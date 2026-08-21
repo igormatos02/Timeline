@@ -24,11 +24,13 @@ import {
   Pin,
   Repeat,
   BookOpen,
-  Filter
+  Filter,
+  LocateFixed
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
 import FloatingTaskStack from './FloatingTaskStack';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getGroupingForPeriodicity } from '../utils/loanCalculations';
 
 export default function VerticalTimeline({
   timeline,
@@ -37,14 +39,50 @@ export default function VerticalTimeline({
   onToggleTask,
   onAddEventForDate,
   onCompleteFloatingTask,
-  onAddFloatingTask
+  onAddFloatingTask,
+  onUpdateFloatingTaskPriority,
+  onAddChecklistItem,
+  onDeleteChecklistItem,
+  onToggleLoanPayment,
+  onOpenEditInstallment
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('Todos');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('Todos');
   const [selectedLabelFilter, setSelectedLabelFilter] = useState('Todos');
   const [showEmptyDays, setShowEmptyDays] = useState(true);
-  const [groupBy, setGroupBy] = useState('dia'); // 'dia' | 'semana' | 'mes' | 'ano'
+  const [groupBy, setGroupBy] = useState(() => {
+    if (timeline.type === 'Empréstimo' && timeline.periodicity) {
+      return getGroupingForPeriodicity(timeline.periodicity);
+    }
+    return 'dia';
+  });
+
+  // Automatically update aggregation view when timeline periodicity changes
+  React.useEffect(() => {
+    if (timeline.type === 'Empréstimo' && timeline.periodicity) {
+      setGroupBy(getGroupingForPeriodicity(timeline.periodicity));
+    }
+  }, [timeline.id, timeline.periodicity, timeline.type]);
+
+  // Scroll and focus on Today / Current period node
+  const scrollToToday = () => {
+    const todayNode = document.getElementById('timeline-node-today');
+    if (todayNode) {
+      todayNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  // Auto-focus on Today / Current node on startup / when changing timeline or view mode
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      const todayNode = document.getElementById('timeline-node-today');
+      if (todayNode) {
+        todayNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [timeline.id, groupBy]);
 
   // Default Today reference (2026-08-21)
   const todayDate = new Date('2026-08-21');
@@ -97,16 +135,34 @@ export default function VerticalTimeline({
   if (isNaN(startDateObj.getTime())) {
     startDateObj = subDays(todayDate, 20);
   }
-  if (startDateObj > todayDate) {
-    startDateObj = subDays(todayDate, 14);
+
+  // Determine latest date in timeline (supports future loan installments up to endDate)
+  let maxDateObj = todayDate;
+  if (timeline.endDate) {
+    try {
+      const parsedEnd = parseISO(timeline.endDate);
+      if (!isNaN(parsedEnd.getTime()) && parsedEnd > maxDateObj) {
+        maxDateObj = parsedEnd;
+      }
+    } catch (e) {}
   }
 
-  // Generate array of days from startDate up to todayDate (Descending)
+  // Check if any event has a later date
+  allEvents.forEach((ev) => {
+    try {
+      const evD = parseISO(ev.date);
+      if (!isNaN(evD.getTime()) && evD > maxDateObj) {
+        maxDateObj = evD;
+      }
+    } catch (e) {}
+  });
+
+  // Generate array of days from startDate up to maxDateObj (Descending: future at top, past at bottom)
   let daysArray = [];
   try {
     const daysAscending = eachDayOfInterval({
       start: startDateObj,
-      end: todayDate
+      end: maxDateObj
     });
     daysArray = daysAscending.reverse();
   } catch (err) {
@@ -177,6 +233,7 @@ export default function VerticalTimeline({
           return (
             <div
               key={format(weekData.weekStart, 'yyyy-MM-dd')}
+              id={isCurrentWeek ? 'timeline-node-today' : undefined}
               className={`timeline-day-row ${isCurrentWeek ? 'is-today' : ''}`}
             >
               <div className="day-date-col">
@@ -207,7 +264,11 @@ export default function VerticalTimeline({
 
                   {hasEvents ? (
                     weekData.events.map((ev) => (
-                      <div key={ev.id} style={{ marginBottom: '12px' }}>
+                      <div
+                        key={ev.id}
+                        id={ev.status === 'Atrasada' ? 'loan-inst-overdue' : undefined}
+                        style={{ marginBottom: '12px' }}
+                      >
                         <div style={{ fontSize: '0.78rem', color: 'var(--primary-light)', fontWeight: '700', marginBottom: '4px' }}>
                           📅 {format(parseISO(ev.date), "EEEE, d 'de' MMMM", { locale: pt })}
                         </div>
@@ -216,6 +277,8 @@ export default function VerticalTimeline({
                           onEdit={onEditEvent}
                           onDelete={onDeleteEvent}
                           onToggleTask={onToggleTask}
+                          onToggleLoanPayment={onToggleLoanPayment}
+                          onOpenEditInstallment={onOpenEditInstallment}
                         />
                       </div>
                     ))
@@ -288,6 +351,7 @@ export default function VerticalTimeline({
           return (
             <div
               key={format(mGroup.monthDate, 'yyyy-MM')}
+              id={isCurrentMonth ? 'timeline-node-today' : undefined}
               className={`timeline-day-row ${isCurrentMonth ? 'is-today' : ''}`}
             >
               <div className="day-date-col">
@@ -320,7 +384,11 @@ export default function VerticalTimeline({
 
                   {hasEvents ? (
                     mGroup.events.map((ev) => (
-                      <div key={ev.id} style={{ marginBottom: '12px' }}>
+                      <div
+                        key={ev.id}
+                        id={ev.status === 'Atrasada' ? 'loan-inst-overdue' : undefined}
+                        style={{ marginBottom: '12px' }}
+                      >
                         <div style={{ fontSize: '0.78rem', color: 'var(--primary-light)', fontWeight: '700', marginBottom: '4px' }}>
                           📅 {format(parseISO(ev.date), "EEEE, d 'de' MMMM", { locale: pt })}
                         </div>
@@ -329,6 +397,8 @@ export default function VerticalTimeline({
                           onEdit={onEditEvent}
                           onDelete={onDeleteEvent}
                           onToggleTask={onToggleTask}
+                          onToggleLoanPayment={onToggleLoanPayment}
+                          onOpenEditInstallment={onOpenEditInstallment}
                         />
                       </div>
                     ))
@@ -416,6 +486,7 @@ export default function VerticalTimeline({
           return (
             <div
               key={yGroup.yearStr}
+              id={isCurrentYear ? 'timeline-node-today' : undefined}
               className={`timeline-day-row ${isCurrentYear ? 'is-today' : ''}`}
             >
               <div className="day-date-col">
@@ -468,6 +539,8 @@ export default function VerticalTimeline({
                               onEdit={onEditEvent}
                               onDelete={onDeleteEvent}
                               onToggleTask={onToggleTask}
+                              onToggleLoanPayment={onToggleLoanPayment}
+                              onOpenEditInstallment={onOpenEditInstallment}
                             />
                           ))
                         ) : (
@@ -520,6 +593,7 @@ export default function VerticalTimeline({
           return (
             <div
               key={dateKey}
+              id={isTodayNode ? 'timeline-node-today' : undefined}
               className={`timeline-day-row ${isTodayNode ? 'is-today' : ''}`}
             >
               <div className="day-date-col">
@@ -551,13 +625,19 @@ export default function VerticalTimeline({
                 {hasEvents ? (
                   <AnimatePresence>
                     {dayEvents.map((ev) => (
-                      <TimelineEventCard
+                      <div
                         key={ev.id}
-                        event={ev}
-                        onEdit={onEditEvent}
-                        onDelete={onDeleteEvent}
-                        onToggleTask={onToggleTask}
-                      />
+                        id={ev.status === 'Atrasada' ? 'loan-inst-overdue' : undefined}
+                      >
+                        <TimelineEventCard
+                          event={ev}
+                          onEdit={onEditEvent}
+                          onDelete={onDeleteEvent}
+                          onToggleTask={onToggleTask}
+                          onToggleLoanPayment={onToggleLoanPayment}
+                          onOpenEditInstallment={onOpenEditInstallment}
+                        />
+                      </div>
                     ))}
                   </AnimatePresence>
                 ) : (
@@ -582,12 +662,6 @@ export default function VerticalTimeline({
 
   return (
     <div className="vertical-timeline-section">
-      {/* 📌 Pinned Floating Task Stack (Pilha de Tarefas Pendentes no Topo) */}
-      <FloatingTaskStack
-        pendingTasks={pendingFloatingTasks}
-        onCompleteTask={onCompleteFloatingTask}
-        onAddFloatingTask={onAddFloatingTask}
-      />
 
       {/* Toolbar / Search / Category / Label Filters & Grouping Selector */}
       <div
@@ -607,32 +681,53 @@ export default function VerticalTimeline({
             />
           </div>
 
-          <div className="group-selector-container">
-            <span className="group-label">Agrupar:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <button
-              className={`group-btn ${groupBy === 'dia' ? 'active' : ''}`}
-              onClick={() => setGroupBy('dia')}
+              type="button"
+              onClick={scrollToToday}
+              className="btn btn-secondary btn-sm"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: '700',
+                borderColor: 'var(--primary-light)',
+                color: 'var(--primary-light)',
+                background: 'rgba(99, 102, 241, 0.12)'
+              }}
+              title="Focar e navegar diretamente para a data de hoje / período atual"
             >
-              <Calendar size={14} /> Dia
+              <LocateFixed size={14} />
+              <span>Hoje / Atual</span>
             </button>
-            <button
-              className={`group-btn ${groupBy === 'semana' ? 'active' : ''}`}
-              onClick={() => setGroupBy('semana')}
-            >
-              <Layers size={14} /> Semana
-            </button>
-            <button
-              className={`group-btn ${groupBy === 'mes' ? 'active' : ''}`}
-              onClick={() => setGroupBy('mes')}
-            >
-              <Clock size={14} /> Mês
-            </button>
-            <button
-              className={`group-btn ${groupBy === 'ano' ? 'active' : ''}`}
-              onClick={() => setGroupBy('ano')}
-            >
-              <Sparkles size={14} /> Ano
-            </button>
+
+            <div className="group-selector-container">
+              <span className="group-label">Agrupar:</span>
+              <button
+                className={`group-btn ${groupBy === 'dia' ? 'active' : ''}`}
+                onClick={() => setGroupBy('dia')}
+              >
+                <Calendar size={14} /> Dia
+              </button>
+              <button
+                className={`group-btn ${groupBy === 'semana' ? 'active' : ''}`}
+                onClick={() => setGroupBy('semana')}
+              >
+                <Layers size={14} /> Semana
+              </button>
+              <button
+                className={`group-btn ${groupBy === 'mes' ? 'active' : ''}`}
+                onClick={() => setGroupBy('mes')}
+              >
+                <Clock size={14} /> Mês
+              </button>
+              <button
+                className={`group-btn ${groupBy === 'ano' ? 'active' : ''}`}
+                onClick={() => setGroupBy('ano')}
+              >
+                <Sparkles size={14} /> Ano
+              </button>
+            </div>
           </div>
         </div>
 
@@ -643,6 +738,12 @@ export default function VerticalTimeline({
           </span>
           {[
             { id: 'Todos', name: 'Todos os Tipos', icon: '⚡' },
+            ...(timeline.type === 'Empréstimo'
+              ? [
+                  { id: 'parcela_emprestimo', name: 'Prestações', icon: '💳' },
+                  { id: 'amortizacao', name: 'Amortizações', icon: '📉' }
+                ]
+              : []),
             { id: 'agendamento', name: 'Agendamentos', icon: '📅' },
             { id: 'repetitivo', name: 'Repetitivos / Aniversários', icon: '🔁' },
             { id: 'tarefa', name: 'Tarefas (Fixadas)', icon: '📌' },
@@ -693,6 +794,17 @@ export default function VerticalTimeline({
         )}
       </div>
 
+      {/* 📌 Pilha de Tarefas Pendentes (abaixo dos filtros) */}
+      <FloatingTaskStack
+        pendingTasks={pendingFloatingTasks}
+        onCompleteTask={onCompleteFloatingTask}
+        onAddFloatingTask={onAddFloatingTask}
+        onUpdatePriority={onUpdateFloatingTaskPriority}
+        onToggleTask={onToggleTask}
+        onAddChecklistItem={onAddChecklistItem}
+        onDeleteChecklistItem={onDeleteChecklistItem}
+      />
+
       {/* Render Selected Timeline View */}
       {groupBy === 'semana' && renderWeekView()}
       {groupBy === 'mes' && renderMonthView()}
@@ -718,6 +830,38 @@ export default function VerticalTimeline({
           </button>
         </div>
       )}
+
+      {/* 🎯 Floating Quick Return to Today Button */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 99
+        }}
+      >
+        <button
+          type="button"
+          onClick={scrollToToday}
+          className="btn btn-primary"
+          style={{
+            borderRadius: '9999px',
+            padding: '10px 18px',
+            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: '800',
+            fontSize: '0.85rem',
+            background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.2)'
+          }}
+          title="Focar e voltar para a data de Hoje / Mês Atual"
+        >
+          <LocateFixed size={16} />
+          <span>Voltar ao Hoje</span>
+        </button>
+      </div>
     </div>
   );
 }

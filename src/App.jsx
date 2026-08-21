@@ -5,12 +5,20 @@ import TimelineHeader from './components/TimelineHeader';
 import VerticalTimeline from './components/VerticalTimeline';
 import CreateTimelineModal from './components/CreateTimelineModal';
 import CreateEventModal from './components/CreateEventModal';
+import AmortizationModal from './components/AmortizationModal';
+import EditInstallmentModal from './components/EditInstallmentModal';
+import {
+  recalculateLoanState,
+  propagateInstallmentAmountForward,
+  applyExtraordinaryAmortization,
+  getLoanMetrics
+} from './utils/loanCalculations';
 import './App.css';
 
 export default function App() {
-  // Load timelines from localStorage or mock data
+  // Load timelines from localStorage or mock data (v4 includes Real Contract Crédito Automóvel)
   const [timelines, setTimelines] = useState(() => {
-    const saved = localStorage.getItem('chrono_timelines_data_v2');
+    const saved = localStorage.getItem('chrono_timelines_data_v4');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -22,7 +30,7 @@ export default function App() {
   });
 
   const [activeTimelineId, setActiveTimelineId] = useState(() => {
-    return timelines[0]?.id || 'tl-1';
+    return timelines[0]?.id || 'tl-loan-80004197726';
   });
 
   // Modal states
@@ -33,9 +41,28 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState('2026-08-21');
 
+  // Loan Specific Modals
+  const [isAmortizationModalOpen, setIsAmortizationModalOpen] = useState(false);
+  const [editingInstallment, setEditingInstallment] = useState(null);
+
+  // Theme (light is default)
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('chrono_theme') || 'light';
+  });
+
+  // Apply theme to document
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('chrono_theme', theme);
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  };
+
   // Save to localStorage when timelines state updates
   useEffect(() => {
-    localStorage.setItem('chrono_timelines_data_v2', JSON.stringify(timelines));
+    localStorage.setItem('chrono_timelines_data_v4', JSON.stringify(timelines));
   }, [timelines]);
 
   const activeTimeline = timelines.find((tl) => tl.id === activeTimelineId) || timelines[0];
@@ -150,6 +177,41 @@ export default function App() {
     );
   };
 
+  // Add a new checklist item to any event/task
+  const handleAddChecklistItem = (eventId, itemText) => {
+    if (!activeTimeline || !itemText || !itemText.trim()) return;
+    const updatedEvents = (activeTimeline.events || []).map((ev) => {
+      if (ev.id === eventId) {
+        const currentTasks = ev.tasks || [];
+        return {
+          ...ev,
+          tasks: [...currentTasks, { text: itemText.trim(), completed: false }]
+        };
+      }
+      return ev;
+    });
+
+    setTimelines((prev) =>
+      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
+    );
+  };
+
+  // Delete a checklist item from any event/task
+  const handleDeleteChecklistItem = (eventId, itemIdx) => {
+    if (!activeTimeline) return;
+    const updatedEvents = (activeTimeline.events || []).map((ev) => {
+      if (ev.id === eventId && ev.tasks) {
+        const updatedTasks = ev.tasks.filter((_, idx) => idx !== itemIdx);
+        return { ...ev, tasks: updatedTasks };
+      }
+      return ev;
+    });
+
+    setTimelines((prev) =>
+      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
+    );
+  };
+
   // Complete a floating pending task and fix it to today's date on the timeline
   const handleCompleteFloatingTask = (taskId) => {
     if (!activeTimeline) return;
@@ -184,6 +246,120 @@ export default function App() {
     );
   };
 
+  // Update priority of a floating task
+  const handleUpdateFloatingTaskPriority = (taskId, priority) => {
+    if (!activeTimeline) return;
+    const updatedEvents = (activeTimeline.events || []).map((ev) =>
+      ev.id === taskId ? { ...ev, priority } : ev
+    );
+    setTimelines((prev) =>
+      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
+    );
+  };
+
+  // ----------------------------------------------------
+  // Loan Specific Handlers (Empréstimo)
+  // ----------------------------------------------------
+  
+  // Toggle installment payment state (Pago <-> Pendente / Atrasada)
+  const handleToggleLoanPayment = (installmentId) => {
+    if (!activeTimeline) return;
+
+    const currentEvents = activeTimeline.events || [];
+    const target = currentEvents.find((e) => e.id === installmentId);
+    if (!target) return;
+
+    const nextStatus = target.status === 'Pago' ? 'Pendente' : 'Pago';
+    const nextCompleted = nextStatus === 'Pago';
+
+    const updatedList = currentEvents.map((ev) =>
+      ev.id === installmentId
+        ? { ...ev, status: nextStatus, isCompleted: nextCompleted }
+        : ev
+    );
+
+    const finalEvents = recalculateLoanState(activeTimeline, updatedList);
+
+    setTimelines((prev) =>
+      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: finalEvents } : tl))
+    );
+  };
+
+  // Save changes from EditInstallmentModal (amount, principalAmount, interestPortion, interestAmount, propagateForward)
+  const handleSaveEditInstallment = (installmentId, { status, amount, principalAmount, interestPortion, interestAmount, propagateForward }) => {
+    if (!activeTimeline) return;
+
+    let currentEvents = activeTimeline.events || [];
+
+    if (propagateForward) {
+      // Propagate new base amount, principal and interest to this and all subsequent future installments
+      currentEvents = propagateInstallmentAmountForward(currentEvents, installmentId, amount, principalAmount, interestPortion);
+    }
+
+    // Update the specific installment's values and status
+    const isPaid = status === 'Pago';
+    const updatedList = currentEvents.map((ev) => {
+      if (ev.id === installmentId) {
+        return {
+          ...ev,
+          amount: Number(amount),
+          principalAmount: Number(principalAmount),
+          interestPortion: Number(interestPortion),
+          interestAmount: Number(interestAmount) || 0,
+          status: status,
+          isCompleted: isPaid
+        };
+      }
+      return ev;
+    });
+
+    const finalEvents = recalculateLoanState(activeTimeline, updatedList);
+
+    setTimelines((prev) =>
+      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: finalEvents } : tl))
+    );
+  };
+
+  // Save extraordinary amortization event
+  const handleSaveAmortization = ({ amount, date, strategy, notes }) => {
+    if (!activeTimeline) return;
+
+    const finalEvents = applyExtraordinaryAmortization({
+      timeline: activeTimeline,
+      eventsList: activeTimeline.events || [],
+      amortizationAmount: amount,
+      amortizationDateStr: date,
+      strategy: strategy,
+      notes: notes
+    });
+
+    setTimelines((prev) =>
+      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: finalEvents } : tl))
+    );
+  };
+
+  const loanMetrics = activeTimeline?.type === 'Empréstimo'
+    ? getLoanMetrics(activeTimeline, activeTimeline.events || [])
+    : null;
+
+  const handleScrollToOverdue = () => {
+    const el = document.getElementById('loan-inst-overdue');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const handleScrollToToday = () => {
+    const todayNode = document.getElementById('timeline-node-today');
+    if (todayNode) {
+      todayNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      todayNode.classList.add('pulse-highlight-node');
+      setTimeout(() => {
+        todayNode.classList.remove('pulse-highlight-node');
+      }, 2000);
+    }
+  };
+
   return (
     <div className="app-container">
       {/* Navbar */}
@@ -193,6 +369,9 @@ export default function App() {
         onSelectTimeline={setActiveTimelineId}
         onOpenCreateTimeline={handleOpenCreateTimeline}
         onOpenCreateEvent={() => handleOpenCreateEvent('2026-08-21')}
+        onScrollToToday={handleScrollToToday}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
 
       {/* Main Layout Area */}
@@ -204,6 +383,8 @@ export default function App() {
               timeline={activeTimeline}
               onEdit={handleOpenEditTimeline}
               onDelete={handleDeleteTimeline}
+              onOpenAmortizationModal={() => setIsAmortizationModalOpen(true)}
+              onScrollToOverdue={handleScrollToOverdue}
             />
 
             {/* Vertical Timeline Engine with Floating Task Stack */}
@@ -215,6 +396,11 @@ export default function App() {
               onAddEventForDate={(dateStr) => handleOpenCreateEvent(dateStr)}
               onCompleteFloatingTask={handleCompleteFloatingTask}
               onAddFloatingTask={handleAddFloatingTask}
+              onUpdateFloatingTaskPriority={handleUpdateFloatingTaskPriority}
+              onAddChecklistItem={handleAddChecklistItem}
+              onDeleteChecklistItem={handleDeleteChecklistItem}
+              onToggleLoanPayment={handleToggleLoanPayment}
+              onOpenEditInstallment={(inst) => setEditingInstallment(inst)}
             />
           </>
         ) : (
@@ -248,6 +434,21 @@ export default function App() {
         onSave={handleSaveEvent}
         initialData={editingEvent}
         defaultDate={selectedDateForNewEvent}
+      />
+
+      {/* Loan Modals */}
+      <AmortizationModal
+        isOpen={isAmortizationModalOpen}
+        onClose={() => setIsAmortizationModalOpen(false)}
+        onSave={handleSaveAmortization}
+        remainingBalance={loanMetrics ? loanMetrics.remainingBalance : undefined}
+      />
+
+      <EditInstallmentModal
+        isOpen={Boolean(editingInstallment)}
+        onClose={() => setEditingInstallment(null)}
+        installment={editingInstallment}
+        onSave={handleSaveEditInstallment}
       />
     </div>
   );

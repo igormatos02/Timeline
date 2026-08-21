@@ -1,12 +1,15 @@
 import React from 'react';
-import { Clock, Plus, Layers, Calendar, Sparkles } from 'lucide-react';
+import { Clock, Plus, Layers, Calendar, Sparkles, Sun, Moon, LocateFixed } from 'lucide-react';
 
 export default function Navbar({
   timelines,
   activeTimelineId,
   onSelectTimeline,
   onOpenCreateTimeline,
-  onOpenCreateEvent
+  onOpenCreateEvent,
+  onScrollToToday,
+  theme,
+  onToggleTheme
 }) {
   return (
     <header className="app-header">
@@ -26,7 +29,7 @@ export default function Navbar({
 
         {/* Timeline Selector Dropdown */}
         <div className="timeline-selector-wrapper">
-          <Layers size={18} style={{ color: '#818cf8' }} />
+          <Layers size={18} style={{ color: 'var(--primary)' }} />
           <select
             className="timeline-select"
             value={activeTimelineId}
@@ -42,6 +45,33 @@ export default function Navbar({
 
         {/* Actions */}
         <div className="header-actions">
+          {/* Botão Ir para Hoje / Atual */}
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={onScrollToToday}
+            style={{
+              background: 'rgba(99, 102, 241, 0.15)',
+              borderColor: 'var(--primary-light)',
+              color: 'var(--primary-light)',
+              fontWeight: '700'
+            }}
+            title="Voltar à data de hoje / período atual"
+          >
+            <LocateFixed size={16} />
+            <span>Ir para Hoje</span>
+          </button>
+
+          {/* Theme Toggle */}
+          <button
+            className="theme-toggle-btn"
+            onClick={onToggleTheme}
+            title={theme === 'light' ? 'Mudar para tema escuro' : 'Mudar para tema claro'}
+            aria-label="Alternar tema"
+          >
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
+
           <button
             className="btn btn-outline btn-sm"
             onClick={onOpenCreateTimeline}
@@ -62,3 +92,4 @@ export default function Navbar({
     </header>
   );
 }
+

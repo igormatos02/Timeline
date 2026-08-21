@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, FolderPlus, Edit2 } from 'lucide-react';
+import { X, Sparkles, FolderPlus, Edit2, CreditCard, DollarSign, Calendar } from 'lucide-react';
 import { TIMELINE_TYPES, TIMELINE_STATUSES } from '../data/mockTimelines';
+import { generateLoanSchedule } from '../utils/loanCalculations';
 
 export default function CreateTimelineModal({
   isOpen,
@@ -11,11 +12,15 @@ export default function CreateTimelineModal({
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    startDate: '2026-08-01',
-    endDate: '2026-09-30',
+    startDate: '2026-01-10',
+    endDate: '2027-12-10',
     status: 'Em Progresso',
-    type: 'Tecnologia',
-    color: '#6366f1'
+    type: 'Empréstimo',
+    color: '#6366f1',
+    totalDebt: 12000,
+    installmentAmount: 500,
+    periodicity: 'mensal',
+    dueDay: 10
   });
 
   useEffect(() => {
@@ -25,11 +30,15 @@ export default function CreateTimelineModal({
       setFormData({
         name: '',
         description: '',
-        startDate: '2026-08-01',
-        endDate: '2026-09-30',
+        startDate: '2026-01-10',
+        endDate: '2027-12-10',
         status: 'Em Progresso',
-        type: 'Tecnologia',
-        color: '#6366f1'
+        type: 'Empréstimo',
+        color: '#6366f1',
+        totalDebt: 12000,
+        installmentAmount: 500,
+        periodicity: 'mensal',
+        dueDay: 10
       });
     }
   }, [initialData, isOpen]);
@@ -39,11 +48,27 @@ export default function CreateTimelineModal({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
-    onSave(formData);
+
+    let finalData = { ...formData };
+
+    // If new loan timeline, automatically generate loan installments schedule
+    if (!initialData && formData.type === 'Empréstimo') {
+      const generatedEvents = generateLoanSchedule({
+        totalDebt: Number(formData.totalDebt) || 12000,
+        installmentAmount: Number(formData.installmentAmount) || 500,
+        startDateStr: formData.startDate,
+        dueDay: Number(formData.dueDay) || 10,
+        periodicity: formData.periodicity || 'mensal'
+      });
+      finalData.events = generatedEvents;
+    }
+
+    onSave(finalData);
     onClose();
   };
 
   const isEditing = Boolean(initialData && initialData.id);
+  const isLoan = formData.type === 'Empréstimo';
 
   const colors = [
     '#6366f1', // Indigo
@@ -60,6 +85,7 @@ export default function CreateTimelineModal({
       <div
         className="modal-card"
         onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: '580px' }}
       >
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -80,7 +106,7 @@ export default function CreateTimelineModal({
             <input
               type="text"
               className="form-input"
-              placeholder="Ex: Lançamento da Nova App Mobile"
+              placeholder={isLoan ? "Ex: Crédito Automóvel / Habitação" : "Ex: Lançamento de Produto"}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -101,7 +127,7 @@ export default function CreateTimelineModal({
           {/* Type & Status */}
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Tipo / Categoria</label>
+              <label className="form-label">Tipo de Timeline</label>
               <select
                 className="form-select"
                 value={formData.type}
@@ -127,10 +153,77 @@ export default function CreateTimelineModal({
             </div>
           </div>
 
+          {/* Loan Specific Parameters */}
+          {isLoan && (
+            <div style={{ padding: '14px', borderRadius: '10px', background: 'rgba(99, 102, 241, 0.07)', border: '1px solid var(--border-glass-glow)', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: '700', color: 'var(--primary-light)', marginBottom: '10px' }}>
+                <CreditCard size={15} /> Parâmetros Financeiros do Empréstimo
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Valor Total da Dívida (€)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    className="form-input"
+                    value={formData.totalDebt || ''}
+                    onChange={(e) => setFormData({ ...formData, totalDebt: parseFloat(e.target.value) || 0 })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Valor da Parcela (€)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    className="form-input"
+                    value={formData.installmentAmount || ''}
+                    onChange={(e) => setFormData({ ...formData, installmentAmount: parseFloat(e.target.value) || 0 })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Periodicidade</label>
+                  <select
+                    className="form-select"
+                    value={formData.periodicity || 'mensal'}
+                    onChange={(e) => setFormData({ ...formData, periodicity: e.target.value })}
+                  >
+                    <option value="mensal">Mensal (Padrão)</option>
+                    <option value="quinzenal">Quinzenal</option>
+                    <option value="diaria">Diária</option>
+                    <option value="bimestral">Bimestral</option>
+                    <option value="semestral">Semestral</option>
+                    <option value="anual">Anual</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Dia do Vencimento</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    className="form-input"
+                    value={formData.dueDay || 10}
+                    onChange={(e) => setFormData({ ...formData, dueDay: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Start & End Dates */}
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Data de Início</label>
+              <label className="form-label">Data de Início da Dívida</label>
               <input
                 type="date"
                 className="form-input"
@@ -141,7 +234,7 @@ export default function CreateTimelineModal({
             </div>
 
             <div className="form-group">
-              <label className="form-label">Data de Fim</label>
+              <label className="form-label">Data Prevista de Término</label>
               <input
                 type="date"
                 className="form-input"
@@ -161,30 +254,27 @@ export default function CreateTimelineModal({
                   key={c}
                   onClick={() => setFormData({ ...formData, color: c })}
                   style={{
-                    width: '28px',
-                    height: '28px',
+                    width: '32px',
+                    height: '32px',
                     borderRadius: '50%',
                     backgroundColor: c,
                     cursor: 'pointer',
-                    border: formData.color === c ? '3px solid #ffffff' : '2px solid transparent',
-                    boxShadow: formData.color === c ? `0 0 12px ${c}` : 'none'
+                    border: formData.color === c ? '3px solid #fff' : '2px solid transparent',
+                    boxShadow: formData.color === c ? '0 0 12px ' + c : 'none',
+                    transition: 'all 0.2s'
                   }}
                 />
               ))}
             </div>
           </div>
 
-          <div className="form-footer">
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
-              onClick={onClose}
-            >
+          {/* Submit */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px' }}>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
               Cancelar
             </button>
-            <button type="submit" className="btn btn-primary btn-sm">
-              <Sparkles size={16} />
-              <span>{isEditing ? 'Guardar Alterações' : 'Criar Timeline'}</span>
+            <button type="submit" className="btn btn-primary">
+              {isEditing ? 'Salvar Alterações' : 'Criar Timeline'}
             </button>
           </div>
         </form>

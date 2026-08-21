@@ -8,7 +8,6 @@ import {
   endOfWeek,
   isSameWeek,
   isSameMonth,
-  isSameYear,
   getWeek
 } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -21,10 +20,14 @@ import {
   Layers,
   Clock,
   Sparkles,
-  ChevronDown,
-  ChevronRight
+  Tag,
+  Pin,
+  Repeat,
+  BookOpen,
+  Filter
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
+import FloatingTaskStack from './FloatingTaskStack';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function VerticalTimeline({
@@ -32,18 +35,33 @@ export default function VerticalTimeline({
   onEditEvent,
   onDeleteEvent,
   onToggleTask,
-  onAddEventForDate
+  onAddEventForDate,
+  onCompleteFloatingTask,
+  onAddFloatingTask
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('Todos');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('Todos');
+  const [selectedLabelFilter, setSelectedLabelFilter] = useState('Todos');
   const [showEmptyDays, setShowEmptyDays] = useState(true);
   const [groupBy, setGroupBy] = useState('dia'); // 'dia' | 'semana' | 'mes' | 'ano'
 
-  // Default Today reference (dynamic or 2026-08-21)
+  // Default Today reference (2026-08-21)
   const todayDate = new Date('2026-08-21');
   const todayStr = format(todayDate, 'yyyy-MM-dd');
 
-  // Filter events based on search query and status filter
+  // Extract pending floating tasks (category === 'tarefa' and !isCompleted)
+  const allEvents = timeline.events || [];
+  const pendingFloatingTasks = allEvents.filter(
+    (ev) => ev.category === 'tarefa' && ev.isCompleted === false
+  );
+
+  // Events that belong on the timeline (non-floating OR completed tasks fixed to dates)
+  const timelineEvents = allEvents.filter(
+    (ev) => !(ev.category === 'tarefa' && ev.isCompleted === false)
+  );
+
+  // Filter events based on search query, status, category, and label
   const filterEvents = (events) => {
     if (!events) return [];
     return events.filter((ev) => {
@@ -51,16 +69,28 @@ export default function VerticalTimeline({
         searchQuery === '' ||
         ev.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (ev.description && ev.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (ev.tags && ev.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase())));
+        (ev.labels && ev.labels.some((l) => l.toLowerCase().includes(searchQuery.toLowerCase())));
 
       const matchesStatus =
         selectedStatusFilter === 'Todos' || ev.status === selectedStatusFilter;
 
-      return matchesSearch && matchesStatus;
+      const matchesCategory =
+        selectedCategoryFilter === 'Todos' || ev.category === selectedCategoryFilter;
+
+      const matchesLabel =
+        selectedLabelFilter === 'Todos' ||
+        (ev.labels && ev.labels.includes(selectedLabelFilter));
+
+      return matchesSearch && matchesStatus && matchesCategory && matchesLabel;
     });
   };
 
-  const filteredEvents = filterEvents(timeline.events || []);
+  const filteredEvents = filterEvents(timelineEvents);
+
+  // Collect all unique labels for filter pills
+  const availableLabels = Array.from(
+    new Set(allEvents.flatMap((ev) => ev.labels || []))
+  );
 
   // Determine earliest date in timeline
   let startDateObj = parseISO(timeline.startDate || '2026-08-01');
@@ -93,14 +123,12 @@ export default function VerticalTimeline({
   });
 
   // ========================================================
-  // GROUPING COMPUTATIONS
+  // RENDER ENGINES BY GROUPBY MODE
   // ========================================================
 
-  // 1. GROUP BY WEEK (Semana)
   const renderWeekView = () => {
     const weekMap = new Map();
 
-    // Collect all weeks in interval
     daysArray.forEach((dayObj) => {
       const weekStart = startOfWeek(dayObj, { weekStartsOn: 1 });
       const weekEnd = endOfWeek(dayObj, { weekStartsOn: 1 });
@@ -116,7 +144,6 @@ export default function VerticalTimeline({
       }
     });
 
-    // Populate events in weeks
     filteredEvents.forEach((ev) => {
       try {
         const evDate = parseISO(ev.date);
@@ -152,14 +179,12 @@ export default function VerticalTimeline({
               key={format(weekData.weekStart, 'yyyy-MM-dd')}
               className={`timeline-day-row ${isCurrentWeek ? 'is-today' : ''}`}
             >
-              {/* Left Column */}
               <div className="day-date-col">
                 <div className="day-date-main">SEMANA {weekData.weekNum}</div>
                 <div className="day-date-sub">{format(weekData.weekStart, 'yyyy')}</div>
                 {isCurrentWeek && <span className="today-badge-chip pulse-glow">SEMANA ATUAL</span>}
               </div>
 
-              {/* Central Spine Node (Bolinha) */}
               <div className="day-node-wrapper">
                 <div
                   className={`day-node-dot ${
@@ -169,15 +194,12 @@ export default function VerticalTimeline({
                 />
               </div>
 
-              {/* Content Column */}
               <div className="day-content-col">
                 <div className="group-card">
                   <div className="group-card-header">
-                    <div>
-                      <h3 className="group-card-title">
-                        Semana {weekData.weekNum} ({weekStartStr} - {weekEndStr})
-                      </h3>
-                    </div>
+                    <h3 className="group-card-title">
+                      Semana {weekData.weekNum} ({weekStartStr} - {weekEndStr})
+                    </h3>
                     <span className="group-card-badge">
                       {weekData.events.length} evento(s)
                     </span>
@@ -218,7 +240,6 @@ export default function VerticalTimeline({
     );
   };
 
-  // 2. GROUP BY MONTH (Mês)
   const renderMonthView = () => {
     const monthMap = new Map();
 
@@ -258,7 +279,7 @@ export default function VerticalTimeline({
         />
 
         {monthsList.map((mGroup) => {
-          const isCurrentMonth = isSameMonth(todayDate, mGroup.monthDate);
+          const isCurrentMonth = format(todayDate, 'yyyy-MM') === format(mGroup.monthDate, 'yyyy-MM');
           const monthTitleStr = format(mGroup.monthDate, 'MMMM yyyy', { locale: pt });
           const hasEvents = mGroup.events.length > 0;
 
@@ -269,7 +290,6 @@ export default function VerticalTimeline({
               key={format(mGroup.monthDate, 'yyyy-MM')}
               className={`timeline-day-row ${isCurrentMonth ? 'is-today' : ''}`}
             >
-              {/* Left Column */}
               <div className="day-date-col">
                 <div className="day-date-main">
                   {format(mGroup.monthDate, 'MMM', { locale: pt }).toUpperCase()}
@@ -278,7 +298,6 @@ export default function VerticalTimeline({
                 {isCurrentMonth && <span className="today-badge-chip pulse-glow">MÊS ATUAL</span>}
               </div>
 
-              {/* Central Spine Node */}
               <div className="day-node-wrapper">
                 <div
                   className={`day-node-dot ${
@@ -288,7 +307,6 @@ export default function VerticalTimeline({
                 />
               </div>
 
-              {/* Content Column */}
               <div className="day-content-col">
                 <div className="group-card">
                   <div className="group-card-header">
@@ -335,7 +353,6 @@ export default function VerticalTimeline({
     );
   };
 
-  // 3. GROUP BY YEAR (Ano - mostra os Meses dentro de cada Ano)
   const renderYearView = () => {
     const yearMap = new Map();
 
@@ -401,13 +418,11 @@ export default function VerticalTimeline({
               key={yGroup.yearStr}
               className={`timeline-day-row ${isCurrentYear ? 'is-today' : ''}`}
             >
-              {/* Left Column */}
               <div className="day-date-col">
                 <div className="day-date-main">ANO {yGroup.yearStr}</div>
                 {isCurrentYear && <span className="today-badge-chip pulse-glow">ANO ATUAL</span>}
               </div>
 
-              {/* Central Spine Node */}
               <div className="day-node-wrapper">
                 <div
                   className={`day-node-dot ${
@@ -417,7 +432,6 @@ export default function VerticalTimeline({
                 />
               </div>
 
-              {/* Content Column: Displays the Months breakdown for the Year */}
               <div className="day-content-col">
                 <div className="group-card">
                   <div className="group-card-header">
@@ -429,7 +443,6 @@ export default function VerticalTimeline({
                     </span>
                   </div>
 
-                  {/* Render Months inside Year */}
                   {monthsList.map((mGroup) => {
                     const monthTitleStr = format(mGroup.monthDate, 'MMMM yyyy', { locale: pt });
                     const hasEvents = mGroup.events.length > 0;
@@ -481,7 +494,6 @@ export default function VerticalTimeline({
     );
   };
 
-  // 4. GROUP BY DAY (Dia - Default)
   const renderDayView = () => {
     return (
       <div className="vertical-timeline-container">
@@ -510,7 +522,6 @@ export default function VerticalTimeline({
               key={dateKey}
               className={`timeline-day-row ${isTodayNode ? 'is-today' : ''}`}
             >
-              {/* Left Column */}
               <div className="day-date-col">
                 <div className="day-date-main">
                   {dayOfWeekStr.toUpperCase()}, {dayNumStr} {monthStr}
@@ -521,7 +532,6 @@ export default function VerticalTimeline({
                 )}
               </div>
 
-              {/* Central Spine Node */}
               <div className="day-node-wrapper">
                 <div
                   className={`day-node-dot ${
@@ -537,7 +547,6 @@ export default function VerticalTimeline({
                 />
               </div>
 
-              {/* Content Column */}
               <div className="day-content-col">
                 {hasEvents ? (
                   <AnimatePresence>
@@ -573,25 +582,31 @@ export default function VerticalTimeline({
 
   return (
     <div className="vertical-timeline-section">
-      {/* Toolbar / Search / Filters & Grouping Selector */}
+      {/* 📌 Pinned Floating Task Stack (Pilha de Tarefas Pendentes no Topo) */}
+      <FloatingTaskStack
+        pendingTasks={pendingFloatingTasks}
+        onCompleteTask={onCompleteFloatingTask}
+        onAddFloatingTask={onAddFloatingTask}
+      />
+
+      {/* Toolbar / Search / Category / Label Filters & Grouping Selector */}
       <div
         className="toolbar-section glass-panel"
-        style={{ padding: '16px 20px', borderRadius: '14px', flexDirection: 'column', alignItems: 'stretch' }}
+        style={{ padding: '18px 22px', borderRadius: '16px', flexDirection: 'column', alignItems: 'stretch', gap: '14px' }}
       >
+        {/* Row 1: Search & Grouping View */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-          {/* Search Box */}
           <div className="search-box">
             <Search size={18} className="search-icon" />
             <input
               type="text"
               className="search-input"
-              placeholder="Pesquisar eventos, palavras-chave ou #tags..."
+              placeholder="Pesquisar por título, notas ou #etiquetas..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          {/* Group By Selector */}
           <div className="group-selector-container">
             <span className="group-label">Agrupar:</span>
             <button
@@ -621,32 +636,64 @@ export default function VerticalTimeline({
           </div>
         </div>
 
-        {/* Second Row: Status Filter Pills and Toggle Empty Days */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)', flexWrap: 'wrap', gap: '12px' }}>
-          <div className="filter-pills">
-            {['Todos', 'Em Progresso', 'Concluído', 'Planeado'].map((status) => (
+        {/* Row 2: Event Nature Category Filters */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <span style={{ fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+            Natureza:
+          </span>
+          {[
+            { id: 'Todos', name: 'Todos os Tipos', icon: '⚡' },
+            { id: 'agendamento', name: 'Agendamentos', icon: '📅' },
+            { id: 'repetitivo', name: 'Repetitivos / Aniversários', icon: '🔁' },
+            { id: 'tarefa', name: 'Tarefas (Fixadas)', icon: '📌' },
+            { id: 'memoria', name: 'Memórias / Notas', icon: '📝' }
+          ].map((cat) => (
+            <button
+              key={cat.id}
+              className={`pill-btn ${selectedCategoryFilter === cat.id ? 'active' : ''}`}
+              onClick={() => setSelectedCategoryFilter(cat.id)}
+            >
+              <span>{cat.icon}</span> {cat.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Row 3: Label/Etiquetas Filter Bar */}
+        {availableLabels.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Tag size={12} /> Etiquetas:
+            </span>
+            <button
+              className={`pill-btn ${selectedLabelFilter === 'Todos' ? 'active' : ''}`}
+              onClick={() => setSelectedLabelFilter('Todos')}
+            >
+              Todas
+            </button>
+            {availableLabels.map((lbl) => (
               <button
-                key={status}
-                className={`pill-btn ${selectedStatusFilter === status ? 'active' : ''}`}
-                onClick={() => setSelectedStatusFilter(status)}
+                key={lbl}
+                className={`pill-btn ${selectedLabelFilter === lbl ? 'active' : ''}`}
+                onClick={() => setSelectedLabelFilter(lbl)}
               >
-                {status}
+                #{lbl}
               </button>
             ))}
-          </div>
 
-          <div
-            className="toggle-empty-days"
-            onClick={() => setShowEmptyDays(!showEmptyDays)}
-            title="Alternar visibilidade de intervalos sem eventos"
-          >
-            {showEmptyDays ? <Eye size={16} /> : <EyeOff size={16} />}
-            <span>{showEmptyDays ? 'Ocultar vazios' : 'Mostrar vazios'}</span>
+            <div
+              className="toggle-empty-days"
+              onClick={() => setShowEmptyDays(!showEmptyDays)}
+              style={{ marginLeft: 'auto' }}
+              title="Alternar visibilidade dos dias sem eventos"
+            >
+              {showEmptyDays ? <Eye size={16} /> : <EyeOff size={16} />}
+              <span>{showEmptyDays ? 'Ocultar vazios' : 'Mostrar vazios'}</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Render Selected View Engine */}
+      {/* Render Selected Timeline View */}
       {groupBy === 'semana' && renderWeekView()}
       {groupBy === 'mes' && renderMonthView()}
       {groupBy === 'ano' && renderYearView()}

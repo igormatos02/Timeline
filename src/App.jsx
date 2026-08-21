@@ -10,7 +10,7 @@ import './App.css';
 export default function App() {
   // Load timelines from localStorage or mock data
   const [timelines, setTimelines] = useState(() => {
-    const saved = localStorage.getItem('chrono_timelines_data');
+    const saved = localStorage.getItem('chrono_timelines_data_v2');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -35,7 +35,7 @@ export default function App() {
 
   // Save to localStorage when timelines state updates
   useEffect(() => {
-    localStorage.setItem('chrono_timelines_data', JSON.stringify(timelines));
+    localStorage.setItem('chrono_timelines_data_v2', JSON.stringify(timelines));
   }, [timelines]);
 
   const activeTimeline = timelines.find((tl) => tl.id === activeTimelineId) || timelines[0];
@@ -150,6 +150,40 @@ export default function App() {
     );
   };
 
+  // Complete a floating pending task and fix it to today's date on the timeline
+  const handleCompleteFloatingTask = (taskId) => {
+    if (!activeTimeline) return;
+    const updatedEvents = (activeTimeline.events || []).map((ev) => {
+      if (ev.id === taskId) {
+        return {
+          ...ev,
+          isCompleted: true,
+          status: 'Concluído',
+          date: '2026-08-21' // Fix to completion date (today)
+        };
+      }
+      return ev;
+    });
+
+    setTimelines((prev) =>
+      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
+    );
+  };
+
+  // Add a new floating task directly to the top stack
+  const handleAddFloatingTask = (taskData) => {
+    if (!activeTimeline) return;
+    const newFloatingTask = {
+      ...taskData,
+      id: `ev-task-${Date.now()}`
+    };
+
+    const updatedEvents = [newFloatingTask, ...(activeTimeline.events || [])];
+    setTimelines((prev) =>
+      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
+    );
+  };
+
   return (
     <div className="app-container">
       {/* Navbar */}
@@ -172,13 +206,15 @@ export default function App() {
               onDelete={handleDeleteTimeline}
             />
 
-            {/* Vertical Timeline Engine */}
+            {/* Vertical Timeline Engine with Floating Task Stack */}
             <VerticalTimeline
               timeline={activeTimeline}
               onEditEvent={handleOpenEditEvent}
               onDeleteEvent={handleDeleteEvent}
               onToggleTask={handleToggleTask}
               onAddEventForDate={(dateStr) => handleOpenCreateEvent(dateStr)}
+              onCompleteFloatingTask={handleCompleteFloatingTask}
+              onAddFloatingTask={handleAddFloatingTask}
             />
           </>
         ) : (

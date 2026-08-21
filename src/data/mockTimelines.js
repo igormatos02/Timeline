@@ -1,4 +1,19 @@
-// Mock dataset for vertical timelines
+// Mock dataset for vertical timelines with advanced event categories & labels
+
+export const EVENT_CATEGORIES = [
+  { id: 'agendamento', name: 'Agendamento', icon: '📅', color: '#06b6d4' },
+  { id: 'repetitivo', name: 'Repetitivo / Aniversário', icon: '🔁', color: '#ec4899' },
+  { id: 'tarefa', name: 'Pilha de Tarefas (Flutuante)', icon: '📌', color: '#f59e0b' },
+  { id: 'memoria', name: 'Memória / Nota', icon: '📝', color: '#10b981' }
+];
+
+export const DEFAULT_LABELS = [
+  { id: 'trabalho', name: 'Trabalho', color: '#6366f1' },
+  { id: 'pessoal', name: 'Pessoal', color: '#ec4899' },
+  { id: 'aniversario', name: 'Aniversário', color: '#f59e0b' },
+  { id: 'urgente', name: 'Urgente', color: '#ef4444' },
+  { id: 'ideia', name: 'Ideia / Nota', color: '#10b981' }
+];
 
 export const initialTimelines = [
   {
@@ -9,7 +24,7 @@ export const initialTimelines = [
     endDate: "2026-09-15",
     status: "Em Progresso",
     type: "Tecnologia",
-    color: "#6366f1", // Indigo
+    color: "#6366f1",
     events: [
       {
         id: "ev-today",
@@ -18,10 +33,10 @@ export const initialTimelines = [
         title: "Sincronização da Interface Vertical & Protótipo UI",
         description: "Apresentação da nova linha temporal vertical interativa com ordenação decrescente e nós diários em tempo real.",
         status: "Em Progresso",
-        type: "Design & Frontend",
+        category: "agendamento",
         priority: "Alta",
         author: "Igor Matos",
-        tags: ["React", "UI/UX", "Timeline"],
+        labels: ["Trabalho", "Urgente"],
         tasks: [
           { text: "Aprovação do layout visual", completed: true },
           { text: "Testes de responsividade mobile", completed: false },
@@ -29,64 +44,81 @@ export const initialTimelines = [
         ]
       },
       {
-        id: "ev-1",
-        date: "2026-08-20",
-        time: "16:00",
-        title: "Revisão de Arquitetura Mock JSON",
-        description: "Estruturação dos esquemas de dados sem dependência de base de dados inicial para aceleração do protótipo.",
+        id: "ev-repeat-1",
+        date: "2026-08-21",
+        time: "09:00",
+        title: "Aniversário da Empresa (Comemoração Anual)",
+        description: "Data comemorativa recorrente do nascimento da equipa de desenvolvimento.",
         status: "Concluído",
-        type: "Backend",
+        category: "repetitivo",
         priority: "Média",
-        author: "Dev Team",
-        tags: ["JSON", "Schema", "Architecture"]
+        author: "RH Team",
+        labels: ["Aniversário", "Pessoal"]
       },
       {
-        id: "ev-2",
-        date: "2026-08-18",
-        time: "14:15",
-        title: "Validação do Design System & Palette HSL",
-        description: "Definição do tema escuro premium com efeitos de glassmorphism, gradientes e estados de emissão de luz nos nós.",
+        id: "ev-mem-1",
+        date: "2026-08-20",
+        time: "18:00",
+        title: "Memória: Insights sobre Usabilidade de Timelines",
+        description: "Nota de reflexão: A ordenação decrescente com filtro de tarefas flutuantes aumenta imenso a clareza do roadmap diário.",
         status: "Concluído",
-        type: "Design",
+        category: "memoria",
+        priority: "Baixa",
+        author: "Igor Matos",
+        labels: ["Ideia / Nota"]
+      },
+      // Floating Tasks (Pending - float in top stack until completed)
+      {
+        id: "ev-task-pending-1",
+        date: "2026-08-21",
+        time: "",
+        title: "Configurar integrações de webhooks para notificações",
+        description: "Tarefa flutuante: permanece na pilha no topo da timeline até ser concluída.",
+        status: "Em Progresso",
+        category: "tarefa",
+        priority: "Alta",
+        author: "DevOps",
+        labels: ["Trabalho", "Urgente"],
+        isCompleted: false
+      },
+      {
+        id: "ev-task-pending-2",
+        date: "2026-08-21",
+        time: "",
+        title: "Revisar documentação de código da API",
+        description: "Tarefa pendente em pilha flutuante.",
+        status: "Em Progresso",
+        category: "tarefa",
+        priority: "Média",
+        author: "Igor Matos",
+        labels: ["Trabalho"],
+        isCompleted: false
+      },
+      // Fixed Completed Task (was completed on 18 Aug)
+      {
+        id: "ev-task-completed-1",
+        date: "2026-08-18",
+        time: "15:00",
+        title: "Aprovação dos Esquemas de Cores Glassmorphism",
+        description: "Esta tarefa estava na pilha flutuante e foi fixada no dia 18 de Agosto quando foi concluída.",
+        status: "Concluído",
+        category: "tarefa",
         priority: "Alta",
         author: "UI Team",
-        tags: ["Design System", "CSS Glass"]
+        labels: ["Trabalho"],
+        isCompleted: true
       },
       {
-        id: "ev-3",
+        id: "ev-1",
         date: "2026-08-15",
         time: "11:00",
         title: "Reunião de Alinhamento Estratégico Q3",
         description: "Aprovação do orçamento e roadmap para a versão 1.0 sem persistência remota.",
         status: "Concluído",
-        type: "Gestão",
+        category: "agendamento",
         priority: "Urgente",
         author: "Stakeholders",
-        tags: ["Roadmap", "Q3"]
-      },
-      {
-        id: "ev-4",
-        date: "2026-08-10",
-        time: "09:00",
-        title: "Benchmarking de Interfaces Temporais",
-        description: "Estudo detalhado das melhores referências visuais de timelines verticais do mercado.",
-        status: "Concluído",
-        type: "Pesquisa",
-        priority: "Baixa",
-        author: "Igor Matos",
-        tags: ["Research", "Benchmark"]
-      },
-      {
-        id: "ev-5",
-        date: "2026-08-01",
-        time: "08:30",
-        title: "Kickoff Oficial do Projeto Timeline",
-        description: "Início formal do projeto com marcação da data de início oficial no calendário.",
-        status: "Concluído",
-        type: "Milestone",
-        priority: "Alta",
-        author: "Liderança",
-        tags: ["Kickoff", "Start"]
+        labels: ["Trabalho"]
       }
     ]
   },
@@ -98,7 +130,7 @@ export const initialTimelines = [
     endDate: "2026-08-15",
     status: "Concluído",
     type: "Design",
-    color: "#ec4899", // Pink
+    color: "#ec4899",
     events: [
       {
         id: "ev-201",
@@ -107,46 +139,10 @@ export const initialTimelines = [
         title: "Entrega do Brandbook Final",
         description: "Publicação do manual da marca em formato PDF e design system no Figma.",
         status: "Concluído",
-        type: "Entregável",
+        category: "agendamento",
         priority: "Alta",
         author: "Design Core",
-        tags: ["Figma", "Brandbook"]
-      },
-      {
-        id: "ev-202",
-        date: "2026-07-25",
-        time: "15:30",
-        title: "Seleção da Paleta de Cores e Tipografia",
-        description: "Aprovação da fonte Outfit / Inter e esquemas de contraste acessíveis W3C.",
-        status: "Concluído",
-        type: "Design",
-        priority: "Média",
-        author: "Design Core",
-        tags: ["Typography", "Colors"]
-      }
-    ]
-  },
-  {
-    id: "tl-3",
-    name: "Expansão de Infias & Infraestrutura",
-    description: "Planeamento e implementação de servidores dedicados de alta disponibilidade para 2027.",
-    startDate: "2026-09-01",
-    endDate: "2026-11-30",
-    status: "Planeado",
-    type: "Infraestrutura",
-    color: "#10b981", // Emerald
-    events: [
-      {
-        id: "ev-301",
-        date: "2026-09-01",
-        time: "09:00",
-        title: "Início dos Testes de Carga",
-        description: "Simulação de 100k requisições simultâneas nos ambientes de validação.",
-        status: "Planeado",
-        type: "DevOps",
-        priority: "Alta",
-        author: "DevOps Team",
-        tags: ["DevOps", "LoadTest"]
+        labels: ["Trabalho"]
       }
     ]
   }

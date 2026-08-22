@@ -165,53 +165,169 @@ function createHomeLoanEvents() {
   return events;
 }
 
-// Helper to generate Income Timeline events (strictly 1 monthly salary of 3.300€ on day 27)
-function createIncomeEvents() {
+// Helper to generate Financial Timeline events (Entradas, Gastos e Investimentos)
+function createFinancialEvents() {
   const events = [];
   const salaryAmount = 3300.00;
   const todayStr = '2026-08-21';
 
-  // Salário Recorrente Mensal: exactamente 1 por mês a cada dia 27 até no máximo 1 ano à frente (2024-01-27 até 2027-08-27)
+  // Gerar movimentos mensais de 2024 a Agosto de 2027
   for (let year = 2024; year <= 2027; year++) {
-    const maxMonth = year === 2027 ? 8 : 12; // Máximo 1 ano à frente (Agosto 2027)
+    const maxMonth = year === 2027 ? 8 : 12;
     for (let month = 1; month <= maxMonth; month++) {
       const monthStr = month.toString().padStart(2, '0');
-      const dateStr = `${year}-${monthStr}-27`;
-      const isPast = dateStr <= todayStr;
-      const status = isPast ? 'Recebido' : 'Pendente';
-
+      
+      // 1. ENTRADA: Salário Mensal (Dia 27)
+      const salaryDateStr = `${year}-${monthStr}-27`;
+      const isSalaryPast = salaryDateStr <= todayStr;
       events.push({
-        id: `income-salary-${year}-${monthStr}`,
+        id: `fin-salary-${year}-${monthStr}`,
         timelineOriginId: 'tl-income',
-        timelineOriginName: 'Entradas & Rendimentos',
-        timelineOriginIcon: '💵',
-        date: dateStr,
+        timelineOriginName: 'Financeiro',
+        timelineOriginIcon: '💰',
+        date: salaryDateStr,
         time: '10:00',
         title: 'Salário Mensal',
-        description: `Transferência bancária de vencimento mensal líquido (${formatCurrency(salaryAmount)}).`,
+        description: '',
         category: 'entrada_recorrente',
-        status: status,
+        financialType: 'entrada',
+        status: isSalaryPast ? 'Recebido' : 'Pendente',
         priority: 'Normal',
         amount: salaryAmount,
         isIncome: true,
-        isCompleted: isPast,
-        labels: ['Salário', isPast ? 'Recebido' : 'Pendente']
+        isExpense: false,
+        isCompleted: isSalaryPast,
+        labels: ['Salário', isSalaryPast ? 'Recebido' : 'Pendente']
+      });
+
+      // 2. GASTO: Despesas Fixas / Habitação & Condomínio (Dia 05)
+      const rentDateStr = `${year}-${monthStr}-05`;
+      const isRentPast = rentDateStr <= todayStr;
+      events.push({
+        id: `fin-rent-${year}-${monthStr}`,
+        timelineOriginId: 'tl-income',
+        timelineOriginName: 'Financeiro',
+        timelineOriginIcon: '💰',
+        date: rentDateStr,
+        time: '09:00',
+        title: 'Habitação & Despesas Fixas',
+        description: '',
+        category: 'saida_recorrente',
+        financialType: 'gasto',
+        status: isRentPast ? 'Pago' : 'Pendente',
+        priority: 'Alta',
+        amount: 650.00,
+        isIncome: false,
+        isExpense: true,
+        isCompleted: isRentPast,
+        labels: ['Despesas Fixas', isRentPast ? 'Pago' : 'Pendente']
+      });
+
+      // 3. GASTO: Serviços, Telecom & Utilities (Dia 12)
+      const utilDateStr = `${year}-${monthStr}-12`;
+      const isUtilPast = utilDateStr <= todayStr;
+      events.push({
+        id: `fin-util-${year}-${monthStr}`,
+        timelineOriginId: 'tl-income',
+        timelineOriginName: 'Financeiro',
+        timelineOriginIcon: '💰',
+        date: utilDateStr,
+        time: '11:00',
+        title: 'Serviços & Telecomunicações',
+        description: '',
+        category: 'saida_recorrente',
+        financialType: 'gasto',
+        status: isUtilPast ? 'Pago' : 'Pendente',
+        priority: 'Normal',
+        amount: 145.00,
+        isIncome: false,
+        isExpense: true,
+        isCompleted: isUtilPast,
+        labels: ['Serviços', isUtilPast ? 'Pago' : 'Pendente']
+      });
+
+      // 4. GASTO: Alimentação & Supermercado (Dia 18)
+      const superDateStr = `${year}-${monthStr}-18`;
+      const isSuperPast = superDateStr <= todayStr;
+      events.push({
+        id: `fin-super-${year}-${monthStr}`,
+        timelineOriginId: 'tl-income',
+        timelineOriginName: 'Financeiro',
+        timelineOriginIcon: '💰',
+        date: superDateStr,
+        time: '17:00',
+        title: 'Alimentação & Supermercado',
+        description: '',
+        category: 'saida_recorrente',
+        financialType: 'gasto',
+        status: isSuperPast ? 'Pago' : 'Pendente',
+        priority: 'Normal',
+        amount: 380.00,
+        isIncome: false,
+        isExpense: true,
+        isCompleted: isSuperPast,
+        labels: ['Alimentação', isSuperPast ? 'Pago' : 'Pendente']
+      });
+
+      // 5. INVESTIMENTO: Aporte Poupança / Reserva (Dia 28)
+      const savDateStr = `${year}-${monthStr}-28`;
+      const isSavPast = savDateStr <= todayStr;
+      events.push({
+        id: `fin-sav-${year}-${monthStr}`,
+        timelineOriginId: 'tl-income',
+        timelineOriginName: 'Financeiro',
+        timelineOriginIcon: '💰',
+        date: savDateStr,
+        time: '12:00',
+        title: 'Reforço Reserva de Emergência',
+        description: '',
+        category: 'investimento_poupanca',
+        financialType: 'investimento',
+        status: isSavPast ? 'Investido' : 'Planeado',
+        priority: 'Normal',
+        amount: 350.00,
+        isIncome: false,
+        isInvestment: true,
+        isCompleted: isSavPast,
+        labels: ['Poupança', isSavPast ? 'Investido' : 'Planeado']
+      });
+
+      // 6. INVESTIMENTO: Aporte Fundos / ETF Global (Dia 28)
+      events.push({
+        id: `fin-etf-${year}-${monthStr}`,
+        timelineOriginId: 'tl-income',
+        timelineOriginName: 'Financeiro',
+        timelineOriginIcon: '💰',
+        date: savDateStr,
+        time: '12:30',
+        title: 'Aporte ETF Mundial (VWCE/IWDA)',
+        description: '',
+        category: 'investimento_etf',
+        financialType: 'investimento',
+        status: isSavPast ? 'Investido' : 'Planeado',
+        priority: 'Normal',
+        amount: 250.00,
+        isIncome: false,
+        isInvestment: true,
+        isCompleted: isSavPast,
+        labels: ['Investimentos', isSavPast ? 'Investido' : 'Planeado']
       });
     }
   }
 
-  // Entradas Esporádicas Pontuais dentro do horizonte
+  // Entradas Esporádicas Pontuais
   events.push(
     {
       id: 'income-bonus-2025-12',
       timelineOriginId: 'tl-income',
-      timelineOriginName: 'Entradas & Rendimentos',
-      timelineOriginIcon: '💵',
+      timelineOriginName: 'Financeiro',
+      timelineOriginIcon: '💰',
       date: '2025-12-15',
       time: '14:00',
       title: 'Bónus Anual de Desempenho',
       description: 'Prémio extraordinário de produtividade.',
       category: 'entrada_esporadica',
+      financialType: 'entrada',
       status: 'Recebido',
       priority: 'Normal',
       amount: 2500.00,
@@ -222,13 +338,14 @@ function createIncomeEvents() {
     {
       id: 'income-bonus-2026-06',
       timelineOriginId: 'tl-income',
-      timelineOriginName: 'Entradas & Rendimentos',
-      timelineOriginIcon: '💵',
+      timelineOriginName: 'Financeiro',
+      timelineOriginIcon: '💰',
       date: '2026-06-20',
       time: '14:00',
       title: 'Subsídio / Bónus Extraordinário',
       description: 'Gratificação semestral atribuída pela empresa.',
       category: 'entrada_esporadica',
+      financialType: 'entrada',
       status: 'Recebido',
       priority: 'Normal',
       amount: 1650.00,
@@ -239,13 +356,14 @@ function createIncomeEvents() {
     {
       id: 'income-bonus-2026-12',
       timelineOriginId: 'tl-income',
-      timelineOriginName: 'Entradas & Rendimentos',
-      timelineOriginIcon: '💵',
+      timelineOriginName: 'Financeiro',
+      timelineOriginIcon: '💰',
       date: '2026-12-15',
       time: '14:00',
       title: 'Bónus Previsto Fim de Ano',
       description: 'Estimativa de bónus de fecho de exercício fiscal.',
       category: 'entrada_esporadica',
+      financialType: 'entrada',
       status: 'Pendente',
       priority: 'Normal',
       amount: 2000.00,
@@ -273,20 +391,34 @@ export const initialTimelines = [
     events: []
   },
 
-  // 2. TIMELINE DE ENTRADAS & RENDIMENTOS (SALÁRIO 3.300€ A CADA DIA 27)
+  // 2. TIMELINE FINANCEIRO (ENTRADAS, GASTOS, INVESTIMENTOS, EMPRÉSTIMO CARRO E BALANÇO)
   {
     id: "tl-income",
-    name: "Entradas & Rendimentos",
+    name: "Financeiro",
     description: "",
     startDate: "2024-01-01",
     endDate: "2027-08-31",
     status: "Em Progresso",
-    type: "Entradas",
+    type: "Financeiro",
     color: "#10b981",
     periodicity: "mensal",
     monthlySalary: 3300.00,
     dueDay: 27,
-    events: createIncomeEvents()
+    carLoanContract: {
+      id: "tl-loan-80004197726",
+      name: "Crédito Automóvel Nº 80004197726",
+      description: "Com reserva de propriedade (TAN 11.183000%). Débito Direto IBAN: PT50002300004549878663394.",
+      startDate: "2024-05-15",
+      endDate: "2034-04-15",
+      status: "Em Progresso",
+      type: "Empréstimo",
+      color: "#6366f1",
+      totalDebt: 15456.60,
+      installmentAmount: 218.47,
+      periodicity: "mensal",
+      dueDay: 15
+    },
+    events: [...createFinancialEvents(), ...createRealCarLoanEvents()]
   },
 
   // 3. CRÉDITO HABITAÇÃO (CASA - 60.000€ / 34 ANOS / 2% TAN DESDE 2018)
@@ -304,22 +436,5 @@ export const initialTimelines = [
     periodicity: "mensal",
     dueDay: 10,
     events: createHomeLoanEvents()
-  },
-
-  // 4. CRÉDITO AUTOMÓVEL Nº 80004197726 (EXTRATO REAL)
-  {
-    id: "tl-loan-80004197726",
-    name: "Crédito Automóvel Nº 80004197726",
-    description: "Com reserva de propriedade (TAN 11.183000%). Débito Direto IBAN: PT50002300004549878663394.",
-    startDate: "2024-05-15",
-    endDate: "2034-04-15",
-    status: "Em Progresso",
-    type: "Empréstimo",
-    color: "#6366f1",
-    totalDebt: 15456.60,
-    installmentAmount: 218.47,
-    periodicity: "mensal",
-    dueDay: 15,
-    events: createRealCarLoanEvents()
   }
 ];

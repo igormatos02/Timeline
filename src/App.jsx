@@ -16,9 +16,9 @@ import {
 import './App.css';
 
 export default function App() {
-  // Load timelines from localStorage or mock data (v11 without redundant description on Entradas)
+  // Load timelines from localStorage or mock data (v14 with Financeiro sub-timelines & Car Loan integration)
   const [timelines, setTimelines] = useState(() => {
-    const saved = localStorage.getItem('chrono_timelines_data_v11');
+    const saved = localStorage.getItem('chrono_timelines_data_v14');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -33,6 +33,9 @@ export default function App() {
     return 'tl-principal';
   });
 
+  // Financial Sub-Tabs State ('balanco' | 'entradas' | 'gastos' | 'investimentos' | 'emprestimos')
+  const [activeFinancialTab, setActiveFinancialTab] = useState('balanco');
+
   // Modal states
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
   const [editingTimeline, setEditingTimeline] = useState(null);
@@ -40,6 +43,7 @@ export default function App() {
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState('2026-08-21');
+  const [eventModalDefaultNature, setEventModalDefaultNature] = useState('income'); // 'income' | 'expense' | 'investment'
 
   // Loan Specific Modals
   const [isAmortizationModalOpen, setIsAmortizationModalOpen] = useState(false);
@@ -62,7 +66,7 @@ export default function App() {
 
   // Save to localStorage when timelines state updates
   useEffect(() => {
-    localStorage.setItem('chrono_timelines_data_v11', JSON.stringify(timelines));
+    localStorage.setItem('chrono_timelines_data_v14', JSON.stringify(timelines));
   }, [timelines]);
 
   const rawActiveTimeline = timelines.find((tl) => tl.id === activeTimelineId) || timelines[0];
@@ -149,14 +153,17 @@ export default function App() {
   // ----------------------------------------------------
   // Event Handlers
   // ----------------------------------------------------
-  const handleOpenCreateEvent = (dateStr = '2026-08-21') => {
+  const handleOpenCreateEvent = (dateStr = '2026-08-21', nature = 'income') => {
     setEditingEvent(null);
     setSelectedDateForNewEvent(dateStr);
+    setEventModalDefaultNature(nature);
     setIsEventModalOpen(true);
   };
 
   const handleOpenEditEvent = (eventObj) => {
     setEditingEvent(eventObj);
+    const nature = eventObj?.isExpense ? 'expense' : eventObj?.isInvestment ? 'investment' : 'income';
+    setEventModalDefaultNature(nature);
     setIsEventModalOpen(true);
   };
 
@@ -377,8 +384,22 @@ export default function App() {
   const handleSaveAmortization = ({ amount, date, strategy, notes }) => {
     if (!activeTimeline) return;
 
+    let targetTimeline = activeTimeline;
+    if (activeTimeline.type === 'Financeiro') {
+      targetTimeline = {
+        ...(activeTimeline.carLoanContract || {
+          id: "tl-loan-80004197726",
+          name: "Crédito Automóvel Nº 80004197726",
+          totalDebt: 15456.60,
+          installmentAmount: 218.47,
+          periodicity: "mensal"
+        }),
+        events: activeTimeline.events
+      };
+    }
+
     const finalEvents = applyExtraordinaryAmortization({
-      timeline: activeTimeline,
+      timeline: targetTimeline,
       eventsList: activeTimeline.events || [],
       amortizationAmount: amount,
       amortizationDateStr: date,
@@ -432,10 +453,12 @@ export default function App() {
         {activeTimeline ? (
           <VerticalTimeline
             timeline={activeTimeline}
+            activeFinancialTab={activeFinancialTab}
+            onSelectFinancialTab={setActiveFinancialTab}
             onEditEvent={handleOpenEditEvent}
             onDeleteEvent={handleDeleteEvent}
             onToggleTask={handleToggleTask}
-            onAddEventForDate={(dateStr) => handleOpenCreateEvent(dateStr)}
+            onAddEventForDate={(dateStr, nature) => handleOpenCreateEvent(dateStr, nature || (activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income'))}
             onCompleteFloatingTask={handleCompleteFloatingTask}
             onAddFloatingTask={handleAddFloatingTask}
             onUpdateFloatingTaskPriority={handleUpdateFloatingTaskPriority}
@@ -448,8 +471,11 @@ export default function App() {
               <TimelineHeader
                 timeline={activeTimeline}
                 allTimelines={timelines}
+                activeFinancialTab={activeFinancialTab}
+                onSelectFinancialTab={setActiveFinancialTab}
                 onEdit={handleOpenEditTimeline}
                 onDelete={handleDeleteTimeline}
+                onOpenCreateTimeline={handleOpenCreateTimeline}
                 onOpenAmortizationModal={() => setIsAmortizationModalOpen(true)}
                 onScrollToOverdue={handleScrollToOverdue}
               />
@@ -487,6 +513,8 @@ export default function App() {
         initialData={editingEvent}
         defaultDate={selectedDateForNewEvent}
         timeline={activeTimeline}
+        allTimelines={timelines}
+        defaultNature={eventModalDefaultNature}
       />
 
       {/* Loan Modals */}

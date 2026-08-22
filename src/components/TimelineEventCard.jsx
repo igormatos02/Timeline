@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Clock,
   CheckSquare,
@@ -22,7 +22,15 @@ import {
   ArrowUpRight,
   ExternalLink,
   Sparkles,
-  Gift
+  Gift,
+  MinusCircle,
+  Plus,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Home,
+  Car,
+  Layers
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatCurrency } from '../utils/loanCalculations';
@@ -33,18 +41,29 @@ export default function TimelineEventCard({
   onEdit,
   onDelete,
   onToggleTask,
+  onAddChecklistItem,
+  onDeleteChecklistItem,
   onToggleLoanPayment,
   onOpenEditInstallment,
   onNavigateToTimeline
 }) {
+  const [isNotesExpanded, setIsNotesExpanded] = useState(false);
+  const [newItemText, setNewItemText] = useState('');
   const todayStr = '2026-08-21';
   const isLoanInstallment = event.category === 'parcela_emprestimo';
   const isAmortization = event.category === 'amortizacao';
-  const isIncomeEvent = event.isIncome || event.category === 'entrada_recorrente' || event.category === 'entrada_esporadica';
-  const isReceivedIncome = isIncomeEvent && event.status === 'Recebido';
+  const isIncomeEvent = (event.isIncome || event.financialType === 'entrada' || event.category === 'entrada_recorrente' || event.category === 'entrada_esporadica') && !event.isExpense && !event.isInvestment;
+  const isExpenseEvent = event.isExpense || event.financialType === 'gasto' || (event.category && event.category.startsWith('saida')) || event.category === 'gasto';
+  const isInvestmentEvent = event.isInvestment || event.financialType === 'investimento' || (event.category && event.category.startsWith('investimento'));
+
+  const isReceivedIncome = isIncomeEvent && (event.status === 'Recebido' || event.isCompleted);
   const isOverdueIncome = isIncomeEvent && event.date < todayStr && !isReceivedIncome;
   const isNextIncome = isIncomeEvent && event.date >= todayStr && event.date <= '2026-08-31' && !isReceivedIncome;
   const isFarFutureIncome = isIncomeEvent && event.date > '2026-08-31' && !isReceivedIncome;
+
+  const isPaidExpense = isExpenseEvent && (event.status === 'Pago' || event.isCompleted);
+  const isCompletedInvestment = isInvestmentEvent && (event.status === 'Investido' || event.status === 'Pago' || event.isCompleted);
+
   const isMemoryCard = event.category === 'memoria';
 
   // Category Info & Styles
@@ -65,6 +84,41 @@ export default function TimelineEventCard({
           bg: 'rgba(6, 182, 212, 0.15)',
           color: '#06b6d4',
           border: 'rgba(6, 182, 212, 0.3)'
+        };
+      case 'saida_recorrente':
+        return {
+          label: 'Gasto Recorrente / Fixo',
+          icon: <CreditCard size={12} />,
+          bg: 'rgba(244, 63, 94, 0.15)',
+          color: '#f43f5e',
+          border: 'rgba(244, 63, 94, 0.3)'
+        };
+      case 'saida_esporadica':
+      case 'gasto':
+        return {
+          label: 'Gasto / Saída',
+          icon: <Tag size={12} />,
+          bg: 'rgba(244, 63, 94, 0.15)',
+          color: '#f43f5e',
+          border: 'rgba(244, 63, 94, 0.3)'
+        };
+      case 'investimento_poupanca':
+        return {
+          label: 'Poupança / Reserva',
+          icon: <TrendingUp size={12} />,
+          bg: 'rgba(99, 102, 241, 0.15)',
+          color: 'var(--primary-light)',
+          border: 'rgba(99, 102, 241, 0.3)'
+        };
+      case 'investimento_etf':
+      case 'investimento_acoes':
+      case 'investimento_extra':
+        return {
+          label: 'Investimento / Aporte',
+          icon: <Sparkles size={12} />,
+          bg: 'rgba(99, 102, 241, 0.15)',
+          color: '#818cf8',
+          border: 'rgba(99, 102, 241, 0.3)'
         };
       case 'parcela_emprestimo':
         return {
@@ -213,34 +267,42 @@ export default function TimelineEventCard({
   let cardStyle = {};
   if (isIncomeEvent) {
     if (isOverdueIncome) {
-      // 🔴 Entrada em Atraso (Data anterior a hoje e ainda não recebida)
       cardStyle = {
-        background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.09) 0%, var(--bg-card) 100%)',
+        background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, var(--bg-card) 100%)',
         borderLeft: '4px solid #ef4444',
-        borderColor: 'rgba(239, 68, 68, 0.35)'
+        borderColor: 'rgba(239, 68, 68, 0.3)'
       };
     } else if (isReceivedIncome) {
-      // 🟢 Entradas Já Recebidas / Confirmadas (Verde)
       cardStyle = {
-        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.07) 0%, var(--bg-card) 100%)',
+        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-card) 100%)',
         borderLeft: '4px solid #10b981',
-        borderColor: 'rgba(16, 185, 129, 0.25)'
+        borderColor: 'rgba(16, 185, 129, 0.28)'
       };
     } else if (isNextIncome) {
-      // 🔵 Próxima Entrada Imediata (Azul)
       cardStyle = {
         background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.09) 0%, var(--bg-card) 100%)',
         borderLeft: '4px solid #3b82f6',
         borderColor: 'rgba(59, 130, 246, 0.3)'
       };
     } else {
-      // ⚪ Entradas Futuras Posteriores (Cinza / Previstas)
       cardStyle = {
         background: 'rgba(255, 255, 255, 0.02)',
         borderLeft: '4px solid #64748b',
         borderColor: 'var(--border-glass)'
       };
     }
+  } else if (isExpenseEvent) {
+    cardStyle = {
+      background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.06) 0%, var(--bg-card) 100%)',
+      borderLeft: '4px solid #f43f5e',
+      borderColor: 'rgba(244, 63, 94, 0.25)'
+    };
+  } else if (isInvestmentEvent) {
+    cardStyle = {
+      background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, var(--bg-card) 100%)',
+      borderLeft: '4px solid #6366f1',
+      borderColor: 'rgba(99, 102, 241, 0.25)'
+    };
   } else if (isLoanInstallment) {
     if (event.status === 'Atrasada') {
       cardStyle = {
@@ -333,7 +395,13 @@ export default function TimelineEventCard({
               }}
               title={`Navegar para a timeline dedicada de ${event.timelineOriginName}`}
             >
-              <span>{event.timelineOriginIcon || '📌'}</span>
+              {event.timelineOriginId === 'tl-loan-house' ? (
+                <Home size={12} />
+              ) : event.timelineOriginId === 'tl-loan-80004197726' ? (
+                <Car size={12} />
+              ) : (
+                <DollarSign size={12} />
+              )}
               <span>{event.timelineOriginName}</span>
               {onNavigateToTimeline && <ArrowUpRight size={11} />}
             </button>
@@ -409,84 +477,206 @@ export default function TimelineEventCard({
           </div>
 
           {/* Interactive Status Toggle Pill for Income */}
-          {isIncomeEvent && (
-            <button
-              type="button"
-              disabled={event.date > todayStr}
-              onClick={() => {
-                if (event.date <= todayStr && onToggleLoanPayment) {
-                  onToggleLoanPayment(event.id);
-                }
-              }}
-              className="btn btn-sm"
-              style={{
-                background: isReceivedIncome
-                  ? 'rgba(16, 185, 129, 0.16)'
-                  : isOverdueIncome
-                    ? 'rgba(239, 68, 68, 0.16)'
-                    : isNextIncome
-                      ? 'rgba(59, 130, 246, 0.12)'
-                      : 'rgba(148, 163, 184, 0.1)',
-                color: isReceivedIncome
-                  ? '#10b981'
-                  : isOverdueIncome
-                    ? '#f87171'
-                    : isNextIncome
-                      ? '#60a5fa'
-                      : '#94a3b8',
-                border: `1px solid ${isReceivedIncome
-                    ? 'rgba(16, 185, 129, 0.35)'
-                    : isOverdueIncome
-                      ? 'rgba(239, 68, 68, 0.4)'
-                      : isNextIncome
-                        ? 'rgba(59, 130, 246, 0.3)'
-                        : 'rgba(148, 163, 184, 0.2)'
-                  }`,
-                borderRadius: '9999px',
-                padding: '5px 14px',
-                fontSize: '0.78rem',
-                fontWeight: '700',
-                cursor: event.date > todayStr ? 'default' : 'pointer',
-                opacity: event.date > todayStr ? 0.75 : 1,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s',
-                boxShadow: isOverdueIncome
-                  ? '0 2px 10px rgba(239, 68, 68, 0.25)'
-                  : isReceivedIncome
-                    ? '0 2px 8px rgba(16, 185, 129, 0.2)'
-                    : 'none',
-                animation: isOverdueIncome ? 'pulseGlow 2s infinite' : 'none'
-              }}
-              title={
-                event.date > todayStr
-                  ? 'Entrada futura (só pode ser recebida na data prevista)'
-                  : isReceivedIncome
-                    ? 'Clique para marcar como A Receber'
-                    : isOverdueIncome
-                      ? 'Entrada em atraso! Clique para confirmar recebimento'
-                      : 'Clique para marcar como Recebido'
+          <button
+            type="button"
+            disabled={event.date > todayStr}
+            onClick={() => {
+              if (event.date <= todayStr && onToggleLoanPayment) {
+                onToggleLoanPayment(event.id);
               }
-            >
-              {isReceivedIncome ? (
-                <>
-                  <CheckCircle2 size={14} style={{ color: '#10b981' }} />
-                  <span>Recebido</span>
-                </>
-              ) : isOverdueIncome ? (
-                <>
-                  <AlertCircle size={14} style={{ color: '#f87171' }} />
-                  <span>Em Atraso</span>
-                </>
-              ) : (
-                <>
-                  <Clock size={14} style={{ color: isNextIncome ? '#60a5fa' : '#94a3b8' }} />
-                  <span>A Receber</span>
-                </>
-              )}
-            </button>
-          )}
+            }}
+            className="btn btn-sm"
+            style={{
+              background: isReceivedIncome
+                ? 'rgba(16, 185, 129, 0.16)'
+                : isOverdueIncome
+                  ? 'rgba(239, 68, 68, 0.16)'
+                  : isNextIncome
+                    ? 'rgba(59, 130, 246, 0.12)'
+                    : 'rgba(148, 163, 184, 0.1)',
+              color: isReceivedIncome
+                ? '#10b981'
+                : isOverdueIncome
+                  ? '#f87171'
+                  : isNextIncome
+                    ? '#60a5fa'
+                    : '#94a3b8',
+              border: `1px solid ${isReceivedIncome
+                  ? 'rgba(16, 185, 129, 0.35)'
+                  : isOverdueIncome
+                    ? 'rgba(239, 68, 68, 0.4)'
+                    : isNextIncome
+                      ? 'rgba(59, 130, 246, 0.3)'
+                      : 'rgba(148, 163, 184, 0.2)'
+                }`,
+              borderRadius: '9999px',
+              padding: '5px 14px',
+              fontSize: '0.78rem',
+              fontWeight: '700',
+              cursor: event.date > todayStr ? 'default' : 'pointer',
+              opacity: event.date > todayStr ? 0.75 : 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s',
+              boxShadow: isOverdueIncome
+                ? '0 2px 10px rgba(239, 68, 68, 0.25)'
+                : isReceivedIncome
+                  ? '0 2px 8px rgba(16, 185, 129, 0.2)'
+                  : 'none'
+            }}
+          >
+            {isReceivedIncome ? (
+              <>
+                <CheckCircle2 size={14} style={{ color: '#10b981' }} />
+                <span>Recebido</span>
+              </>
+            ) : isOverdueIncome ? (
+              <>
+                <AlertCircle size={14} style={{ color: '#f87171' }} />
+                <span>Em Atraso</span>
+              </>
+            ) : (
+              <>
+                <Clock size={14} style={{ color: isNextIncome ? '#60a5fa' : '#94a3b8' }} />
+                <span>A Receber</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* 🛒 Expense (Gasto/Saída) Financial Highlight Strip */}
+      {isExpenseEvent && (
+        <div
+          className="loan-breakdown-strip"
+          style={{
+            background: 'rgba(244, 63, 94, 0.08)',
+            border: '1px solid rgba(244, 63, 94, 0.22)',
+            borderRadius: '10px',
+            padding: '8px 12px',
+            margin: '10px 0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                Valor Pago / Débito
+              </span>
+              <span
+                style={{
+                  fontSize: '1.05rem',
+                  fontWeight: '800',
+                  color: '#f43f5e'
+                }}
+              >
+                -{formatCurrency(event.amount)}
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onToggleLoanPayment && onToggleLoanPayment(event.id)}
+            className="btn btn-sm"
+            style={{
+              background: isPaidExpense ? 'rgba(244, 63, 94, 0.16)' : 'rgba(245, 158, 11, 0.14)',
+              color: isPaidExpense ? '#f43f5e' : '#f59e0b',
+              border: `1px solid ${isPaidExpense ? 'rgba(244, 63, 94, 0.35)' : 'rgba(245, 158, 11, 0.35)'}`,
+              borderRadius: '9999px',
+              padding: '5px 14px',
+              fontSize: '0.78rem',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            {isPaidExpense ? (
+              <>
+                <CheckCircle2 size={14} style={{ color: '#f43f5e' }} />
+                <span>Pago</span>
+              </>
+            ) : (
+              <>
+                <Clock size={14} style={{ color: '#f59e0b' }} />
+                <span>Pendente</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* 📈 Investment (Investimento/Poupança) Financial Highlight Strip */}
+      {isInvestmentEvent && (
+        <div
+          className="loan-breakdown-strip"
+          style={{
+            background: 'rgba(99, 102, 241, 0.08)',
+            border: '1px solid rgba(99, 102, 241, 0.22)',
+            borderRadius: '10px',
+            padding: '8px 12px',
+            margin: '10px 0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                Valor Aportado / Investimento
+              </span>
+              <span
+                style={{
+                  fontSize: '1.05rem',
+                  fontWeight: '800',
+                  color: 'var(--primary-light)'
+                }}
+              >
+                +{formatCurrency(event.amount)}
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onToggleLoanPayment && onToggleLoanPayment(event.id)}
+            className="btn btn-sm"
+            style={{
+              background: isCompletedInvestment ? 'rgba(99, 102, 241, 0.16)' : 'rgba(148, 163, 184, 0.12)',
+              color: isCompletedInvestment ? 'var(--primary-light)' : '#94a3b8',
+              border: `1px solid ${isCompletedInvestment ? 'rgba(99, 102, 241, 0.35)' : 'rgba(148, 163, 184, 0.3)'}`,
+              borderRadius: '9999px',
+              padding: '5px 14px',
+              fontSize: '0.78rem',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            {isCompletedInvestment ? (
+              <>
+                <CheckCircle2 size={14} style={{ color: 'var(--primary-light)' }} />
+                <span>Investido</span>
+              </>
+            ) : (
+              <>
+                <Clock size={14} style={{ color: '#94a3b8' }} />
+                <span>Planeado</span>
+              </>
+            )}
+          </button>
         </div>
       )}
 
@@ -521,7 +711,7 @@ export default function TimelineEventCard({
             {/* Decomposição: Capital Amortizado */}
             <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                🏦 Capital (Dívida)
+                Capital (Dívida)
               </span>
               <span style={{ fontSize: '0.88rem', fontWeight: '800', color: 'var(--text-main)' }}>
                 {formatCurrency(event.principalAmount !== undefined ? event.principalAmount : Math.round((Number(event.amount) || 0) * 0.82))}
@@ -531,7 +721,7 @@ export default function TimelineEventCard({
             {/* Juros Embutidos */}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                📈 Juros
+                Juros
               </span>
               <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#f59e0b' }}>
                 {formatCurrency(event.interestPortion !== undefined ? event.interestPortion : Math.round((Number(event.amount) || 0) * 0.18))}
@@ -542,7 +732,7 @@ export default function TimelineEventCard({
             {event.interestAmount > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.7rem', color: '#f87171', textTransform: 'uppercase', fontWeight: '700' }}>
-                  ⚠️ Mora / Atraso
+                  Mora / Atraso
                 </span>
                 <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#f87171' }}>
                   +{formatCurrency(event.interestAmount)}
@@ -593,35 +783,157 @@ export default function TimelineEventCard({
         </div>
       )}
 
-      {/* Description / Note */}
-      {event.description && (
-        <p className="event-description" style={isMemoryCard ? { fontStyle: 'italic', color: '#e2e8f0' } : {}}>
-          {isMemoryCard && '📝 '}
-          {event.description}
-        </p>
-      )}
+      {/* Expandable Notes Section (Glassmorphism & Clean) */}
+      {(() => {
+        const isBoilerplate = event.description && event.description.toLowerCase().includes('transferência bancária de vencimento');
+        const hasDescription = Boolean(event.description && !isBoilerplate);
 
-      {/* Subtasks Checklist */}
-      {event.tasks && event.tasks.length > 0 && (
-        <div className="event-tasks-box">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            <CheckSquare size={13} />
-            <span>Checklist ({event.tasks.filter((t) => t.completed).length}/{event.tasks.length})</span>
-          </div>
-          {event.tasks.map((task, idx) => (
-            <div
-              key={idx}
-              className={`task-item ${task.completed ? 'completed' : ''}`}
-              onClick={() => onToggleTask && onToggleTask(event.id, idx)}
-            >
-              <div className="task-checkbox">
-                {task.completed && '✓'}
-              </div>
-              <span>{task.text}</span>
+        return (
+          <div style={{ marginTop: '8px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setIsNotesExpanded(!isNotesExpanded)}
+                style={{
+                  background: isNotesExpanded
+                    ? 'rgba(16, 185, 129, 0.12)'
+                    : hasDescription
+                      ? 'rgba(255, 255, 255, 0.04)'
+                      : 'transparent',
+                  border: isNotesExpanded
+                    ? '1px solid rgba(16, 185, 129, 0.35)'
+                    : '1px solid var(--border-glass)',
+                  borderRadius: '8px',
+                  padding: '4px 10px',
+                  fontSize: '0.74rem',
+                  fontWeight: '700',
+                  color: isNotesExpanded
+                    ? '#10b981'
+                    : hasDescription
+                      ? 'var(--primary-light)'
+                      : 'var(--text-muted)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                title="Expandir notas deste movimento"
+              >
+                <FileText size={12} />
+                <span>Notas {hasDescription ? '(1)' : ''}</span>
+                {isNotesExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              </button>
             </div>
-          ))}
-        </div>
-      )}
+
+            {isNotesExpanded && (
+              <div
+                style={{
+                  marginTop: '8px',
+                  padding: '10px 12px',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  border: '1px solid var(--border-glass)',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}
+              >
+                {/* Custom Note Display */}
+                {hasDescription ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      gap: '8px',
+                      fontSize: '0.78rem',
+                      color: 'var(--text-main)',
+                      padding: '6px 10px',
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      borderRadius: '6px',
+                      borderLeft: '3px solid #10b981'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                      <FileText size={13} style={{ flexShrink: 0, marginTop: '2px', color: '#10b981' }} />
+                      <span>{event.description}</span>
+                    </div>
+                    {onEdit && (
+                      <button
+                        type="button"
+                        onClick={() => onEdit({ ...event, description: '' })}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--text-dim)',
+                          cursor: 'pointer',
+                          padding: '2px'
+                        }}
+                        title="Remover nota"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
+                    Nenhuma nota registada neste movimento.
+                  </span>
+                )}
+
+                {/* Inline Quick Note Add/Edit */}
+                {onEdit && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (newItemText.trim()) {
+                        onEdit({ ...event, description: newItemText.trim() });
+                        setNewItemText('');
+                      }
+                    }}
+                    style={{ display: 'flex', gap: '6px', marginTop: '2px' }}
+                  >
+                    <input
+                      type="text"
+                      placeholder={hasDescription ? "Editar nota..." : "Escrever uma nota..."}
+                      value={newItemText}
+                      onChange={(e) => setNewItemText(e.target.value)}
+                      style={{
+                        flex: 1,
+                        background: 'rgba(0, 0, 0, 0.15)',
+                        border: '1px solid var(--border-glass)',
+                        borderRadius: '6px',
+                        padding: '6px 10px',
+                        fontSize: '0.76rem',
+                        color: 'var(--text-main)',
+                        outline: 'none'
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newItemText.trim()}
+                      className="btn btn-primary btn-sm"
+                      style={{
+                        padding: '4px 12px',
+                        fontSize: '0.74rem',
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: '#ffffff',
+                        border: 'none'
+                      }}
+                      title="Guardar nota"
+                    >
+                      Guardar
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Footer Meta & Actions */}
       <div className="event-card-footer">
@@ -706,6 +1018,16 @@ export default function TimelineEventCard({
             </>
           ) : (
             <>
+              {onEdit && (
+                <button
+                  className="action-icon-btn"
+                  onClick={() => setIsNotesExpanded(!isNotesExpanded)}
+                  title="Adicionar / Editar Nota"
+                  style={{ color: isNotesExpanded ? 'var(--primary-light)' : undefined }}
+                >
+                  <FileText size={14} />
+                </button>
+              )}
               <button
                 className="action-icon-btn"
                 onClick={() => onEdit(event)}

@@ -25,19 +25,32 @@ import {
   ShieldAlert,
   Gift,
   BarChart2,
-  LayoutDashboard
+  LayoutDashboard,
+  ShoppingCart,
+  PiggyBank,
+  Scale
 } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
-import { formatCurrency, getLoanMetrics, getIncomeMetrics, getConsolidatedLoanMetrics, getPeriodicityLabel } from '../utils/loanCalculations';
+import {
+  formatCurrency,
+  getLoanMetrics,
+  getIncomeMetrics,
+  getFinancialMetrics,
+  getConsolidatedLoanMetrics,
+  getPeriodicityLabel
+} from '../utils/loanCalculations';
 import IncomeEvolutionChart from './IncomeEvolutionChart';
 
 export default function TimelineHeader({
   timeline,
   allTimelines = [],
   selectedTimelineIds = null,
+  activeFinancialTab = 'entradas',
+  onSelectFinancialTab,
   onEdit,
   onDelete,
+  onOpenCreateTimeline,
   onOpenAmortizationModal,
   onScrollToOverdue
 }) {
@@ -48,10 +61,35 @@ export default function TimelineHeader({
 
   const isPrincipal = timeline.type === 'Principal';
   const isLoanTimeline = timeline.type === 'Empréstimo';
-  const isIncomeTimeline = timeline.type === 'Entradas';
-  
+  const isIncomeTimeline = timeline.type === 'Entradas' || timeline.type === 'Financeiro' || timeline.id === 'tl-income';
+  const isCarLoanActive = isIncomeTimeline && activeFinancialTab === 'emprestimos';
+  const effectiveIsLoan = isLoanTimeline || isCarLoanActive;
+
+  const carLoanContract = timeline.carLoanContract || {
+    id: "tl-loan-80004197726",
+    name: "Crédito Automóvel Nº 80004197726",
+    description: "Com reserva de propriedade (TAN 11.183000%). Débito Direto IBAN: PT50002300004549878663394.",
+    startDate: "2024-05-15",
+    endDate: "2034-04-15",
+    status: "Em Progresso",
+    type: "Empréstimo",
+    color: "#6366f1",
+    totalDebt: 15456.60,
+    installmentAmount: 218.47,
+    periodicity: "mensal",
+    dueDay: 15
+  };
+
+  const carLoanEvents = (timeline.events || []).filter(
+    (e) => e.category === 'parcela_emprestimo' || e.timelineOriginId === 'tl-loan-80004197726' || e.isSystemLoanEvent || e.category === 'amortizacao'
+  );
+
   const loanMetrics = isLoanTimeline ? getLoanMetrics(timeline, timeline.events || []) : null;
+  const carLoanMetrics = isCarLoanActive ? getLoanMetrics(carLoanContract, carLoanEvents) : null;
+  const activeLoanMetrics = isLoanTimeline ? loanMetrics : carLoanMetrics;
+
   const incomeMetrics = isIncomeTimeline ? getIncomeMetrics(timeline, timeline.events || []) : null;
+  const finMetrics = isIncomeTimeline ? getFinancialMetrics(timeline, timeline.events || []) : null;
   const consolidatedMetrics = isPrincipal ? getConsolidatedLoanMetrics(allTimelines, selectedTimelineIds) : null;
 
   const collapsed = isCollapsed;
@@ -93,16 +131,16 @@ export default function TimelineHeader({
   let totalDays = 0;
   let progressPercent = 0;
   try {
-    const start = parseISO(timeline.startDate);
-    const end = parseISO(timeline.endDate);
+    const start = parseISO(timeline.startDate || (isCarLoanActive ? '2024-05-15' : '2024-01-01'));
+    const end = parseISO(timeline.endDate || (isCarLoanActive ? '2034-04-15' : '2027-08-31'));
     const today = new Date('2026-08-21');
     totalDays = Math.max(1, differenceInDays(end, start));
     const elapsedDays = Math.max(0, differenceInDays(today, start));
     
     if (isPrincipal && consolidatedMetrics) {
       progressPercent = consolidatedMetrics.progressPercent;
-    } else if (isLoanTimeline && loanMetrics) {
-      progressPercent = loanMetrics.progressPercent;
+    } else if (effectiveIsLoan && activeLoanMetrics) {
+      progressPercent = activeLoanMetrics.progressPercent;
     } else {
       progressPercent = Math.min(100, Math.max(0, Math.round((elapsedDays / totalDays) * 100)));
     }
@@ -110,209 +148,166 @@ export default function TimelineHeader({
     progressPercent = 50;
   }
 
+  const getSelectedViewInfo = () => {
+    if (isIncomeTimeline) {
+      switch (activeFinancialTab) {
+        case 'balanco':
+          return { title: 'Balanço Global', icon: <Scale size={18} style={{ color: '#0ea5e9' }} /> };
+        case 'entradas':
+          return { title: 'Entradas e Rendimentos', icon: <DollarSign size={18} style={{ color: '#10b981' }} /> };
+        case 'gastos':
+          return { title: 'Gastos e Saídas', icon: <ShoppingCart size={18} style={{ color: '#f43f5e' }} /> };
+        case 'investimentos':
+          return { title: 'Investimentos e Poupança', icon: <PiggyBank size={18} style={{ color: '#6366f1' }} /> };
+        case 'emprestimos':
+          return { title: 'Crédito Automóvel Nº 80004197726', icon: <CreditCard size={18} style={{ color: '#8b5cf6' }} /> };
+        default:
+          return { title: 'Balanço Global', icon: <Scale size={18} style={{ color: '#0ea5e9' }} /> };
+      }
+    }
+    return {
+      title: timeline.name,
+      icon: isPrincipal ? <Layers size={18} style={{ color: '#8b5cf6' }} /> : <CreditCard size={18} style={{ color: '#6366f1' }} />
+    };
+  };
+  const selectedViewInfo = getSelectedViewInfo();
+  const selectedViewTitle = selectedViewInfo.title;
+
   return (
     <div
       className={`timeline-hero glass-panel ${collapsed ? 'hero-collapsed' : ''}`}
       style={{
         '--active-timeline-color': timeline.color || '#10b981',
-        padding: collapsed ? '10px 16px' : (isLoanTimeline || isPrincipal || isIncomeTimeline ? '14px 18px 10px 18px' : '20px'),
-        marginBottom: '8px',
+        padding: collapsed ? '12px 18px' : '16px 20px',
+        marginBottom: '10px',
         transition: 'all 0.2s ease',
-        boxShadow: collapsed ? '0 4px 16px rgba(0, 0, 0, 0.08)' : 'var(--shadow-sm)'
+        boxShadow: 'var(--shadow-sm)'
       }}
     >
-      {/* Collapsed Mode */}
-      {collapsed ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            {!isIncomeTimeline && (
-              <span className={`badge ${statusInfo.cls}`} style={{ padding: '2px 8px', fontSize: '0.72rem' }}>
-                {statusInfo.icon} {timeline.status}
-              </span>
-            )}
-            
-            <h2 style={{ fontSize: '1rem', fontWeight: '800', margin: 0, color: 'var(--text-main)' }}>
-              {timeline.name}
-            </h2>
-
-            {isPrincipal && consolidatedMetrics ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: '800', color: 'var(--primary-light)' }}>
-                  Total em Dívidas: {formatCurrency(consolidatedMetrics.totalRemainingBalance)}
-                </span>
-                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#10b981' }}>
-                  Amortizado: {formatCurrency(consolidatedMetrics.totalPrincipalAmortized)}
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                  ({consolidatedMetrics.activeCreditsCount} Contratos • {progressPercent}%)
-                </span>
-              </div>
-            ) : isIncomeTimeline && incomeMetrics ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: '800', color: '#10b981' }}>
-                  Recorrente: {formatCurrency(incomeMetrics.monthlyRecurring)} / mês
-                </span>
-                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#06b6d4' }}>
-                  Recebido: {formatCurrency(incomeMetrics.totalReceived)}
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                  ({incomeMetrics.receivedCount}/{incomeMetrics.totalEventsCount} entradas)
-                </span>
-              </div>
-            ) : isLoanTimeline && loanMetrics ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderLeft: '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--primary-light)' }}>
-                  Saldo: {formatCurrency(loanMetrics.remainingBalance)}
-                </span>
-                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#10b981' }}>
-                  Pago: {formatCurrency(loanMetrics.totalPaid)}
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                  ({loanMetrics.paidInstallmentsCount}/{loanMetrics.totalInstallmentsCount} parc. • {progressPercent}%)
-                </span>
-              </div>
-            ) : null}
-
-            {isLoanTimeline && loanMetrics && loanMetrics.overdueInstallmentsCount > 0 && (
-              <button
-                type="button"
-                onClick={onScrollToOverdue}
-                className="badge badge-paused"
-                style={{
-                  cursor: 'pointer',
-                  border: '1px solid rgba(239, 68, 68, 0.4)',
-                  padding: '2px 8px',
-                  fontSize: '0.72rem'
-                }}
-                title="Ir para parcela em atraso"
-              >
-                <AlertCircle size={11} /> {loanMetrics.overdueInstallmentsCount} em Atraso ▾
-              </button>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {/* View Mode Toggle: Summary vs Chart */}
-            <div
+      {/* 🏷️ Linha Superior: Nome da Timeline (Financeiro) e Badges */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          paddingBottom: collapsed ? '0' : '12px',
+          borderBottom: collapsed ? 'none' : '1px solid var(--border-glass)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Botão de Chevron estilo Google para Expandir/Recolher */}
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(!collapsed)}
+            aria-label={collapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
+            title={collapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
+            style={{
+              width: '30px',
+              height: '30px',
+              borderRadius: '50%',
+              border: '1px solid var(--border-glass)',
+              background: 'rgba(99, 102, 241, 0.08)',
+              color: 'var(--primary-light)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              padding: 0,
+              flexShrink: 0
+            }}
+          >
+            <ChevronDown
+              size={18}
+              strokeWidth={2.4}
               style={{
-                display: 'inline-flex',
-                background: 'var(--bg-app)',
-                border: '1px solid var(--border-glass)',
-                borderRadius: '8px',
-                padding: '2px',
-                gap: '2px'
+                transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode('summary');
-                  setIsCollapsed(false);
-                }}
-                className={`btn btn-sm ${viewMode === 'summary' ? 'btn-primary' : 'btn-ghost'}`}
+            />
+          </button>
+
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h1
                 style={{
-                  padding: '3px 8px',
-                  fontSize: '0.72rem',
-                  borderRadius: '5px',
-                  background: viewMode === 'summary' ? 'var(--primary)' : 'transparent',
-                  color: viewMode === 'summary' ? '#fff' : 'var(--text-muted)'
+                  fontSize: '1.35rem',
+                  fontWeight: '800',
+                  color: 'var(--text-main)',
+                  margin: 0,
+                  letterSpacing: '-0.02em',
+                  cursor: 'pointer'
                 }}
-                title="Ver Resumo"
+                onClick={() => setIsCollapsed(!collapsed)}
               >
-                <LayoutDashboard size={12} />
-                <span>Resumo</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode('chart');
-                  setIsCollapsed(false);
-                }}
-                className={`btn btn-sm ${viewMode === 'chart' ? 'btn-primary' : 'btn-ghost'}`}
-                style={{
-                  padding: '3px 8px',
-                  fontSize: '0.72rem',
-                  borderRadius: '5px',
-                  background: viewMode === 'chart' ? 'var(--primary)' : 'transparent',
-                  color: viewMode === 'chart' ? '#fff' : 'var(--text-muted)'
-                }}
-                title="Ver Gráfico"
-              >
-                <BarChart2 size={12} />
-                <span>Gráfico</span>
-              </button>
+                {timeline.name}
+              </h1>
+              {!isIncomeTimeline && (
+                <span className={`badge ${statusInfo.cls}`} style={{ padding: '2px 8px', fontSize: '0.72rem' }}>
+                  {statusInfo.icon} {timeline.status}
+                </span>
+              )}
             </div>
-
-            {isLoanTimeline && onOpenAmortizationModal && (
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={onOpenAmortizationModal}
-                style={{ padding: '4px 10px', fontSize: '0.75rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
-              >
-                <TrendingDown size={13} /> Amortizar
-              </button>
+            {timeline.description && (
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                {timeline.description}
+              </p>
             )}
-
-            {!isPrincipal && (
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={onEdit}
-                style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                title="Editar timeline"
-              >
-                <Edit2 size={13} />
-              </button>
-            )}
-
-            {/* Expand Toggle Button */}
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
-              onClick={() => setIsCollapsed(false)}
-              style={{ padding: '4px 8px', fontSize: '0.75rem', color: 'var(--primary-light)', borderColor: 'var(--border-glass-glow)' }}
-              title="Expandir cabeçalho"
-            >
-              <ChevronDown size={14} />
-              <span>Expandir</span>
-            </button>
           </div>
         </div>
-      ) : (
-        /* Expanded Mode */
-        <>
-          <div className="hero-top" style={{ marginBottom: isLoanTimeline || isPrincipal || isIncomeTimeline ? '10px' : '14px' }}>
-            <div className="hero-title-group">
-              {!isIncomeTimeline && (
-                <div className="hero-badges">
-                  <span className={`badge ${statusInfo.cls}`}>
-                    {statusInfo.icon} {timeline.status}
-                  </span>
-                  <span className="badge badge-type" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
-                    {isPrincipal ? <Layers size={12} /> : isLoanTimeline ? <CreditCard size={12} /> : <Tag size={12} />} {timeline.type}
-                  </span>
 
-                  {/* Overdue Badge for Loans */}
-                  {isLoanTimeline && loanMetrics && loanMetrics.overdueInstallmentsCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={onScrollToOverdue}
-                      className="badge badge-paused"
-                      style={{
-                        animation: 'pulseGlow 2s infinite',
-                        cursor: 'pointer',
-                        border: '1px solid rgba(239, 68, 68, 0.4)'
-                      }}
-                      title="Clique para ir diretamente à parcela em atraso"
-                    >
-                      <AlertCircle size={12} /> {loanMetrics.overdueInstallmentsCount} em Atraso ▾
-                    </button>
-                  )}
-                </div>
-              )}
-              <h1 className="hero-name" style={{ fontSize: isLoanTimeline || isPrincipal || isIncomeTimeline ? '1.4rem' : '1.75rem', marginTop: '2px' }}>{timeline.name}</h1>
-              {timeline.description && (
-                <p className="hero-description" style={{ fontSize: '0.82rem', marginBottom: 0 }}>{timeline.description}</p>
-              )}
+        {/* Lado Direito da Barra de Título: Botão Nova Visão Financeira e Resumo Compacto */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Modo Compacto: resumo à direita */}
+          {collapsed && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(99, 102, 241, 0.08)', padding: '3px 10px', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
+              {selectedViewInfo.icon}
+              <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                {selectedViewTitle}
+              </span>
+            </div>
+          )}
+
+          {onOpenCreateTimeline && (
+            <button
+              type="button"
+              onClick={onOpenCreateTimeline}
+              className="btn btn-outline btn-sm"
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.76rem',
+                fontWeight: '700',
+                borderColor: 'var(--border-glass-glow)',
+                color: 'var(--primary-light)',
+                background: 'rgba(99, 102, 241, 0.08)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                borderRadius: '7px',
+                cursor: 'pointer'
+              }}
+              title={isIncomeTimeline ? "Criar nova visão financeira" : "Criar nova timeline"}
+            >
+              <Plus size={13} strokeWidth={2.5} />
+              <span>{isIncomeTimeline ? 'Nova Visão Financeira' : 'Nova Timeline'}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 📦 Parte Inferior: Visão Selecionada, Controlos de Ação, Métricas e Gráfico */}
+      {!collapsed && (
+        <div style={{ paddingTop: '12px' }}>
+          <div className="hero-top" style={{ marginBottom: '12px' }}>
+            <div className="hero-title-group">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {selectedViewInfo.icon}
+                <h2 className="hero-name" style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0, color: 'var(--text-main)' }}>
+                  {selectedViewTitle}
+                </h2>
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -359,7 +354,7 @@ export default function TimelineHeader({
                 </button>
               </div>
 
-              {isLoanTimeline && onOpenAmortizationModal && (
+              {effectiveIsLoan && onOpenAmortizationModal && (
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={onOpenAmortizationModal}
@@ -367,6 +362,24 @@ export default function TimelineHeader({
                 >
                   <TrendingDown size={14} />
                   <span>Amortizar</span>
+                </button>
+              )}
+
+              {effectiveIsLoan && activeLoanMetrics && activeLoanMetrics.overdueInstallmentsCount > 0 && (
+                <button
+                  type="button"
+                  onClick={onScrollToOverdue}
+                  className="badge badge-paused"
+                  style={{
+                    animation: 'pulseGlow 2s infinite',
+                    cursor: 'pointer',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    padding: '4px 8px',
+                    fontSize: '0.72rem'
+                  }}
+                  title="Clique para ir diretamente à parcela em atraso"
+                >
+                  <AlertCircle size={12} /> {activeLoanMetrics.overdueInstallmentsCount} em Atraso ▾
                 </button>
               )}
 
@@ -391,18 +404,6 @@ export default function TimelineHeader({
                   </button>
                 </>
               )}
-
-              {/* Collapse Toggle Button */}
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
-                onClick={() => setIsCollapsed(true)}
-                style={{ padding: '5px 8px', color: 'var(--text-muted)' }}
-                title="Recolher cabeçalho para modo compacto"
-              >
-                <ChevronUp size={15} />
-                <span>Recolher</span>
-              </button>
             </div>
           </div>
 
@@ -412,11 +413,12 @@ export default function TimelineHeader({
               timeline={timeline}
               events={timeline.events || []}
               todayStr="2026-08-21"
+              activeFinancialTab={activeFinancialTab}
             />
           ) : (
-            /* VIEW MODE 2: SUMMARY METRICS GRID */
-            <>
-              {isPrincipal && consolidatedMetrics ? (
+              /* VIEW MODE 2: SUMMARY METRICS GRID */
+              <>
+                {isPrincipal && consolidatedMetrics ? (
                 <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', marginBottom: '8px' }}>
                   {/* Total em Dívidas */}
                   <div className="meta-item" style={{ padding: '6px 10px' }}>
@@ -482,72 +484,290 @@ export default function TimelineHeader({
                     </div>
                   </div>
                 </div>
-              ) : isIncomeTimeline && incomeMetrics ? (
-                <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', marginBottom: '8px' }}>
-                  {/* Rendimento Recorrente */}
-                  <div className="meta-item" style={{ padding: '6px 10px' }}>
-                    <div className="meta-icon-box" style={{ color: '#10b981' }}>
-                      <DollarSign size={16} />
-                    </div>
-                    <div>
-                      <div className="meta-label" style={{ fontSize: '0.7rem' }}>Rendimento Recorrente (Base)</div>
-                      <div className="meta-value" style={{ color: '#10b981', fontSize: '0.96rem', fontWeight: '800' }}>
-                        {formatCurrency(incomeMetrics.monthlyRecurring)} / mês
+              ) : isIncomeTimeline && finMetrics ? (
+                <>
+                  {/* Cards de Métricas contextuais conforme a aba ativa */}
+                  {activeFinancialTab === 'entradas' && (
+                    <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', marginBottom: '8px' }}>
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#10b981' }}>
+                          <DollarSign size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Rendimento Recorrente (Base)</div>
+                          <div className="meta-value" style={{ color: '#10b981', fontSize: '0.96rem', fontWeight: '800' }}>
+                            {formatCurrency(3300.00)} / mês
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Salário fixo mensal líquido</div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                        Salário fixo mensal líquido
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Total Já Recebido */}
-                  <div className="meta-item" style={{ padding: '6px 10px' }}>
-                    <div className="meta-icon-box" style={{ color: '#06b6d4' }}>
-                      <TrendingUp size={16} />
-                    </div>
-                    <div>
-                      <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Recebido até Hoje</div>
-                      <div className="meta-value" style={{ color: '#06b6d4', fontSize: '0.96rem', fontWeight: '800' }}>
-                        {formatCurrency(incomeMetrics.totalReceived)}
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#06b6d4' }}>
+                          <TrendingUp size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Recebido até Hoje</div>
+                          <div className="meta-value" style={{ color: '#06b6d4', fontSize: '0.96rem', fontWeight: '800' }}>
+                            {formatCurrency(finMetrics.totalReceived)}
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                        {incomeMetrics.receivedCount} entradas confirmadas
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Próxima Entrada */}
-                  <div className="meta-item" style={{ padding: '6px 10px' }}>
-                    <div className="meta-icon-box" style={{ color: '#f59e0b' }}>
-                      <Calendar size={16} />
-                    </div>
-                    <div>
-                      <div className="meta-label" style={{ fontSize: '0.7rem' }}>Próxima Entrada Prevista</div>
-                      <div className="meta-value" style={{ fontSize: '0.85rem', fontWeight: '700' }}>
-                        {incomeMetrics.nextIncome ? formatDateShort(incomeMetrics.nextIncome.date) : '27/08/2026'}
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#f59e0b' }}>
+                          <Calendar size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Próxima Entrada Prevista</div>
+                          <div className="meta-value" style={{ fontSize: '0.85rem', fontWeight: '700' }}>
+                            {finMetrics.nextIncome ? formatDateShort(finMetrics.nextIncome.date) : '27/08/2026'}
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: '#10b981', fontWeight: '700' }}>
+                            {finMetrics.nextIncome ? `+${formatCurrency(finMetrics.nextIncome.amount)}` : '+3.300,00 €'}
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.66rem', color: '#60a5fa', fontWeight: '700' }}>
-                        {incomeMetrics.nextIncome ? `+${formatCurrency(incomeMetrics.nextIncome.amount)}` : '+3.300,00 €'}
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Total Projetado */}
-                  <div className="meta-item" style={{ padding: '6px 10px' }}>
-                    <div className="meta-icon-box" style={{ color: '#8b5cf6' }}>
-                      <Gift size={16} />
-                    </div>
-                    <div>
-                      <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Projetado no Horizonte</div>
-                      <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800' }}>
-                        {formatCurrency(incomeMetrics.totalForecast)}
-                      </div>
-                      <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                        {incomeMetrics.plannedCount} entradas futuras
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#8b5cf6' }}>
+                          <Gift size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Projetado no Horizonte</div>
+                          <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800' }}>
+                            {formatCurrency(finMetrics.totalForecastIncome)}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  )}
+
+                  {activeFinancialTab === 'gastos' && (
+                    <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', marginBottom: '8px' }}>
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#f43f5e' }}>
+                          <ShoppingCart size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Gasto até Hoje</div>
+                          <div className="meta-value" style={{ color: '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
+                            -{formatCurrency(finMetrics.totalPaidExpenses)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#fb7185' }}>
+                          <Repeat size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Média de Gastos Mensais</div>
+                          <div className="meta-value" style={{ color: '#fb7185', fontSize: '0.96rem', fontWeight: '800' }}>
+                            ~1.175,00 € / mês
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#f59e0b' }}>
+                          <Calendar size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Próxima Saída Prevista</div>
+                          <div className="meta-value" style={{ fontSize: '0.85rem', fontWeight: '700' }}>
+                            {finMetrics.nextExpense ? formatDateShort(finMetrics.nextExpense.date) : '05/09/2026'}
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: '#f43f5e', fontWeight: '700' }}>
+                            {finMetrics.nextExpense ? `-${formatCurrency(finMetrics.nextExpense.amount)}` : '-650,00 €'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#94a3b8' }}>
+                          <Layers size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Gastos Totais Projetados</div>
+                          <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800' }}>
+                            {formatCurrency(finMetrics.totalPlannedExpenses)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeFinancialTab === 'investimentos' && (
+                    <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', marginBottom: '8px' }}>
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#6366f1' }}>
+                          <PiggyBank size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Poupado & Investido</div>
+                          <div className="meta-value" style={{ color: 'var(--primary-light)', fontSize: '0.96rem', fontWeight: '800' }}>
+                            {formatCurrency(finMetrics.totalInvested)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#10b981' }}>
+                          <TrendingUp size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Aporte Mensal Previsto</div>
+                          <div className="meta-value" style={{ color: '#10b981', fontSize: '0.96rem', fontWeight: '800' }}>
+                            +600,00 € / mês
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>350€ Poupança + 250€ ETF</div>
+                        </div>
+                      </div>
+
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#0ea5e9' }}>
+                          <Percent size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Taxa de Poupança Média</div>
+                          <div className="meta-value" style={{ color: '#0ea5e9', fontSize: '0.96rem', fontWeight: '800' }}>
+                            ~{finMetrics.savingsRate}%
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#8b5cf6' }}>
+                          <Sparkles size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Património Projetado</div>
+                          <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800' }}>
+                            {formatCurrency(finMetrics.totalPlannedInvestments)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeFinancialTab === 'balanco' && (
+                    <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '8px', marginBottom: '8px' }}>
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#10b981' }}>
+                          <DollarSign size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Entradas</div>
+                          <div className="meta-value" style={{ color: '#10b981', fontSize: '0.94rem', fontWeight: '800' }}>
+                            +{formatCurrency(finMetrics.totalReceived)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#f43f5e' }}>
+                          <ShoppingCart size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Gastos</div>
+                          <div className="meta-value" style={{ color: '#f43f5e', fontSize: '0.94rem', fontWeight: '800' }}>
+                            -{formatCurrency(finMetrics.totalPaidExpenses)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#6366f1' }}>
+                          <PiggyBank size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Investimentos</div>
+                          <div className="meta-value" style={{ color: 'var(--primary-light)', fontSize: '0.94rem', fontWeight: '800' }}>
+                            -{formatCurrency(finMetrics.totalInvested)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: finMetrics.netRealized >= 0 ? '#10b981' : '#f43f5e' }}>
+                          <Scale size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Saldo Líquido Realizado</div>
+                          <div className="meta-value" style={{ color: finMetrics.netRealized >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
+                            {finMetrics.netRealized >= 0 ? '+' : ''}{formatCurrency(finMetrics.netRealized)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 🚗 Aba Crédito Automóvel em Financeiro */}
+                  {activeFinancialTab === 'emprestimos' && carLoanMetrics && (
+                    <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '8px', marginBottom: '8px' }}>
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#8b5cf6' }}>
+                          <CreditCard size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Saldo Devedor Restante</div>
+                          <div className="meta-value" style={{ color: 'var(--primary-light)', fontSize: '0.94rem', fontWeight: '800' }}>
+                            {formatCurrency(carLoanMetrics.remainingBalance)}
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
+                            de {formatCurrency(carLoanMetrics.totalDebt)} contratados
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#10b981' }}>
+                          <DollarSign size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Capital Amortizado</div>
+                          <div className="meta-value" style={{ color: '#10b981', fontSize: '0.94rem', fontWeight: '800' }}>
+                            {formatCurrency(carLoanMetrics.totalPrincipalAmortized)}
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
+                            {formatCurrency(carLoanMetrics.totalPaid)} total pago
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#06b6d4' }}>
+                          <Repeat size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Prestação Mensal</div>
+                          <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800' }}>
+                            {formatCurrency(carLoanMetrics.monthlyPayment)} / mês
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
+                            {carLoanMetrics.paidInstallmentsCount} de {carLoanMetrics.totalInstallmentsCount} parcelas pagas
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: carLoanMetrics.overdueInstallmentsCount > 0 ? '#f43f5e' : '#f59e0b' }}>
+                          <Percent size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Progresso de Quitação</div>
+                          <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800', color: carLoanMetrics.overdueInstallmentsCount > 0 ? '#f43f5e' : '#10b981' }}>
+                            {carLoanMetrics.progressPercent}% Quitado
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: carLoanMetrics.overdueInstallmentsCount > 0 ? '#f43f5e' : 'var(--text-dim)' }}>
+                            {carLoanMetrics.overdueInstallmentsCount > 0 ? `${carLoanMetrics.overdueInstallmentsCount} parcela em atraso` : 'Em dia'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : isLoanTimeline && loanMetrics ? (
                 <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '8px', marginBottom: '10px' }}>
                   {/* Saldo Devedor Restante */}
@@ -614,7 +834,7 @@ export default function TimelineHeader({
               ) : null}
 
               {/* Progress Bar for Loans and Principal */}
-              {(isLoanTimeline || isPrincipal) && (
+              {(effectiveIsLoan || isPrincipal) && (
                 <div className="timeline-progress-container" style={{ marginTop: '2px' }}>
                   <div className="progress-header" style={{ fontSize: '0.72rem', marginBottom: '3px' }}>
                     <span>{isPrincipal ? 'Progresso Global de Amortização das Dívidas' : 'Progresso de Amortização do Capital'}</span>
@@ -633,7 +853,7 @@ export default function TimelineHeader({
               )}
             </>
           )}
-        </>
+        </div>
       )}
     </div>
   );

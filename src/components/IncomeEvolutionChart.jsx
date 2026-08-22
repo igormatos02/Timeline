@@ -16,9 +16,10 @@ import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../utils/loanCalculations';
 
 export default function IncomeEvolutionChart({
-  timeline,
+  timeline = {},
   events = [],
-  todayStr = '2026-08-21'
+  todayStr = '2026-08-21',
+  activeFinancialTab = 'balanco'
 }) {
   // Chart Mode: 'acumulado_real' (Historical Real Received up to Today), 'acumulativo' (Cumulative with Future Projection), 'variante' (Monthly Variation)
   const [chartMode, setChartMode] = useState('acumulado_real');
@@ -29,19 +30,30 @@ export default function IncomeEvolutionChart({
   // Hover state for interactive tooltips
   const [hoveredData, setHoveredData] = useState(null);
 
-  const baseSalary = Number(timeline.monthlySalary || 3300.00);
+  const baseSalary = Number(timeline?.monthlySalary || 3300.00);
 
   // ----------------------------------------------------
   // Generate projection dataset across selected mode & horizon
   // ----------------------------------------------------
   const chartData = useMemo(() => {
-    const start = parseISO(timeline.startDate || '2024-01-01');
+    let start;
+    try {
+      start = parseISO(timeline?.startDate || (activeFinancialTab === 'emprestimos' ? '2024-05-15' : '2024-01-01'));
+      if (isNaN(start.getTime())) start = new Date(2024, 0, 1);
+    } catch {
+      start = new Date(2024, 0, 1);
+    }
     const currentMonthKey = todayStr.substring(0, 7); // '2026-08'
 
     // For 'acumulado_real', calculate exact number of months from start to current month (no future progression)
     let totalMonths;
     if (chartMode === 'acumulado_real') {
-      const todayDate = parseISO(todayStr);
+      let todayDate;
+      try {
+        todayDate = parseISO(todayStr);
+      } catch {
+        todayDate = new Date(2026, 7, 21);
+      }
       const startYear = start.getFullYear();
       const startMonth = start.getMonth();
       const curYear = todayDate.getFullYear();
@@ -57,7 +69,7 @@ export default function IncomeEvolutionChart({
     // Index existing known events by YYYY-MM
     const eventsByMonth = {};
     (events || []).forEach((ev) => {
-      if (ev.date) {
+      if (ev && ev.date) {
         const key = ev.date.substring(0, 7); // 'YYYY-MM'
         if (!eventsByMonth[key]) eventsByMonth[key] = [];
         eventsByMonth[key].push(ev);
@@ -79,36 +91,66 @@ export default function IncomeEvolutionChart({
         eventsByMonth[monthKey].forEach((ev) => {
           const amt = Number(ev.amount || 0);
           const evIsPast = ev.date <= todayStr;
+          const isReceived = ev.status === 'Recebido' || ev.status === 'Pago' || ev.status === 'Investido' || ev.isCompleted;
 
-          if (chartMode === 'acumulado_real') {
-            // Apenas o que foi efetivamente recebido até hoje
-            if (ev.status === 'Recebido') {
-              monthTotal += amt;
+          const isLoan = ev.category === 'parcela_emprestimo' || ev.timelineOriginId === 'tl-loan-80004197726' || ev.isSystemLoanEvent || ev.category === 'amortizacao';
+          const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
+          const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') && !isLoan;
+          const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+
+          // Match active financial tab
+          let applies = true;
+          if (activeFinancialTab === 'entradas') applies = isIncome;
+          else if (activeFinancialTab === 'gastos') applies = isExpense;
+          else if (activeFinancialTab === 'investimentos') applies = isInvestment;
+          else if (activeFinancialTab === 'emprestimos') applies = isLoan;
+          // 'balanco' considers net (income - expense - investment - loan)
+
+          if (applies) {
+            let signedAmt = amt;
+            if (activeFinancialTab === 'balanco') {
+              if (isExpense || isLoan || isInvestment) signedAmt = -amt;
             }
-          } else {
-            // Projetado / Variante
-            if (evIsPast) {
-              if (ev.status === 'Recebido') {
-                monthTotal += amt;
+
+            if (chartMode === 'acumulado_real') {
+              if (isReceived) {
+                monthTotal += isNaN(signedAmt) ? 0 : signedAmt;
               }
             } else {
-              monthTotal += amt;
+              if (evIsPast) {
+                if (isReceived) {
+                  monthTotal += isNaN(signedAmt) ? 0 : signedAmt;
+                }
+              } else {
+                monthTotal += isNaN(signedAmt) ? 0 : signedAmt;
+              }
             }
-          }
 
-          if (ev.category === 'entrada_esporadica' || amt > baseSalary) {
-            notes.push(ev.title);
+            if (ev.category === 'entrada_esporadica' || amt > 2500) {
+              if (ev.title) notes.push(ev.title);
+            }
           }
         });
       } else if (chartMode !== 'acumulado_real') {
-        // Projected future month: Base Salary + Biannual/Annual Bonus
-        monthTotal = baseSalary;
-        if (monthNum === 6) {
-          monthTotal += 1650.00; // Subsídio / Bónus de Verão
-          notes.push('Bónus Semestral Estimado (+1.650 €)');
-        } else if (monthNum === 12) {
-          monthTotal += 2000.00; // Bónus de Fim de Ano
-          notes.push('Bónus Fim de Ano Estimado (+2.000 €)');
+        // Projected future month fallbacks
+        if (activeFinancialTab === 'entradas') {
+          monthTotal = isNaN(baseSalary) ? 3300 : baseSalary;
+          if (monthNum === 6) {
+            monthTotal += 1650.00;
+            notes.push('Bónus Semestral Estimado (+1.650 €)');
+          } else if (monthNum === 12) {
+            monthTotal += 2000.00;
+            notes.push('Bónus Fim de Ano Estimado (+2.000 €)');
+          }
+        } else if (activeFinancialTab === 'gastos') {
+          monthTotal = 1175.00;
+        } else if (activeFinancialTab === 'investimentos') {
+          monthTotal = 600.00;
+        } else if (activeFinancialTab === 'emprestimos') {
+          monthTotal = 218.47;
+        } else {
+          // Balanço líquido mensal
+          monthTotal = 1525.00;
         }
       }
 
@@ -130,7 +172,7 @@ export default function IncomeEvolutionChart({
     }
 
     return data;
-  }, [timeline.startDate, events, horizonYears, baseSalary, todayStr, chartMode]);
+  }, [timeline?.startDate, events, horizonYears, baseSalary, todayStr, chartMode, activeFinancialTab]);
 
   // Overall Statistics for the active view
   const maxCumulative = chartData.length > 0 ? chartData[chartData.length - 1].runningTotal : 0;
@@ -145,9 +187,9 @@ export default function IncomeEvolutionChart({
   const graphHeight = height - padding.top - padding.bottom;
 
   // Scaling helpers
-  const getX = (idx) => padding.left + (idx / (chartData.length - 1 || 1)) * graphWidth;
-  const getYCumulative = (val) => padding.top + graphHeight - (val / (maxCumulative || 1)) * graphHeight;
-  const getYMonthly = (val) => padding.top + graphHeight - (val / (maxMonthly || 1)) * graphHeight;
+  const getX = (idx) => padding.left + (idx / Math.max(1, chartData.length - 1)) * graphWidth;
+  const getYCumulative = (val) => padding.top + graphHeight - (val / Math.max(1, maxCumulative)) * graphHeight;
+  const getYMonthly = (val) => padding.top + graphHeight - (val / Math.max(1, maxMonthly)) * graphHeight;
 
   // Build SVG Path for Cumulative Curve
   const cumulativePath = useMemo(() => {

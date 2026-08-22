@@ -241,7 +241,7 @@
   position: sticky;
   top: 64px;
   z-index: 38;
-  background: var(--bg-main);
+  background: transparent;
   padding: 4px 0 10px 0;
   margin-bottom: 8px;
 }

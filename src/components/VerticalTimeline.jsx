@@ -28,7 +28,23 @@ import {
   Filter,
   LocateFixed,
   DollarSign,
-  TrendingUp
+  TrendingUp,
+  TrendingDown,
+  Scale,
+  ShoppingCart,
+  PiggyBank,
+  CheckCircle2,
+  AlertCircle,
+  Play,
+  CheckSquare,
+  Square,
+  Home,
+  Car,
+  CreditCard,
+  Gift,
+  FileText,
+  Zap,
+  Activity
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
 import FloatingTaskStack from './FloatingTaskStack';
@@ -37,6 +53,8 @@ import { getGroupingForPeriodicity, formatCurrency } from '../utils/loanCalculat
 
 export default function VerticalTimeline({
   timeline,
+  activeFinancialTab = 'balanco',
+  onSelectFinancialTab,
   onEditEvent,
   onDeleteEvent,
   onToggleTask,
@@ -51,6 +69,7 @@ export default function VerticalTimeline({
   onNavigateToTimeline,
   headerComponent
 }) {
+  const isFinancialTimeline = timeline.type === 'Financeiro' || timeline.type === 'Entradas' || timeline.id === 'tl-income';
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('Todos');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('Todos');
@@ -59,9 +78,9 @@ export default function VerticalTimeline({
 
   // Multi-selection of credit and income timelines for Principal view
   const availableCreditOptions = [
-    { id: 'tl-loan-house', name: 'Habitação', icon: '🏠', color: '#10b981' },
-    { id: 'tl-loan-80004197726', name: 'Automóvel', icon: '🚗', color: '#6366f1' },
-    { id: 'tl-income', name: 'Entradas', icon: '💵', color: '#06b6d4' }
+    { id: 'tl-loan-house', name: 'Habitação', icon: <Home size={14} />, color: '#10b981' },
+    { id: 'tl-loan-80004197726', name: 'Automóvel', icon: <Car size={14} />, color: '#6366f1' },
+    { id: 'tl-income', name: 'Entradas', icon: <DollarSign size={14} />, color: '#06b6d4' }
   ];
   const [selectedTimelineIds, setSelectedTimelineIds] = useState(['tl-loan-house', 'tl-loan-80004197726', 'tl-income']);
 
@@ -233,8 +252,24 @@ export default function VerticalTimeline({
         selectedLabelFilter === 'Todos' ||
         (ev.labels && ev.labels.includes(selectedLabelFilter));
 
-      // Entradas: máximo 1 ano à frente da data atual (21/08/2026 -> 21/08/2027 / 31/08/2027)
-      if (timeline.type === 'Entradas') {
+      const isFinancialTimeline = timeline.type === 'Financeiro' || timeline.type === 'Entradas' || timeline.id === 'tl-income';
+
+      // Financial Tabs Filter
+      if (isFinancialTimeline) {
+        const isLoan = ev.category === 'parcela_emprestimo' || ev.timelineOriginId === 'tl-loan-80004197726' || ev.isSystemLoanEvent || ev.category === 'amortizacao';
+        const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
+        const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') && !isLoan;
+        const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+
+        if (activeFinancialTab === 'entradas' && !isIncome) return false;
+        if (activeFinancialTab === 'gastos' && !isExpense) return false;
+        if (activeFinancialTab === 'investimentos' && !isInvestment) return false;
+        if (activeFinancialTab === 'emprestimos' && !isLoan) return false;
+        // 'balanco' shows all
+      }
+
+      // Entradas / Gastos / Investimentos em Financeiro: máximo 1 ano à frente da data atual (21/08/2026 -> 31/08/2027)
+      if (isFinancialTimeline && activeFinancialTab !== 'emprestimos') {
         const oneYearAheadStr = format(addYears(todayDate, 1), 'yyyy-MM-31');
         if (ev.date > oneYearAheadStr) {
           return false;
@@ -395,8 +430,9 @@ export default function VerticalTimeline({
                         id={ev.status === 'Atrasada' ? 'loan-inst-overdue' : undefined}
                         style={{ marginBottom: '12px' }}
                       >
-                        <div style={{ fontSize: '0.78rem', color: 'var(--primary-light)', fontWeight: '700', marginBottom: '4px' }}>
-                          📅 {format(parseISO(ev.date), "EEEE, d 'de' MMMM", { locale: pt })}
+                        <div style={{ fontSize: '0.78rem', color: 'var(--primary-light)', fontWeight: '700', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Calendar size={13} />
+                          <span>{format(parseISO(ev.date), "EEEE, d 'de' MMMM", { locale: pt })}</span>
                         </div>
                         <TimelineEventCard
                           event={ev}
@@ -461,19 +497,40 @@ export default function VerticalTimeline({
 
     const monthsList = Array.from(monthMap.values());
 
-    // Pre-calculate chronological running cumulative budget (sum of received entries up to each month)
+    const isFinancialTimeline = timeline.type === 'Financeiro' || timeline.type === 'Entradas' || timeline.id === 'tl-income';
+
+    // Pre-calculate chronological running cumulative metrics
     const monthCumulativeMap = new Map();
-    let runningCumulativeReceived = 0;
+    let runningIncome = 0;
+    let runningExpense = 0;
+    let runningInvestment = 0;
+
     const sortedChronologicalMonths = [...monthsList].sort((a, b) => a.monthDate.getTime() - b.monthDate.getTime());
     sortedChronologicalMonths.forEach((mG) => {
-      let mReceived = 0;
+      let mInc = 0;
+      let mExp = 0;
+      let mInv = 0;
+
       mG.events.forEach((ev) => {
-        if (ev.status === 'Recebido') {
-          mReceived += Number(ev.amount || 0);
-        }
+        const amt = Number(ev.amount || 0);
+        const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment;
+        const isExpense = ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto';
+        const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+
+        if (isIncome && ev.status === 'Recebido') mInc += amt;
+        if (isExpense && (ev.status === 'Pago' || ev.isCompleted)) mExp += amt;
+        if (isInvestment && (ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted)) mInv += amt;
       });
-      runningCumulativeReceived += mReceived;
-      monthCumulativeMap.set(format(mG.monthDate, 'yyyy-MM'), runningCumulativeReceived);
+
+      runningIncome += mInc;
+      runningExpense += mExp;
+      runningInvestment += mInv;
+
+      monthCumulativeMap.set(format(mG.monthDate, 'yyyy-MM'), {
+        income: runningIncome,
+        expense: runningExpense,
+        investment: runningInvestment
+      });
     });
 
     return (
@@ -490,17 +547,24 @@ export default function VerticalTimeline({
           const monthKeyStr = format(mGroup.monthDate, 'yyyy-MM');
           const hasEvents = mGroup.events.length > 0;
 
-          // Calculate total received in this month
-          let totalMonthReceived = 0;
+          // Calculate month stats
+          let mMonthIncome = 0;
+          let mMonthExpense = 0;
+          let mMonthInvestment = 0;
+
           mGroup.events.forEach((ev) => {
             const amt = Number(ev.amount || 0);
-            if (ev.status === 'Recebido') {
-              totalMonthReceived += amt;
-            }
+            const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment;
+            const isExpense = ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto';
+            const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+
+            if (isIncome && ev.status === 'Recebido') mMonthIncome += amt;
+            if (isExpense && (ev.status === 'Pago' || ev.isCompleted)) mMonthExpense += amt;
+            if (isInvestment && (ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted)) mMonthInvestment += amt;
           });
 
-          // Cumulative received budget up to this specific month
-          const cumulativeReceived = monthCumulativeMap.get(monthKeyStr) || 0;
+          const mNetMonth = mMonthIncome - mMonthExpense;
+          const cumData = monthCumulativeMap.get(monthKeyStr) || { income: 0, expense: 0, investment: 0 };
 
           if (!showEmptyDays && !hasEvents && !isCurrentMonth) return null;
 
@@ -533,7 +597,7 @@ export default function VerticalTimeline({
                       <Clock size={18} style={{ color: 'var(--primary-light)' }} /> {monthTitleStr}
                     </h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      {/* Badge do Contador de Entradas */}
+                      {/* Badge do Contador */}
                       <span
                         className="group-card-badge"
                         style={{
@@ -543,123 +607,224 @@ export default function VerticalTimeline({
                           boxSizing: 'border-box'
                         }}
                       >
-                        {mGroup.events.length} {timeline.type === 'Entradas' ? 'entrada(s)' : 'evento(s)'}
+                        {mGroup.events.length} {isFinancialTimeline ? (activeFinancialTab === 'gastos' ? 'saída(s)' : activeFinancialTab === 'investimentos' ? 'aporte(s)' : 'movimento(s)') : 'evento(s)'}
                       </span>
 
-                      {/* Badge 1: Budget Mensal (Soma do Recebido no Mês) */}
-                      {timeline.type === 'Entradas' && (
-                        <span
-                          className="group-card-badge"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            height: '26px',
-                            boxSizing: 'border-box',
-                            background: totalMonthReceived > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                            color: totalMonthReceived > 0 ? '#10b981' : 'var(--text-dim)',
-                            borderColor: totalMonthReceived > 0 ? 'rgba(16, 185, 129, 0.35)' : 'var(--border-glass)',
-                            fontWeight: '800',
-                            fontSize: '0.76rem'
-                          }}
-                          title={`Budget mensal efetivamente recebido em ${monthTitleStr}: ${formatCurrency(totalMonthReceived)}`}
-                        >
-                          <DollarSign size={12} style={{ color: totalMonthReceived > 0 ? '#10b981' : 'var(--text-dim)' }} />
-                          <span>Budget Mensal: {formatCurrency(totalMonthReceived)}</span>
-                        </span>
+                      {/* Badges para a aba Entradas */}
+                      {isFinancialTimeline && activeFinancialTab === 'entradas' && (
+                        <>
+                          <span
+                            className="group-card-badge"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              height: '26px',
+                              boxSizing: 'border-box',
+                              background: mMonthIncome > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                              color: mMonthIncome > 0 ? '#10b981' : 'var(--text-dim)',
+                              borderColor: mMonthIncome > 0 ? 'rgba(16, 185, 129, 0.35)' : 'var(--border-glass)',
+                              fontWeight: '800',
+                              fontSize: '0.76rem'
+                            }}
+                          >
+                            <DollarSign size={12} />
+                            <span>Budget Mensal: {formatCurrency(mMonthIncome)}</span>
+                          </span>
+
+                          <span
+                            className="group-card-badge"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              height: '26px',
+                              boxSizing: 'border-box',
+                              background: cumData.income > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                              color: cumData.income > 0 ? 'var(--primary-light)' : 'var(--text-dim)',
+                              borderColor: cumData.income > 0 ? 'rgba(99, 102, 241, 0.35)' : 'var(--border-glass)',
+                              fontWeight: '800',
+                              fontSize: '0.76rem'
+                            }}
+                          >
+                            <TrendingUp size={12} />
+                            <span>Budget Acumulado: {formatCurrency(cumData.income)}</span>
+                          </span>
+                        </>
                       )}
 
-                      {/* Badge 2: Budget Acumulado (Soma do Recebido até este Mês) */}
-                      {timeline.type === 'Entradas' && (
-                        <span
-                          className="group-card-badge"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            height: '26px',
-                            boxSizing: 'border-box',
-                            background: cumulativeReceived > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                            color: cumulativeReceived > 0 ? 'var(--primary-light)' : 'var(--text-dim)',
-                            borderColor: cumulativeReceived > 0 ? 'rgba(99, 102, 241, 0.35)' : 'var(--border-glass)',
-                            fontWeight: '800',
-                            fontSize: '0.76rem'
-                          }}
-                          title={`Budget total acumulado recebido até ${monthTitleStr}: ${formatCurrency(cumulativeReceived)}`}
-                        >
-                          <TrendingUp size={12} style={{ color: cumulativeReceived > 0 ? 'var(--primary-light)' : 'var(--text-dim)' }} />
-                          <span>Budget Acumulado: {formatCurrency(cumulativeReceived)}</span>
-                        </span>
+                      {/* Badges para a aba Gastos */}
+                      {isFinancialTimeline && activeFinancialTab === 'gastos' && (
+                        <>
+                          <span
+                            className="group-card-badge"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              height: '26px',
+                              boxSizing: 'border-box',
+                              background: mMonthExpense > 0 ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                              color: mMonthExpense > 0 ? '#f43f5e' : 'var(--text-dim)',
+                              borderColor: mMonthExpense > 0 ? 'rgba(244, 63, 94, 0.35)' : 'var(--border-glass)',
+                              fontWeight: '800',
+                              fontSize: '0.76rem'
+                            }}
+                          >
+                            <span>Total Gasto: -{formatCurrency(mMonthExpense)}</span>
+                          </span>
+
+                          <span
+                            className="group-card-badge"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              height: '26px',
+                              boxSizing: 'border-box',
+                              background: cumData.expense > 0 ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                              color: cumData.expense > 0 ? '#fb7185' : 'var(--text-dim)',
+                              borderColor: cumData.expense > 0 ? 'rgba(244, 63, 94, 0.35)' : 'var(--border-glass)',
+                              fontWeight: '800',
+                              fontSize: '0.76rem'
+                            }}
+                          >
+                            <span>Acumulado: -{formatCurrency(cumData.expense)}</span>
+                          </span>
+                        </>
+                      )}
+
+                      {/* Badges para a aba Investimentos */}
+                      {isFinancialTimeline && activeFinancialTab === 'investimentos' && (
+                        <>
+                          <span
+                            className="group-card-badge"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              height: '26px',
+                              boxSizing: 'border-box',
+                              background: mMonthInvestment > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                              color: mMonthInvestment > 0 ? 'var(--primary-light)' : 'var(--text-dim)',
+                              borderColor: mMonthInvestment > 0 ? 'rgba(99, 102, 241, 0.35)' : 'var(--border-glass)',
+                              fontWeight: '800',
+                              fontSize: '0.76rem'
+                            }}
+                          >
+                            <span>Aportes: +{formatCurrency(mMonthInvestment)}</span>
+                          </span>
+
+                          <span
+                            className="group-card-badge"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              height: '26px',
+                              boxSizing: 'border-box',
+                              background: cumData.investment > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                              color: cumData.investment > 0 ? '#818cf8' : 'var(--text-dim)',
+                              borderColor: cumData.investment > 0 ? 'rgba(99, 102, 241, 0.35)' : 'var(--border-glass)',
+                              fontWeight: '800',
+                              fontSize: '0.76rem'
+                            }}
+                          >
+                            <span>Património: {formatCurrency(cumData.investment)}</span>
+                          </span>
+                        </>
+                      )}
+
+                      {/* Badges para a aba Balanço */}
+                      {isFinancialTimeline && activeFinancialTab === 'balanco' && (
+                        <>
+                          <span
+                            className="group-card-badge"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              height: '26px',
+                              boxSizing: 'border-box',
+                              color: '#10b981',
+                              fontWeight: '800',
+                              fontSize: '0.74rem'
+                            }}
+                          >
+                            +{formatCurrency(mMonthIncome)}
+                          </span>
+
+                          <span
+                            className="group-card-badge"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              height: '26px',
+                              boxSizing: 'border-box',
+                              color: '#f43f5e',
+                              fontWeight: '800',
+                              fontSize: '0.74rem'
+                            }}
+                          >
+                            -{formatCurrency(mMonthExpense)}
+                          </span>
+
+                          <span
+                            className="group-card-badge"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              height: '26px',
+                              boxSizing: 'border-box',
+                              background: mNetMonth >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
+                              color: mNetMonth >= 0 ? '#10b981' : '#f43f5e',
+                              borderColor: mNetMonth >= 0 ? 'rgba(16, 185, 129, 0.35)' : 'rgba(244, 63, 94, 0.35)',
+                              fontWeight: '800',
+                              fontSize: '0.76rem'
+                            }}
+                          >
+                            <span>Líquido: {mNetMonth >= 0 ? '+' : ''}{formatCurrency(mNetMonth)}</span>
+                          </span>
+                        </>
                       )}
                     </div>
                   </div>
 
                   {hasEvents ? (
-                    <>
-                      {mGroup.events.map((ev) => (
-                        <div
-                          key={ev.id}
-                          id={ev.status === 'Atrasada' ? 'loan-inst-overdue' : undefined}
-                          style={{ marginBottom: '12px' }}
-                        >
-                          <div style={{ fontSize: '0.78rem', color: 'var(--primary-light)', fontWeight: '700', marginBottom: '4px' }}>
-                            📅 {format(parseISO(ev.date), "EEEE, d 'de' MMMM", { locale: pt })}
-                          </div>
-                          <TimelineEventCard
-                            event={ev}
-                            currentTimelineId={timeline.id}
-                            onEdit={onEditEvent}
-                            onDelete={onDeleteEvent}
-                            onToggleTask={onToggleTask}
-                            onToggleLoanPayment={onToggleLoanPayment}
-                            onOpenEditInstallment={onOpenEditInstallment}
-                            onNavigateToTimeline={onNavigateToTimeline}
-                          />
-                        </div>
-                      ))}
-
-                      {/* Botão no fundo do mês (Solid & Prominent) */}
-                      <button
-                        type="button"
-                        onClick={() => onAddEventForDate(format(mGroup.monthDate, 'yyyy-MM-15'))}
-                        className="btn btn-primary"
-                        style={{
-                          marginTop: '12px',
-                          width: '100%',
-                          background: timeline.type === 'Entradas'
-                            ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                            : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-                          color: '#ffffff',
-                          border: '1px solid rgba(255, 255, 255, 0.25)',
-                          boxShadow: timeline.type === 'Entradas'
-                            ? '0 4px 16px rgba(16, 185, 129, 0.35)'
-                            : '0 4px 16px rgba(99, 102, 241, 0.35)',
-                          padding: '11px 18px',
-                          borderRadius: '10px',
-                          fontSize: '0.88rem',
-                          fontWeight: '800',
-                          letterSpacing: '0.2px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          transform: 'translateY(0)'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                        title={`Adicionar nova entrada em ${monthTitleStr}`}
+                    mGroup.events.map((ev) => (
+                      <div
+                        key={ev.id}
+                        id={ev.status === 'Atrasada' ? 'loan-inst-overdue' : undefined}
+                        style={{ marginBottom: '12px' }}
                       >
-                        <Plus size={16} strokeWidth={2.5} />
-                        <span>{timeline.type === 'Entradas' ? 'Adicionar Nova Entrada neste Mês' : 'Adicionar Novo Evento'}</span>
-                      </button>
-                    </>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--primary-light)', fontWeight: '700', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Calendar size={13} />
+                          <span>{format(parseISO(ev.date), "EEEE, d 'de' MMMM", { locale: pt })}</span>
+                        </div>
+                        <TimelineEventCard
+                          event={ev}
+                          currentTimelineId={timeline.id}
+                          onEdit={onEditEvent}
+                          onDelete={onDeleteEvent}
+                          onToggleTask={onToggleTask}
+                          onAddChecklistItem={onAddChecklistItem}
+                          onDeleteChecklistItem={onDeleteChecklistItem}
+                          onToggleLoanPayment={onToggleLoanPayment}
+                          onOpenEditInstallment={onOpenEditInstallment}
+                          onNavigateToTimeline={onNavigateToTimeline}
+                        />
+                      </div>
+                    ))
                   ) : (
                     /* Botão em frente à data quando o mês está vazio */
                     <div
                       className="empty-day-row"
-                      onClick={() => onAddEventForDate(format(mGroup.monthDate, 'yyyy-MM-01'))}
+                      onClick={() => {
+                        const nature = activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income';
+                        onAddEventForDate(format(mGroup.monthDate, 'yyyy-MM-01'), nature);
+                      }}
                       style={{
                         cursor: 'pointer',
                         display: 'flex',
@@ -671,15 +836,15 @@ export default function VerticalTimeline({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
                         <span className="empty-day-text">
-                          {timeline.type === 'Entradas' ? 'Sem entradas registadas neste mês' : 'Sem eventos registados neste mês'}
+                          Sem registos nesta aba para este mês
                         </span>
                       </div>
                       <span
                         className="add-event-mini-btn"
                         style={{
-                          background: timeline.type === 'Entradas' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(99, 102, 241, 0.15)',
-                          color: timeline.type === 'Entradas' ? '#10b981' : 'var(--primary-light)',
-                          border: `1px solid ${timeline.type === 'Entradas' ? 'rgba(16, 185, 129, 0.35)' : 'rgba(99, 102, 241, 0.3)'}`,
+                          background: 'rgba(16, 185, 129, 0.18)',
+                          color: '#10b981',
+                          border: '1px solid rgba(16, 185, 129, 0.35)',
                           padding: '4px 10px',
                           borderRadius: '6px',
                           fontWeight: '700',
@@ -689,7 +854,7 @@ export default function VerticalTimeline({
                           gap: '4px'
                         }}
                       >
-                        <Plus size={13} /> {timeline.type === 'Entradas' ? 'Criar Entrada' : 'Adicionar'}
+                        <Plus size={13} /> Adicionar
                       </span>
                     </div>
                   )}
@@ -950,6 +1115,81 @@ export default function VerticalTimeline({
           <span>Filtros & Navegação</span>
         </div>
 
+        {/* 🌟 0. Abas Financeiras (Apenas na Timeline Financeiro) */}
+        {isFinancialTimeline && (
+          <div className="sidebar-section">
+            <div className="sidebar-section-title">
+              <span>Visão Financeira</span>
+            </div>
+            <div className="sidebar-btn-group">
+              <button
+                type="button"
+                className={`sidebar-filter-item ${activeFinancialTab === 'balanco' ? 'active' : ''}`}
+                onClick={() => onSelectFinancialTab && onSelectFinancialTab('balanco')}
+                style={activeFinancialTab === 'balanco' ? { borderColor: '#0ea5e9', background: 'rgba(14, 165, 233, 0.16)', color: '#0ea5e9' } : {}}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Scale size={14} />
+                  <span style={{ fontWeight: '800' }}>Balanço (Principal)</span>
+                </div>
+                {activeFinancialTab === 'balanco' && <span style={{ fontSize: '0.75rem', color: '#0ea5e9' }}>✓</span>}
+              </button>
+
+              <button
+                type="button"
+                className={`sidebar-filter-item ${activeFinancialTab === 'entradas' ? 'active' : ''}`}
+                onClick={() => onSelectFinancialTab && onSelectFinancialTab('entradas')}
+                style={activeFinancialTab === 'entradas' ? { borderColor: '#10b981', background: 'rgba(16, 185, 129, 0.14)', color: '#10b981' } : {}}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <DollarSign size={14} />
+                  <span style={{ fontWeight: '700' }}>Entradas e Rendimentos</span>
+                </div>
+                {activeFinancialTab === 'entradas' && <span style={{ fontSize: '0.75rem', color: '#10b981' }}>✓</span>}
+              </button>
+
+              <button
+                type="button"
+                className={`sidebar-filter-item ${activeFinancialTab === 'gastos' ? 'active' : ''}`}
+                onClick={() => onSelectFinancialTab && onSelectFinancialTab('gastos')}
+                style={activeFinancialTab === 'gastos' ? { borderColor: '#f43f5e', background: 'rgba(244, 63, 94, 0.14)', color: '#f43f5e' } : {}}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ShoppingCart size={14} />
+                  <span style={{ fontWeight: '700' }}>Gastos e Saídas</span>
+                </div>
+                {activeFinancialTab === 'gastos' && <span style={{ fontSize: '0.75rem', color: '#f43f5e' }}>✓</span>}
+              </button>
+
+              <button
+                type="button"
+                className={`sidebar-filter-item ${activeFinancialTab === 'investimentos' ? 'active' : ''}`}
+                onClick={() => onSelectFinancialTab && onSelectFinancialTab('investimentos')}
+                style={activeFinancialTab === 'investimentos' ? { borderColor: '#6366f1', background: 'rgba(99, 102, 241, 0.14)', color: 'var(--primary-light)' } : {}}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <PiggyBank size={14} />
+                  <span style={{ fontWeight: '700' }}>Investimentos e Poupança</span>
+                </div>
+                {activeFinancialTab === 'investimentos' && <span style={{ fontSize: '0.75rem', color: 'var(--primary-light)' }}>✓</span>}
+              </button>
+
+              <button
+                type="button"
+                className={`sidebar-filter-item ${activeFinancialTab === 'emprestimos' ? 'active' : ''}`}
+                onClick={() => onSelectFinancialTab && onSelectFinancialTab('emprestimos')}
+                style={activeFinancialTab === 'emprestimos' ? { borderColor: '#8b5cf6', background: 'rgba(139, 92, 246, 0.14)', color: '#8b5cf6' } : {}}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <CreditCard size={14} />
+                  <span style={{ fontWeight: '700' }}>Crédito Automóvel</span>
+                </div>
+                {activeFinancialTab === 'emprestimos' && <span style={{ fontSize: '0.75rem', color: '#8b5cf6' }}>✓</span>}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 1. Search Box */}
         <div className="sidebar-section">
           <div className="search-box">
@@ -995,25 +1235,25 @@ export default function VerticalTimeline({
             <span>Estado</span>
           </div>
           <div className="sidebar-btn-group">
-            {(timeline.type === 'Entradas'
+            {(timeline.type === 'Entradas' || timeline.type === 'Financeiro'
               ? [
-                { id: 'Todos', name: 'Todos os Estados', icon: '⚡' },
-                { id: 'Recebido', name: 'Recebidos', icon: '✅' },
-                { id: 'Pendente', name: 'A Receber', icon: '⏳' },
-                { id: 'Atrasada', name: 'Em Atraso', icon: '⚠️' }
+                { id: 'Todos', name: 'Todos os Estados', icon: <Layers size={13} /> },
+                { id: 'Recebido', name: 'Recebidos / Pagos', icon: <CheckCircle2 size={13} /> },
+                { id: 'Pendente', name: 'Previstos / Pendentes', icon: <Clock size={13} /> },
+                { id: 'Atrasada', name: 'Em Atraso', icon: <AlertCircle size={13} /> }
               ]
               : timeline.type === 'Empréstimo' || timeline.type === 'Principal'
                 ? [
-                  { id: 'Todos', name: 'Todos os Estados', icon: '⚡' },
-                  { id: 'Pago', name: 'Pagas / Liquidadas', icon: '✅' },
-                  { id: 'Pendente', name: 'Pendentes', icon: '⏳' },
-                  { id: 'Atrasada', name: 'Em Atraso', icon: '⚠️' }
+                  { id: 'Todos', name: 'Todos os Estados', icon: <Layers size={13} /> },
+                  { id: 'Pago', name: 'Pagas / Liquidadas', icon: <CheckCircle2 size={13} /> },
+                  { id: 'Pendente', name: 'Pendentes', icon: <Clock size={13} /> },
+                  { id: 'Atrasada', name: 'Em Atraso', icon: <AlertCircle size={13} /> }
                 ]
                 : [
-                  { id: 'Todos', name: 'Todos', icon: '⚡' },
-                  { id: 'Em Progresso', name: 'Em Progresso', icon: '▶️' },
-                  { id: 'Concluído', name: 'Concluídos', icon: '✅' },
-                  { id: 'Planeado', name: 'Planeados', icon: '📅' }
+                  { id: 'Todos', name: 'Todos', icon: <Layers size={13} /> },
+                  { id: 'Em Progresso', name: 'Em Progresso', icon: <Play size={13} /> },
+                  { id: 'Concluído', name: 'Concluídos', icon: <CheckCircle2 size={13} /> },
+                  { id: 'Planeado', name: 'Planeados', icon: <Calendar size={13} /> }
                 ]
             ).map((st) => (
               <button
@@ -1023,7 +1263,7 @@ export default function VerticalTimeline({
                 onClick={() => setSelectedStatusFilter(st.id)}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span>{st.icon}</span>
+                  {st.icon}
                   <span>{st.name}</span>
                 </div>
                 {selectedStatusFilter === st.id && <span style={{ fontSize: '0.75rem', color: 'var(--primary-light)' }}>✓</span>}
@@ -1064,10 +1304,10 @@ export default function VerticalTimeline({
                     style={isSelected ? { borderColor: opt.color } : { opacity: 0.6 }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>{opt.icon}</span>
+                      {opt.icon}
                       <span>{opt.name}</span>
                     </div>
-                    <span style={{ fontSize: '0.85rem' }}>{isSelected ? '☑️' : '◻️'}</span>
+                    {isSelected ? <CheckSquare size={13} style={{ color: opt.color }} /> : <Square size={13} style={{ color: 'var(--text-dim)' }} />}
                   </button>
                 );
               })}
@@ -1082,24 +1322,27 @@ export default function VerticalTimeline({
               <span>Categoria / Tipo</span>
             </div>
             <div className="sidebar-btn-group">
-              {(timeline.type === 'Entradas'
+              {(timeline.type === 'Entradas' || timeline.type === 'Financeiro'
                 ? [
-                  { id: 'Todos', name: 'Todas as Categorias', icon: '⚡' },
-                  { id: 'entrada_recorrente', name: 'Salários / Rendas', icon: '💰' },
-                  { id: 'entrada_esporadica', name: 'Bónus / Extras', icon: '🎁' }
+                  { id: 'Todos', name: 'Todas as Categorias', icon: <Layers size={13} /> },
+                  { id: 'entrada_recorrente', name: 'Salários / Rendas', icon: <DollarSign size={13} /> },
+                  { id: 'entrada_esporadica', name: 'Bónus / Extras', icon: <Gift size={13} /> },
+                  { id: 'saida_recorrente', name: 'Despesas Fixas', icon: <CreditCard size={13} /> },
+                  { id: 'gasto', name: 'Gastos Variáveis', icon: <Tag size={13} /> },
+                  { id: 'investimento_poupanca', name: 'Poupança / Aportes', icon: <TrendingUp size={13} /> }
                 ]
                 : timeline.type === 'Empréstimo'
                   ? [
-                    { id: 'Todos', name: 'Todas as Categorias', icon: '⚡' },
-                    { id: 'parcela_emprestimo', name: 'Prestações Contratuais', icon: '💳' },
-                    { id: 'amortizacao', name: 'Amortizações Extras', icon: '📉' }
+                    { id: 'Todos', name: 'Todas as Categorias', icon: <Layers size={13} /> },
+                    { id: 'parcela_emprestimo', name: 'Prestações Contratuais', icon: <CreditCard size={13} /> },
+                    { id: 'amortizacao', name: 'Amortizações Extras', icon: <TrendingDown size={13} /> }
                   ]
                   : [
-                    { id: 'Todos', name: 'Todos os Tipos', icon: '⚡' },
-                    { id: 'agendamento', name: 'Agendamentos', icon: '📅' },
-                    { id: 'repetitivo', name: 'Repetitivos', icon: '🔁' },
-                    { id: 'tarefa', name: 'Tarefas', icon: '📌' },
-                    { id: 'memoria', name: 'Notas', icon: '📝' }
+                    { id: 'Todos', name: 'Todos os Tipos', icon: <Layers size={13} /> },
+                    { id: 'agendamento', name: 'Agendamentos', icon: <Calendar size={13} /> },
+                    { id: 'repetitivo', name: 'Repetitivos', icon: <Repeat size={13} /> },
+                    { id: 'tarefa', name: 'Tarefas', icon: <Pin size={13} /> },
+                    { id: 'memoria', name: 'Notas', icon: <FileText size={13} /> }
                   ]
               ).map((cat) => (
                 <button
@@ -1109,7 +1352,7 @@ export default function VerticalTimeline({
                   onClick={() => setSelectedCategoryFilter(cat.id)}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>{cat.icon}</span>
+                    {cat.icon}
                     <span>{cat.name}</span>
                   </div>
                   {selectedCategoryFilter === cat.id && <span style={{ fontSize: '0.75rem', color: 'var(--primary-light)' }}>✓</span>}
@@ -1144,8 +1387,8 @@ export default function VerticalTimeline({
           {headerComponent}
         </div>
 
-        {/* 📌 Pilha de Tarefas Pendentes (apenas para timelines gerais/projeto) */}
-        {timeline.type !== 'Empréstimo' && timeline.type !== 'Entradas' && timeline.type !== 'Principal' && (
+        {/* 📌 Pilha de Tarefas Pendentes (apenas para timelines de projeto/gerais, oculta em Financeiro, Entradas, Empréstimos e Principal) */}
+        {!isFinancialTimeline && timeline.type !== 'Financeiro' && timeline.type !== 'Entradas' && timeline.type !== 'Empréstimo' && timeline.type !== 'Principal' && (
           <FloatingTaskStack
             pendingTasks={pendingFloatingTasks}
             onCompleteTask={onCompleteFloatingTask}
@@ -1184,7 +1427,7 @@ export default function VerticalTimeline({
         )}
       </div>
 
-      {/* 🎯 Floating Quick Return to Today Button */}
+      {/* 🎯 Floating Quick Novo Button (Aligned with UI Design System) */}
       <div
         style={{
           position: 'fixed',
@@ -1195,24 +1438,40 @@ export default function VerticalTimeline({
       >
         <button
           type="button"
-          onClick={scrollToToday}
+          onClick={() => {
+            const nature = activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income';
+            onAddEventForDate(todayStr, nature);
+          }}
           className="btn btn-primary"
           style={{
             borderRadius: '9999px',
-            padding: '10px 18px',
-            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.45)',
-            display: 'flex',
+            padding: '10px 20px',
+            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)',
+            display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
-            fontWeight: '800',
-            fontSize: '0.85rem',
+            fontWeight: '700',
+            fontSize: '0.86rem',
             background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-            border: '1px solid rgba(255, 255, 255, 0.2)'
+            border: '1px solid rgba(255, 255, 255, 0.22)',
+            color: '#ffffff',
+            cursor: 'pointer',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)'
           }}
-          title="Focar e voltar para a data de Hoje / Mês Atual"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+            e.currentTarget.style.boxShadow = '0 12px 28px rgba(99, 102, 241, 0.55)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0) scale(1)';
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(99, 102, 241, 0.4)';
+          }}
+          title="Criar novo registo / movimento"
         >
-          <LocateFixed size={16} />
-          <span>Voltar ao Hoje</span>
+          <Plus size={16} strokeWidth={2.5} />
+          <span>Novo</span>
         </button>
       </div>
     </div>

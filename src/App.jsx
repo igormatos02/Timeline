@@ -16,9 +16,9 @@ import {
 import './App.css';
 
 export default function App() {
-  // Load timelines from localStorage or mock data (v4 includes Real Contract Crédito Automóvel)
+  // Load timelines from localStorage or mock data (v11 without redundant description on Entradas)
   const [timelines, setTimelines] = useState(() => {
-    const saved = localStorage.getItem('chrono_timelines_data_v4');
+    const saved = localStorage.getItem('chrono_timelines_data_v11');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -30,7 +30,7 @@ export default function App() {
   });
 
   const [activeTimelineId, setActiveTimelineId] = useState(() => {
-    return timelines[0]?.id || 'tl-loan-80004197726';
+    return 'tl-principal';
   });
 
   // Modal states
@@ -62,10 +62,47 @@ export default function App() {
 
   // Save to localStorage when timelines state updates
   useEffect(() => {
-    localStorage.setItem('chrono_timelines_data_v4', JSON.stringify(timelines));
+    localStorage.setItem('chrono_timelines_data_v11', JSON.stringify(timelines));
   }, [timelines]);
 
-  const activeTimeline = timelines.find((tl) => tl.id === activeTimelineId) || timelines[0];
+  const rawActiveTimeline = timelines.find((tl) => tl.id === activeTimelineId) || timelines[0];
+
+  // Dynamically merge loan and income events up to today (2026-08-21) when viewing the Principal timeline
+  const activeTimeline = React.useMemo(() => {
+    if (!rawActiveTimeline) return null;
+    if (rawActiveTimeline.type === 'Principal') {
+      const todayStr = '2026-08-21';
+      const otherTimelines = timelines.filter((tl) => tl.id !== rawActiveTimeline.id);
+      const mergedEvents = [];
+      
+      otherTimelines.forEach((tl) => {
+        (tl.events || []).forEach((ev) => {
+          if (ev.date <= todayStr) {
+            mergedEvents.push({
+              ...ev,
+              timelineOriginId: ev.timelineOriginId || tl.id,
+              timelineOriginName: ev.timelineOriginName || tl.name,
+              timelineOriginIcon:
+                ev.timelineOriginIcon ||
+                (tl.id === 'tl-loan-house' ? '🏠' : tl.id === 'tl-income' ? '💵' : '🚗'),
+              timelineOriginColor: tl.color
+            });
+          }
+        });
+      });
+
+      // Sort by date descending
+      mergedEvents.sort((a, b) => b.date.localeCompare(a.date));
+
+      return {
+        ...rawActiveTimeline,
+        startDate: '2018-01-10',
+        endDate: todayStr,
+        events: mergedEvents
+      };
+    }
+    return rawActiveTimeline;
+  }, [rawActiveTimeline, timelines]);
 
   // ----------------------------------------------------
   // Timeline Handlers
@@ -263,14 +300,28 @@ export default function App() {
   
   // Toggle installment payment state (Pago <-> Pendente / Atrasada)
   const handleToggleLoanPayment = (installmentId) => {
-    if (!activeTimeline) return;
+    // Find target timeline that contains this event
+    let targetTimeline = timelines.find((tl) => (tl.events || []).some((e) => e.id === installmentId));
+    if (!targetTimeline) targetTimeline = activeTimeline;
+    if (!targetTimeline) return;
 
-    const currentEvents = activeTimeline.events || [];
+    const currentEvents = targetTimeline.events || [];
     const target = currentEvents.find((e) => e.id === installmentId);
     if (!target) return;
 
-    const nextStatus = target.status === 'Pago' ? 'Pendente' : 'Pago';
-    const nextCompleted = nextStatus === 'Pago';
+    const isIncome = target.isIncome || (target.category && target.category.startsWith('entrada'));
+    let nextStatus, nextCompleted;
+
+    if (isIncome) {
+      if (target.date > '2026-08-21') {
+        return; // Entradas futuras não podem ser marcadas como recebidas antes da data atual
+      }
+      nextStatus = target.status === 'Recebido' ? 'Pendente' : 'Recebido';
+      nextCompleted = nextStatus === 'Recebido';
+    } else {
+      nextStatus = target.status === 'Pago' ? 'Pendente' : 'Pago';
+      nextCompleted = nextStatus === 'Pago';
+    }
 
     const updatedList = currentEvents.map((ev) =>
       ev.id === installmentId
@@ -278,10 +329,12 @@ export default function App() {
         : ev
     );
 
-    const finalEvents = recalculateLoanState(activeTimeline, updatedList);
+    const finalEvents = targetTimeline.type === 'Empréstimo'
+      ? recalculateLoanState(targetTimeline, updatedList)
+      : updatedList;
 
     setTimelines((prev) =>
-      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: finalEvents } : tl))
+      prev.map((tl) => (tl.id === targetTimeline.id ? { ...tl, events: finalEvents } : tl))
     );
   };
 
@@ -377,32 +430,31 @@ export default function App() {
       {/* Main Layout Area */}
       <main className="main-layout">
         {activeTimeline ? (
-          <>
-            {/* Active Timeline Hero Banner */}
-            <TimelineHeader
-              timeline={activeTimeline}
-              onEdit={handleOpenEditTimeline}
-              onDelete={handleDeleteTimeline}
-              onOpenAmortizationModal={() => setIsAmortizationModalOpen(true)}
-              onScrollToOverdue={handleScrollToOverdue}
-            />
-
-            {/* Vertical Timeline Engine with Floating Task Stack */}
-            <VerticalTimeline
-              timeline={activeTimeline}
-              onEditEvent={handleOpenEditEvent}
-              onDeleteEvent={handleDeleteEvent}
-              onToggleTask={handleToggleTask}
-              onAddEventForDate={(dateStr) => handleOpenCreateEvent(dateStr)}
-              onCompleteFloatingTask={handleCompleteFloatingTask}
-              onAddFloatingTask={handleAddFloatingTask}
-              onUpdateFloatingTaskPriority={handleUpdateFloatingTaskPriority}
-              onAddChecklistItem={handleAddChecklistItem}
-              onDeleteChecklistItem={handleDeleteChecklistItem}
-              onToggleLoanPayment={handleToggleLoanPayment}
-              onOpenEditInstallment={(inst) => setEditingInstallment(inst)}
-            />
-          </>
+          <VerticalTimeline
+            timeline={activeTimeline}
+            onEditEvent={handleOpenEditEvent}
+            onDeleteEvent={handleDeleteEvent}
+            onToggleTask={handleToggleTask}
+            onAddEventForDate={(dateStr) => handleOpenCreateEvent(dateStr)}
+            onCompleteFloatingTask={handleCompleteFloatingTask}
+            onAddFloatingTask={handleAddFloatingTask}
+            onUpdateFloatingTaskPriority={handleUpdateFloatingTaskPriority}
+            onAddChecklistItem={handleAddChecklistItem}
+            onDeleteChecklistItem={handleDeleteChecklistItem}
+            onToggleLoanPayment={handleToggleLoanPayment}
+            onOpenEditInstallment={(inst) => setEditingInstallment(inst)}
+            onNavigateToTimeline={(timelineId) => setActiveTimelineId(timelineId)}
+            headerComponent={
+              <TimelineHeader
+                timeline={activeTimeline}
+                allTimelines={timelines}
+                onEdit={handleOpenEditTimeline}
+                onDelete={handleDeleteTimeline}
+                onOpenAmortizationModal={() => setIsAmortizationModalOpen(true)}
+                onScrollToOverdue={handleScrollToOverdue}
+              />
+            }
+          />
         ) : (
           <div className="empty-timeline-state glass-panel" style={{ marginTop: '40px' }}>
             <h2>Nenhuma Timeline Encontrada</h2>
@@ -434,6 +486,7 @@ export default function App() {
         onSave={handleSaveEvent}
         initialData={editingEvent}
         defaultDate={selectedDateForNewEvent}
+        timeline={activeTimeline}
       />
 
       {/* Loan Modals */}

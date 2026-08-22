@@ -1,23 +1,17 @@
 import { formatCurrency } from '../utils/loanCalculations';
 
-// Mock dataset for vertical timelines with advanced event categories, labels and Loan (Empréstimo) support
-
+// Categories for events
 export const EVENT_CATEGORIES = [
+  { id: 'entrada_recorrente', name: 'Entrada Recorrente (Salário)', icon: '💰', color: '#10b981' },
+  { id: 'entrada_esporadica', name: 'Entrada Esporádica (Bónus / Extra)', icon: '🎁', color: '#06b6d4' },
   { id: 'parcela_emprestimo', name: 'Prestação / Parcela', icon: '💳', color: '#6366f1' },
-  { id: 'amortizacao', name: 'Amortização Extraordinária', icon: '📉', color: '#10b981' },
-  { id: 'agendamento', name: 'Agendamento', icon: '📅', color: '#06b6d4' },
-  { id: 'repetitivo', name: 'Repetitivo / Aniversário', icon: '🔁', color: '#ec4899' },
-  { id: 'tarefa', name: 'Pilha de Tarefas (Flutuante)', icon: '📌', color: '#f59e0b' },
-  { id: 'memoria', name: 'Memória / Nota', icon: '📝', color: '#10b981' }
+  { id: 'amortizacao', name: 'Amortização Extraordinária', icon: '📉', color: '#10b981' }
 ];
 
 export const TIMELINE_TYPES = [
-  'Empréstimo',
-  'Tecnologia',
-  'Pessoal',
-  'Marketing',
-  'Educação',
-  'Outro'
+  'Principal',
+  'Entradas',
+  'Empréstimo'
 ];
 
 export const TIMELINE_STATUSES = [
@@ -28,13 +22,11 @@ export const TIMELINE_STATUSES = [
 ];
 
 export const DEFAULT_LABELS = [
-  { id: 'emprestimo', name: 'Crédito Automóvel', color: '#6366f1' },
-  { id: 'amortizacao', name: 'Amortização', color: '#10b981' },
-  { id: 'debito_direto', name: 'Débito Direto', color: '#06b6d4' },
-  { id: 'trabalho', name: 'Trabalho', color: '#6366f1' },
-  { id: 'pessoal', name: 'Pessoal', color: '#ec4899' },
-  { id: 'urgente', name: 'Urgente', color: '#ef4444' },
-  { id: 'financas', name: 'Finanças', color: '#10b981' }
+  { id: 'salario', name: 'Salário', color: '#10b981' },
+  { id: 'bonus', name: 'Bónus / Extra', color: '#06b6d4' },
+  { id: 'habitacao', name: 'Crédito Habitação', color: '#10b981' },
+  { id: 'automovel', name: 'Crédito Automóvel', color: '#6366f1' },
+  { id: 'debito_direto', name: 'Débito Direto', color: '#06b6d4' }
 ];
 
 // Helper to generate the exact Real Contract Crédito Automóvel Nº 80004197726
@@ -43,17 +35,14 @@ function createRealCarLoanEvents() {
   const totalDebt = 15456.60;
   const regularMonthly = 218.47;
   const totalMonths = 120; // 120 prestações (Maio 2024 a Abril 2034)
-  
-  // Saldo devedor inicial
+
   let runningBalance = totalDebt;
 
-  // Início em 2024-05-15 (Prestação #1) até 2034-04-15 (Prestação #120)
   for (let i = 1; i <= totalMonths; i++) {
-    // Calcular data da prestação
     const totalMonthOffset = i - 1; // 0 = Maio 2024
     const startYear = 2024;
     const startMonth = 5; // Maio
-    
+
     const absoluteMonth = startMonth + totalMonthOffset;
     const year = startYear + Math.floor((absoluteMonth - 1) / 12);
     const monthNumber = ((absoluteMonth - 1) % 12) + 1;
@@ -61,7 +50,7 @@ function createRealCarLoanEvents() {
     const dateStr = `${year}-${monthStr}-15`;
 
     const isPastPaid = i < 28; // Prestações 1 a 27 (Maio 2024 a Julho 2026) estão pagas
-    const isAugustDue = i === 28; // Prestação 28 (15 de Agosto de 2026 - atrasada face a 21 de Agosto de 2026)
+    const isAugustDue = i === 28; // Prestação 28 (15 de Agosto de 2026 - atrasada)
 
     let status = 'Pendente';
     if (isPastPaid) {
@@ -70,8 +59,6 @@ function createRealCarLoanEvents() {
       status = 'Atrasada';
     }
 
-    // Decomposição real do extrato:
-    // Prestação #28: Capital = 89.08€, Juros = 124.41€, Imposto Selo = 4.98€ (Juros totais = 129.39€)
     let principalAmount;
     let interestPortion;
 
@@ -79,27 +66,27 @@ function createRealCarLoanEvents() {
       principalAmount = 89.08;
       interestPortion = 129.39; // 124.41 + 4.98
     } else if (i < 28) {
-      // Amortização progressiva anterior somando os 2.107,59€
       principalAmount = Math.round((70 + (i * 0.7)) * 100) / 100;
       interestPortion = Math.round((regularMonthly - principalAmount) * 100) / 100;
     } else {
-      // Prestações futuras (capital vai subindo ligeiramente à medida que o saldo reduz)
       principalAmount = Math.min(runningBalance, Math.round((89.08 + (i - 28) * 1.15) * 100) / 100);
       interestPortion = Math.max(0, Math.round((regularMonthly - principalAmount) * 100) / 100);
     }
 
     if (i === 28) {
-      // Ajustar saldo exato do extrato
       runningBalance = 13259.93;
     } else {
       runningBalance = Math.max(0, Math.round((runningBalance - principalAmount) * 100) / 100);
     }
 
     events.push({
-      id: `loan-inst-${i}`,
+      id: `car-loan-inst-${i}`,
+      timelineOriginId: 'tl-loan-80004197726',
+      timelineOriginName: 'Crédito Automóvel',
+      timelineOriginIcon: '🚗',
       date: dateStr,
       time: '08:30',
-      title: `Prestação #${i} de ${totalMonths}`,
+      title: `Prestação Carro #${i} de ${totalMonths}`,
       description: i === 28
         ? `Débito Direto PT50002300004549878663394 (${formatCurrency(principalAmount)} capital + ${formatCurrency(124.41)} juros + ${formatCurrency(4.98)} imp. selo).`
         : `Débito Direto em conta (${formatCurrency(principalAmount)} capital + ${formatCurrency(interestPortion)} juros/selo).`,
@@ -115,35 +102,211 @@ function createRealCarLoanEvents() {
       totalInstallments: totalMonths,
       isSystemLoanEvent: true,
       isCompleted: isPastPaid,
-      labels: ['Crédito Automóvel', 'Débito Direto', isAugustDue ? 'Atrasada' : (isPastPaid ? 'Pago' : 'Pendente')]
+      labels: ['Crédito Automóvel', isAugustDue ? 'Atrasada' : (isPastPaid ? 'Pago' : 'Pendente')]
     });
   }
 
-  // Tarefa flutuante na pilha
-  events.push({
-    id: 'ev-loan-task-real',
-    date: '2026-08-21',
-    time: '',
-    title: 'Validar Débito Direto PT50...663394 da Prestação #28 (218,47 €)',
-    description: 'Verificar saldo e débito da prestação #28 de 15 de Agosto no extrato bancário.',
-    status: 'Em Progresso',
-    category: 'tarefa',
-    priority: 'Urgente',
-    author: 'Igor Matos',
-    labels: ['Finanças', 'Débito Direto', 'Urgente'],
-    isCompleted: false,
-    tasks: [
-      { text: 'Confirmar saldo na conta associada ao IBAN PT50002300004549878663394', completed: true },
-      { text: 'Validar cobrança ADC ativa de 218,47 €', completed: false },
-      { text: 'Arquivar extrato 2026/07 (TAN 11.183%)', completed: true }
-    ]
-  });
+  return events;
+}
+
+// Helper to generate the 60.000 € / 34 Years / 2% Interest Home Loan (Crédito Habitação)
+function createHomeLoanEvents() {
+  const events = [];
+  const totalDebt = 60000;
+  const regularMonthly = 203.50;
+  const totalMonths = 34 * 12; // 408 prestações (Janeiro 2018 a Dezembro 2051)
+  const monthlyRate = 0.02 / 12; // 2% ao ano
+
+  let runningBalance = totalDebt;
+
+  for (let i = 1; i <= totalMonths; i++) {
+    const totalMonthOffset = i - 1; // 0 = Janeiro 2018
+    const startYear = 2018;
+    const startMonth = 1; // Janeiro
+
+    const absoluteMonth = startMonth + totalMonthOffset;
+    const year = startYear + Math.floor((absoluteMonth - 1) / 12);
+    const monthNumber = ((absoluteMonth - 1) % 12) + 1;
+    const monthStr = monthNumber.toString().padStart(2, '0');
+    const dateStr = `${year}-${monthStr}-10`;
+
+    const isPastPaid = i <= 104; // Janeiro 2018 a Agosto 2026
+    let status = isPastPaid ? 'Pago' : 'Pendente';
+
+    const interestPortion = Math.max(0, Math.round(runningBalance * monthlyRate * 100) / 100);
+    const principalAmount = Math.min(runningBalance, Math.round((regularMonthly - interestPortion) * 100) / 100);
+    runningBalance = Math.max(0, Math.round((runningBalance - principalAmount) * 100) / 100);
+
+    events.push({
+      id: `house-loan-inst-${i}`,
+      timelineOriginId: 'tl-loan-house',
+      timelineOriginName: 'Crédito Habitação',
+      timelineOriginIcon: '🏠',
+      date: dateStr,
+      time: '09:00',
+      title: `Prestação Casa #${i} de ${totalMonths}`,
+      description: `Amortização de habitação própria (${formatCurrency(principalAmount)} capital + ${formatCurrency(interestPortion)} juros TAN 2%).`,
+      category: 'parcela_emprestimo',
+      status: status,
+      priority: 'Normal',
+      amount: regularMonthly,
+      principalAmount: principalAmount,
+      interestPortion: interestPortion,
+      interestAmount: 0,
+      balanceAfter: runningBalance,
+      installmentNumber: i,
+      totalInstallments: totalMonths,
+      isSystemLoanEvent: true,
+      isCompleted: isPastPaid,
+      labels: ['Crédito Habitação', isPastPaid ? 'Pago' : 'Pendente']
+    });
+  }
+
+  return events;
+}
+
+// Helper to generate Income Timeline events (strictly 1 monthly salary of 3.300€ on day 27)
+function createIncomeEvents() {
+  const events = [];
+  const salaryAmount = 3300.00;
+  const todayStr = '2026-08-21';
+
+  // Salário Recorrente Mensal: exactamente 1 por mês a cada dia 27 até no máximo 1 ano à frente (2024-01-27 até 2027-08-27)
+  for (let year = 2024; year <= 2027; year++) {
+    const maxMonth = year === 2027 ? 8 : 12; // Máximo 1 ano à frente (Agosto 2027)
+    for (let month = 1; month <= maxMonth; month++) {
+      const monthStr = month.toString().padStart(2, '0');
+      const dateStr = `${year}-${monthStr}-27`;
+      const isPast = dateStr <= todayStr;
+      const status = isPast ? 'Recebido' : 'Pendente';
+
+      events.push({
+        id: `income-salary-${year}-${monthStr}`,
+        timelineOriginId: 'tl-income',
+        timelineOriginName: 'Entradas & Rendimentos',
+        timelineOriginIcon: '💵',
+        date: dateStr,
+        time: '10:00',
+        title: 'Salário Mensal',
+        description: `Transferência bancária de vencimento mensal líquido (${formatCurrency(salaryAmount)}).`,
+        category: 'entrada_recorrente',
+        status: status,
+        priority: 'Normal',
+        amount: salaryAmount,
+        isIncome: true,
+        isCompleted: isPast,
+        labels: ['Salário', isPast ? 'Recebido' : 'Pendente']
+      });
+    }
+  }
+
+  // Entradas Esporádicas Pontuais dentro do horizonte
+  events.push(
+    {
+      id: 'income-bonus-2025-12',
+      timelineOriginId: 'tl-income',
+      timelineOriginName: 'Entradas & Rendimentos',
+      timelineOriginIcon: '💵',
+      date: '2025-12-15',
+      time: '14:00',
+      title: 'Bónus Anual de Desempenho',
+      description: 'Prémio extraordinário de produtividade.',
+      category: 'entrada_esporadica',
+      status: 'Recebido',
+      priority: 'Normal',
+      amount: 2500.00,
+      isIncome: true,
+      isCompleted: true,
+      labels: ['Bónus / Extra', 'Recebido']
+    },
+    {
+      id: 'income-bonus-2026-06',
+      timelineOriginId: 'tl-income',
+      timelineOriginName: 'Entradas & Rendimentos',
+      timelineOriginIcon: '💵',
+      date: '2026-06-20',
+      time: '14:00',
+      title: 'Subsídio / Bónus Extraordinário',
+      description: 'Gratificação semestral atribuída pela empresa.',
+      category: 'entrada_esporadica',
+      status: 'Recebido',
+      priority: 'Normal',
+      amount: 1650.00,
+      isIncome: true,
+      isCompleted: true,
+      labels: ['Bónus / Extra', 'Recebido']
+    },
+    {
+      id: 'income-bonus-2026-12',
+      timelineOriginId: 'tl-income',
+      timelineOriginName: 'Entradas & Rendimentos',
+      timelineOriginIcon: '💵',
+      date: '2026-12-15',
+      time: '14:00',
+      title: 'Bónus Previsto Fim de Ano',
+      description: 'Estimativa de bónus de fecho de exercício fiscal.',
+      category: 'entrada_esporadica',
+      status: 'Pendente',
+      priority: 'Normal',
+      amount: 2000.00,
+      isIncome: true,
+      isCompleted: false,
+      labels: ['Bónus / Extra', 'Pendente']
+    }
+  );
 
   return events;
 }
 
 export const initialTimelines = [
-  // 1. TIMELINE PADRÃO: CONTRATO CRÉDITO AUTOMÓVEL Nº 80004197726 (EXTRATO REAL)
+  // 1. TIMELINE PRINCIPAL (CONSOLIDADA - DEFAULT)
+  {
+    id: "tl-principal",
+    name: "Timeline Principal (Consolidada)",
+    description: "Visão executiva unificada com todos os compromissos, empréstimos e entradas consolidados até à data de hoje.",
+    startDate: "2018-01-10",
+    endDate: "2026-08-21",
+    status: "Em Progresso",
+    type: "Principal",
+    color: "#8b5cf6",
+    periodicity: "mensal",
+    events: []
+  },
+
+  // 2. TIMELINE DE ENTRADAS & RENDIMENTOS (SALÁRIO 3.300€ A CADA DIA 27)
+  {
+    id: "tl-income",
+    name: "Entradas & Rendimentos",
+    description: "",
+    startDate: "2024-01-01",
+    endDate: "2027-08-31",
+    status: "Em Progresso",
+    type: "Entradas",
+    color: "#10b981",
+    periodicity: "mensal",
+    monthlySalary: 3300.00,
+    dueDay: 27,
+    events: createIncomeEvents()
+  },
+
+  // 3. CRÉDITO HABITAÇÃO (CASA - 60.000€ / 34 ANOS / 2% TAN DESDE 2018)
+  {
+    id: "tl-loan-house",
+    name: "Crédito Habitação - Casa",
+    description: "Financiamento Imobiliário de 60.000,00 € a 34 anos (TAN 2.00%). Prestações pagas desde Janeiro de 2018.",
+    startDate: "2018-01-10",
+    endDate: "2052-01-10",
+    status: "Em Progresso",
+    type: "Empréstimo",
+    color: "#059669",
+    totalDebt: 60000.00,
+    installmentAmount: 203.50,
+    periodicity: "mensal",
+    dueDay: 10,
+    events: createHomeLoanEvents()
+  },
+
+  // 4. CRÉDITO AUTOMÓVEL Nº 80004197726 (EXTRATO REAL)
   {
     id: "tl-loan-80004197726",
     name: "Crédito Automóvel Nº 80004197726",
@@ -158,60 +321,5 @@ export const initialTimelines = [
     periodicity: "mensal",
     dueDay: 15,
     events: createRealCarLoanEvents()
-  },
-
-  // 2. TIMELINE PROJETO (CHRONO)
-  {
-    id: "tl-1",
-    name: "Lançamento da Plataforma Chrono",
-    description: "Planeamento executivo e execução do novo ecossistema de gestão temporal para equipas de alta performance.",
-    startDate: "2026-08-01",
-    endDate: "2026-09-15",
-    status: "Em Progresso",
-    type: "Tecnologia",
-    color: "#06b6d4",
-    events: [
-      {
-        id: "ev-today",
-        date: "2026-08-21",
-        time: "10:30",
-        title: "Sincronização da Interface Vertical & Protótipo UI",
-        description: "Apresentação da nova linha temporal vertical interativa com ordenação decrescente e nós diários em tempo real.",
-        status: "Em Progresso",
-        category: "agendamento",
-        priority: "Alta",
-        author: "Igor Matos",
-        labels: ["Trabalho", "Urgente"],
-        tasks: [
-          { text: "Aprovação do layout visual", completed: true },
-          { text: "Testes de responsividade mobile", completed: false },
-          { text: "Integrar animações Framer Motion", completed: true }
-        ]
-      },
-      {
-        id: "ev-repeat-1",
-        date: "2026-08-21",
-        time: "09:00",
-        title: "Aniversário da Empresa (Comemoração Anual)",
-        description: "Data comemorativa recorrente do nascimento da equipa de desenvolvimento.",
-        status: "Concluído",
-        category: "repetitivo",
-        priority: "Média",
-        author: "RH Team",
-        labels: ["Aniversário", "Pessoal"]
-      },
-      {
-        id: "ev-mem-1",
-        date: "2026-08-20",
-        time: "18:00",
-        title: "Memória: Insights sobre Usabilidade de Timelines",
-        description: "Nota de reflexão: A ordenação decrescente com filtro de tarefas flutuantes aumenta imenso a clareza do roadmap diário.",
-        status: "Concluído",
-        category: "memoria",
-        priority: "Baixa",
-        author: "Igor Matos",
-        labels: ["Ideia / Nota"]
-      }
-    ]
   }
 ];

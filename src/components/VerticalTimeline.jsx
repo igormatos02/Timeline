@@ -8,7 +8,8 @@ import {
   endOfWeek,
   isSameWeek,
   isSameMonth,
-  getWeek
+  getWeek,
+  addYears
 } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import {
@@ -44,28 +45,101 @@ export default function VerticalTimeline({
   onAddChecklistItem,
   onDeleteChecklistItem,
   onToggleLoanPayment,
-  onOpenEditInstallment
+  onOpenEditInstallment,
+  onNavigateToTimeline,
+  headerComponent
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('Todos');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('Todos');
   const [selectedLabelFilter, setSelectedLabelFilter] = useState('Todos');
   const [showEmptyDays, setShowEmptyDays] = useState(true);
-  const [groupBy, setGroupBy] = useState(() => {
-    if (timeline.type === 'Empréstimo' && timeline.periodicity) {
-      return getGroupingForPeriodicity(timeline.periodicity);
-    }
-    return 'dia';
-  });
 
-  // Automatically update aggregation view when timeline periodicity changes
+  // Multi-selection of credit and income timelines for Principal view
+  const availableCreditOptions = [
+    { id: 'tl-loan-house', name: 'Habitação', icon: '🏠', color: '#10b981' },
+    { id: 'tl-loan-80004197726', name: 'Automóvel', icon: '🚗', color: '#6366f1' },
+    { id: 'tl-income', name: 'Entradas', icon: '💵', color: '#06b6d4' }
+  ];
+  const [selectedTimelineIds, setSelectedTimelineIds] = useState(['tl-loan-house', 'tl-loan-80004197726', 'tl-income']);
+
+  const toggleTimelineSelection = (id) => {
+    if (selectedTimelineIds.includes(id)) {
+      if (selectedTimelineIds.length === 1) {
+        setSelectedTimelineIds(availableCreditOptions.map((o) => o.id));
+      } else {
+        setSelectedTimelineIds(selectedTimelineIds.filter((item) => item !== id));
+      }
+    } else {
+      setSelectedTimelineIds([...selectedTimelineIds, id]);
+    }
+  };
+
+  const selectAllTimelines = () => {
+    if (selectedTimelineIds.length === availableCreditOptions.length) {
+      setSelectedTimelineIds([availableCreditOptions[0].id]);
+    } else {
+      setSelectedTimelineIds(availableCreditOptions.map((o) => o.id));
+    }
+  };
+
+  // Agrupamento fixo mensal por agora
+  const [groupBy, setGroupBy] = useState('mes');
+
+  // Helper to determine allowed grouping modes based on timeline type and periodicity
+  const getAllowedGroupingModes = () => {
+    if (timeline.type === 'Principal' || timeline.type === 'Entradas') {
+      return [
+        { id: 'dia', name: 'Dia', icon: <Calendar size={14} /> },
+        { id: 'mes', name: 'Mês', icon: <Clock size={14} /> },
+        { id: 'ano', name: 'Ano', icon: <Sparkles size={14} /> }
+      ];
+    }
+    if (timeline.type !== 'Empréstimo') {
+      return [
+        { id: 'dia', name: 'Dia', icon: <Calendar size={14} /> },
+        { id: 'semana', name: 'Semana', icon: <Layers size={14} /> },
+        { id: 'mes', name: 'Mês', icon: <Clock size={14} /> },
+        { id: 'ano', name: 'Ano', icon: <Sparkles size={14} /> }
+      ];
+    }
+    const p = (timeline.periodicity || 'mensal').toLowerCase();
+    if (p === 'anual') {
+      return [
+        { id: 'ano', name: 'Ano', icon: <Sparkles size={14} /> }
+      ];
+    }
+    if (p === 'mensal' || p === 'bimestral' || p === 'semestral') {
+      return [
+        { id: 'mes', name: 'Mês', icon: <Clock size={14} /> },
+        { id: 'ano', name: 'Ano', icon: <Sparkles size={14} /> }
+      ];
+    }
+    if (p === 'quinzenal') {
+      return [
+        { id: 'semana', name: 'Semana', icon: <Layers size={14} /> },
+        { id: 'mes', name: 'Mês', icon: <Clock size={14} /> },
+        { id: 'ano', name: 'Ano', icon: <Sparkles size={14} /> }
+      ];
+    }
+    // diaria
+    return [
+      { id: 'dia', name: 'Dia', icon: <Calendar size={14} /> },
+      { id: 'semana', name: 'Semana', icon: <Layers size={14} /> },
+      { id: 'mes', name: 'Mês', icon: <Clock size={14} /> },
+      { id: 'ano', name: 'Ano', icon: <Sparkles size={14} /> }
+    ];
+  };
+
+  const allowedGroupingModes = getAllowedGroupingModes();
+
+  // Automatically update aggregation view when timeline periodicity changes & ensure valid grouping
+  // Keep grouping locked to monthly
   React.useEffect(() => {
-    if (timeline.type === 'Empréstimo' && timeline.periodicity) {
-      setGroupBy(getGroupingForPeriodicity(timeline.periodicity));
-    }
-  }, [timeline.id, timeline.periodicity, timeline.type]);
+    setGroupBy('mes');
+  }, [timeline.id]);
 
-  // Scroll and focus on Today / Current period node
+  // Scroll and focus on Today / Current period node when clicked by user
   const scrollToToday = () => {
     const todayNode = document.getElementById('timeline-node-today');
     if (todayNode) {
@@ -73,16 +147,38 @@ export default function VerticalTimeline({
     }
   };
 
-  // Auto-focus on Today / Current node on startup / when changing timeline or view mode
+  // Scroll memory per timeline: remember exact scroll position or jump directly to today without animated gliding
+  const scrollPositionsRef = React.useRef({});
+  const currentTimelineIdRef = React.useRef(timeline.id);
+
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      const todayNode = document.getElementById('timeline-node-today');
-      if (todayNode) {
-        todayNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const handleScroll = () => {
+      if (currentTimelineIdRef.current) {
+        scrollPositionsRef.current[currentTimelineIdRef.current] = window.scrollY;
       }
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [timeline.id, groupBy]);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  React.useLayoutEffect(() => {
+    const currentId = timeline.id;
+    currentTimelineIdRef.current = currentId;
+
+    const savedPosition = scrollPositionsRef.current[currentId];
+    if (savedPosition !== undefined) {
+      window.scrollTo({ top: savedPosition, behavior: 'instant' });
+    } else {
+      // First time opening this timeline: place directly on today without animated scroll racing
+      const timer = setTimeout(() => {
+        const todayNode = document.getElementById('timeline-node-today');
+        if (todayNode) {
+          todayNode.scrollIntoView({ behavior: 'instant', block: 'center' });
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [timeline.id]);
 
   // Default Today reference (2026-08-21)
   const todayDate = new Date('2026-08-21');
@@ -109,17 +205,41 @@ export default function VerticalTimeline({
         (ev.description && ev.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (ev.labels && ev.labels.some((l) => l.toLowerCase().includes(searchQuery.toLowerCase())));
 
-      const matchesStatus =
-        selectedStatusFilter === 'Todos' || ev.status === selectedStatusFilter;
+      let matchesStatus = selectedStatusFilter === 'Todos';
+      if (!matchesStatus) {
+        if (selectedStatusFilter === 'Recebido') {
+          matchesStatus = ev.status === 'Recebido';
+        } else if (selectedStatusFilter === 'Pendente') {
+          matchesStatus = (ev.status === 'Pendente' || ev.status === 'Previsto') && (!ev.isIncome || ev.date >= todayStr);
+        } else if (selectedStatusFilter === 'Atrasada') {
+          matchesStatus = ev.status === 'Atrasada' || (ev.isIncome && ev.date < todayStr && ev.status !== 'Recebido');
+        } else {
+          matchesStatus = ev.status === selectedStatusFilter;
+        }
+      }
 
       const matchesCategory =
-        selectedCategoryFilter === 'Todos' || ev.category === selectedCategoryFilter;
+        selectedCategoryFilter === 'Todos' ||
+        ev.category === selectedCategoryFilter;
+
+      const matchesTimelineMultiSelect =
+        timeline.type !== 'Principal' ||
+        selectedTimelineIds.length === 0 ||
+        selectedTimelineIds.includes(ev.timelineOriginId);
 
       const matchesLabel =
         selectedLabelFilter === 'Todos' ||
         (ev.labels && ev.labels.includes(selectedLabelFilter));
 
-      return matchesSearch && matchesStatus && matchesCategory && matchesLabel;
+      // Entradas: máximo 1 ano à frente da data atual (21/08/2026 -> 21/08/2027 / 31/08/2027)
+      if (timeline.type === 'Entradas') {
+        const oneYearAheadStr = format(addYears(todayDate, 1), 'yyyy-MM-31');
+        if (ev.date > oneYearAheadStr) {
+          return false;
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesCategory && matchesTimelineMultiSelect && matchesLabel;
     });
   };
 
@@ -136,9 +256,13 @@ export default function VerticalTimeline({
     startDateObj = subDays(todayDate, 20);
   }
 
-  // Determine latest date in timeline (supports future loan installments up to endDate)
+  // Determine latest date in timeline (Principal only shows up to todayDate, Entradas shows at most 1 year ahead)
   let maxDateObj = todayDate;
-  if (timeline.endDate) {
+  if (timeline.type === 'Principal') {
+    maxDateObj = todayDate;
+  } else if (timeline.type === 'Entradas') {
+    maxDateObj = addYears(todayDate, 1);
+  } else if (timeline.endDate) {
     try {
       const parsedEnd = parseISO(timeline.endDate);
       if (!isNaN(parsedEnd.getTime()) && parsedEnd > maxDateObj) {
@@ -147,15 +271,16 @@ export default function VerticalTimeline({
     } catch (e) {}
   }
 
-  // Check if any event has a later date
-  allEvents.forEach((ev) => {
-    try {
-      const evD = parseISO(ev.date);
-      if (!isNaN(evD.getTime()) && evD > maxDateObj) {
-        maxDateObj = evD;
-      }
-    } catch (e) {}
-  });
+  if (timeline.type !== 'Principal' && timeline.type !== 'Entradas') {
+    allEvents.forEach((ev) => {
+      try {
+        const evD = parseISO(ev.date);
+        if (!isNaN(evD.getTime()) && evD > maxDateObj) {
+          maxDateObj = evD;
+        }
+      } catch (e) {}
+    });
+  }
 
   // Generate array of days from startDate up to maxDateObj (Descending: future at top, past at bottom)
   let daysArray = [];
@@ -274,11 +399,13 @@ export default function VerticalTimeline({
                         </div>
                         <TimelineEventCard
                           event={ev}
+                          currentTimelineId={timeline.id}
                           onEdit={onEditEvent}
                           onDelete={onDeleteEvent}
                           onToggleTask={onToggleTask}
                           onToggleLoanPayment={onToggleLoanPayment}
                           onOpenEditInstallment={onOpenEditInstallment}
+                          onNavigateToTimeline={onNavigateToTimeline}
                         />
                       </div>
                     ))
@@ -373,13 +500,51 @@ export default function VerticalTimeline({
 
               <div className="day-content-col">
                 <div className="group-card">
-                  <div className="group-card-header">
+                  <div className="group-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                     <h3 className="group-card-title" style={{ textTransform: 'capitalize' }}>
                       <Clock size={18} style={{ color: 'var(--primary-light)' }} /> {monthTitleStr}
                     </h3>
-                    <span className="group-card-badge">
-                      {mGroup.events.length} evento(s)
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span
+                        className="group-card-badge"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          height: '26px',
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        {mGroup.events.length} {timeline.type === 'Entradas' ? 'entrada(s)' : 'evento(s)'}
+                      </span>
+                      {hasEvents && (
+                        <button
+                          type="button"
+                          onClick={() => onAddEventForDate(format(mGroup.monthDate, 'yyyy-MM-15'))}
+                          style={{
+                            cursor: 'pointer',
+                            height: '26px',
+                            padding: '4px 10px',
+                            borderRadius: '9999px',
+                            fontSize: '0.75rem',
+                            fontWeight: '700',
+                            lineHeight: 1,
+                            background: timeline.type === 'Entradas' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'var(--primary)',
+                            color: '#ffffff',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            boxShadow: timeline.type === 'Entradas' ? '0 2px 8px rgba(16, 185, 129, 0.35)' : '0 2px 8px rgba(99, 102, 241, 0.35)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            boxSizing: 'border-box',
+                            transition: 'all 0.2s'
+                          }}
+                          title={`Adicionar nova entrada em ${monthTitleStr}`}
+                        >
+                          <Plus size={12} />
+                          <span>{timeline.type === 'Entradas' ? 'Nova Entrada' : 'Novo Evento'}</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {hasEvents ? (
@@ -394,23 +559,51 @@ export default function VerticalTimeline({
                         </div>
                         <TimelineEventCard
                           event={ev}
+                          currentTimelineId={timeline.id}
                           onEdit={onEditEvent}
                           onDelete={onDeleteEvent}
                           onToggleTask={onToggleTask}
                           onToggleLoanPayment={onToggleLoanPayment}
                           onOpenEditInstallment={onOpenEditInstallment}
+                          onNavigateToTimeline={onNavigateToTimeline}
                         />
                       </div>
                     ))
                   ) : (
+                    /* Botão em frente à data quando o mês está vazio */
                     <div
                       className="empty-day-row"
                       onClick={() => onAddEventForDate(format(mGroup.monthDate, 'yyyy-MM-01'))}
+                      style={{
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 12px'
+                      }}
                     >
-                      <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
-                      <span className="empty-day-text">Sem eventos registados neste mês</span>
-                      <span className="add-event-mini-btn">
-                        <Plus size={12} /> Adicionar
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
+                        <span className="empty-day-text">
+                          {timeline.type === 'Entradas' ? 'Sem entradas registadas neste mês' : 'Sem eventos registados neste mês'}
+                        </span>
+                      </div>
+                      <span
+                        className="add-event-mini-btn"
+                        style={{
+                          background: timeline.type === 'Entradas' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(99, 102, 241, 0.15)',
+                          color: timeline.type === 'Entradas' ? '#10b981' : 'var(--primary-light)',
+                          border: `1px solid ${timeline.type === 'Entradas' ? 'rgba(16, 185, 129, 0.35)' : 'rgba(99, 102, 241, 0.3)'}`,
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontWeight: '700',
+                          fontSize: '0.76rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Plus size={13} /> {timeline.type === 'Entradas' ? 'Criar Entrada' : 'Adicionar'}
                       </span>
                     </div>
                   )}
@@ -536,11 +729,13 @@ export default function VerticalTimeline({
                             <TimelineEventCard
                               key={ev.id}
                               event={ev}
+                              currentTimelineId={timeline.id}
                               onEdit={onEditEvent}
                               onDelete={onDeleteEvent}
                               onToggleTask={onToggleTask}
                               onToggleLoanPayment={onToggleLoanPayment}
                               onOpenEditInstallment={onOpenEditInstallment}
+                              onNavigateToTimeline={onNavigateToTimeline}
                             />
                           ))
                         ) : (
@@ -631,11 +826,13 @@ export default function VerticalTimeline({
                       >
                         <TimelineEventCard
                           event={ev}
+                          currentTimelineId={timeline.id}
                           onEdit={onEditEvent}
                           onDelete={onDeleteEvent}
                           onToggleTask={onToggleTask}
                           onToggleLoanPayment={onToggleLoanPayment}
                           onOpenEditInstallment={onOpenEditInstallment}
+                          onNavigateToTimeline={onNavigateToTimeline}
                         />
                       </div>
                     ))}
@@ -661,175 +858,247 @@ export default function VerticalTimeline({
   };
 
   return (
-    <div className="vertical-timeline-section">
+    <div className="timeline-workspace-layout">
+      {/* 🧭 Left Filter Sidebar Cockpit */}
+      <aside className="filter-sidebar">
+        <div className="sidebar-header-title">
+          <Filter size={15} style={{ color: 'var(--primary-light)' }} />
+          <span>Filtros & Navegação</span>
+        </div>
 
-      {/* Toolbar / Search / Category / Label Filters & Grouping Selector */}
-      <div
-        className="toolbar-section glass-panel"
-        style={{ padding: '18px 22px', borderRadius: '16px', flexDirection: 'column', alignItems: 'stretch', gap: '14px' }}
-      >
-        {/* Row 1: Search & Grouping View */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+        {/* 1. Search Box */}
+        <div className="sidebar-section">
           <div className="search-box">
-            <Search size={18} className="search-icon" />
+            <Search size={15} className="search-icon" />
             <input
               type="text"
               className="search-input"
-              placeholder="Pesquisar por título, notas ou #etiquetas..."
+              placeholder="Pesquisar eventos..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+        </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={scrollToToday}
-              className="btn btn-secondary btn-sm"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontWeight: '700',
-                borderColor: 'var(--primary-light)',
-                color: 'var(--primary-light)',
-                background: 'rgba(99, 102, 241, 0.12)'
-              }}
-              title="Focar e navegar diretamente para a data de hoje / período atual"
-            >
-              <LocateFixed size={14} />
-              <span>Hoje / Atual</span>
-            </button>
+        {/* 2. Quick Focus Today Button */}
+        <div className="sidebar-section">
+          <button
+            type="button"
+            onClick={scrollToToday}
+            className="btn btn-secondary btn-sm"
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              fontWeight: '700',
+              borderColor: 'var(--primary-light)',
+              color: 'var(--primary-light)',
+              background: 'rgba(99, 102, 241, 0.12)',
+              padding: '8px 12px'
+            }}
+            title="Focar e navegar diretamente para o mês atual"
+          >
+            <LocateFixed size={15} />
+            <span>Focar no Mês Atual</span>
+          </button>
+        </div>
 
-            <div className="group-selector-container">
-              <span className="group-label">Agrupar:</span>
+        {/* 3. Estado Filter */}
+        <div className="sidebar-section">
+          <div className="sidebar-section-title">
+            <span>Estado</span>
+          </div>
+          <div className="sidebar-btn-group">
+            {(timeline.type === 'Entradas'
+              ? [
+                  { id: 'Todos', name: 'Todos os Estados', icon: '⚡' },
+                  { id: 'Recebido', name: 'Recebidos', icon: '✅' },
+                  { id: 'Pendente', name: 'A Receber', icon: '⏳' },
+                  { id: 'Atrasada', name: 'Em Atraso', icon: '⚠️' }
+                ]
+              : timeline.type === 'Empréstimo' || timeline.type === 'Principal'
+              ? [
+                  { id: 'Todos', name: 'Todos os Estados', icon: '⚡' },
+                  { id: 'Pago', name: 'Pagas / Liquidadas', icon: '✅' },
+                  { id: 'Pendente', name: 'Pendentes', icon: '⏳' },
+                  { id: 'Atrasada', name: 'Em Atraso', icon: '⚠️' }
+                ]
+              : [
+                  { id: 'Todos', name: 'Todos', icon: '⚡' },
+                  { id: 'Em Progresso', name: 'Em Progresso', icon: '▶️' },
+                  { id: 'Concluído', name: 'Concluídos', icon: '✅' },
+                  { id: 'Planeado', name: 'Planeados', icon: '📅' }
+                ]
+            ).map((st) => (
               <button
-                className={`group-btn ${groupBy === 'dia' ? 'active' : ''}`}
-                onClick={() => setGroupBy('dia')}
+                key={st.id}
+                type="button"
+                className={`sidebar-filter-item ${selectedStatusFilter === st.id ? 'active' : ''}`}
+                onClick={() => setSelectedStatusFilter(st.id)}
               >
-                <Calendar size={14} /> Dia
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>{st.icon}</span>
+                  <span>{st.name}</span>
+                </div>
+                {selectedStatusFilter === st.id && <span style={{ fontSize: '0.75rem', color: 'var(--primary-light)' }}>✓</span>}
               </button>
-              <button
-                className={`group-btn ${groupBy === 'semana' ? 'active' : ''}`}
-                onClick={() => setGroupBy('semana')}
-              >
-                <Layers size={14} /> Semana
-              </button>
-              <button
-                className={`group-btn ${groupBy === 'mes' ? 'active' : ''}`}
-                onClick={() => setGroupBy('mes')}
-              >
-                <Clock size={14} /> Mês
-              </button>
-              <button
-                className={`group-btn ${groupBy === 'ano' ? 'active' : ''}`}
-                onClick={() => setGroupBy('ano')}
-              >
-                <Sparkles size={14} /> Ano
-              </button>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Row 2: Event Nature Category Filters */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            Natureza:
-          </span>
-          {[
-            { id: 'Todos', name: 'Todos os Tipos', icon: '⚡' },
-            ...(timeline.type === 'Empréstimo'
-              ? [
-                  { id: 'parcela_emprestimo', name: 'Prestações', icon: '💳' },
-                  { id: 'amortizacao', name: 'Amortizações', icon: '📉' }
-                ]
-              : []),
-            { id: 'agendamento', name: 'Agendamentos', icon: '📅' },
-            { id: 'repetitivo', name: 'Repetitivos / Aniversários', icon: '🔁' },
-            { id: 'tarefa', name: 'Tarefas (Fixadas)', icon: '📌' },
-            { id: 'memoria', name: 'Memórias / Notas', icon: '📝' }
-          ].map((cat) => (
-            <button
-              key={cat.id}
-              className={`pill-btn ${selectedCategoryFilter === cat.id ? 'active' : ''}`}
-              onClick={() => setSelectedCategoryFilter(cat.id)}
-            >
-              <span>{cat.icon}</span> {cat.name}
-            </button>
-          ))}
-        </div>
-
-        {/* Row 3: Label/Etiquetas Filter Bar */}
-        {availableLabels.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Tag size={12} /> Etiquetas:
-            </span>
-            <button
-              className={`pill-btn ${selectedLabelFilter === 'Todos' ? 'active' : ''}`}
-              onClick={() => setSelectedLabelFilter('Todos')}
-            >
-              Todas
-            </button>
-            {availableLabels.map((lbl) => (
+        {/* 4. Timelines Filter (Multi-Selection for Principal) */}
+        {timeline.type === 'Principal' && (
+          <div className="sidebar-section">
+            <div className="sidebar-section-title">
+              <span>Linhas Integradas</span>
               <button
-                key={lbl}
-                className={`pill-btn ${selectedLabelFilter === lbl ? 'active' : ''}`}
-                onClick={() => setSelectedLabelFilter(lbl)}
+                type="button"
+                onClick={selectAllTimelines}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--primary-light)',
+                  fontSize: '0.7rem',
+                  cursor: 'pointer',
+                  fontWeight: '700'
+                }}
               >
-                #{lbl}
+                {selectedTimelineIds.length === availableCreditOptions.length ? 'Desmarcar' : 'Todas'}
               </button>
-            ))}
-
-            <div
-              className="toggle-empty-days"
-              onClick={() => setShowEmptyDays(!showEmptyDays)}
-              style={{ marginLeft: 'auto' }}
-              title="Alternar visibilidade dos dias sem eventos"
-            >
-              {showEmptyDays ? <Eye size={16} /> : <EyeOff size={16} />}
-              <span>{showEmptyDays ? 'Ocultar vazios' : 'Mostrar vazios'}</span>
+            </div>
+            <div className="sidebar-btn-group">
+              {availableCreditOptions.map((opt) => {
+                const isSelected = selectedTimelineIds.includes(opt.id);
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
+                    onClick={() => toggleTimelineSelection(opt.id)}
+                    style={isSelected ? { borderColor: opt.color } : { opacity: 0.6 }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>{opt.icon}</span>
+                      <span>{opt.name}</span>
+                    </div>
+                    <span style={{ fontSize: '0.85rem' }}>{isSelected ? '☑️' : '◻️'}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
-      </div>
 
-      {/* 📌 Pilha de Tarefas Pendentes (abaixo dos filtros) */}
-      <FloatingTaskStack
-        pendingTasks={pendingFloatingTasks}
-        onCompleteTask={onCompleteFloatingTask}
-        onAddFloatingTask={onAddFloatingTask}
-        onUpdatePriority={onUpdateFloatingTaskPriority}
-        onToggleTask={onToggleTask}
-        onAddChecklistItem={onAddChecklistItem}
-        onDeleteChecklistItem={onDeleteChecklistItem}
-      />
-
-      {/* Render Selected Timeline View */}
-      {groupBy === 'semana' && renderWeekView()}
-      {groupBy === 'mes' && renderMonthView()}
-      {groupBy === 'ano' && renderYearView()}
-      {groupBy === 'dia' && renderDayView()}
-
-      {/* Fallback if no matching events */}
-      {filteredEvents.length === 0 && !showEmptyDays && (
-        <div className="empty-timeline-state glass-panel">
-          <div className="empty-icon">
-            <Calendar size={28} />
+        {/* 5. Tipo / Natureza Filter */}
+        {timeline.type !== 'Principal' && (
+          <div className="sidebar-section">
+            <div className="sidebar-section-title">
+              <span>Categoria / Tipo</span>
+            </div>
+            <div className="sidebar-btn-group">
+              {(timeline.type === 'Entradas'
+                ? [
+                    { id: 'Todos', name: 'Todas as Categorias', icon: '⚡' },
+                    { id: 'entrada_recorrente', name: 'Salários / Rendas', icon: '💰' },
+                    { id: 'entrada_esporadica', name: 'Bónus / Extras', icon: '🎁' }
+                  ]
+                : timeline.type === 'Empréstimo'
+                ? [
+                    { id: 'Todos', name: 'Todas as Categorias', icon: '⚡' },
+                    { id: 'parcela_emprestimo', name: 'Prestações Contratuais', icon: '💳' },
+                    { id: 'amortizacao', name: 'Amortizações Extras', icon: '📉' }
+                  ]
+                : [
+                    { id: 'Todos', name: 'Todos os Tipos', icon: '⚡' },
+                    { id: 'agendamento', name: 'Agendamentos', icon: '📅' },
+                    { id: 'repetitivo', name: 'Repetitivos', icon: '🔁' },
+                    { id: 'tarefa', name: 'Tarefas', icon: '📌' },
+                    { id: 'memoria', name: 'Notas', icon: '📝' }
+                  ]
+              ).map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  className={`sidebar-filter-item ${selectedCategoryFilter === cat.id ? 'active' : ''}`}
+                  onClick={() => setSelectedCategoryFilter(cat.id)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{cat.icon}</span>
+                    <span>{cat.name}</span>
+                  </div>
+                  {selectedCategoryFilter === cat.id && <span style={{ fontSize: '0.75rem', color: 'var(--primary-light)' }}>✓</span>}
+                </button>
+              ))}
+            </div>
           </div>
-          <h3>Nenhum evento encontrado</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
-            Tente alterar os filtros de pesquisa ou clique abaixo para adicionar um evento.
-          </p>
-          <button
-            className="btn btn-primary btn-sm"
-            style={{ marginTop: '16px' }}
-            onClick={() => onAddEventForDate(todayStr)}
+        )}
+
+        {/* 6. Períodos Vazios Toggle */}
+        <div className="sidebar-section">
+          <div
+            className="sidebar-filter-item"
+            onClick={() => setShowEmptyDays(!showEmptyDays)}
+            style={{ cursor: 'pointer' }}
           >
-            <Plus size={16} /> Adicionar Evento em Hoje
-          </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {showEmptyDays ? <Eye size={15} /> : <EyeOff size={15} />}
+              <span>{showEmptyDays ? 'Ocultar vazios' : 'Mostrar vazios'}</span>
+            </div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              {showEmptyDays ? 'Visível' : 'Oculto'}
+            </span>
+          </div>
         </div>
-      )}
+      </aside>
+
+      {/* 📜 Right Timeline Content Stream */}
+      <div className="timeline-content-stream">
+        {/* Sticky Header Dock */}
+        <div className="sticky-header-dock">
+          {headerComponent}
+        </div>
+
+        {/* 📌 Pilha de Tarefas Pendentes (apenas para timelines gerais/projeto) */}
+        {timeline.type !== 'Empréstimo' && timeline.type !== 'Entradas' && timeline.type !== 'Principal' && (
+          <FloatingTaskStack
+            pendingTasks={pendingFloatingTasks}
+            onCompleteTask={onCompleteFloatingTask}
+            onAddFloatingTask={onAddFloatingTask}
+            onUpdatePriority={onUpdateFloatingTaskPriority}
+            onToggleTask={onToggleTask}
+            onAddChecklistItem={onAddChecklistItem}
+            onDeleteChecklistItem={onDeleteChecklistItem}
+          />
+        )}
+
+        {/* Render Selected Timeline View (Fixed Monthly) */}
+        {groupBy === 'semana' && renderWeekView()}
+        {groupBy === 'mes' && renderMonthView()}
+        {groupBy === 'ano' && renderYearView()}
+        {groupBy === 'dia' && renderDayView()}
+
+        {/* Fallback if no matching events */}
+        {filteredEvents.length === 0 && !showEmptyDays && (
+          <div className="empty-timeline-state glass-panel">
+            <div className="empty-icon">
+              <Calendar size={28} />
+            </div>
+            <h3>Nenhum evento encontrado</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
+              Tente alterar os filtros de pesquisa na barra lateral ou clique abaixo para adicionar um evento.
+            </p>
+            <button
+              className="btn btn-primary btn-sm"
+              style={{ marginTop: '16px' }}
+              onClick={() => onAddEventForDate(todayStr)}
+            >
+              <Plus size={16} /> Adicionar Evento em Hoje
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* 🎯 Floating Quick Return to Today Button */}
       <div

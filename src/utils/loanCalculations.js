@@ -54,9 +54,9 @@ export function generateLoanSchedule({
   let remainingBalance = Number(totalDebt);
   let currentStartDate = parseISO(startDateStr);
   const monthlyRate = (annualInterestRate / 100) / 12;
-  
+
   const totalInstallments = customInstallmentsCount || Math.ceil(totalDebt / (installmentAmount * 0.85));
-  
+
   for (let i = 1; i <= totalInstallments; i++) {
     let dueDate;
     const p = (periodicity || 'mensal').toLowerCase();
@@ -78,7 +78,7 @@ export function generateLoanSchedule({
 
     const dueDateStr = format(dueDate, 'yyyy-MM-dd');
     const thisTotal = Number(installmentAmount);
-    
+
     // Calcular parcela de juros sobre o saldo devedor
     const interestPortion = Math.min(thisTotal * 0.4, Math.round(remainingBalance * monthlyRate * 100) / 100) || Math.round(thisTotal * 0.18 * 100) / 100;
     const principalAmount = Math.min(remainingBalance, Math.round((thisTotal - interestPortion) * 100) / 100);
@@ -134,19 +134,19 @@ export function recalculateLoanState(timeline, eventsList) {
   const updatedEvents = sorted.map((ev) => {
     if (ev.category === 'parcela_emprestimo') {
       const totalAmount = Number(ev.amount || 0);
-      
+
       // Amortização de capital vs Juros embutidos
       let principal = ev.principalAmount !== undefined
         ? Number(ev.principalAmount)
         : (ev.interestPortion !== undefined ? Math.max(0, totalAmount - Number(ev.interestPortion)) : Math.round(totalAmount * 0.82 * 100) / 100);
-      
+
       let interestPortion = ev.interestPortion !== undefined
         ? Number(ev.interestPortion)
         : Math.max(0, Math.round((totalAmount - principal) * 100) / 100);
 
       const lateInterest = Number(ev.interestAmount || 0);
       const isPaid = ev.status === 'Pago' || ev.isCompleted;
-      
+
       // Check if overdue: date is before today and not paid
       let status = ev.status;
       try {
@@ -156,7 +156,7 @@ export function recalculateLoanState(timeline, eventsList) {
         } else if (!isPaid) {
           status = 'Pendente';
         }
-      } catch (e) {}
+      } catch (e) { }
 
       runningBalance = Math.max(0, Math.round((runningBalance - principal) * 100) / 100);
 
@@ -263,7 +263,7 @@ export function applyExtraordinaryAmortization({
       const state = recalculateLoanState(timeline, updatedList);
       const amortEvUpdated = state.find((e) => e.id === amortEvent.id);
       const remainingBalanceAfter = amortEvUpdated ? amortEvUpdated.balanceAfter : (Number(timeline.totalDebt) - amortVal);
-      
+
       const newMonthlyPrincipal = Math.max(10, Math.round((remainingBalanceAfter / futureUnpaid.length) * 100) / 100);
       const estimatedInterest = Math.round(newMonthlyPrincipal * 0.18 * 100) / 100;
       const newTotal = newMonthlyPrincipal + estimatedInterest;
@@ -306,7 +306,7 @@ export function applyExtraordinaryAmortization({
  */
 export function getLoanMetrics(timeline, eventsList = []) {
   const totalDebt = Number(timeline.totalDebt || 0);
-  
+
   let totalPaid = 0;
   let totalContractInterestPaid = 0;
   let totalLateInterestPaid = 0;
@@ -376,4 +376,145 @@ export function getLoanMetrics(timeline, eventsList = []) {
     nextInstallment,
     loanStatus
   };
+}
+
+/**
+ * Calculate combined / consolidated metrics across multiple loan timelines
+ */
+export function getConsolidatedLoanMetrics(timelines, selectedIds = null) {
+  const loanTimelines = (timelines || []).filter(
+    (tl) => tl.type === 'Empréstimo' && (!selectedIds || selectedIds.includes(tl.id))
+  );
+
+  let totalContractedDebt = 0;
+  let totalRemainingBalance = 0;
+  let totalPaid = 0;
+  let totalPrincipalAmortized = 0;
+  let totalInterestPaid = 0;
+  let totalInstallments = 0;
+  let paidInstallments = 0;
+  let overdueInstallments = 0;
+
+  loanTimelines.forEach((tl) => {
+    const metrics = getLoanMetrics(tl, tl.events || []);
+    totalContractedDebt += Number(tl.totalDebt || 0);
+    totalRemainingBalance += Number(metrics.remainingBalance || 0);
+    totalPaid += Number(metrics.totalPaid || 0);
+    totalPrincipalAmortized += Number(metrics.totalPrincipalAmortized || 0);
+    totalInterestPaid += Number(metrics.totalInterestPaid || 0);
+    totalInstallments += metrics.totalInstallmentsCount;
+    paidInstallments += metrics.paidInstallmentsCount;
+    overdueInstallments += metrics.overdueInstallmentsCount;
+  });
+
+  const progressPercent = totalContractedDebt > 0
+    ? Math.min(100, Math.round((totalPrincipalAmortized / totalContractedDebt) * 100))
+    : 0;
+
+  return {
+    activeCreditsCount: loanTimelines.length,
+    totalContractedDebt,
+    totalRemainingBalance,
+    totalPaid,
+    totalPrincipalAmortized,
+    totalInterestPaid,
+    totalInstallments,
+    paidInstallments,
+    overdueInstallments,
+    progressPercent
+  };
+}
+
+/**
+ * Calculate metrics for Income (Entradas & Rendimentos) timelines
+ */
+export function getIncomeMetrics(timeline, events = []) {
+  const allEvents = events.length > 0 ? events : (timeline.events || []);
+  const todayStr = '2026-08-21';
+
+  let totalReceived = 0;
+  let totalForecast = 0;
+  let receivedCount = 0;
+  let plannedCount = 0;
+  let monthlyRecurring = Number(timeline.monthlySalary || 3300.00);
+  let nextIncome = null;
+
+  allEvents.forEach((ev) => {
+    const amt = Number(ev.amount || 0);
+    const isPast = ev.date <= todayStr;
+    const isReceived = ev.status === 'Recebido';
+
+    if (isPast) {
+      if (isReceived) {
+        totalReceived += amt;
+        receivedCount++;
+        totalForecast += amt;
+      } else {
+        // Entrada passada não recebida (Em Atraso)
+      }
+    } else {
+      // Futuro a partir da data de hoje: considera-se que vão ser recebidos
+      totalForecast += amt;
+      plannedCount++;
+      if (!nextIncome || ev.date < nextIncome.date) {
+        nextIncome = ev;
+      }
+    }
+  });
+
+  return {
+    totalReceived,
+    totalForecast,
+    receivedCount,
+    plannedCount,
+    totalEventsCount: allEvents.length,
+    monthlyRecurring,
+    nextIncome
+  };
+}
+
+/**
+ * Generate regular income schedule events (e.g. salary)
+ */
+export function generateIncomeSchedule({
+  monthlySalary = 3300.00,
+  startDateStr = '2024-01-01',
+  endDateStr = '2027-12-31',
+  dueDay = 28
+}) {
+  const events = [];
+  const start = parseISO(startDateStr);
+  const end = parseISO(endDateStr);
+  const todayStr = '2026-08-21';
+  let cur = start;
+  let counter = 1;
+
+  while (cur <= end) {
+    const year = cur.getFullYear();
+    const month = cur.getMonth() + 1;
+    const monthStr = month.toString().padStart(2, '0');
+    const dayStr = Number(dueDay).toString().padStart(2, '0');
+    const dateStr = `${year}-${monthStr}-${dayStr}`;
+
+    const isPast = dateStr <= todayStr;
+    events.push({
+      id: `income-gen-${counter}-${Date.now()}`,
+      date: dateStr,
+      time: '10:00',
+      title: `Salário Mensal (${formatCurrency(monthlySalary)})`,
+      description: `Transferência de vencimento líquido (${formatCurrency(monthlySalary)}).`,
+      category: 'entrada_recorrente',
+      status: isPast ? 'Recebido' : 'Previsto',
+      priority: 'Normal',
+      amount: Number(monthlySalary),
+      isIncome: true,
+      isCompleted: isPast,
+      labels: ['Salário', 'Recorrente', isPast ? 'Recebido' : 'Previsto']
+    });
+
+    cur = addMonths(cur, 1);
+    counter++;
+  }
+
+  return events;
 }

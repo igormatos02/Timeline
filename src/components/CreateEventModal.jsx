@@ -52,7 +52,7 @@ export default function CreateEventModal({
   useEffect(() => {
     const todayStr = '2026-08-21';
     const targetDate = initialData?.date || defaultDate || todayStr;
-    
+
     let parsedDay = 27;
     try {
       const d = parseISO(targetDate);
@@ -86,7 +86,7 @@ export default function CreateEventModal({
       });
     } else {
       const isPast = targetDate <= todayStr;
-      
+
       setFormData({
         title: isIncomeTimeline ? 'Salário Mensal' : '',
         date: targetDate,
@@ -121,7 +121,7 @@ export default function CreateEventModal({
       yearStr = format(d, 'yyyy');
       monthStr = format(d, 'MM');
     }
-  } catch (e) {}
+  } catch (e) { }
 
   // Handle switching Periodicity (Única vs Recorrente)
   const handleSelectPeriodicity = (p) => {
@@ -220,49 +220,49 @@ export default function CreateEventModal({
   // Boxes dynamically configured per periodicity
   const incomeSubtypeBoxes = formData.periodicity === 'unica'
     ? [
-        {
-          id: 'ganhos',
-          name: 'Ganhos',
-          icon: <Gift size={18} />,
-          color: '#10b981',
-          bgGlow: 'rgba(16, 185, 129, 0.15)',
-          borderColor: '#10b981'
-        },
-        {
-          id: 'vendas',
-          name: 'Vendas',
-          icon: <ShoppingBag size={18} />,
-          color: '#06b6d4',
-          bgGlow: 'rgba(6, 182, 212, 0.15)',
-          borderColor: '#06b6d4'
-        },
-        {
-          id: 'outros',
-          name: 'Outros',
-          icon: <Sparkles size={18} />,
-          color: '#8b5cf6',
-          bgGlow: 'rgba(139, 92, 246, 0.15)',
-          borderColor: '#8b5cf6'
-        }
-      ]
+      {
+        id: 'ganhos',
+        name: 'Ganhos',
+        icon: <Gift size={18} />,
+        color: '#10b981',
+        bgGlow: 'rgba(16, 185, 129, 0.15)',
+        borderColor: '#10b981'
+      },
+      {
+        id: 'vendas',
+        name: 'Vendas',
+        icon: <ShoppingBag size={18} />,
+        color: '#06b6d4',
+        bgGlow: 'rgba(6, 182, 212, 0.15)',
+        borderColor: '#06b6d4'
+      },
+      {
+        id: 'outros',
+        name: 'Outros',
+        icon: <Sparkles size={18} />,
+        color: '#8b5cf6',
+        bgGlow: 'rgba(139, 92, 246, 0.15)',
+        borderColor: '#8b5cf6'
+      }
+    ]
     : [
-        {
-          id: 'rendimentos',
-          name: 'Rendimentos',
-          icon: <Briefcase size={18} />,
-          color: '#10b981',
-          bgGlow: 'rgba(16, 185, 129, 0.15)',
-          borderColor: '#10b981'
-        },
-        {
-          id: 'outros',
-          name: 'Outros',
-          icon: <Sparkles size={18} />,
-          color: '#8b5cf6',
-          bgGlow: 'rgba(139, 92, 246, 0.15)',
-          borderColor: '#8b5cf6'
-        }
-      ];
+      {
+        id: 'rendimentos',
+        name: 'Rendimentos',
+        icon: <Briefcase size={18} />,
+        color: '#10b981',
+        bgGlow: 'rgba(16, 185, 129, 0.15)',
+        borderColor: '#10b981'
+      },
+      {
+        id: 'outros',
+        name: 'Outros',
+        icon: <Sparkles size={18} />,
+        color: '#8b5cf6',
+        bgGlow: 'rgba(139, 92, 246, 0.15)',
+        borderColor: '#8b5cf6'
+      }
+    ];
 
   return (
     <div className="modal-overlay" onClick={onClose}>

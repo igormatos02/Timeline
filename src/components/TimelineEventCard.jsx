@@ -311,20 +311,20 @@ export default function TimelineEventCard({
                   event.timelineOriginId === 'tl-loan-house'
                     ? 'rgba(16, 185, 129, 0.15)'
                     : event.timelineOriginId === 'tl-income'
-                    ? 'rgba(6, 182, 212, 0.15)'
-                    : 'rgba(99, 102, 241, 0.15)',
+                      ? 'rgba(6, 182, 212, 0.15)'
+                      : 'rgba(99, 102, 241, 0.15)',
                 color:
                   event.timelineOriginId === 'tl-loan-house'
                     ? '#10b981'
                     : event.timelineOriginId === 'tl-income'
-                    ? '#06b6d4'
-                    : 'var(--primary-light)',
+                      ? '#06b6d4'
+                      : 'var(--primary-light)',
                 borderColor:
                   event.timelineOriginId === 'tl-loan-house'
                     ? 'rgba(16, 185, 129, 0.3)'
                     : event.timelineOriginId === 'tl-income'
-                    ? 'rgba(6, 182, 212, 0.3)'
-                    : 'rgba(99, 102, 241, 0.3)',
+                      ? 'rgba(6, 182, 212, 0.3)'
+                      : 'rgba(99, 102, 241, 0.3)',
                 fontWeight: '700',
                 cursor: onNavigateToTimeline ? 'pointer' : 'default',
                 display: 'inline-flex',
@@ -374,13 +374,13 @@ export default function TimelineEventCard({
             background: isNextIncome
               ? 'rgba(59, 130, 246, 0.08)'
               : isFarFutureIncome
-              ? 'rgba(255, 255, 255, 0.02)'
-              : 'rgba(16, 185, 129, 0.08)',
+                ? 'rgba(255, 255, 255, 0.02)'
+                : 'rgba(16, 185, 129, 0.08)',
             border: isNextIncome
               ? '1px solid rgba(59, 130, 246, 0.28)'
               : isFarFutureIncome
-              ? '1px solid var(--border-glass)'
-              : '1px solid rgba(16, 185, 129, 0.22)',
+                ? '1px solid var(--border-glass)'
+                : '1px solid rgba(16, 185, 129, 0.22)',
             borderRadius: '10px',
             padding: '8px 12px',
             margin: '10px 0',
@@ -423,26 +423,25 @@ export default function TimelineEventCard({
                 background: isReceivedIncome
                   ? 'rgba(16, 185, 129, 0.16)'
                   : isOverdueIncome
-                  ? 'rgba(239, 68, 68, 0.16)'
-                  : isNextIncome
-                  ? 'rgba(59, 130, 246, 0.12)'
-                  : 'rgba(148, 163, 184, 0.1)',
+                    ? 'rgba(239, 68, 68, 0.16)'
+                    : isNextIncome
+                      ? 'rgba(59, 130, 246, 0.12)'
+                      : 'rgba(148, 163, 184, 0.1)',
                 color: isReceivedIncome
                   ? '#10b981'
                   : isOverdueIncome
-                  ? '#f87171'
-                  : isNextIncome
-                  ? '#60a5fa'
-                  : '#94a3b8',
-                border: `1px solid ${
-                  isReceivedIncome
+                    ? '#f87171'
+                    : isNextIncome
+                      ? '#60a5fa'
+                      : '#94a3b8',
+                border: `1px solid ${isReceivedIncome
                     ? 'rgba(16, 185, 129, 0.35)'
                     : isOverdueIncome
-                    ? 'rgba(239, 68, 68, 0.4)'
-                    : isNextIncome
-                    ? 'rgba(59, 130, 246, 0.3)'
-                    : 'rgba(148, 163, 184, 0.2)'
-                }`,
+                      ? 'rgba(239, 68, 68, 0.4)'
+                      : isNextIncome
+                        ? 'rgba(59, 130, 246, 0.3)'
+                        : 'rgba(148, 163, 184, 0.2)'
+                  }`,
                 borderRadius: '9999px',
                 padding: '5px 14px',
                 fontSize: '0.78rem',
@@ -456,18 +455,18 @@ export default function TimelineEventCard({
                 boxShadow: isOverdueIncome
                   ? '0 2px 10px rgba(239, 68, 68, 0.25)'
                   : isReceivedIncome
-                  ? '0 2px 8px rgba(16, 185, 129, 0.2)'
-                  : 'none',
+                    ? '0 2px 8px rgba(16, 185, 129, 0.2)'
+                    : 'none',
                 animation: isOverdueIncome ? 'pulseGlow 2s infinite' : 'none'
               }}
               title={
                 event.date > todayStr
                   ? 'Entrada futura (só pode ser recebida na data prevista)'
                   : isReceivedIncome
-                  ? 'Clique para marcar como A Receber'
-                  : isOverdueIncome
-                  ? 'Entrada em atraso! Clique para confirmar recebimento'
-                  : 'Clique para marcar como Recebido'
+                    ? 'Clique para marcar como A Receber'
+                    : isOverdueIncome
+                      ? 'Entrada em atraso! Clique para confirmar recebimento'
+                      : 'Clique para marcar como Recebido'
               }
             >
               {isReceivedIncome ? (
@@ -664,8 +663,8 @@ export default function TimelineEventCard({
                   event.timelineOriginId === 'tl-loan-house'
                     ? '#10b981'
                     : event.timelineOriginId === 'tl-income'
-                    ? '#06b6d4'
-                    : 'var(--primary-light)',
+                      ? '#06b6d4'
+                      : 'var(--primary-light)',
                 borderColor: 'var(--border-glass)'
               }}
               title={`Abrir timeline de ${event.timelineOriginName}`}

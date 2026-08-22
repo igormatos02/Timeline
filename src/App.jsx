@@ -74,7 +74,7 @@ export default function App() {
       const todayStr = '2026-08-21';
       const otherTimelines = timelines.filter((tl) => tl.id !== rawActiveTimeline.id);
       const mergedEvents = [];
-      
+
       otherTimelines.forEach((tl) => {
         (tl.events || []).forEach((ev) => {
           if (ev.date <= todayStr) {
@@ -297,7 +297,7 @@ export default function App() {
   // ----------------------------------------------------
   // Loan Specific Handlers (Empréstimo)
   // ----------------------------------------------------
-  
+
   // Toggle installment payment state (Pago <-> Pendente / Atrasada)
   const handleToggleLoanPayment = (installmentId) => {
     // Find target timeline that contains this event

@@ -26,12 +26,14 @@ import {
   Repeat,
   BookOpen,
   Filter,
-  LocateFixed
+  LocateFixed,
+  DollarSign,
+  TrendingUp
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
 import FloatingTaskStack from './FloatingTaskStack';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getGroupingForPeriodicity } from '../utils/loanCalculations';
+import { getGroupingForPeriodicity, formatCurrency } from '../utils/loanCalculations';
 
 export default function VerticalTimeline({
   timeline,
@@ -268,7 +270,7 @@ export default function VerticalTimeline({
       if (!isNaN(parsedEnd.getTime()) && parsedEnd > maxDateObj) {
         maxDateObj = parsedEnd;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   if (timeline.type !== 'Principal' && timeline.type !== 'Entradas') {
@@ -278,7 +280,7 @@ export default function VerticalTimeline({
         if (!isNaN(evD.getTime()) && evD > maxDateObj) {
           maxDateObj = evD;
         }
-      } catch (e) {}
+      } catch (e) { }
     });
   }
 
@@ -334,7 +336,7 @@ export default function VerticalTimeline({
             break;
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     });
 
     const weeksList = Array.from(weekMap.values());
@@ -369,9 +371,8 @@ export default function VerticalTimeline({
 
               <div className="day-node-wrapper">
                 <div
-                  className={`day-node-dot ${
-                    isCurrentWeek ? 'is-today-node' : hasEvents ? 'has-events' : ''
-                  }`}
+                  className={`day-node-dot ${isCurrentWeek ? 'is-today-node' : hasEvents ? 'has-events' : ''
+                    }`}
                   style={hasEvents && !isCurrentWeek ? { backgroundColor: timeline.color } : {}}
                 />
               </div>
@@ -455,10 +456,25 @@ export default function VerticalTimeline({
             events: [ev]
           });
         }
-      } catch (e) {}
+      } catch (e) { }
     });
 
     const monthsList = Array.from(monthMap.values());
+
+    // Pre-calculate chronological running cumulative budget (sum of received entries up to each month)
+    const monthCumulativeMap = new Map();
+    let runningCumulativeReceived = 0;
+    const sortedChronologicalMonths = [...monthsList].sort((a, b) => a.monthDate.getTime() - b.monthDate.getTime());
+    sortedChronologicalMonths.forEach((mG) => {
+      let mReceived = 0;
+      mG.events.forEach((ev) => {
+        if (ev.status === 'Recebido') {
+          mReceived += Number(ev.amount || 0);
+        }
+      });
+      runningCumulativeReceived += mReceived;
+      monthCumulativeMap.set(format(mG.monthDate, 'yyyy-MM'), runningCumulativeReceived);
+    });
 
     return (
       <div className="vertical-timeline-container">
@@ -471,7 +487,20 @@ export default function VerticalTimeline({
         {monthsList.map((mGroup) => {
           const isCurrentMonth = format(todayDate, 'yyyy-MM') === format(mGroup.monthDate, 'yyyy-MM');
           const monthTitleStr = format(mGroup.monthDate, 'MMMM yyyy', { locale: pt });
+          const monthKeyStr = format(mGroup.monthDate, 'yyyy-MM');
           const hasEvents = mGroup.events.length > 0;
+
+          // Calculate total received in this month
+          let totalMonthReceived = 0;
+          mGroup.events.forEach((ev) => {
+            const amt = Number(ev.amount || 0);
+            if (ev.status === 'Recebido') {
+              totalMonthReceived += amt;
+            }
+          });
+
+          // Cumulative received budget up to this specific month
+          const cumulativeReceived = monthCumulativeMap.get(monthKeyStr) || 0;
 
           if (!showEmptyDays && !hasEvents && !isCurrentMonth) return null;
 
@@ -491,9 +520,8 @@ export default function VerticalTimeline({
 
               <div className="day-node-wrapper">
                 <div
-                  className={`day-node-dot ${
-                    isCurrentMonth ? 'is-today-node' : hasEvents ? 'has-events' : ''
-                  }`}
+                  className={`day-node-dot ${isCurrentMonth ? 'is-today-node' : hasEvents ? 'has-events' : ''
+                    }`}
                   style={hasEvents && !isCurrentMonth ? { backgroundColor: timeline.color } : {}}
                 />
               </div>
@@ -504,7 +532,8 @@ export default function VerticalTimeline({
                     <h3 className="group-card-title" style={{ textTransform: 'capitalize' }}>
                       <Clock size={18} style={{ color: 'var(--primary-light)' }} /> {monthTitleStr}
                     </h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      {/* Badge do Contador de Entradas */}
                       <span
                         className="group-card-badge"
                         style={{
@@ -516,59 +545,116 @@ export default function VerticalTimeline({
                       >
                         {mGroup.events.length} {timeline.type === 'Entradas' ? 'entrada(s)' : 'evento(s)'}
                       </span>
-                      {hasEvents && (
-                        <button
-                          type="button"
-                          onClick={() => onAddEventForDate(format(mGroup.monthDate, 'yyyy-MM-15'))}
+
+                      {/* Badge 1: Budget Mensal (Soma do Recebido no Mês) */}
+                      {timeline.type === 'Entradas' && (
+                        <span
+                          className="group-card-badge"
                           style={{
-                            cursor: 'pointer',
-                            height: '26px',
-                            padding: '4px 10px',
-                            borderRadius: '9999px',
-                            fontSize: '0.75rem',
-                            fontWeight: '700',
-                            lineHeight: 1,
-                            background: timeline.type === 'Entradas' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'var(--primary)',
-                            color: '#ffffff',
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
-                            boxShadow: timeline.type === 'Entradas' ? '0 2px 8px rgba(16, 185, 129, 0.35)' : '0 2px 8px rgba(99, 102, 241, 0.35)',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '4px',
+                            gap: '5px',
+                            height: '26px',
                             boxSizing: 'border-box',
-                            transition: 'all 0.2s'
+                            background: totalMonthReceived > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                            color: totalMonthReceived > 0 ? '#10b981' : 'var(--text-dim)',
+                            borderColor: totalMonthReceived > 0 ? 'rgba(16, 185, 129, 0.35)' : 'var(--border-glass)',
+                            fontWeight: '800',
+                            fontSize: '0.76rem'
                           }}
-                          title={`Adicionar nova entrada em ${monthTitleStr}`}
+                          title={`Budget mensal efetivamente recebido em ${monthTitleStr}: ${formatCurrency(totalMonthReceived)}`}
                         >
-                          <Plus size={12} />
-                          <span>{timeline.type === 'Entradas' ? 'Nova Entrada' : 'Novo Evento'}</span>
-                        </button>
+                          <DollarSign size={12} style={{ color: totalMonthReceived > 0 ? '#10b981' : 'var(--text-dim)' }} />
+                          <span>Budget Mensal: {formatCurrency(totalMonthReceived)}</span>
+                        </span>
+                      )}
+
+                      {/* Badge 2: Budget Acumulado (Soma do Recebido até este Mês) */}
+                      {timeline.type === 'Entradas' && (
+                        <span
+                          className="group-card-badge"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            height: '26px',
+                            boxSizing: 'border-box',
+                            background: cumulativeReceived > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                            color: cumulativeReceived > 0 ? 'var(--primary-light)' : 'var(--text-dim)',
+                            borderColor: cumulativeReceived > 0 ? 'rgba(99, 102, 241, 0.35)' : 'var(--border-glass)',
+                            fontWeight: '800',
+                            fontSize: '0.76rem'
+                          }}
+                          title={`Budget total acumulado recebido até ${monthTitleStr}: ${formatCurrency(cumulativeReceived)}`}
+                        >
+                          <TrendingUp size={12} style={{ color: cumulativeReceived > 0 ? 'var(--primary-light)' : 'var(--text-dim)' }} />
+                          <span>Budget Acumulado: {formatCurrency(cumulativeReceived)}</span>
+                        </span>
                       )}
                     </div>
                   </div>
 
                   {hasEvents ? (
-                    mGroup.events.map((ev) => (
-                      <div
-                        key={ev.id}
-                        id={ev.status === 'Atrasada' ? 'loan-inst-overdue' : undefined}
-                        style={{ marginBottom: '12px' }}
-                      >
-                        <div style={{ fontSize: '0.78rem', color: 'var(--primary-light)', fontWeight: '700', marginBottom: '4px' }}>
-                          📅 {format(parseISO(ev.date), "EEEE, d 'de' MMMM", { locale: pt })}
+                    <>
+                      {mGroup.events.map((ev) => (
+                        <div
+                          key={ev.id}
+                          id={ev.status === 'Atrasada' ? 'loan-inst-overdue' : undefined}
+                          style={{ marginBottom: '12px' }}
+                        >
+                          <div style={{ fontSize: '0.78rem', color: 'var(--primary-light)', fontWeight: '700', marginBottom: '4px' }}>
+                            📅 {format(parseISO(ev.date), "EEEE, d 'de' MMMM", { locale: pt })}
+                          </div>
+                          <TimelineEventCard
+                            event={ev}
+                            currentTimelineId={timeline.id}
+                            onEdit={onEditEvent}
+                            onDelete={onDeleteEvent}
+                            onToggleTask={onToggleTask}
+                            onToggleLoanPayment={onToggleLoanPayment}
+                            onOpenEditInstallment={onOpenEditInstallment}
+                            onNavigateToTimeline={onNavigateToTimeline}
+                          />
                         </div>
-                        <TimelineEventCard
-                          event={ev}
-                          currentTimelineId={timeline.id}
-                          onEdit={onEditEvent}
-                          onDelete={onDeleteEvent}
-                          onToggleTask={onToggleTask}
-                          onToggleLoanPayment={onToggleLoanPayment}
-                          onOpenEditInstallment={onOpenEditInstallment}
-                          onNavigateToTimeline={onNavigateToTimeline}
-                        />
-                      </div>
-                    ))
+                      ))}
+
+                      {/* Botão no fundo do mês (Solid & Prominent) */}
+                      <button
+                        type="button"
+                        onClick={() => onAddEventForDate(format(mGroup.monthDate, 'yyyy-MM-15'))}
+                        className="btn btn-primary"
+                        style={{
+                          marginTop: '12px',
+                          width: '100%',
+                          background: timeline.type === 'Entradas'
+                            ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                            : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                          color: '#ffffff',
+                          border: '1px solid rgba(255, 255, 255, 0.25)',
+                          boxShadow: timeline.type === 'Entradas'
+                            ? '0 4px 16px rgba(16, 185, 129, 0.35)'
+                            : '0 4px 16px rgba(99, 102, 241, 0.35)',
+                          padding: '11px 18px',
+                          borderRadius: '10px',
+                          fontSize: '0.88rem',
+                          fontWeight: '800',
+                          letterSpacing: '0.2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          transform: 'translateY(0)'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        title={`Adicionar nova entrada em ${monthTitleStr}`}
+                      >
+                        <Plus size={16} strokeWidth={2.5} />
+                        <span>{timeline.type === 'Entradas' ? 'Adicionar Nova Entrada neste Mês' : 'Adicionar Novo Evento'}</span>
+                      </button>
+                    </>
                   ) : (
                     /* Botão em frente à data quando o mês está vazio */
                     <div
@@ -658,7 +744,7 @@ export default function VerticalTimeline({
           });
         }
         yearEntry.monthsMap.get(monthKey).events.push(ev);
-      } catch (e) {}
+      } catch (e) { }
     });
 
     const yearsList = Array.from(yearMap.values());
@@ -689,9 +775,8 @@ export default function VerticalTimeline({
 
               <div className="day-node-wrapper">
                 <div
-                  className={`day-node-dot ${
-                    isCurrentYear ? 'is-today-node' : totalEventsInYear > 0 ? 'has-events' : ''
-                  }`}
+                  className={`day-node-dot ${isCurrentYear ? 'is-today-node' : totalEventsInYear > 0 ? 'has-events' : ''
+                    }`}
                   style={totalEventsInYear > 0 && !isCurrentYear ? { backgroundColor: timeline.color } : {}}
                 />
               </div>
@@ -803,9 +888,8 @@ export default function VerticalTimeline({
 
               <div className="day-node-wrapper">
                 <div
-                  className={`day-node-dot ${
-                    isTodayNode ? 'is-today-node' : hasEvents ? 'has-events' : ''
-                  }`}
+                  className={`day-node-dot ${isTodayNode ? 'is-today-node' : hasEvents ? 'has-events' : ''
+                    }`}
                   onClick={() => onAddEventForDate(dateKey)}
                   title={
                     hasEvents
@@ -913,19 +997,19 @@ export default function VerticalTimeline({
           <div className="sidebar-btn-group">
             {(timeline.type === 'Entradas'
               ? [
-                  { id: 'Todos', name: 'Todos os Estados', icon: '⚡' },
-                  { id: 'Recebido', name: 'Recebidos', icon: '✅' },
-                  { id: 'Pendente', name: 'A Receber', icon: '⏳' },
-                  { id: 'Atrasada', name: 'Em Atraso', icon: '⚠️' }
-                ]
+                { id: 'Todos', name: 'Todos os Estados', icon: '⚡' },
+                { id: 'Recebido', name: 'Recebidos', icon: '✅' },
+                { id: 'Pendente', name: 'A Receber', icon: '⏳' },
+                { id: 'Atrasada', name: 'Em Atraso', icon: '⚠️' }
+              ]
               : timeline.type === 'Empréstimo' || timeline.type === 'Principal'
-              ? [
+                ? [
                   { id: 'Todos', name: 'Todos os Estados', icon: '⚡' },
                   { id: 'Pago', name: 'Pagas / Liquidadas', icon: '✅' },
                   { id: 'Pendente', name: 'Pendentes', icon: '⏳' },
                   { id: 'Atrasada', name: 'Em Atraso', icon: '⚠️' }
                 ]
-              : [
+                : [
                   { id: 'Todos', name: 'Todos', icon: '⚡' },
                   { id: 'Em Progresso', name: 'Em Progresso', icon: '▶️' },
                   { id: 'Concluído', name: 'Concluídos', icon: '✅' },
@@ -1000,17 +1084,17 @@ export default function VerticalTimeline({
             <div className="sidebar-btn-group">
               {(timeline.type === 'Entradas'
                 ? [
-                    { id: 'Todos', name: 'Todas as Categorias', icon: '⚡' },
-                    { id: 'entrada_recorrente', name: 'Salários / Rendas', icon: '💰' },
-                    { id: 'entrada_esporadica', name: 'Bónus / Extras', icon: '🎁' }
-                  ]
+                  { id: 'Todos', name: 'Todas as Categorias', icon: '⚡' },
+                  { id: 'entrada_recorrente', name: 'Salários / Rendas', icon: '💰' },
+                  { id: 'entrada_esporadica', name: 'Bónus / Extras', icon: '🎁' }
+                ]
                 : timeline.type === 'Empréstimo'
-                ? [
+                  ? [
                     { id: 'Todos', name: 'Todas as Categorias', icon: '⚡' },
                     { id: 'parcela_emprestimo', name: 'Prestações Contratuais', icon: '💳' },
                     { id: 'amortizacao', name: 'Amortizações Extras', icon: '📉' }
                   ]
-                : [
+                  : [
                     { id: 'Todos', name: 'Todos os Tipos', icon: '⚡' },
                     { id: 'agendamento', name: 'Agendamentos', icon: '📅' },
                     { id: 'repetitivo', name: 'Repetitivos', icon: '🔁' },

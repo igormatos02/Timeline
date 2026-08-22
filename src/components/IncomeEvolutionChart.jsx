@@ -22,7 +22,7 @@ export default function IncomeEvolutionChart({
 }) {
   // Chart Mode: 'acumulado_real' (Historical Real Received up to Today), 'acumulativo' (Cumulative with Future Projection), 'variante' (Monthly Variation)
   const [chartMode, setChartMode] = useState('acumulado_real');
-  
+
   // Horizon in Years: 1 to 10 years ahead
   const [horizonYears, setHorizonYears] = useState(5);
 
@@ -37,7 +37,7 @@ export default function IncomeEvolutionChart({
   const chartData = useMemo(() => {
     const start = parseISO(timeline.startDate || '2024-01-01');
     const currentMonthKey = todayStr.substring(0, 7); // '2026-08'
-    
+
     // For 'acumulado_real', calculate exact number of months from start to current month (no future progression)
     let totalMonths;
     if (chartMode === 'acumulado_real') {
@@ -308,7 +308,7 @@ export default function IncomeEvolutionChart({
                 Histórico Realizado
               </span>
               <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                {chartData.length > 0 ? `${chartData[0].label} — ${chartData[chartData.length-1].label}` : ''} ({chartData.length} meses)
+                {chartData.length > 0 ? `${chartData[0].label} — ${chartData[chartData.length - 1].label}` : ''} ({chartData.length} meses)
               </span>
             </div>
           </div>

@@ -404,7 +404,7 @@ export default function TimelineEventCard({
             {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
           </h3>
 
-          {/* Timeline Origin Badge (Crédito Habitação vs Automóvel vs Entradas) - Clickable, shown only when not inside that timeline */}
+          {/* Origin Badge */}
           {event.timelineOriginName && event.timelineOriginId !== currentTimelineId && (
             <button
               type="button"
@@ -453,19 +453,6 @@ export default function TimelineEventCard({
               {onNavigateToTimeline && <ArrowUpRight size={11} />}
             </button>
           )}
-
-          {event.priority && !isLoanInstallment && !isIncomeEvent && (
-            <span
-              className="badge"
-              style={{
-                backgroundColor: priorityStyle.bg,
-                color: priorityStyle.text,
-                borderColor: priorityStyle.border
-              }}
-            >
-              {event.priority}
-            </span>
-          )}
         </div>
       </div>
 
@@ -511,73 +498,89 @@ export default function TimelineEventCard({
             </div>
           </div>
 
-          {/* Interactive Status Toggle Pill for Income */}
-          <button
-            type="button"
-            disabled={event.date > todayStr}
-            onClick={() => {
-              if (event.date <= todayStr && onToggleLoanPayment) {
-                onToggleLoanPayment(event.id);
-              }
-            }}
-            className="btn btn-sm"
-            style={{
-              background: isReceivedIncome
-                ? 'rgba(16, 185, 129, 0.16)'
-                : isOverdueIncome
-                  ? 'rgba(239, 68, 68, 0.16)'
-                  : isNextIncome
-                    ? 'rgba(59, 130, 246, 0.12)'
-                    : 'rgba(148, 163, 184, 0.1)',
-              color: isReceivedIncome
-                ? '#10b981'
-                : isOverdueIncome
-                  ? '#f87171'
-                  : isNextIncome
-                    ? '#60a5fa'
-                    : '#94a3b8',
-              border: `1px solid ${isReceivedIncome
-                  ? 'rgba(16, 185, 129, 0.35)'
-                  : isOverdueIncome
-                    ? 'rgba(239, 68, 68, 0.4)'
-                    : isNextIncome
-                      ? 'rgba(59, 130, 246, 0.3)'
-                      : 'rgba(148, 163, 184, 0.2)'
-                }`,
-              borderRadius: '9999px',
-              padding: '5px 14px',
-              fontSize: '0.78rem',
-              fontWeight: '700',
-              cursor: event.date > todayStr ? 'default' : 'pointer',
-              opacity: event.date > todayStr ? 0.75 : 1,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s',
-              boxShadow: isOverdueIncome
-                ? '0 2px 10px rgba(239, 68, 68, 0.25)'
-                : isReceivedIncome
-                  ? '0 2px 8px rgba(16, 185, 129, 0.2)'
-                  : 'none'
-            }}
-          >
-            {isReceivedIncome ? (
-              <>
-                <CheckCircle2 size={14} style={{ color: '#10b981' }} />
-                <span>Recebido às {getCompletedTimeStr()}</span>
-              </>
-            ) : isOverdueIncome ? (
-              <>
-                <AlertCircle size={14} style={{ color: '#f87171' }} />
-                <span>Em Atraso</span>
-              </>
-            ) : (
-              <>
-                <Clock size={14} style={{ color: isNextIncome ? '#60a5fa' : '#94a3b8' }} />
-                <span>A Receber</span>
-              </>
+          {/* Priority Badge in front of Status & Interactive Status Toggle Pill for Income */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {event.priority && (
+              <span
+                className="badge"
+                style={{
+                  backgroundColor: priorityStyle.bg,
+                  color: priorityStyle.text,
+                  borderColor: priorityStyle.border,
+                  fontSize: '0.72rem',
+                  padding: '3px 8px'
+                }}
+              >
+                {event.priority}
+              </span>
             )}
-          </button>
+            <button
+              type="button"
+              disabled={event.date > todayStr}
+              onClick={() => {
+                if (event.date <= todayStr && onToggleLoanPayment) {
+                  onToggleLoanPayment(event.id);
+                }
+              }}
+              className="btn btn-sm"
+              style={{
+                background: isReceivedIncome
+                  ? 'rgba(16, 185, 129, 0.16)'
+                  : isOverdueIncome
+                    ? 'rgba(239, 68, 68, 0.16)'
+                    : isNextIncome
+                      ? 'rgba(59, 130, 246, 0.12)'
+                      : 'rgba(148, 163, 184, 0.1)',
+                color: isReceivedIncome
+                  ? '#10b981'
+                  : isOverdueIncome
+                    ? '#f87171'
+                    : isNextIncome
+                      ? '#60a5fa'
+                      : '#94a3b8',
+                border: `1px solid ${isReceivedIncome
+                    ? 'rgba(16, 185, 129, 0.35)'
+                    : isOverdueIncome
+                      ? 'rgba(239, 68, 68, 0.4)'
+                      : isNextIncome
+                        ? 'rgba(59, 130, 246, 0.3)'
+                        : 'rgba(148, 163, 184, 0.2)'
+                  }`,
+                borderRadius: '9999px',
+                padding: '5px 14px',
+                fontSize: '0.78rem',
+                fontWeight: '700',
+                cursor: event.date > todayStr ? 'default' : 'pointer',
+                opacity: event.date > todayStr ? 0.75 : 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s',
+                boxShadow: isOverdueIncome
+                  ? '0 2px 10px rgba(239, 68, 68, 0.25)'
+                  : isReceivedIncome
+                    ? '0 2px 8px rgba(16, 185, 129, 0.2)'
+                    : 'none'
+              }}
+            >
+              {isReceivedIncome ? (
+                <>
+                  <CheckCircle2 size={14} style={{ color: '#10b981' }} />
+                  <span>Recebido às {getCompletedTimeStr()}</span>
+                </>
+              ) : isOverdueIncome ? (
+                <>
+                  <AlertCircle size={14} style={{ color: '#f87171' }} />
+                  <span>Em Atraso</span>
+                </>
+              ) : (
+                <>
+                  <Clock size={14} style={{ color: isNextIncome ? '#60a5fa' : '#94a3b8' }} />
+                  <span>A Receber</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
@@ -615,36 +618,52 @@ export default function TimelineEventCard({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => onToggleLoanPayment && onToggleLoanPayment(event.id)}
-            className="btn btn-sm"
-            style={{
-              background: isPaidExpense ? 'rgba(244, 63, 94, 0.16)' : 'rgba(245, 158, 11, 0.14)',
-              color: isPaidExpense ? '#f43f5e' : '#f59e0b',
-              border: `1px solid ${isPaidExpense ? 'rgba(244, 63, 94, 0.35)' : 'rgba(245, 158, 11, 0.35)'}`,
-              borderRadius: '9999px',
-              padding: '5px 14px',
-              fontSize: '0.78rem',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            {isPaidExpense ? (
-              <>
-                <CheckCircle2 size={14} style={{ color: '#f43f5e' }} />
-                <span>Pago às {getCompletedTimeStr()}</span>
-              </>
-            ) : (
-              <>
-                <Clock size={14} style={{ color: '#f59e0b' }} />
-                <span>Pendente</span>
-              </>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {event.priority && (
+              <span
+                className="badge"
+                style={{
+                  backgroundColor: priorityStyle.bg,
+                  color: priorityStyle.text,
+                  borderColor: priorityStyle.border,
+                  fontSize: '0.72rem',
+                  padding: '3px 8px'
+                }}
+              >
+                {event.priority}
+              </span>
             )}
-          </button>
+            <button
+              type="button"
+              onClick={() => onToggleLoanPayment && onToggleLoanPayment(event.id)}
+              className="btn btn-sm"
+              style={{
+                background: isPaidExpense ? 'rgba(244, 63, 94, 0.16)' : 'rgba(245, 158, 11, 0.14)',
+                color: isPaidExpense ? '#f43f5e' : '#f59e0b',
+                border: `1px solid ${isPaidExpense ? 'rgba(244, 63, 94, 0.35)' : 'rgba(245, 158, 11, 0.35)'}`,
+                borderRadius: '9999px',
+                padding: '5px 14px',
+                fontSize: '0.78rem',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              {isPaidExpense ? (
+                <>
+                  <CheckCircle2 size={14} style={{ color: '#f43f5e' }} />
+                  <span>Pago às {getCompletedTimeStr()}</span>
+                </>
+              ) : (
+                <>
+                  <Clock size={14} style={{ color: '#f59e0b' }} />
+                  <span>Pendente</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
@@ -682,36 +701,52 @@ export default function TimelineEventCard({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => onToggleLoanPayment && onToggleLoanPayment(event.id)}
-            className="btn btn-sm"
-            style={{
-              background: isCompletedInvestment ? 'rgba(99, 102, 241, 0.16)' : 'rgba(148, 163, 184, 0.12)',
-              color: isCompletedInvestment ? 'var(--primary-light)' : '#94a3b8',
-              border: `1px solid ${isCompletedInvestment ? 'rgba(99, 102, 241, 0.35)' : 'rgba(148, 163, 184, 0.3)'}`,
-              borderRadius: '9999px',
-              padding: '5px 14px',
-              fontSize: '0.78rem',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            {isCompletedInvestment ? (
-              <>
-                <CheckCircle2 size={14} style={{ color: 'var(--primary-light)' }} />
-                <span>Investido às {getCompletedTimeStr()}</span>
-              </>
-            ) : (
-              <>
-                <Clock size={14} style={{ color: '#94a3b8' }} />
-                <span>Planeado</span>
-              </>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {event.priority && (
+              <span
+                className="badge"
+                style={{
+                  backgroundColor: priorityStyle.bg,
+                  color: priorityStyle.text,
+                  borderColor: priorityStyle.border,
+                  fontSize: '0.72rem',
+                  padding: '3px 8px'
+                }}
+              >
+                {event.priority}
+              </span>
             )}
-          </button>
+            <button
+              type="button"
+              onClick={() => onToggleLoanPayment && onToggleLoanPayment(event.id)}
+              className="btn btn-sm"
+              style={{
+                background: isCompletedInvestment ? 'rgba(99, 102, 241, 0.16)' : 'rgba(148, 163, 184, 0.12)',
+                color: isCompletedInvestment ? 'var(--primary-light)' : '#94a3b8',
+                border: `1px solid ${isCompletedInvestment ? 'rgba(99, 102, 241, 0.35)' : 'rgba(148, 163, 184, 0.3)'}`,
+                borderRadius: '9999px',
+                padding: '5px 14px',
+                fontSize: '0.78rem',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              {isCompletedInvestment ? (
+                <>
+                  <CheckCircle2 size={14} style={{ color: 'var(--primary-light)' }} />
+                  <span>Investido às {getCompletedTimeStr()}</span>
+                </>
+              ) : (
+                <>
+                  <Clock size={14} style={{ color: '#94a3b8' }} />
+                  <span>Planeado</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
@@ -790,6 +825,20 @@ export default function TimelineEventCard({
 
           {/* Inline Loan Payment Fast Toggle */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {event.priority && (
+              <span
+                className="badge"
+                style={{
+                  backgroundColor: priorityStyle.bg,
+                  color: priorityStyle.text,
+                  borderColor: priorityStyle.border,
+                  fontSize: '0.72rem',
+                  padding: '3px 8px'
+                }}
+              >
+                {event.priority}
+              </span>
+            )}
             <button
               type="button"
               onClick={() => onToggleLoanPayment && onToggleLoanPayment(event.id)}

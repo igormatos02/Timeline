@@ -345,6 +345,11 @@ export default function TimelineEventCard({
       {/* Top Header */}
       <div className="event-card-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Clean event title in front */}
+          <h3 className="event-title">
+            {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
+          </h3>
+
           {/* Nature Category Badge */}
           <span
             className="badge"
@@ -406,11 +411,6 @@ export default function TimelineEventCard({
               {onNavigateToTimeline && <ArrowUpRight size={11} />}
             </button>
           )}
-
-          {/* Clean event title without trailing values in parentheses */}
-          <h3 className="event-title">
-            {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
-          </h3>
 
           {event.priority && !isLoanInstallment && !isIncomeEvent && (
             <span

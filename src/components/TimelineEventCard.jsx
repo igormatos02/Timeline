@@ -31,7 +31,9 @@ import {
   Home,
   Car,
   Layers,
-  Zap
+  Zap,
+  ShoppingCart,
+  PiggyBank
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatCurrency } from '../utils/loanCalculations';
@@ -369,18 +371,107 @@ export default function TimelineEventCard({
        event.category === 'repetitivo')
     );
 
+  // Event Origin / Sub-vision info for right-aligned badge
+  const getEventOriginInfo = () => {
+    if (
+      event.timelineOriginId === 'tl-loan-house' ||
+      event.timelineOriginName === 'Habitação' ||
+      event.timelineOriginName === 'Crédito Habitação'
+    ) {
+      return {
+        label: 'Crédito Habitação',
+        icon: <Home size={12} />,
+        bg: 'rgba(16, 185, 129, 0.15)',
+        color: '#10b981',
+        border: 'rgba(16, 185, 129, 0.3)',
+        timelineId: 'tl-loan-house',
+        tab: null
+      };
+    }
+    if (
+      event.timelineOriginId === 'tl-loan-80004197726' ||
+      event.category === 'parcela_emprestimo' ||
+      event.category === 'amortizacao' ||
+      isLoanInstallment
+    ) {
+      return {
+        label: 'Crédito Automóvel',
+        icon: <Car size={12} />,
+        bg: 'rgba(99, 102, 241, 0.15)',
+        color: '#a5b4fc',
+        border: 'rgba(99, 102, 241, 0.3)',
+        timelineId: 'tl-income',
+        tab: 'emprestimos'
+      };
+    }
+    if (isExpenseEvent) {
+      return {
+        label: 'Gastos e Saídas',
+        icon: <ShoppingCart size={12} />,
+        bg: 'rgba(244, 63, 94, 0.15)',
+        color: '#fda4af',
+        border: 'rgba(244, 63, 94, 0.3)',
+        timelineId: 'tl-income',
+        tab: 'gastos'
+      };
+    }
+    if (isInvestmentEvent) {
+      return {
+        label: 'Investimentos',
+        icon: <PiggyBank size={12} />,
+        bg: 'rgba(99, 102, 241, 0.15)',
+        color: '#c7d2fe',
+        border: 'rgba(99, 102, 241, 0.3)',
+        timelineId: 'tl-income',
+        tab: 'investimentos'
+      };
+    }
+    if (isIncomeEvent) {
+      return {
+        label: 'Entradas e Rendimentos',
+        icon: <DollarSign size={12} />,
+        bg: 'rgba(6, 182, 212, 0.15)',
+        color: '#67e8f9',
+        border: 'rgba(6, 182, 212, 0.3)',
+        timelineId: 'tl-income',
+        tab: 'entradas'
+      };
+    }
+    return {
+      label: event.timelineOriginName || 'Financeiro',
+      icon: <DollarSign size={12} />,
+      bg: 'rgba(99, 102, 241, 0.15)',
+      color: 'var(--primary-light)',
+      border: 'rgba(99, 102, 241, 0.3)',
+      timelineId: event.timelineOriginId || 'tl-income',
+      tab: 'balanco'
+    };
+  };
+
+  const originInfo = getEventOriginInfo();
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      layout
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.25 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.2 }}
       className={`event-card ${isMemoryCard ? 'memory-card' : ''}`}
       style={cardStyle}
     >
       {/* Top Header */}
-      <div className="event-card-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+      <div
+        className="event-card-header"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '10px',
+          width: '100%'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
           {/* Ícone de Único ou Recorrente na frente do título */}
           <span
             title={isRecurring ? 'Recorrente' : 'Único / Pontual'}
@@ -401,60 +492,44 @@ export default function TimelineEventCard({
           </span>
 
           {/* Título do evento limpo */}
-          <h3 className="event-title">
+          <h3 className="event-title" style={{ margin: 0 }}>
             {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
           </h3>
-
-          {/* Origin Badge */}
-          {event.timelineOriginName && event.timelineOriginId !== currentTimelineId && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onNavigateToTimeline && event.timelineOriginId) {
-                  onNavigateToTimeline(event.timelineOriginId);
-                }
-              }}
-              className="badge"
-              style={{
-                backgroundColor:
-                  event.timelineOriginId === 'tl-loan-house'
-                    ? 'rgba(16, 185, 129, 0.15)'
-                    : event.timelineOriginId === 'tl-income'
-                      ? 'rgba(6, 182, 212, 0.15)'
-                      : 'rgba(99, 102, 241, 0.15)',
-                color:
-                  event.timelineOriginId === 'tl-loan-house'
-                    ? '#10b981'
-                    : event.timelineOriginId === 'tl-income'
-                      ? '#06b6d4'
-                      : 'var(--primary-light)',
-                borderColor:
-                  event.timelineOriginId === 'tl-loan-house'
-                    ? 'rgba(16, 185, 129, 0.3)'
-                    : event.timelineOriginId === 'tl-income'
-                      ? 'rgba(6, 182, 212, 0.3)'
-                      : 'rgba(99, 102, 241, 0.3)',
-                fontWeight: '700',
-                cursor: onNavigateToTimeline ? 'pointer' : 'default',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-              title={`Navegar para a timeline dedicada de ${event.timelineOriginName}`}
-            >
-              {event.timelineOriginId === 'tl-loan-house' ? (
-                <Home size={12} />
-              ) : event.timelineOriginId === 'tl-loan-80004197726' ? (
-                <Car size={12} />
-              ) : (
-                <DollarSign size={12} />
-              )}
-              <span>{event.timelineOriginName}</span>
-              {onNavigateToTimeline && <ArrowUpRight size={11} />}
-            </button>
-          )}
         </div>
+
+        {/* Origin / Sub-vision Badge aligned to the RIGHT for ALL cards */}
+        {originInfo && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onNavigateToTimeline) {
+                onNavigateToTimeline(originInfo.timelineId, originInfo.tab);
+              }
+            }}
+            className="badge"
+            style={{
+              backgroundColor: originInfo.bg,
+              color: originInfo.color,
+              borderColor: originInfo.border,
+              fontWeight: '700',
+              fontSize: '0.72rem',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              cursor: onNavigateToTimeline ? 'pointer' : 'default',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              flexShrink: 0,
+              marginLeft: 'auto'
+            }}
+            title={`Ir para a visão de ${originInfo.label}`}
+          >
+            {originInfo.icon}
+            <span>{originInfo.label}</span>
+            {onNavigateToTimeline && <ArrowUpRight size={11} />}
+          </button>
+        )}
       </div>
 
       {/* 💰 Income (Entrada) Financial Highlight Strip */}
@@ -1056,28 +1131,26 @@ export default function TimelineEventCard({
         </div>
 
         <div className="event-card-actions">
-          {/* Botão para ir para a timeline dedicada do evento quando na visão consolidada */}
-          {event.timelineOriginId && event.timelineOriginId !== currentTimelineId && onNavigateToTimeline && (
+          {/* Botão para ir para a visão dedicada do evento */}
+          {originInfo && onNavigateToTimeline && (
             <button
               type="button"
               className="btn btn-outline btn-sm"
-              onClick={() => onNavigateToTimeline(event.timelineOriginId)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onNavigateToTimeline(originInfo.timelineId, originInfo.tab);
+              }}
               style={{
                 padding: '4px 10px',
                 fontSize: '0.74rem',
                 gap: '4px',
-                color:
-                  event.timelineOriginId === 'tl-loan-house'
-                    ? '#10b981'
-                    : event.timelineOriginId === 'tl-income'
-                      ? '#06b6d4'
-                      : 'var(--primary-light)',
+                color: originInfo.color,
                 borderColor: 'var(--border-glass)'
               }}
-              title={`Abrir timeline de ${event.timelineOriginName}`}
+              title={`Abrir visão de ${originInfo.label}`}
             >
               <ArrowUpRight size={13} />
-              <span>Ver na Timeline ({event.timelineOriginName})</span>
+              <span>Ver em {originInfo.label}</span>
             </button>
           )}
 

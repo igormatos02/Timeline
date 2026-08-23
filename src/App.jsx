@@ -497,7 +497,10 @@ export default function App() {
             onDeleteChecklistItem={handleDeleteChecklistItem}
             onToggleLoanPayment={handleToggleLoanPayment}
             onOpenEditInstallment={(inst) => setEditingInstallment(inst)}
-            onNavigateToTimeline={(timelineId) => setActiveTimelineId(timelineId)}
+            onNavigateToTimeline={(timelineId, tab) => {
+              if (timelineId) setActiveTimelineId(timelineId);
+              if (tab) setActiveFinancialTab(tab);
+            }}
             headerComponent={
               <TimelineHeader
                 timeline={activeTimeline}

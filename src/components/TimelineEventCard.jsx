@@ -482,8 +482,8 @@ export default function TimelineEventCard({
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: isRecurring ? 'var(--primary-light)' : 'var(--text-dim)',
-              opacity: isRecurring ? 0.9 : 0.6,
+              color: 'var(--primary-light)',
+              opacity: 0.85,
               flexShrink: 0
             }}
           >

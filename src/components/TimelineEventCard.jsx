@@ -606,7 +606,7 @@ export default function TimelineEventCard({
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {event.priority && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: '1.2' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', lineHeight: '1.2' }}>
                 <span
                   style={{
                     fontSize: '0.64rem',

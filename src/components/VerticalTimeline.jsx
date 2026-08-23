@@ -161,11 +161,13 @@ export default function VerticalTimeline({
     setGroupBy('mes');
   }, [timeline.id]);
 
-  // Scroll and focus on Today / Current period node when clicked by user
+  // Scroll and focus on Today / Current period node when clicked by user (aligned at top of month block)
   const scrollToToday = () => {
     const todayNode = document.getElementById('timeline-node-today');
     if (todayNode) {
-      todayNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const yOffset = -85; // Compensar cabeçalho fixo para mostrar o topo do bloco do mês e o primeiro evento
+      const y = todayNode.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
     }
   };
 
@@ -191,11 +193,13 @@ export default function VerticalTimeline({
     if (savedPosition !== undefined) {
       window.scrollTo({ top: savedPosition, behavior: 'instant' });
     } else {
-      // First time opening this timeline: place directly on today without animated scroll racing
+      // First time opening this timeline: place directly at top of current month
       const timer = setTimeout(() => {
         const todayNode = document.getElementById('timeline-node-today');
         if (todayNode) {
-          todayNode.scrollIntoView({ behavior: 'instant', block: 'center' });
+          const yOffset = -85;
+          const y = todayNode.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
         }
       }, 50);
       return () => clearTimeout(timer);

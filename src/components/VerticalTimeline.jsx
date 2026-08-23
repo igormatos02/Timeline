@@ -179,14 +179,14 @@ export default function VerticalTimeline({
     }
   };
 
-  // Scroll memory per timeline: remember exact scroll position or jump directly to today without animated gliding
+  // Scroll memory per timeline/tab: remember exact scroll position or jump directly to today without animated gliding
   const scrollPositionsRef = React.useRef({});
-  const currentTimelineIdRef = React.useRef(timeline.id);
+  const currentKeyRef = React.useRef(`${timeline.id}_${activeFinancialTab || 'default'}`);
 
   React.useEffect(() => {
     const handleScroll = () => {
-      if (currentTimelineIdRef.current) {
-        scrollPositionsRef.current[currentTimelineIdRef.current] = window.scrollY;
+      if (currentKeyRef.current) {
+        scrollPositionsRef.current[currentKeyRef.current] = window.scrollY;
       }
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -194,14 +194,15 @@ export default function VerticalTimeline({
   }, []);
 
   React.useLayoutEffect(() => {
-    const currentId = timeline.id;
-    currentTimelineIdRef.current = currentId;
+    const viewKey = `${timeline.id}_${activeFinancialTab || 'default'}`;
+    currentKeyRef.current = viewKey;
 
-    const savedPosition = scrollPositionsRef.current[currentId];
+    const savedPosition = scrollPositionsRef.current[viewKey];
     if (savedPosition !== undefined) {
+      // Restaurar exatamente onde o utilizador esteve pela última vez
       window.scrollTo({ top: savedPosition, behavior: 'instant' });
     } else {
-      // First time opening this timeline: place directly at start of month
+      // Apenas na PRIMEIRA VEZ que entra nesta visão: posicionar no mês corrente / topo
       const timer = setTimeout(() => {
         const isBalancoView = (timeline.type === 'Financeiro' && activeFinancialTab === 'balanco') || timeline.type === 'Principal';
         if (isBalancoView) {

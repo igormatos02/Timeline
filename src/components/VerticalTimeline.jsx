@@ -79,9 +79,9 @@ export default function VerticalTimeline({
 
   // Multi-selection of credit and income timelines for Principal view
   const availableCreditOptions = [
-    { id: 'tl-loan-house', name: 'Habitação', icon: <Home size={14} />, color: '#10b981' },
-    { id: 'tl-loan-80004197726', name: 'Automóvel', icon: <Car size={14} />, color: '#6366f1' },
-    { id: 'tl-income', name: 'Entradas', icon: <DollarSign size={14} />, color: '#06b6d4' }
+    { id: 'tl-income', name: 'Entradas', icon: <DollarSign size={14} />, color: '#10b981' },
+    { id: 'tl-loan-house', name: 'Habitação', icon: <Home size={14} />, color: '#0ea5e9' },
+    { id: 'tl-loan-80004197726', name: 'Automóvel', icon: <Car size={14} />, color: '#6366f1' }
   ];
   const [selectedTimelineIds, setSelectedTimelineIds] = useState(['tl-loan-house', 'tl-loan-80004197726', 'tl-income']);
 

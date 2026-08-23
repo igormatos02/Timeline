@@ -384,9 +384,9 @@ export default function TimelineEventCard({
       return {
         label: 'Habitação',
         icon: <Home size={11} strokeWidth={2.4} />,
-        bg: 'rgba(16, 185, 129, 0.12)',
-        color: '#10b981',
-        border: 'rgba(16, 185, 129, 0.28)',
+        bg: 'rgba(14, 165, 233, 0.12)',
+        color: '#0ea5e9',
+        border: 'rgba(14, 165, 233, 0.28)',
         timelineId: 'tl-loan-house',
         tab: null
       };
@@ -433,9 +433,9 @@ export default function TimelineEventCard({
       return {
         label: 'Entradas',
         icon: <DollarSign size={11} strokeWidth={2.4} />,
-        bg: 'rgba(6, 182, 212, 0.12)',
-        color: '#06b6d4',
-        border: 'rgba(6, 182, 212, 0.28)',
+        bg: 'rgba(16, 185, 129, 0.12)',
+        color: '#10b981',
+        border: 'rgba(16, 185, 129, 0.28)',
         timelineId: 'tl-income',
         tab: 'entradas'
       };
@@ -443,9 +443,9 @@ export default function TimelineEventCard({
     return {
       label: event.timelineOriginName || 'Financeiro',
       icon: <DollarSign size={11} strokeWidth={2.4} />,
-      bg: 'rgba(99, 102, 241, 0.12)',
-      color: '#6366f1',
-      border: 'rgba(99, 102, 241, 0.28)',
+      bg: 'rgba(16, 185, 129, 0.12)',
+      color: '#10b981',
+      border: 'rgba(16, 185, 129, 0.28)',
       timelineId: event.timelineOriginId || 'tl-income',
       tab: 'balanco'
     };

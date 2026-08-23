@@ -56,6 +56,7 @@ export default function VerticalTimeline({
   activeFinancialTab = 'balanco',
   onSelectFinancialTab,
   onEditEvent,
+  onUpdateEventDirect,
   onDeleteEvent,
   onToggleTask,
   onAddEventForDate,
@@ -438,6 +439,7 @@ export default function VerticalTimeline({
                           event={ev}
                           currentTimelineId={timeline.id}
                           onEdit={onEditEvent}
+                          onUpdateEventDirect={onUpdateEventDirect}
                           onDelete={onDeleteEvent}
                           onToggleTask={onToggleTask}
                           onToggleLoanPayment={onToggleLoanPayment}
@@ -807,6 +809,7 @@ export default function VerticalTimeline({
                           event={ev}
                           currentTimelineId={timeline.id}
                           onEdit={onEditEvent}
+                          onUpdateEventDirect={onUpdateEventDirect}
                           onDelete={onDeleteEvent}
                           onToggleTask={onToggleTask}
                           onAddChecklistItem={onAddChecklistItem}
@@ -981,6 +984,7 @@ export default function VerticalTimeline({
                               event={ev}
                               currentTimelineId={timeline.id}
                               onEdit={onEditEvent}
+                              onUpdateEventDirect={onUpdateEventDirect}
                               onDelete={onDeleteEvent}
                               onToggleTask={onToggleTask}
                               onToggleLoanPayment={onToggleLoanPayment}
@@ -1077,6 +1081,7 @@ export default function VerticalTimeline({
                           event={ev}
                           currentTimelineId={timeline.id}
                           onEdit={onEditEvent}
+                          onUpdateEventDirect={onUpdateEventDirect}
                           onDelete={onDeleteEvent}
                           onToggleTask={onToggleTask}
                           onToggleLoanPayment={onToggleLoanPayment}

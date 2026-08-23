@@ -40,6 +40,7 @@ export default function TimelineEventCard({
   event,
   currentTimelineId,
   onEdit,
+  onUpdateEventDirect,
   onDelete,
   onToggleTask,
   onAddChecklistItem,
@@ -887,6 +888,7 @@ export default function TimelineEventCard({
                 {allNotes.map((note, idx) => (
                   <div
                     key={idx}
+                    onClick={(e) => e.stopPropagation()}
                     style={{
                       display: 'flex',
                       alignItems: 'flex-start',
@@ -901,16 +903,21 @@ export default function TimelineEventCard({
                     }}
                   >
                     <span style={{ flex: 1, lineHeight: '1.45' }}>{note}</span>
-                    {onEdit && (
+                    {(onUpdateEventDirect || onEdit) && (
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           const updatedNotes = allNotes.filter((_, nIdx) => nIdx !== idx);
-                          onEdit({
+                          const updatedEvent = {
                             ...event,
                             notes: updatedNotes,
                             description: updatedNotes[0] || ''
-                          });
+                          };
+                          if (onUpdateEventDirect) {
+                            onUpdateEventDirect(updatedEvent);
+                          }
                         }}
                         style={{
                           background: 'transparent',
@@ -936,20 +943,25 @@ export default function TimelineEventCard({
             )}
 
             {/* Add New Note Input Form */}
-            {onEdit && (
+            {(onUpdateEventDirect || onEdit) && (
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   if (newItemText.trim()) {
                     const updatedNotes = [...allNotes, newItemText.trim()];
-                    onEdit({
+                    const updatedEvent = {
                       ...event,
                       notes: updatedNotes,
                       description: updatedNotes[0] || ''
-                    });
+                    };
+                    if (onUpdateEventDirect) {
+                      onUpdateEventDirect(updatedEvent);
+                    }
                     setNewItemText('');
                   }
                 }}
+                onClick={(e) => e.stopPropagation()}
                 style={{ display: 'flex', gap: '6px', marginTop: '4px' }}
               >
                 <input
@@ -957,6 +969,7 @@ export default function TimelineEventCard({
                   placeholder="Escrever uma nova nota..."
                   value={newItemText}
                   onChange={(e) => setNewItemText(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
                   style={{
                     flex: 1,
                     background: 'rgba(0, 0, 0, 0.15)',
@@ -971,6 +984,7 @@ export default function TimelineEventCard({
                 <button
                   type="submit"
                   disabled={!newItemText.trim()}
+                  onClick={(e) => e.stopPropagation()}
                   className="btn btn-primary btn-sm"
                   style={{
                     padding: '4px 12px',

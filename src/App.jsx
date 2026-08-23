@@ -194,6 +194,20 @@ export default function App() {
     }
   };
 
+  const handleUpdateEventDirect = (updatedEvent) => {
+    if (!updatedEvent || !updatedEvent.id) return;
+    setTimelines((prev) =>
+      prev.map((tl) => {
+        const hasEvent = (tl.events || []).some((ev) => ev.id === updatedEvent.id);
+        if (!hasEvent) return tl;
+        return {
+          ...tl,
+          events: tl.events.map((ev) => (ev.id === updatedEvent.id ? { ...ev, ...updatedEvent } : ev))
+        };
+      })
+    );
+  };
+
   const handleDeleteEvent = (eventId) => {
     if (!activeTimeline) return;
     if (window.confirm('Tem a certeza que deseja eliminar este evento?')) {
@@ -463,6 +477,7 @@ export default function App() {
             activeFinancialTab={activeFinancialTab}
             onSelectFinancialTab={setActiveFinancialTab}
             onEditEvent={handleOpenEditEvent}
+            onUpdateEventDirect={handleUpdateEventDirect}
             onDeleteEvent={handleDeleteEvent}
             onToggleTask={handleToggleTask}
             onAddEventForDate={(dateStr, nature) => handleOpenCreateEvent(dateStr, nature || (activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income'))}

@@ -30,7 +30,8 @@ import {
   FileText,
   Home,
   Car,
-  Layers
+  Layers,
+  Zap
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatCurrency } from '../utils/loanCalculations';
@@ -333,6 +334,16 @@ export default function TimelineEventCard({
     };
   }
 
+  const isRecurring =
+    event.periodicity === 'recorrente' ||
+    event.isRecurring ||
+    Boolean(
+      event.category &&
+      (event.category.includes('recorrente') ||
+       event.category === 'parcela_emprestimo' ||
+       event.category === 'repetitivo')
+    );
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -345,22 +356,29 @@ export default function TimelineEventCard({
       {/* Top Header */}
       <div className="event-card-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {/* Clean event title in front */}
+          {/* Ícone de Único ou Recorrente na frente do título */}
+          <span
+            title={isRecurring ? 'Recorrente' : 'Único / Pontual'}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '24px',
+              height: '24px',
+              borderRadius: '6px',
+              background: isRecurring ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.08)',
+              color: isRecurring ? 'var(--primary-light)' : 'var(--text-muted)',
+              border: isRecurring ? '1px solid rgba(99, 102, 241, 0.25)' : '1px solid var(--border-glass)',
+              flexShrink: 0
+            }}
+          >
+            {isRecurring ? <Repeat size={13} strokeWidth={2.4} /> : <Zap size={13} strokeWidth={2.4} />}
+          </span>
+
+          {/* Título do evento limpo */}
           <h3 className="event-title">
             {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
           </h3>
-
-          {/* Nature Category Badge */}
-          <span
-            className="badge"
-            style={{
-              backgroundColor: catMeta.bg,
-              color: catMeta.color,
-              borderColor: catMeta.border
-            }}
-          >
-            {catMeta.icon} {catMeta.label}
-          </span>
 
           {/* Timeline Origin Badge (Crédito Habitação vs Automóvel vs Entradas) - Clickable, shown only when not inside that timeline */}
           {event.timelineOriginName && event.timelineOriginId !== currentTimelineId && (

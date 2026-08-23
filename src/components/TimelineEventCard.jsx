@@ -496,7 +496,7 @@ export default function TimelineEventCard({
           </h3>
         </div>
 
-        {/* Origin / Sub-vision Badge aligned to the RIGHT - ONLY on Balanço / Principal view */}
+        {/* Origin / Sub-vision Clean Text Indicator aligned to the RIGHT - ONLY on Balanço / Principal view */}
         {isBalanceView && originInfo && (
           <button
             type="button"
@@ -506,23 +506,22 @@ export default function TimelineEventCard({
                 onNavigateToTimeline(originInfo.timelineId, originInfo.tab);
               }
             }}
-            className="badge"
             style={{
-              backgroundColor: originInfo.bg,
+              background: 'transparent',
+              border: 'none',
+              boxShadow: 'none',
+              padding: '2px 0',
               color: originInfo.color,
-              borderColor: originInfo.border,
               fontWeight: '700',
-              fontSize: '0.72rem',
+              fontSize: '0.74rem',
               letterSpacing: '0.01em',
-              padding: '3px 9px',
-              borderRadius: '9999px',
               cursor: onNavigateToTimeline ? 'pointer' : 'default',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
               flexShrink: 0,
               marginLeft: 'auto',
-              transition: 'all 0.15s ease',
+              transition: 'opacity 0.15s ease',
               lineHeight: 1.2
             }}
             title={`Ir para a visão de ${originInfo.label}`}

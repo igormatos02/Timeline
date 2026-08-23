@@ -604,17 +604,30 @@ export default function TimelineEventCard({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {event.priority && (
-              <span
-                style={{
-                  fontSize: '0.74rem',
-                  color: 'var(--text-dim)',
-                  fontWeight: '600'
-                }}
-              >
-                Prioridade: {event.priority}
-              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: '1.2' }}>
+                <span
+                  style={{
+                    fontSize: '0.64rem',
+                    color: 'var(--text-dim)',
+                    textTransform: 'uppercase',
+                    fontWeight: '700',
+                    letterSpacing: '0.04em'
+                  }}
+                >
+                  Prioridade
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.82rem',
+                    color: 'var(--text-main)',
+                    fontWeight: '700'
+                  }}
+                >
+                  {event.priority}
+                </span>
+              </div>
             )}
             <button
               type="button"

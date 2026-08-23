@@ -16,12 +16,15 @@ import {
 import './App.css';
 
 export default function App() {
-  // Load timelines from localStorage or mock data (v14 with Financeiro sub-timelines & Car Loan integration)
+  // Load timelines from localStorage or mock data (v15 with clean structure & reactive toggles)
   const [timelines, setTimelines] = useState(() => {
-    const saved = localStorage.getItem('chrono_timelines_data_v14');
+    const saved = localStorage.getItem('chrono_timelines_data_v15');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       } catch (e) {
         console.error('Failed to parse saved timelines:', e);
       }
@@ -66,7 +69,7 @@ export default function App() {
 
   // Save to localStorage when timelines state updates
   useEffect(() => {
-    localStorage.setItem('chrono_timelines_data_v14', JSON.stringify(timelines));
+    localStorage.setItem('chrono_timelines_data_v15', JSON.stringify(timelines));
   }, [timelines]);
 
   const rawActiveTimeline = timelines.find((tl) => tl.id === activeTimelineId) || timelines[0];

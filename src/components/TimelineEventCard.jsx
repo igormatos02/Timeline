@@ -64,6 +64,8 @@ export default function TimelineEventCard({
   const isExpenseEvent = event.isExpense || event.financialType === 'gasto' || (event.category && event.category.startsWith('saida')) || event.category === 'gasto';
   const isInvestmentEvent = event.isInvestment || event.financialType === 'investimento' || (event.category && event.category.startsWith('investimento'));
 
+  const isInertFuture = event.date > '2026-08-31';
+
   const isReceivedIncome = isIncomeEvent && (event.status === 'Recebido' || event.isCompleted);
   const isOverdueIncome = isIncomeEvent && event.date < todayStr && !isReceivedIncome;
   const isNextIncome = isIncomeEvent && event.date >= todayStr && event.date <= '2026-08-31' && !isReceivedIncome;
@@ -475,7 +477,7 @@ export default function TimelineEventCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.2 }}
-      className={`event-card ${isMemoryCard ? 'memory-card' : ''}`}
+      className={`event-card ${isMemoryCard ? 'memory-card' : ''} ${isInertFuture ? 'is-inert-future-card' : ''}`}
       style={cardStyle}
     >
       {/* Top Header */}
@@ -497,7 +499,7 @@ export default function TimelineEventCard({
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--primary-light)',
+              color: isInertFuture ? 'var(--text-dim)' : 'var(--primary-light)',
               opacity: 0.85,
               flexShrink: 0
             }}
@@ -506,7 +508,7 @@ export default function TimelineEventCard({
           </span>
 
           {/* Título do evento limpo */}
-          <h3 className="event-title" style={{ margin: 0 }}>
+          <h3 className="event-title" style={{ margin: 0, color: isInertFuture ? 'var(--text-muted)' : 'var(--text-main)' }}>
             {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
           </h3>
         </div>
@@ -515,9 +517,10 @@ export default function TimelineEventCard({
         {isBalanceView && originInfo && (
           <button
             type="button"
+            disabled={isInertFuture}
             onClick={(e) => {
               e.stopPropagation();
-              if (onNavigateToTimeline) {
+              if (!isInertFuture && onNavigateToTimeline) {
                 onNavigateToTimeline(originInfo.timelineId, originInfo.tab);
               }
             }}
@@ -526,11 +529,12 @@ export default function TimelineEventCard({
               border: 'none',
               boxShadow: 'none',
               padding: '2px 0',
-              color: originInfo.color,
+              color: isInertFuture ? 'var(--text-dim)' : originInfo.color,
               fontWeight: '700',
               fontSize: '0.74rem',
               letterSpacing: '0.01em',
-              cursor: onNavigateToTimeline ? 'pointer' : 'default',
+              cursor: isInertFuture ? 'default' : (onNavigateToTimeline ? 'pointer' : 'default'),
+              pointerEvents: isInertFuture ? 'none' : 'auto',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
@@ -541,9 +545,8 @@ export default function TimelineEventCard({
             }}
             title={`Ir para a visão de ${originInfo.label}`}
           >
-            {originInfo.icon}
             <span>{originInfo.label}</span>
-            {onNavigateToTimeline && <ArrowUpRight size={10} style={{ opacity: 0.75, marginLeft: '1px' }} />}
+            <ArrowUpRight size={13} strokeWidth={2.5} style={{ opacity: isInertFuture ? 0.4 : 0.8 }} />
           </button>
         )}
       </div>
@@ -553,16 +556,20 @@ export default function TimelineEventCard({
         <div
           className="loan-breakdown-strip"
           style={{
-            background: isNextIncome
-              ? 'rgba(59, 130, 246, 0.08)'
-              : isFarFutureIncome
-                ? 'rgba(255, 255, 255, 0.02)'
-                : 'rgba(16, 185, 129, 0.08)',
-            border: isNextIncome
-              ? '1px solid rgba(59, 130, 246, 0.28)'
-              : isFarFutureIncome
-                ? '1px solid var(--border-glass)'
-                : '1px solid rgba(16, 185, 129, 0.22)',
+            background: isInertFuture
+              ? 'rgba(148, 163, 184, 0.04)'
+              : isNextIncome
+                ? 'rgba(59, 130, 246, 0.08)'
+                : isFarFutureIncome
+                  ? 'rgba(255, 255, 255, 0.02)'
+                  : 'rgba(16, 185, 129, 0.08)',
+            border: isInertFuture
+              ? '1px solid rgba(148, 163, 184, 0.18)'
+              : isNextIncome
+                ? '1px solid rgba(59, 130, 246, 0.28)'
+                : isFarFutureIncome
+                  ? '1px solid var(--border-glass)'
+                  : '1px solid rgba(16, 185, 129, 0.22)',
             borderRadius: '10px',
             padding: '8px 12px',
             margin: '10px 0',
@@ -582,7 +589,7 @@ export default function TimelineEventCard({
                 style={{
                   fontSize: '1.05rem',
                   fontWeight: '800',
-                  color: isNextIncome ? '#60a5fa' : isFarFutureIncome ? '#94a3b8' : '#10b981'
+                  color: isInertFuture ? '#94a3b8' : (isNextIncome ? '#60a5fa' : isFarFutureIncome ? '#94a3b8' : '#10b981')
                 }}
               >
                 +{formatCurrency(event.amount)}
@@ -590,89 +597,111 @@ export default function TimelineEventCard({
             </div>
           </div>
 
-          {/* Interactive Status Toggle Pill for Income */}
+          {/* Status Pill for Income */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              type="button"
-              disabled={event.date > todayStr}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isLocked) {
-                  return; // Bloqueado: clique no cadeado para abrir
+            {isInertFuture ? (
+              <div
+                style={{
+                  background: 'rgba(148, 163, 184, 0.08)',
+                  color: 'var(--text-dim)',
+                  border: '1px solid rgba(148, 163, 184, 0.2)',
+                  borderRadius: '9999px',
+                  padding: '5px 14px',
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'default',
+                  userSelect: 'none'
+                }}
+              >
+                <Clock size={13} />
+                <span>Previsto</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={event.date > todayStr}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isLocked) {
+                    return; // Bloqueado: clique no cadeado para abrir
+                  }
+                  if (event.date <= todayStr && onToggleLoanPayment) {
+                    onToggleLoanPayment(event.id);
+                  }
+                }}
+                className="btn btn-sm"
+                title={
+                  isLocked
+                    ? 'Entrada confirmada e bloqueada. Clique no cadeado no rodapé para desbloquear e alterar.'
+                    : 'Clique para alternar o status'
                 }
-                if (event.date <= todayStr && onToggleLoanPayment) {
-                  onToggleLoanPayment(event.id);
-                }
-              }}
-              className="btn btn-sm"
-              title={
-                isLocked
-                  ? 'Entrada confirmada e bloqueada. Clique no cadeado no rodapé para desbloquear e alterar.'
-                  : 'Clique para alternar o status'
-              }
-              style={{
-                background: isReceivedIncome
-                  ? 'rgba(16, 185, 129, 0.16)'
-                  : isOverdueIncome
-                    ? 'rgba(239, 68, 68, 0.16)'
-                    : isNextIncome
-                      ? 'rgba(59, 130, 246, 0.12)'
-                      : 'rgba(148, 163, 184, 0.1)',
-                color: isReceivedIncome
-                  ? '#10b981'
-                  : isOverdueIncome
-                    ? '#f87171'
-                    : isNextIncome
-                      ? '#60a5fa'
-                      : '#94a3b8',
-                border: isReceivedIncome
-                  ? isLocked
-                    ? '1px solid rgba(16, 185, 129, 0.35)'
-                    : '1.5px dashed rgba(16, 185, 129, 0.65)'
-                  : isOverdueIncome
-                    ? '1px solid rgba(239, 68, 68, 0.4)'
-                    : isNextIncome
-                      ? '1px solid rgba(59, 130, 246, 0.3)'
-                      : '1px solid rgba(148, 163, 184, 0.2)',
-                borderRadius: '9999px',
-                padding: '5px 14px',
-                fontSize: '0.78rem',
-                fontWeight: '700',
-                cursor: isLocked ? 'default' : event.date > todayStr ? 'default' : 'pointer',
-                opacity: event.date > todayStr ? 0.75 : 1,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s',
-                boxShadow: isOverdueIncome
-                  ? '0 2px 10px rgba(239, 68, 68, 0.25)'
-                  : isReceivedIncome
-                    ? '0 2px 8px rgba(16, 185, 129, 0.2)'
-                    : 'none'
-              }}
-            >
-              {isReceivedIncome ? (
-                <>
-                  <CheckCircle2 size={14} style={{ color: '#10b981' }} />
-                  <span>Recebido às {getCompletedTimeStr()}</span>
-                  {isLocked ? (
-                    <Lock size={12} style={{ color: '#f59e0b', marginLeft: '2px' }} title="Status travado" />
-                  ) : (
-                    <Unlock size={12} style={{ color: 'var(--text-dim)', marginLeft: '2px' }} title="Status aberto para alteração" />
-                  )}
-                </>
-              ) : isOverdueIncome ? (
-                <>
-                  <AlertCircle size={14} style={{ color: '#f87171' }} />
-                  <span>Em Atraso</span>
-                </>
-              ) : (
-                <>
-                  <Clock size={14} style={{ color: isNextIncome ? '#60a5fa' : '#94a3b8' }} />
-                  <span>A Receber</span>
-                </>
-              )}
-            </button>
+                style={{
+                  background: isReceivedIncome
+                    ? 'rgba(16, 185, 129, 0.16)'
+                    : isOverdueIncome
+                      ? 'rgba(239, 68, 68, 0.16)'
+                      : isNextIncome
+                        ? 'rgba(59, 130, 246, 0.12)'
+                        : 'rgba(148, 163, 184, 0.1)',
+                  color: isReceivedIncome
+                    ? '#10b981'
+                    : isOverdueIncome
+                      ? '#f87171'
+                      : isNextIncome
+                        ? '#60a5fa'
+                        : '#94a3b8',
+                  border: isReceivedIncome
+                    ? isLocked
+                      ? '1px solid rgba(16, 185, 129, 0.35)'
+                      : '1.5px dashed rgba(16, 185, 129, 0.65)'
+                    : isOverdueIncome
+                      ? '1px solid rgba(239, 68, 68, 0.4)'
+                      : isNextIncome
+                        ? '1px solid rgba(59, 130, 246, 0.3)'
+                        : '1px solid rgba(148, 163, 184, 0.2)',
+                  borderRadius: '9999px',
+                  padding: '5px 14px',
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  cursor: isLocked ? 'default' : event.date > todayStr ? 'default' : 'pointer',
+                  opacity: event.date > todayStr ? 0.75 : 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s',
+                  boxShadow: isOverdueIncome
+                    ? '0 2px 10px rgba(239, 68, 68, 0.25)'
+                    : isReceivedIncome
+                      ? '0 2px 8px rgba(16, 185, 129, 0.2)'
+                      : 'none'
+                }}
+              >
+                {isReceivedIncome ? (
+                  <>
+                    <CheckCircle2 size={14} style={{ color: '#10b981' }} />
+                    <span>Recebido às {getCompletedTimeStr()}</span>
+                    {isLocked ? (
+                      <Lock size={12} style={{ color: '#f59e0b', marginLeft: '2px' }} title="Status travado" />
+                    ) : (
+                      <Unlock size={12} style={{ color: 'var(--text-dim)', marginLeft: '2px' }} title="Status aberto para alteração" />
+                    )}
+                  </>
+                ) : isOverdueIncome ? (
+                  <>
+                    <AlertCircle size={14} style={{ color: '#f87171' }} />
+                    <span>Em Atraso</span>
+                  </>
+                ) : (
+                  <>
+                    <Clock size={14} style={{ color: isNextIncome ? '#60a5fa' : '#94a3b8' }} />
+                    <span>A Receber</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -682,8 +711,8 @@ export default function TimelineEventCard({
         <div
           className="loan-breakdown-strip"
           style={{
-            background: 'rgba(244, 63, 94, 0.08)',
-            border: '1px solid rgba(244, 63, 94, 0.22)',
+            background: isInertFuture ? 'rgba(148, 163, 184, 0.04)' : 'rgba(244, 63, 94, 0.08)',
+            border: isInertFuture ? '1px solid rgba(148, 163, 184, 0.18)' : '1px solid rgba(244, 63, 94, 0.22)',
             borderRadius: '10px',
             padding: '8px 12px',
             margin: '10px 0',
@@ -703,14 +732,14 @@ export default function TimelineEventCard({
                 style={{
                   fontSize: '1.05rem',
                   fontWeight: '800',
-                  color: '#f43f5e'
+                  color: isInertFuture ? '#94a3b8' : '#f43f5e'
                 }}
               >
                 -{formatCurrency(event.amount)}
               </span>
             </div>
 
-            {event.priority && (
+            {event.priority && !isInertFuture && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                   Prioridade
@@ -722,56 +751,78 @@ export default function TimelineEventCard({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isLocked) {
-                return; // Bloqueado: clique no cadeado para abrir
+          {isInertFuture ? (
+            <div
+              style={{
+                background: 'rgba(148, 163, 184, 0.08)',
+                color: 'var(--text-dim)',
+                border: '1px solid rgba(148, 163, 184, 0.2)',
+                borderRadius: '9999px',
+                padding: '5px 14px',
+                fontSize: '0.78rem',
+                fontWeight: '700',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'default',
+                userSelect: 'none'
+              }}
+            >
+              <Clock size={13} />
+              <span>Pendente</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isLocked) {
+                  return; // Bloqueado: clique no cadeado para abrir
+                }
+                if (onToggleLoanPayment) onToggleLoanPayment(event.id);
+              }}
+              className="btn btn-sm"
+              title={
+                isLocked
+                  ? 'Gasto pago e bloqueado. Clique no cadeado no rodapé para desbloquear e alterar.'
+                  : 'Clique para alternar o status'
               }
-              if (onToggleLoanPayment) onToggleLoanPayment(event.id);
-            }}
-            className="btn btn-sm"
-            title={
-              isLocked
-                ? 'Gasto pago e bloqueado. Clique no cadeado no rodapé para desbloquear e alterar.'
-                : 'Clique para alternar o status'
-            }
-            style={{
-              background: isPaidExpense ? 'rgba(244, 63, 94, 0.16)' : 'rgba(245, 158, 11, 0.14)',
-              color: isPaidExpense ? '#f43f5e' : '#f59e0b',
-              border: isPaidExpense
-                ? isLocked
-                  ? '1px solid rgba(244, 63, 94, 0.35)'
-                  : '1.5px dashed rgba(244, 63, 94, 0.65)'
-                : '1px solid rgba(245, 158, 11, 0.35)',
-              borderRadius: '9999px',
-              padding: '5px 14px',
-              fontSize: '0.78rem',
-              fontWeight: '700',
-              cursor: isLocked ? 'default' : 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            {isPaidExpense ? (
-              <>
-                <CheckCircle2 size={14} style={{ color: '#f43f5e' }} />
-                <span>Pago às {getCompletedTimeStr()}</span>
-                {isLocked ? (
-                  <Lock size={12} style={{ color: '#f59e0b', marginLeft: '2px' }} title="Status travado" />
-                ) : (
-                  <Unlock size={12} style={{ color: 'var(--text-dim)', marginLeft: '2px' }} title="Status aberto para alteração" />
-                )}
-              </>
-            ) : (
-              <>
-                <Clock size={14} style={{ color: '#f59e0b' }} />
-                <span>Pendente</span>
-              </>
-            )}
-          </button>
+              style={{
+                background: isPaidExpense ? 'rgba(244, 63, 94, 0.16)' : 'rgba(245, 158, 11, 0.14)',
+                color: isPaidExpense ? '#f43f5e' : '#f59e0b',
+                border: isPaidExpense
+                  ? isLocked
+                    ? '1px solid rgba(244, 63, 94, 0.35)'
+                    : '1.5px dashed rgba(244, 63, 94, 0.65)'
+                  : '1px solid rgba(245, 158, 11, 0.35)',
+                borderRadius: '9999px',
+                padding: '5px 14px',
+                fontSize: '0.78rem',
+                fontWeight: '700',
+                cursor: isLocked ? 'default' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              {isPaidExpense ? (
+                <>
+                  <CheckCircle2 size={14} style={{ color: '#f43f5e' }} />
+                  <span>Pago às {getCompletedTimeStr()}</span>
+                  {isLocked ? (
+                    <Lock size={12} style={{ color: '#f59e0b', marginLeft: '2px' }} title="Status travado" />
+                  ) : (
+                    <Unlock size={12} style={{ color: 'var(--text-dim)', marginLeft: '2px' }} title="Status aberto para alteração" />
+                  )}
+                </>
+              ) : (
+                <>
+                  <Clock size={14} style={{ color: '#f59e0b' }} />
+                  <span>Pendente</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       )}
 
@@ -780,8 +831,8 @@ export default function TimelineEventCard({
         <div
           className="loan-breakdown-strip"
           style={{
-            background: 'rgba(99, 102, 241, 0.08)',
-            border: '1px solid rgba(99, 102, 241, 0.22)',
+            background: isInertFuture ? 'rgba(148, 163, 184, 0.04)' : 'rgba(99, 102, 241, 0.08)',
+            border: isInertFuture ? '1px solid rgba(148, 163, 184, 0.18)' : '1px solid rgba(99, 102, 241, 0.22)',
             borderRadius: '10px',
             padding: '8px 12px',
             margin: '10px 0',
@@ -801,7 +852,7 @@ export default function TimelineEventCard({
                 style={{
                   fontSize: '1.05rem',
                   fontWeight: '800',
-                  color: 'var(--primary-light)'
+                  color: isInertFuture ? '#94a3b8' : 'var(--primary-light)'
                 }}
               >
                 +{formatCurrency(event.amount)}
@@ -810,56 +861,78 @@ export default function TimelineEventCard({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isLocked) {
-                  return; // Bloqueado
+            {isInertFuture ? (
+              <div
+                style={{
+                  background: 'rgba(148, 163, 184, 0.08)',
+                  color: 'var(--text-dim)',
+                  border: '1px solid rgba(148, 163, 184, 0.2)',
+                  borderRadius: '9999px',
+                  padding: '5px 14px',
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'default',
+                  userSelect: 'none'
+                }}
+              >
+                <Clock size={13} />
+                <span>Planeado</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isLocked) {
+                    return; // Bloqueado
+                  }
+                  if (onToggleLoanPayment) onToggleLoanPayment(event.id);
+                }}
+                className="btn btn-sm"
+                title={
+                  isLocked
+                    ? 'Investimento confirmado e bloqueado. Clique no cadeado no rodapé para desbloquear e alterar.'
+                    : 'Clique para alternar o status'
                 }
-                if (onToggleLoanPayment) onToggleLoanPayment(event.id);
-              }}
-              className="btn btn-sm"
-              title={
-                isLocked
-                  ? 'Investimento confirmado e bloqueado. Clique no cadeado no rodapé para desbloquear e alterar.'
-                  : 'Clique para alternar o status'
-              }
-              style={{
-                background: isCompletedInvestment ? 'rgba(139, 92, 246, 0.16)' : 'rgba(148, 163, 184, 0.12)',
-                color: isCompletedInvestment ? '#8b5cf6' : '#94a3b8',
-                border: isCompletedInvestment
-                  ? isLocked
-                    ? '1px solid rgba(139, 92, 246, 0.35)'
-                    : '1.5px dashed rgba(139, 92, 246, 0.65)'
-                  : '1px solid rgba(148, 163, 184, 0.3)',
-                borderRadius: '9999px',
-                padding: '5px 14px',
-                fontSize: '0.78rem',
-                fontWeight: '700',
-                cursor: isLocked ? 'default' : 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              {isCompletedInvestment ? (
-                <>
-                  <CheckCircle2 size={14} style={{ color: '#8b5cf6' }} />
-                  <span>Investido às {getCompletedTimeStr()}</span>
-                  {isLocked ? (
-                    <Lock size={12} style={{ color: '#f59e0b', marginLeft: '2px' }} title="Status travado" />
-                  ) : (
-                    <Unlock size={12} style={{ color: 'var(--text-dim)', marginLeft: '2px' }} title="Status aberto para alteração" />
-                  )}
-                </>
-              ) : (
-                <>
-                  <Clock size={14} style={{ color: '#94a3b8' }} />
-                  <span>Planeado</span>
-                </>
-              )}
-            </button>
+                style={{
+                  background: isCompletedInvestment ? 'rgba(139, 92, 246, 0.16)' : 'rgba(148, 163, 184, 0.12)',
+                  color: isCompletedInvestment ? '#8b5cf6' : '#94a3b8',
+                  border: isCompletedInvestment
+                    ? isLocked
+                      ? '1px solid rgba(139, 92, 246, 0.35)'
+                      : '1.5px dashed rgba(139, 92, 246, 0.65)'
+                    : '1px solid rgba(148, 163, 184, 0.3)',
+                  borderRadius: '9999px',
+                  padding: '5px 14px',
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  cursor: isLocked ? 'default' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                {isCompletedInvestment ? (
+                  <>
+                    <CheckCircle2 size={14} style={{ color: '#8b5cf6' }} />
+                    <span>Investido às {getCompletedTimeStr()}</span>
+                    {isLocked ? (
+                      <Lock size={12} style={{ color: '#f59e0b', marginLeft: '2px' }} title="Status travado" />
+                    ) : (
+                      <Unlock size={12} style={{ color: 'var(--text-dim)', marginLeft: '2px' }} title="Status aberto para alteração" />
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Clock size={14} style={{ color: '#94a3b8' }} />
+                    <span>Planeado</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -869,8 +942,8 @@ export default function TimelineEventCard({
         <div
           className="loan-breakdown-strip"
           style={{
-            background: 'var(--bg-app)',
-            border: '1px solid var(--border-glass)',
+            background: isInertFuture ? 'rgba(148, 163, 184, 0.04)' : 'var(--bg-app)',
+            border: isInertFuture ? '1px solid rgba(148, 163, 184, 0.18)' : '1px solid var(--border-glass)',
             borderRadius: '10px',
             padding: '8px 12px',
             margin: '10px 0',
@@ -887,7 +960,7 @@ export default function TimelineEventCard({
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                 Total da Parcela
               </span>
-              <span style={{ fontSize: '1rem', fontWeight: '800', color: 'var(--primary-light)' }}>
+              <span style={{ fontSize: '1rem', fontWeight: '800', color: isInertFuture ? '#94a3b8' : 'var(--primary-light)' }}>
                 {formatCurrency(Number(event.amount) + Number(event.interestAmount || 0))}
               </span>
             </div>
@@ -897,7 +970,7 @@ export default function TimelineEventCard({
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                 Capital (Dívida)
               </span>
-              <span style={{ fontSize: '0.88rem', fontWeight: '800', color: 'var(--text-main)' }}>
+              <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isInertFuture ? 'var(--text-muted)' : 'var(--text-main)' }}>
                 {formatCurrency(event.principalAmount !== undefined ? event.principalAmount : Math.round((Number(event.amount) || 0) * 0.82))}
               </span>
             </div>
@@ -907,13 +980,13 @@ export default function TimelineEventCard({
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                 Juros
               </span>
-              <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#f59e0b' }}>
+              <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isInertFuture ? '#94a3b8' : '#f59e0b' }}>
                 {formatCurrency(event.interestPortion !== undefined ? event.interestPortion : Math.round((Number(event.amount) || 0) * 0.18))}
               </span>
             </div>
 
             {/* Juros Extra de Mora se Atrasada */}
-            {event.interestAmount > 0 && (
+            {event.interestAmount > 0 && !isInertFuture && (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.7rem', color: '#f87171', textTransform: 'uppercase', fontWeight: '700' }}>
                   Mora / Atraso
@@ -930,7 +1003,7 @@ export default function TimelineEventCard({
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                   Saldo Devedor Restante
                 </span>
-                <span style={{ fontSize: '0.88rem', fontWeight: '800', color: 'var(--primary-light)' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isInertFuture ? '#94a3b8' : 'var(--primary-light)' }}>
                   {formatCurrency(event.balanceAfter)}
                 </span>
               </div>
@@ -939,75 +1012,97 @@ export default function TimelineEventCard({
 
           {/* Inline Loan Payment Fast Toggle */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isLocked) {
-                  return; // Bloqueado
+            {isInertFuture ? (
+              <div
+                style={{
+                  background: 'rgba(148, 163, 184, 0.08)',
+                  color: 'var(--text-dim)',
+                  border: '1px solid rgba(148, 163, 184, 0.2)',
+                  borderRadius: '9999px',
+                  padding: '5px 14px',
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'default',
+                  userSelect: 'none'
+                }}
+              >
+                <Clock size={13} />
+                <span>Pendente</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isLocked) {
+                    return; // Bloqueado
+                  }
+                  if (onToggleLoanPayment) onToggleLoanPayment(event.id);
+                }}
+                className="btn btn-sm"
+                title={
+                  isLocked
+                    ? 'Prestação liquidada e bloqueada. Clique no cadeado no rodapé para desbloquear e alterar.'
+                    : 'Clique para alternar o status'
                 }
-                if (onToggleLoanPayment) onToggleLoanPayment(event.id);
-              }}
-              className="btn btn-sm"
-              title={
-                isLocked
-                  ? 'Prestação liquidada e bloqueada. Clique no cadeado no rodapé para desbloquear e alterar.'
-                  : 'Clique para alternar o status'
-              }
-              style={{
-                background: event.status === 'Pago'
-                  ? 'rgba(16, 185, 129, 0.16)'
-                  : event.status === 'Atrasada'
-                    ? 'rgba(239, 68, 68, 0.16)'
-                    : 'rgba(245, 158, 11, 0.14)',
-                color: event.status === 'Pago'
-                  ? '#10b981'
-                  : event.status === 'Atrasada'
-                    ? '#f87171'
-                    : '#f59e0b',
-                border: event.status === 'Pago'
-                  ? isLocked
-                    ? '1px solid rgba(16, 185, 129, 0.35)'
-                    : '1.5px dashed rgba(16, 185, 129, 0.65)'
-                  : event.status === 'Atrasada'
-                    ? '1px solid rgba(239, 68, 68, 0.4)'
-                    : '1px solid rgba(245, 158, 11, 0.35)',
-                borderRadius: '9999px',
-                padding: '5px 14px',
-                fontSize: '0.78rem',
-                fontWeight: '700',
-                cursor: isLocked ? 'default' : 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s',
-                boxShadow: event.status === 'Pago'
-                  ? '0 2px 8px rgba(16, 185, 129, 0.2)'
-                  : 'none'
-              }}
-            >
-              {event.status === 'Pago' ? (
-                <>
-                  <CheckCircle2 size={14} style={{ color: '#10b981' }} />
-                  <span>Liquidado às {getCompletedTimeStr()}</span>
-                  {isLocked ? (
-                    <Lock size={12} style={{ color: '#f59e0b', marginLeft: '2px' }} title="Status travado" />
-                  ) : (
-                    <Unlock size={12} style={{ color: 'var(--text-dim)', marginLeft: '2px' }} title="Status aberto para alteração" />
-                  )}
-                </>
-              ) : event.status === 'Atrasada' ? (
-                <>
-                  <AlertCircle size={14} style={{ color: '#f87171' }} />
-                  <span>Atrasada</span>
-                </>
-              ) : (
-                <>
-                  <Clock size={14} style={{ color: '#f59e0b' }} />
-                  <span>Pendente</span>
-                </>
-              )}
-            </button>
+                style={{
+                  background: event.status === 'Pago'
+                    ? 'rgba(16, 185, 129, 0.16)'
+                    : event.status === 'Atrasada'
+                      ? 'rgba(239, 68, 68, 0.16)'
+                      : 'rgba(245, 158, 11, 0.14)',
+                  color: event.status === 'Pago'
+                    ? '#10b981'
+                    : event.status === 'Atrasada'
+                      ? '#f87171'
+                      : '#f59e0b',
+                  border: event.status === 'Pago'
+                    ? isLocked
+                      ? '1px solid rgba(16, 185, 129, 0.35)'
+                      : '1.5px dashed rgba(16, 185, 129, 0.65)'
+                    : event.status === 'Atrasada'
+                      ? '1px solid rgba(239, 68, 68, 0.4)'
+                      : '1px solid rgba(245, 158, 11, 0.35)',
+                  borderRadius: '9999px',
+                  padding: '5px 14px',
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  cursor: isLocked ? 'default' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s',
+                  boxShadow: event.status === 'Pago'
+                    ? '0 2px 8px rgba(16, 185, 129, 0.2)'
+                    : 'none'
+                }}
+              >
+                {event.status === 'Pago' ? (
+                  <>
+                    <CheckCircle2 size={14} style={{ color: '#10b981' }} />
+                    <span>Liquidado às {getCompletedTimeStr()}</span>
+                    {isLocked ? (
+                      <Lock size={12} style={{ color: '#f59e0b', marginLeft: '2px' }} title="Status travado" />
+                    ) : (
+                      <Unlock size={12} style={{ color: 'var(--text-dim)', marginLeft: '2px' }} title="Status aberto para alteração" />
+                    )}
+                  </>
+                ) : event.status === 'Atrasada' ? (
+                  <>
+                    <AlertCircle size={14} style={{ color: '#f87171' }} />
+                    <span>Atrasada</span>
+                  </>
+                ) : (
+                  <>
+                    <Clock size={14} style={{ color: '#f59e0b' }} />
+                    <span>Pendente</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -1183,187 +1278,189 @@ export default function TimelineEventCard({
         );
       })()}
 
-      {/* Footer Meta & Actions */}
-      <div className="event-card-footer">
-        <div className="tag-list">
-          {/* Custom Labels / Etiquetas */}
-          {event.labels && event.labels.map((lbl, i) => (
-            <span
-              key={i}
-              className="event-tag"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '3px'
-              }}
-            >
-              <Tag size={10} /> {lbl}
-            </span>
-          ))}
+      {/* Footer Meta & Actions (Omitted in inert future months) */}
+      {!isInertFuture && (
+        <div className="event-card-footer">
+          <div className="tag-list">
+            {/* Custom Labels / Etiquetas */}
+            {event.labels && event.labels.map((lbl, i) => (
+              <span
+                key={i}
+                className="event-tag"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px'
+                }}
+              >
+                <Tag size={10} /> {lbl}
+              </span>
+            ))}
 
-          {event.author && (
-            <span className="event-tag" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <User size={10} /> {event.author}
-            </span>
-          )}
-        </div>
+            {event.author && (
+              <span className="event-tag" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <User size={10} /> {event.author}
+              </span>
+            )}
+          </div>
 
-        <div className="event-card-actions">
-          {/* Loan Installment Specific Actions */}
-          {isLoanInstallment ? (
-            <>
-              {/* Ajustar / Juros exibido APENAS em parcelas em aberto (Pendentes ou Atrasadas) */}
-              {event.status !== 'Pago' && (
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => onOpenEditInstallment && onOpenEditInstallment(event)}
-                  style={{ padding: '4px 10px', fontSize: '0.76rem', gap: '4px' }}
-                  title="Ajustar valor da parcela, juros ou propagar para a frente"
-                >
-                  <Sliders size={13} />
-                  <span>Ajustar / Juros</span>
-                </button>
-              )}
+          <div className="event-card-actions">
+            {/* Loan Installment Specific Actions */}
+            {isLoanInstallment ? (
+              <>
+                {/* Ajustar / Juros exibido APENAS em parcelas em aberto (Pendentes ou Atrasadas) */}
+                {event.status !== 'Pago' && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => onOpenEditInstallment && onOpenEditInstallment(event)}
+                    style={{ padding: '4px 10px', fontSize: '0.76rem', gap: '4px' }}
+                    title="Ajustar valor da parcela, juros ou propagar para a frente"
+                  >
+                    <Sliders size={13} />
+                    <span>Ajustar / Juros</span>
+                  </button>
+                )}
 
-              {/* Botão de Notas para parcelas */}
-              {onEdit && (() => {
-                const allNotes = Array.isArray(event.notes)
-                  ? event.notes.filter(Boolean)
-                  : (event.description && !event.description.toLowerCase().includes('transferência bancária de vencimento') && event.description.trim() ? [event.description.trim()] : []);
-                const hasNotes = allNotes.length > 0;
+                {/* Botão de Notas para parcelas */}
+                {onEdit && (() => {
+                  const allNotes = Array.isArray(event.notes)
+                    ? event.notes.filter(Boolean)
+                    : (event.description && !event.description.toLowerCase().includes('transferência bancária de vencimento') && event.description.trim() ? [event.description.trim()] : []);
+                  const hasNotes = allNotes.length > 0;
 
-                return (
+                  return (
+                    <button
+                      type="button"
+                      className="action-icon-btn"
+                      onClick={() => setIsNotesExpanded(!isNotesExpanded)}
+                      title={hasNotes ? `Ver / Editar Notas (${allNotes.length})` : "Adicionar Nota"}
+                      style={{
+                        color: hasNotes ? '#f59e0b' : 'var(--text-dim)',
+                        background: hasNotes ? 'rgba(245, 158, 11, 0.14)' : 'transparent',
+                        border: hasNotes ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid transparent',
+                        borderRadius: '6px',
+                        padding: '4px 6px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <FileText size={14} />
+                      {hasNotes && (
+                        <span style={{ fontSize: '0.68rem', fontWeight: '800', color: '#f59e0b' }}>
+                          {allNotes.length}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })()}
+
+                {event.status === 'Pago' && (
                   <button
                     type="button"
                     className="action-icon-btn"
-                    onClick={() => setIsNotesExpanded(!isNotesExpanded)}
-                    title={hasNotes ? `Ver / Editar Notas (${allNotes.length})` : "Adicionar Nota"}
+                    onClick={handleToggleLock}
+                    title={
+                      isLocked
+                        ? "Prestação liquidada e bloqueada (Clique para abrir o cadeado e permitir alterar o status)"
+                        : "Prestação desbloqueada (Clique para bloquear)"
+                    }
                     style={{
-                      color: hasNotes ? '#f59e0b' : 'var(--text-dim)',
-                      background: hasNotes ? 'rgba(245, 158, 11, 0.14)' : 'transparent',
-                      border: hasNotes ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid transparent',
-                      borderRadius: '6px',
-                      padding: '4px 6px',
+                      color: isLocked ? '#f59e0b' : 'var(--text-dim)',
+                      background: 'transparent',
+                      border: 'none',
+                      boxShadow: 'none',
+                      padding: '4px',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '4px'
+                      cursor: 'pointer',
+                      transition: 'color 0.15s ease'
                     }}
                   >
-                    <FileText size={14} />
-                    {hasNotes && (
-                      <span style={{ fontSize: '0.68rem', fontWeight: '800', color: '#f59e0b' }}>
-                        {allNotes.length}
-                      </span>
-                    )}
+                    {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
                   </button>
-                );
-              })()}
+                )}
+              </>
+            ) : (
+              <>
+                {onEdit && (() => {
+                  const allNotes = Array.isArray(event.notes)
+                    ? event.notes.filter(Boolean)
+                    : (event.description && !event.description.toLowerCase().includes('transferência bancária de vencimento') && event.description.trim() ? [event.description.trim()] : []);
+                  const hasNotes = allNotes.length > 0;
 
-              {event.status === 'Pago' && (
+                  return (
+                    <button
+                      type="button"
+                      className="action-icon-btn"
+                      onClick={() => setIsNotesExpanded(!isNotesExpanded)}
+                      title={hasNotes ? `Ver / Editar Notas (${allNotes.length})` : "Adicionar Nota"}
+                      style={{
+                        color: hasNotes ? '#f59e0b' : 'var(--text-dim)',
+                        background: hasNotes ? 'rgba(245, 158, 11, 0.14)' : 'transparent',
+                        border: hasNotes ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid transparent',
+                        borderRadius: '6px',
+                        padding: '4px 6px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <FileText size={15} />
+                      {hasNotes && (
+                        <span style={{ fontSize: '0.68rem', fontWeight: '800', color: '#f59e0b' }}>
+                          {allNotes.length}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })()}
                 <button
                   type="button"
                   className="action-icon-btn"
-                  onClick={handleToggleLock}
-                  title={
-                    isLocked
-                      ? "Prestação liquidada e bloqueada (Clique para abrir o cadeado e permitir alterar o status)"
-                      : "Prestação desbloqueada (Clique para bloquear)"
-                  }
-                  style={{
-                    color: isLocked ? '#f59e0b' : 'var(--text-dim)',
-                    background: 'transparent',
-                    border: 'none',
-                    boxShadow: 'none',
-                    padding: '4px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    cursor: 'pointer',
-                    transition: 'color 0.15s ease'
-                  }}
+                  onClick={() => onEdit(event)}
+                  title="Editar Evento"
                 >
-                  {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
+                  <Edit3 size={15} />
                 </button>
-              )}
-            </>
-          ) : (
-            <>
-              {onEdit && (() => {
-                const allNotes = Array.isArray(event.notes)
-                  ? event.notes.filter(Boolean)
-                  : (event.description && !event.description.toLowerCase().includes('transferência bancária de vencimento') && event.description.trim() ? [event.description.trim()] : []);
-                const hasNotes = allNotes.length > 0;
-
-                return (
+                <button
+                  type="button"
+                  className="action-icon-btn delete"
+                  onClick={() => onDelete(event.id)}
+                  title="Eliminar Evento"
+                >
+                  <Trash2 size={15} />
+                </button>
+                {isCompleted && (
                   <button
                     type="button"
                     className="action-icon-btn"
-                    onClick={() => setIsNotesExpanded(!isNotesExpanded)}
-                    title={hasNotes ? `Ver / Editar Notas (${allNotes.length})` : "Adicionar Nota"}
+                    onClick={handleToggleLock}
+                    title={
+                      isLocked
+                        ? "Movimento confirmado e bloqueado (Clique para abrir o cadeado e permitir alterar o status)"
+                        : "Movimento desbloqueado (Clique para bloquear)"
+                    }
                     style={{
-                      color: hasNotes ? '#f59e0b' : 'var(--text-dim)',
-                      background: hasNotes ? 'rgba(245, 158, 11, 0.14)' : 'transparent',
-                      border: hasNotes ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid transparent',
-                      borderRadius: '6px',
-                      padding: '4px 6px',
+                      color: isLocked ? '#f59e0b' : 'var(--text-dim)',
+                      background: 'transparent',
+                      border: 'none',
+                      boxShadow: 'none',
+                      padding: '4px',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '4px'
+                      cursor: 'pointer',
+                      transition: 'color 0.15s ease'
                     }}
                   >
-                    <FileText size={15} />
-                    {hasNotes && (
-                      <span style={{ fontSize: '0.68rem', fontWeight: '800', color: '#f59e0b' }}>
-                        {allNotes.length}
-                      </span>
-                    )}
+                    {isLocked ? <Lock size={15} /> : <Unlock size={15} />}
                   </button>
-                );
-              })()}
-              <button
-                type="button"
-                className="action-icon-btn"
-                onClick={() => onEdit(event)}
-                title="Editar Evento"
-              >
-                <Edit3 size={15} />
-              </button>
-              <button
-                type="button"
-                className="action-icon-btn delete"
-                onClick={() => onDelete(event.id)}
-                title="Eliminar Evento"
-              >
-                <Trash2 size={15} />
-              </button>
-              {isCompleted && (
-                <button
-                  type="button"
-                  className="action-icon-btn"
-                  onClick={handleToggleLock}
-                  title={
-                    isLocked
-                      ? "Movimento confirmado e bloqueado (Clique para abrir o cadeado e permitir alterar o status)"
-                      : "Movimento desbloqueado (Clique para bloquear)"
-                  }
-                  style={{
-                    color: isLocked ? '#f59e0b' : 'var(--text-dim)',
-                    background: 'transparent',
-                    border: 'none',
-                    boxShadow: 'none',
-                    padding: '4px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    cursor: 'pointer',
-                    transition: 'color 0.15s ease'
-                  }}
-                >
-                  {isLocked ? <Lock size={15} /> : <Unlock size={15} />}
-                </button>
-              )}
-            </>
-          )}
+                )}
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </motion.div>
   );
 }

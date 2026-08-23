@@ -835,67 +835,58 @@ export default function TimelineEventCard({
         </div>
       )}
 
-      {/* Expandable Notes Section (Glassmorphism & Clean) */}
+      {/* Expandable Notes Section (Glassmorphism) */}
       {(() => {
-        const isBoilerplate = event.description && event.description.toLowerCase().includes('transferência bancária de vencimento');
-        const hasDescription = Boolean(event.description && !isBoilerplate);
+        const allNotes = Array.isArray(event.notes)
+          ? event.notes.filter(Boolean)
+          : (event.description && !event.description.toLowerCase().includes('transferência bancária de vencimento') && event.description.trim() ? [event.description.trim()] : []);
+        const hasNotes = allNotes.length > 0;
+
+        if (!isNotesExpanded) return null;
 
         return (
-          <div style={{ marginTop: '8px', marginBottom: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <div
+            style={{
+              marginTop: '10px',
+              marginBottom: '10px',
+              padding: '12px 14px',
+              background: 'rgba(255, 255, 255, 0.03)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', fontWeight: '700', color: hasNotes ? '#f59e0b' : 'var(--text-muted)' }}>
+                <FileText size={14} style={{ color: hasNotes ? '#f59e0b' : 'var(--text-dim)' }} />
+                <span>Notas do Movimento ({allNotes.length})</span>
+              </div>
               <button
                 type="button"
-                onClick={() => setIsNotesExpanded(!isNotesExpanded)}
+                onClick={() => setIsNotesExpanded(false)}
                 style={{
-                  background: isNotesExpanded
-                    ? 'rgba(16, 185, 129, 0.12)'
-                    : hasDescription
-                      ? 'rgba(255, 255, 255, 0.04)'
-                      : 'transparent',
-                  border: isNotesExpanded
-                    ? '1px solid rgba(16, 185, 129, 0.35)'
-                    : '1px solid var(--border-glass)',
-                  borderRadius: '8px',
-                  padding: '4px 10px',
-                  fontSize: '0.74rem',
-                  fontWeight: '700',
-                  color: isNotesExpanded
-                    ? '#10b981'
-                    : hasDescription
-                      ? 'var(--primary-light)'
-                      : 'var(--text-muted)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-dim)',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease'
+                  fontSize: '0.72rem',
+                  padding: '2px 6px'
                 }}
-                title="Expandir notas deste movimento"
               >
-                <FileText size={12} />
-                <span>Notas {hasDescription ? '(1)' : ''}</span>
-                {isNotesExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                ✕ Fechar
               </button>
             </div>
 
-            {isNotesExpanded && (
-              <div
-                style={{
-                  marginTop: '8px',
-                  padding: '10px 12px',
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
-                  border: '1px solid var(--border-glass)',
-                  borderRadius: '10px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px'
-                }}
-              >
-                {/* Custom Note Display */}
-                {hasDescription ? (
+            {/* List of existing notes */}
+            {hasNotes ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {allNotes.map((note, idx) => (
                   <div
+                    key={idx}
                     style={{
                       display: 'flex',
                       alignItems: 'flex-start',
@@ -906,82 +897,97 @@ export default function TimelineEventCard({
                       padding: '6px 10px',
                       background: 'rgba(255, 255, 255, 0.04)',
                       borderRadius: '6px',
-                      borderLeft: '3px solid #10b981'
+                      borderLeft: '3px solid #f59e0b'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                      <FileText size={13} style={{ flexShrink: 0, marginTop: '2px', color: '#10b981' }} />
-                      <span>{event.description}</span>
-                    </div>
+                    <span style={{ flex: 1, lineHeight: '1.45' }}>{note}</span>
                     {onEdit && (
                       <button
                         type="button"
-                        onClick={() => onEdit({ ...event, description: '' })}
+                        onClick={() => {
+                          const updatedNotes = allNotes.filter((_, nIdx) => nIdx !== idx);
+                          onEdit({
+                            ...event,
+                            notes: updatedNotes,
+                            description: updatedNotes[0] || ''
+                          });
+                        }}
                         style={{
                           background: 'transparent',
                           border: 'none',
                           color: 'var(--text-dim)',
                           cursor: 'pointer',
-                          padding: '2px'
+                          padding: '2px',
+                          display: 'inline-flex',
+                          alignItems: 'center'
                         }}
-                        title="Remover nota"
+                        title="Eliminar esta nota"
                       >
                         <Trash2 size={12} />
                       </button>
                     )}
                   </div>
-                ) : (
-                  <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
-                    Nenhuma nota registada neste movimento.
-                  </span>
-                )}
-
-                {/* Inline Quick Note Add/Edit */}
-                {onEdit && (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      if (newItemText.trim()) {
-                        onEdit({ ...event, description: newItemText.trim() });
-                        setNewItemText('');
-                      }
-                    }}
-                    style={{ display: 'flex', gap: '6px', marginTop: '2px' }}
-                  >
-                    <input
-                      type="text"
-                      placeholder={hasDescription ? "Editar nota..." : "Escrever uma nota..."}
-                      value={newItemText}
-                      onChange={(e) => setNewItemText(e.target.value)}
-                      style={{
-                        flex: 1,
-                        background: 'rgba(0, 0, 0, 0.15)',
-                        border: '1px solid var(--border-glass)',
-                        borderRadius: '6px',
-                        padding: '6px 10px',
-                        fontSize: '0.76rem',
-                        color: 'var(--text-main)',
-                        outline: 'none'
-                      }}
-                    />
-                    <button
-                      type="submit"
-                      disabled={!newItemText.trim()}
-                      className="btn btn-primary btn-sm"
-                      style={{
-                        padding: '4px 12px',
-                        fontSize: '0.74rem',
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        color: '#ffffff',
-                        border: 'none'
-                      }}
-                      title="Guardar nota"
-                    >
-                      Guardar
-                    </button>
-                  </form>
-                )}
+                ))}
               </div>
+            ) : (
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
+                Nenhuma nota adicionada ainda.
+              </span>
+            )}
+
+            {/* Add New Note Input Form */}
+            {onEdit && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (newItemText.trim()) {
+                    const updatedNotes = [...allNotes, newItemText.trim()];
+                    onEdit({
+                      ...event,
+                      notes: updatedNotes,
+                      description: updatedNotes[0] || ''
+                    });
+                    setNewItemText('');
+                  }
+                }}
+                style={{ display: 'flex', gap: '6px', marginTop: '4px' }}
+              >
+                <input
+                  type="text"
+                  placeholder="Escrever uma nova nota..."
+                  value={newItemText}
+                  onChange={(e) => setNewItemText(e.target.value)}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(0, 0, 0, 0.15)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: '6px',
+                    padding: '6px 10px',
+                    fontSize: '0.76rem',
+                    color: 'var(--text-main)',
+                    outline: 'none'
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={!newItemText.trim()}
+                  className="btn btn-primary btn-sm"
+                  style={{
+                    padding: '4px 12px',
+                    fontSize: '0.74rem',
+                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title="Adicionar nota"
+                >
+                  <Plus size={13} />
+                  <span>Adicionar</span>
+                </button>
+              </form>
             )}
           </div>
         );
@@ -1054,6 +1060,40 @@ export default function TimelineEventCard({
                 </button>
               )}
 
+              {/* Botão de Notas para parcelas */}
+              {onEdit && (() => {
+                const allNotes = Array.isArray(event.notes)
+                  ? event.notes.filter(Boolean)
+                  : (event.description && !event.description.toLowerCase().includes('transferência bancária de vencimento') && event.description.trim() ? [event.description.trim()] : []);
+                const hasNotes = allNotes.length > 0;
+
+                return (
+                  <button
+                    type="button"
+                    className="action-icon-btn"
+                    onClick={() => setIsNotesExpanded(!isNotesExpanded)}
+                    title={hasNotes ? `Ver / Editar Notas (${allNotes.length})` : "Adicionar Nota"}
+                    style={{
+                      color: hasNotes ? '#f59e0b' : 'var(--text-dim)',
+                      background: hasNotes ? 'rgba(245, 158, 11, 0.14)' : 'transparent',
+                      border: hasNotes ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid transparent',
+                      borderRadius: '6px',
+                      padding: '4px 6px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <FileText size={14} />
+                    {hasNotes && (
+                      <span style={{ fontSize: '0.68rem', fontWeight: '800', color: '#f59e0b' }}>
+                        {allNotes.length}
+                      </span>
+                    )}
+                  </button>
+                );
+              })()}
+
               <span
                 style={{
                   display: 'flex',
@@ -1070,16 +1110,38 @@ export default function TimelineEventCard({
             </>
           ) : (
             <>
-              {onEdit && (
-                <button
-                  className="action-icon-btn"
-                  onClick={() => setIsNotesExpanded(!isNotesExpanded)}
-                  title="Adicionar / Editar Nota"
-                  style={{ color: isNotesExpanded ? 'var(--primary-light)' : undefined }}
-                >
-                  <FileText size={14} />
-                </button>
-              )}
+              {onEdit && (() => {
+                const allNotes = Array.isArray(event.notes)
+                  ? event.notes.filter(Boolean)
+                  : (event.description && !event.description.toLowerCase().includes('transferência bancária de vencimento') && event.description.trim() ? [event.description.trim()] : []);
+                const hasNotes = allNotes.length > 0;
+
+                return (
+                  <button
+                    type="button"
+                    className="action-icon-btn"
+                    onClick={() => setIsNotesExpanded(!isNotesExpanded)}
+                    title={hasNotes ? `Ver / Editar Notas (${allNotes.length})` : "Adicionar Nota"}
+                    style={{
+                      color: hasNotes ? '#f59e0b' : 'var(--text-dim)',
+                      background: hasNotes ? 'rgba(245, 158, 11, 0.14)' : 'transparent',
+                      border: hasNotes ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid transparent',
+                      borderRadius: '6px',
+                      padding: '4px 6px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <FileText size={15} />
+                    {hasNotes && (
+                      <span style={{ fontSize: '0.68rem', fontWeight: '800', color: '#f59e0b' }}>
+                        {allNotes.length}
+                      </span>
+                    )}
+                  </button>
+                );
+              })()}
               <button
                 className="action-icon-btn"
                 onClick={() => onEdit(event)}

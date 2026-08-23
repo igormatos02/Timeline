@@ -237,10 +237,39 @@ export default function App() {
 
   const handleUpdateEventDirect = (updatedEvent) => {
     if (!updatedEvent || !updatedEvent.id) return;
+
     setTimelines((prev) =>
       prev.map((tl) => {
         const hasEvent = (tl.events || []).some((ev) => ev.id === updatedEvent.id);
         if (!hasEvent) return tl;
+
+        if (updatedEvent.propagateForward) {
+          const newAmount = Number(updatedEvent.amount);
+          const targetDate = updatedEvent.date;
+
+          const updatedEvents = (tl.events || []).map((ev) => {
+            if (ev.id === updatedEvent.id) {
+              return { ...ev, ...updatedEvent };
+            }
+
+            // Propagar apenas para eventos subsequentes do mesmo tipo/série/título
+            const isSameSeries = (updatedEvent.seriesId && ev.seriesId === updatedEvent.seriesId) ||
+              (ev.title === updatedEvent.title && ev.category === updatedEvent.category && (ev.timelineOriginId === updatedEvent.timelineOriginId || tl.id === 'tl-income'));
+
+            if (isSameSeries && ev.date >= targetDate) {
+              return {
+                ...ev,
+                amount: newAmount
+              };
+            }
+
+            // Os anteriores e não relacionados permanecem inalterados
+            return ev;
+          });
+
+          return { ...tl, events: updatedEvents };
+        }
+
         return {
           ...tl,
           events: tl.events.map((ev) => (ev.id === updatedEvent.id ? { ...ev, ...updatedEvent } : ev))

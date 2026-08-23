@@ -34,7 +34,9 @@ import {
   Zap,
   ShoppingCart,
   PiggyBank,
-  Unlock
+  Unlock,
+  Check,
+  X
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatCurrency } from '../utils/loanCalculations';
@@ -76,6 +78,153 @@ export default function TimelineEventCard({
 
   const isCompleted = isReceivedIncome || isPaidExpense || isCompletedInvestment || (isLoanInstallment && event.status === 'Pago');
   const isLocked = event.isLocked !== undefined ? !!event.isLocked : isCompleted;
+
+  const [isEditingAmount, setIsEditingAmount] = useState(false);
+  const [tempAmount, setTempAmount] = useState(event.amount !== undefined ? event.amount : '');
+
+  React.useEffect(() => {
+    setTempAmount(event.amount !== undefined ? event.amount : '');
+  }, [event.amount]);
+
+  // Lock rule: locked events cannot be edited (unless in future months where lock doesn't apply)
+  const canEditAmount = isInertFuture || !isLocked;
+
+  const isRecurring =
+    event.periodicity === 'recorrente' ||
+    event.isRecurring ||
+    Boolean(
+      event.category &&
+      (event.category.includes('recorrente') ||
+       event.category === 'parcela_emprestimo' ||
+       event.category === 'repetitivo')
+    );
+
+  const handleSaveAmount = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const num = Number(tempAmount);
+    if (!isNaN(num) && num >= 0 && onUpdateEventDirect) {
+      onUpdateEventDirect({
+        ...event,
+        amount: num,
+        propagateForward: isRecurring
+      });
+    }
+    setIsEditingAmount(false);
+  };
+
+  const handleCancelAmount = (e) => {
+    if (e) e.stopPropagation();
+    setTempAmount(event.amount !== undefined ? event.amount : '');
+    setIsEditingAmount(false);
+  };
+
+  const renderEditableAmount = (prefix = '', defaultColor = 'var(--text-main)') => {
+    if (isEditingAmount) {
+      return (
+        <form
+          onSubmit={handleSaveAmount}
+          onClick={(e) => e.stopPropagation()}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}
+        >
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            autoFocus
+            value={tempAmount}
+            onChange={(e) => setTempAmount(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') handleCancelAmount(e);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100px',
+              padding: '3px 8px',
+              fontSize: '0.95rem',
+              fontWeight: '800',
+              color: defaultColor,
+              background: 'rgba(0, 0, 0, 0.25)',
+              border: '1.5px solid var(--primary)',
+              borderRadius: '6px',
+              outline: 'none'
+            }}
+          />
+          <button
+            type="submit"
+            onClick={handleSaveAmount}
+            style={{
+              background: '#10b981',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '4px 6px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center'
+            }}
+            title={isRecurring ? "Guardar valor (propagando para os meses seguintes)" : "Guardar valor"}
+          >
+            <Check size={13} strokeWidth={3} />
+          </button>
+          <button
+            type="button"
+            onClick={handleCancelAmount}
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              color: 'var(--text-dim)',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '4px 6px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center'
+            }}
+            title="Cancelar"
+          >
+            <X size={13} strokeWidth={2.5} />
+          </button>
+        </form>
+      );
+    }
+
+    return (
+      <span
+        onClick={(e) => {
+          e.stopPropagation();
+          if (canEditAmount) {
+            setIsEditingAmount(true);
+          }
+        }}
+        title={
+          !canEditAmount
+            ? 'Valor bloqueado. Abra o cadeado para editar.'
+            : isRecurring
+              ? 'Clique para editar o valor (propaga para todos os meses seguintes)'
+              : 'Clique para editar o valor'
+        }
+        style={{
+          fontSize: '1.05rem',
+          fontWeight: '800',
+          color: defaultColor,
+          cursor: canEditAmount ? 'pointer' : 'default',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '5px',
+          borderBottom: canEditAmount ? '1px dashed rgba(148, 163, 184, 0.45)' : 'none',
+          paddingBottom: '1px',
+          transition: 'all 0.15s ease'
+        }}
+      >
+        {prefix}{formatCurrency(event.amount)}
+        {canEditAmount && (
+          <Edit3 size={11} style={{ opacity: 0.55, color: defaultColor }} />
+        )}
+      </span>
+    );
+  };
 
   const handleToggleLock = (e) => {
     e.stopPropagation();
@@ -381,16 +530,6 @@ export default function TimelineEventCard({
     };
   }
 
-  const isRecurring =
-    event.periodicity === 'recorrente' ||
-    event.isRecurring ||
-    Boolean(
-      event.category &&
-      (event.category.includes('recorrente') ||
-       event.category === 'parcela_emprestimo' ||
-       event.category === 'repetitivo')
-    );
-
   // Event Origin / Sub-vision info for right-aligned badge (coherent with vision palettes)
   const getEventOriginInfo = () => {
     if (
@@ -585,15 +724,7 @@ export default function TimelineEventCard({
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                 Valor a Receber / Creditado
               </span>
-              <span
-                style={{
-                  fontSize: '1.05rem',
-                  fontWeight: '800',
-                  color: isInertFuture ? '#94a3b8' : (isNextIncome ? '#60a5fa' : isFarFutureIncome ? '#94a3b8' : '#10b981')
-                }}
-              >
-                +{formatCurrency(event.amount)}
-              </span>
+              {renderEditableAmount('+', isInertFuture ? '#94a3b8' : (isNextIncome ? '#60a5fa' : isFarFutureIncome ? '#94a3b8' : '#10b981'))}
             </div>
           </div>
 
@@ -728,15 +859,7 @@ export default function TimelineEventCard({
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                 Valor Pago / Débito
               </span>
-              <span
-                style={{
-                  fontSize: '1.05rem',
-                  fontWeight: '800',
-                  color: isInertFuture ? '#94a3b8' : '#f43f5e'
-                }}
-              >
-                -{formatCurrency(event.amount)}
-              </span>
+              {renderEditableAmount('-', isInertFuture ? '#94a3b8' : '#f43f5e')}
             </div>
 
             {event.priority && !isInertFuture && (
@@ -848,15 +971,7 @@ export default function TimelineEventCard({
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                 Valor Aportado / Investimento
               </span>
-              <span
-                style={{
-                  fontSize: '1.05rem',
-                  fontWeight: '800',
-                  color: isInertFuture ? '#94a3b8' : 'var(--primary-light)'
-                }}
-              >
-                +{formatCurrency(event.amount)}
-              </span>
+              {renderEditableAmount('+', isInertFuture ? '#94a3b8' : 'var(--primary-light)')}
             </div>
           </div>
 
@@ -960,9 +1075,7 @@ export default function TimelineEventCard({
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                 Total da Parcela
               </span>
-              <span style={{ fontSize: '1rem', fontWeight: '800', color: isInertFuture ? '#94a3b8' : 'var(--primary-light)' }}>
-                {formatCurrency(Number(event.amount) + Number(event.interestAmount || 0))}
-              </span>
+              {renderEditableAmount('', isInertFuture ? '#94a3b8' : 'var(--primary-light)')}
             </div>
 
             {/* Decomposição: Capital Amortizado */}

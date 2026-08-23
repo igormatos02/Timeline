@@ -498,22 +498,8 @@ export default function TimelineEventCard({
             </div>
           </div>
 
-          {/* Priority Badge in front of Status & Interactive Status Toggle Pill for Income */}
+          {/* Interactive Status Toggle Pill for Income */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {event.priority && (
-              <span
-                className="badge"
-                style={{
-                  backgroundColor: priorityStyle.bg,
-                  color: priorityStyle.text,
-                  borderColor: priorityStyle.border,
-                  fontSize: '0.72rem',
-                  padding: '3px 8px'
-                }}
-              >
-                Prioridade: {event.priority}
-              </span>
-            )}
             <button
               type="button"
               disabled={event.date > todayStr}
@@ -702,20 +688,6 @@ export default function TimelineEventCard({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {event.priority && (
-              <span
-                className="badge"
-                style={{
-                  backgroundColor: priorityStyle.bg,
-                  color: priorityStyle.text,
-                  borderColor: priorityStyle.border,
-                  fontSize: '0.72rem',
-                  padding: '3px 8px'
-                }}
-              >
-                Prioridade: {event.priority}
-              </span>
-            )}
             <button
               type="button"
               onClick={() => onToggleLoanPayment && onToggleLoanPayment(event.id)}
@@ -825,20 +797,6 @@ export default function TimelineEventCard({
 
           {/* Inline Loan Payment Fast Toggle */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {event.priority && (
-              <span
-                className="badge"
-                style={{
-                  backgroundColor: priorityStyle.bg,
-                  color: priorityStyle.text,
-                  borderColor: priorityStyle.border,
-                  fontSize: '0.72rem',
-                  padding: '3px 8px'
-                }}
-              >
-                Prioridade: {event.priority}
-              </span>
-            )}
             <button
               type="button"
               onClick={() => onToggleLoanPayment && onToggleLoanPayment(event.id)}

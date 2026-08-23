@@ -161,19 +161,14 @@ export default function VerticalTimeline({
     setGroupBy('mes');
   }, [timeline.id]);
 
-  // Scroll and focus on Today / Current period node when clicked by user (goes to top of page/month)
+  // Scroll and focus on Today / Current period node when clicked by user (aligned right below navbar/header)
   const scrollToToday = () => {
-    const isBalancoView = (timeline.type === 'Financeiro' && activeFinancialTab === 'balanco') || timeline.type === 'Principal';
-    if (isBalancoView) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
     const todayNode = document.getElementById('timeline-node-today');
     if (todayNode) {
-      const yOffset = -75;
-      const y = todayNode.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+      const navbar = document.querySelector('.navbar') || document.querySelector('header');
+      const navHeight = navbar ? navbar.offsetHeight : 64;
+      const targetY = todayNode.getBoundingClientRect().top + window.pageYOffset - navHeight - 16;
+      window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -202,22 +197,18 @@ export default function VerticalTimeline({
       // Restaurar exatamente onde o utilizador esteve pela última vez
       window.scrollTo({ top: savedPosition, behavior: 'instant' });
     } else {
-      // Apenas na PRIMEIRA VEZ que entra nesta visão: posicionar no mês corrente / topo
+      // Apenas na PRIMEIRA VEZ que entra nesta visão: posicionar no mês corrente
       const timer = setTimeout(() => {
-        const isBalancoView = (timeline.type === 'Financeiro' && activeFinancialTab === 'balanco') || timeline.type === 'Principal';
-        if (isBalancoView) {
-          window.scrollTo({ top: 0, behavior: 'instant' });
+        const todayNode = document.getElementById('timeline-node-today');
+        if (todayNode) {
+          const navbar = document.querySelector('.navbar') || document.querySelector('header');
+          const navHeight = navbar ? navbar.offsetHeight : 64;
+          const targetY = todayNode.getBoundingClientRect().top + window.pageYOffset - navHeight - 16;
+          window.scrollTo({ top: Math.max(0, targetY), behavior: 'instant' });
         } else {
-          const todayNode = document.getElementById('timeline-node-today');
-          if (todayNode) {
-            const yOffset = -75;
-            const y = todayNode.getBoundingClientRect().top + window.pageYOffset + yOffset;
-            window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
-          } else {
-            window.scrollTo({ top: 0, behavior: 'instant' });
-          }
+          window.scrollTo({ top: 0, behavior: 'instant' });
         }
-      }, 50);
+      }, 60);
       return () => clearTimeout(timer);
     }
   }, [timeline.id, activeFinancialTab]);

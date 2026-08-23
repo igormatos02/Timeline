@@ -438,6 +438,8 @@ export default function VerticalTimeline({
                         <TimelineEventCard
                           event={ev}
                           currentTimelineId={timeline.id}
+                          timelineType={timeline.type}
+                          activeFinancialTab={activeFinancialTab}
                           onEdit={onEditEvent}
                           onUpdateEventDirect={onUpdateEventDirect}
                           onDelete={onDeleteEvent}
@@ -808,6 +810,8 @@ export default function VerticalTimeline({
                         <TimelineEventCard
                           event={ev}
                           currentTimelineId={timeline.id}
+                          timelineType={timeline.type}
+                          activeFinancialTab={activeFinancialTab}
                           onEdit={onEditEvent}
                           onUpdateEventDirect={onUpdateEventDirect}
                           onDelete={onDeleteEvent}
@@ -983,6 +987,8 @@ export default function VerticalTimeline({
                               key={ev.id}
                               event={ev}
                               currentTimelineId={timeline.id}
+                              timelineType={timeline.type}
+                              activeFinancialTab={activeFinancialTab}
                               onEdit={onEditEvent}
                               onUpdateEventDirect={onUpdateEventDirect}
                               onDelete={onDeleteEvent}
@@ -1080,6 +1086,8 @@ export default function VerticalTimeline({
                         <TimelineEventCard
                           event={ev}
                           currentTimelineId={timeline.id}
+                          timelineType={timeline.type}
+                          activeFinancialTab={activeFinancialTab}
                           onEdit={onEditEvent}
                           onUpdateEventDirect={onUpdateEventDirect}
                           onDelete={onDeleteEvent}

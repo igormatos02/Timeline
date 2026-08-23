@@ -41,6 +41,8 @@ import { formatCurrency } from '../utils/loanCalculations';
 export default function TimelineEventCard({
   event,
   currentTimelineId,
+  timelineType,
+  activeFinancialTab = 'balanco',
   onEdit,
   onUpdateEventDirect,
   onDelete,
@@ -53,6 +55,7 @@ export default function TimelineEventCard({
 }) {
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   const [newItemText, setNewItemText] = useState('');
+  const isBalanceView = timelineType === 'Principal' || activeFinancialTab === 'balanco';
   const todayStr = '2026-08-21';
   const isLoanInstallment = event.category === 'parcela_emprestimo';
   const isAmortization = event.category === 'amortizacao';
@@ -497,8 +500,8 @@ export default function TimelineEventCard({
           </h3>
         </div>
 
-        {/* Origin / Sub-vision Badge aligned to the RIGHT for ALL cards */}
-        {originInfo && (
+        {/* Origin / Sub-vision Badge aligned to the RIGHT - ONLY on Balanço / Principal view */}
+        {isBalanceView && originInfo && (
           <button
             type="button"
             onClick={(e) => {
@@ -1131,8 +1134,8 @@ export default function TimelineEventCard({
         </div>
 
         <div className="event-card-actions">
-          {/* Botão para ir para a visão dedicada do evento */}
-          {originInfo && onNavigateToTimeline && (
+          {/* Botão para ir para a visão dedicada do evento quando na visão de Balanço */}
+          {isBalanceView && originInfo && onNavigateToTimeline && (
             <button
               type="button"
               className="btn btn-outline btn-sm"

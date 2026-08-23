@@ -1239,7 +1239,7 @@ export default function TimelineEventCard({
                     : "Prestação desbloqueada (Clique para bloquear)"
                 }
                 style={{
-                  color: isLocked ? '#10b981' : 'var(--text-dim)',
+                  color: isLocked ? '#f59e0b' : 'var(--text-dim)',
                   background: 'transparent',
                   border: 'none',
                   boxShadow: 'none',
@@ -1313,7 +1313,7 @@ export default function TimelineEventCard({
                     : "Movimento desbloqueado (Clique para bloquear)"
                 }
                 style={{
-                  color: isLocked ? '#10b981' : 'var(--text-dim)',
+                  color: isLocked ? '#f59e0b' : 'var(--text-dim)',
                   background: 'transparent',
                   border: 'none',
                   boxShadow: 'none',

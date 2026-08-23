@@ -808,22 +808,50 @@ export default function TimelineEventCard({
               }}
               className="btn btn-sm"
               style={{
-                background: event.status === 'Pago' ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-card)',
-                color: event.status === 'Pago' ? '#10b981' : 'var(--text-main)',
-                border: `1px solid ${event.status === 'Pago' ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-glass)'}`,
-                padding: '4px 10px',
-                fontSize: '0.78rem'
+                background: event.status === 'Pago'
+                  ? 'rgba(16, 185, 129, 0.16)'
+                  : event.status === 'Atrasada'
+                    ? 'rgba(239, 68, 68, 0.16)'
+                    : 'rgba(245, 158, 11, 0.14)',
+                color: event.status === 'Pago'
+                  ? '#10b981'
+                  : event.status === 'Atrasada'
+                    ? '#f87171'
+                    : '#f59e0b',
+                border: `1px solid ${event.status === 'Pago'
+                    ? 'rgba(16, 185, 129, 0.35)'
+                    : event.status === 'Atrasada'
+                      ? 'rgba(239, 68, 68, 0.4)'
+                      : 'rgba(245, 158, 11, 0.35)'
+                  }`,
+                borderRadius: '9999px',
+                padding: '5px 14px',
+                fontSize: '0.78rem',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s',
+                boxShadow: event.status === 'Pago'
+                  ? '0 2px 8px rgba(16, 185, 129, 0.2)'
+                  : 'none'
               }}
             >
               {event.status === 'Pago' ? (
                 <>
-                  <CheckCircle2 size={13} style={{ color: '#10b981' }} />
+                  <CheckCircle2 size={14} style={{ color: '#10b981' }} />
                   <span>Liquidado às {getCompletedTimeStr()}</span>
+                </>
+              ) : event.status === 'Atrasada' ? (
+                <>
+                  <AlertCircle size={14} style={{ color: '#f87171' }} />
+                  <span>Atrasada</span>
                 </>
               ) : (
                 <>
-                  <Circle size={13} style={{ color: '#f59e0b' }} />
-                  <span>Marcar como Paga</span>
+                  <Clock size={14} style={{ color: '#f59e0b' }} />
+                  <span>Pendente</span>
                 </>
               )}
             </button>

@@ -1133,29 +1133,6 @@ export default function TimelineEventCard({
         </div>
 
         <div className="event-card-actions">
-          {/* Botão para ir para a visão dedicada do evento quando na visão de Balanço */}
-          {isBalanceView && originInfo && onNavigateToTimeline && (
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onNavigateToTimeline(originInfo.timelineId, originInfo.tab);
-              }}
-              style={{
-                padding: '4px 10px',
-                fontSize: '0.74rem',
-                gap: '4px',
-                color: originInfo.color,
-                borderColor: 'var(--border-glass)'
-              }}
-              title={`Abrir visão de ${originInfo.label}`}
-            >
-              <ArrowUpRight size={13} />
-              <span>Ver em {originInfo.label}</span>
-            </button>
-          )}
-
           {/* Loan Installment Specific Actions */}
           {isLoanInstallment ? (
             <>

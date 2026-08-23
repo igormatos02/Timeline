@@ -455,13 +455,23 @@ export default function App() {
   };
 
   const handleScrollToToday = () => {
+    const isBalancoView = (activeTimeline?.type === 'Financeiro' && activeFinancialTab === 'balanco') || activeTimeline?.type === 'Principal';
+    if (isBalancoView) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     const todayNode = document.getElementById('timeline-node-today');
     if (todayNode) {
-      todayNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const yOffset = -75;
+      const y = todayNode.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
       todayNode.classList.add('pulse-highlight-node');
       setTimeout(() => {
         todayNode.classList.remove('pulse-highlight-node');
       }, 2000);
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 

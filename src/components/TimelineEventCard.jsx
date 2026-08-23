@@ -33,7 +33,8 @@ import {
   Layers,
   Zap,
   ShoppingCart,
-  PiggyBank
+  PiggyBank,
+  Unlock
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatCurrency } from '../utils/loanCalculations';
@@ -70,6 +71,20 @@ export default function TimelineEventCard({
 
   const isPaidExpense = isExpenseEvent && (event.status === 'Pago' || event.isCompleted);
   const isCompletedInvestment = isInvestmentEvent && (event.status === 'Investido' || event.status === 'Pago' || event.isCompleted);
+
+  const isCompleted = isReceivedIncome || isPaidExpense || isCompletedInvestment || (isLoanInstallment && event.status === 'Pago');
+  const isLocked = event.isLocked !== undefined ? !!event.isLocked : isCompleted;
+
+  const handleToggleLock = (e) => {
+    e.stopPropagation();
+    const nextLocked = !isLocked;
+    if (onUpdateEventDirect) {
+      onUpdateEventDirect({
+        ...event,
+        isLocked: nextLocked
+      });
+    }
+  };
 
   const isMemoryCard = event.category === 'memoria';
 
@@ -582,11 +597,19 @@ export default function TimelineEventCard({
               disabled={event.date > todayStr}
               onClick={(e) => {
                 e.stopPropagation();
+                if (isLocked) {
+                  return; // Bloqueado: clique no cadeado para abrir
+                }
                 if (event.date <= todayStr && onToggleLoanPayment) {
                   onToggleLoanPayment(event.id);
                 }
               }}
               className="btn btn-sm"
+              title={
+                isLocked
+                  ? 'Entrada confirmada e bloqueada. Clique no cadeado no rodapé para desbloquear e alterar.'
+                  : 'Clique para alternar o status'
+              }
               style={{
                 background: isReceivedIncome
                   ? 'rgba(16, 185, 129, 0.16)'
@@ -614,7 +637,7 @@ export default function TimelineEventCard({
                 padding: '5px 14px',
                 fontSize: '0.78rem',
                 fontWeight: '700',
-                cursor: event.date > todayStr ? 'default' : 'pointer',
+                cursor: isLocked ? 'default' : event.date > todayStr ? 'default' : 'pointer',
                 opacity: event.date > todayStr ? 0.75 : 1,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -697,9 +720,17 @@ export default function TimelineEventCard({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
+              if (isLocked) {
+                return; // Bloqueado: clique no cadeado para abrir
+              }
               if (onToggleLoanPayment) onToggleLoanPayment(event.id);
             }}
             className="btn btn-sm"
+            title={
+              isLocked
+                ? 'Gasto pago e bloqueado. Clique no cadeado no rodapé para desbloquear e alterar.'
+                : 'Clique para alternar o status'
+            }
             style={{
               background: isPaidExpense ? 'rgba(244, 63, 94, 0.16)' : 'rgba(245, 158, 11, 0.14)',
               color: isPaidExpense ? '#f43f5e' : '#f59e0b',
@@ -708,7 +739,7 @@ export default function TimelineEventCard({
               padding: '5px 14px',
               fontSize: '0.78rem',
               fontWeight: '700',
-              cursor: 'pointer',
+              cursor: isLocked ? 'default' : 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px'
@@ -768,18 +799,26 @@ export default function TimelineEventCard({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                if (isLocked) {
+                  return; // Bloqueado
+                }
                 if (onToggleLoanPayment) onToggleLoanPayment(event.id);
               }}
               className="btn btn-sm"
+              title={
+                isLocked
+                  ? 'Investimento confirmado e bloqueado. Clique no cadeado no rodapé para desbloquear e alterar.'
+                  : 'Clique para alternar o status'
+              }
               style={{
-                background: isCompletedInvestment ? 'rgba(99, 102, 241, 0.16)' : 'rgba(148, 163, 184, 0.12)',
-                color: isCompletedInvestment ? 'var(--primary-light)' : '#94a3b8',
-                border: `1px solid ${isCompletedInvestment ? 'rgba(99, 102, 241, 0.35)' : 'rgba(148, 163, 184, 0.3)'}`,
+                background: isCompletedInvestment ? 'rgba(139, 92, 246, 0.16)' : 'rgba(148, 163, 184, 0.12)',
+                color: isCompletedInvestment ? '#8b5cf6' : '#94a3b8',
+                border: `1px solid ${isCompletedInvestment ? 'rgba(139, 92, 246, 0.35)' : 'rgba(148, 163, 184, 0.3)'}`,
                 borderRadius: '9999px',
                 padding: '5px 14px',
                 fontSize: '0.78rem',
                 fontWeight: '700',
-                cursor: 'pointer',
+                cursor: isLocked ? 'default' : 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px'
@@ -880,9 +919,17 @@ export default function TimelineEventCard({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                if (isLocked) {
+                  return; // Bloqueado
+                }
                 if (onToggleLoanPayment) onToggleLoanPayment(event.id);
               }}
               className="btn btn-sm"
+              title={
+                isLocked
+                  ? 'Prestação liquidada e bloqueada. Clique no cadeado no rodapé para desbloquear e alterar.'
+                  : 'Clique para alternar o status'
+              }
               style={{
                 background: event.status === 'Pago'
                   ? 'rgba(16, 185, 129, 0.16)'
@@ -904,7 +951,7 @@ export default function TimelineEventCard({
                 padding: '5px 14px',
                 fontSize: '0.78rem',
                 fontWeight: '700',
-                cursor: 'pointer',
+                cursor: isLocked ? 'default' : 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
@@ -1182,19 +1229,29 @@ export default function TimelineEventCard({
                 );
               })()}
 
-              <span
+              <button
+                type="button"
+                className={`action-icon-btn ${isLocked ? 'locked' : ''}`}
+                onClick={handleToggleLock}
+                title={
+                  isLocked
+                    ? "Prestação liquidada e bloqueada (Clique para abrir o cadeado e permitir alterar o status)"
+                    : "Prestação desbloqueada (Clique para bloquear)"
+                }
                 style={{
-                  display: 'flex',
+                  color: isLocked ? '#10b981' : 'var(--text-dim)',
+                  background: isLocked ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                  border: isLocked ? '1px solid rgba(16, 185, 129, 0.28)' : '1px solid transparent',
+                  borderRadius: '6px',
+                  padding: '4px 6px',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
-                  fontSize: '0.72rem',
-                  color: 'var(--text-dim)',
-                  marginLeft: '4px'
+                  transition: 'all 0.2s ease'
                 }}
-                title="Prestações contratuais são protegidas e não podem ser eliminadas"
               >
-                <Lock size={12} />
-              </span>
+                {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
+              </button>
             </>
           ) : (
             <>
@@ -1231,11 +1288,27 @@ export default function TimelineEventCard({
                 );
               })()}
               <button
-                className="action-icon-btn"
-                onClick={() => onEdit(event)}
-                title="Editar Evento"
+                type="button"
+                className={`action-icon-btn ${isLocked ? 'locked' : ''}`}
+                onClick={handleToggleLock}
+                title={
+                  isLocked
+                    ? "Movimento bloqueado (Clique para abrir o cadeado e permitir alterar o status)"
+                    : "Movimento desbloqueado (Clique para bloquear)"
+                }
+                style={{
+                  color: isLocked ? '#10b981' : 'var(--text-dim)',
+                  background: isLocked ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                  border: isLocked ? '1px solid rgba(16, 185, 129, 0.28)' : '1px solid transparent',
+                  borderRadius: '6px',
+                  padding: '4px 6px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'all 0.2s ease'
+                }}
               >
-                <Edit3 size={15} />
+                {isLocked ? <Lock size={15} /> : <Unlock size={15} />}
               </button>
               <button
                 className="action-icon-btn delete"

@@ -361,6 +361,7 @@ export default function App() {
             ...ev,
             status: nextStatus,
             isCompleted: nextCompleted,
+            isLocked: nextCompleted,
             time: nextCompleted ? clickTimeStr : ev.time,
             completedAtTime: nextCompleted ? clickTimeStr : null
           };

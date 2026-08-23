@@ -625,14 +625,15 @@ export default function TimelineEventCard({
                     : isNextIncome
                       ? '#60a5fa'
                       : '#94a3b8',
-                border: `1px solid ${isReceivedIncome
-                    ? 'rgba(16, 185, 129, 0.35)'
-                    : isOverdueIncome
-                      ? 'rgba(239, 68, 68, 0.4)'
-                      : isNextIncome
-                        ? 'rgba(59, 130, 246, 0.3)'
-                        : 'rgba(148, 163, 184, 0.2)'
-                  }`,
+                border: isReceivedIncome
+                  ? isLocked
+                    ? '1px solid rgba(16, 185, 129, 0.35)'
+                    : '1.5px dashed rgba(16, 185, 129, 0.65)'
+                  : isOverdueIncome
+                    ? '1px solid rgba(239, 68, 68, 0.4)'
+                    : isNextIncome
+                      ? '1px solid rgba(59, 130, 246, 0.3)'
+                      : '1px solid rgba(148, 163, 184, 0.2)',
                 borderRadius: '9999px',
                 padding: '5px 14px',
                 fontSize: '0.78rem',
@@ -654,6 +655,11 @@ export default function TimelineEventCard({
                 <>
                   <CheckCircle2 size={14} style={{ color: '#10b981' }} />
                   <span>Recebido às {getCompletedTimeStr()}</span>
+                  {isLocked ? (
+                    <Lock size={12} style={{ color: '#f59e0b', marginLeft: '2px' }} title="Status travado" />
+                  ) : (
+                    <Unlock size={12} style={{ color: 'var(--text-dim)', marginLeft: '2px' }} title="Status aberto para alteração" />
+                  )}
                 </>
               ) : isOverdueIncome ? (
                 <>
@@ -734,7 +740,11 @@ export default function TimelineEventCard({
             style={{
               background: isPaidExpense ? 'rgba(244, 63, 94, 0.16)' : 'rgba(245, 158, 11, 0.14)',
               color: isPaidExpense ? '#f43f5e' : '#f59e0b',
-              border: `1px solid ${isPaidExpense ? 'rgba(244, 63, 94, 0.35)' : 'rgba(245, 158, 11, 0.35)'}`,
+              border: isPaidExpense
+                ? isLocked
+                  ? '1px solid rgba(244, 63, 94, 0.35)'
+                  : '1.5px dashed rgba(244, 63, 94, 0.65)'
+                : '1px solid rgba(245, 158, 11, 0.35)',
               borderRadius: '9999px',
               padding: '5px 14px',
               fontSize: '0.78rem',
@@ -749,6 +759,11 @@ export default function TimelineEventCard({
               <>
                 <CheckCircle2 size={14} style={{ color: '#f43f5e' }} />
                 <span>Pago às {getCompletedTimeStr()}</span>
+                {isLocked ? (
+                  <Lock size={12} style={{ color: '#f59e0b', marginLeft: '2px' }} title="Status travado" />
+                ) : (
+                  <Unlock size={12} style={{ color: 'var(--text-dim)', marginLeft: '2px' }} title="Status aberto para alteração" />
+                )}
               </>
             ) : (
               <>
@@ -813,7 +828,11 @@ export default function TimelineEventCard({
               style={{
                 background: isCompletedInvestment ? 'rgba(139, 92, 246, 0.16)' : 'rgba(148, 163, 184, 0.12)',
                 color: isCompletedInvestment ? '#8b5cf6' : '#94a3b8',
-                border: `1px solid ${isCompletedInvestment ? 'rgba(139, 92, 246, 0.35)' : 'rgba(148, 163, 184, 0.3)'}`,
+                border: isCompletedInvestment
+                  ? isLocked
+                    ? '1px solid rgba(139, 92, 246, 0.35)'
+                    : '1.5px dashed rgba(139, 92, 246, 0.65)'
+                  : '1px solid rgba(148, 163, 184, 0.3)',
                 borderRadius: '9999px',
                 padding: '5px 14px',
                 fontSize: '0.78rem',
@@ -826,8 +845,13 @@ export default function TimelineEventCard({
             >
               {isCompletedInvestment ? (
                 <>
-                  <CheckCircle2 size={14} style={{ color: 'var(--primary-light)' }} />
+                  <CheckCircle2 size={14} style={{ color: '#8b5cf6' }} />
                   <span>Investido às {getCompletedTimeStr()}</span>
+                  {isLocked ? (
+                    <Lock size={12} style={{ color: '#f59e0b', marginLeft: '2px' }} title="Status travado" />
+                  ) : (
+                    <Unlock size={12} style={{ color: 'var(--text-dim)', marginLeft: '2px' }} title="Status aberto para alteração" />
+                  )}
                 </>
               ) : (
                 <>
@@ -941,12 +965,13 @@ export default function TimelineEventCard({
                   : event.status === 'Atrasada'
                     ? '#f87171'
                     : '#f59e0b',
-                border: `1px solid ${event.status === 'Pago'
-                    ? 'rgba(16, 185, 129, 0.35)'
-                    : event.status === 'Atrasada'
-                      ? 'rgba(239, 68, 68, 0.4)'
-                      : 'rgba(245, 158, 11, 0.35)'
-                  }`,
+                border: event.status === 'Pago'
+                  ? isLocked
+                    ? '1px solid rgba(16, 185, 129, 0.35)'
+                    : '1.5px dashed rgba(16, 185, 129, 0.65)'
+                  : event.status === 'Atrasada'
+                    ? '1px solid rgba(239, 68, 68, 0.4)'
+                    : '1px solid rgba(245, 158, 11, 0.35)',
                 borderRadius: '9999px',
                 padding: '5px 14px',
                 fontSize: '0.78rem',
@@ -965,6 +990,11 @@ export default function TimelineEventCard({
                 <>
                   <CheckCircle2 size={14} style={{ color: '#10b981' }} />
                   <span>Liquidado às {getCompletedTimeStr()}</span>
+                  {isLocked ? (
+                    <Lock size={12} style={{ color: '#f59e0b', marginLeft: '2px' }} title="Status travado" />
+                  ) : (
+                    <Unlock size={12} style={{ color: 'var(--text-dim)', marginLeft: '2px' }} title="Status aberto para alteração" />
+                  )}
                 </>
               ) : event.status === 'Atrasada' ? (
                 <>

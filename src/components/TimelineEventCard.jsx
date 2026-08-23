@@ -374,7 +374,7 @@ export default function TimelineEventCard({
        event.category === 'repetitivo')
     );
 
-  // Event Origin / Sub-vision info for right-aligned badge
+  // Event Origin / Sub-vision info for right-aligned badge (coherent with vision palettes)
   const getEventOriginInfo = () => {
     if (
       event.timelineOriginId === 'tl-loan-house' ||
@@ -382,11 +382,11 @@ export default function TimelineEventCard({
       event.timelineOriginName === 'Crédito Habitação'
     ) {
       return {
-        label: 'Crédito Habitação',
-        icon: <Home size={12} />,
-        bg: 'rgba(16, 185, 129, 0.15)',
+        label: 'Habitação',
+        icon: <Home size={11} strokeWidth={2.4} />,
+        bg: 'rgba(16, 185, 129, 0.12)',
         color: '#10b981',
-        border: 'rgba(16, 185, 129, 0.3)',
+        border: 'rgba(16, 185, 129, 0.28)',
         timelineId: 'tl-loan-house',
         tab: null
       };
@@ -398,22 +398,22 @@ export default function TimelineEventCard({
       isLoanInstallment
     ) {
       return {
-        label: 'Crédito Automóvel',
-        icon: <Car size={12} />,
-        bg: 'rgba(99, 102, 241, 0.15)',
-        color: '#a5b4fc',
-        border: 'rgba(99, 102, 241, 0.3)',
+        label: 'Automóvel',
+        icon: <Car size={11} strokeWidth={2.4} />,
+        bg: 'rgba(99, 102, 241, 0.12)',
+        color: '#6366f1',
+        border: 'rgba(99, 102, 241, 0.28)',
         timelineId: 'tl-income',
         tab: 'emprestimos'
       };
     }
     if (isExpenseEvent) {
       return {
-        label: 'Gastos e Saídas',
-        icon: <ShoppingCart size={12} />,
-        bg: 'rgba(244, 63, 94, 0.15)',
-        color: '#fda4af',
-        border: 'rgba(244, 63, 94, 0.3)',
+        label: 'Gastos',
+        icon: <ShoppingCart size={11} strokeWidth={2.4} />,
+        bg: 'rgba(244, 63, 94, 0.12)',
+        color: '#f43f5e',
+        border: 'rgba(244, 63, 94, 0.28)',
         timelineId: 'tl-income',
         tab: 'gastos'
       };
@@ -421,31 +421,31 @@ export default function TimelineEventCard({
     if (isInvestmentEvent) {
       return {
         label: 'Investimentos',
-        icon: <PiggyBank size={12} />,
-        bg: 'rgba(99, 102, 241, 0.15)',
-        color: '#c7d2fe',
-        border: 'rgba(99, 102, 241, 0.3)',
+        icon: <PiggyBank size={11} strokeWidth={2.4} />,
+        bg: 'rgba(139, 92, 246, 0.12)',
+        color: '#8b5cf6',
+        border: 'rgba(139, 92, 246, 0.28)',
         timelineId: 'tl-income',
         tab: 'investimentos'
       };
     }
     if (isIncomeEvent) {
       return {
-        label: 'Entradas e Rendimentos',
-        icon: <DollarSign size={12} />,
-        bg: 'rgba(6, 182, 212, 0.15)',
-        color: '#67e8f9',
-        border: 'rgba(6, 182, 212, 0.3)',
+        label: 'Entradas',
+        icon: <DollarSign size={11} strokeWidth={2.4} />,
+        bg: 'rgba(6, 182, 212, 0.12)',
+        color: '#06b6d4',
+        border: 'rgba(6, 182, 212, 0.28)',
         timelineId: 'tl-income',
         tab: 'entradas'
       };
     }
     return {
       label: event.timelineOriginName || 'Financeiro',
-      icon: <DollarSign size={12} />,
-      bg: 'rgba(99, 102, 241, 0.15)',
-      color: 'var(--primary-light)',
-      border: 'rgba(99, 102, 241, 0.3)',
+      icon: <DollarSign size={11} strokeWidth={2.4} />,
+      bg: 'rgba(99, 102, 241, 0.12)',
+      color: '#6366f1',
+      border: 'rgba(99, 102, 241, 0.28)',
       timelineId: event.timelineOriginId || 'tl-income',
       tab: 'balanco'
     };
@@ -517,20 +517,23 @@ export default function TimelineEventCard({
               borderColor: originInfo.border,
               fontWeight: '700',
               fontSize: '0.72rem',
-              padding: '4px 10px',
-              borderRadius: '6px',
+              letterSpacing: '0.01em',
+              padding: '3px 9px',
+              borderRadius: '9999px',
               cursor: onNavigateToTimeline ? 'pointer' : 'default',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '5px',
+              gap: '4px',
               flexShrink: 0,
-              marginLeft: 'auto'
+              marginLeft: 'auto',
+              transition: 'all 0.15s ease',
+              lineHeight: 1.2
             }}
             title={`Ir para a visão de ${originInfo.label}`}
           >
             {originInfo.icon}
             <span>{originInfo.label}</span>
-            {onNavigateToTimeline && <ArrowUpRight size={11} />}
+            {onNavigateToTimeline && <ArrowUpRight size={10} style={{ opacity: 0.75, marginLeft: '1px' }} />}
           </button>
         )}
       </div>

@@ -607,13 +607,10 @@ export default function TimelineEventCard({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {event.priority && (
               <span
-                className="badge"
                 style={{
-                  backgroundColor: priorityStyle.bg,
-                  color: priorityStyle.text,
-                  borderColor: priorityStyle.border,
-                  fontSize: '0.72rem',
-                  padding: '3px 8px'
+                  fontSize: '0.74rem',
+                  color: 'var(--text-dim)',
+                  fontWeight: '600'
                 }}
               >
                 Prioridade: {event.priority}

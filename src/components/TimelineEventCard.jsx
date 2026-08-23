@@ -1259,29 +1259,31 @@ export default function TimelineEventCard({
                 );
               })()}
 
-              <button
-                type="button"
-                className="action-icon-btn"
-                onClick={handleToggleLock}
-                title={
-                  isLocked
-                    ? "Prestação liquidada e bloqueada (Clique para abrir o cadeado e permitir alterar o status)"
-                    : "Prestação desbloqueada (Clique para bloquear)"
-                }
-                style={{
-                  color: isLocked ? '#f59e0b' : 'var(--text-dim)',
-                  background: 'transparent',
-                  border: 'none',
-                  boxShadow: 'none',
-                  padding: '4px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  transition: 'color 0.15s ease'
-                }}
-              >
-                {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
-              </button>
+              {event.status === 'Pago' && (
+                <button
+                  type="button"
+                  className="action-icon-btn"
+                  onClick={handleToggleLock}
+                  title={
+                    isLocked
+                      ? "Prestação liquidada e bloqueada (Clique para abrir o cadeado e permitir alterar o status)"
+                      : "Prestação desbloqueada (Clique para bloquear)"
+                  }
+                  style={{
+                    color: isLocked ? '#f59e0b' : 'var(--text-dim)',
+                    background: 'transparent',
+                    border: 'none',
+                    boxShadow: 'none',
+                    padding: '4px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    transition: 'color 0.15s ease'
+                  }}
+                >
+                  {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
+                </button>
+              )}
             </>
           ) : (
             <>
@@ -1333,29 +1335,31 @@ export default function TimelineEventCard({
               >
                 <Trash2 size={15} />
               </button>
-              <button
-                type="button"
-                className="action-icon-btn"
-                onClick={handleToggleLock}
-                title={
-                  isLocked
-                    ? "Movimento bloqueado (Clique para abrir o cadeado e permitir alterar o status)"
-                    : "Movimento desbloqueado (Clique para bloquear)"
-                }
-                style={{
-                  color: isLocked ? '#f59e0b' : 'var(--text-dim)',
-                  background: 'transparent',
-                  border: 'none',
-                  boxShadow: 'none',
-                  padding: '4px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  transition: 'color 0.15s ease'
-                }}
-              >
-                {isLocked ? <Lock size={15} /> : <Unlock size={15} />}
-              </button>
+              {isCompleted && (
+                <button
+                  type="button"
+                  className="action-icon-btn"
+                  onClick={handleToggleLock}
+                  title={
+                    isLocked
+                      ? "Movimento confirmado e bloqueado (Clique para abrir o cadeado e permitir alterar o status)"
+                      : "Movimento desbloqueado (Clique para bloquear)"
+                  }
+                  style={{
+                    color: isLocked ? '#f59e0b' : 'var(--text-dim)',
+                    background: 'transparent',
+                    border: 'none',
+                    boxShadow: 'none',
+                    padding: '4px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    transition: 'color 0.15s ease'
+                  }}
+                >
+                  {isLocked ? <Lock size={15} /> : <Unlock size={15} />}
+                </button>
+              )}
             </>
           )}
         </div>

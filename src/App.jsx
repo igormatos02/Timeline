@@ -317,6 +317,7 @@ export default function App() {
     if (!target) return;
 
     const isIncome = target.isIncome || (target.category && target.category.startsWith('entrada'));
+    const clickTimeStr = format(new Date(), 'HH:mm');
     let nextStatus, nextCompleted;
 
     if (isIncome) {
@@ -332,7 +333,13 @@ export default function App() {
 
     const updatedList = currentEvents.map((ev) =>
       ev.id === installmentId
-        ? { ...ev, status: nextStatus, isCompleted: nextCompleted }
+        ? {
+            ...ev,
+            status: nextStatus,
+            isCompleted: nextCompleted,
+            time: nextCompleted ? clickTimeStr : ev.time,
+            completedAtTime: nextCompleted ? clickTimeStr : null
+          }
         : ev
     );
 

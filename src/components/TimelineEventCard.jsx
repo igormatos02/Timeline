@@ -174,12 +174,16 @@ export default function TimelineEventCard({
 
   const catMeta = getCategoryMeta(event.category);
 
-  // Status Badge for Loan Installments or Income
+  const getCompletedTimeStr = () => {
+    return event.completedAtTime || event.time || '10:00';
+  };
+
+  // Custom Status Badges
   const getCustomStatusBadge = () => {
     if (isIncomeEvent) {
       if (isReceivedIncome) {
         return {
-          label: 'Recebido',
+          label: `Recebido às ${getCompletedTimeStr()}`,
           icon: <CheckCircle2 size={11} />,
           bg: 'rgba(16, 185, 129, 0.15)',
           color: '#10b981',
@@ -217,7 +221,7 @@ export default function TimelineEventCard({
     if (isLoanInstallment) {
       if (event.status === 'Pago' || event.isCompleted) {
         return {
-          label: 'Pago',
+          label: `Liquidado às ${getCompletedTimeStr()}`,
           icon: <CheckCircle2 size={11} />,
           bg: 'rgba(16, 185, 129, 0.15)',
           color: '#10b981',
@@ -240,6 +244,26 @@ export default function TimelineEventCard({
         bg: 'rgba(245, 158, 11, 0.15)',
         color: '#f59e0b',
         border: 'rgba(245, 158, 11, 0.3)'
+      };
+    }
+
+    if (isPaidExpense) {
+      return {
+        label: `Pago às ${getCompletedTimeStr()}`,
+        icon: <CheckCircle2 size={11} />,
+        bg: 'rgba(244, 63, 94, 0.15)',
+        color: '#f43f5e',
+        border: 'rgba(244, 63, 94, 0.3)'
+      };
+    }
+
+    if (isCompletedInvestment) {
+      return {
+        label: `Investido às ${getCompletedTimeStr()}`,
+        icon: <CheckCircle2 size={11} />,
+        bg: 'rgba(99, 102, 241, 0.15)',
+        color: 'var(--primary-light)',
+        border: 'rgba(99, 102, 241, 0.3)'
       };
     }
 
@@ -443,13 +467,6 @@ export default function TimelineEventCard({
             </span>
           )}
         </div>
-
-        {event.time && (
-          <div className="event-time" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Clock size={12} />
-            <span>{event.time}</span>
-          </div>
-        )}
       </div>
 
       {/* 💰 Income (Entrada) Financial Highlight Strip */}
@@ -547,7 +564,7 @@ export default function TimelineEventCard({
             {isReceivedIncome ? (
               <>
                 <CheckCircle2 size={14} style={{ color: '#10b981' }} />
-                <span>Recebido</span>
+                <span>Recebido às {getCompletedTimeStr()}</span>
               </>
             ) : isOverdueIncome ? (
               <>
@@ -619,7 +636,7 @@ export default function TimelineEventCard({
             {isPaidExpense ? (
               <>
                 <CheckCircle2 size={14} style={{ color: '#f43f5e' }} />
-                <span>Pago</span>
+                <span>Pago às {getCompletedTimeStr()}</span>
               </>
             ) : (
               <>
@@ -686,7 +703,7 @@ export default function TimelineEventCard({
             {isCompletedInvestment ? (
               <>
                 <CheckCircle2 size={14} style={{ color: 'var(--primary-light)' }} />
-                <span>Investido</span>
+                <span>Investido às {getCompletedTimeStr()}</span>
               </>
             ) : (
               <>
@@ -788,7 +805,7 @@ export default function TimelineEventCard({
               {event.status === 'Pago' ? (
                 <>
                   <CheckCircle2 size={13} style={{ color: '#10b981' }} />
-                  <span>Liquidada (Marcar Pendente)</span>
+                  <span>Liquidado às {getCompletedTimeStr()}</span>
                 </>
               ) : (
                 <>

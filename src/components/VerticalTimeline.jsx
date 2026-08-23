@@ -165,9 +165,7 @@ export default function VerticalTimeline({
   const scrollToToday = () => {
     const todayNode = document.getElementById('timeline-node-today');
     if (todayNode) {
-      const yOffset = -85; // Compensar cabeçalho fixo para mostrar o topo do bloco do mês e o primeiro evento
-      const y = todayNode.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+      todayNode.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -193,13 +191,11 @@ export default function VerticalTimeline({
     if (savedPosition !== undefined) {
       window.scrollTo({ top: savedPosition, behavior: 'instant' });
     } else {
-      // First time opening this timeline: place directly at top of current month
+      // First time opening this timeline: place directly at start of current month
       const timer = setTimeout(() => {
         const todayNode = document.getElementById('timeline-node-today');
         if (todayNode) {
-          const yOffset = -85;
-          const y = todayNode.getBoundingClientRect().top + window.pageYOffset + yOffset;
-          window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
+          todayNode.scrollIntoView({ behavior: 'instant', block: 'start' });
         }
       }, 50);
       return () => clearTimeout(timer);

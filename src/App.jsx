@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
+import { format, parseISO, addMonths } from 'date-fns';
 import { initialTimelines } from './data/mockTimelines';
 import Navbar from './components/Navbar';
 import TimelineHeader from './components/TimelineHeader';
@@ -184,17 +184,54 @@ export default function App() {
         prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
       );
     } else {
-      // Add new event
-      const newEvent = {
-        ...eventData,
-        id: `ev-${Date.now()}`
-      };
+      // Add new event (if recurring, project into subsequent months)
+      const isRecurring = eventData.periodicity === 'recorrente' || eventData.isRecurring || (eventData.category && eventData.category.includes('recorrente'));
 
-      const updatedEvents = [newEvent, ...(activeTimeline.events || [])];
+      if (isRecurring) {
+        const generatedEvents = [];
+        const seriesId = `series-${Date.now()}`;
+        const baseDate = parseISO(eventData.date || '2026-08-01');
 
-      setTimelines((prev) =>
-        prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
-      );
+        // Project for 24 months forward into subsequent months
+        for (let i = 0; i < 24; i++) {
+          const occDate = addMonths(baseDate, i);
+          const dateStr = format(occDate, 'yyyy-MM-dd');
+          const isPast = dateStr <= '2026-08-21';
+
+          let status = eventData.status;
+          if (eventData.financialType === 'gasto' || eventData.isExpense) {
+            status = isPast ? 'Pago' : 'Pendente';
+          } else if (eventData.financialType === 'entrada' || eventData.isIncome) {
+            status = isPast ? 'Recebido' : 'Previsto';
+          } else if (eventData.financialType === 'investimento' || eventData.isInvestment) {
+            status = isPast ? 'Investido' : 'Planeado';
+          }
+
+          generatedEvents.push({
+            ...eventData,
+            id: `ev-${seriesId}-${i}`,
+            seriesId,
+            date: dateStr,
+            status,
+            isCompleted: isPast
+          });
+        }
+
+        const updatedEvents = [...generatedEvents, ...(activeTimeline.events || [])];
+        setTimelines((prev) =>
+          prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
+        );
+      } else {
+        const newEvent = {
+          ...eventData,
+          id: `ev-${Date.now()}`
+        };
+
+        const updatedEvents = [newEvent, ...(activeTimeline.events || [])];
+        setTimelines((prev) =>
+          prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
+        );
+      }
     }
   };
 

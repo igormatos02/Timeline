@@ -1231,7 +1231,7 @@ export default function TimelineEventCard({
 
               <button
                 type="button"
-                className={`action-icon-btn ${isLocked ? 'locked' : ''}`}
+                className="action-icon-btn"
                 onClick={handleToggleLock}
                 title={
                   isLocked
@@ -1240,14 +1240,14 @@ export default function TimelineEventCard({
                 }
                 style={{
                   color: isLocked ? '#10b981' : 'var(--text-dim)',
-                  background: isLocked ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
-                  border: isLocked ? '1px solid rgba(16, 185, 129, 0.28)' : '1px solid transparent',
-                  borderRadius: '6px',
-                  padding: '4px 6px',
+                  background: 'transparent',
+                  border: 'none',
+                  boxShadow: 'none',
+                  padding: '4px',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  transition: 'all 0.2s ease'
+                  cursor: 'pointer',
+                  transition: 'color 0.15s ease'
                 }}
               >
                 {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
@@ -1289,7 +1289,23 @@ export default function TimelineEventCard({
               })()}
               <button
                 type="button"
-                className={`action-icon-btn ${isLocked ? 'locked' : ''}`}
+                className="action-icon-btn"
+                onClick={() => onEdit(event)}
+                title="Editar Evento"
+              >
+                <Edit3 size={15} />
+              </button>
+              <button
+                type="button"
+                className="action-icon-btn delete"
+                onClick={() => onDelete(event.id)}
+                title="Eliminar Evento"
+              >
+                <Trash2 size={15} />
+              </button>
+              <button
+                type="button"
+                className="action-icon-btn"
                 onClick={handleToggleLock}
                 title={
                   isLocked
@@ -1298,24 +1314,17 @@ export default function TimelineEventCard({
                 }
                 style={{
                   color: isLocked ? '#10b981' : 'var(--text-dim)',
-                  background: isLocked ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
-                  border: isLocked ? '1px solid rgba(16, 185, 129, 0.28)' : '1px solid transparent',
-                  borderRadius: '6px',
-                  padding: '4px 6px',
+                  background: 'transparent',
+                  border: 'none',
+                  boxShadow: 'none',
+                  padding: '4px',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  transition: 'all 0.2s ease'
+                  cursor: 'pointer',
+                  transition: 'color 0.15s ease'
                 }}
               >
                 {isLocked ? <Lock size={15} /> : <Unlock size={15} />}
-              </button>
-              <button
-                className="action-icon-btn delete"
-                onClick={() => onDelete(event.id)}
-                title="Eliminar Evento"
-              >
-                <Trash2 size={15} />
               </button>
             </>
           )}

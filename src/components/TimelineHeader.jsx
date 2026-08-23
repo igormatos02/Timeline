@@ -180,7 +180,7 @@ export default function TimelineHeader({
         '--active-timeline-color': timeline.color || '#10b981',
         padding: collapsed ? '12px 18px' : '16px 20px',
         marginBottom: '10px',
-        transition: 'all 0.2s ease',
+        transition: 'padding 0.2s ease, box-shadow 0.2s ease',
         boxShadow: 'var(--shadow-sm)'
       }}
     >

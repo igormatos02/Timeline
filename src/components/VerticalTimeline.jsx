@@ -269,8 +269,17 @@ export default function VerticalTimeline({
         // 'balanco' shows all
       }
 
+      // No Balanço: mostrar somente até ao fim do mês corrente (2026-08-31)
+      const isBalancoView = (isFinancialTimeline && activeFinancialTab === 'balanco') || timeline.type === 'Principal';
+      if (isBalancoView) {
+        const currentMonthEndStr = '2026-08-31';
+        if (ev.date > currentMonthEndStr) {
+          return false;
+        }
+      }
+
       // Entradas / Gastos / Investimentos em Financeiro: máximo 1 ano à frente da data atual (21/08/2026 -> 31/08/2027)
-      if (isFinancialTimeline && activeFinancialTab !== 'emprestimos') {
+      if (isFinancialTimeline && activeFinancialTab !== 'emprestimos' && !isBalancoView) {
         const oneYearAheadStr = format(addYears(todayDate, 1), 'yyyy-MM-31');
         if (ev.date > oneYearAheadStr) {
           return false;
@@ -294,10 +303,12 @@ export default function VerticalTimeline({
     startDateObj = subDays(todayDate, 20);
   }
 
-  // Determine latest date in timeline (Principal only shows up to todayDate, Entradas shows at most 1 year ahead)
+  // Determine latest date in timeline (Balanço mostra somente até ao mês corrente, Entradas até 1 ano à frente)
+  const isBalancoView = (isFinancialTimeline && activeFinancialTab === 'balanco') || timeline.type === 'Principal';
   let maxDateObj = todayDate;
-  if (timeline.type === 'Principal') {
-    maxDateObj = todayDate;
+
+  if (isBalancoView) {
+    maxDateObj = parseISO('2026-08-31');
   } else if (timeline.type === 'Entradas') {
     maxDateObj = addYears(todayDate, 1);
   } else if (timeline.endDate) {
@@ -309,7 +320,7 @@ export default function VerticalTimeline({
     } catch (e) { }
   }
 
-  if (timeline.type !== 'Principal' && timeline.type !== 'Entradas') {
+  if (!isBalancoView && timeline.type !== 'Entradas') {
     allEvents.forEach((ev) => {
       try {
         const evD = parseISO(ev.date);

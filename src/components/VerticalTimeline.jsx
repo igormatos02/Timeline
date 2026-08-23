@@ -161,11 +161,21 @@ export default function VerticalTimeline({
     setGroupBy('mes');
   }, [timeline.id]);
 
-  // Scroll and focus on Today / Current period node when clicked by user (aligned at top of month block)
+  // Scroll and focus on Today / Current period node when clicked by user (goes to top of page/month)
   const scrollToToday = () => {
+    const isBalancoView = (timeline.type === 'Financeiro' && activeFinancialTab === 'balanco') || timeline.type === 'Principal';
+    if (isBalancoView) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     const todayNode = document.getElementById('timeline-node-today');
     if (todayNode) {
-      todayNode.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const yOffset = -75;
+      const y = todayNode.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -191,16 +201,25 @@ export default function VerticalTimeline({
     if (savedPosition !== undefined) {
       window.scrollTo({ top: savedPosition, behavior: 'instant' });
     } else {
-      // First time opening this timeline: place directly at start of current month
+      // First time opening this timeline: place directly at start of month
       const timer = setTimeout(() => {
-        const todayNode = document.getElementById('timeline-node-today');
-        if (todayNode) {
-          todayNode.scrollIntoView({ behavior: 'instant', block: 'start' });
+        const isBalancoView = (timeline.type === 'Financeiro' && activeFinancialTab === 'balanco') || timeline.type === 'Principal';
+        if (isBalancoView) {
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        } else {
+          const todayNode = document.getElementById('timeline-node-today');
+          if (todayNode) {
+            const yOffset = -75;
+            const y = todayNode.getBoundingClientRect().top + window.pageYOffset + yOffset;
+            window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
+          } else {
+            window.scrollTo({ top: 0, behavior: 'instant' });
+          }
         }
       }, 50);
       return () => clearTimeout(timer);
     }
-  }, [timeline.id]);
+  }, [timeline.id, activeFinancialTab]);
 
   // Default Today reference (2026-08-21)
   const todayDate = new Date('2026-08-21');

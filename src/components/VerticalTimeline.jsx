@@ -223,9 +223,9 @@ export default function VerticalTimeline({
     return events.filter((ev) => {
       const matchesSearch =
         searchQuery === '' ||
-        ev.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (ev.description && ev.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (ev.labels && ev.labels.some((l) => l.toLowerCase().includes(searchQuery.toLowerCase())));
+        ((ev.title || '').toLowerCase().includes(searchQuery.toLowerCase())) ||
+        ((ev.description || '').toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (ev.labels && ev.labels.some((l) => (l || '').toLowerCase().includes(searchQuery.toLowerCase())));
 
       let matchesStatus = selectedStatusFilter === 'Todos';
       if (!matchesStatus) {

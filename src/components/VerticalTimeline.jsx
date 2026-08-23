@@ -161,13 +161,20 @@ export default function VerticalTimeline({
     setGroupBy('mes');
   }, [timeline.id]);
 
-  // Scroll and focus on Today / Current period node when clicked by user (aligned right below navbar/header)
+  // Scroll and focus on Today / Current period node when clicked by user (positioned right below sticky header dock)
   const scrollToToday = () => {
     const todayNode = document.getElementById('timeline-node-today');
     if (todayNode) {
-      const navbar = document.querySelector('.navbar') || document.querySelector('header');
-      const navHeight = navbar ? navbar.offsetHeight : 64;
-      const targetY = todayNode.getBoundingClientRect().top + window.pageYOffset - navHeight - 16;
+      const navbar = document.querySelector('.app-header') || document.querySelector('header');
+      const stickyDock = document.querySelector('.sticky-header-dock');
+
+      const navHeight = navbar ? navbar.offsetHeight : 68;
+      const dockHeight = stickyDock ? stickyDock.offsetHeight : 80;
+      const totalStickyOffset = navHeight + 24 + dockHeight + 14;
+
+      const elementDocTop = todayNode.getBoundingClientRect().top + window.pageYOffset;
+      const targetY = elementDocTop - totalStickyOffset;
+
       window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -197,13 +204,20 @@ export default function VerticalTimeline({
       // Restaurar exatamente onde o utilizador esteve pela última vez
       window.scrollTo({ top: savedPosition, behavior: 'instant' });
     } else {
-      // Apenas na PRIMEIRA VEZ que entra nesta visão: posicionar no mês corrente
+      // Apenas na PRIMEIRA VEZ que entra nesta visão: posicionar no mês corrente logo abaixo do painel do topo
       const timer = setTimeout(() => {
         const todayNode = document.getElementById('timeline-node-today');
         if (todayNode) {
-          const navbar = document.querySelector('.navbar') || document.querySelector('header');
-          const navHeight = navbar ? navbar.offsetHeight : 64;
-          const targetY = todayNode.getBoundingClientRect().top + window.pageYOffset - navHeight - 16;
+          const navbar = document.querySelector('.app-header') || document.querySelector('header');
+          const stickyDock = document.querySelector('.sticky-header-dock');
+
+          const navHeight = navbar ? navbar.offsetHeight : 68;
+          const dockHeight = stickyDock ? stickyDock.offsetHeight : 80;
+          const totalStickyOffset = navHeight + 24 + dockHeight + 14;
+
+          const elementDocTop = todayNode.getBoundingClientRect().top + window.pageYOffset;
+          const targetY = elementDocTop - totalStickyOffset;
+
           window.scrollTo({ top: Math.max(0, targetY), behavior: 'instant' });
         } else {
           window.scrollTo({ top: 0, behavior: 'instant' });

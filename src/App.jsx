@@ -457,9 +457,16 @@ export default function App() {
   const handleScrollToToday = () => {
     const todayNode = document.getElementById('timeline-node-today');
     if (todayNode) {
-      const navbar = document.querySelector('.navbar') || document.querySelector('header');
-      const navHeight = navbar ? navbar.offsetHeight : 64;
-      const targetY = todayNode.getBoundingClientRect().top + window.pageYOffset - navHeight - 16;
+      const navbar = document.querySelector('.app-header') || document.querySelector('header');
+      const stickyDock = document.querySelector('.sticky-header-dock');
+
+      const navHeight = navbar ? navbar.offsetHeight : 68;
+      const dockHeight = stickyDock ? stickyDock.offsetHeight : 80;
+      const totalStickyOffset = navHeight + 24 + dockHeight + 14;
+
+      const elementDocTop = todayNode.getBoundingClientRect().top + window.pageYOffset;
+      const targetY = elementDocTop - totalStickyOffset;
+
       window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
 
       todayNode.classList.add('pulse-highlight-node');

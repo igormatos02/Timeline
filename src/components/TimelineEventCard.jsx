@@ -475,23 +475,19 @@ export default function TimelineEventCard({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-          {/* Ícone de Único ou Recorrente na frente do título */}
+          {/* Ícone de Único ou Recorrente neutro e sem fundo */}
           <span
             title={isRecurring ? 'Recorrente' : 'Único / Pontual'}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '24px',
-              height: '24px',
-              borderRadius: '6px',
-              background: isRecurring ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.08)',
-              color: isRecurring ? 'var(--primary-light)' : 'var(--text-muted)',
-              border: isRecurring ? '1px solid rgba(99, 102, 241, 0.25)' : '1px solid var(--border-glass)',
+              color: isRecurring ? 'var(--primary-light)' : 'var(--text-dim)',
+              opacity: isRecurring ? 0.9 : 0.6,
               flexShrink: 0
             }}
           >
-            {isRecurring ? <Repeat size={13} strokeWidth={2.4} /> : <Zap size={13} strokeWidth={2.4} />}
+            {isRecurring ? <Repeat size={14} strokeWidth={2.2} /> : <Zap size={14} strokeWidth={2.2} />}
           </span>
 
           {/* Título do evento limpo */}

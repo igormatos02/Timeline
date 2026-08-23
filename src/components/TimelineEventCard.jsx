@@ -511,7 +511,7 @@ export default function TimelineEventCard({
                   padding: '3px 8px'
                 }}
               >
-                {event.priority}
+                Prioridade: {event.priority}
               </span>
             )}
             <button
@@ -630,7 +630,7 @@ export default function TimelineEventCard({
                   padding: '3px 8px'
                 }}
               >
-                {event.priority}
+                Prioridade: {event.priority}
               </span>
             )}
             <button
@@ -713,7 +713,7 @@ export default function TimelineEventCard({
                   padding: '3px 8px'
                 }}
               >
-                {event.priority}
+                Prioridade: {event.priority}
               </span>
             )}
             <button
@@ -836,7 +836,7 @@ export default function TimelineEventCard({
                   padding: '3px 8px'
                 }}
               >
-                {event.priority}
+                Prioridade: {event.priority}
               </span>
             )}
             <button

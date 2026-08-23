@@ -582,9 +582,11 @@ export default function VerticalTimeline({
         />
 
         {monthsList.map((mGroup) => {
-          const isCurrentMonth = format(todayDate, 'yyyy-MM') === format(mGroup.monthDate, 'yyyy-MM');
-          const monthTitleStr = format(mGroup.monthDate, 'MMMM yyyy', { locale: pt });
+          const currentMonthKey = format(todayDate, 'yyyy-MM');
           const monthKeyStr = format(mGroup.monthDate, 'yyyy-MM');
+          const isCurrentMonth = currentMonthKey === monthKeyStr;
+          const isFutureMonth = monthKeyStr > currentMonthKey;
+          const monthTitleStr = format(mGroup.monthDate, 'MMMM yyyy', { locale: pt });
           const hasEvents = mGroup.events.length > 0;
 
           // Calculate month stats
@@ -612,29 +614,37 @@ export default function VerticalTimeline({
             <div
               key={format(mGroup.monthDate, 'yyyy-MM')}
               id={isCurrentMonth ? 'timeline-node-today' : undefined}
-              className={`timeline-day-row ${isCurrentMonth ? 'is-today' : ''}`}
+              className={`timeline-day-row ${isCurrentMonth ? 'is-today' : ''} ${isFutureMonth ? 'is-future-month' : ''}`}
             >
               <div className="day-date-col">
-                <div className="day-date-main">
+                <div className="day-date-main" style={{ color: isFutureMonth ? 'var(--text-dim)' : 'var(--text-main)' }}>
                   {format(mGroup.monthDate, 'MMM', { locale: pt }).toUpperCase()}
                 </div>
-                <div className="day-date-sub">{format(mGroup.monthDate, 'yyyy')}</div>
+                <div className="day-date-sub" style={{ color: isFutureMonth ? 'var(--text-dim)' : 'var(--text-muted)' }}>
+                  {format(mGroup.monthDate, 'yyyy')}
+                </div>
                 {isCurrentMonth && <span className="today-badge-chip pulse-glow">MÊS ATUAL</span>}
               </div>
 
               <div className="day-node-wrapper">
                 <div
-                  className={`day-node-dot ${isCurrentMonth ? 'is-today-node' : hasEvents ? 'has-events' : ''
-                    }`}
-                  style={hasEvents && !isCurrentMonth ? { backgroundColor: timeline.color } : {}}
+                  className={`day-node-dot ${isCurrentMonth ? 'is-today-node' : hasEvents ? 'has-events' : ''}`}
+                  style={
+                    hasEvents && !isCurrentMonth
+                      ? {
+                          backgroundColor: isFutureMonth ? 'rgba(148, 163, 184, 0.4)' : timeline.color,
+                          borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.3)' : undefined
+                        }
+                      : {}
+                  }
                 />
               </div>
 
               <div className="day-content-col">
-                <div className="group-card">
+                <div className="group-card" style={isFutureMonth ? { borderColor: 'rgba(148, 163, 184, 0.18)' } : undefined}>
                   <div className="group-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                    <h3 className="group-card-title" style={{ textTransform: 'capitalize' }}>
-                      <Clock size={18} style={{ color: 'var(--primary-light)' }} /> {monthTitleStr}
+                    <h3 className="group-card-title" style={{ textTransform: 'capitalize', color: isFutureMonth ? 'var(--text-muted)' : 'var(--text-main)' }}>
+                      <Clock size={18} style={{ color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)' }} /> {monthTitleStr}
                     </h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       {/* Badge do Contador */}
@@ -644,7 +654,10 @@ export default function VerticalTimeline({
                           display: 'inline-flex',
                           alignItems: 'center',
                           height: '26px',
-                          boxSizing: 'border-box'
+                          boxSizing: 'border-box',
+                          color: isFutureMonth ? 'var(--text-dim)' : 'var(--text-muted)',
+                          borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.18)' : 'var(--border-glass)',
+                          background: isFutureMonth ? 'rgba(148, 163, 184, 0.05)' : undefined
                         }}
                       >
                         {mGroup.events.length} {isFinancialTimeline ? (activeFinancialTab === 'gastos' ? 'saída(s)' : activeFinancialTab === 'investimentos' ? 'aporte(s)' : 'movimento(s)') : 'evento(s)'}
@@ -661,9 +674,9 @@ export default function VerticalTimeline({
                               gap: '5px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              background: mMonthIncome > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                              color: mMonthIncome > 0 ? '#10b981' : 'var(--text-dim)',
-                              borderColor: mMonthIncome > 0 ? 'rgba(16, 185, 129, 0.35)' : 'var(--border-glass)',
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthIncome > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
+                              color: isFutureMonth ? 'var(--text-dim)' : (mMonthIncome > 0 ? '#10b981' : 'var(--text-dim)'),
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthIncome > 0 ? 'rgba(16, 185, 129, 0.35)' : 'var(--border-glass)'),
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
@@ -680,9 +693,9 @@ export default function VerticalTimeline({
                               gap: '5px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              background: cumData.income > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                              color: cumData.income > 0 ? 'var(--primary-light)' : 'var(--text-dim)',
-                              borderColor: cumData.income > 0 ? 'rgba(99, 102, 241, 0.35)' : 'var(--border-glass)',
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (cumData.income > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
+                              color: isFutureMonth ? 'var(--text-dim)' : (cumData.income > 0 ? 'var(--primary-light)' : 'var(--text-dim)'),
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (cumData.income > 0 ? 'rgba(99, 102, 241, 0.35)' : 'var(--border-glass)'),
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
@@ -704,9 +717,9 @@ export default function VerticalTimeline({
                               gap: '5px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              background: mMonthExpense > 0 ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                              color: mMonthExpense > 0 ? '#f43f5e' : 'var(--text-dim)',
-                              borderColor: mMonthExpense > 0 ? 'rgba(244, 63, 94, 0.35)' : 'var(--border-glass)',
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthExpense > 0 ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
+                              color: isFutureMonth ? 'var(--text-dim)' : (mMonthExpense > 0 ? '#f43f5e' : 'var(--text-dim)'),
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthExpense > 0 ? 'rgba(244, 63, 94, 0.35)' : 'var(--border-glass)'),
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
@@ -722,9 +735,9 @@ export default function VerticalTimeline({
                               gap: '5px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              background: cumData.expense > 0 ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                              color: cumData.expense > 0 ? '#fb7185' : 'var(--text-dim)',
-                              borderColor: cumData.expense > 0 ? 'rgba(244, 63, 94, 0.35)' : 'var(--border-glass)',
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (cumData.expense > 0 ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
+                              color: isFutureMonth ? 'var(--text-dim)' : (cumData.expense > 0 ? '#fb7185' : 'var(--text-dim)'),
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (cumData.expense > 0 ? 'rgba(244, 63, 94, 0.35)' : 'var(--border-glass)'),
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
@@ -745,9 +758,9 @@ export default function VerticalTimeline({
                               gap: '5px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              background: mMonthInvestment > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                              color: mMonthInvestment > 0 ? 'var(--primary-light)' : 'var(--text-dim)',
-                              borderColor: mMonthInvestment > 0 ? 'rgba(99, 102, 241, 0.35)' : 'var(--border-glass)',
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthInvestment > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
+                              color: isFutureMonth ? 'var(--text-dim)' : (mMonthInvestment > 0 ? 'var(--primary-light)' : 'var(--text-dim)'),
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthInvestment > 0 ? 'rgba(99, 102, 241, 0.35)' : 'var(--border-glass)'),
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
@@ -763,9 +776,9 @@ export default function VerticalTimeline({
                               gap: '5px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              background: cumData.investment > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                              color: cumData.investment > 0 ? '#818cf8' : 'var(--text-dim)',
-                              borderColor: cumData.investment > 0 ? 'rgba(99, 102, 241, 0.35)' : 'var(--border-glass)',
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (cumData.investment > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
+                              color: isFutureMonth ? 'var(--text-dim)' : (cumData.investment > 0 ? '#818cf8' : 'var(--text-dim)'),
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (cumData.investment > 0 ? 'rgba(99, 102, 241, 0.35)' : 'var(--border-glass)'),
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
@@ -786,7 +799,9 @@ export default function VerticalTimeline({
                               gap: '4px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              color: '#10b981',
+                              color: isFutureMonth ? 'var(--text-dim)' : '#10b981',
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : undefined,
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : undefined,
                               fontWeight: '800',
                               fontSize: '0.74rem'
                             }}
@@ -802,7 +817,9 @@ export default function VerticalTimeline({
                               gap: '4px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              color: '#f43f5e',
+                              color: isFutureMonth ? 'var(--text-dim)' : '#f43f5e',
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : undefined,
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : undefined,
                               fontWeight: '800',
                               fontSize: '0.74rem'
                             }}
@@ -818,9 +835,9 @@ export default function VerticalTimeline({
                               gap: '4px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              background: mNetMonth >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
-                              color: mNetMonth >= 0 ? '#10b981' : '#f43f5e',
-                              borderColor: mNetMonth >= 0 ? 'rgba(16, 185, 129, 0.35)' : 'rgba(244, 63, 94, 0.35)',
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mNetMonth >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)'),
+                              color: isFutureMonth ? 'var(--text-dim)' : (mNetMonth >= 0 ? '#10b981' : '#f43f5e'),
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mNetMonth >= 0 ? 'rgba(16, 185, 129, 0.35)' : 'rgba(244, 63, 94, 0.35)'),
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
@@ -839,7 +856,7 @@ export default function VerticalTimeline({
                         id={ev.status === 'Atrasada' ? 'loan-inst-overdue' : undefined}
                         style={{ marginBottom: '12px' }}
                       >
-                        <div style={{ fontSize: '0.78rem', color: 'var(--primary-light)', fontWeight: '700', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ fontSize: '0.78rem', color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)', fontWeight: '700', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <Calendar size={13} />
                           <span>{format(parseISO(ev.date), "EEEE, d 'de' MMMM", { locale: pt })}</span>
                         </div>

@@ -319,51 +319,56 @@ export default function App() {
   // Loan Specific Handlers (Empréstimo)
   // ----------------------------------------------------
 
-  // Toggle installment payment state (Pago <-> Pendente / Atrasada)
+  // Toggle installment payment / income / expense / investment status
   const handleToggleLoanPayment = (installmentId) => {
-    // Find target timeline that contains this event
-    let targetTimeline = timelines.find((tl) => (tl.events || []).some((e) => e.id === installmentId));
-    if (!targetTimeline) targetTimeline = activeTimeline;
-    if (!targetTimeline) return;
+    if (!installmentId) return;
 
-    const currentEvents = targetTimeline.events || [];
-    const target = currentEvents.find((e) => e.id === installmentId);
-    if (!target) return;
+    setTimelines((prevTimelines) => {
+      const clickTimeStr = format(new Date(), 'HH:mm');
 
-    const isIncome = target.isIncome || (target.category && target.category.startsWith('entrada'));
-    const clickTimeStr = format(new Date(), 'HH:mm');
-    let nextStatus, nextCompleted;
+      return prevTimelines.map((tl) => {
+        const hasEvent = (tl.events || []).some((e) => e.id === installmentId);
+        if (!hasEvent) return tl;
 
-    if (isIncome) {
-      if (target.date > '2026-08-21') {
-        return; // Entradas futuras não podem ser marcadas como recebidas antes da data atual
-      }
-      nextStatus = target.status === 'Recebido' ? 'Pendente' : 'Recebido';
-      nextCompleted = nextStatus === 'Recebido';
-    } else {
-      nextStatus = target.status === 'Pago' ? 'Pendente' : 'Pago';
-      nextCompleted = nextStatus === 'Pago';
-    }
+        const updatedEvents = (tl.events || []).map((ev) => {
+          if (ev.id !== installmentId) return ev;
 
-    const updatedList = currentEvents.map((ev) =>
-      ev.id === installmentId
-        ? {
+          const isIncome = ev.isIncome || ev.financialType === 'entrada' || (ev.category && ev.category.startsWith('entrada'));
+          const isInvestment = ev.isInvestment || ev.financialType === 'investimento' || (ev.category && ev.category.startsWith('investimento'));
+
+          let nextStatus, nextCompleted;
+
+          if (isIncome) {
+            if (ev.date > '2026-08-21') {
+              return ev; // Entradas futuras não podem ser marcadas antes da data
+            }
+            nextStatus = ev.status === 'Recebido' ? 'Pendente' : 'Recebido';
+            nextCompleted = nextStatus === 'Recebido';
+          } else if (isInvestment) {
+            nextStatus = (ev.status === 'Investido' || ev.status === 'Pago') ? 'Planeado' : 'Investido';
+            nextCompleted = nextStatus === 'Investido';
+          } else {
+            // Gastos e Parcelas de Empréstimo
+            nextStatus = ev.status === 'Pago' ? 'Pendente' : 'Pago';
+            nextCompleted = nextStatus === 'Pago';
+          }
+
+          return {
             ...ev,
             status: nextStatus,
             isCompleted: nextCompleted,
             time: nextCompleted ? clickTimeStr : ev.time,
             completedAtTime: nextCompleted ? clickTimeStr : null
-          }
-        : ev
-    );
+          };
+        });
 
-    const finalEvents = targetTimeline.type === 'Empréstimo'
-      ? recalculateLoanState(targetTimeline, updatedList)
-      : updatedList;
+        const finalEvents = tl.type === 'Empréstimo'
+          ? recalculateLoanState(tl, updatedEvents)
+          : updatedEvents;
 
-    setTimelines((prev) =>
-      prev.map((tl) => (tl.id === targetTimeline.id ? { ...tl, events: finalEvents } : tl))
-    );
+        return { ...tl, events: finalEvents };
+      });
+    });
   };
 
   // Save changes from EditInstallmentModal (amount, principalAmount, interestPortion, interestAmount, propagateForward)

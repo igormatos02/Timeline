@@ -504,7 +504,8 @@ export default function TimelineEventCard({
             <button
               type="button"
               disabled={event.date > todayStr}
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 if (event.date <= todayStr && onToggleLoanPayment) {
                   onToggleLoanPayment(event.id);
                 }
@@ -618,7 +619,10 @@ export default function TimelineEventCard({
 
           <button
             type="button"
-            onClick={() => onToggleLoanPayment && onToggleLoanPayment(event.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onToggleLoanPayment) onToggleLoanPayment(event.id);
+            }}
             className="btn btn-sm"
             style={{
               background: isPaidExpense ? 'rgba(244, 63, 94, 0.16)' : 'rgba(245, 158, 11, 0.14)',
@@ -686,7 +690,10 @@ export default function TimelineEventCard({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               type="button"
-              onClick={() => onToggleLoanPayment && onToggleLoanPayment(event.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onToggleLoanPayment) onToggleLoanPayment(event.id);
+              }}
               className="btn btn-sm"
               style={{
                 background: isCompletedInvestment ? 'rgba(99, 102, 241, 0.16)' : 'rgba(148, 163, 184, 0.12)',
@@ -795,7 +802,10 @@ export default function TimelineEventCard({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               type="button"
-              onClick={() => onToggleLoanPayment && onToggleLoanPayment(event.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onToggleLoanPayment) onToggleLoanPayment(event.id);
+              }}
               className="btn btn-sm"
               style={{
                 background: event.status === 'Pago' ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-card)',

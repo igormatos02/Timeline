@@ -603,64 +603,49 @@ export default function TimelineEventCard({
                 -{formatCurrency(event.amount)}
               </span>
             </div>
-          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {event.priority && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', lineHeight: '1.2' }}>
-                <span
-                  style={{
-                    fontSize: '0.64rem',
-                    color: 'var(--text-dim)',
-                    textTransform: 'uppercase',
-                    fontWeight: '700',
-                    letterSpacing: '0.04em'
-                  }}
-                >
+              <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                   Prioridade
                 </span>
-                <span
-                  style={{
-                    fontSize: '0.82rem',
-                    color: 'var(--text-main)',
-                    fontWeight: '700'
-                  }}
-                >
+                <span style={{ fontSize: '0.88rem', fontWeight: '800', color: 'var(--text-main)' }}>
                   {event.priority}
                 </span>
               </div>
             )}
-            <button
-              type="button"
-              onClick={() => onToggleLoanPayment && onToggleLoanPayment(event.id)}
-              className="btn btn-sm"
-              style={{
-                background: isPaidExpense ? 'rgba(244, 63, 94, 0.16)' : 'rgba(245, 158, 11, 0.14)',
-                color: isPaidExpense ? '#f43f5e' : '#f59e0b',
-                border: `1px solid ${isPaidExpense ? 'rgba(244, 63, 94, 0.35)' : 'rgba(245, 158, 11, 0.35)'}`,
-                borderRadius: '9999px',
-                padding: '5px 14px',
-                fontSize: '0.78rem',
-                fontWeight: '700',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              {isPaidExpense ? (
-                <>
-                  <CheckCircle2 size={14} style={{ color: '#f43f5e' }} />
-                  <span>Pago às {getCompletedTimeStr()}</span>
-                </>
-              ) : (
-                <>
-                  <Clock size={14} style={{ color: '#f59e0b' }} />
-                  <span>Pendente</span>
-                </>
-              )}
-            </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => onToggleLoanPayment && onToggleLoanPayment(event.id)}
+            className="btn btn-sm"
+            style={{
+              background: isPaidExpense ? 'rgba(244, 63, 94, 0.16)' : 'rgba(245, 158, 11, 0.14)',
+              color: isPaidExpense ? '#f43f5e' : '#f59e0b',
+              border: `1px solid ${isPaidExpense ? 'rgba(244, 63, 94, 0.35)' : 'rgba(245, 158, 11, 0.35)'}`,
+              borderRadius: '9999px',
+              padding: '5px 14px',
+              fontSize: '0.78rem',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            {isPaidExpense ? (
+              <>
+                <CheckCircle2 size={14} style={{ color: '#f43f5e' }} />
+                <span>Pago às {getCompletedTimeStr()}</span>
+              </>
+            ) : (
+              <>
+                <Clock size={14} style={{ color: '#f59e0b' }} />
+                <span>Pendente</span>
+              </>
+            )}
+          </button>
         </div>
       )}
 

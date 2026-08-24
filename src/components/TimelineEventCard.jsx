@@ -215,14 +215,12 @@ export default function TimelineEventCard({
           display: 'inline-flex',
           alignItems: 'center',
           gap: '5px',
-          borderBottom: canEditAmount ? '1px dashed rgba(148, 163, 184, 0.45)' : 'none',
-          paddingBottom: '1px',
-          transition: 'all 0.15s ease'
+          transition: 'opacity 0.15s ease'
         }}
       >
         {prefix}{formatCurrency(event.amount)}
         {canEditAmount && (
-          <Edit3 size={11} style={{ opacity: 0.55, color: defaultColor }} />
+          <Edit3 size={11} style={{ opacity: 0.4, color: defaultColor }} />
         )}
       </span>
     );

@@ -89,15 +89,17 @@ export default function TimelineEventCard({
   // Lock rule: locked events cannot be edited (unless in future months where lock doesn't apply)
   const canEditAmount = isInertFuture || !isLocked;
 
-  const isRecurring =
+  const isRecurring = Boolean(
     event.periodicity === 'recorrente' ||
-    event.isRecurring ||
+    event.isRecurring === true ||
+    Boolean(event.seriesId) ||
     Boolean(
       event.category &&
       (event.category.includes('recorrente') ||
        event.category === 'parcela_emprestimo' ||
        event.category === 'repetitivo')
-    );
+    )
+  ) && event.periodicity !== 'unico' && event.periodicity !== 'pontual' && event.category !== 'saida_esporadica' && event.category !== 'entrada_esporadica';
 
   const handleSaveAmount = (e) => {
     if (e) {

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Calendar,
   Tag,
@@ -868,36 +869,65 @@ export default function TimelineHeader({
                         </div>
                       </div>
 
-                      {/* Modal para configurar e salvar a data de início */}
-                      {isDatePickerOpen && (
+                      {/* Modal para configurar e salvar a data de início através de Portal */}
+                      {isDatePickerOpen && typeof document !== 'undefined' && createPortal(
                         <div
                           className="modal-overlay"
                           onClick={() => setIsDatePickerOpen(false)}
-                          style={{ zIndex: 1200 }}
+                          style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            width: '100vw',
+                            height: '100vh',
+                            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                            backdropFilter: 'blur(8px)',
+                            WebkitBackdropFilter: 'blur(8px)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 99999,
+                            padding: '16px',
+                            boxSizing: 'border-box'
+                          }}
                         >
                           <div
                             className="modal-card"
                             onClick={(e) => e.stopPropagation()}
-                            style={{ maxWidth: '400px' }}
+                            style={{
+                              maxWidth: '440px',
+                              width: '100%',
+                              background: 'var(--bg-card, #131722)',
+                              borderRadius: '16px',
+                              border: '1px solid var(--border-glass-glow, rgba(99, 102, 241, 0.35))',
+                              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(99, 102, 241, 0.18)',
+                              padding: '24px',
+                              boxSizing: 'border-box'
+                            }}
                           >
-                            <div className="modal-header">
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Calendar size={18} style={{ color: 'var(--primary-light)' }} />
-                                <h3 className="modal-title" style={{ margin: 0, fontSize: '1.08rem' }}>
+                            <div className="modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ background: 'rgba(99, 102, 241, 0.15)', color: 'var(--primary-light)', padding: '7px', borderRadius: '10px', display: 'flex' }}>
+                                  <Calendar size={20} />
+                                </div>
+                                <h3 className="modal-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-main)' }}>
                                   Computar a partir de
                                 </h3>
                               </div>
                               <button
                                 type="button"
-                                className="modal-close-btn"
+                                className="modal-close-btn action-icon-btn"
                                 onClick={() => setIsDatePickerOpen(false)}
+                                style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px' }}
                               >
-                                <X size={16} />
+                                <X size={18} />
                               </button>
                             </div>
 
-                            <div style={{ padding: '16px 0' }}>
-                              <p style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                            <div style={{ padding: '0 0 16px 0' }}>
+                              <p style={{ margin: '0 0 16px 0', fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
                                 Defina a partir de qual mês/ano o <strong>Summary</strong> e os <strong>Gráficos de Balanço</strong> devem ser calculados. Esta preferência fica salva automaticamente.
                               </p>
 
@@ -919,25 +949,26 @@ export default function TimelineHeader({
                                 className="form-input"
                                 style={{
                                   width: '100%',
-                                  padding: '8px 12px',
-                                  fontSize: '0.92rem',
-                                  borderRadius: '8px',
-                                  background: 'var(--bg-app)',
-                                  border: '1px solid var(--border-glass-glow)',
+                                  padding: '10px 14px',
+                                  fontSize: '0.94rem',
+                                  borderRadius: '10px',
+                                  background: 'var(--bg-app, #0f172a)',
+                                  border: '1px solid var(--border-glass-glow, rgba(99, 102, 241, 0.3))',
                                   color: 'var(--text-main)',
-                                  marginBottom: '16px'
+                                  marginBottom: '16px',
+                                  boxSizing: 'border-box'
                                 }}
                               />
 
                               <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: '700' }}>
                                 Atalhos rápidos:
                               </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                 <button
                                   type="button"
                                   className={`btn btn-sm ${tempComputeMonth === '2026-08' ? 'btn-primary' : 'btn-secondary'}`}
                                   onClick={() => setTempComputeMonth('2026-08')}
-                                  style={{ fontSize: '0.75rem', padding: '6px' }}
+                                  style={{ fontSize: '0.76rem', padding: '7px' }}
                                 >
                                   Ago/2026 (Mês Atual)
                                 </button>
@@ -945,7 +976,7 @@ export default function TimelineHeader({
                                   type="button"
                                   className={`btn btn-sm ${tempComputeMonth === '2026-01' ? 'btn-primary' : 'btn-secondary'}`}
                                   onClick={() => setTempComputeMonth('2026-01')}
-                                  style={{ fontSize: '0.75rem', padding: '6px' }}
+                                  style={{ fontSize: '0.76rem', padding: '7px' }}
                                 >
                                   Jan/2026 (Início do Ano)
                                 </button>
@@ -953,7 +984,7 @@ export default function TimelineHeader({
                                   type="button"
                                   className={`btn btn-sm ${tempComputeMonth === '2025-01' ? 'btn-primary' : 'btn-secondary'}`}
                                   onClick={() => setTempComputeMonth('2025-01')}
-                                  style={{ fontSize: '0.75rem', padding: '6px' }}
+                                  style={{ fontSize: '0.76rem', padding: '7px' }}
                                 >
                                   Jan/2025
                                 </button>
@@ -961,7 +992,7 @@ export default function TimelineHeader({
                                   type="button"
                                   className={`btn btn-sm ${tempComputeMonth === '2024-01' ? 'btn-primary' : 'btn-secondary'}`}
                                   onClick={() => setTempComputeMonth('2024-01')}
-                                  style={{ fontSize: '0.75rem', padding: '6px' }}
+                                  style={{ fontSize: '0.76rem', padding: '7px' }}
                                 >
                                   Jan/2024 (Origem)
                                 </button>
@@ -969,18 +1000,19 @@ export default function TimelineHeader({
                                   type="button"
                                   className={`btn btn-sm ${tempComputeMonth === '1900-01' ? 'btn-primary' : 'btn-secondary'}`}
                                   onClick={() => setTempComputeMonth('1900-01')}
-                                  style={{ fontSize: '0.75rem', padding: '6px', gridColumn: 'span 2' }}
+                                  style={{ fontSize: '0.76rem', padding: '8px', gridColumn: 'span 2' }}
                                 >
                                   Sem Filtro (Todo o Histórico)
                                 </button>
                               </div>
                             </div>
 
-                            <div className="form-footer" style={{ margin: 0, paddingTop: '12px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                            <div className="form-footer" style={{ margin: 0, paddingTop: '16px', borderTop: '1px solid var(--border-glass, rgba(255,255,255,0.08))', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                               <button
                                 type="button"
                                 className="btn btn-secondary btn-sm"
                                 onClick={() => setIsDatePickerOpen(false)}
+                                style={{ padding: '8px 16px', borderRadius: '8px' }}
                               >
                                 Cancelar
                               </button>
@@ -988,13 +1020,14 @@ export default function TimelineHeader({
                                 type="button"
                                 className="btn btn-primary btn-sm"
                                 onClick={() => handleSaveComputeMonth(tempComputeMonth)}
-                                style={{ padding: '6px 16px' }}
+                                style={{ padding: '8px 20px', borderRadius: '8px', fontWeight: '800' }}
                               >
                                 Salvar e Aplicar
                               </button>
                             </div>
                           </div>
-                        </div>
+                        </div>,
+                        document.body
                       )}
                     </>
                   )}

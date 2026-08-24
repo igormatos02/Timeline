@@ -61,9 +61,9 @@ export default function TimelineEventCard({
   const todayStr = '2026-08-21';
   const isLoanInstallment = event.category === 'parcela_emprestimo' || event.isSystemLoanEvent || event.timelineOriginId === 'tl-loan-jeep' || event.timelineOriginId === 'tl-loan-dacia' || event.timelineOriginId === 'tl-loan-casa1' || event.timelineOriginId === 'tl-loan-casa2' || event.timelineOriginId === 'tl-loan-80004197726';
   const isAmortization = event.category === 'amortizacao';
-  const isIncomeEvent = (event.isIncome || event.financialType === 'entrada' || event.category === 'entrada_recorrente' || event.category === 'entrada_esporadica') && !event.isExpense && !event.isInvestment;
-  const isExpenseEvent = event.isExpense || event.financialType === 'gasto' || (event.category && event.category.startsWith('saida')) || event.category === 'gasto';
-  const isInvestmentEvent = event.isInvestment || event.financialType === 'investimento' || (event.category && event.category.startsWith('investimento'));
+  const isIncomeEvent = (event.isIncome || event.financialType === 'entrada' || event.category === 'entrada_recorrente' || event.category === 'entrada_esporadica') && !event.isExpense && !event.isInvestment && !isLoanInstallment;
+  const isExpenseEvent = (event.isExpense || event.financialType === 'gasto' || (event.category && event.category.startsWith('saida')) || event.category === 'gasto') && !isLoanInstallment;
+  const isInvestmentEvent = (event.isInvestment || event.financialType === 'investimento' || (event.category && event.category.startsWith('investimento'))) && !isLoanInstallment;
 
   const isInertFuture = event.date > '2026-08-31';
 

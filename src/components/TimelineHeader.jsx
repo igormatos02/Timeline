@@ -348,7 +348,7 @@ export default function TimelineHeader({
           </div>
         </div>
 
-        {/* Lado Direito da Barra de Título: Botão Nova Visão Financeira e Resumo Compacto */}
+        {/* Lado Direito da Barra de Título: Botão Nova Timeline e Resumo Compacto */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {/* Modo Compacto: resumo à direita */}
           {collapsed && (
@@ -378,10 +378,10 @@ export default function TimelineHeader({
                 borderRadius: '7px',
                 cursor: 'pointer'
               }}
-              title={isIncomeTimeline ? "Criar nova visão financeira" : "Criar nova timeline"}
+              title="Criar nova timeline"
             >
               <Plus size={13} strokeWidth={2.5} />
-              <span>{isIncomeTimeline ? 'Nova Visão Financeira' : 'Nova Timeline'}</span>
+              <span>Nova Timeline</span>
             </button>
           )}
         </div>

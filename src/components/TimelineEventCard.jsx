@@ -1032,7 +1032,7 @@ export default function TimelineEventCard({
               }}
               title={
                 isLoanInstallment
-                  ? `Clique para ir à visão do ${originInfo ? originInfo.label : 'Empréstimo'}`
+                  ? `Clique para ir à timeline do ${originInfo ? originInfo.label : 'Empréstimo'}`
                   : isRecurring
                     ? "Clique para editar o nome (altera em todos os meses)"
                     : "Clique para editar o nome"
@@ -1079,7 +1079,7 @@ export default function TimelineEventCard({
               transition: 'all 0.15s ease',
               lineHeight: 1.2
             }}
-            title={`Ir para a visão do ${originInfo.label}`}
+            title={`Ir para a timeline do ${originInfo.label}`}
           >
             <span>{originInfo.label}</span>
             <ArrowUpRight size={13} strokeWidth={2.5} style={{ opacity: isInertFuture ? 0.4 : 0.8 }} />

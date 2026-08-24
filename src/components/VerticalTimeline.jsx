@@ -1188,11 +1188,11 @@ export default function VerticalTimeline({
           <span>Filtros & Navegação</span>
         </div>
 
-        {/* 🌟 0. Abas Financeiras (Apenas na Timeline Financeiro) */}
+        {/* 🌟 0. Timelines do Timeboard */}
         {isFinancialTimeline && (
           <div className="sidebar-section">
             <div className="sidebar-section-title">
-              <span>Visão Financeira</span>
+              <span>Timelines</span>
             </div>
             <div className="sidebar-btn-group">
               <button

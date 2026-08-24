@@ -812,19 +812,35 @@ export default function TimelineEventCard({
       };
     }
     if (
+      event.timelineOriginId === 'tl-loan-dacia' ||
+      event.timelineOriginId === 'tl-loan-crd19605103001' ||
+      (event.title && event.title.includes('Dacia'))
+    ) {
+      return {
+        label: 'Crédito Dacia',
+        icon: <Car size={11} strokeWidth={2.4} />,
+        bg: 'rgba(139, 92, 246, 0.12)',
+        color: '#8b5cf6',
+        border: 'rgba(139, 92, 246, 0.28)',
+        timelineId: 'tl-income',
+        tab: 'dacia'
+      };
+    }
+    if (
+      event.timelineOriginId === 'tl-loan-jeep' ||
       event.timelineOriginId === 'tl-loan-80004197726' ||
       event.category === 'parcela_emprestimo' ||
       event.category === 'amortizacao' ||
       isLoanInstallment
     ) {
       return {
-        label: 'Automóvel',
+        label: 'Crédito Jeep',
         icon: <Car size={11} strokeWidth={2.4} />,
         bg: 'rgba(99, 102, 241, 0.12)',
         color: '#6366f1',
         border: 'rgba(99, 102, 241, 0.28)',
         timelineId: 'tl-income',
-        tab: 'emprestimos'
+        tab: 'jeep'
       };
     }
     if (isExpenseEvent) {
@@ -981,11 +997,13 @@ export default function TimelineEventCard({
                 e.stopPropagation();
                 if (!isLoanInstallment) {
                   setIsEditingTitle(true);
+                } else if (onNavigateToTimeline && originInfo) {
+                  onNavigateToTimeline(originInfo.timelineId, originInfo.tab);
                 }
               }}
               title={
                 isLoanInstallment
-                  ? (event.title || '')
+                  ? `Clique para ir à visão do ${originInfo ? originInfo.label : 'Empréstimo'}`
                   : isRecurring
                     ? "Clique para editar o nome (altera em todos os meses)"
                     : "Clique para editar o nome"
@@ -993,7 +1011,7 @@ export default function TimelineEventCard({
               style={{
                 margin: 0,
                 color: isInertFuture ? 'var(--text-muted)' : 'var(--text-main)',
-                cursor: !isLoanInstallment ? 'pointer' : 'default'
+                cursor: 'pointer'
               }}
             >
               {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
@@ -1001,8 +1019,8 @@ export default function TimelineEventCard({
           )}
         </div>
 
-        {/* Origin / Sub-vision Clean Text Indicator aligned to the RIGHT - ONLY on Balanço / Principal view */}
-        {isBalanceView && originInfo && (
+        {/* Origin / Sub-vision Clean Text Indicator aligned to the RIGHT - On Balanço, Principal or Gastos for loans */}
+        {(isBalanceView || (activeFinancialTab === 'gastos' && isLoanInstallment)) && originInfo && (
           <button
             type="button"
             disabled={isInertFuture}
@@ -1013,10 +1031,11 @@ export default function TimelineEventCard({
               }
             }}
             style={{
-              background: 'transparent',
-              border: 'none',
+              background: activeFinancialTab === 'gastos' ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
+              border: activeFinancialTab === 'gastos' ? '1px solid rgba(99, 102, 241, 0.25)' : 'none',
+              borderRadius: activeFinancialTab === 'gastos' ? '6px' : '0px',
               boxShadow: 'none',
-              padding: '2px 0',
+              padding: activeFinancialTab === 'gastos' ? '3px 8px' : '2px 0',
               color: isInertFuture ? 'var(--text-dim)' : originInfo.color,
               fontWeight: '700',
               fontSize: '0.74rem',
@@ -1028,10 +1047,10 @@ export default function TimelineEventCard({
               gap: '4px',
               flexShrink: 0,
               marginLeft: 'auto',
-              transition: 'opacity 0.15s ease',
+              transition: 'all 0.15s ease',
               lineHeight: 1.2
             }}
-            title={`Ir para a visão de ${originInfo.label}`}
+            title={`Ir para a visão do ${originInfo.label}`}
           >
             <span>{originInfo.label}</span>
             <ArrowUpRight size={13} strokeWidth={2.5} style={{ opacity: isInertFuture ? 0.4 : 0.8 }} />

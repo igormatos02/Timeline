@@ -618,17 +618,19 @@ export default function TimelineHeader({
                         </div>
                       </div>
 
-                      {/* 4. Total Gasto até Hoje */}
+                      {/* 4. Total Gasto (Início até Hoje) */}
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#94a3b8' }}>
                           <Repeat size={16} />
                         </div>
                         <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Gasto até Hoje</div>
-                          <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800' }}>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Gasto (Início até Hoje)</div>
+                          <div className="meta-value" style={{ fontSize: '0.96rem', fontWeight: '800', color: '#f43f5e' }}>
                             -{formatCurrency(finMetrics.totalPaidExpenses)}
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Histórico consolidado acumulado</div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
+                            Desde {formatDateShort(timeline.startDate || '2024-01-01')} até hoje
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -503,6 +503,9 @@ export function getFinancialMetrics(timeline, events = []) {
 
   const monthlyAverageExpenses = expenseMonthsSet.size > 0 ? (monthlyExpensesSum / expenseMonthsSet.size) : (currentMonthExpenses || 1040);
   const projectedAnnualExpenses = currentYearExpenses > 0 ? currentYearExpenses : (monthlyAverageExpenses * 12);
+  const monthlyAverageIncome = annualProjectedIncome > 0
+    ? (annualProjectedIncome / 12)
+    : (currentMonthIncome || 3349.60);
 
   const netRealized = totalReceived - totalPaidExpenses - totalInvested;
   const netProjected = totalForecastIncome - totalPlannedExpenses - totalPlannedInvestments;
@@ -514,6 +517,7 @@ export function getFinancialMetrics(timeline, events = []) {
     annualProjectedIncome,
     currentMonthIncome,
     currentMonthIncomeReceived,
+    monthlyAverageIncome,
     totalPaidExpenses,
     totalPlannedExpenses,
     totalInvested,

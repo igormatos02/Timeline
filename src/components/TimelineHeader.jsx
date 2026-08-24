@@ -611,16 +611,14 @@ export default function TimelineHeader({
 
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#f59e0b' }}>
-                          <Calendar size={16} />
+                          <TrendingUp size={16} />
                         </div>
                         <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Próxima Entrada Prevista</div>
-                          <div className="meta-value" style={{ fontSize: '0.85rem', fontWeight: '700' }}>
-                            {finMetrics.nextIncome ? formatDateShort(finMetrics.nextIncome.date) : '27/08/2026'}
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Média Mensal</div>
+                          <div className="meta-value" style={{ color: '#f59e0b', fontSize: '0.96rem', fontWeight: '800' }}>
+                            +{formatCurrency(finMetrics.monthlyAverageIncome || (finMetrics.annualProjectedIncome ? finMetrics.annualProjectedIncome / 12 : 3349.60))} / mês
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: '#10b981', fontWeight: '700' }}>
-                            {finMetrics.nextIncome ? `+${formatCurrency(finMetrics.nextIncome.amount)}` : '+3.178,00 €'}
-                          </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Rendimento médio estimado</div>
                         </div>
                       </div>
 

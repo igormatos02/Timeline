@@ -23,7 +23,9 @@ export function projectEvents(rawEvents = [], options = {}) {
   for (const ev of rawEvents) {
     if (ev.sobrepositionOver) {
       const key = `${ev.sobrepositionOver}_${ev.date}`;
-      overridesMap.set(key, ev);
+      if (!overridesMap.has(key) || Number(ev.version || 0) >= Number(overridesMap.get(key).version || 0)) {
+        overridesMap.set(key, ev);
+      }
     } else if (ev.isRecurring || ev.periodicity === 'recorrente' || ev.seriesId) {
       const sId = ev.seriesId || ev.id;
       const normalizedEv = {
@@ -333,16 +335,27 @@ export class TimelineService {
 
     // Cenário 1: Alteração Única em Ocorrência de Evento Recorrente (sobrepositionOver)
     if (updateScope === 'single' && targetSeriesId) {
+      const seriesVersions = allRawEvents.filter((ev) => ev.seriesId === targetSeriesId || ev.sobrepositionOver === targetSeriesId);
+      const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
+      const nextVersion = currentHighestVersion + 1;
+
       const existingOverride = allRawEvents.find(
         (ev) => ev.sobrepositionOver === targetSeriesId && ev.date === directUpdates.date
       );
 
       if (existingOverride) {
-        return eventRepository.update(existingOverride.id, directUpdates);
+        return eventRepository.update(existingOverride.id, {
+          ...directUpdates,
+          version: nextVersion,
+          sobrepositionOver: targetSeriesId,
+          isRecurring: false,
+          periodicity: 'unico'
+        });
       } else {
         return eventRepository.create({
           ...directUpdates,
           sobrepositionOver: targetSeriesId,
+          version: nextVersion,
           isRecurring: false,
           periodicity: 'unico'
         });

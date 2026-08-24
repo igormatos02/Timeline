@@ -471,27 +471,37 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
     const evMonth = ev.date ? ev.date.substring(0, 7) : '';
+    const isUpToCurrent = ev.date <= todayStr || evMonth <= currentMonthKey;
 
     if (isIncome) {
-      if (isPast && ev.status === 'Recebido') totalReceived += amt;
+      // Todo o rendimento do período computado até ao período corrente (sem pendências/cancelamentos)
+      if (isUpToCurrent && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+        totalReceived += amt;
+      }
       totalForecastIncome += amt;
       if (evMonth === currentMonthKey) {
         currentMonthIncome += amt;
-        if (isPast && ev.status === 'Recebido') currentMonthIncomeReceived += amt;
+        if (ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+          currentMonthIncomeReceived += amt;
+        }
       }
       if (evMonth >= currentMonthKey && evMonth < oneYearAheadKey) {
         annualProjectedIncome += amt;
       }
       if (!isPast && (!nextIncome || ev.date < nextIncome.date)) nextIncome = ev;
     } else if (isExpense) {
-      if (isPast && (ev.status === 'Pago' || ev.isCompleted)) totalPaidExpenses += amt;
+      // Gastos/Empréstimos pagos ou sem pendência até ao período atual
+      const isPaidOrNoPending = ev.status === 'Pago' || ev.status === 'Recebido' || ev.isCompleted || (isPast && ev.status !== 'Pendente' && ev.status !== 'Atrasada' && ev.status !== 'Cancelado');
+      if (isUpToCurrent && isPaidOrNoPending) {
+        totalPaidExpenses += amt;
+      }
       totalPlannedExpenses += amt;
       if (!isPast && (!nextExpense || ev.date < nextExpense.date)) nextExpense = ev;
 
       const evYear = ev.date ? ev.date.substring(0, 4) : '';
       if (evMonth === currentMonthKey) {
         currentMonthExpenses += amt;
-        if (isPast && (ev.status === 'Pago' || ev.isCompleted)) currentMonthExpensesPaid += amt;
+        if (isPaidOrNoPending) currentMonthExpensesPaid += amt;
       }
       if (evYear === currentYearKey) {
         currentYearExpenses += amt;
@@ -501,7 +511,11 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
         monthlyExpensesSum += amt;
       }
     } else if (isInvestment) {
-      if (isPast && (ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted)) totalInvested += amt;
+      // Investimentos realizados / aportados até ao período atual
+      const isInvestedDone = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted || (isPast && ev.status !== 'Pendente' && ev.status !== 'Cancelado');
+      if (isUpToCurrent && isInvestedDone) {
+        totalInvested += amt;
+      }
       totalPlannedInvestments += amt;
     }
   });

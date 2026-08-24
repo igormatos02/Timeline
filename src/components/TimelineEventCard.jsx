@@ -59,7 +59,7 @@ export default function TimelineEventCard({
   const [newItemText, setNewItemText] = useState('');
   const isBalanceView = timelineType === 'Principal' || activeFinancialTab === 'balanco';
   const todayStr = '2026-08-21';
-  const isLoanInstallment = event.category === 'parcela_emprestimo' || event.isSystemLoanEvent || event.timelineOriginId === 'tl-loan-jeep' || event.timelineOriginId === 'tl-loan-dacia' || event.timelineOriginId === 'tl-loan-80004197726';
+  const isLoanInstallment = event.category === 'parcela_emprestimo' || event.isSystemLoanEvent || event.timelineOriginId === 'tl-loan-jeep' || event.timelineOriginId === 'tl-loan-dacia' || event.timelineOriginId === 'tl-loan-casa1' || event.timelineOriginId === 'tl-loan-casa2' || event.timelineOriginId === 'tl-loan-80004197726';
   const isAmortization = event.category === 'amortizacao';
   const isIncomeEvent = (event.isIncome || event.financialType === 'entrada' || event.category === 'entrada_recorrente' || event.category === 'entrada_esporadica') && !event.isExpense && !event.isInvestment;
   const isExpenseEvent = event.isExpense || event.financialType === 'gasto' || (event.category && event.category.startsWith('saida')) || event.category === 'gasto';
@@ -809,6 +809,34 @@ export default function TimelineEventCard({
         border: 'rgba(14, 165, 233, 0.28)',
         timelineId: 'tl-loan-house',
         tab: null
+      };
+    }
+    if (
+      event.timelineOriginId === 'tl-loan-casa1' ||
+      (event.title && (event.title.includes('02012642') || event.title.includes('Casa 1')))
+    ) {
+      return {
+        label: 'Crédito Casa 1',
+        icon: <Home size={11} strokeWidth={2.4} />,
+        bg: 'rgba(14, 165, 233, 0.12)',
+        color: '#0ea5e9',
+        border: 'rgba(14, 165, 233, 0.28)',
+        timelineId: 'tl-income',
+        tab: 'casa1'
+      };
+    }
+    if (
+      event.timelineOriginId === 'tl-loan-casa2' ||
+      (event.title && (event.title.includes('02015122') || event.title.includes('Casa 2')))
+    ) {
+      return {
+        label: 'Crédito Casa 2',
+        icon: <Home size={11} strokeWidth={2.4} />,
+        bg: 'rgba(20, 184, 166, 0.12)',
+        color: '#14b8a6',
+        border: 'rgba(20, 184, 166, 0.28)',
+        timelineId: 'tl-income',
+        tab: 'casa2'
       };
     }
     if (

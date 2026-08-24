@@ -28,7 +28,8 @@ import {
   LayoutDashboard,
   ShoppingCart,
   PiggyBank,
-  Scale
+  Scale,
+  Home
 } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -64,7 +65,9 @@ export default function TimelineHeader({
   const isIncomeTimeline = timeline.type === 'Entradas' || timeline.type === 'Financeiro' || timeline.id === 'tl-income';
   const isJeepActive = isIncomeTimeline && (activeFinancialTab === 'jeep' || activeFinancialTab === 'emprestimos');
   const isDaciaActive = isIncomeTimeline && activeFinancialTab === 'dacia';
-  const isCarLoanActive = isJeepActive || isDaciaActive;
+  const isCasa1Active = isIncomeTimeline && activeFinancialTab === 'casa1';
+  const isCasa2Active = isIncomeTimeline && activeFinancialTab === 'casa2';
+  const isCarLoanActive = isJeepActive || isDaciaActive || isCasa1Active || isCasa2Active;
   const effectiveIsLoan = isLoanTimeline || isCarLoanActive;
 
   const jeepContract = {
@@ -100,9 +103,63 @@ export default function TimelineHeader({
     dueDay: 28
   };
 
-  const currentCarContract = isDaciaActive ? daciaContract : jeepContract;
+  const casa1Contract = {
+    id: "tl-loan-casa1",
+    name: "Crédito Hipotecário - Casa 1",
+    contractNumber: "02012642",
+    description: "Crédito Hipotecário Nº 02012642 (TAN 2.690%). Prestação nº 94. Próximo débito 01/08/2026.",
+    startDate: "2018-10-01",
+    endDate: "2054-10-01",
+    status: "Em Progresso",
+    type: "Empréstimo",
+    color: "#0ea5e9",
+    totalDebt: 67884.39,
+    remainingDebt: 58006.90,
+    amortizedCapital: 9877.49,
+    installmentAmount: 288.01,
+    tan: 2.690,
+    currentInstallmentNumber: 94,
+    remainingMonths: 338,
+    periodicity: "mensal",
+    dueDay: 1
+  };
+
+  const casa2Contract = {
+    id: "tl-loan-casa2",
+    name: "Crédito Hipotecário - Casa 2",
+    contractNumber: "02015122",
+    description: "Crédito Hipotecário Nº 02015122 (TAN 3.990%). Prestação nº 17. Próximo débito 01/08/2026.",
+    startDate: "2025-03-01",
+    endDate: "2054-03-01",
+    status: "Em Progresso",
+    type: "Empréstimo",
+    color: "#14b8a6",
+    totalDebt: 51417.00,
+    remainingDebt: 50137.21,
+    amortizedCapital: 1279.79,
+    installmentAmount: 293.05,
+    tan: 3.990,
+    currentInstallmentNumber: 17,
+    remainingMonths: 331,
+    periodicity: "mensal",
+    dueDay: 1
+  };
+
+  const currentCarContract = isCasa1Active
+    ? casa1Contract
+    : isCasa2Active
+      ? casa2Contract
+      : isDaciaActive
+        ? daciaContract
+        : jeepContract;
 
   const carLoanEvents = (timeline.events || []).filter((e) => {
+    if (isCasa1Active) {
+      return e.timelineOriginId === 'tl-loan-casa1' || e.title?.includes('02012642') || e.title?.includes('Casa 1');
+    }
+    if (isCasa2Active) {
+      return e.timelineOriginId === 'tl-loan-casa2' || e.title?.includes('02015122') || e.title?.includes('Casa 2');
+    }
     if (isDaciaActive) {
       return e.timelineOriginId === 'tl-loan-dacia' || e.timelineOriginId === 'tl-loan-crd19605103001' || e.title?.includes('Dacia') || (e.isSystemLoanEvent && e.amount === 180.08);
     }
@@ -184,6 +241,14 @@ export default function TimelineHeader({
           return { title: 'Gastos e Saídas', icon: <ShoppingCart size={18} style={{ color: '#f43f5e' }} /> };
         case 'investimentos':
           return { title: 'Investimentos e Poupança', icon: <PiggyBank size={18} style={{ color: '#6366f1' }} /> };
+        case 'jeep':
+          return { title: 'Crédito Automóvel - Jeep (Nº 80004197726)', icon: <CreditCard size={18} style={{ color: '#6366f1' }} /> };
+        case 'dacia':
+          return { title: 'Crédito Automóvel - Dacia (CRD19605103001)', icon: <CreditCard size={18} style={{ color: '#8b5cf6' }} /> };
+        case 'casa1':
+          return { title: 'Crédito Hipotecário - Casa 1 (Nº 02012642)', icon: <Home size={18} style={{ color: '#0ea5e9' }} /> };
+        case 'casa2':
+          return { title: 'Crédito Hipotecário - Casa 2 (Nº 02015122)', icon: <Home size={18} style={{ color: '#14b8a6' }} /> };
         case 'emprestimos':
           return { title: 'Crédito Automóvel Nº 80004197726', icon: <CreditCard size={18} style={{ color: '#8b5cf6' }} /> };
         default:
@@ -748,8 +813,8 @@ export default function TimelineHeader({
                     </div>
                   )}
 
-                  {/* 🚗 Aba Crédito Automóvel em Financeiro */}
-                  {(activeFinancialTab === 'jeep' || activeFinancialTab === 'dacia' || activeFinancialTab === 'emprestimos') && carLoanMetrics && (
+                  {/* 🚗 / 🏠 Aba Crédito (Automóvel ou Hipotecário) em Financeiro */}
+                  {(activeFinancialTab === 'jeep' || activeFinancialTab === 'dacia' || activeFinancialTab === 'casa1' || activeFinancialTab === 'casa2' || activeFinancialTab === 'emprestimos') && carLoanMetrics && (
                     <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '8px', marginBottom: '8px' }}>
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#8b5cf6' }}>

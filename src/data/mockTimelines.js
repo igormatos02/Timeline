@@ -187,57 +187,113 @@ function createDaciaLoanEvents() {
   return events;
 }
 
-// Helper to generate the 60.000 € / 34 Years / 2% Interest Home Loan (Crédito Habitação)
-function createHomeLoanEvents() {
+// Helper to generate Crédito Hipotecário - CASA 1 (Contrato 02012642)
+function createCasa1LoanEvents() {
   const events = [];
-  const totalDebt = 60000;
-  const regularMonthly = 203.50;
-  const totalMonths = 34 * 12; // 408 prestações (Janeiro 2018 a Dezembro 2051)
-  const monthlyRate = 0.02 / 12; // 2% ao ano
+  const regularMonthly = 288.01;
+  const totalMonths = 432; // 36 anos (94 pagas + 338 remanescentes)
+  const todayStr = '2026-08-21';
 
-  let runningBalance = totalDebt;
+  for (let year = 2024; year <= 2027; year++) {
+    const maxMonth = year === 2027 ? 8 : 12;
+    for (let month = 1; month <= maxMonth; month++) {
+      const monthStr = month.toString().padStart(2, '0');
+      const dateStr = `${year}-${monthStr}-01`;
 
-  for (let i = 1; i <= totalMonths; i++) {
-    const totalMonthOffset = i - 1; // 0 = Janeiro 2018
-    const startYear = 2018;
-    const startMonth = 1; // Janeiro
+      // Prestação 94 é em Agosto de 2026
+      const instNum = 94 + (year - 2026) * 12 + (month - 8);
+      if (instNum < 1) continue;
 
-    const absoluteMonth = startMonth + totalMonthOffset;
-    const year = startYear + Math.floor((absoluteMonth - 1) / 12);
-    const monthNumber = ((absoluteMonth - 1) % 12) + 1;
-    const monthStr = monthNumber.toString().padStart(2, '0');
-    const dateStr = `${year}-${monthStr}-10`;
+      const isPastPaid = dateStr <= todayStr;
+      const status = isPastPaid ? 'Pago' : 'Pendente';
 
-    const isPastPaid = i <= 104; // Janeiro 2018 a Agosto 2026
-    let status = isPastPaid ? 'Pago' : 'Pendente';
+      events.push({
+        id: `casa1-loan-inst-${instNum}`,
+        timelineOriginId: 'tl-loan-casa1',
+        timelineOriginName: 'Crédito Hipotecário - Casa 1',
+        timelineOriginIcon: '🏠',
+        date: dateStr,
+        time: '08:00',
+        title: `Prestação Casa 1 #${instNum} (Nº 02012642)`,
+        description: `Crédito Hipotecário Nº 02012642 (TAN 2.690%). Capital: 115,61 € | Juros: 130,29 € | Seguro de Vida: 42,11 €`,
+        category: 'parcela_emprestimo',
+        financialType: 'gasto',
+        status: status,
+        priority: 'Normal',
+        amount: regularMonthly,
+        principalAmount: 115.61,
+        interestPortion: 130.29,
+        interestAmount: 0,
+        balanceAfter: 58006.90 - (instNum - 94) * 115.61,
+        installmentNumber: instNum,
+        totalInstallments: totalMonths,
+        isSystemLoanEvent: true,
+        isCompleted: isPastPaid,
+        labels: ['Casa 1', '02012642', isPastPaid ? 'Pago' : 'Pendente'],
+        breakdownItems: [
+          { id: `c1-cap-${instNum}`, name: 'Capital', amount: 115.61 },
+          { id: `c1-jur-${instNum}`, name: 'Juros', amount: 130.29 },
+          { id: `c1-selo-${instNum}`, name: 'Imposto do Selo', amount: 0.00 },
+          { id: `c1-seg-${instNum}`, name: 'Seguro de Vida', amount: 42.11 }
+        ]
+      });
+    }
+  }
 
-    const interestPortion = Math.max(0, Math.round(runningBalance * monthlyRate * 100) / 100);
-    const principalAmount = Math.min(runningBalance, Math.round((regularMonthly - interestPortion) * 100) / 100);
-    runningBalance = Math.max(0, Math.round((runningBalance - principalAmount) * 100) / 100);
+  return events;
+}
 
-    events.push({
-      id: `house-loan-inst-${i}`,
-      timelineOriginId: 'tl-loan-house',
-      timelineOriginName: 'Crédito Habitação',
-      timelineOriginIcon: '🏠',
-      date: dateStr,
-      time: '09:00',
-      title: `Prestação Casa #${i} de ${totalMonths}`,
-      description: `Amortização de habitação própria (${formatCurrency(principalAmount)} capital + ${formatCurrency(interestPortion)} juros TAN 2%).`,
-      category: 'parcela_emprestimo',
-      status: status,
-      priority: 'Normal',
-      amount: regularMonthly,
-      principalAmount: principalAmount,
-      interestPortion: interestPortion,
-      interestAmount: 0,
-      balanceAfter: runningBalance,
-      installmentNumber: i,
-      totalInstallments: totalMonths,
-      isSystemLoanEvent: true,
-      isCompleted: isPastPaid,
-      labels: ['Crédito Habitação', isPastPaid ? 'Pago' : 'Pendente']
-    });
+// Helper to generate Crédito Hipotecário - CASA 2 (Contrato 02015122)
+function createCasa2LoanEvents() {
+  const events = [];
+  const regularMonthly = 293.05;
+  const totalMonths = 348; // 29 anos (17 pagas + 331 remanescentes)
+  const todayStr = '2026-08-21';
+
+  for (let year = 2024; year <= 2027; year++) {
+    const maxMonth = year === 2027 ? 8 : 12;
+    for (let month = 1; month <= maxMonth; month++) {
+      const monthStr = month.toString().padStart(2, '0');
+      const dateStr = `${year}-${monthStr}-01`;
+
+      // Prestação 17 é em Agosto de 2026
+      const instNum = 17 + (year - 2026) * 12 + (month - 8);
+      if (instNum < 1) continue;
+
+      const isPastPaid = dateStr <= todayStr;
+      const status = isPastPaid ? 'Pago' : 'Pendente';
+
+      events.push({
+        id: `casa2-loan-inst-${instNum}`,
+        timelineOriginId: 'tl-loan-casa2',
+        timelineOriginName: 'Crédito Hipotecário - Casa 2',
+        timelineOriginIcon: '🏡',
+        date: dateStr,
+        time: '08:00',
+        title: `Prestação Casa 2 #${instNum} (Nº 02015122)`,
+        description: `Crédito Hipotecário Nº 02015122 (TAN 3.990%). Capital: 83,00 € | Juros: 166,98 € | Imposto Selo: 6,68 € | Seguro Vida: 36,39 €`,
+        category: 'parcela_emprestimo',
+        financialType: 'gasto',
+        status: status,
+        priority: 'Normal',
+        amount: regularMonthly,
+        principalAmount: 83.00,
+        interestPortion: 166.98,
+        interestAmount: 6.68,
+        balanceAfter: 50137.21 - (instNum - 17) * 83.00,
+        installmentNumber: instNum,
+        totalInstallments: totalMonths,
+        isSystemLoanEvent: true,
+        isCompleted: isPastPaid,
+        labels: ['Casa 2', '02015122', isPastPaid ? 'Pago' : 'Pendente'],
+        breakdownItems: [
+          { id: `c2-cap-${instNum}`, name: 'Capital', amount: 83.00 },
+          { id: `c2-jur-${instNum}`, name: 'Juros', amount: 166.98 },
+          { id: `c2-selo-${instNum}`, name: 'Imposto do Selo', amount: 6.68 },
+          { id: `c2-seg-${instNum}`, name: 'Seguro de Vida', amount: 36.39 }
+        ]
+      });
+    }
   }
 
   return events;
@@ -451,25 +507,54 @@ export const initialTimelines = [
         servicesPortion: 55.91,
         periodicity: "mensal",
         dueDay: 28
+      },
+      {
+        id: "tl-loan-casa1",
+        name: "Crédito Hipotecário - Casa 1",
+        contractNumber: "02012642",
+        description: "Crédito Hipotecário Nº 02012642 (TAN 2.690%). Prestação nº 94. Próximo débito 01/08/2026.",
+        startDate: "2018-10-01",
+        endDate: "2054-10-01",
+        status: "Em Progresso",
+        type: "Empréstimo",
+        color: "#0ea5e9",
+        totalDebt: 67884.39,
+        remainingDebt: 58006.90,
+        amortizedCapital: 9877.49,
+        installmentAmount: 288.01,
+        tan: 2.690,
+        currentInstallmentNumber: 94,
+        remainingMonths: 338,
+        periodicity: "mensal",
+        dueDay: 1
+      },
+      {
+        id: "tl-loan-casa2",
+        name: "Crédito Hipotecário - Casa 2",
+        contractNumber: "02015122",
+        description: "Crédito Hipotecário Nº 02015122 (TAN 3.990%). Prestação nº 17. Próximo débito 01/08/2026.",
+        startDate: "2025-03-01",
+        endDate: "2054-03-01",
+        status: "Em Progresso",
+        type: "Empréstimo",
+        color: "#14b8a6",
+        totalDebt: 51417.00,
+        remainingDebt: 50137.21,
+        amortizedCapital: 1279.79,
+        installmentAmount: 293.05,
+        tan: 3.990,
+        currentInstallmentNumber: 17,
+        remainingMonths: 331,
+        periodicity: "mensal",
+        dueDay: 1
       }
     ],
-    events: [...createFinancialEvents(), ...createJeepLoanEvents(), ...createDaciaLoanEvents()]
-  },
-
-  // 3. CRÉDITO HABITAÇÃO (CASA - 60.000€ / 34 ANOS / 2% TAN DESDE 2018)
-  {
-    id: "tl-loan-house",
-    name: "Crédito Habitação - Casa",
-    description: "Financiamento Imobiliário de 60.000,00 € a 34 anos (TAN 2.00%). Prestações pagas desde Janeiro de 2018.",
-    startDate: "2018-01-10",
-    endDate: "2052-01-10",
-    status: "Em Progresso",
-    type: "Empréstimo",
-    color: "#059669",
-    totalDebt: 60000.00,
-    installmentAmount: 203.50,
-    periodicity: "mensal",
-    dueDay: 10,
-    events: createHomeLoanEvents()
+    events: [
+      ...createFinancialEvents(),
+      ...createJeepLoanEvents(),
+      ...createDaciaLoanEvents(),
+      ...createCasa1LoanEvents(),
+      ...createCasa2LoanEvents()
+    ]
   }
 ];

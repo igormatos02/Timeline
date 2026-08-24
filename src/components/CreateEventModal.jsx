@@ -10,7 +10,7 @@ import {
   PiggyBank,
   Repeat,
   Sparkles,
-  ChevronDown
+  Lock
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -187,6 +187,7 @@ export default function CreateEventModal({
   const currentTheme = themeConfig[movementType] || themeConfig.entrada;
 
   const handleSelectMovementType = (typeKey) => {
+    if (!isBalancoView) return; // Locked if not coming from Balanço
     setMovementType(typeKey);
     let newTitle = formData.title;
     let newAmt = formData.amount;
@@ -276,20 +277,27 @@ export default function CreateEventModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1100 }}>
       <div
-        className="modal-content"
+        className="modal-card"
         onClick={(e) => e.stopPropagation()}
         style={{
           maxWidth: '560px',
-          borderColor: currentTheme.border,
-          boxShadow: `0 20px 40px -15px ${currentTheme.bgGlow}, 0 0 0 1px ${currentTheme.border}`
+          width: '100%',
+          background: 'var(--bg-card, #1c2033)',
+          border: `1px solid ${currentTheme.border}`,
+          borderRadius: '16px',
+          boxShadow: `0 24px 60px rgba(0, 0, 0, 0.45), 0 0 35px ${currentTheme.bgGlow}`,
+          overflow: 'hidden',
+          padding: 0
         }}
       >
         {/* Header com estilo correspondente ao tipo */}
         <div
           className="modal-header"
           style={{
+            margin: 0,
+            padding: '16px 20px',
             borderBottom: `1px solid ${currentTheme.border}`,
             background: `linear-gradient(180deg, ${currentTheme.bgLight} 0%, transparent 100%)`
           }}
@@ -314,7 +322,7 @@ export default function CreateEventModal({
               <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-main)', fontWeight: '800' }}>
                 {initialData ? `Editar ${currentTheme.textTitle}` : `Novo(a) ${currentTheme.textTitle}`}
               </h3>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: currentTheme.color, fontWeight: '600' }}>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: currentTheme.color, fontWeight: '700' }}>
                 {format(parseISO(`${yearStr}-${monthStr}-01`), 'MMMM yyyy', { locale: pt }).toUpperCase()}
               </p>
             </div>
@@ -327,81 +335,92 @@ export default function CreateEventModal({
         <form onSubmit={handleSubmit}>
           <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px' }}>
             
-            {/* Seletor de Tipo APENAS no Balanço */}
-            {isBalancoView && (
-              <div className="form-group" style={{ marginBottom: '4px' }}>
-                <label className="form-label" style={{ fontWeight: '700', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            {/* Seletor de Tipo de Movimento (Sempre visível, disabled quando não vier do Balanço) */}
+            <div className="form-group" style={{ marginBottom: '2px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <label className="form-label" style={{ fontWeight: '700', fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
                   Tipo de Movimento
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectMovementType('entrada')}
-                    style={{
-                      padding: '8px 10px',
-                      borderRadius: '8px',
-                      border: movementType === 'entrada' ? '2px solid #10b981' : '1px solid var(--border-glass)',
-                      background: movementType === 'entrada' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.04)',
-                      color: movementType === 'entrada' ? '#10b981' : 'var(--text-muted)',
-                      fontWeight: '800',
-                      fontSize: '0.8rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <DollarSign size={14} /> Entrada
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleSelectMovementType('saida')}
-                    style={{
-                      padding: '8px 10px',
-                      borderRadius: '8px',
-                      border: movementType === 'saida' ? '2px solid #f43f5e' : '1px solid var(--border-glass)',
-                      background: movementType === 'saida' ? 'rgba(244, 63, 94, 0.18)' : 'rgba(255, 255, 255, 0.04)',
-                      color: movementType === 'saida' ? '#f43f5e' : 'var(--text-muted)',
-                      fontWeight: '800',
-                      fontSize: '0.8rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <ShoppingCart size={14} /> Saída
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleSelectMovementType('investimento')}
-                    style={{
-                      padding: '8px 10px',
-                      borderRadius: '8px',
-                      border: movementType === 'investimento' ? '2px solid #6366f1' : '1px solid var(--border-glass)',
-                      background: movementType === 'investimento' ? 'rgba(99, 102, 241, 0.18)' : 'rgba(255, 255, 255, 0.04)',
-                      color: movementType === 'investimento' ? '#818cf8' : 'var(--text-muted)',
-                      fontWeight: '800',
-                      fontSize: '0.8rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <PiggyBank size={14} /> Investimento
-                  </button>
-                </div>
+                {!isBalancoView && (
+                  <span style={{ fontSize: '0.72rem', color: currentTheme.color, fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Lock size={11} /> Definido pela Timeline ativa
+                  </span>
+                )}
               </div>
-            )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <button
+                  type="button"
+                  disabled={!isBalancoView}
+                  onClick={() => handleSelectMovementType('entrada')}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: movementType === 'entrada' ? '2px solid #10b981' : '1px solid var(--border-glass)',
+                    background: movementType === 'entrada' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                    color: movementType === 'entrada' ? '#10b981' : 'var(--text-muted)',
+                    fontWeight: '800',
+                    fontSize: '0.8rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: !isBalancoView ? 'not-allowed' : 'pointer',
+                    opacity: !isBalancoView && movementType !== 'entrada' ? 0.35 : 1,
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <DollarSign size={14} /> Entrada
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!isBalancoView}
+                  onClick={() => handleSelectMovementType('saida')}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: movementType === 'saida' ? '2px solid #f43f5e' : '1px solid var(--border-glass)',
+                    background: movementType === 'saida' ? 'rgba(244, 63, 94, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                    color: movementType === 'saida' ? '#f43f5e' : 'var(--text-muted)',
+                    fontWeight: '800',
+                    fontSize: '0.8rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: !isBalancoView ? 'not-allowed' : 'pointer',
+                    opacity: !isBalancoView && movementType !== 'saida' ? 0.35 : 1,
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <ShoppingCart size={14} /> Saída
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!isBalancoView}
+                  onClick={() => handleSelectMovementType('investimento')}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: movementType === 'investimento' ? '2px solid #6366f1' : '1px solid var(--border-glass)',
+                    background: movementType === 'investimento' ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                    color: movementType === 'investimento' ? '#818cf8' : 'var(--text-muted)',
+                    fontWeight: '800',
+                    fontSize: '0.8rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: !isBalancoView ? 'not-allowed' : 'pointer',
+                    opacity: !isBalancoView && movementType !== 'investimento' ? 0.35 : 1,
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <PiggyBank size={14} /> Investimento
+                </button>
+              </div>
+            </div>
 
             {/* Título do Movimento */}
             <div className="form-group">
@@ -641,7 +660,19 @@ export default function CreateEventModal({
 
           </div>
 
-          <div className="modal-footer" style={{ borderTop: `1px solid ${currentTheme.border}`, padding: '14px 20px' }}>
+          <div
+            className="modal-footer"
+            style={{
+              margin: 0,
+              padding: '14px 20px',
+              borderTop: `1px solid ${currentTheme.border}`,
+              background: 'rgba(0, 0, 0, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: '10px'
+            }}
+          >
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Cancelar
             </button>

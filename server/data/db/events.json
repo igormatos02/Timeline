@@ -1761,7 +1761,17 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
+    "updatedAt": "2026-08-24T17:47:59.652Z",
+    "isInvestment": false,
+    "isLocked": false,
+    "isSystemLoanEvent": false,
+    "principalAmount": 0,
+    "interestPortion": 0,
+    "interestAmount": 0,
+    "balanceAfter": 0,
+    "installmentNumber": null,
+    "totalInstallments": null,
+    "timelineOriginColor": "#f43f5e"
   },
   {
     "id": "cd8620d4-ed01-4d13-8d67-49b5b8f9ef85",
@@ -2009,7 +2019,7 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
+    "updatedAt": "2026-08-24T17:47:59.652Z"
   },
   {
     "id": "67d8b14d-ce24-49e3-85b0-1c7223f51e1b",
@@ -2257,7 +2267,7 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
+    "updatedAt": "2026-08-24T17:47:59.652Z"
   },
   {
     "id": "e064c557-fc3c-497b-a53a-a7d4cadc9922",
@@ -2505,7 +2515,7 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
+    "updatedAt": "2026-08-24T17:47:59.652Z"
   },
   {
     "id": "d5aab8b8-4c1d-47bd-a63d-c1ae0c11f7ea",
@@ -2753,7 +2763,7 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
+    "updatedAt": "2026-08-24T17:47:59.652Z"
   },
   {
     "id": "47210197-b164-400f-a60e-25f911b2612a",
@@ -3001,7 +3011,7 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
+    "updatedAt": "2026-08-24T17:47:59.652Z"
   },
   {
     "id": "77f25e87-4ae1-4088-a399-5c1e5f989963",
@@ -3249,7 +3259,7 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
+    "updatedAt": "2026-08-24T17:47:59.652Z"
   },
   {
     "id": "d5ff1844-4a8b-4889-ba80-9343d64aea27",
@@ -3497,7 +3507,7 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
+    "updatedAt": "2026-08-24T17:47:59.652Z"
   },
   {
     "id": "67c6de31-4a72-436f-a3c2-d44854a4f08c",
@@ -3745,7 +3755,7 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
+    "updatedAt": "2026-08-24T17:47:59.652Z"
   },
   {
     "id": "e97f7ddb-d2d2-4d28-8ab6-f31138e762fe",

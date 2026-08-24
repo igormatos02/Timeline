@@ -350,11 +350,11 @@ export default function VerticalTimeline({
     }).sort((a, b) => {
       const dateA = a.date || '';
       const dateB = b.date || '';
-      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      if (dateA !== dateB) return dateB.localeCompare(dateA);
       const timeA = a.time || '00:00';
       const timeB = b.time || '00:00';
-      if (timeA !== timeB) return timeA.localeCompare(timeB);
-      return (a.title || '').localeCompare(b.title || '');
+      if (timeA !== timeB) return timeB.localeCompare(timeA);
+      return (b.title || '').localeCompare(a.title || '');
     });
   }, [
     timelineEvents,
@@ -548,11 +548,11 @@ export default function VerticalTimeline({
       mEntry.events.sort((a, b) => {
         const dateA = a.date || '';
         const dateB = b.date || '';
-        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        if (dateA !== dateB) return dateB.localeCompare(dateA);
         const timeA = a.time || '00:00';
         const timeB = b.time || '00:00';
-        if (timeA !== timeB) return timeA.localeCompare(timeB);
-        return (a.title || '').localeCompare(b.title || '');
+        if (timeA !== timeB) return timeB.localeCompare(timeA);
+        return (b.title || '').localeCompare(a.title || '');
       });
     });
 

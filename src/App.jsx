@@ -20,7 +20,7 @@ import './App.css';
 export default function App() {
   // Load timelines from localStorage or mock data (v15 with clean structure & reactive toggles)
   const [timelines, setTimelines] = useState(() => {
-    const saved = localStorage.getItem('chrono_timelines_data_v16');
+    const saved = localStorage.getItem('chrono_timelines_data_v17');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -72,7 +72,7 @@ export default function App() {
 
   // Save to localStorage when timelines state updates
   useEffect(() => {
-    localStorage.setItem('chrono_timelines_data_v16', JSON.stringify(timelines));
+    localStorage.setItem('chrono_timelines_data_v17', JSON.stringify(timelines));
   }, [timelines]);
 
   const rawActiveTimeline = timelines.find((tl) => tl.id === activeTimelineId) || timelines[0];

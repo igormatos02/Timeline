@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, AlertTriangle, X, Calendar, DollarSign, Repeat, ArrowRight } from 'lucide-react';
+import { Trash2, AlertTriangle, X, Calendar, DollarSign, Repeat } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../utils/loanCalculations';
@@ -48,46 +48,19 @@ export default function DeleteEventModal({
   };
 
   return (
-    <div
-      className="modal-overlay"
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        padding: '16px'
-      }}
-    >
+    <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal-content glass-panel"
+        className="modal-card"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '100%',
-          maxWidth: '460px',
-          padding: '24px',
-          borderRadius: '16px',
-          border: '1px solid rgba(244, 63, 94, 0.35)',
-          background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(244, 63, 94, 0.15)',
-          animation: 'fadeIn 0.2s ease-out'
-        }}
+        style={{ maxWidth: '480px' }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+        <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
               style={{
-                width: '38px',
-                height: '38px',
+                width: '36px',
+                height: '36px',
                 borderRadius: '10px',
                 background: 'rgba(244, 63, 94, 0.15)',
                 border: '1px solid rgba(244, 63, 94, 0.3)',
@@ -97,33 +70,19 @@ export default function DeleteEventModal({
                 color: '#f43f5e'
               }}
             >
-              <Trash2 size={20} strokeWidth={2.2} />
+              <Trash2 size={18} strokeWidth={2.2} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-main)' }}>
+              <h2 className="modal-title" style={{ fontSize: '1.2rem', margin: 0 }}>
                 Eliminar Registo
-              </h3>
-              <span style={{ fontSize: '0.76rem', color: 'var(--text-dim)' }}>
+              </h2>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
                 Confirmação de exclusão
-              </span>
+              </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-dim)',
-              cursor: 'pointer',
-              padding: '6px',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
+          <button type="button" className="modal-close-btn" onClick={onClose}>
             <X size={18} />
           </button>
         </div>
@@ -131,11 +90,11 @@ export default function DeleteEventModal({
         {/* Item Summary Card */}
         <div
           style={{
-            background: 'rgba(255, 255, 255, 0.03)',
+            background: 'var(--bg-app)',
             border: '1px solid var(--border-glass)',
             borderRadius: '12px',
             padding: '14px 16px',
-            marginBottom: '18px',
+            marginBottom: '16px',
             display: 'flex',
             flexDirection: 'column',
             gap: '8px'
@@ -186,8 +145,8 @@ export default function DeleteEventModal({
         </div>
 
         {/* Warning Text */}
-        <p style={{ margin: '0 0 18px 0', fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
-          Tem a certeza que deseja eliminar este movimento? Esta ação não pode ser revertida.
+        <p style={{ margin: '0 0 16px 0', fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
+          Tem a certeza que deseja eliminar este movimento? Esta ação não pode ser desfeita.
         </p>
 
         {/* Recurring Propagation Switch */}
@@ -195,7 +154,7 @@ export default function DeleteEventModal({
           <div
             onClick={() => setDeleteSubsequent(!deleteSubsequent)}
             style={{
-              background: deleteSubsequent ? 'rgba(244, 63, 94, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+              background: deleteSubsequent ? 'rgba(244, 63, 94, 0.08)' : 'var(--bg-app)',
               border: deleteSubsequent ? '1px solid rgba(244, 63, 94, 0.35)' : '1px solid var(--border-glass)',
               borderRadius: '12px',
               padding: '12px 14px',
@@ -214,12 +173,12 @@ export default function DeleteEventModal({
                 style={{
                   fontSize: '0.84rem',
                   fontWeight: '700',
-                  color: deleteSubsequent ? '#f87171' : 'var(--text-main)'
+                  color: deleteSubsequent ? '#f43f5e' : 'var(--text-main)'
                 }}
               >
                 Eliminar ocorrências subsequentes
               </span>
-              <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)', lineHeight: '1.35' }}>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: '1.35' }}>
                 {deleteSubsequent
                   ? 'Elimina este mês e todos os meses futuros da série. Os meses passados permanecem guardados.'
                   : 'Elimina apenas este registo específico. Os restantes meses da série são mantidos.'}
@@ -281,7 +240,7 @@ export default function DeleteEventModal({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 4px 14px rgba(244, 63, 94, 0.4)',
+              boxShadow: '0 4px 14px rgba(244, 63, 94, 0.35)',
               transition: 'all 0.15s ease'
             }}
           >

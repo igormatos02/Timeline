@@ -21,12 +21,14 @@ export function projectEvents(rawEvents = [], options = {}) {
 
   // 1. Classificar os eventos brutos
   for (const ev of rawEvents) {
+    const isLoan = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.category === 'amortizacao' || ev.timelineOriginId?.startsWith('tl-loan-');
+
     if (ev.sobrepositionOver) {
       const key = `${ev.sobrepositionOver}_${ev.date}`;
       if (!overridesMap.has(key) || Number(ev.version || 0) >= Number(overridesMap.get(key).version || 0)) {
         overridesMap.set(key, ev);
       }
-    } else if (ev.isRecurring || ev.periodicity === 'recorrente' || ev.seriesId) {
+    } else if (!isLoan && (ev.isRecurring || ev.periodicity === 'recorrente' || ev.seriesId)) {
       const sId = ev.seriesId || ev.id;
       const normalizedEv = {
         ...ev,
@@ -331,6 +333,40 @@ export class TimelineService {
     const { updateScope, propagateForward, ...directUpdates } = updates;
 
     const allRawEvents = await eventRepository.getAll();
+    const existing = await eventRepository.getById(id);
+
+    const isLoan = directUpdates.category === 'parcela_emprestimo' ||
+                   existing?.category === 'parcela_emprestimo' ||
+                   directUpdates.isSystemLoanEvent ||
+                   existing?.isSystemLoanEvent ||
+                   (directUpdates.timelineOriginId && directUpdates.timelineOriginId.startsWith('tl-loan-')) ||
+                   (existing?.timelineOriginId && existing?.timelineOriginId.startsWith('tl-loan-'));
+
+    // --- REGRA DE EMPRÉSTIMOS ---
+    // Empréstimos têm número fixo de eventos individuais (início e fim definidos).
+    if (isLoan) {
+      const targetDate = directUpdates.date || existing?.date;
+      const loanTlId = directUpdates.timelineOriginId || existing?.timelineOriginId;
+
+      if (updateScope === 'subsequent' || propagateForward) {
+        // Alterar em lote todos os eventos subsequentes deste empréstimo
+        await eventRepository.updateMany(
+          (ev) => (ev.timelineOriginId === loanTlId || ev.category === 'parcela_emprestimo') &&
+                  (!targetDate || ev.date >= targetDate),
+          directUpdates
+        );
+        return existing ? eventRepository.update(id, directUpdates) : true;
+      } else {
+        // Alterar apenas o evento específico deste mês
+        if (existing) {
+          return eventRepository.update(id, directUpdates);
+        } else {
+          return eventRepository.create({ ...directUpdates, id });
+        }
+      }
+    }
+
+    // --- REGRAS DE ENTRADAS / GASTOS / RECORRENTES (Sem data de fim) ---
     const targetSeriesId = directUpdates.seriesId || updates.seriesId;
 
     // Cenário 1: Alteração Única em Ocorrência de Evento Recorrente (sobrepositionOver)
@@ -378,7 +414,6 @@ export class TimelineService {
     }
 
     // Cenário 3: Atualização direta a evento existente
-    const existing = await eventRepository.getById(id);
     if (existing) {
       return eventRepository.update(id, directUpdates);
     }
@@ -431,9 +466,28 @@ export class TimelineService {
   async deleteEvent(id, options = {}) {
     const { deleteScope = 'single' } = options;
     const allRawEvents = await eventRepository.getAll();
-
-    // Verificar se existe registo físico direto com esse id
     const directEvent = await eventRepository.getById(id);
+
+    const isLoan = directEvent?.category === 'parcela_emprestimo' ||
+                   directEvent?.isSystemLoanEvent ||
+                   directEvent?.category === 'amortizacao' ||
+                   directEvent?.timelineOriginId?.startsWith('tl-loan-');
+
+    if (isLoan) {
+      const targetDate = options.date || directEvent?.date;
+      const loanTlId = directEvent?.timelineOriginId;
+
+      if (deleteScope === 'subsequent') {
+        await eventRepository.deleteMany((ev) => (ev.timelineOriginId === loanTlId || ev.category === 'parcela_emprestimo') && (!targetDate || ev.date >= targetDate));
+        return true;
+      } else if (deleteScope === 'all') {
+        await eventRepository.deleteMany((ev) => ev.timelineOriginId === loanTlId || ev.id === id);
+        return true;
+      } else {
+        return eventRepository.delete(id);
+      }
+    }
+
     const targetSeriesId = directEvent?.seriesId || directEvent?.sobrepositionOver || options.seriesId;
 
     // Se for para eliminar TODA a série (ou evento único direto)

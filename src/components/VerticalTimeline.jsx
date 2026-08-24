@@ -855,6 +855,38 @@ export default function VerticalTimeline({
                           </span>
                         </>
                       )}
+
+                      {/* Botão Adicionar Evento no Mês (em frente à data, alinhado à direita) */}
+                      {onAddEventForDate && (
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          style={{
+                            height: '26px',
+                            padding: '0 10px',
+                            fontSize: '0.75rem',
+                            fontWeight: '700',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            borderRadius: '6px',
+                            marginLeft: '6px',
+                            cursor: 'pointer'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
+                            onAddEventForDate(
+                              targetDayStr,
+                              activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income'
+                            );
+                          }}
+                          title={`Adicionar novo evento em ${monthTitleStr}`}
+                        >
+                          <Plus size={13} strokeWidth={2.5} />
+                          <span>Adicionar Evento</span>
+                        </button>
+                      )}
                     </div>
                   </div>
 

@@ -1,33 +1,5 @@
 [
   {
-    "id": "23e1e184-b422-4623-a54d-6458f8caf296",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2026-01-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Recebido",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": true,
-    "labels": [
-      "Salário",
-      "Recebido"
-    ],
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
     "id": "2435c4f2-61c6-490c-b552-48edb46d42b9",
     "seriesId": "550e8400-e29b-41d4-a716-446655440002",
     "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
@@ -299,34 +271,6 @@
       "Investido"
     ],
     "seriesId": null,
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
-    "id": "4e55e5bc-97be-4969-a54b-56127d00ab44",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2026-02-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Recebido",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": true,
-    "labels": [
-      "Salário",
-      "Recebido"
-    ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
     "updatedAt": "2026-08-24T17:26:05.136Z"
@@ -608,34 +552,6 @@
     "updatedAt": "2026-08-24T17:26:05.136Z"
   },
   {
-    "id": "b12f9718-16db-455f-9cd9-4ba981c581e1",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2026-03-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Recebido",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": true,
-    "labels": [
-      "Salário",
-      "Recebido"
-    ],
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
     "id": "d33f45b1-07e2-41ca-911c-6157dd90a13d",
     "seriesId": "550e8400-e29b-41d4-a716-446655440002",
     "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
@@ -907,34 +823,6 @@
       "Investido"
     ],
     "seriesId": null,
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
-    "id": "7ae64acf-3f64-4164-96eb-9a714c9de8bd",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2026-04-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Recebido",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": true,
-    "labels": [
-      "Salário",
-      "Recebido"
-    ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
     "updatedAt": "2026-08-24T17:26:05.136Z"
@@ -1216,34 +1104,6 @@
     "updatedAt": "2026-08-24T17:26:05.136Z"
   },
   {
-    "id": "4868bcb4-b89d-4cd6-9720-da2659604042",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2026-05-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Recebido",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": true,
-    "labels": [
-      "Salário",
-      "Recebido"
-    ],
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
     "id": "d42f9495-2995-4f6b-8e31-229c74cbd815",
     "seriesId": "550e8400-e29b-41d4-a716-446655440002",
     "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
@@ -1515,34 +1375,6 @@
       "Investido"
     ],
     "seriesId": null,
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
-    "id": "5a045a11-84ab-40e0-a3e4-3064e002ce15",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2026-06-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Recebido",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": true,
-    "labels": [
-      "Salário",
-      "Recebido"
-    ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
     "updatedAt": "2026-08-24T17:26:05.136Z"
@@ -1824,34 +1656,6 @@
     "updatedAt": "2026-08-24T17:26:05.136Z"
   },
   {
-    "id": "c426659a-8dd5-44d8-9e74-b905d9e5c572",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2026-07-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Recebido",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": true,
-    "labels": [
-      "Salário",
-      "Recebido"
-    ],
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
     "id": "bd0b7cff-20c5-4c99-9a33-707bfff8c6f4",
     "seriesId": "550e8400-e29b-41d4-a716-446655440002",
     "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
@@ -2123,34 +1927,6 @@
       "Investido"
     ],
     "seriesId": null,
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
-    "id": "205f1bf4-685f-4d08-a2d2-567f8ee3ed2d",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2026-08-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Pendente",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": false,
-    "labels": [
-      "Salário",
-      "Pendente"
-    ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
     "updatedAt": "2026-08-24T17:26:05.136Z"
@@ -2432,34 +2208,6 @@
     "updatedAt": "2026-08-24T17:26:05.136Z"
   },
   {
-    "id": "39b1dd42-81bb-4ba8-a55e-74be9ac337ed",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2026-09-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Pendente",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": false,
-    "labels": [
-      "Salário",
-      "Pendente"
-    ],
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
     "id": "7ed2f198-d28d-406e-b31e-6b310aac68c9",
     "seriesId": "550e8400-e29b-41d4-a716-446655440002",
     "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
@@ -2731,34 +2479,6 @@
       "Planeado"
     ],
     "seriesId": null,
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
-    "id": "5940650a-02e7-4c64-80d6-fc288798f505",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2026-10-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Pendente",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": false,
-    "labels": [
-      "Salário",
-      "Pendente"
-    ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
     "updatedAt": "2026-08-24T17:26:05.136Z"
@@ -3040,34 +2760,6 @@
     "updatedAt": "2026-08-24T17:26:05.136Z"
   },
   {
-    "id": "5659aae2-33b9-4b01-907e-70326896261a",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2026-11-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Pendente",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": false,
-    "labels": [
-      "Salário",
-      "Pendente"
-    ],
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
     "id": "fb7ac2fb-fbda-4faf-8d42-48264c1d8bce",
     "seriesId": "550e8400-e29b-41d4-a716-446655440002",
     "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
@@ -3339,34 +3031,6 @@
       "Planeado"
     ],
     "seriesId": null,
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
-    "id": "788c3864-e774-4b8b-a2ec-d6ed43f9fed8",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2026-12-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Pendente",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": false,
-    "labels": [
-      "Salário",
-      "Pendente"
-    ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
     "updatedAt": "2026-08-24T17:26:05.136Z"
@@ -3648,34 +3312,6 @@
     "updatedAt": "2026-08-24T17:26:05.136Z"
   },
   {
-    "id": "8da62da6-e06c-4b34-95c1-59cf88bc0bcf",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2027-01-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Pendente",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": false,
-    "labels": [
-      "Salário",
-      "Pendente"
-    ],
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
     "id": "9018cd83-5626-4aa9-b8e1-d673d3cc0aac",
     "seriesId": "550e8400-e29b-41d4-a716-446655440002",
     "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
@@ -3947,34 +3583,6 @@
       "Planeado"
     ],
     "seriesId": null,
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
-    "id": "d78bcb93-71e9-4216-978e-b00b5e2ed06c",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2027-02-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Pendente",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": false,
-    "labels": [
-      "Salário",
-      "Pendente"
-    ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
     "updatedAt": "2026-08-24T17:26:05.136Z"
@@ -4256,34 +3864,6 @@
     "updatedAt": "2026-08-24T17:26:05.136Z"
   },
   {
-    "id": "ecbe49a5-e564-4c36-b65e-99a1bb97d81e",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2027-03-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Pendente",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": false,
-    "labels": [
-      "Salário",
-      "Pendente"
-    ],
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
     "id": "9b535cf0-7ee9-48f3-82c3-34740272b264",
     "seriesId": "550e8400-e29b-41d4-a716-446655440002",
     "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
@@ -4555,34 +4135,6 @@
       "Planeado"
     ],
     "seriesId": null,
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
-    "id": "addae3f4-fd28-45ce-bc76-162dc94606c2",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440001",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2027-04-27",
-    "time": "10:00",
-    "title": "Salário",
-    "description": "",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Pendente",
-    "priority": "Normal",
-    "amount": 3178,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": false,
-    "labels": [
-      "Salário",
-      "Pendente"
-    ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
     "updatedAt": "2026-08-24T17:26:05.136Z"

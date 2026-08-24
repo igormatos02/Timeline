@@ -77,6 +77,10 @@ export default function App() {
       .then((data) => {
         if (isMounted && Array.isArray(data) && data.length > 0) {
           setTimeboards(data);
+          setActiveTimeboardId((currentId) => {
+            const exists = data.some((tb) => tb.id === currentId);
+            return exists ? currentId : data[0].id;
+          });
         }
       })
       .catch((err) => {
@@ -165,7 +169,7 @@ export default function App() {
 
   // All timelines belonging to active Timeboard
   const activeTimeboardTimelines = timelines.filter(
-    (tl) => tl.timeboardId === activeTimeboardId || (!tl.timeboardId && activeTimeboardId === 'tb-principal')
+    (tl) => !tl.timeboardId || tl.timeboardId === activeTimeboardId || tl.timeboardId === activeTimeboard?.id || timeboards.length <= 1
   );
 
   // Dynamic consolidated timeline aggregating all financial timelines of the active Timeboard
@@ -197,14 +201,14 @@ export default function App() {
       name: activeTimeboard?.name || 'Timeboard Principal',
       type: 'Financeiro',
       description: activeTimeboard?.description || '',
-      startDate: '2026-01-01',
-      endDate: '2027-04-30',
+      startDate: '2025-08-01',
+      endDate: `${2026 + futureHorizonYears}-08-31`,
       monthlySalary: 3349.60,
       carLoans,
       events: allEvents,
       timelines: activeTimeboardTimelines
     };
-  }, [activeTimeboard, activeTimeboardTimelines]);
+  }, [activeTimeboard, activeTimeboardTimelines, futureHorizonYears]);
 
   // ----------------------------------------------------
   // Timeline Handlers

@@ -313,16 +313,16 @@ export default function VerticalTimeline({
         }
       }
 
-      // Entradas / Gastos / Investimentos em Financeiro: máximo 1 ano à frente da data atual (21/08/2026 -> 31/08/2027)
+      // Entradas / Gastos / Investimentos em Financeiro: respeitar o horizonte máximo projetado
       const isCarLoanTab = activeFinancialTab === 'jeep' || activeFinancialTab === 'dacia' || activeFinancialTab === 'casa1' || activeFinancialTab === 'casa2' || activeFinancialTab === 'emprestimos';
       if (isFinancialTimeline && !isCarLoanTab && !isBalancoView) {
-        const oneYearAheadStr = format(addYears(todayDate, 1), 'yyyy-MM-31');
-        if (ev.date > oneYearAheadStr) {
+        const maxEndStr = format(maxDateObj, 'yyyy-MM-dd');
+        if (ev.date > maxEndStr) {
           return false;
         }
       }
 
-      return matchesSearch && matchesStatus && matchesCategory && matchesTimelineMultiSelect && matchesLabel;
+      return matchesSearch && matchesStatus && matchesCategory && matchesLabel;
     });
   };
 

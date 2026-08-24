@@ -1,33 +1,5 @@
 [
   {
-    "id": "2435c4f2-61c6-490c-b552-48edb46d42b9",
-    "seriesId": "550e8400-e29b-41d4-a716-446655440002",
-    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2026-01-27",
-    "time": "10:05",
-    "title": "Refeição",
-    "description": "Subsídio de Alimentação",
-    "category": "entrada_recorrente",
-    "financialType": "entrada",
-    "periodicity": "recorrente",
-    "status": "Recebido",
-    "priority": "Normal",
-    "amount": 171.6,
-    "isIncome": true,
-    "isExpense": false,
-    "isRecurring": true,
-    "isCompleted": true,
-    "labels": [
-      "Refeição",
-      "Recebido"
-    ],
-    "breakdownItems": [],
-    "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
-  },
-  {
     "id": "378dab10-2cc0-44bb-8302-7b7caceb4ea9",
     "seriesId": "550e8400-e29b-41d4-a716-446655440010",
     "timelineOriginId": "a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d",

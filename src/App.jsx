@@ -248,10 +248,23 @@ export default function App() {
   };
 
   const handleSaveEvent = (eventData) => {
-    if (!activeTimeline) return;
+    // 1. Determinar o timelineOriginId correto dentro do Timeboard ativo
+    let targetTimelineId = eventData.timelineOriginId;
+    if (!targetTimelineId || targetTimelineId === activeTimeboardId) {
+      if (eventData.isIncome || eventData.financialType === 'entrada' || eventData.category?.includes('entrada')) {
+        const entTl = activeTimeboardTimelines.find((tl) => tl.type === 'entradas');
+        targetTimelineId = entTl ? entTl.id : activeTimeboardTimelines[0]?.id;
+      } else if (eventData.isInvestment || eventData.financialType === 'investimento' || eventData.category?.includes('investimento')) {
+        const invTl = activeTimeboardTimelines.find((tl) => tl.type === 'investimentos');
+        targetTimelineId = invTl ? invTl.id : activeTimeboardTimelines[0]?.id;
+      } else {
+        const gastTl = activeTimeboardTimelines.find((tl) => tl.type === 'gastos');
+        targetTimelineId = gastTl ? gastTl.id : activeTimeboardTimelines[0]?.id;
+      }
+    }
 
     if (editingEvent && editingEvent.id) {
-      // Update event (propagate title and series changes if recurring)
+      // Update existing event
       const isRecurring = Boolean(
         editingEvent.seriesId ||
         editingEvent.periodicity === 'recorrente' ||
@@ -264,32 +277,45 @@ export default function App() {
       const previousTitle = editingEvent.title;
       const newTitle = eventData.title;
 
-      const updatedEvents = (activeTimeline.events || []).map((ev) => {
-        if (ev.id === editingEvent.id) {
-          return { ...ev, ...eventData };
-        }
-
-        const isSameSeries = isRecurring && (
-          (targetSeriesId && ev.seriesId === targetSeriesId) ||
-          (previousTitle && ev.title === previousTitle && ev.category === editingEvent.category)
-        );
-
-        if (isSameSeries) {
-          return {
-            ...ev,
-            title: newTitle || ev.title,
-            ...(eventData.breakdownItems !== undefined ? { breakdownItems: eventData.breakdownItems ? JSON.parse(JSON.stringify(eventData.breakdownItems)) : undefined } : {})
-          };
-        }
-
-        return ev;
-      });
+      api.updateEvent(editingEvent.id, {
+        ...eventData,
+        timelineOriginId: targetTimelineId,
+        propagateForward: isRecurring,
+        previousTitle
+      }).catch(console.error);
 
       setTimelines((prev) =>
-        prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
+        prev.map((tl) => {
+          const events = tl.events || [];
+          const hasEvent = events.some((ev) => ev.id === editingEvent.id);
+          if (!hasEvent) return tl;
+
+          const updatedEvents = events.map((ev) => {
+            if (ev.id === editingEvent.id) {
+              return { ...ev, ...eventData, timelineOriginId: targetTimelineId };
+            }
+
+            const isSameSeries = isRecurring && (
+              (targetSeriesId && ev.seriesId === targetSeriesId) ||
+              (previousTitle && ev.title === previousTitle && ev.category === editingEvent.category)
+            );
+
+            if (isSameSeries) {
+              return {
+                ...ev,
+                title: newTitle || ev.title,
+                ...(eventData.breakdownItems !== undefined ? { breakdownItems: eventData.breakdownItems ? JSON.parse(JSON.stringify(eventData.breakdownItems)) : undefined } : {})
+              };
+            }
+
+            return ev;
+          });
+
+          return { ...tl, events: updatedEvents };
+        })
       );
     } else {
-      // Add new event (if recurring, project into subsequent months)
+      // Create new event(s)
       const isRecurring = eventData.periodicity === 'recorrente' || eventData.isRecurring || (eventData.category && eventData.category.includes('recorrente'));
 
       if (isRecurring) {
@@ -312,29 +338,43 @@ export default function App() {
             status = isPast ? 'Investido' : 'Planeado';
           }
 
-          generatedEvents.push({
+          const ev = {
             ...eventData,
             id: generateUUID(),
             seriesId,
+            timelineOriginId: targetTimelineId,
             date: dateStr,
             status,
             isCompleted: isPast
-          });
+          };
+          generatedEvents.push(ev);
+          api.createEvent(ev).catch(console.error);
         }
 
-        const updatedEvents = [...generatedEvents, ...(activeTimeline.events || [])];
         setTimelines((prev) =>
-          prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
+          prev.map((tl) => {
+            if (tl.id === targetTimelineId) {
+              return { ...tl, events: [...generatedEvents, ...(tl.events || [])] };
+            }
+            return tl;
+          })
         );
       } else {
         const newEvent = {
           ...eventData,
-          id: generateUUID()
+          id: generateUUID(),
+          timelineOriginId: targetTimelineId
         };
 
-        const updatedEvents = [newEvent, ...(activeTimeline.events || [])];
+        api.createEvent(newEvent).catch(console.error);
+
         setTimelines((prev) =>
-          prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
+          prev.map((tl) => {
+            if (tl.id === targetTimelineId) {
+              return { ...tl, events: [newEvent, ...(tl.events || [])] };
+            }
+            return tl;
+          })
         );
       }
     }
@@ -363,7 +403,7 @@ export default function App() {
 
             // Propagar apenas para eventos da mesma série ou mesmo título anterior
             const isSameSeries = (updatedEvent.seriesId && ev.seriesId === updatedEvent.seriesId) ||
-              (ev.title === (updatedEvent.previousTitle || updatedEvent.title) && ev.category === updatedEvent.category && (ev.timelineOriginId === updatedEvent.timelineOriginId || tl.id === 'tl-income'));
+              (ev.title === (updatedEvent.previousTitle || updatedEvent.title) && ev.category === updatedEvent.category);
 
             if (isSameSeries && (updatedEvent.updateAllRecurring ? true : ev.date >= targetDate)) {
               return {
@@ -374,7 +414,6 @@ export default function App() {
               };
             }
 
-            // Os anteriores e não relacionados permanecem inalterados
             return ev;
           });
 
@@ -402,38 +441,36 @@ export default function App() {
   };
 
   const handleConfirmDeleteEvent = (eventId, deleteSubsequent = false) => {
-    if (!activeTimeline) return;
-
-    const targetEvent = (activeTimeline.events || []).find((ev) => ev.id === eventId);
+    const targetEvent = (activeTimeline?.events || []).find((ev) => ev.id === eventId);
     if (!targetEvent) return;
 
     api.deleteEvent(eventId, { onlySubsequent: deleteSubsequent, fromDate: targetEvent.date, deleteSeries: deleteSubsequent }).catch(console.error);
 
-    if (deleteSubsequent) {
-      const targetDate = targetEvent.date;
-      const updatedEvents = (activeTimeline.events || []).filter((ev) => {
-        if (ev.id === targetEvent.id) return false;
+    setTimelines((prev) =>
+      prev.map((tl) => {
+        const events = tl.events || [];
+        if (!events.some((ev) => ev.id === eventId)) return tl;
 
-        // Verificar se é da mesma série recorrente e data subsequente
-        const isSameSeries = (targetEvent.seriesId && ev.seriesId === targetEvent.seriesId) ||
-          (ev.title === targetEvent.title && ev.category === targetEvent.category && (ev.timelineOriginId === targetEvent.timelineOriginId || activeTimeline.id === 'tl-income'));
+        if (deleteSubsequent) {
+          const targetDate = targetEvent.date;
+          const updatedEvents = events.filter((ev) => {
+            if (ev.id === targetEvent.id) return false;
 
-        if (isSameSeries && ev.date >= targetDate) {
-          return false; // Eliminar ocorrência subsequente
+            const isSameSeries = (targetEvent.seriesId && ev.seriesId === targetEvent.seriesId) ||
+              (ev.title === targetEvent.title && ev.category === targetEvent.category);
+
+            if (isSameSeries && ev.date >= targetDate) {
+              return false;
+            }
+
+            return true;
+          });
+          return { ...tl, events: updatedEvents };
+        } else {
+          return { ...tl, events: events.filter((ev) => ev.id !== eventId) };
         }
-
-        return true; // Manter passados e outros
-      });
-
-      setTimelines((prev) =>
-        prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
-      );
-    } else {
-      const updatedEvents = (activeTimeline.events || []).filter((ev) => ev.id !== eventId);
-      setTimelines((prev) =>
-        prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
-      );
-    }
+      })
+    );
 
     setDeletingEvent(null);
   };

@@ -433,7 +433,15 @@ export default function App() {
   };
 
   const handleConfirmDeleteEvent = (eventId, deleteSubsequent = false) => {
-    const targetEvent = (activeTimeline?.events || []).find((ev) => ev.id === eventId);
+    let targetEvent = null;
+    timelines.forEach((tl) => {
+      const found = (tl.events || []).find((ev) => ev.id === eventId);
+      if (found) targetEvent = found;
+    });
+
+    if (!targetEvent && activeTimeline) {
+      targetEvent = (activeTimeline.events || []).find((ev) => ev.id === eventId);
+    }
     if (!targetEvent) return;
 
     api.deleteEvent(eventId, { onlySubsequent: deleteSubsequent, fromDate: targetEvent.date, deleteSeries: deleteSubsequent }).catch(console.error);
@@ -441,7 +449,6 @@ export default function App() {
     setTimelines((prev) =>
       prev.map((tl) => {
         const events = tl.events || [];
-        if (!events.some((ev) => ev.id === eventId)) return tl;
 
         if (deleteSubsequent) {
           const targetDate = targetEvent.date;
@@ -449,7 +456,7 @@ export default function App() {
             if (ev.id === targetEvent.id) return false;
 
             const isSameSeries = (targetEvent.seriesId && ev.seriesId === targetEvent.seriesId) ||
-              (ev.title === targetEvent.title && ev.category === targetEvent.category);
+              (ev.title === targetEvent.title && (ev.timelineOriginId === targetEvent.timelineOriginId || ev.category === targetEvent.category));
 
             if (isSameSeries && ev.date >= targetDate) {
               return false;

@@ -213,9 +213,13 @@ export class TimelineService {
     const event = await eventRepository.getById(id);
     if (!event) return false;
 
-    if (options.deleteSeries && event.seriesId) {
+    if (options.deleteSeries) {
       const fromDate = options.fromDate || (options.onlySubsequent ? event.date : null);
-      return eventRepository.deleteMany((ev) => ev.seriesId === event.seriesId && (!fromDate || ev.date >= fromDate));
+      if (event.seriesId) {
+        return eventRepository.deleteMany((ev) => ev.seriesId === event.seriesId && (!fromDate || ev.date >= fromDate));
+      } else {
+        return eventRepository.deleteMany((ev) => ev.title === event.title && (ev.timelineOriginId === event.timelineOriginId || ev.category === event.category) && (!fromDate || ev.date >= fromDate));
+      }
     }
 
     return eventRepository.delete(id);

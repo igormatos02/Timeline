@@ -1823,8 +1823,10 @@ export default function TimelineEventCard({
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       gap: '8px',
-                      padding: '3px 0px',
-                      background: 'transparent'
+                      padding: '4px 0px',
+                      background: 'transparent',
+                      borderBottom: '3px solid var(--primary-light)',
+                      width: '100%'
                     }}
                   >
                     <input
@@ -1838,13 +1840,11 @@ export default function TimelineEventCard({
                         flex: 1,
                         background: 'transparent',
                         border: 'none',
-                        borderBottom: '3px solid var(--primary-light)',
-                        borderRadius: '0px',
+                        outline: 'none',
                         padding: '2px 0',
                         color: 'var(--text-main)',
                         fontSize: '0.86rem',
-                        fontWeight: '700',
-                        outline: 'none'
+                        fontWeight: '700'
                       }}
                     />
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

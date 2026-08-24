@@ -451,7 +451,7 @@ export default function CreateEventModal({
                 }}
               >
                 <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                  Dia {formData.dayOfMonth} de {format(parseISO(`${yearStr}-${monthStr}-01`), 'MMM', { locale: pt })}
+                  Dia {formData.dayOfMonth} do mês
                 </span>
 
                 <button
@@ -493,7 +493,7 @@ export default function CreateEventModal({
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid var(--border-glass)' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Escolha o dia ({format(parseISO(`${yearStr}-${monthStr}-01`), 'MMMM yyyy', { locale: pt })})
+                  Escolha o dia do mês (1 a {totalDays})
                 </span>
                 <span style={{ fontSize: '0.75rem', color: currentTheme.color, fontWeight: '700' }}>
                   Dia {formData.dayOfMonth} selecionado

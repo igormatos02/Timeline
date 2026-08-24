@@ -841,6 +841,7 @@ export default function App() {
         timeline={activeTimeline}
         allTimelines={timelines}
         defaultNature={eventModalDefaultNature}
+        activeFinancialTab={activeFinancialTab}
       />
 
       {/* Loan Modals */}

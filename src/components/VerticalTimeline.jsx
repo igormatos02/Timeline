@@ -863,26 +863,24 @@ export default function VerticalTimeline({
                             -{formatCurrency(mMonthExpense)}
                           </span>
 
-                          {mMonthInvestment > 0 && (
-                            <span
-                              className="group-card-badge"
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                height: '26px',
-                                boxSizing: 'border-box',
-                                color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)',
-                                borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : 'rgba(99, 102, 241, 0.25)',
-                                background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : 'rgba(99, 102, 241, 0.08)',
-                                fontWeight: '800',
-                                fontSize: '0.74rem'
-                              }}
-                              title="Total de Investimentos"
-                            >
-                              Inv: -{formatCurrency(mMonthInvestment)}
-                            </span>
-                          )}
+                          <span
+                            className="group-card-badge"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              height: '26px',
+                              boxSizing: 'border-box',
+                              color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)',
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : 'rgba(99, 102, 241, 0.25)',
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : 'rgba(99, 102, 241, 0.08)',
+                              fontWeight: '800',
+                              fontSize: '0.74rem'
+                            }}
+                            title="Total de Investimentos / Aportes"
+                          >
+                            Investido: -{formatCurrency(mMonthInvestment)}
+                          </span>
 
                           <span
                             className="group-card-badge"

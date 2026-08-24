@@ -1368,7 +1368,7 @@ export default function TimelineEventCard({
               {renderEditableAmount('+', isInertFuture ? '#94a3b8' : 'var(--primary-light)')}
             </div>
 
-            {Number(event.initialInvestedAmount || 0) > 0 && (
+            {Number(event.initialInvestedAmount || 0) > 0 && (event.isFirstOccurrence === true || (!event.isProjected && !event.seriesId) || (event.isFirstOccurrence !== false && !event.isProjected)) && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                   Património Anterior

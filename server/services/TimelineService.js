@@ -40,7 +40,10 @@ export function projectEvents(rawEvents = [], options = {}) {
       }
       recurringSeriesMap.get(sId).push(normalizedEv);
     } else {
-      uniqueEvents.push(ev);
+      uniqueEvents.push({
+        ...ev,
+        isFirstOccurrence: true
+      });
     }
   }
 
@@ -114,6 +117,8 @@ export function projectEvents(rawEvents = [], options = {}) {
         }
       }
 
+      const isFirstOccurrence = curDateStr === rootVersion.date;
+
       if (override) {
         // Se a sobreposição for uma exclusão (tombstone), omitir a ocorrência
         if (override.isDeleted || override.status === 'Excluido') {
@@ -123,7 +128,8 @@ export function projectEvents(rawEvents = [], options = {}) {
             ...activeVersion,
             ...override,
             isOverridden: true,
-            sobrepositionOver: seriesId
+            sobrepositionOver: seriesId,
+            isFirstOccurrence
           });
         }
       } else {
@@ -134,7 +140,8 @@ export function projectEvents(rawEvents = [], options = {}) {
           seriesId,
           version: activeVersion.version,
           date: curDateStr,
-          isProjected: true
+          isProjected: !isFirstOccurrence,
+          isFirstOccurrence
         });
       }
 

@@ -246,7 +246,8 @@ function createHomeLoanEvents() {
 // Helper to generate Financial Timeline events (Entradas, Gastos e Investimentos)
 function createFinancialEvents() {
   const events = [];
-  const salaryAmount = 3300.00;
+  const salaryAmount = 3178.00;
+  const mealAllowanceAmount = 171.60;
   const todayStr = '2026-08-21';
 
   // Gerar movimentos mensais de 2024 a Agosto de 2027
@@ -260,22 +261,49 @@ function createFinancialEvents() {
       const isSalaryPast = salaryDateStr <= todayStr;
       events.push({
         id: `fin-salary-${year}-${monthStr}`,
+        seriesId: 'series-salary-main',
         timelineOriginId: 'tl-income',
         timelineOriginName: 'Financeiro',
         timelineOriginIcon: '💰',
         date: salaryDateStr,
         time: '10:00',
-        title: 'Salário Mensal',
+        title: 'Salário',
         description: '',
         category: 'entrada_recorrente',
         financialType: 'entrada',
+        periodicity: 'recorrente',
         status: isSalaryPast ? 'Recebido' : 'Pendente',
         priority: 'Normal',
         amount: salaryAmount,
         isIncome: true,
         isExpense: false,
+        isRecurring: true,
         isCompleted: isSalaryPast,
         labels: ['Salário', isSalaryPast ? 'Recebido' : 'Pendente']
+      });
+
+      // 1.1 ENTRADA: Subsídio de Refeição (Dia 27)
+      events.push({
+        id: `fin-meal-${year}-${monthStr}`,
+        seriesId: 'series-meal-allowance',
+        timelineOriginId: 'tl-income',
+        timelineOriginName: 'Financeiro',
+        timelineOriginIcon: '💰',
+        date: salaryDateStr,
+        time: '10:05',
+        title: 'Refeição',
+        description: 'Subsídio de Alimentação',
+        category: 'entrada_recorrente',
+        financialType: 'entrada',
+        periodicity: 'recorrente',
+        status: isSalaryPast ? 'Recebido' : 'Pendente',
+        priority: 'Normal',
+        amount: mealAllowanceAmount,
+        isIncome: true,
+        isExpense: false,
+        isRecurring: true,
+        isCompleted: isSalaryPast,
+        labels: ['Refeição', isSalaryPast ? 'Recebido' : 'Pendente']
       });
 
       // 2. GASTOS FIXOS RECORRENTES MENSAIS (Sem Carro 1 e Carro 2)
@@ -362,64 +390,6 @@ function createFinancialEvents() {
     }
   }
 
-  // Entradas Esporádicas Pontuais
-  events.push(
-    {
-      id: 'income-bonus-2025-12',
-      timelineOriginId: 'tl-income',
-      timelineOriginName: 'Financeiro',
-      timelineOriginIcon: '💰',
-      date: '2025-12-15',
-      time: '14:00',
-      title: 'Bónus Anual de Desempenho',
-      description: 'Prémio extraordinário de produtividade.',
-      category: 'entrada_esporadica',
-      financialType: 'entrada',
-      status: 'Recebido',
-      priority: 'Normal',
-      amount: 2500.00,
-      isIncome: true,
-      isCompleted: true,
-      labels: ['Bónus / Extra', 'Recebido']
-    },
-    {
-      id: 'income-bonus-2026-06',
-      timelineOriginId: 'tl-income',
-      timelineOriginName: 'Financeiro',
-      timelineOriginIcon: '💰',
-      date: '2026-06-20',
-      time: '14:00',
-      title: 'Subsídio / Bónus Extraordinário',
-      description: 'Gratificação semestral atribuída pela empresa.',
-      category: 'entrada_esporadica',
-      financialType: 'entrada',
-      status: 'Recebido',
-      priority: 'Normal',
-      amount: 1650.00,
-      isIncome: true,
-      isCompleted: true,
-      labels: ['Bónus / Extra', 'Recebido']
-    },
-    {
-      id: 'income-bonus-2026-12',
-      timelineOriginId: 'tl-income',
-      timelineOriginName: 'Financeiro',
-      timelineOriginIcon: '💰',
-      date: '2026-12-15',
-      time: '14:00',
-      title: 'Bónus Previsto Fim de Ano',
-      description: 'Estimativa de bónus de fecho de exercício fiscal.',
-      category: 'entrada_esporadica',
-      financialType: 'entrada',
-      status: 'Pendente',
-      priority: 'Normal',
-      amount: 2000.00,
-      isIncome: true,
-      isCompleted: false,
-      labels: ['Bónus / Extra', 'Pendente']
-    }
-  );
-
   return events;
 }
 
@@ -449,7 +419,7 @@ export const initialTimelines = [
     type: "Financeiro",
     color: "#10b981",
     periodicity: "mensal",
-    monthlySalary: 3300.00,
+    monthlySalary: 3349.60,
     carLoans: [
       {
         id: "tl-loan-jeep",

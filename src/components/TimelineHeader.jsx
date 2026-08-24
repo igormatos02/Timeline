@@ -519,11 +519,13 @@ export default function TimelineHeader({
                           <DollarSign size={16} />
                         </div>
                         <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Rendimento Recorrente (Base)</div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Entradas Recorrentes</div>
                           <div className="meta-value" style={{ color: '#10b981', fontSize: '0.96rem', fontWeight: '800' }}>
-                            {formatCurrency(3300.00)} / mês
+                            {formatCurrency(3349.60)} / mês
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Salário fixo mensal líquido</div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
+                            Salário: 3.178 € + Refeição: 171,60 €
+                          </div>
                         </div>
                       </div>
 
@@ -536,6 +538,7 @@ export default function TimelineHeader({
                           <div className="meta-value" style={{ color: '#06b6d4', fontSize: '0.96rem', fontWeight: '800' }}>
                             {formatCurrency(finMetrics.totalReceived)}
                           </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Entradas liquidadas e confirmadas</div>
                         </div>
                       </div>
 
@@ -549,7 +552,7 @@ export default function TimelineHeader({
                             {finMetrics.nextIncome ? formatDateShort(finMetrics.nextIncome.date) : '27/08/2026'}
                           </div>
                           <div style={{ fontSize: '0.66rem', color: '#10b981', fontWeight: '700' }}>
-                            {finMetrics.nextIncome ? `+${formatCurrency(finMetrics.nextIncome.amount)}` : '+3.300,00 €'}
+                            {finMetrics.nextIncome ? `+${formatCurrency(finMetrics.nextIncome.amount)}` : '+3.178,00 €'}
                           </div>
                         </div>
                       </div>
@@ -563,6 +566,7 @@ export default function TimelineHeader({
                           <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800' }}>
                             {formatCurrency(finMetrics.totalForecastIncome)}
                           </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Projeção total acumulada</div>
                         </div>
                       </div>
                     </div>
@@ -575,10 +579,11 @@ export default function TimelineHeader({
                           <ShoppingCart size={16} />
                         </div>
                         <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Gasto até Hoje</div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Gastos Fixos Recorrentes</div>
                           <div className="meta-value" style={{ color: '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
-                            -{formatCurrency(finMetrics.totalPaidExpenses)}
+                            -1.040,00 € / mês
                           </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Despesas fixas mensais</div>
                         </div>
                       </div>
 
@@ -587,10 +592,11 @@ export default function TimelineHeader({
                           <Repeat size={16} />
                         </div>
                         <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Média de Gastos Mensais</div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Gasto até Hoje</div>
                           <div className="meta-value" style={{ color: '#fb7185', fontSize: '0.96rem', fontWeight: '800' }}>
-                            ~1.175,00 € / mês
+                            -{formatCurrency(finMetrics.totalPaidExpenses)}
                           </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Gastos pagos e consolidados</div>
                         </div>
                       </div>
 
@@ -601,10 +607,10 @@ export default function TimelineHeader({
                         <div>
                           <div className="meta-label" style={{ fontSize: '0.7rem' }}>Próxima Saída Prevista</div>
                           <div className="meta-value" style={{ fontSize: '0.85rem', fontWeight: '700' }}>
-                            {finMetrics.nextExpense ? formatDateShort(finMetrics.nextExpense.date) : '05/09/2026'}
+                            {finMetrics.nextExpense ? formatDateShort(finMetrics.nextExpense.date) : '02/09/2026'}
                           </div>
                           <div style={{ fontSize: '0.66rem', color: '#f43f5e', fontWeight: '700' }}>
-                            {finMetrics.nextExpense ? `-${formatCurrency(finMetrics.nextExpense.amount)}` : '-650,00 €'}
+                            {finMetrics.nextExpense ? `-${formatCurrency(finMetrics.nextExpense.amount)} (${finMetrics.nextExpense.title})` : '-20,00 €'}
                           </div>
                         </div>
                       </div>
@@ -616,8 +622,9 @@ export default function TimelineHeader({
                         <div>
                           <div className="meta-label" style={{ fontSize: '0.7rem' }}>Gastos Totais Projetados</div>
                           <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800' }}>
-                            {formatCurrency(finMetrics.totalPlannedExpenses)}
+                            -{formatCurrency(finMetrics.totalPlannedExpenses)}
                           </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>No horizonte da timeline</div>
                         </div>
                       </div>
                     </div>
@@ -634,6 +641,7 @@ export default function TimelineHeader({
                           <div className="meta-value" style={{ color: 'var(--primary-light)', fontSize: '0.96rem', fontWeight: '800' }}>
                             {formatCurrency(finMetrics.totalInvested)}
                           </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Acumulado até à data</div>
                         </div>
                       </div>
 
@@ -642,11 +650,11 @@ export default function TimelineHeader({
                           <TrendingUp size={16} />
                         </div>
                         <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Aporte Mensal Previsto</div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Aporte Mensal Planeado</div>
                           <div className="meta-value" style={{ color: '#10b981', fontSize: '0.96rem', fontWeight: '800' }}>
                             +600,00 € / mês
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>350€ Poupança + 250€ ETF</div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>350€ Reserva + 250€ ETF</div>
                         </div>
                       </div>
 
@@ -659,6 +667,7 @@ export default function TimelineHeader({
                           <div className="meta-value" style={{ color: '#0ea5e9', fontSize: '0.96rem', fontWeight: '800' }}>
                             ~{finMetrics.savingsRate}%
                           </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Do rendimento mensal</div>
                         </div>
                       </div>
 
@@ -671,6 +680,7 @@ export default function TimelineHeader({
                           <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800' }}>
                             {formatCurrency(finMetrics.totalPlannedInvestments)}
                           </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Projeção a longo prazo</div>
                         </div>
                       </div>
                     </div>
@@ -687,6 +697,7 @@ export default function TimelineHeader({
                           <div className="meta-value" style={{ color: '#10b981', fontSize: '0.94rem', fontWeight: '800' }}>
                             +{formatCurrency(finMetrics.totalReceived)}
                           </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>{formatCurrency(3349.60)}/mês</div>
                         </div>
                       </div>
 
@@ -699,6 +710,7 @@ export default function TimelineHeader({
                           <div className="meta-value" style={{ color: '#f43f5e', fontSize: '0.94rem', fontWeight: '800' }}>
                             -{formatCurrency(finMetrics.totalPaidExpenses)}
                           </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>-1.040,00 €/mês</div>
                         </div>
                       </div>
 
@@ -711,6 +723,7 @@ export default function TimelineHeader({
                           <div className="meta-value" style={{ color: 'var(--primary-light)', fontSize: '0.94rem', fontWeight: '800' }}>
                             -{formatCurrency(finMetrics.totalInvested)}
                           </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>-600,00 €/mês</div>
                         </div>
                       </div>
 
@@ -723,6 +736,7 @@ export default function TimelineHeader({
                           <div className="meta-value" style={{ color: finMetrics.netRealized >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
                             {finMetrics.netRealized >= 0 ? '+' : ''}{formatCurrency(finMetrics.netRealized)}
                           </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Sobra acumulada</div>
                         </div>
                       </div>
                     </div>

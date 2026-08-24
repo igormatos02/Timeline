@@ -627,11 +627,11 @@ export default function TimelineHeader({
                           <Gift size={16} />
                         </div>
                         <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Projetado no Horizonte</div>
-                          <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800' }}>
-                            {formatCurrency(finMetrics.totalForecastIncome)}
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Projeção Anual</div>
+                          <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800', color: '#a78bfa' }}>
+                            {formatCurrency(finMetrics.annualProjectedIncome !== undefined ? finMetrics.annualProjectedIncome : finMetrics.totalForecastIncome)}
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Projeção total acumulada</div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>1 ano de entradas (mês atual + 11m)</div>
                         </div>
                       </div>
                     </div>

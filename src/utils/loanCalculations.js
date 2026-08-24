@@ -434,9 +434,13 @@ export function getFinancialMetrics(timeline, events = []) {
   const todayStr = '2026-08-21';
   const currentMonthKey = todayStr.substring(0, 7); // '2026-08'
   const currentYearKey = todayStr.substring(0, 4); // '2026'
+  const currentMonthDate = parseISO(`${currentMonthKey}-01`);
+  const oneYearAheadDate = addMonths(currentMonthDate, 12);
+  const oneYearAheadKey = format(oneYearAheadDate, 'yyyy-MM');
 
   let totalReceived = 0;
   let totalForecastIncome = 0;
+  let annualProjectedIncome = 0;
   let totalPaidExpenses = 0;
   let totalPlannedExpenses = 0;
   let totalInvested = 0;
@@ -459,16 +463,20 @@ export function getFinancialMetrics(timeline, events = []) {
     const isExpense = ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto' || isLoan;
     const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
+    const evMonth = ev.date ? ev.date.substring(0, 7) : '';
+
     if (isIncome) {
       if (isPast && ev.status === 'Recebido') totalReceived += amt;
       totalForecastIncome += amt;
+      if (evMonth >= currentMonthKey && evMonth < oneYearAheadKey) {
+        annualProjectedIncome += amt;
+      }
       if (!isPast && (!nextIncome || ev.date < nextIncome.date)) nextIncome = ev;
     } else if (isExpense) {
       if (isPast && (ev.status === 'Pago' || ev.isCompleted)) totalPaidExpenses += amt;
       totalPlannedExpenses += amt;
       if (!isPast && (!nextExpense || ev.date < nextExpense.date)) nextExpense = ev;
 
-      const evMonth = ev.date ? ev.date.substring(0, 7) : '';
       const evYear = ev.date ? ev.date.substring(0, 4) : '';
       if (evMonth === currentMonthKey) {
         currentMonthExpenses += amt;
@@ -497,6 +505,7 @@ export function getFinancialMetrics(timeline, events = []) {
   return {
     totalReceived,
     totalForecastIncome,
+    annualProjectedIncome,
     totalPaidExpenses,
     totalPlannedExpenses,
     totalInvested,

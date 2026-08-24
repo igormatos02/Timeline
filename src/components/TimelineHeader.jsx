@@ -29,7 +29,8 @@ import {
   ShoppingCart,
   PiggyBank,
   Scale,
-  Home
+  Home,
+  RotateCcw
 } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -51,6 +52,7 @@ export default function TimelineHeader({
   onSelectFinancialTab,
   onEdit,
   onDelete,
+  onReset,
   onOpenCreateTimeline,
   onOpenAmortizationModal,
   onScrollToOverdue
@@ -470,6 +472,18 @@ export default function TimelineHeader({
                   title="Clique para ir diretamente à parcela em atraso"
                 >
                   <AlertCircle size={12} /> {activeLoanMetrics.overdueInstallmentsCount} em Atraso ▾
+                </button>
+              )}
+
+              {onReset && (
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={onReset}
+                  style={{ color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.35)', padding: '5px 10px' }}
+                  title="Resetar timeline (apagar todos os eventos desta timeline)"
+                >
+                  <RotateCcw size={13} />
+                  <span>Resetar</span>
                 </button>
               )}
 

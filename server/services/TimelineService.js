@@ -225,6 +225,15 @@ export class TimelineService {
     return eventRepository.delete(id);
   }
 
+  async resetTimeline(timelineId) {
+    const timeline = await timelineRepository.getById(timelineId);
+    if (!timeline) return false;
+
+    // Delete all events associated with this timeline
+    await eventRepository.deleteMany((ev) => ev.timelineOriginId === timelineId);
+    return true;
+  }
+
   // --- Loan Operations ---
   async getLoanContracts() {
     return loanContractRepository.getAll();

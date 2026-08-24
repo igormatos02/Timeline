@@ -55,3 +55,13 @@ timelinesRouter.delete('/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// POST /api/timelines/:id/reset
+timelinesRouter.post('/:id/reset', async (req, res) => {
+  try {
+    const reset = await timelineService.resetTimeline(req.params.id);
+    res.json({ success: reset });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});

@@ -18,6 +18,7 @@ import {
 } from './utils/loanCalculations';
 import * as api from './services/api';
 import { generateUUID } from './utils/uuid';
+import { RotateCcw, X } from 'lucide-react';
 import './App.css';
 
 export default function App() {
@@ -103,6 +104,7 @@ export default function App() {
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [deletingEvent, setDeletingEvent] = useState(null);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState('2026-08-21');
   const [eventModalDefaultNature, setEventModalDefaultNature] = useState('income'); // 'income' | 'expense' | 'investment'
 
@@ -474,6 +476,38 @@ export default function App() {
     setDeletingEvent(null);
   };
 
+  const handleConfirmResetTimeline = async () => {
+    let targetTlId = activeTimelineId;
+
+    if (activeFinancialTab === 'entradas') {
+      const found = activeTimeboardTimelines.find((t) => t.type === 'entradas');
+      if (found) targetTlId = found.id;
+    } else if (activeFinancialTab === 'gastos') {
+      const found = activeTimeboardTimelines.find((t) => t.type === 'gastos');
+      if (found) targetTlId = found.id;
+    } else if (activeFinancialTab === 'investimentos') {
+      const found = activeTimeboardTimelines.find((t) => t.type === 'investimentos');
+      if (found) targetTlId = found.id;
+    }
+
+    if (activeFinancialTab === 'balanco') {
+      const tlIdsToReset = activeTimeboardTimelines.map((t) => t.id);
+      setTimelines((prev) =>
+        prev.map((tl) => (tlIdsToReset.includes(tl.id) ? { ...tl, events: [] } : tl))
+      );
+      for (const tId of tlIdsToReset) {
+        api.resetTimeline(tId).catch(console.error);
+      }
+    } else if (targetTlId) {
+      setTimelines((prev) =>
+        prev.map((tl) => (tl.id === targetTlId ? { ...tl, events: [] } : tl))
+      );
+      api.resetTimeline(targetTlId).catch(console.error);
+    }
+
+    setIsResetConfirmOpen(false);
+  };
+
   const handleToggleTask = (eventId, taskIdx) => {
     if (!activeTimeline) return;
     const updatedEvents = (activeTimeline.events || []).map((ev) => {
@@ -801,6 +835,7 @@ export default function App() {
                 onSelectFinancialTab={setActiveFinancialTab}
                 onEdit={handleOpenEditTimeline}
                 onDelete={handleDeleteTimeline}
+                onReset={() => setIsResetConfirmOpen(true)}
                 onOpenCreateTimeline={handleOpenCreateTimeline}
                 onOpenAmortizationModal={() => setIsAmortizationModalOpen(true)}
                 onScrollToOverdue={handleScrollToOverdue}
@@ -873,6 +908,91 @@ export default function App() {
         event={deletingEvent}
         onConfirmDelete={handleConfirmDeleteEvent}
       />
+
+      {/* Reset Timeline Confirmation Modal */}
+      {isResetConfirmOpen && (
+        <div className="modal-overlay" onClick={() => setIsResetConfirmOpen(false)} style={{ zIndex: 1100 }}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '460px' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    color: '#f59e0b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid rgba(245, 158, 11, 0.3)'
+                  }}
+                >
+                  <RotateCcw size={18} />
+                </div>
+                <div>
+                  <h3 className="modal-title" style={{ margin: 0, fontSize: '1.15rem' }}>
+                    Resetar Timeline
+                  </h3>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {activeFinancialTab === 'balanco'
+                      ? 'Limpar todos os movimentos do Timeboard'
+                      : `Limpar ${activeFinancialTab.toUpperCase()}`}
+                  </div>
+                </div>
+              </div>
+              <button type="button" className="modal-close-btn" onClick={() => setIsResetConfirmOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: '16px 0', fontSize: '0.9rem', color: 'var(--text-main)', lineHeight: '1.5' }}>
+              <p style={{ margin: '0 0 12px 0' }}>
+                Tem a certeza que deseja <strong>resetar e apagar todos os movimentos</strong> desta timeline?
+              </p>
+              <div
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  fontSize: '0.82rem',
+                  color: '#f87171'
+                }}
+              >
+                ⚠️ Esta ação limpará todos os eventos registados e não pode ser revertida.
+              </div>
+            </div>
+
+            <div className="form-footer" style={{ margin: 0, paddingTop: '16px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setIsResetConfirmOpen(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleConfirmResetTimeline}
+                style={{
+                  background: '#f59e0b',
+                  borderColor: '#f59e0b',
+                  boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
+                  fontWeight: '700',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <RotateCcw size={15} />
+                <span>Sim, Resetar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

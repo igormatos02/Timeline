@@ -81,6 +81,14 @@ export async function deleteTimeline(id) {
   return res.json();
 }
 
+export async function resetTimeline(id) {
+  const res = await fetch(`${API_BASE}/timelines/${id}/reset`, {
+    method: 'POST'
+  });
+  if (!res.ok) throw new Error('Failed to reset timeline');
+  return res.json();
+}
+
 // Events
 export async function createEvent(eventData) {
   const res = await fetch(`${API_BASE}/events`, {

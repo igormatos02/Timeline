@@ -179,15 +179,20 @@ export default function App() {
 
   // Dynamic consolidated timeline aggregating all financial timelines of the active Timeboard
   const activeTimeline = React.useMemo(() => {
+    const seenEventIds = new Set();
     const allEvents = [];
     activeTimeboardTimelines.forEach((tl) => {
       (tl.events || []).forEach((ev) => {
-        allEvents.push({
-          ...ev,
-          timelineOriginId: ev.timelineOriginId || tl.id,
-          timelineOriginName: ev.timelineOriginName || tl.name,
-          timelineOriginColor: ev.timelineOriginColor || tl.color
-        });
+        if (!ev || !ev.id) return;
+        if (!seenEventIds.has(ev.id)) {
+          seenEventIds.add(ev.id);
+          allEvents.push({
+            ...ev,
+            timelineOriginId: ev.timelineOriginId || tl.id,
+            timelineOriginName: ev.timelineOriginName || tl.name,
+            timelineOriginColor: ev.timelineOriginColor || tl.color
+          });
+        }
       });
     });
 

@@ -1814,7 +1814,7 @@ export default function TimelineEventCard({
 
             {/* List of draft subparts */}
             {draftSubparts.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {draftSubparts.map((item, idx) => (
                   <React.Fragment key={item.id || idx}>
                     <div
@@ -1823,7 +1823,7 @@ export default function TimelineEventCard({
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         gap: '8px',
-                        padding: '6px 4px',
+                        padding: '2px 0px',
                         background: 'transparent'
                       }}
                     >
@@ -1840,14 +1840,14 @@ export default function TimelineEventCard({
                           border: 'none',
                           borderBottom: '1px solid var(--primary-light)',
                           borderRadius: '0px',
-                          padding: '3px 0',
+                          padding: '2px 0',
                           color: 'var(--text-main)',
-                          fontSize: '0.88rem',
+                          fontSize: '0.86rem',
                           fontWeight: '700',
                           outline: 'none'
                         }}
                       />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="number"
                           step="0.01"
@@ -1857,9 +1857,9 @@ export default function TimelineEventCard({
                           value={item.amount}
                           onFocus={(e) => e.target.select()}
                           onChange={(e) => handleDraftUpdateAmount(idx, e.target.value)}
-                          style={{ width: '80px', fontSize: '0.88rem', textAlign: 'right', fontWeight: '700' }}
+                          style={{ width: '75px', fontSize: '0.86rem', textAlign: 'right', fontWeight: '700', padding: '2px 0' }}
                         />
-                        <span style={{ fontSize: '0.84rem', fontWeight: '700', color: 'var(--text-dim)' }}>€</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-dim)' }}>€</span>
                         {canEditAmount && (
                           <button
                             type="button"
@@ -1884,8 +1884,8 @@ export default function TimelineEventCard({
                     <div
                       style={{
                         height: '3px',
-                        background: 'rgba(255, 255, 255, 0.08)',
-                        borderRadius: '2px',
+                        background: 'rgba(255, 255, 255, 0.12)',
+                        borderRadius: '1px',
                         width: '100%',
                         margin: '2px 0'
                       }}
@@ -1899,7 +1899,7 @@ export default function TimelineEventCard({
             {canEditAmount && (
               <form
                 onSubmit={handleDraftAddSubpart}
-                style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr auto', gap: '8px', marginTop: '4px', padding: '4px 0' }}
+                style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr auto', gap: '6px', marginTop: '2px', padding: '2px 0' }}
               >
                 <input
                   type="text"
@@ -1912,8 +1912,8 @@ export default function TimelineEventCard({
                     border: 'none',
                     borderBottom: '1px solid var(--primary-light)',
                     borderRadius: '0px',
-                    padding: '3px 0',
-                    fontSize: '0.88rem',
+                    padding: '2px 0',
+                    fontSize: '0.86rem',
                     fontWeight: '700',
                     color: 'var(--text-main)',
                     outline: 'none'
@@ -1932,8 +1932,8 @@ export default function TimelineEventCard({
                     border: 'none',
                     borderBottom: '1px solid var(--primary-light)',
                     borderRadius: '0px',
-                    padding: '3px 0',
-                    fontSize: '0.88rem',
+                    padding: '2px 0',
+                    fontSize: '0.86rem',
                     color: 'var(--text-main)',
                     outline: 'none',
                     fontWeight: '700'
@@ -1944,15 +1944,15 @@ export default function TimelineEventCard({
                   disabled={!newSubpartName.trim()}
                   className="btn btn-secondary btn-sm"
                   style={{
-                    padding: '4px 12px',
-                    fontSize: '0.74rem',
+                    padding: '3px 10px',
+                    fontSize: '0.72rem',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '4px'
                   }}
                   title="Adicionar mais uma subparte à lista"
                 >
-                  <Plus size={13} />
+                  <Plus size={12} />
                   <span>Adicionar</span>
                 </button>
               </form>

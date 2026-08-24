@@ -43,6 +43,7 @@ import {
   Car,
   CreditCard,
   Gift,
+  ArrowUp,
   FileText,
   Zap,
   Activity
@@ -244,6 +245,26 @@ export default function VerticalTimeline({
     (ev) => !(ev.category === 'tarefa' && ev.isCompleted === false)
   );
 
+  const isBalancoView = (isFinancialTimeline && activeFinancialTab === 'balanco') || timeline.type === 'Principal';
+
+  // Determine earliest date in timeline (12 meses anteriores ao mês corrente)
+  const startDateObj = parseISO('2025-08-01');
+
+  // Determine latest date in timeline (12 meses futuros expansível)
+  const maxDateObj = isBalancoView ? parseISO('2026-08-31') : addMonths(parseISO('2026-08-31'), Math.max(1, futureHorizonYears) * 12);
+
+  // Generate array of days from startDate up to maxDateObj (Descending: future at top, past at bottom)
+  let daysArray = [];
+  try {
+    const daysAscending = eachDayOfInterval({
+      start: startDateObj,
+      end: maxDateObj
+    });
+    daysArray = daysAscending.reverse();
+  } catch (err) {
+    daysArray = [todayDate];
+  }
+
   // Filter events based on search query, status, category, and label
   const filterEvents = (events) => {
     if (!events) return [];
@@ -280,8 +301,6 @@ export default function VerticalTimeline({
         selectedLabelFilter === 'Todos' ||
         (ev.labels && ev.labels.includes(selectedLabelFilter));
 
-      const isFinancialTimeline = timeline.type === 'Financeiro' || timeline.type === 'Entradas' || timeline.id === 'tl-income';
-
       // Financial Tabs Filter
       if (isFinancialTimeline) {
         const isJeep = ev.timelineOriginId === 'tl-loan-jeep' || ev.timelineOriginId === 'tl-loan-80004197726' || (ev.title && ev.title.includes('Jeep')) || (ev.isSystemLoanEvent && ev.amount === 218.47);
@@ -305,7 +324,6 @@ export default function VerticalTimeline({
       }
 
       // No Balanço: mostrar somente até ao fim do mês corrente (2026-08-31)
-      const isBalancoView = (isFinancialTimeline && activeFinancialTab === 'balanco') || timeline.type === 'Principal';
       if (isBalancoView) {
         const currentMonthEndStr = '2026-08-31';
         if (ev.date > currentMonthEndStr) {
@@ -332,25 +350,6 @@ export default function VerticalTimeline({
   const availableLabels = Array.from(
     new Set(allEvents.flatMap((ev) => ev.labels || []))
   );
-
-  // Determine earliest date in timeline (12 meses anteriores ao mês corrente)
-  let startDateObj = parseISO('2025-08-01');
-
-  // Determine latest date in timeline (12 meses futuros expansível)
-  const isBalancoView = (isFinancialTimeline && activeFinancialTab === 'balanco') || timeline.type === 'Principal';
-  let maxDateObj = isBalancoView ? parseISO('2026-08-31') : addMonths(parseISO('2026-08-31'), Math.max(1, futureHorizonYears) * 12);
-
-  // Generate array of days from startDate up to maxDateObj (Descending: future at top, past at bottom)
-  let daysArray = [];
-  try {
-    const daysAscending = eachDayOfInterval({
-      start: startDateObj,
-      end: maxDateObj
-    });
-    daysArray = daysAscending.reverse();
-  } catch (err) {
-    daysArray = [todayDate];
-  }
 
   // Map events by date (YYYY-MM-DD)
   const eventsByDate = {};

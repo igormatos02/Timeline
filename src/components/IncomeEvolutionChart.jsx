@@ -19,7 +19,8 @@ export default function IncomeEvolutionChart({
   timeline = {},
   events = [],
   todayStr = '2026-08-21',
-  activeFinancialTab = 'balanco'
+  activeFinancialTab = 'balanco',
+  computeStartDate = null
 }) {
   // Chart Mode: 'acumulado_real' (Historical Real Received up to Today), 'acumulativo' (Cumulative with Future Projection), 'variante' (Monthly Variation)
   const [chartMode, setChartMode] = useState('variante');
@@ -38,10 +39,14 @@ export default function IncomeEvolutionChart({
   const chartData = useMemo(() => {
     let start;
     try {
-      start = parseISO(timeline?.startDate || (activeFinancialTab === 'emprestimos' ? '2024-05-15' : '2026-01-01'));
-      if (isNaN(start.getTime())) start = new Date(2026, 0, 1);
+      if (computeStartDate) {
+        start = parseISO(computeStartDate.length === 7 ? `${computeStartDate}-01` : computeStartDate);
+      } else {
+        start = parseISO(timeline?.startDate || (activeFinancialTab === 'emprestimos' ? '2024-05-15' : '2026-01-01'));
+      }
+      if (isNaN(start.getTime())) start = new Date(2026, 7, 1);
     } catch {
-      start = new Date(2026, 0, 1);
+      start = new Date(2026, 7, 1);
     }
     const currentMonthKey = todayStr.substring(0, 7); // '2026-08'
 

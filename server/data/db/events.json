@@ -58226,5 +58226,110 @@
     "breakdownItems": [],
     "createdAt": "2026-08-24T19:53:00.502Z",
     "updatedAt": "2026-08-24T19:53:00.502Z"
+  },
+  {
+    "title": "Condomínio",
+    "date": "2026-08-01",
+    "dayOfMonth": 1,
+    "time": "09:00",
+    "status": "Pendente",
+    "periodicity": "recorrente",
+    "amount": 20,
+    "priority": "Normal",
+    "labelsInput": "",
+    "category": "saida_recorrente",
+    "financialType": "gasto",
+    "isIncome": false,
+    "isExpense": true,
+    "isInvestment": false,
+    "labels": [],
+    "isCompleted": false,
+    "updateScope": "all",
+    "id": "908cb3e0-7b22-483d-938a-3d868d2d7f45",
+    "seriesId": "7de77405-8a40-49b1-89de-982aa0e31efb",
+    "version": 0,
+    "isRecurring": true,
+    "timelineOriginId": "a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d",
+    "createdAt": "2026-08-24T20:44:47.626Z",
+    "updatedAt": "2026-08-24T20:44:47.626Z"
+  },
+  {
+    "title": "Transferência Rafael",
+    "date": "2026-08-28",
+    "dayOfMonth": 28,
+    "time": "09:00",
+    "status": "Pendente",
+    "periodicity": "recorrente",
+    "amount": 200,
+    "priority": "Normal",
+    "labelsInput": "",
+    "category": "saida_recorrente",
+    "financialType": "gasto",
+    "isIncome": false,
+    "isExpense": true,
+    "isInvestment": false,
+    "breakdownItems": [
+      {
+        "id": "0c7dee39-f172-46f9-a25d-ac76264b2db5",
+        "name": "Violão Cello",
+        "amount": 25
+      },
+      {
+        "id": "13fde59b-3d63-4b15-98af-eb9ac988fec6",
+        "name": "Karate",
+        "amount": 30
+      },
+      {
+        "id": "aaa4e649-3520-4dd6-b7fe-2136423a9e1e",
+        "name": "Escola ",
+        "amount": 50
+      },
+      {
+        "id": "9a1675b3-2c49-47e7-a8c0-0eee1b6094a8",
+        "name": "Conservatório",
+        "amount": 70
+      },
+      {
+        "id": "c623cb44-f300-4750-b016-449e7e51c75a",
+        "name": "Outros",
+        "amount": 25
+      }
+    ],
+    "labels": [],
+    "isCompleted": false,
+    "updateScope": "all",
+    "id": "f1500a87-3c4d-4524-932d-7b9e4fea7371",
+    "seriesId": "604f498f-bd3d-4ee7-a1d5-731288fd7fae",
+    "version": 0,
+    "isRecurring": true,
+    "timelineOriginId": "a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d",
+    "createdAt": "2026-08-24T20:47:58.844Z",
+    "updatedAt": "2026-08-24T20:47:58.844Z"
+  },
+  {
+    "title": "Poupança",
+    "date": "2026-08-30",
+    "dayOfMonth": 30,
+    "time": "09:00",
+    "status": "Planeado",
+    "periodicity": "unica",
+    "amount": 1500,
+    "priority": "Normal",
+    "labelsInput": "",
+    "category": "investimento_extra",
+    "financialType": "investimento",
+    "isIncome": false,
+    "isExpense": false,
+    "isInvestment": true,
+    "labels": [],
+    "isCompleted": false,
+    "updateScope": "all",
+    "id": "0ef8b52d-bbf5-4bb5-92c1-46038cadf4e8",
+    "seriesId": null,
+    "version": 0,
+    "isRecurring": false,
+    "timelineOriginId": "b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e",
+    "createdAt": "2026-08-24T20:53:35.803Z",
+    "updatedAt": "2026-08-24T20:53:35.803Z"
   }
 ]

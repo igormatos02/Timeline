@@ -429,7 +429,7 @@ export function getConsolidatedLoanMetrics(timelines, selectedIds = null) {
 /**
  * Calculate metrics for Financial (Entradas, Gastos, Investimentos, Balanço) timelines
  */
-export function getFinancialMetrics(timeline, events = []) {
+export function getFinancialMetrics(timeline, events = [], computeStartDate = null) {
   const allEvents = events.length > 0 ? events : (timeline.events || []);
   const todayStr = '2026-08-21';
   const currentMonthKey = todayStr.substring(0, 7); // '2026-08'
@@ -437,6 +437,8 @@ export function getFinancialMetrics(timeline, events = []) {
   const currentMonthDate = parseISO(`${currentMonthKey}-01`);
   const oneYearAheadDate = addMonths(currentMonthDate, 12);
   const oneYearAheadKey = format(oneYearAheadDate, 'yyyy-MM');
+
+  const startBound = computeStartDate ? (computeStartDate.length === 7 ? `${computeStartDate}-01` : computeStartDate) : null;
 
   let totalReceived = 0;
   let totalForecastIncome = 0;
@@ -458,11 +460,14 @@ export function getFinancialMetrics(timeline, events = []) {
   let monthlyExpensesSum = 0;
 
   allEvents.forEach((ev) => {
+    if (!ev || !ev.date) return;
+    if (startBound && ev.date < startBound) return; // Filtrar eventos anteriores à data de computação
+
     const amt = Number(ev.amount || 0);
     const isPast = ev.date <= todayStr;
-    const isLoan = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.timelineOriginId === 'tl-loan-jeep' || ev.timelineOriginId === 'tl-loan-dacia' || ev.timelineOriginId === 'tl-loan-casa1' || ev.timelineOriginId === 'tl-loan-casa2' || ev.timelineOriginId === 'tl-loan-80004197726';
+    const isLoan = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.timelineOriginId === 'tl-loan-jeep' || ev.timelineOriginId === 'tl-loan-dacia' || ev.timelineOriginId === 'tl-loan-casa1' || ev.timelineOriginId === 'tl-loan-casa2' || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
     const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
-    const isExpense = ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto' || isLoan;
+    const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan;
     const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
     const evMonth = ev.date ? ev.date.substring(0, 7) : '';

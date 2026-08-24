@@ -1048,8 +1048,8 @@ export default function TimelineEventCard({
           )}
         </div>
 
-        {/* Origin / Sub-vision Clean Text Indicator aligned to the RIGHT - On Balanço, Principal or Gastos for loans */}
-        {(isBalanceView || (activeFinancialTab === 'gastos' && isLoanInstallment)) && originInfo && (
+        {/* Origin / Sub-vision Clean Text Indicator aligned to the RIGHT - On Balanço, Principal or Gastos for loans/investments */}
+        {(isBalanceView || (activeFinancialTab === 'gastos' && (isLoanInstallment || isInvestmentEvent))) && originInfo && (
           <button
             type="button"
             disabled={isInertFuture}

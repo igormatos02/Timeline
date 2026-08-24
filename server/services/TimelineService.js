@@ -44,9 +44,19 @@ export function projectEvents(rawEvents = [], options = {}) {
 
   // 2. Projetar cada série recorrente
   for (const [seriesId, versions] of recurringSeriesMap.entries()) {
-    // Ordenar versões de forma crescente por número de versão e data
-    versions.sort((a, b) => a.version - b.version || (a.date > b.date ? 1 : -1));
-    const rootVersion = versions[0];
+    // Agrupar versões por data e manter a versão com maior número de versão para a mesma data
+    const versionsByDate = new Map();
+    for (const v of versions) {
+      if (!v || !v.date) continue;
+      const vDate = v.date;
+      if (!versionsByDate.has(vDate) || (Number(v.version || 0) >= Number(versionsByDate.get(vDate).version || 0))) {
+        versionsByDate.set(vDate, v);
+      }
+    }
+
+    // Ordenar as versões cronologicamente por data de início
+    const sortedVersions = Array.from(versionsByDate.values()).sort((a, b) => (a.date > b.date ? 1 : -1));
+    const rootVersion = sortedVersions[0];
     if (!rootVersion || !rootVersion.date) continue;
 
     let baseDate;
@@ -68,10 +78,10 @@ export function projectEvents(rawEvents = [], options = {}) {
       const curDateStr = format(curDate, 'yyyy-MM-dd');
       const curMonthKey = curDateStr.substring(0, 7);
 
-      // Encontrar a versão ativa com a versão mais alta cuja data seja <= curDateStr
+      // Encontrar a versão ativa: a versão mais recente cuja data seja <= curDateStr
       let activeVersion = rootVersion;
-      for (const v of versions) {
-        if (v.date <= curDateStr && v.version >= activeVersion.version) {
+      for (const v of sortedVersions) {
+        if (v.date <= curDateStr) {
           activeVersion = v;
         }
       }

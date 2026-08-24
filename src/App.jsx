@@ -162,18 +162,12 @@ export default function App() {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  // Save to localStorage safely in background/idle without blocking the UI thread
+  // Save minimal settings to localStorage safely
   useEffect(() => {
-    const timer = setTimeout(() => {
-      try {
-        localStorage.setItem('chrono_timelines_data_v26', JSON.stringify(timelines));
-        localStorage.setItem('chrono_timeboards_v1', JSON.stringify(timeboards));
-      } catch (err) {
-        console.warn('LocalStorage save failed:', err);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [timelines, timeboards]);
+    try {
+      localStorage.setItem('chrono_timeboards_v1', JSON.stringify(timeboards));
+    } catch { }
+  }, [timeboards]);
 
   // Selected Timeboard
   const activeTimeboard = timeboards.find((tb) => tb.id === activeTimeboardId) || timeboards[0];

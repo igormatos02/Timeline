@@ -59,7 +59,25 @@ export default function TimelineHeader({
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState('summary'); // 'summary' | 'chart'
-  const [computeFromMonth, setComputeFromMonth] = useState('2026-08');
+  const [computeFromMonth, setComputeFromMonth] = useState(() => {
+    try {
+      return localStorage.getItem('timeline_compute_from_month') || '2026-08';
+    } catch {
+      return '2026-08';
+    }
+  });
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [tempComputeMonth, setTempComputeMonth] = useState(computeFromMonth);
+
+  const handleSaveComputeMonth = (val) => {
+    setComputeFromMonth(val);
+    try {
+      localStorage.setItem('timeline_compute_from_month', val);
+    } catch (e) {
+      console.error(e);
+    }
+    setIsDatePickerOpen(false);
+  };
 
   if (!timeline) return null;
 
@@ -756,90 +774,8 @@ export default function TimelineHeader({
 
                   {activeFinancialTab === 'balanco' && (
                     <>
-                      {/* Seletor: Computar a partir de */}
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          flexWrap: 'wrap',
-                          gap: '10px',
-                          background: 'var(--bg-app)',
-                          border: '1px solid var(--border-glass)',
-                          borderRadius: '10px',
-                          padding: '8px 14px',
-                          marginBottom: '10px'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <Calendar size={14} style={{ color: 'var(--primary-light)' }} />
-                          <span style={{ fontSize: '0.78rem', color: 'var(--text-main)', fontWeight: '700' }}>
-                            Computar a partir de:
-                          </span>
-                          <input
-                            type="month"
-                            value={computeFromMonth}
-                            onChange={(e) => setComputeFromMonth(e.target.value)}
-                            style={{
-                              padding: '3px 8px',
-                              fontSize: '0.78rem',
-                              height: '28px',
-                              borderRadius: '6px',
-                              background: 'var(--bg-card)',
-                              border: '1px solid var(--border-glass-glow)',
-                              color: 'var(--text-main)',
-                              cursor: 'pointer'
-                            }}
-                          />
-                        </div>
-
-                        {/* Presets rápidos */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-                          <button
-                            type="button"
-                            onClick={() => setComputeFromMonth('2026-08')}
-                            className={`btn btn-sm ${computeFromMonth === '2026-08' ? 'btn-primary' : 'btn-ghost'}`}
-                            style={{ padding: '2px 9px', fontSize: '0.72rem', height: '26px', borderRadius: '6px' }}
-                          >
-                            Ago/2026 (Atual)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setComputeFromMonth('2026-01')}
-                            className={`btn btn-sm ${computeFromMonth === '2026-01' ? 'btn-primary' : 'btn-ghost'}`}
-                            style={{ padding: '2px 9px', fontSize: '0.72rem', height: '26px', borderRadius: '6px' }}
-                          >
-                            Jan/2026 (Ano)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setComputeFromMonth('2025-01')}
-                            className={`btn btn-sm ${computeFromMonth === '2025-01' ? 'btn-primary' : 'btn-ghost'}`}
-                            style={{ padding: '2px 9px', fontSize: '0.72rem', height: '26px', borderRadius: '6px' }}
-                          >
-                            2025
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setComputeFromMonth('2024-01')}
-                            className={`btn btn-sm ${computeFromMonth === '2024-01' ? 'btn-primary' : 'btn-ghost'}`}
-                            style={{ padding: '2px 9px', fontSize: '0.72rem', height: '26px', borderRadius: '6px' }}
-                          >
-                            2024 (Origem)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setComputeFromMonth('1900-01')}
-                            className={`btn btn-sm ${computeFromMonth === '1900-01' ? 'btn-primary' : 'btn-ghost'}`}
-                            style={{ padding: '2px 9px', fontSize: '0.72rem', height: '26px', borderRadius: '6px' }}
-                            title="Considerar todos os eventos da base de dados"
-                          >
-                            Tudo
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', marginBottom: '8px' }}>
+                      <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', marginBottom: '8px' }}>
+                        {/* Card 1: Total Investido */}
                         <div className="meta-item" style={{ padding: '6px 10px' }}>
                           <div className="meta-icon-box" style={{ color: '#6366f1' }}>
                             <PiggyBank size={16} />
@@ -855,6 +791,7 @@ export default function TimelineHeader({
                           </div>
                         </div>
 
+                        {/* Card 2: Saldo Líquido Realizado */}
                         <div className="meta-item" style={{ padding: '6px 10px' }}>
                           <div className="meta-icon-box" style={{ color: finMetrics.netRealized >= 0 ? '#10b981' : '#f43f5e' }}>
                             <Scale size={16} />
@@ -869,7 +806,170 @@ export default function TimelineHeader({
                             </div>
                           </div>
                         </div>
+
+                        {/* Card 3: Computar a partir de (Quadrado interativo ao lado) */}
+                        <div
+                          className="meta-item"
+                          onClick={() => {
+                            setTempComputeMonth(computeFromMonth);
+                            setIsDatePickerOpen(true);
+                          }}
+                          style={{
+                            padding: '6px 10px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            border: isDatePickerOpen ? '1px solid var(--primary)' : '1px solid var(--border-glass)'
+                          }}
+                          title="Clique para alterar e salvar a data de início da computação"
+                        >
+                          <div className="meta-icon-box" style={{ color: 'var(--primary-light)' }}>
+                            <Calendar size={16} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div className="meta-label" style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span>Computar a partir de</span>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--primary-light)', fontWeight: '700' }}>⚙️ Alterar</span>
+                            </div>
+                            <div className="meta-value" style={{ color: 'var(--text-main)', fontSize: '0.92rem', fontWeight: '800' }}>
+                              {computeFromMonth === '1900-01'
+                                ? 'Todo o Histórico'
+                                : format(parseISO(`${computeFromMonth}-01`), "MMMM 'de' yyyy", { locale: pt })}
+                            </div>
+                            <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
+                              {computeFromMonth === '1900-01' ? 'Sem filtro inicial' : `Base: ${computeFromMonth}`} (Salvo)
+                            </div>
+                          </div>
+                        </div>
                       </div>
+
+                      {/* Modal para configurar e salvar a data de início */}
+                      {isDatePickerOpen && (
+                        <div
+                          className="modal-overlay"
+                          onClick={() => setIsDatePickerOpen(false)}
+                          style={{ zIndex: 1200 }}
+                        >
+                          <div
+                            className="modal-card"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ maxWidth: '400px' }}
+                          >
+                            <div className="modal-header">
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Calendar size={18} style={{ color: 'var(--primary-light)' }} />
+                                <h3 className="modal-title" style={{ margin: 0, fontSize: '1.08rem' }}>
+                                  Computar a partir de
+                                </h3>
+                              </div>
+                              <button
+                                type="button"
+                                className="modal-close-btn"
+                                onClick={() => setIsDatePickerOpen(false)}
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+
+                            <div style={{ padding: '16px 0' }}>
+                              <p style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                                Defina a partir de qual mês/ano o <strong>Summary</strong> e os <strong>Gráficos de Balanço</strong> devem ser calculados. Esta preferência fica salva automaticamente.
+                              </p>
+
+                              <label
+                                style={{
+                                  fontSize: '0.78rem',
+                                  color: 'var(--text-main)',
+                                  display: 'block',
+                                  marginBottom: '6px',
+                                  fontWeight: '700'
+                                }}
+                              >
+                                Selecione Mês e Ano:
+                              </label>
+                              <input
+                                type="month"
+                                value={tempComputeMonth}
+                                onChange={(e) => setTempComputeMonth(e.target.value)}
+                                className="form-input"
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 12px',
+                                  fontSize: '0.92rem',
+                                  borderRadius: '8px',
+                                  background: 'var(--bg-app)',
+                                  border: '1px solid var(--border-glass-glow)',
+                                  color: 'var(--text-main)',
+                                  marginBottom: '16px'
+                                }}
+                              />
+
+                              <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: '700' }}>
+                                Atalhos rápidos:
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                                <button
+                                  type="button"
+                                  className={`btn btn-sm ${tempComputeMonth === '2026-08' ? 'btn-primary' : 'btn-secondary'}`}
+                                  onClick={() => setTempComputeMonth('2026-08')}
+                                  style={{ fontSize: '0.75rem', padding: '6px' }}
+                                >
+                                  Ago/2026 (Mês Atual)
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`btn btn-sm ${tempComputeMonth === '2026-01' ? 'btn-primary' : 'btn-secondary'}`}
+                                  onClick={() => setTempComputeMonth('2026-01')}
+                                  style={{ fontSize: '0.75rem', padding: '6px' }}
+                                >
+                                  Jan/2026 (Início do Ano)
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`btn btn-sm ${tempComputeMonth === '2025-01' ? 'btn-primary' : 'btn-secondary'}`}
+                                  onClick={() => setTempComputeMonth('2025-01')}
+                                  style={{ fontSize: '0.75rem', padding: '6px' }}
+                                >
+                                  Jan/2025
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`btn btn-sm ${tempComputeMonth === '2024-01' ? 'btn-primary' : 'btn-secondary'}`}
+                                  onClick={() => setTempComputeMonth('2024-01')}
+                                  style={{ fontSize: '0.75rem', padding: '6px' }}
+                                >
+                                  Jan/2024 (Origem)
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`btn btn-sm ${tempComputeMonth === '1900-01' ? 'btn-primary' : 'btn-secondary'}`}
+                                  onClick={() => setTempComputeMonth('1900-01')}
+                                  style={{ fontSize: '0.75rem', padding: '6px', gridColumn: 'span 2' }}
+                                >
+                                  Sem Filtro (Todo o Histórico)
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="form-footer" style={{ margin: 0, paddingTop: '12px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => setIsDatePickerOpen(false)}
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-sm"
+                                onClick={() => handleSaveComputeMonth(tempComputeMonth)}
+                                style={{ padding: '6px 16px' }}
+                              >
+                                Salvar e Aplicar
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
 

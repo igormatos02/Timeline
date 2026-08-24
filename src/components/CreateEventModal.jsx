@@ -7,7 +7,9 @@ import {
   ShoppingCart,
   PiggyBank,
   Sparkles,
-  Lock
+  Lock,
+  Repeat,
+  Zap
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -446,38 +448,74 @@ export default function CreateEventModal({
             </div>
           </div>
 
-          {/* Linha: Periodicidade e Status */}
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Periodicidade</label>
-              <select
-                className="form-select"
-                value={formData.periodicity}
-                onChange={(e) => setFormData({ ...formData, periodicity: e.target.value })}
-              >
-                <option value="recorrente">🔁 Mensal (Recorrente)</option>
-                <option value="unica">⚡ Pontual (Mês Atual)</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Estado</label>
-              <select
-                className="form-select"
+          {/* Periodicidade: Seletor Segmentado Único vs Recorrente */}
+          <div className="form-group">
+            <label className="form-label">Periodicidade do Movimento</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, periodicity: 'recorrente' })}
                 style={{
-                  color: formData.status === 'Recebido' || formData.status === 'Pago' || formData.status === 'Investido' ? currentTheme.color : 'var(--text-main)',
-                  fontWeight: '700'
+                  padding: '9px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: formData.periodicity === 'recorrente' ? `2px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
+                  background: formData.periodicity === 'recorrente' ? currentTheme.bgLight : 'var(--bg-glass)',
+                  color: formData.periodicity === 'recorrente' ? currentTheme.color : 'var(--text-muted)',
+                  fontWeight: '700',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  transition: 'all var(--transition-fast)'
                 }}
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
               >
-                {currentTheme.statusOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+                <Repeat size={15} /> Recorrente (Mensal)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, periodicity: 'unica' })}
+                style={{
+                  padding: '9px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: formData.periodicity === 'unica' ? `2px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
+                  background: formData.periodicity === 'unica' ? currentTheme.bgLight : 'var(--bg-glass)',
+                  color: formData.periodicity === 'unica' ? currentTheme.color : 'var(--text-muted)',
+                  fontWeight: '700',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                <Zap size={15} /> Único (Apenas este Mês)
+              </button>
             </div>
+          </div>
+
+          {/* Estado / Status */}
+          <div className="form-group">
+            <label className="form-label">Estado Inicial</label>
+            <select
+              className="form-select"
+              style={{
+                color: formData.status === 'Recebido' || formData.status === 'Pago' || formData.status === 'Investido' ? currentTheme.color : 'var(--text-main)',
+                fontWeight: '700'
+              }}
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+            >
+              {currentTheme.statusOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Desmembramento em Subpartes (Opcional) */}

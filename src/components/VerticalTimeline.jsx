@@ -645,20 +645,42 @@ export default function VerticalTimeline({
           let mMonthExpense = 0;
           let mMonthInvestment = 0;
 
+          let mMonthIncomePaid = 0;
+          let mMonthExpensePaid = 0;
+          let mMonthInvestmentPaid = 0;
+
           mGroup.events.forEach((ev) => {
+            if (ev.status === 'Cancelado' || ev.status === 'Excluido' || ev.isDeleted) return;
+
             const amt = Number(ev.amount || 0);
             const isLoan = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
             const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
             const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan;
             const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
-            if (isIncome) mMonthIncome += amt;
-            if (isExpense) mMonthExpense += amt;
-            if (isInvestment) mMonthInvestment += amt;
+            const isIncomeReceived = ev.status === 'Recebido' || ev.isCompleted;
+            const isExpensePaid = ev.status === 'Pago' || ev.isCompleted;
+            const isInvested = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted;
+
+            if (isIncome) {
+              mMonthIncome += amt;
+              if (isIncomeReceived || isFutureMonth) mMonthIncomePaid += amt;
+            }
+            if (isExpense) {
+              mMonthExpense += amt;
+              if (isExpensePaid || isFutureMonth) mMonthExpensePaid += amt;
+            }
+            if (isInvestment) {
+              mMonthInvestment += amt;
+              if (isInvested || isFutureMonth) mMonthInvestmentPaid += amt;
+            }
           });
 
-          // Balanço Mensal = Soma(Entradas) - (Soma(Gastos + Empréstimos) + Soma(Investimentos))
-          const mNetMonth = mMonthIncome - (mMonthExpense + mMonthInvestment);
+          // No Balanço: Se for mês passado ou atual, computar o que foi efetivamente recebido/pago/investido para atualizar dinamicamente com o status
+          const effectiveIncome = isBalancoView ? (isFutureMonth ? mMonthIncome : (mMonthIncomePaid > 0 ? mMonthIncomePaid : mMonthIncome)) : mMonthIncome;
+          const effectiveExpense = isBalancoView ? (isFutureMonth ? mMonthExpense : mMonthExpensePaid) : mMonthExpense;
+          const effectiveInvestment = isBalancoView ? (isFutureMonth ? mMonthInvestment : mMonthInvestmentPaid) : mMonthInvestment;
+          const mNetMonth = effectiveIncome - (effectiveExpense + effectiveInvestment);
           const cumData = monthCumulativeMap.get(monthKeyStr) || { income: 0, expense: 0, investment: 0 };
 
           if (!showEmptyDays && !hasEvents && !isCurrentMonth) return null;
@@ -861,7 +883,7 @@ export default function VerticalTimeline({
                             }}
                             title="Total de Entradas"
                           >
-                            +{formatCurrency(mMonthIncome)}
+                            +{formatCurrency(effectiveIncome)}
                           </span>
 
                           <span
@@ -878,9 +900,9 @@ export default function VerticalTimeline({
                               fontWeight: '800',
                               fontSize: '0.74rem'
                             }}
-                            title="Total de Gastos (inclui Empréstimos)"
+                            title="Total de Gastos Pagos (inclui Empréstimos)"
                           >
-                            -{formatCurrency(mMonthExpense)}
+                            -{formatCurrency(effectiveExpense)}
                           </span>
 
                           <span
@@ -899,7 +921,7 @@ export default function VerticalTimeline({
                             }}
                             title="Total de Investimentos / Aportes"
                           >
-                            -{formatCurrency(mMonthInvestment)}
+                            -{formatCurrency(effectiveInvestment)}
                           </span>
 
                           <span
@@ -916,7 +938,7 @@ export default function VerticalTimeline({
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
-                            title={`Balanço = ${formatCurrency(mMonthIncome)} - (${formatCurrency(mMonthExpense)} + ${formatCurrency(mMonthInvestment)})`}
+                            title={`Balanço = ${formatCurrency(effectiveIncome)} - (${formatCurrency(effectiveExpense)} + ${formatCurrency(effectiveInvestment)})`}
                           >
                             <span>Balanço: {mNetMonth > 0 ? '+' : ''}{formatCurrency(mNetMonth)}</span>
                           </span>

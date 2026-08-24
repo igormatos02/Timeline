@@ -8484,7 +8484,7 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T23:02:15.732Z"
+    "updatedAt": "2026-08-24T23:09:10.834Z"
   },
   {
     "id": "caff1549-f989-426b-937d-5f48023a5716",
@@ -58323,14 +58323,14 @@
     "category": "saida_recorrente",
     "financialType": "gasto",
     "periodicity": "recorrente",
-    "status": "Pendente",
+    "status": "Pago",
     "priority": "Normal",
     "amount": 200,
     "isIncome": false,
     "isExpense": true,
     "isInvestment": false,
     "isRecurring": true,
-    "isCompleted": false,
+    "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": false,
     "principalAmount": 0,
@@ -58368,7 +58368,7 @@
       }
     ],
     "createdAt": "2026-08-24T20:47:58.844Z",
-    "updatedAt": "2026-08-24T23:04:49.297Z",
+    "updatedAt": "2026-08-24T23:10:35.834Z",
     "isProjected": true,
     "completedAtTime": "00:03",
     "timelineOriginColor": "#f43f5e"

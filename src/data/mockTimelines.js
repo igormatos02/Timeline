@@ -192,52 +192,53 @@ function createCasa1LoanEvents() {
   const events = [];
   const regularMonthly = 288.01;
   const totalMonths = 432; // 36 anos (94 pagas + 338 remanescentes)
-  const todayStr = '2026-08-21';
 
-  for (let year = 2024; year <= 2027; year++) {
-    const maxMonth = year === 2027 ? 8 : 12;
-    for (let month = 1; month <= maxMonth; month++) {
-      const monthStr = month.toString().padStart(2, '0');
-      const dateStr = `${year}-${monthStr}-01`;
+  // Base: Outubro de 2018 (Prestação 1) até Outubro de 2054 (Prestação 432)
+  for (let i = 1; i <= totalMonths; i++) {
+    const totalMonthOffset = i - 1; // 0 = Outubro 2018
+    const startYear = 2018;
+    const startMonth = 10; // Outubro
 
-      // Prestação 94 é em Agosto de 2026
-      const instNum = 94 + (year - 2026) * 12 + (month - 8);
-      if (instNum < 1) continue;
+    const absoluteMonth = startMonth + totalMonthOffset;
+    const year = startYear + Math.floor((absoluteMonth - 1) / 12);
+    const monthNumber = ((absoluteMonth - 1) % 12) + 1;
+    const monthStr = monthNumber.toString().padStart(2, '0');
+    const dateStr = `${year}-${monthStr}-01`;
 
-      const isPastPaid = dateStr <= todayStr;
-      const status = isPastPaid ? 'Pago' : 'Pendente';
+    const isPastPaid = i <= 94; // Prestações 1 a 94 pagas (até Agosto 2026)
+    const status = isPastPaid ? 'Pago' : 'Pendente';
+    const balanceAfter = Math.max(0, Math.round((58006.90 - (i - 94) * 115.61) * 100) / 100);
 
-      events.push({
-        id: `casa1-loan-inst-${instNum}`,
-        timelineOriginId: 'tl-loan-casa1',
-        timelineOriginName: 'Crédito Hipotecário - Casa 1',
-        timelineOriginIcon: '🏠',
-        date: dateStr,
-        time: '08:00',
-        title: `Prestação Casa 1 #${instNum} (Nº 02012642)`,
-        description: `Crédito Hipotecário Nº 02012642 (TAN 2.690%). Capital: 115,61 € | Juros: 130,29 € | Seguro de Vida: 42,11 €`,
-        category: 'parcela_emprestimo',
-        financialType: 'gasto',
-        status: status,
-        priority: 'Normal',
-        amount: regularMonthly,
-        principalAmount: 115.61,
-        interestPortion: 130.29,
-        interestAmount: 0,
-        balanceAfter: 58006.90 - (instNum - 94) * 115.61,
-        installmentNumber: instNum,
-        totalInstallments: totalMonths,
-        isSystemLoanEvent: true,
-        isCompleted: isPastPaid,
-        labels: ['Casa 1', '02012642', isPastPaid ? 'Pago' : 'Pendente'],
-        breakdownItems: [
-          { id: `c1-cap-${instNum}`, name: 'Capital', amount: 115.61 },
-          { id: `c1-jur-${instNum}`, name: 'Juros', amount: 130.29 },
-          { id: `c1-selo-${instNum}`, name: 'Imposto do Selo', amount: 0.00 },
-          { id: `c1-seg-${instNum}`, name: 'Seguro de Vida', amount: 42.11 }
-        ]
-      });
-    }
+    events.push({
+      id: `casa1-loan-inst-${i}`,
+      timelineOriginId: 'tl-loan-casa1',
+      timelineOriginName: 'Crédito Hipotecário - Casa 1',
+      timelineOriginIcon: '🏠',
+      date: dateStr,
+      time: '08:00',
+      title: `Prestação Casa 1 #${i} de ${totalMonths}`,
+      description: `Crédito Hipotecário Nº 02012642 (TAN 2.690%). Capital: 115,61 € | Juros: 130,29 € | Seguro de Vida: 42,11 €`,
+      category: 'parcela_emprestimo',
+      financialType: 'gasto',
+      status: status,
+      priority: 'Normal',
+      amount: regularMonthly,
+      principalAmount: 115.61,
+      interestPortion: 130.29,
+      interestAmount: 0,
+      balanceAfter: balanceAfter,
+      installmentNumber: i,
+      totalInstallments: totalMonths,
+      isSystemLoanEvent: true,
+      isCompleted: isPastPaid,
+      labels: ['Casa 1', '02012642', isPastPaid ? 'Pago' : 'Pendente'],
+      breakdownItems: [
+        { id: `c1-cap-${i}`, name: 'Capital', amount: 115.61 },
+        { id: `c1-jur-${i}`, name: 'Juros', amount: 130.29 },
+        { id: `c1-selo-${i}`, name: 'Imposto do Selo', amount: 0.00 },
+        { id: `c1-seg-${i}`, name: 'Seguro de Vida', amount: 42.11 }
+      ]
+    });
   }
 
   return events;
@@ -248,52 +249,53 @@ function createCasa2LoanEvents() {
   const events = [];
   const regularMonthly = 293.05;
   const totalMonths = 348; // 29 anos (17 pagas + 331 remanescentes)
-  const todayStr = '2026-08-21';
 
-  for (let year = 2024; year <= 2027; year++) {
-    const maxMonth = year === 2027 ? 8 : 12;
-    for (let month = 1; month <= maxMonth; month++) {
-      const monthStr = month.toString().padStart(2, '0');
-      const dateStr = `${year}-${monthStr}-01`;
+  // Base: Abril de 2025 (Prestação 1) até Março de 2054 (Prestação 348)
+  for (let i = 1; i <= totalMonths; i++) {
+    const totalMonthOffset = i - 1; // 0 = Abril 2025
+    const startYear = 2025;
+    const startMonth = 4; // Abril
 
-      // Prestação 17 é em Agosto de 2026
-      const instNum = 17 + (year - 2026) * 12 + (month - 8);
-      if (instNum < 1) continue;
+    const absoluteMonth = startMonth + totalMonthOffset;
+    const year = startYear + Math.floor((absoluteMonth - 1) / 12);
+    const monthNumber = ((absoluteMonth - 1) % 12) + 1;
+    const monthStr = monthNumber.toString().padStart(2, '0');
+    const dateStr = `${year}-${monthStr}-01`;
 
-      const isPastPaid = dateStr <= todayStr;
-      const status = isPastPaid ? 'Pago' : 'Pendente';
+    const isPastPaid = i <= 17; // Prestações 1 a 17 pagas (até Agosto 2026)
+    const status = isPastPaid ? 'Pago' : 'Pendente';
+    const balanceAfter = Math.max(0, Math.round((50137.21 - (i - 17) * 83.00) * 100) / 100);
 
-      events.push({
-        id: `casa2-loan-inst-${instNum}`,
-        timelineOriginId: 'tl-loan-casa2',
-        timelineOriginName: 'Crédito Hipotecário - Casa 2',
-        timelineOriginIcon: '🏡',
-        date: dateStr,
-        time: '08:00',
-        title: `Prestação Casa 2 #${instNum} (Nº 02015122)`,
-        description: `Crédito Hipotecário Nº 02015122 (TAN 3.990%). Capital: 83,00 € | Juros: 166,98 € | Imposto Selo: 6,68 € | Seguro Vida: 36,39 €`,
-        category: 'parcela_emprestimo',
-        financialType: 'gasto',
-        status: status,
-        priority: 'Normal',
-        amount: regularMonthly,
-        principalAmount: 83.00,
-        interestPortion: 166.98,
-        interestAmount: 6.68,
-        balanceAfter: 50137.21 - (instNum - 17) * 83.00,
-        installmentNumber: instNum,
-        totalInstallments: totalMonths,
-        isSystemLoanEvent: true,
-        isCompleted: isPastPaid,
-        labels: ['Casa 2', '02015122', isPastPaid ? 'Pago' : 'Pendente'],
-        breakdownItems: [
-          { id: `c2-cap-${instNum}`, name: 'Capital', amount: 83.00 },
-          { id: `c2-jur-${instNum}`, name: 'Juros', amount: 166.98 },
-          { id: `c2-selo-${instNum}`, name: 'Imposto do Selo', amount: 6.68 },
-          { id: `c2-seg-${instNum}`, name: 'Seguro de Vida', amount: 36.39 }
-        ]
-      });
-    }
+    events.push({
+      id: `casa2-loan-inst-${i}`,
+      timelineOriginId: 'tl-loan-casa2',
+      timelineOriginName: 'Crédito Hipotecário - Casa 2',
+      timelineOriginIcon: '🏡',
+      date: dateStr,
+      time: '08:00',
+      title: `Prestação Casa 2 #${i} de ${totalMonths}`,
+      description: `Crédito Hipotecário Nº 02015122 (TAN 3.990%). Capital: 83,00 € | Juros: 166,98 € | Imposto Selo: 6,68 € | Seguro Vida: 36,39 €`,
+      category: 'parcela_emprestimo',
+      financialType: 'gasto',
+      status: status,
+      priority: 'Normal',
+      amount: regularMonthly,
+      principalAmount: 83.00,
+      interestPortion: 166.98,
+      interestAmount: 6.68,
+      balanceAfter: balanceAfter,
+      installmentNumber: i,
+      totalInstallments: totalMonths,
+      isSystemLoanEvent: true,
+      isCompleted: isPastPaid,
+      labels: ['Casa 2', '02015122', isPastPaid ? 'Pago' : 'Pendente'],
+      breakdownItems: [
+        { id: `c2-cap-${i}`, name: 'Capital', amount: 83.00 },
+        { id: `c2-jur-${i}`, name: 'Juros', amount: 166.98 },
+        { id: `c2-selo-${i}`, name: 'Imposto do Selo', amount: 6.68 },
+        { id: `c2-seg-${i}`, name: 'Seguro de Vida', amount: 36.39 }
+      ]
+    });
   }
 
   return events;

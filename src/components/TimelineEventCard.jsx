@@ -1814,96 +1814,107 @@ export default function TimelineEventCard({
 
             {/* List of draft subparts */}
             {draftSubparts.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {draftSubparts.map((item, idx) => (
-                  <div
-                    key={item.id || idx}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '8px',
-                      padding: '8px 10px',
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      borderRadius: '6px',
-                      borderBottom: '3px solid rgba(255, 255, 255, 0.08)'
-                    }}
-                  >
-                    <input
-                      type="text"
-                      disabled={!canEditAmount}
-                      value={item.name}
-                      onChange={(e) => handleDraftUpdateName(idx, e.target.value)}
-                      placeholder="Nome da subparte..."
+                  <React.Fragment key={item.id || idx}>
+                    <div
                       style={{
-                        flex: 1,
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--text-main)',
-                        fontSize: '0.84rem',
-                        fontWeight: '600',
-                        outline: 'none'
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '8px',
+                        padding: '6px 4px',
+                        background: 'transparent'
+                      }}
+                    >
+                      <input
+                        type="text"
+                        disabled={!canEditAmount}
+                        value={item.name}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => handleDraftUpdateName(idx, e.target.value)}
+                        placeholder="Nome da subparte..."
+                        style={{
+                          flex: 1,
+                          background: 'transparent',
+                          border: 'none',
+                          borderBottom: '1px solid var(--primary-light)',
+                          borderRadius: '0px',
+                          padding: '3px 0',
+                          color: 'var(--text-main)',
+                          fontSize: '0.88rem',
+                          fontWeight: '700',
+                          outline: 'none'
+                        }}
+                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          disabled={!canEditAmount}
+                          className="inline-amount-input"
+                          value={item.amount}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => handleDraftUpdateAmount(idx, e.target.value)}
+                          style={{ width: '80px', fontSize: '0.88rem', textAlign: 'right', fontWeight: '700' }}
+                        />
+                        <span style={{ fontSize: '0.84rem', fontWeight: '700', color: 'var(--text-dim)' }}>€</span>
+                        {canEditAmount && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleDraftDeleteSubpart(idx, e)}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: 'var(--text-dim)',
+                              cursor: 'pointer',
+                              padding: '2px',
+                              display: 'inline-flex',
+                              alignItems: 'center'
+                            }}
+                            title="Eliminar esta subparte"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {/* Linha horizontal de 3px para separar cada subparte */}
+                    <div
+                      style={{
+                        height: '3px',
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        borderRadius: '2px',
+                        width: '100%',
+                        margin: '2px 0'
                       }}
                     />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        disabled={!canEditAmount}
-                        className="inline-amount-input"
-                        value={item.amount}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => handleDraftUpdateAmount(idx, e.target.value)}
-                        style={{ width: '80px', fontSize: '0.86rem', textAlign: 'right', fontWeight: '700' }}
-                      />
-                      <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-dim)' }}>€</span>
-                      {canEditAmount && (
-                        <button
-                          type="button"
-                          onClick={(e) => handleDraftDeleteSubpart(idx, e)}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: 'var(--text-dim)',
-                            cursor: 'pointer',
-                            padding: '2px',
-                            display: 'inline-flex',
-                            alignItems: 'center'
-                          }}
-                          title="Eliminar esta subparte"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  </React.Fragment>
                 ))}
               </div>
-            )}
-
-            {/* Separador de 3px antes do formulário */}
-            {draftSubparts.length > 0 && (
-              <div style={{ height: '3px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '2px', margin: '2px 0' }} />
             )}
 
             {/* Add New Subpart Form */}
             {canEditAmount && (
               <form
                 onSubmit={handleDraftAddSubpart}
-                style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr auto', gap: '6px', marginTop: '2px' }}
+                style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr auto', gap: '8px', marginTop: '4px', padding: '4px 0' }}
               >
                 <input
                   type="text"
                   placeholder="Nome da subparte (ex: Restaurante)"
                   value={newSubpartName}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => setNewSubpartName(e.target.value)}
                   style={{
-                    background: 'rgba(0, 0, 0, 0.15)',
-                    border: '1px solid var(--border-glass)',
-                    borderRadius: '6px',
-                    padding: '6px 10px',
-                    fontSize: '0.78rem',
+                    background: 'transparent',
+                    border: 'none',
+                    borderBottom: '1px solid var(--primary-light)',
+                    borderRadius: '0px',
+                    padding: '3px 0',
+                    fontSize: '0.88rem',
+                    fontWeight: '700',
                     color: 'var(--text-main)',
                     outline: 'none'
                   }}
@@ -1917,11 +1928,12 @@ export default function TimelineEventCard({
                   onFocus={(e) => e.target.select()}
                   onChange={(e) => setNewSubpartAmount(e.target.value)}
                   style={{
-                    background: 'rgba(0, 0, 0, 0.15)',
-                    border: '1px solid var(--border-glass)',
-                    borderRadius: '6px',
-                    padding: '6px 10px',
-                    fontSize: '0.78rem',
+                    background: 'transparent',
+                    border: 'none',
+                    borderBottom: '1px solid var(--primary-light)',
+                    borderRadius: '0px',
+                    padding: '3px 0',
+                    fontSize: '0.88rem',
                     color: 'var(--text-main)',
                     outline: 'none',
                     fontWeight: '700'

@@ -80,6 +80,7 @@ export default function TimelineEventCard({
 
   const [isEditingAmount, setIsEditingAmount] = useState(false);
   const [tempAmount, setTempAmount] = useState(event.amount !== undefined ? event.amount : '');
+  const [propagateSubsequent, setPropagateSubsequent] = useState(true);
 
   React.useEffect(() => {
     setTempAmount(event.amount !== undefined ? event.amount : '');
@@ -108,7 +109,7 @@ export default function TimelineEventCard({
       onUpdateEventDirect({
         ...event,
         amount: num,
-        propagateForward: isRecurring
+        propagateForward: isRecurring ? propagateSubsequent : false
       });
     }
     setIsEditingAmount(false);
@@ -166,7 +167,7 @@ export default function TimelineEventCard({
               display: 'inline-flex',
               alignItems: 'center'
             }}
-            title={isRecurring ? "Guardar valor (propagando para os meses seguintes)" : "Guardar valor"}
+            title={isRecurring && propagateSubsequent ? "Guardar valor (propagando para os meses seguintes)" : "Guardar valor apenas neste mês"}
           >
             <Check size={13} strokeWidth={3} />
           </button>
@@ -188,6 +189,66 @@ export default function TimelineEventCard({
           >
             <X size={13} strokeWidth={2.5} />
           </button>
+
+          {/* Switch para Mudar os valores subsequentes (Default: true) */}
+          {isRecurring && (
+            <label
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => e.stopPropagation()}
+              title="Ativar para aplicar este novo valor a todos os meses subsequentes ou desativar para alterar apenas este mês"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '0.72rem',
+                fontWeight: '600',
+                color: propagateSubsequent ? 'var(--primary-light)' : 'var(--text-dim)',
+                cursor: 'pointer',
+                userSelect: 'none',
+                background: propagateSubsequent ? 'rgba(99, 102, 241, 0.14)' : 'rgba(255, 255, 255, 0.05)',
+                border: propagateSubsequent ? '1px solid rgba(99, 102, 241, 0.35)' : '1px solid var(--border-glass)',
+                borderRadius: '9999px',
+                padding: '2px 8px',
+                marginLeft: '4px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span
+                style={{
+                  width: '20px',
+                  height: '11px',
+                  background: propagateSubsequent ? 'var(--primary)' : 'rgba(148, 163, 184, 0.35)',
+                  borderRadius: '9999px',
+                  position: 'relative',
+                  display: 'inline-block',
+                  transition: 'background 0.15s ease'
+                }}
+              >
+                <span
+                  style={{
+                    width: '7px',
+                    height: '7px',
+                    background: '#fff',
+                    borderRadius: '50%',
+                    position: 'absolute',
+                    top: '2px',
+                    left: propagateSubsequent ? '11px' : '2px',
+                    transition: 'left 0.15s ease'
+                  }}
+                />
+              </span>
+              <input
+                type="checkbox"
+                checked={propagateSubsequent}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setPropagateSubsequent(e.target.checked);
+                }}
+                style={{ display: 'none' }}
+              />
+              <span>Mudar subsequentes</span>
+            </label>
+          )}
         </form>
       );
     }
@@ -197,6 +258,7 @@ export default function TimelineEventCard({
         onClick={(e) => {
           e.stopPropagation();
           if (canEditAmount) {
+            setPropagateSubsequent(true);
             setIsEditingAmount(true);
           }
         }}

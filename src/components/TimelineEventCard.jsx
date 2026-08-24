@@ -231,21 +231,30 @@ export default function TimelineEventCard({
         >
           {prefix}{formatCurrency(event.amount)}
           <span
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDesmembramentoExpanded((prev) => !prev);
+            }}
             style={{
-              fontSize: '0.68rem',
+              fontSize: '0.72rem',
               fontWeight: '700',
-              color: 'var(--primary-light)',
-              background: 'rgba(99, 102, 241, 0.14)',
-              border: '1px solid rgba(99, 102, 241, 0.3)',
+              color: isDesmembramentoExpanded ? '#ffffff' : 'var(--primary-light)',
+              background: isDesmembramentoExpanded ? 'var(--primary)' : 'rgba(99, 102, 241, 0.14)',
+              border: '1px solid rgba(99, 102, 241, 0.4)',
               borderRadius: '9999px',
-              padding: '1px 7px',
+              padding: '2px 9px',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '3px'
+              gap: '5px',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              boxShadow: isDesmembramentoExpanded ? '0 2px 8px rgba(99, 102, 241, 0.35)' : 'none'
             }}
+            title={isDesmembramentoExpanded ? "Clique para fechar o desmembramento" : "Clique para abrir e ver/editar as subpartes"}
           >
-            <Layers size={10} />
-            {event.breakdownItems.length} subpartes
+            <Layers size={11} />
+            <span>{event.breakdownItems.length} subpartes</span>
+            <span style={{ fontSize: '0.65rem', opacity: 0.85 }}>{isDesmembramentoExpanded ? '▲' : '▼'}</span>
           </span>
         </span>
       );
@@ -1846,32 +1855,46 @@ export default function TimelineEventCard({
                 </label>
               ) : <div />}
 
-              {canEditAmount && allSubparts.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {canEditAmount && allSubparts.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onUpdateEventDirect) {
+                        onUpdateEventDirect({
+                          ...event,
+                          breakdownItems: undefined,
+                          propagateForward: isRecurring ? propagateSubsequent : false
+                        });
+                      }
+                      setIsDesmembramentoExpanded(false);
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#f87171',
+                      cursor: 'pointer',
+                      fontSize: '0.72rem',
+                      fontWeight: '600',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    Voltar a Valor Único
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => {
-                    if (onUpdateEventDirect) {
-                      onUpdateEventDirect({
-                        ...event,
-                        breakdownItems: undefined,
-                        propagateForward: isRecurring ? propagateSubsequent : false
-                      });
-                    }
-                    setIsDesmembramentoExpanded(false);
-                  }}
+                  onClick={() => setIsDesmembramentoExpanded(false)}
+                  className="btn btn-secondary btn-sm"
                   style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#f87171',
-                    cursor: 'pointer',
                     fontSize: '0.72rem',
-                    fontWeight: '600',
-                    textDecoration: 'underline'
+                    padding: '3px 10px',
+                    borderRadius: '6px'
                   }}
                 >
-                  Voltar a Valor Único
+                  ✕ Fechar
                 </button>
-              )}
+              </div>
             </div>
           </div>
         );

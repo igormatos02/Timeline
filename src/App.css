@@ -815,6 +815,32 @@
   background: rgba(255, 255, 255, 0.02) !important;
 }
 
+/* Inline Amount Input (no increment/decrement spinners, transparent background, auto-selected) */
+.inline-amount-input {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 6px !important;
+  padding: 2px 6px !important;
+  font-family: inherit !important;
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  outline: none !important;
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+  width: 95px !important;
+  transition: border-color var(--transition-fast) !important;
+}
+
+.inline-amount-input:focus {
+  border-color: var(--primary-light) !important;
+}
+
+.inline-amount-input::-webkit-outer-spin-button,
+.inline-amount-input::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
 .event-card-header {
   display: flex;
   align-items: flex-start;

@@ -126,33 +126,35 @@ export default function TimelineEventCard({
         <form
           onSubmit={handleSaveAmount}
           onClick={(e) => e.stopPropagation()}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', margin: 0, padding: 0 }}
         >
+          {prefix && (
+            <span style={{ fontSize: '1.05rem', fontWeight: '800', color: defaultColor, marginRight: '-2px' }}>
+              {prefix}
+            </span>
+          )}
           <input
             type="number"
             step="0.01"
             min="0"
             autoFocus
+            className="inline-amount-input"
             value={tempAmount}
+            onFocus={(e) => e.target.select()}
+            onBlur={handleSaveAmount}
             onChange={(e) => setTempAmount(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Escape') handleCancelAmount(e);
             }}
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: '100px',
-              padding: '3px 8px',
-              fontSize: '0.95rem',
-              fontWeight: '800',
               color: defaultColor,
-              background: 'rgba(0, 0, 0, 0.25)',
-              border: '1.5px solid var(--primary)',
-              borderRadius: '6px',
-              outline: 'none'
+              borderColor: defaultColor !== 'var(--text-main)' ? defaultColor : 'rgba(255, 255, 255, 0.35)'
             }}
           />
           <button
             type="submit"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={handleSaveAmount}
             style={{
               background: '#10b981',
@@ -170,6 +172,7 @@ export default function TimelineEventCard({
           </button>
           <button
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={handleCancelAmount}
             style={{
               background: 'rgba(255, 255, 255, 0.1)',

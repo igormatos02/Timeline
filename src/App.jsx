@@ -18,18 +18,25 @@ import {
 import './App.css';
 
 export default function App() {
-  // Load timelines from localStorage or mock data (v15 with clean structure & reactive toggles)
+  // Load timelines from localStorage or mock data (with automatic legacy cleanup)
   const [timelines, setTimelines] = useState(() => {
-    const saved = localStorage.getItem('chrono_timelines_data_v24');
-    if (saved) {
-      try {
+    try {
+      // Clear legacy storage keys to free browser quota
+      for (let i = 1; i <= 23; i++) {
+        localStorage.removeItem(`chrono_timelines_data_v${i}`);
+      }
+    } catch (e) { }
+
+    try {
+      const saved = localStorage.getItem('chrono_timelines_data_v24');
+      if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed;
         }
-      } catch (e) {
-        console.error('Failed to parse saved timelines:', e);
       }
+    } catch (e) {
+      console.error('Failed to parse saved timelines:', e);
     }
     return initialTimelines;
   });
@@ -62,17 +69,33 @@ export default function App() {
 
   // Apply theme to document
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('chrono_theme', theme);
+    try {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('chrono_theme', theme);
+    } catch (e) { }
   }, [theme]);
 
   const handleToggleTheme = () => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  // Save to localStorage when timelines state updates
+  // Save to localStorage safely when timelines state updates
   useEffect(() => {
-    localStorage.setItem('chrono_timelines_data_v24', JSON.stringify(timelines));
+    try {
+      localStorage.setItem('chrono_timelines_data_v24', JSON.stringify(timelines));
+    } catch (err) {
+      console.warn('LocalStorage save failed, cleaning older keys:', err);
+      try {
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith('chrono_timelines_data_v') && key !== 'chrono_timelines_data_v24') {
+            localStorage.removeItem(key);
+          }
+        });
+        localStorage.setItem('chrono_timelines_data_v24', JSON.stringify(timelines));
+      } catch (e) {
+        console.warn('LocalStorage quota still exceeded:', e);
+      }
+    }
   }, [timelines]);
 
   const rawActiveTimeline = timelines.find((tl) => tl.id === activeTimelineId) || timelines[0];

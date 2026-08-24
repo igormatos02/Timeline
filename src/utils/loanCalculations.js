@@ -501,11 +501,11 @@ export function getFinancialMetrics(timeline, events = []) {
     }
   });
 
-  const monthlyAverageExpenses = expenseMonthsSet.size > 0 ? (monthlyExpensesSum / expenseMonthsSet.size) : (currentMonthExpenses || 1040);
+  const monthlyAverageExpenses = expenseMonthsSet.size > 0 ? (monthlyExpensesSum / expenseMonthsSet.size) : (currentMonthExpenses || 0);
   const projectedAnnualExpenses = currentYearExpenses > 0 ? currentYearExpenses : (monthlyAverageExpenses * 12);
   const monthlyAverageIncome = annualProjectedIncome > 0
     ? (annualProjectedIncome / 12)
-    : (currentMonthIncome || 3349.60);
+    : (currentMonthIncome || 0);
 
   const netRealized = totalReceived - totalPaidExpenses - totalInvested;
   const netProjected = totalForecastIncome - totalPlannedExpenses - totalPlannedInvestments;

@@ -614,7 +614,7 @@ export default function TimelineHeader({
                         <div>
                           <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Mês Corrente</div>
                           <div className="meta-value" style={{ color: '#10b981', fontSize: '0.96rem', fontWeight: '800' }}>
-                            +{formatCurrency(finMetrics.currentMonthIncome || 3349.60)}
+                            +{formatCurrency(finMetrics.currentMonthIncome || 0)}
                           </div>
                           <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
                             {finMetrics.currentMonthIncomeReceived > 0
@@ -631,7 +631,7 @@ export default function TimelineHeader({
                         <div>
                           <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Recebido até Hoje</div>
                           <div className="meta-value" style={{ color: '#06b6d4', fontSize: '0.96rem', fontWeight: '800' }}>
-                            {formatCurrency(finMetrics.totalReceived)}
+                            {formatCurrency(finMetrics.totalReceived || 0)}
                           </div>
                           <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Entradas liquidadas e confirmadas</div>
                         </div>
@@ -644,7 +644,7 @@ export default function TimelineHeader({
                         <div>
                           <div className="meta-label" style={{ fontSize: '0.7rem' }}>Média Mensal</div>
                           <div className="meta-value" style={{ color: '#f59e0b', fontSize: '0.96rem', fontWeight: '800' }}>
-                            +{formatCurrency(finMetrics.monthlyAverageIncome || (finMetrics.annualProjectedIncome ? finMetrics.annualProjectedIncome / 12 : 3349.60))} / mês
+                            +{formatCurrency(finMetrics.monthlyAverageIncome || 0)} / mês
                           </div>
                           <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Rendimento médio estimado</div>
                         </div>

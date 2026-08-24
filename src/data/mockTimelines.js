@@ -200,73 +200,44 @@ function createFinancialEvents() {
         labels: ['Salário', isSalaryPast ? 'Recebido' : 'Pendente']
       });
 
-      // 2. GASTO: Despesas Fixas / Habitação & Condomínio (Dia 05)
-      const rentDateStr = `${year}-${monthStr}-05`;
-      const isRentPast = rentDateStr <= todayStr;
-      events.push({
-        id: `fin-rent-${year}-${monthStr}`,
-        timelineOriginId: 'tl-income',
-        timelineOriginName: 'Financeiro',
-        timelineOriginIcon: '💰',
-        date: rentDateStr,
-        time: '09:00',
-        title: 'Habitação & Despesas Fixas',
-        description: '',
-        category: 'saida_recorrente',
-        financialType: 'gasto',
-        status: isRentPast ? 'Pago' : 'Pendente',
-        priority: 'Alta',
-        amount: 650.00,
-        isIncome: false,
-        isExpense: true,
-        isCompleted: isRentPast,
-        labels: ['Despesas Fixas', isRentPast ? 'Pago' : 'Pendente']
-      });
+      // 2. GASTOS FIXOS RECORRENTES MENSAIS
+      const recurringExpenses = [
+        { title: 'Condomínio', amount: 20.00, day: '02', priority: 'Alta' },
+        { title: 'Luz', amount: 80.00, day: '08', priority: 'Alta' },
+        { title: 'Água', amount: 50.00, day: '10', priority: 'Alta' },
+        { title: 'Carro 1', amount: 170.00, day: '12', priority: 'Normal' },
+        { title: 'Comida', amount: 300.00, day: '15', priority: 'Alta' },
+        { title: 'Conctvida', amount: 150.00, day: '18', priority: 'Normal' },
+        { title: 'Rafael', amount: 200.00, day: '20', priority: 'Normal' },
+        { title: 'Carro 2', amount: 250.00, day: '22', priority: 'Normal' },
+        { title: 'Gasolina', amount: 40.00, day: '25', priority: 'Normal' }
+      ];
 
-      // 3. GASTO: Serviços, Telecom & Utilities (Dia 12)
-      const utilDateStr = `${year}-${monthStr}-12`;
-      const isUtilPast = utilDateStr <= todayStr;
-      events.push({
-        id: `fin-util-${year}-${monthStr}`,
-        timelineOriginId: 'tl-income',
-        timelineOriginName: 'Financeiro',
-        timelineOriginIcon: '💰',
-        date: utilDateStr,
-        time: '11:00',
-        title: 'Serviços & Telecomunicações',
-        description: '',
-        category: 'saida_recorrente',
-        financialType: 'gasto',
-        status: isUtilPast ? 'Pago' : 'Pendente',
-        priority: 'Normal',
-        amount: 145.00,
-        isIncome: false,
-        isExpense: true,
-        isCompleted: isUtilPast,
-        labels: ['Serviços', isUtilPast ? 'Pago' : 'Pendente']
-      });
-
-      // 4. GASTO: Alimentação & Supermercado (Dia 18)
-      const superDateStr = `${year}-${monthStr}-18`;
-      const isSuperPast = superDateStr <= todayStr;
-      events.push({
-        id: `fin-super-${year}-${monthStr}`,
-        timelineOriginId: 'tl-income',
-        timelineOriginName: 'Financeiro',
-        timelineOriginIcon: '💰',
-        date: superDateStr,
-        time: '17:00',
-        title: 'Alimentação & Supermercado',
-        description: '',
-        category: 'saida_recorrente',
-        financialType: 'gasto',
-        status: isSuperPast ? 'Pago' : 'Pendente',
-        priority: 'Normal',
-        amount: 380.00,
-        isIncome: false,
-        isExpense: true,
-        isCompleted: isSuperPast,
-        labels: ['Alimentação', isSuperPast ? 'Pago' : 'Pendente']
+      recurringExpenses.forEach((exp, expIdx) => {
+        const expDateStr = `${year}-${monthStr}-${exp.day}`;
+        const isExpPast = expDateStr <= todayStr;
+        events.push({
+          id: `fin-exp-${expIdx}-${year}-${monthStr}`,
+          seriesId: `series-exp-${expIdx}`,
+          timelineOriginId: 'tl-income',
+          timelineOriginName: 'Financeiro',
+          timelineOriginIcon: '💰',
+          date: expDateStr,
+          time: '09:00',
+          title: exp.title,
+          description: '',
+          category: 'saida_recorrente',
+          financialType: 'gasto',
+          periodicity: 'recorrente',
+          status: isExpPast ? 'Pago' : 'Pendente',
+          priority: exp.priority,
+          amount: exp.amount,
+          isIncome: false,
+          isExpense: true,
+          isRecurring: true,
+          isCompleted: isExpPast,
+          labels: [exp.title, isExpPast ? 'Pago' : 'Pendente']
+        });
       });
 
       // 5. INVESTIMENTO: Aporte Poupança / Reserva (Dia 28)

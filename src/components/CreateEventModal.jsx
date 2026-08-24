@@ -291,90 +291,92 @@ export default function CreateEventModal({
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Seletor de Tipo de Movimento */}
-          <div className="form-group">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label className="form-label">Tipo de Movimento</label>
-              {!isBalancoView && (
-                <span style={{ fontSize: '0.72rem', color: currentTheme.color, fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'none' }}>
-                  <Lock size={11} /> Definido pela Timeline ativa
-                </span>
-              )}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-              <button
-                type="button"
-                disabled={!isBalancoView}
-                onClick={() => handleSelectMovementType('entrada')}
-                style={{
-                  padding: '8px 10px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: movementType === 'entrada' ? '2px solid #10b981' : '1px solid var(--border-glass)',
-                  background: movementType === 'entrada' ? 'rgba(16, 185, 129, 0.2)' : 'var(--bg-glass)',
-                  color: movementType === 'entrada' ? '#10b981' : 'var(--text-muted)',
-                  fontWeight: '700',
-                  fontSize: '0.85rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  cursor: !isBalancoView ? 'not-allowed' : 'pointer',
-                  opacity: !isBalancoView && movementType !== 'entrada' ? 0.4 : 1,
-                  transition: 'all var(--transition-fast)'
-                }}
-              >
-                <DollarSign size={14} /> Entrada
-              </button>
+          {/* Seletor de Tipo de Movimento (Apenas na Criação de Novo Evento) */}
+          {!initialData && (
+            <div className="form-group">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label className="form-label">Tipo de Movimento</label>
+                {!isBalancoView && (
+                  <span style={{ fontSize: '0.72rem', color: currentTheme.color, fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'none' }}>
+                    <Lock size={11} /> Definido pela Timeline ativa
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <button
+                  type="button"
+                  disabled={!isBalancoView}
+                  onClick={() => handleSelectMovementType('entrada')}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: movementType === 'entrada' ? '2px solid #10b981' : '1px solid var(--border-glass)',
+                    background: movementType === 'entrada' ? 'rgba(16, 185, 129, 0.2)' : 'var(--bg-glass)',
+                    color: movementType === 'entrada' ? '#10b981' : 'var(--text-muted)',
+                    fontWeight: '700',
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: !isBalancoView ? 'not-allowed' : 'pointer',
+                    opacity: !isBalancoView && movementType !== 'entrada' ? 0.4 : 1,
+                    transition: 'all var(--transition-fast)'
+                  }}
+                >
+                  <DollarSign size={14} /> Entrada
+                </button>
 
-              <button
-                type="button"
-                disabled={!isBalancoView}
-                onClick={() => handleSelectMovementType('saida')}
-                style={{
-                  padding: '8px 10px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: movementType === 'saida' ? '2px solid #f43f5e' : '1px solid var(--border-glass)',
-                  background: movementType === 'saida' ? 'rgba(244, 63, 94, 0.2)' : 'var(--bg-glass)',
-                  color: movementType === 'saida' ? '#f43f5e' : 'var(--text-muted)',
-                  fontWeight: '700',
-                  fontSize: '0.85rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  cursor: !isBalancoView ? 'not-allowed' : 'pointer',
-                  opacity: !isBalancoView && movementType !== 'saida' ? 0.4 : 1,
-                  transition: 'all var(--transition-fast)'
-                }}
-              >
-                <ShoppingCart size={14} /> Saída
-              </button>
+                <button
+                  type="button"
+                  disabled={!isBalancoView}
+                  onClick={() => handleSelectMovementType('saida')}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: movementType === 'saida' ? '2px solid #f43f5e' : '1px solid var(--border-glass)',
+                    background: movementType === 'saida' ? 'rgba(244, 63, 94, 0.2)' : 'var(--bg-glass)',
+                    color: movementType === 'saida' ? '#f43f5e' : 'var(--text-muted)',
+                    fontWeight: '700',
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: !isBalancoView ? 'not-allowed' : 'pointer',
+                    opacity: !isBalancoView && movementType !== 'saida' ? 0.4 : 1,
+                    transition: 'all var(--transition-fast)'
+                  }}
+                >
+                  <ShoppingCart size={14} /> Saída
+                </button>
 
-              <button
-                type="button"
-                disabled={!isBalancoView}
-                onClick={() => handleSelectMovementType('investimento')}
-                style={{
-                  padding: '8px 10px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: movementType === 'investimento' ? '2px solid #6366f1' : '1px solid var(--border-glass)',
-                  background: movementType === 'investimento' ? 'rgba(99, 102, 241, 0.2)' : 'var(--bg-glass)',
-                  color: movementType === 'investimento' ? '#818cf8' : 'var(--text-muted)',
-                  fontWeight: '700',
-                  fontSize: '0.85rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  cursor: !isBalancoView ? 'not-allowed' : 'pointer',
-                  opacity: !isBalancoView && movementType !== 'investimento' ? 0.4 : 1,
-                  transition: 'all var(--transition-fast)'
-                }}
-              >
-                <PiggyBank size={14} /> Investimento
-              </button>
+                <button
+                  type="button"
+                  disabled={!isBalancoView}
+                  onClick={() => handleSelectMovementType('investimento')}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: movementType === 'investimento' ? '2px solid #6366f1' : '1px solid var(--border-glass)',
+                    background: movementType === 'investimento' ? 'rgba(99, 102, 241, 0.2)' : 'var(--bg-glass)',
+                    color: movementType === 'investimento' ? '#818cf8' : 'var(--text-muted)',
+                    fontWeight: '700',
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: !isBalancoView ? 'not-allowed' : 'pointer',
+                    opacity: !isBalancoView && movementType !== 'investimento' ? 0.4 : 1,
+                    transition: 'all var(--transition-fast)'
+                  }}
+                >
+                  <PiggyBank size={14} /> Investimento
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Título do Movimento */}
           <div className="form-group">
@@ -449,94 +451,57 @@ export default function CreateEventModal({
                   border: isDayPickerOpen ? `1px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
                   borderRadius: 'var(--radius-sm)',
                   padding: '6px 10px',
-                  minHeight: '42px',
-                  transition: 'all var(--transition-fast)'
+                  cursor: 'pointer',
+                  height: '42px'
                 }}
+                onClick={() => setIsDayPickerOpen(!isDayPickerOpen)}
               >
-                <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                  Dia {formData.dayOfMonth} do mês
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => setIsDayPickerOpen(!isDayPickerOpen)}
-                  style={{
-                    background: currentTheme.bgLight,
-                    border: `1px solid ${currentTheme.border}`,
-                    borderRadius: '4px',
-                    color: currentTheme.color,
-                    padding: '4px 8px',
-                    fontSize: '0.75rem',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <Calendar size={13} />
-                  <span>{isDayPickerOpen ? 'Fechar' : 'Escolher'}</span>
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Calendar size={15} style={{ color: currentTheme.color }} />
+                  <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                    Dia {formData.dayOfMonth}
+                  </span>
+                </div>
+                <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: isDayPickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
               </div>
             </div>
           </div>
 
-          {/* Grid de Seleção de Dia do Mês */}
+          {/* Grid Popover de Seleção Rápida de Dias (1..31) */}
           {isDayPickerOpen && (
-            <div
-              style={{
-                marginBottom: '16px',
-                padding: '12px',
-                background: 'var(--bg-glass)',
-                border: `1px solid ${currentTheme.border}`,
-                borderRadius: 'var(--radius-sm)',
-                boxShadow: `0 8px 24px -6px ${currentTheme.bgGlow}`
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid var(--border-glass)' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Escolha o dia do mês (1 a {totalDays})
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', padding: '12px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                  Selecione o Dia de Vencimento
                 </span>
-                <span style={{ fontSize: '0.75rem', color: currentTheme.color, fontWeight: '700' }}>
-                  Dia {formData.dayOfMonth} selecionado
+                <span style={{ fontSize: '0.72rem', color: currentTheme.color, fontWeight: '800' }}>
+                  {format(parseISO(`${yearStr}-${monthStr}-01`), 'MMMM yyyy', { locale: pt })} ({totalDays} dias)
                 </span>
               </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(7, 1fr)',
-                  gap: '6px'
-                }}
-              >
-                {daysArray.map((dNum) => {
-                  const isSelected = Number(formData.dayOfMonth) === dNum;
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+                {daysArray.map((d) => {
+                  const isSelected = Number(formData.dayOfMonth) === d;
                   return (
                     <button
-                      key={dNum}
+                      key={d}
                       type="button"
                       onClick={() => {
-                        setFormData({ ...formData, dayOfMonth: dNum });
-                        setIsDayPickerOpen(false); // Fill e fecha o grid
+                        setFormData({ ...formData, dayOfMonth: d });
+                        setIsDayPickerOpen(false);
                       }}
                       style={{
-                        height: '32px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        padding: '6px 0',
+                        fontSize: '0.8rem',
+                        fontWeight: isSelected ? '800' : '600',
                         borderRadius: '4px',
                         border: isSelected ? `2px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
-                        background: isSelected ? currentTheme.color : 'rgba(255, 255, 255, 0.04)',
-                        color: isSelected ? '#ffffff' : 'var(--text-main)',
-                        fontWeight: isSelected ? '800' : '600',
-                        fontSize: '0.85rem',
+                        background: isSelected ? currentTheme.bgLight : 'var(--bg-glass)',
+                        color: isSelected ? currentTheme.color : 'var(--text-main)',
                         cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                        boxShadow: isSelected ? `0 2px 8px ${currentTheme.bgGlow}` : 'none'
+                        transition: 'all var(--transition-fast)'
                       }}
                     >
-                      {dNum}
+                      {d}
                     </button>
                   );
                 })}
@@ -544,129 +509,134 @@ export default function CreateEventModal({
             </div>
           )}
 
-          {/* Periodicidade: Seletor Segmentado Único vs Recorrente */}
-          <div className="form-group">
-            <label className="form-label">Periodicidade do Movimento</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, periodicity: 'recorrente' })}
-                style={{
-                  padding: '9px 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: formData.periodicity === 'recorrente' ? `2px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
-                  background: formData.periodicity === 'recorrente' ? currentTheme.bgLight : 'var(--bg-glass)',
-                  color: formData.periodicity === 'recorrente' ? currentTheme.color : 'var(--text-muted)',
-                  fontWeight: '700',
-                  fontSize: '0.85rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                  transition: 'all var(--transition-fast)'
-                }}
-              >
-                <Repeat size={15} /> Recorrente (Mensal)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, periodicity: 'unica' })}
-                style={{
-                  padding: '9px 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: formData.periodicity === 'unica' ? `2px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
-                  background: formData.periodicity === 'unica' ? currentTheme.bgLight : 'var(--bg-glass)',
-                  color: formData.periodicity === 'unica' ? currentTheme.color : 'var(--text-muted)',
-                  fontWeight: '700',
-                  fontSize: '0.85rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                  transition: 'all var(--transition-fast)'
-                }}
-              >
-                <Zap size={15} /> Único (Apenas este Mês)
-              </button>
-            </div>
-          </div>
-
-          {/* Âmbito da Alteração (apenas ao editar evento recorrente existente) */}
+          {/* Switch Mudar Subsequentes (Apenas ao Editar Evento Recorrente) */}
           {initialData && (initialData.seriesId || initialData.isRecurring || formData.periodicity === 'recorrente') && (
-            <div className="form-group" style={{ background: 'rgba(99, 102, 241, 0.08)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(99, 102, 241, 0.25)' }}>
-              <label className="form-label" style={{ color: 'var(--primary-light)', marginBottom: '8px' }}>
-                🎯 Âmbito da Alteração
+            <div className="form-group" style={{ margin: '4px 0 14px 0' }}>
+              <label
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.8rem',
+                  fontWeight: '700',
+                  color: updateScope === 'subsequent' ? 'var(--primary-light)' : 'var(--text-dim)',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  background: updateScope === 'subsequent' ? 'rgba(99, 102, 241, 0.14)' : 'rgba(255, 255, 255, 0.04)',
+                  border: updateScope === 'subsequent' ? '1px solid rgba(99, 102, 241, 0.35)' : '1px solid var(--border-glass)',
+                  borderRadius: '9999px',
+                  padding: '5px 12px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span
+                  style={{
+                    width: '24px',
+                    height: '13px',
+                    background: updateScope === 'subsequent' ? 'var(--primary)' : 'rgba(148, 163, 184, 0.35)',
+                    borderRadius: '9999px',
+                    position: 'relative',
+                    display: 'inline-block',
+                    transition: 'background 0.15s ease'
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '9px',
+                      height: '9px',
+                      background: '#fff',
+                      borderRadius: '50%',
+                      position: 'absolute',
+                      top: '2px',
+                      left: updateScope === 'subsequent' ? '13px' : '2px',
+                      transition: 'left 0.15s ease'
+                    }}
+                  />
+                </span>
+                <input
+                  type="checkbox"
+                  checked={updateScope === 'subsequent'}
+                  onChange={(e) => setUpdateScope(e.target.checked ? 'subsequent' : 'single')}
+                  style={{ display: 'none' }}
+                />
+                <span>Mudar subsequentes</span>
               </label>
+            </div>
+          )}
+
+          {/* Periodicidade: Seletor Segmentado Único vs Recorrente (Apenas na Criação) */}
+          {!initialData && (
+            <div className="form-group">
+              <label className="form-label">Periodicidade do Movimento</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <button
                   type="button"
-                  onClick={() => setUpdateScope('single')}
+                  onClick={() => setFormData({ ...formData, periodicity: 'recorrente' })}
                   style={{
-                    padding: '8px 10px',
-                    borderRadius: '6px',
-                    border: updateScope === 'single' ? '2px solid #06b6d4' : '1px solid var(--border-glass)',
-                    background: updateScope === 'single' ? 'rgba(6, 182, 212, 0.15)' : 'var(--bg-glass)',
-                    color: updateScope === 'single' ? '#06b6d4' : 'var(--text-muted)',
+                    padding: '9px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: formData.periodicity === 'recorrente' ? `2px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
+                    background: formData.periodicity === 'recorrente' ? currentTheme.bgLight : 'var(--bg-glass)',
+                    color: formData.periodicity === 'recorrente' ? currentTheme.color : 'var(--text-muted)',
                     fontWeight: '700',
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
+                    fontSize: '0.85rem',
                     display: 'flex',
-                    flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '2px'
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    transition: 'all var(--transition-fast)'
                   }}
                 >
-                  <span>Apenas este Mês</span>
-                  <span style={{ fontSize: '0.66rem', opacity: 0.8 }}>(Sobreposição Pontual)</span>
+                  <Repeat size={15} /> Recorrente (Mensal)
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setUpdateScope('subsequent')}
+                  onClick={() => setFormData({ ...formData, periodicity: 'unica' })}
                   style={{
-                    padding: '8px 10px',
-                    borderRadius: '6px',
-                    border: updateScope === 'subsequent' ? '2px solid #8b5cf6' : '1px solid var(--border-glass)',
-                    background: updateScope === 'subsequent' ? 'rgba(139, 92, 246, 0.15)' : 'var(--bg-glass)',
-                    color: updateScope === 'subsequent' ? '#a78bfa' : 'var(--text-muted)',
+                    padding: '9px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: formData.periodicity === 'unica' ? `2px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
+                    background: formData.periodicity === 'unica' ? currentTheme.bgLight : 'var(--bg-glass)',
+                    color: formData.periodicity === 'unica' ? currentTheme.color : 'var(--text-muted)',
                     fontWeight: '700',
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
+                    fontSize: '0.85rem',
                     display: 'flex',
-                    flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '2px'
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    transition: 'all var(--transition-fast)'
                   }}
                 >
-                  <span>Deste Mês em Diante</span>
-                  <span style={{ fontSize: '0.66rem', opacity: 0.8 }}>(Nova Versão Incremental)</span>
+                  <Zap size={15} /> Único (Apenas este Mês)
                 </button>
               </div>
             </div>
           )}
 
-          {/* Estado / Status */}
-          <div className="form-group">
-            <label className="form-label">Estado Inicial</label>
-            <select
-              className="form-select"
-              style={{
-                color: formData.status === 'Recebido' || formData.status === 'Pago' || formData.status === 'Investido' ? currentTheme.color : 'var(--text-main)',
-                fontWeight: '700'
-              }}
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            >
-              {currentTheme.statusOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Estado Inicial (Apenas na Criação) */}
+          {!initialData && (
+            <div className="form-group">
+              <label className="form-label">Estado Inicial</label>
+              <select
+                className="form-select"
+                style={{
+                  color: formData.status === 'Recebido' || formData.status === 'Pago' || formData.status === 'Investido' ? currentTheme.color : 'var(--text-main)',
+                  fontWeight: '700'
+                }}
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              >
+                {currentTheme.statusOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Desmembramento em Subpartes (Opcional) */}
           <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-glass)', border: '1px solid var(--border-glass)', marginBottom: '16px' }}>

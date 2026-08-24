@@ -441,6 +441,8 @@ export function getFinancialMetrics(timeline, events = []) {
   let totalReceived = 0;
   let totalForecastIncome = 0;
   let annualProjectedIncome = 0;
+  let currentMonthIncome = 0;
+  let currentMonthIncomeReceived = 0;
   let totalPaidExpenses = 0;
   let totalPlannedExpenses = 0;
   let totalInvested = 0;
@@ -468,6 +470,10 @@ export function getFinancialMetrics(timeline, events = []) {
     if (isIncome) {
       if (isPast && ev.status === 'Recebido') totalReceived += amt;
       totalForecastIncome += amt;
+      if (evMonth === currentMonthKey) {
+        currentMonthIncome += amt;
+        if (isPast && ev.status === 'Recebido') currentMonthIncomeReceived += amt;
+      }
       if (evMonth >= currentMonthKey && evMonth < oneYearAheadKey) {
         annualProjectedIncome += amt;
       }
@@ -506,6 +512,8 @@ export function getFinancialMetrics(timeline, events = []) {
     totalReceived,
     totalForecastIncome,
     annualProjectedIncome,
+    currentMonthIncome,
+    currentMonthIncomeReceived,
     totalPaidExpenses,
     totalPlannedExpenses,
     totalInvested,

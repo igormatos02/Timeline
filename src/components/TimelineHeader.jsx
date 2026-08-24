@@ -584,12 +584,14 @@ export default function TimelineHeader({
                           <DollarSign size={16} />
                         </div>
                         <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Entradas Recorrentes</div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Mês Corrente</div>
                           <div className="meta-value" style={{ color: '#10b981', fontSize: '0.96rem', fontWeight: '800' }}>
-                            {formatCurrency(3349.60)} / mês
+                            +{formatCurrency(finMetrics.currentMonthIncome || 3349.60)}
                           </div>
                           <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                            Salário: 3.178 € + Refeição: 171,60 €
+                            {finMetrics.currentMonthIncomeReceived > 0
+                              ? `${formatCurrency(finMetrics.currentMonthIncomeReceived)} já recebidos`
+                              : 'Entradas previstas no mês'}
                           </div>
                         </div>
                       </div>

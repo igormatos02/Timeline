@@ -2121,171 +2121,169 @@ export default function TimelineEventCard({
         );
       })()}
 
-      {/* Footer Meta & Actions (Omitted in inert future months) */}
-      {!isInertFuture && (
-        <div className="event-card-footer">
-          <div className="tag-list">
-            {/* Custom Labels / Etiquetas */}
-            {event.labels && event.labels.map((lbl, i) => (
-              <span
-                key={i}
-                className="event-tag"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '3px'
-                }}
-              >
-                <Tag size={10} /> {lbl}
-              </span>
-            ))}
+      {/* Footer Meta & Actions (Always visible and interactive) */}
+      <div className="event-card-footer">
+        <div className="tag-list">
+          {/* Custom Labels / Etiquetas */}
+          {event.labels && event.labels.map((lbl, i) => (
+            <span
+              key={i}
+              className="event-tag"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px'
+              }}
+            >
+              <Tag size={10} /> {lbl}
+            </span>
+          ))}
 
-            {event.author && (
-              <span className="event-tag" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                <User size={10} /> {event.author}
-              </span>
-            )}
-          </div>
-
-          <div className="event-card-actions">
-            {/* Ajustar / Juros exibido em parcelas em aberto de empréstimo */}
-            {isLoanInstallment && event.status !== 'Pago' && (
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => onOpenEditInstallment && onOpenEditInstallment(event)}
-                style={{ padding: '4px 10px', fontSize: '0.76rem', gap: '4px' }}
-                title="Ajustar valor da parcela, juros ou propagar para a frente"
-              >
-                <Sliders size={13} />
-                <span>Ajustar / Juros</span>
-              </button>
-            )}
-
-            {/* Botão de Notas */}
-            {onEdit && (() => {
-              const allNotes = Array.isArray(event.notes)
-                ? event.notes.filter(Boolean)
-                : (event.description && !event.description.toLowerCase().includes('transferência bancária de vencimento') && event.description.trim() ? [event.description.trim()] : []);
-              const hasNotes = allNotes.length > 0;
-
-              return (
-                <button
-                  type="button"
-                  className="action-icon-btn"
-                  onClick={() => setIsNotesExpanded(!isNotesExpanded)}
-                  title={hasNotes ? `Ver / Editar Notas (${allNotes.length})` : "Adicionar Nota"}
-                  style={{
-                    color: hasNotes ? '#f59e0b' : 'var(--text-dim)',
-                    background: hasNotes ? 'rgba(245, 158, 11, 0.14)' : 'transparent',
-                    border: hasNotes ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid transparent',
-                    borderRadius: '6px',
-                    padding: '4px 6px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <FileText size={14} />
-                  {hasNotes && (
-                    <span style={{ fontSize: '0.68rem', fontWeight: '800', color: '#f59e0b' }}>
-                      {allNotes.length}
-                    </span>
-                  )}
-                </button>
-              );
-            })()}
-
-            {/* Botão de Desmembrar Valor */}
-            {!isLoanInstallment && (onUpdateEventDirect || onEdit) && (() => {
-              const allSubparts = Array.isArray(event.breakdownItems) ? event.breakdownItems : [];
-              const hasBreakdown = allSubparts.length > 0;
-
-              return (
-                <button
-                  type="button"
-                  className="action-icon-btn"
-                  onClick={(e) => {
-                    if (isDesmembramentoExpanded) {
-                      handleCancelDesmembramento(e);
-                    } else {
-                      openDesmembramento(e);
-                    }
-                  }}
-                  title={hasBreakdown ? `Ver / Editar Desmembramento (${allSubparts.length} subpartes)` : "Desmembrar Valor"}
-                  style={{
-                    color: hasBreakdown ? 'var(--primary-light)' : 'var(--text-dim)',
-                    background: hasBreakdown ? 'rgba(99, 102, 241, 0.14)' : 'transparent',
-                    border: hasBreakdown ? '1px solid rgba(99, 102, 241, 0.35)' : '1px solid transparent',
-                    borderRadius: '6px',
-                    padding: '4px 6px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <Layers size={14} />
-                  {hasBreakdown && (
-                    <span style={{ fontSize: '0.68rem', fontWeight: '800', color: 'var(--primary-light)' }}>
-                      {allSubparts.length}
-                    </span>
-                  )}
-                </button>
-              );
-            })()}
-
-            {/* Botão Editar Evento */}
-            {onEdit && (
-              <button
-                type="button"
-                className="action-icon-btn"
-                onClick={() => onEdit(event)}
-                title="Editar Evento"
-              >
-                <Edit3 size={15} />
-              </button>
-            )}
-
-            {/* Botão Eliminar Evento - Sempre visível e ativo para TODOS os eventos */}
-            {onDelete && (
-              <button
-                type="button"
-                className="action-icon-btn delete"
-                onClick={() => onDelete(event)}
-                title="Eliminar Evento"
-              >
-                <Trash2 size={15} />
-              </button>
-            )}
-
-            {/* Botão Bloquear / Desbloquear */}
-            {isCompleted && (
-              <button
-                type="button"
-                className="action-icon-btn"
-                onClick={handleToggleLock}
-                title={
-                  isLocked
-                    ? "Movimento confirmado e bloqueado (Clique para abrir o cadeado e permitir alterar o status)"
-                    : "Movimento desbloqueado (Clique para bloquear)"
-                }
-                style={{
-                  color: isLocked ? '#f59e0b' : 'var(--text-dim)',
-                  background: 'transparent',
-                  border: 'none',
-                  boxShadow: 'none',
-                  padding: '4px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  transition: 'color 0.15s ease'
-                }}
-              >
-                {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
-              </button>
-            )}
-          </div>
+          {event.author && (
+            <span className="event-tag" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <User size={10} /> {event.author}
+            </span>
+          )}
         </div>
-      )}
+
+        <div className="event-card-actions">
+          {/* Ajustar / Juros exibido em parcelas em aberto de empréstimo */}
+          {isLoanInstallment && event.status !== 'Pago' && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => onOpenEditInstallment && onOpenEditInstallment(event)}
+              style={{ padding: '4px 10px', fontSize: '0.76rem', gap: '4px' }}
+              title="Ajustar valor da parcela, juros ou propagar para a frente"
+            >
+              <Sliders size={13} />
+              <span>Ajustar / Juros</span>
+            </button>
+          )}
+
+          {/* Botão de Notas */}
+          {onEdit && (() => {
+            const allNotes = Array.isArray(event.notes)
+              ? event.notes.filter(Boolean)
+              : (event.description && !event.description.toLowerCase().includes('transferência bancária de vencimento') && event.description.trim() ? [event.description.trim()] : []);
+            const hasNotes = allNotes.length > 0;
+
+            return (
+              <button
+                type="button"
+                className="action-icon-btn"
+                onClick={() => setIsNotesExpanded(!isNotesExpanded)}
+                title={hasNotes ? `Ver / Editar Notas (${allNotes.length})` : "Adicionar Nota"}
+                style={{
+                  color: hasNotes ? '#f59e0b' : 'var(--text-dim)',
+                  background: hasNotes ? 'rgba(245, 158, 11, 0.14)' : 'transparent',
+                  border: hasNotes ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid transparent',
+                  borderRadius: '6px',
+                  padding: '4px 6px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <FileText size={14} />
+                {hasNotes && (
+                  <span style={{ fontSize: '0.68rem', fontWeight: '800', color: '#f59e0b' }}>
+                    {allNotes.length}
+                  </span>
+                )}
+              </button>
+            );
+          })()}
+
+          {/* Botão de Desmembrar Valor */}
+          {!isLoanInstallment && (onUpdateEventDirect || onEdit) && (() => {
+            const allSubparts = Array.isArray(event.breakdownItems) ? event.breakdownItems : [];
+            const hasBreakdown = allSubparts.length > 0;
+
+            return (
+              <button
+                type="button"
+                className="action-icon-btn"
+                onClick={(e) => {
+                  if (isDesmembramentoExpanded) {
+                    handleCancelDesmembramento(e);
+                  } else {
+                    openDesmembramento(e);
+                  }
+                }}
+                title={hasBreakdown ? `Ver / Editar Desmembramento (${allSubparts.length} subpartes)` : "Desmembrar Valor"}
+                style={{
+                  color: hasBreakdown ? 'var(--primary-light)' : 'var(--text-dim)',
+                  background: hasBreakdown ? 'rgba(99, 102, 241, 0.14)' : 'transparent',
+                  border: hasBreakdown ? '1px solid rgba(99, 102, 241, 0.35)' : '1px solid transparent',
+                  borderRadius: '6px',
+                  padding: '4px 6px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <Layers size={14} />
+                {hasBreakdown && (
+                  <span style={{ fontSize: '0.68rem', fontWeight: '800', color: 'var(--primary-light)' }}>
+                    {allSubparts.length}
+                  </span>
+                )}
+              </button>
+            );
+          })()}
+
+          {/* Botão Editar Evento */}
+          {onEdit && (
+            <button
+              type="button"
+              className="action-icon-btn"
+              onClick={() => onEdit(event)}
+              title="Editar Evento"
+            >
+              <Edit3 size={15} />
+            </button>
+          )}
+
+          {/* Botão Eliminar Evento - Sempre visível e ativo para TODOS os eventos */}
+          {onDelete && (
+            <button
+              type="button"
+              className="action-icon-btn delete"
+              onClick={() => onDelete(event)}
+              title="Eliminar Evento"
+            >
+              <Trash2 size={15} />
+            </button>
+          )}
+
+          {/* Botão Bloquear / Desbloquear */}
+          {isCompleted && (
+            <button
+              type="button"
+              className="action-icon-btn"
+              onClick={handleToggleLock}
+              title={
+                isLocked
+                  ? "Movimento confirmado e bloqueado (Clique para abrir o cadeado e permitir alterar o status)"
+                  : "Movimento desbloqueado (Clique para bloquear)"
+              }
+              style={{
+                color: isLocked ? '#f59e0b' : 'var(--text-dim)',
+                background: 'transparent',
+                border: 'none',
+                boxShadow: 'none',
+                padding: '4px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                cursor: 'pointer',
+                transition: 'color 0.15s ease'
+              }}
+            >
+              {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { timeboardRepository } from '../repositories/TimeboardRepository.js';
 import { timelineRepository } from '../repositories/TimelineRepository.js';
 import { loanContractRepository } from '../repositories/LoanContractRepository.js';
 import { eventRepository } from '../repositories/EventRepository.js';
@@ -6,9 +7,24 @@ import { initialTimelines } from '../../src/data/mockTimelines.js';
 export async function runSeed() {
   console.log('🌱 Starting Database Seed to server/data/db/*.json...');
 
-  // 1. Extract Timelines
-  const timelinesData = initialTimelines.map((tl) => ({
+  // 1. Extract Timeboard
+  const timeboardsData = [
+    {
+      id: 'tb-principal',
+      name: 'Timeboard Principal',
+      description: 'Gestão e controle financeiro consolidado.',
+      tenant: 'default',
+      type: null,
+      createdAt: '2026-08-24T17:55:00.000Z',
+      updatedAt: '2026-08-24T17:55:00.000Z'
+    }
+  ];
+
+  // 2. Extract Timelines (Only tl-income as the active financial timeline under tb-principal)
+  const filteredTimelines = initialTimelines.filter((tl) => tl.id !== 'tl-principal');
+  const timelinesData = filteredTimelines.map((tl) => ({
     id: tl.id,
+    timeboardId: 'tb-principal',
     name: tl.name,
     type: tl.type,
     color: tl.color,
@@ -20,9 +36,9 @@ export async function runSeed() {
     monthlySalary: tl.monthlySalary || 3349.60
   }));
 
-  // 2. Extract Loan Contracts
+  // 3. Extract Loan Contracts
   const loanContractsData = [];
-  initialTimelines.forEach((tl) => {
+  filteredTimelines.forEach((tl) => {
     if (Array.isArray(tl.carLoans)) {
       tl.carLoans.forEach((loan) => {
         loanContractsData.push({
@@ -33,9 +49,9 @@ export async function runSeed() {
     }
   });
 
-  // 3. Extract Events & Breakdown items
+  // 4. Extract Events & Breakdown items
   const allEventsData = [];
-  initialTimelines.forEach((tl) => {
+  filteredTimelines.forEach((tl) => {
     if (Array.isArray(tl.events)) {
       tl.events.forEach((ev) => {
         allEventsData.push({
@@ -47,6 +63,10 @@ export async function runSeed() {
   });
 
   // Write to repositories
+  await timeboardRepository.deleteMany(() => true);
+  await timeboardRepository.createMany(timeboardsData);
+  console.log(`✅ Seeded ${timeboardsData.length} timeboards into timeboards.json`);
+
   await timelineRepository.deleteMany(() => true);
   await timelineRepository.createMany(timelinesData);
   console.log(`✅ Seeded ${timelinesData.length} timelines into timelines.json`);

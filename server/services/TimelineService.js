@@ -1,8 +1,49 @@
+import { timeboardRepository } from '../repositories/TimeboardRepository.js';
 import { timelineRepository } from '../repositories/TimelineRepository.js';
 import { loanContractRepository } from '../repositories/LoanContractRepository.js';
 import { eventRepository } from '../repositories/EventRepository.js';
 
 export class TimelineService {
+  // --- Timeboard Operations ---
+  async getAllTimeboards() {
+    const timeboards = await timeboardRepository.getAll();
+    const timelines = await this.getAllTimelines();
+
+    return timeboards.map((tb) => ({
+      ...tb,
+      timelines: timelines.filter((tl) => tl.timeboardId === tb.id)
+    }));
+  }
+
+  async getTimeboardById(id) {
+    const timeboard = await timeboardRepository.getById(id);
+    if (!timeboard) return null;
+
+    const timelines = await this.getAllTimelines();
+    return {
+      ...timeboard,
+      timelines: timelines.filter((tl) => tl.timeboardId === id)
+    };
+  }
+
+  async createTimeboard(data) {
+    return timeboardRepository.create(data);
+  }
+
+  async updateTimeboard(id, updates) {
+    return timeboardRepository.update(id, updates);
+  }
+
+  async deleteTimeboard(id) {
+    // Cascade delete timelines
+    const timelines = await timelineRepository.getAll((tl) => tl.timeboardId === id);
+    for (const tl of timelines) {
+      await this.deleteTimeline(tl.id);
+    }
+    return timeboardRepository.delete(id);
+  }
+
+  // --- Timeline Operations ---
   async getAllTimelines() {
     const timelines = await timelineRepository.getAll();
     const allLoans = await loanContractRepository.getAll();

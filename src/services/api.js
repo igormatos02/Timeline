@@ -5,6 +5,42 @@
 
 const API_BASE = '/api';
 
+// Timeboards
+export async function fetchTimeboards() {
+  const res = await fetch(`${API_BASE}/timeboards`);
+  if (!res.ok) throw new Error(`Failed to fetch timeboards: ${res.statusText}`);
+  return res.json();
+}
+
+export async function createTimeboard(timeboardData) {
+  const res = await fetch(`${API_BASE}/timeboards`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(timeboardData)
+  });
+  if (!res.ok) throw new Error('Failed to create timeboard');
+  return res.json();
+}
+
+export async function updateTimeboard(id, updates) {
+  const res = await fetch(`${API_BASE}/timeboards/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) throw new Error('Failed to update timeboard');
+  return res.json();
+}
+
+export async function deleteTimeboard(id) {
+  const res = await fetch(`${API_BASE}/timeboards/${id}`, {
+    method: 'DELETE'
+  });
+  if (!res.ok) throw new Error('Failed to delete timeboard');
+  return res.json();
+}
+
+// Timelines
 export async function fetchTimelines() {
   const res = await fetch(`${API_BASE}/timelines`);
   if (!res.ok) throw new Error(`Failed to fetch timelines: ${res.statusText}`);

@@ -1,11 +1,11 @@
 import React from 'react';
-import { Clock, Plus, Layers, Calendar, Sparkles, Sun, Moon, LocateFixed } from 'lucide-react';
+import { Clock, Plus, LayoutGrid, Calendar, Sparkles, Sun, Moon, LocateFixed } from 'lucide-react';
 
 export default function Navbar({
-  timelines,
-  activeTimelineId,
-  onSelectTimeline,
-  onOpenCreateTimeline,
+  timeboards = [],
+  activeTimeboardId,
+  onSelectTimeboard,
+  onOpenCreateTimeboard,
   onOpenCreateEvent,
   onScrollToToday,
   theme,
@@ -21,23 +21,23 @@ export default function Navbar({
           </div>
           <div>
             <div className="brand-title">
-              Chrono Timeline <Sparkles size={16} style={{ color: '#818cf8' }} />
+              Chrono Timeboard <Sparkles size={16} style={{ color: '#818cf8' }} />
             </div>
-            <div className="brand-subtitle">Linha Temporal Vertical</div>
+            <div className="brand-subtitle">Gestão Financeira & Linhas Temporais</div>
           </div>
         </div>
 
-        {/* Timeline Selector Dropdown */}
-        <div className="timeline-selector-wrapper">
-          <Layers size={18} style={{ color: 'var(--primary)' }} />
+        {/* Timeboard Selector Dropdown */}
+        <div className="timeline-selector-wrapper" title="Selecionar Timeboard">
+          <LayoutGrid size={18} style={{ color: 'var(--primary)' }} />
           <select
             className="timeline-select"
-            value={activeTimelineId}
-            onChange={(e) => onSelectTimeline(e.target.value)}
+            value={activeTimeboardId}
+            onChange={(e) => onSelectTimeboard && onSelectTimeboard(e.target.value)}
           >
-            {timelines.map((tl) => (
-              <option key={tl.id} value={tl.id}>
-                {tl.name} ({tl.status})
+            {timeboards.map((tb) => (
+              <option key={tb.id} value={tb.id}>
+                {tb.name}
               </option>
             ))}
           </select>
@@ -74,10 +74,11 @@ export default function Navbar({
 
           <button
             className="btn btn-outline btn-sm"
-            onClick={onOpenCreateTimeline}
+            onClick={onOpenCreateTimeboard}
+            title="Criar novo Timeboard"
           >
             <Plus size={16} />
-            <span>Nova Timeline</span>
+            <span>Novo Timeboard</span>
           </button>
           
           <button

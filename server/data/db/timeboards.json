@@ -1,0 +1,11 @@
+[
+  {
+    "id": "tb-principal",
+    "name": "Timeboard Principal",
+    "description": "Gestão e controle financeiro consolidado.",
+    "tenant": "default",
+    "type": null,
+    "createdAt": "2026-08-24T17:55:00.000Z",
+    "updatedAt": "2026-08-24T16:56:42.687Z"
+  }
+]

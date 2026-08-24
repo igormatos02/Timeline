@@ -1,12 +1,13 @@
 export class Timeline {
   constructor({
     id,
+    timeboardId = 'tb-principal',
     name,
-    type = 'Principal', // 'Principal' | 'Financeiro' | 'Empréstimo' | 'Personalizado'
+    type = 'Financeiro', // 'Financeiro' | 'Empréstimo' | 'Personalizado'
     color = '#10b981',
     description = '',
-    startDate = '2024-01-01',
-    endDate = '2027-08-31',
+    startDate = '2026-01-01',
+    endDate = '2027-04-30',
     status = 'Em Progresso',
     periodicity = 'mensal',
     monthlySalary = 3349.60,
@@ -14,6 +15,7 @@ export class Timeline {
     updatedAt = new Date().toISOString()
   }) {
     this.id = id;
+    this.timeboardId = timeboardId;
     this.name = name;
     this.type = type;
     this.color = color;

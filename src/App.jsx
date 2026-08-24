@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, addMonths } from 'date-fns';
-import { initialTimelines } from './data/mockTimelines';
+import { initialTimeboards, initialTimelines } from './data/mockTimelines';
 import Navbar from './components/Navbar';
 import TimelineHeader from './components/TimelineHeader';
 import VerticalTimeline from './components/VerticalTimeline';
 import CreateTimelineModal from './components/CreateTimelineModal';
+import CreateTimeboardModal from './components/CreateTimeboardModal';
 import CreateEventModal from './components/CreateEventModal';
 import DeleteEventModal from './components/DeleteEventModal';
 import AmortizationModal from './components/AmortizationModal';
@@ -19,6 +20,22 @@ import * as api from './services/api';
 import './App.css';
 
 export default function App() {
+  // Timeboards State (Top Level Grouping)
+  const [timeboards, setTimeboards] = useState(() => {
+    try {
+      const saved = localStorage.getItem('chrono_timeboards_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) { }
+    return initialTimeboards;
+  });
+
+  const [activeTimeboardId, setActiveTimeboardId] = useState('tb-principal');
+  const [isTimeboardModalOpen, setIsTimeboardModalOpen] = useState(false);
+  const [editingTimeboard, setEditingTimeboard] = useState(null);
+
   // Load timelines from localStorage or mock data (with automatic legacy cleanup)
   const [timelines, setTimelines] = useState(() => {
     try {
@@ -43,7 +60,7 @@ export default function App() {
   });
 
   const [activeTimelineId, setActiveTimelineId] = useState(() => {
-    return 'tl-principal';
+    return 'tl-income';
   });
 
   // Financial Sub-Tabs State ('balanco' | 'entradas' | 'gastos' | 'investimentos' | 'emprestimos')
@@ -52,6 +69,19 @@ export default function App() {
   // Load latest data from Backend JSON Database on mount
   useEffect(() => {
     let isMounted = true;
+    
+    // 1. Load Timeboards
+    api.fetchTimeboards()
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setTimeboards(data);
+        }
+      })
+      .catch((err) => {
+        console.info('Using local timeboards cache:', err.message);
+      });
+
+    // 2. Load Timelines
     api.fetchTimelines()
       .then((data) => {
         if (isMounted && Array.isArray(data) && data.length > 0) {
@@ -61,6 +91,7 @@ export default function App() {
       .catch((err) => {
         console.info('Backend API connected with fallback cache:', err.message);
       });
+
     return () => { isMounted = false; };
   }, []);
 
@@ -95,63 +126,23 @@ export default function App() {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  // Save to localStorage safely when timelines state updates
+  // Save to localStorage safely when timelines/timeboards state updates
   useEffect(() => {
     try {
       localStorage.setItem('chrono_timelines_data_v26', JSON.stringify(timelines));
+      localStorage.setItem('chrono_timeboards_v1', JSON.stringify(timeboards));
     } catch (err) {
       console.warn('LocalStorage save failed, cleaning older keys:', err);
-      try {
-        Object.keys(localStorage).forEach((key) => {
-          if (key.startsWith('chrono_timelines_data_v') && key !== 'chrono_timelines_data_v26') {
-            localStorage.removeItem(key);
-          }
-        });
-        localStorage.setItem('chrono_timelines_data_v26', JSON.stringify(timelines));
-      } catch (e) {
-        console.warn('LocalStorage quota still exceeded:', e);
-      }
     }
-  }, [timelines]);
+  }, [timelines, timeboards]);
 
-  const rawActiveTimeline = timelines.find((tl) => tl.id === activeTimelineId) || timelines[0];
+  // Selected Timeboard
+  const activeTimeboard = timeboards.find((tb) => tb.id === activeTimeboardId) || timeboards[0];
 
-  // Dynamically merge loan and income events up to today (2026-08-21) when viewing the Principal timeline
-  const activeTimeline = React.useMemo(() => {
-    if (!rawActiveTimeline) return null;
-    if (rawActiveTimeline.type === 'Principal') {
-      const todayStr = '2026-08-21';
-      const otherTimelines = timelines.filter((tl) => tl.id !== rawActiveTimeline.id);
-      const mergedEvents = [];
+  // Active Timeline within current Timeboard (Default to tl-income)
+  const rawActiveTimeline = timelines.find((tl) => tl.id === activeTimelineId || tl.timeboardId === activeTimeboardId) || timelines[0];
 
-      otherTimelines.forEach((tl) => {
-        (tl.events || []).forEach((ev) => {
-          if (ev.date <= todayStr) {
-            mergedEvents.push({
-              ...ev,
-              timelineOriginId: ev.timelineOriginId || tl.id,
-              timelineOriginName: ev.timelineOriginName || tl.name,
-              timelineOriginIcon:
-                ev.timelineOriginIcon ||
-                (tl.id === 'tl-loan-house' ? '🏠' : tl.id === 'tl-income' ? '💵' : '🚗'),
-              timelineOriginColor: tl.color
-            });
-          }
-        });
-      });
-
-      // Sort by date descending
-      mergedEvents.sort((a, b) => b.date.localeCompare(a.date));
-
-      return {
-        ...rawActiveTimeline,
-        startDate: '2018-01-10',
-        endDate: todayStr,
-        events: mergedEvents
-      };
-    }
-    return rawActiveTimeline;
-  }, [rawActiveTimeline, timelines]);
+  const activeTimeline = rawActiveTimeline;
 
   // ----------------------------------------------------
   // Timeline Handlers
@@ -666,14 +657,38 @@ export default function App() {
     }
   };
 
+  const handleSaveTimeboard = (formData) => {
+    if (editingTimeboard && editingTimeboard.id) {
+      setTimeboards((prev) =>
+        prev.map((tb) => (tb.id === editingTimeboard.id ? { ...tb, ...formData } : tb))
+      );
+      api.updateTimeboard(editingTimeboard.id, formData).catch(console.error);
+    } else {
+      const newTb = {
+        ...formData,
+        id: `tb-${Date.now()}`
+      };
+      setTimeboards((prev) => [...prev, newTb]);
+      setActiveTimeboardId(newTb.id);
+      api.createTimeboard(newTb).catch(console.error);
+    }
+  };
+
   return (
     <div className="app-container">
       {/* Navbar */}
       <Navbar
-        timelines={timelines}
-        activeTimelineId={activeTimelineId}
-        onSelectTimeline={setActiveTimelineId}
-        onOpenCreateTimeline={handleOpenCreateTimeline}
+        timeboards={timeboards}
+        activeTimeboardId={activeTimeboardId}
+        onSelectTimeboard={(id) => {
+          setActiveTimeboardId(id);
+          const foundTl = timelines.find((tl) => tl.timeboardId === id);
+          if (foundTl) setActiveTimelineId(foundTl.id);
+        }}
+        onOpenCreateTimeboard={() => {
+          setEditingTimeboard(null);
+          setIsTimeboardModalOpen(true);
+        }}
         onOpenCreateEvent={() => handleOpenCreateEvent('2026-08-21')}
         onScrollToToday={handleScrollToToday}
         theme={theme}
@@ -735,6 +750,13 @@ export default function App() {
       </main>
 
       {/* Modals */}
+      <CreateTimeboardModal
+        isOpen={isTimeboardModalOpen}
+        onClose={() => setIsTimeboardModalOpen(false)}
+        onSave={handleSaveTimeboard}
+        initialData={editingTimeboard}
+      />
+
       <CreateTimelineModal
         isOpen={isTimelineModalOpen}
         onClose={() => setIsTimelineModalOpen(false)}

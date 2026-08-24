@@ -449,24 +449,23 @@ function createFinancialEvents() {
   return events;
 }
 
-export const initialTimelines = [
-  // 1. TIMELINE PRINCIPAL (CONSOLIDADA - DEFAULT)
+export const initialTimeboards = [
   {
-    id: "tl-principal",
-    name: "Timeline Principal (Consolidada)",
-    description: "Visão executiva unificada com todos os compromissos, empréstimos e entradas consolidados até à data de hoje.",
-    startDate: "2018-01-10",
-    endDate: "2026-08-21",
-    status: "Em Progresso",
-    type: "Principal",
-    color: "#8b5cf6",
-    periodicity: "mensal",
-    events: []
-  },
+    id: "tb-principal",
+    name: "Timeboard Principal",
+    description: "Gestão e controle financeiro consolidado.",
+    tenant: "default",
+    type: null,
+    createdAt: "2026-08-24T17:55:00.000Z",
+    updatedAt: "2026-08-24T17:55:00.000Z"
+  }
+];
 
-  // 2. TIMELINE FINANCEIRO (ENTRADAS, GASTOS, INVESTIMENTOS, EMPRÉSTIMO CARRO E BALANÇO)
+export const initialTimelines = [
+  // 1. TIMELINE FINANCEIRO (ENTRADAS, GASTOS, INVESTIMENTOS, EMPRÉSTIMOS E BALANÇO)
   {
     id: "tl-income",
+    timeboardId: "tb-principal",
     name: "Financeiro",
     description: "",
     startDate: "2026-01-01",

@@ -1,20 +1,7 @@
 [
   {
-    "id": "tl-principal",
-    "name": "Timeline Principal (Consolidada)",
-    "type": "Principal",
-    "color": "#8b5cf6",
-    "description": "Visão executiva unificada com todos os compromissos, empréstimos e entradas consolidados até à data de hoje.",
-    "startDate": "2018-01-10",
-    "endDate": "2026-08-21",
-    "status": "Em Progresso",
-    "periodicity": "mensal",
-    "monthlySalary": 3349.6,
-    "createdAt": "2026-08-24T16:46:23.090Z",
-    "updatedAt": "2026-08-24T16:46:23.090Z"
-  },
-  {
     "id": "tl-income",
+    "timeboardId": "tb-principal",
     "name": "Financeiro",
     "type": "Financeiro",
     "color": "#10b981",
@@ -24,7 +11,7 @@
     "status": "Em Progresso",
     "periodicity": "mensal",
     "monthlySalary": 3349.6,
-    "createdAt": "2026-08-24T16:46:23.090Z",
-    "updatedAt": "2026-08-24T16:46:23.090Z"
+    "createdAt": "2026-08-24T16:56:42.688Z",
+    "updatedAt": "2026-08-24T16:56:42.688Z"
   }
 ]

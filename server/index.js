@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import { timeboardsRouter } from './routes/timeboardsRoutes.js';
 import { timelinesRouter } from './routes/timelinesRoutes.js';
 import { eventsRouter } from './routes/eventsRoutes.js';
 import { loansRouter } from './routes/loansRoutes.js';
@@ -18,6 +19,7 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
 // API Routes
+app.use('/api/timeboards', timeboardsRouter);
 app.use('/api/timelines', timelinesRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/loans', loansRouter);

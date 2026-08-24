@@ -15,6 +15,7 @@ import {
   applyExtraordinaryAmortization,
   getLoanMetrics
 } from './utils/loanCalculations';
+import * as api from './services/api';
 import './App.css';
 
 export default function App() {
@@ -47,6 +48,21 @@ export default function App() {
 
   // Financial Sub-Tabs State ('balanco' | 'entradas' | 'gastos' | 'investimentos' | 'emprestimos')
   const [activeFinancialTab, setActiveFinancialTab] = useState('balanco');
+
+  // Load latest data from Backend JSON Database on mount
+  useEffect(() => {
+    let isMounted = true;
+    api.fetchTimelines()
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setTimelines(data);
+        }
+      })
+      .catch((err) => {
+        console.info('Backend API connected with fallback cache:', err.message);
+      });
+    return () => { isMounted = false; };
+  }, []);
 
   // Modal states
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
@@ -156,6 +172,7 @@ export default function App() {
       setTimelines((prev) =>
         prev.map((tl) => (tl.id === editingTimeline.id ? { ...tl, ...formData } : tl))
       );
+      api.updateTimeline(editingTimeline.id, formData).catch(console.error);
     } else {
       // Create new timeline
       const newTl = {
@@ -165,17 +182,20 @@ export default function App() {
       };
       setTimelines((prev) => [newTl, ...prev]);
       setActiveTimelineId(newTl.id);
+      api.createTimeline(newTl).catch(console.error);
     }
   };
 
   const handleDeleteTimeline = () => {
     if (!activeTimeline) return;
     if (window.confirm(`Tem a certeza que deseja eliminar a timeline "${activeTimeline.name}"?`)) {
-      const filtered = timelines.filter((tl) => tl.id !== activeTimeline.id);
+      const targetId = activeTimeline.id;
+      const filtered = timelines.filter((tl) => tl.id !== targetId);
       setTimelines(filtered);
       if (filtered.length > 0) {
         setActiveTimelineId(filtered[0].id);
       }
+      api.deleteTimeline(targetId).catch(console.error);
     }
   };
 
@@ -292,6 +312,9 @@ export default function App() {
   const handleUpdateEventDirect = (updatedEvent) => {
     if (!updatedEvent || !updatedEvent.id) return;
 
+    // Sync to backend API
+    api.updateEvent(updatedEvent.id, updatedEvent).catch(console.error);
+
     setTimelines((prev) =>
       prev.map((tl) => {
         const hasEvent = (tl.events || []).some((ev) => ev.id === updatedEvent.id);
@@ -352,6 +375,8 @@ export default function App() {
 
     const targetEvent = (activeTimeline.events || []).find((ev) => ev.id === eventId);
     if (!targetEvent) return;
+
+    api.deleteEvent(eventId, { onlySubsequent: deleteSubsequent, fromDate: targetEvent.date, deleteSeries: deleteSubsequent }).catch(console.error);
 
     if (deleteSubsequent) {
       const targetDate = targetEvent.date;
@@ -486,6 +511,9 @@ export default function App() {
   // Toggle installment payment / income / expense / investment status
   const handleToggleLoanPayment = (installmentId) => {
     if (!installmentId) return;
+
+    // Sync to backend
+    api.toggleEventPayment(installmentId).catch(console.error);
 
     setTimelines((prevTimelines) => {
       const clickTimeStr = format(new Date(), 'HH:mm');

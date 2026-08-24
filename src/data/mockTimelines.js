@@ -1,4 +1,4 @@
-import { formatCurrency } from '../utils/loanCalculations';
+import { formatCurrency } from '../utils/loanCalculations.js';
 
 // Categories for events
 export const EVENT_CATEGORIES = [

@@ -107,6 +107,7 @@ export default function App() {
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState('2026-08-21');
   const [eventModalDefaultNature, setEventModalDefaultNature] = useState('income'); // 'income' | 'expense' | 'investment'
+  const scrollYBeforeModalRef = React.useRef(0);
 
   // Loan Specific Modals
   const [isAmortizationModalOpen, setIsAmortizationModalOpen] = useState(false);
@@ -236,6 +237,7 @@ export default function App() {
   // Event Handlers
   // ----------------------------------------------------
   const handleOpenCreateEvent = (dateStr = '2026-08-21', nature = 'income') => {
+    scrollYBeforeModalRef.current = window.scrollY;
     setEditingEvent(null);
     setSelectedDateForNewEvent(dateStr);
     setEventModalDefaultNature(nature);
@@ -243,6 +245,7 @@ export default function App() {
   };
 
   const handleOpenEditEvent = (eventObj) => {
+    scrollYBeforeModalRef.current = window.scrollY;
     setEditingEvent(eventObj);
     const nature = eventObj?.isExpense ? 'expense' : eventObj?.isInvestment ? 'investment' : 'income';
     setEventModalDefaultNature(nature);
@@ -250,6 +253,8 @@ export default function App() {
   };
 
   const handleSaveEvent = (eventData) => {
+    const savedScrollPos = scrollYBeforeModalRef.current || window.scrollY;
+
     // 1. Determinar o timelineOriginId correto dentro do Timeboard ativo
     let targetTimelineId = eventData.timelineOriginId;
     if (!targetTimelineId || targetTimelineId === activeTimeboardId) {
@@ -372,6 +377,11 @@ export default function App() {
         );
       }
     }
+
+    // Restore and lock scroll position exactly where the user was
+    setTimeout(() => {
+      window.scrollTo({ top: savedScrollPos, behavior: 'instant' });
+    }, 10);
   };
 
   const handleUpdateEventDirect = (updatedEvent) => {

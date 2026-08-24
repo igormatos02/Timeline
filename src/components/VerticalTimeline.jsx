@@ -331,38 +331,14 @@ export default function VerticalTimeline({
   );
 
   // Determine earliest date in timeline
-  let startDateObj = parseISO(timeline.startDate || '2026-08-01');
+  let startDateObj = parseISO(timeline.startDate || '2026-01-01');
   if (isNaN(startDateObj.getTime())) {
-    startDateObj = subDays(todayDate, 20);
+    startDateObj = parseISO('2026-01-01');
   }
 
-  // Determine latest date in timeline (Balanço mostra somente até ao mês corrente, Entradas até 1 ano à frente)
+  // Determine latest date in timeline (Balanço mostra até ao mês corrente; outras abas horizonte fixo de 2.5 anos para estabilidade de scroll)
   const isBalancoView = (isFinancialTimeline && activeFinancialTab === 'balanco') || timeline.type === 'Principal';
-  let maxDateObj = todayDate;
-
-  if (isBalancoView) {
-    maxDateObj = parseISO('2026-08-31');
-  } else if (timeline.type === 'Entradas') {
-    maxDateObj = addYears(todayDate, 1);
-  } else if (timeline.endDate) {
-    try {
-      const parsedEnd = parseISO(timeline.endDate);
-      if (!isNaN(parsedEnd.getTime()) && parsedEnd > maxDateObj) {
-        maxDateObj = parsedEnd;
-      }
-    } catch (e) { }
-  }
-
-  if (!isBalancoView && timeline.type !== 'Entradas') {
-    allEvents.forEach((ev) => {
-      try {
-        const evD = parseISO(ev.date);
-        if (!isNaN(evD.getTime()) && evD > maxDateObj) {
-          maxDateObj = evD;
-        }
-      } catch (e) { }
-    });
-  }
+  let maxDateObj = isBalancoView ? parseISO('2026-08-31') : parseISO('2028-12-31');
 
   // Generate array of days from startDate up to maxDateObj (Descending: future at top, past at bottom)
   let daysArray = [];

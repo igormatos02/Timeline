@@ -19,6 +19,7 @@ export class TimelineEvent {
     status = 'Pendente', // 'Pago' | 'Recebido' | 'Investido' | 'Pendente' | 'Atrasada' | 'Planeado'
     priority = 'Normal', // 'Urgente' | 'Alta' | 'Normal' | 'Baixa'
     amount = 0,
+    initialInvestedAmount = 0,
     isIncome = false,
     isExpense = false,
     isInvestment = false,
@@ -56,6 +57,7 @@ export class TimelineEvent {
     this.status = status;
     this.priority = priority;
     this.amount = Number(amount) || 0;
+    this.initialInvestedAmount = Number(initialInvestedAmount) || 0;
     this.isIncome = isIncome;
     this.isExpense = isExpense;
     this.isInvestment = isInvestment;

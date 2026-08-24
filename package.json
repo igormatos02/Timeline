@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently -n \"SERVER,CLIENT\" -c \"bgBlue.bold,bgGreen.bold\" \"npm run server\" \"vite --host\"",
     "dev:client": "vite --host",
-    "server": "node server/index.js",
+    "server": "node --watch server/index.js",
     "seed": "node server/scripts/seedData.js",
     "build": "vite build",
     "lint": "oxlint",

@@ -399,19 +399,20 @@ export default function App() {
       if (found) targetTlId = found.id;
     }
 
-    if (activeFinancialTab === 'balanco') {
-      const tlIdsToReset = activeTimeboardTimelines.map((t) => t.id);
-      setTimelines((prev) =>
-        prev.map((tl) => (tlIdsToReset.includes(tl.id) ? { ...tl, events: [] } : tl))
-      );
-      for (const tId of tlIdsToReset) {
-        api.resetTimeline(tId).catch(console.error);
+    try {
+      if (activeFinancialTab === 'balanco') {
+        const tlIdsToReset = activeTimeboardTimelines.map((t) => t.id);
+        for (const tId of tlIdsToReset) {
+          await api.resetTimeline(tId);
+        }
+      } else if (targetTlId) {
+        await api.resetTimeline(targetTlId);
       }
-    } else if (targetTlId) {
-      setTimelines((prev) =>
-        prev.map((tl) => (tl.id === targetTlId ? { ...tl, events: [] } : tl))
-      );
-      api.resetTimeline(targetTlId).catch(console.error);
+
+      const updatedTimelines = await api.fetchTimelines();
+      setTimelines(updatedTimelines);
+    } catch (err) {
+      console.error('Error resetting timeline:', err);
     }
 
     setIsResetConfirmOpen(false);

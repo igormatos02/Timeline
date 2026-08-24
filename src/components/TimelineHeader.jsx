@@ -30,7 +30,8 @@ import {
   PiggyBank,
   Scale,
   Home,
-  RotateCcw
+  RotateCcw,
+  X
 } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -77,6 +78,17 @@ export default function TimelineHeader({
       console.error(e);
     }
     setIsDatePickerOpen(false);
+  };
+
+  const getFormattedMonthLabel = (monthStr) => {
+    if (!monthStr || monthStr === '1900-01') return 'Todo o Histórico';
+    try {
+      const d = parseISO(`${monthStr}-01`);
+      if (isNaN(d.getTime())) return monthStr;
+      return format(d, "MMMM 'de' yyyy", { locale: pt });
+    } catch {
+      return monthStr;
+    }
   };
 
   if (!timeline) return null;
@@ -847,9 +859,7 @@ export default function TimelineHeader({
                               <span style={{ fontSize: '0.65rem', color: 'var(--primary-light)', fontWeight: '700' }}>⚙️ Alterar</span>
                             </div>
                             <div className="meta-value" style={{ color: 'var(--text-main)', fontSize: '0.92rem', fontWeight: '800' }}>
-                              {computeFromMonth === '1900-01'
-                                ? 'Todo o Histórico'
-                                : format(parseISO(`${computeFromMonth}-01`), "MMMM 'de' yyyy", { locale: pt })}
+                              {getFormattedMonthLabel(computeFromMonth)}
                             </div>
                             <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
                               {computeFromMonth === '1900-01' ? 'Sem filtro inicial' : `Base: ${computeFromMonth}`} (Salvo)

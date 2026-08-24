@@ -81,7 +81,9 @@ export default function TimelineEventCard({
   const [isEditingAmount, setIsEditingAmount] = useState(false);
   const [tempAmount, setTempAmount] = useState(event.amount !== undefined ? event.amount : '');
   const [propagateSubsequent, setPropagateSubsequent] = useState(true);
-  const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(true);
+  const [isDesmembramentoExpanded, setIsDesmembramentoExpanded] = useState(false);
+  const [newSubpartName, setNewSubpartName] = useState('');
+  const [newSubpartAmount, setNewSubpartAmount] = useState('');
 
   const hasBreakdown = Array.isArray(event.breakdownItems) && event.breakdownItems.length > 0;
 
@@ -162,7 +164,7 @@ export default function TimelineEventCard({
     const current = event.breakdownItems || [];
     const updated = [
       ...current,
-      { id: `part-${Date.now()}-${current.length + 1}`, name: `Parte ${current.length + 1}`, amount: 0 }
+      { id: `part-${Date.now()}-${current.length + 1}`, name: `Subparte ${current.length + 1}`, amount: 0 }
     ];
     const newTotal = updated.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
     if (onUpdateEventDirect) {
@@ -173,6 +175,7 @@ export default function TimelineEventCard({
         propagateForward: isRecurring ? propagateSubsequent : false
       });
     }
+    setIsDesmembramentoExpanded(true);
   };
 
   const handleDeleteBreakdownItem = (idx, e) => {
@@ -193,7 +196,7 @@ export default function TimelineEventCard({
     if (e) e.stopPropagation();
     const currentAmt = Number(event.amount) || 0;
     const initialParts = [
-      { id: `part-${Date.now()}-1`, name: 'Parte 1', amount: currentAmt }
+      { id: `part-${Date.now()}-1`, name: 'Subparte 1', amount: currentAmt }
     ];
     if (onUpdateEventDirect) {
       onUpdateEventDirect({
@@ -203,19 +206,19 @@ export default function TimelineEventCard({
       });
     }
     setIsEditingAmount(false);
-    setIsBreakdownExpanded(true);
+    setIsDesmembramentoExpanded(true);
   };
 
   const renderEditableAmount = (prefix = '', defaultColor = 'var(--text-main)') => {
-    // Se o valor estiver destrinchado em partes, o total NÃO é alterado diretamente
+    // Se o valor estiver desmembrado em subpartes, o total NÃO é alterado diretamente mas sim pelas subpartes
     if (hasBreakdown) {
       return (
         <span
           onClick={(e) => {
             e.stopPropagation();
-            setIsBreakdownExpanded((prev) => !prev);
+            setIsDesmembramentoExpanded((prev) => !prev);
           }}
-          title="Valor composto por partes. Clique para ver/editar as partes individuais abaixo."
+          title="Valor desmembrado em subpartes. Clique para ver/editar as subpartes abaixo."
           style={{
             fontSize: '1.05rem',
             fontWeight: '800',
@@ -242,7 +245,7 @@ export default function TimelineEventCard({
             }}
           >
             <Layers size={10} />
-            {event.breakdownItems.length} partes (soma)
+            {event.breakdownItems.length} subpartes
           </span>
         </span>
       );
@@ -316,12 +319,12 @@ export default function TimelineEventCard({
             <X size={13} strokeWidth={2.5} />
           </button>
 
-          {/* Botão para Destrinchar valor em partes */}
+          {/* Botão para Desmembrar valor em subpartes */}
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={handleConvertToBreakdown}
-            title="Destrinchar valor em partes com nomes associados"
+            title="Desmembrar valor em subpartes com nomes associados"
             style={{
               background: 'rgba(99, 102, 241, 0.14)',
               color: 'var(--primary-light)',
@@ -338,7 +341,7 @@ export default function TimelineEventCard({
             }}
           >
             <Layers size={11} />
-            <span>Destrinchar</span>
+            <span>Desmembrar</span>
           </button>
 
           {/* Switch para Mudar os valores subsequentes (Default: true) */}
@@ -439,116 +442,6 @@ export default function TimelineEventCard({
     );
   };
 
-  // Renderizador da caixa de detalhes de partes destrinchadas
-  const renderBreakdownDetails = () => {
-    if (!hasBreakdown || !isBreakdownExpanded) return null;
-    return (
-      <div
-        className="event-breakdown-box"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          marginTop: '8px',
-          padding: '8px 12px',
-          background: 'var(--bg-app)',
-          border: '1px solid var(--border-glass)',
-          borderRadius: '8px',
-          width: '100%'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: '700', color: 'var(--text-dim)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Layers size={12} style={{ color: 'var(--primary-light)' }} />
-            Partes do Valor ({event.breakdownItems.length})
-          </span>
-          {canEditAmount && (
-            <button
-              type="button"
-              onClick={handleAddBreakdownItem}
-              style={{
-                fontSize: '0.72rem',
-                color: 'var(--primary-light)',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: '700',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '3px'
-              }}
-            >
-              <Plus size={11} /> Adicionar Parte
-            </button>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          {event.breakdownItems.map((item, idx) => (
-            <div
-              key={item.id || idx}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '8px',
-                padding: '3px 0',
-                borderBottom: idx < event.breakdownItems.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none'
-              }}
-            >
-              <input
-                type="text"
-                disabled={!canEditAmount}
-                value={item.name}
-                onChange={(e) => handleUpdateBreakdownItemName(idx, e.target.value)}
-                placeholder="Nome da parte"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-main)',
-                  fontSize: '0.84rem',
-                  fontWeight: '600',
-                  flex: 1,
-                  outline: 'none'
-                }}
-              />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  disabled={!canEditAmount}
-                  className="inline-amount-input"
-                  value={item.amount}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => handleUpdateBreakdownItemAmount(idx, e.target.value)}
-                  style={{ width: '80px', fontSize: '0.86rem', textAlign: 'right' }}
-                />
-                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-dim)' }}>€</span>
-                {canEditAmount && (
-                  <button
-                    type="button"
-                    onClick={(e) => handleDeleteBreakdownItem(idx, e)}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#f43f5e',
-                      cursor: 'pointer',
-                      padding: '3px',
-                      opacity: 0.7,
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}
-                    title="Remover parte"
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
 
   const handleToggleLock = (e) => {
     e.stopPropagation();
@@ -1040,7 +933,6 @@ export default function TimelineEventCard({
               {renderEditableAmount('+', isInertFuture ? '#94a3b8' : (isNextIncome ? '#f59e0b' : isFarFutureIncome ? '#94a3b8' : '#10b981'))}
             </div>
           </div>
-          {renderBreakdownDetails()}
 
           {/* Status Pill for Income */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1175,7 +1067,6 @@ export default function TimelineEventCard({
               </span>
               {renderEditableAmount('-', isInertFuture ? '#94a3b8' : '#f43f5e')}
             </div>
-            {renderBreakdownDetails()}
             {event.priority && !isInertFuture && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
@@ -1288,7 +1179,6 @@ export default function TimelineEventCard({
               {renderEditableAmount('+', isInertFuture ? '#94a3b8' : 'var(--primary-light)')}
             </div>
           </div>
-          {renderBreakdownDetails()}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {isInertFuture ? (
@@ -1706,6 +1596,287 @@ export default function TimelineEventCard({
         );
       })()}
 
+      {/* 🧩 Painel de Desmembramento do Valor (In-place, exatamente como a secção de Notas) */}
+      {isDesmembramentoExpanded && (() => {
+        const allSubparts = Array.isArray(event.breakdownItems) ? event.breakdownItems : [];
+        const totalCalculated = allSubparts.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
+
+        return (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              marginTop: '10px',
+              marginBottom: '10px',
+              padding: '12px 14px',
+              background: 'rgba(255, 255, 255, 0.03)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px'
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', fontWeight: '700', color: 'var(--primary-light)' }}>
+                <Layers size={14} style={{ color: 'var(--primary-light)' }} />
+                <span>Desmembramento do Valor ({allSubparts.length} subpartes)</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDesmembramentoExpanded(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-dim)',
+                  cursor: 'pointer',
+                  fontSize: '0.72rem',
+                  padding: '2px 6px'
+                }}
+              >
+                ✕ Fechar
+              </button>
+            </div>
+
+            {/* Total Banner */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 12px',
+                background: 'rgba(99, 102, 241, 0.08)',
+                border: '1px solid rgba(99, 102, 241, 0.25)',
+                borderRadius: '8px'
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                  Total Acumulado (Exibido Acima)
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  A soma das subpartes determina a totalidade desta entrada
+                </div>
+              </div>
+              <span style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--primary-light)' }}>
+                {formatCurrency(totalCalculated)}
+              </span>
+            </div>
+
+            {/* List of existing subparts */}
+            {allSubparts.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {allSubparts.map((item, idx) => (
+                  <div
+                    key={item.id || idx}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '8px',
+                      padding: '6px 10px',
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      borderRadius: '6px',
+                      borderLeft: '3px solid var(--primary)'
+                    }}
+                  >
+                    <input
+                      type="text"
+                      disabled={!canEditAmount}
+                      value={item.name}
+                      onChange={(e) => handleUpdateBreakdownItemName(idx, e.target.value)}
+                      placeholder="Nome da subparte..."
+                      style={{
+                        flex: 1,
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-main)',
+                        fontSize: '0.84rem',
+                        fontWeight: '600',
+                        outline: 'none'
+                      }}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        disabled={!canEditAmount}
+                        className="inline-amount-input"
+                        value={item.amount}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => handleUpdateBreakdownItemAmount(idx, e.target.value)}
+                        style={{ width: '80px', fontSize: '0.86rem', textAlign: 'right', fontWeight: '700' }}
+                      />
+                      <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-dim)' }}>€</span>
+                      {canEditAmount && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteBreakdownItem(idx, e)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--text-dim)',
+                            cursor: 'pointer',
+                            padding: '2px',
+                            display: 'inline-flex',
+                            alignItems: 'center'
+                          }}
+                          title="Eliminar esta subparte"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
+                Nenhuma subparte criada. Adicione subpartes abaixo para desmembrar o valor total.
+              </span>
+            )}
+
+            {/* Add New Subpart Form */}
+            {canEditAmount && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (newSubpartName.trim()) {
+                    const amt = Number(newSubpartAmount) || 0;
+                    const updated = [
+                      ...allSubparts,
+                      { id: `part-${Date.now()}-${allSubparts.length + 1}`, name: newSubpartName.trim(), amount: amt }
+                    ];
+                    const newTotal = updated.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
+                    if (onUpdateEventDirect) {
+                      onUpdateEventDirect({
+                        ...event,
+                        amount: newTotal,
+                        breakdownItems: updated,
+                        propagateForward: isRecurring ? propagateSubsequent : false
+                      });
+                    }
+                    setNewSubpartName('');
+                    setNewSubpartAmount('');
+                  }
+                }}
+                style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr auto', gap: '6px', marginTop: '4px' }}
+              >
+                <input
+                  type="text"
+                  placeholder="Nome da subparte (ex: Restaurante)"
+                  value={newSubpartName}
+                  onChange={(e) => setNewSubpartName(e.target.value)}
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.15)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: '6px',
+                    padding: '6px 10px',
+                    fontSize: '0.76rem',
+                    color: 'var(--text-main)',
+                    outline: 'none'
+                  }}
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Valor (€)"
+                  value={newSubpartAmount}
+                  onChange={(e) => setNewSubpartAmount(e.target.value)}
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.15)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: '6px',
+                    padding: '6px 10px',
+                    fontSize: '0.76rem',
+                    color: 'var(--text-main)',
+                    outline: 'none',
+                    fontWeight: '700'
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={!newSubpartName.trim()}
+                  className="btn btn-primary btn-sm"
+                  style={{
+                    padding: '4px 12px',
+                    fontSize: '0.74rem',
+                    background: 'var(--primary)',
+                    color: '#ffffff',
+                    border: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title="Adicionar subparte"
+                >
+                  <Plus size={13} />
+                  <span>Adicionar</span>
+                </button>
+              </form>
+            )}
+
+            {/* Footer controls: Mudar subsequentes e Voltar a Valor Único */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px', paddingTop: '6px', borderTop: '1px solid var(--border-glass)' }}>
+              {isRecurring ? (
+                <label
+                  title="Ativar para aplicar este desmembramento a todos os meses subsequentes"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    fontSize: '0.72rem',
+                    fontWeight: '600',
+                    color: propagateSubsequent ? 'var(--primary-light)' : 'var(--text-dim)',
+                    cursor: 'pointer',
+                    userSelect: 'none'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={propagateSubsequent}
+                    onChange={(e) => setPropagateSubsequent(e.target.checked)}
+                  />
+                  <span>Mudar subsequentes</span>
+                </label>
+              ) : <div />}
+
+              {canEditAmount && allSubparts.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onUpdateEventDirect) {
+                      onUpdateEventDirect({
+                        ...event,
+                        breakdownItems: undefined,
+                        propagateForward: isRecurring ? propagateSubsequent : false
+                      });
+                    }
+                    setIsDesmembramentoExpanded(false);
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#f87171',
+                    cursor: 'pointer',
+                    fontSize: '0.72rem',
+                    fontWeight: '600',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Voltar a Valor Único
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Footer Meta & Actions (Omitted in inert future months) */}
       {!isInertFuture && (
         <div className="event-card-footer">
@@ -1811,6 +1982,7 @@ export default function TimelineEventCard({
               </>
             ) : (
               <>
+                {/* Botão de Notas */}
                 {onEdit && (() => {
                   const allNotes = Array.isArray(event.notes)
                     ? event.notes.filter(Boolean)
@@ -1838,6 +2010,38 @@ export default function TimelineEventCard({
                       {hasNotes && (
                         <span style={{ fontSize: '0.68rem', fontWeight: '800', color: '#f59e0b' }}>
                           {allNotes.length}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })()}
+
+                {/* Botão de Desmembrar Valor */}
+                {(onUpdateEventDirect || onEdit) && (() => {
+                  const allSubparts = Array.isArray(event.breakdownItems) ? event.breakdownItems : [];
+                  const hasBreakdown = allSubparts.length > 0;
+
+                  return (
+                    <button
+                      type="button"
+                      className="action-icon-btn"
+                      onClick={() => setIsDesmembramentoExpanded(!isDesmembramentoExpanded)}
+                      title={hasBreakdown ? `Ver / Editar Desmembramento (${allSubparts.length} subpartes)` : "Desmembrar Valor"}
+                      style={{
+                        color: hasBreakdown ? 'var(--primary-light)' : 'var(--text-dim)',
+                        background: hasBreakdown ? 'rgba(99, 102, 241, 0.14)' : 'transparent',
+                        border: hasBreakdown ? '1px solid rgba(99, 102, 241, 0.35)' : '1px solid transparent',
+                        borderRadius: '6px',
+                        padding: '4px 6px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Layers size={14} />
+                      {hasBreakdown && (
+                        <span style={{ fontSize: '0.68rem', fontWeight: '800', color: 'var(--primary-light)' }}>
+                          {allSubparts.length}
                         </span>
                       )}
                     </button>

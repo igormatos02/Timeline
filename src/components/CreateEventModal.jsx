@@ -697,7 +697,7 @@ export default function CreateEventModal({
                 </div>
               )}
 
-              {/* 6. Valor (€) ou Destrinchar em Partes */}
+              {/* 6. Valor (€) ou Desmembrar em Subpartes */}
               <div className="form-group">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                   <label className="form-label" style={{ margin: 0 }}>Valor (€) *</label>
@@ -707,7 +707,7 @@ export default function CreateEventModal({
                       onClick={() => {
                         const currentVal = parseFloat(formData.amount) || 0;
                         setBreakdownItems([
-                          { id: `part-${Date.now()}-1`, name: 'Parte 1', amount: currentVal || 0 }
+                          { id: `part-${Date.now()}-1`, name: 'Subparte 1', amount: currentVal || 0 }
                         ]);
                       }}
                       style={{
@@ -725,7 +725,7 @@ export default function CreateEventModal({
                       }}
                     >
                       <Layers size={12} />
-                      <span>Destrinchar em Partes</span>
+                      <span>Desmembrar em Subpartes</span>
                     </button>
                   ) : (
                     <button

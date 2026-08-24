@@ -327,16 +327,8 @@ export default function App() {
         for (let i = 0; i < 24; i++) {
           const occDate = addMonths(baseDate, i);
           const dateStr = format(occDate, 'yyyy-MM-dd');
-          const isPast = dateStr <= '2026-08-21';
-
-          let status = eventData.status;
-          if (eventData.financialType === 'gasto' || eventData.isExpense) {
-            status = isPast ? 'Pago' : 'Pendente';
-          } else if (eventData.financialType === 'entrada' || eventData.isIncome) {
-            status = isPast ? 'Recebido' : 'Previsto';
-          } else if (eventData.financialType === 'investimento' || eventData.isInvestment) {
-            status = isPast ? 'Investido' : 'Planeado';
-          }
+          let status = eventData.status || (eventData.financialType === 'entrada' || eventData.isIncome ? 'Previsto' : eventData.financialType === 'investimento' || eventData.isInvestment ? 'Planeado' : 'Pendente');
+          const isCompleted = status === 'Recebido' || status === 'Pago' || status === 'Investido';
 
           const ev = {
             ...eventData,
@@ -345,7 +337,7 @@ export default function App() {
             timelineOriginId: targetTimelineId,
             date: dateStr,
             status,
-            isCompleted: isPast
+            isCompleted
           };
           generatedEvents.push(ev);
           api.createEvent(ev).catch(console.error);

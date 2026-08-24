@@ -107,7 +107,6 @@ export default function CreateEventModal({
       });
       setBreakdownItems(initialData.breakdownItems ? JSON.parse(JSON.stringify(initialData.breakdownItems)) : []);
     } else {
-      const isPast = targetDate <= todayStr;
       const initialMovement = defaultNature === 'expense' ? 'saida' : defaultNature === 'investment' ? 'investimento' : 'entrada';
       setMovementType(initialMovement);
 
@@ -115,22 +114,22 @@ export default function CreateEventModal({
       let initAmt = 3300;
       let initCat = 'entrada_recorrente';
       let initSubtype = 'rendimentos';
-      let initStatus = isPast ? 'Recebido' : 'Previsto';
-      let initLabels = isPast ? 'Salário, Recebido' : 'Salário, Previsto';
+      let initStatus = 'Previsto'; // Criar como a receber
+      let initLabels = 'Salário, A Receber';
 
       if (initialMovement === 'saida') {
         initTitle = 'Alimentação & Supermercado';
         initAmt = 380;
         initCat = 'saida_esporadica';
         initSubtype = 'compra';
-        initStatus = isPast ? 'Pago' : 'Pendente';
+        initStatus = 'Pendente';
         initLabels = 'Gastos, Supermercado';
       } else if (initialMovement === 'investimento') {
         initTitle = 'Aporte Poupança / Reserva';
         initAmt = 350;
         initCat = 'investimento_poupanca';
         initSubtype = 'aporte';
-        initStatus = isPast ? 'Investido' : 'Planeado';
+        initStatus = 'Planeado';
         initLabels = 'Poupança, Reserva';
       }
 
@@ -139,16 +138,16 @@ export default function CreateEventModal({
         date: targetDate,
         dayOfMonth: parsedDay,
         time: '10:00',
-        status: isFinancialTimeline ? initStatus : 'Em Progresso',
-        periodicity: initialMovement === 'saida' ? 'unica' : 'recorrente',
+        status: initStatus,
+        periodicity: 'recorrente',
         subtype: initSubtype,
         selectedLoanId: '',
-        category: isFinancialTimeline ? initCat : 'agendamento',
+        category: initCat,
         priority: 'Normal',
-        amount: isFinancialTimeline ? initAmt : 0,
+        amount: initAmt,
         description: '',
         author: 'Igor Matos',
-        labelsInput: isFinancialTimeline ? initLabels : '',
+        labelsInput: initLabels,
         tasks: []
       });
       setBreakdownItems([]);
@@ -366,16 +365,18 @@ export default function CreateEventModal({
     if (movementType === 'entrada') {
       isIncome = true;
       finalCategory = formData.periodicity === 'recorrente' ? 'entrada_recorrente' : 'entrada_esporadica';
-      finalStatus = isPast ? 'Recebido' : 'Previsto';
+      finalStatus = formData.status || 'Previsto';
     } else if (movementType === 'saida') {
       isExpense = true;
       finalCategory = formData.periodicity === 'recorrente' ? 'saida_recorrente' : 'saida_esporadica';
-      finalStatus = isPast ? 'Pago' : 'Pendente';
+      finalStatus = formData.status || 'Pendente';
     } else if (movementType === 'investimento') {
       isInvestment = true;
       finalCategory = formData.periodicity === 'recorrente' ? 'investimento_poupanca' : 'investimento_extra';
-      finalStatus = isPast ? 'Investido' : 'Planeado';
+      finalStatus = formData.status || 'Planeado';
     }
+
+    const isCompleted = finalStatus === 'Recebido' || finalStatus === 'Pago' || finalStatus === 'Investido';
 
     onSave({
       ...formData,
@@ -395,7 +396,7 @@ export default function CreateEventModal({
         : undefined,
       breakdownItems: breakdownItems.length > 0 ? breakdownItems : undefined,
       labels,
-      isCompleted: isPast
+      isCompleted
     });
 
     onClose();

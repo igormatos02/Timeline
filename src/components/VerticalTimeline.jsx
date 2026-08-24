@@ -1245,7 +1245,7 @@ export default function VerticalTimeline({
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <CreditCard size={14} />
-                  <span style={{ fontWeight: '700' }}>Crédito Automóvel</span>
+                  <span style={{ fontWeight: '700' }}>Crédito Automóvel (Dacia Sandero)</span>
                 </div>
                 {activeFinancialTab === 'emprestimos' && <span style={{ fontSize: '0.75rem', color: '#8b5cf6' }}>✓</span>}
               </button>

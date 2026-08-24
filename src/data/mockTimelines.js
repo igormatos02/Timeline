@@ -391,25 +391,7 @@ export const initialTimelines = [
     events: [...createFinancialEvents(), ...createRealCarLoanEvents()]
   },
 
-  // 3. CRÉDITO AUTOMÓVEL (DACIA SANDERO II - 9.584,45€ / 96 MESES / TAEG 5.40%)
-  {
-    id: "tl-loan-crd19605103001",
-    name: "Crédito Automóvel - DACIA SANDERO II",
-    description: "Contrato CRD19605103001 (Matrícula: 46-XP-14). RCI Banque / Mobilize FS. Financiamento de 9.584,45 € a 96 meses (TAEG 5.40%).",
-    startDate: "2019-05-29",
-    endDate: "2027-05-28",
-    status: "Em Progresso",
-    type: "Empréstimo",
-    color: "#6366f1",
-    totalDebt: 9584.45,
-    remainingDebt: 972.74,
-    installmentAmount: 180.08,
-    periodicity: "mensal",
-    dueDay: 28,
-    events: createRealCarLoanEvents()
-  },
-
-  // 4. CRÉDITO HABITAÇÃO (CASA - 60.000€ / 34 ANOS / 2% TAN DESDE 2018)
+  // 3. CRÉDITO HABITAÇÃO (CASA - 60.000€ / 34 ANOS / 2% TAN DESDE 2018)
   {
     id: "tl-loan-house",
     name: "Crédito Habitação - Casa",

@@ -46,7 +46,8 @@ eventsRouter.post('/:id/toggle-payment', async (req, res) => {
 // DELETE /api/events/:id
 eventsRouter.delete('/:id', async (req, res) => {
   try {
-    const deleted = await timelineService.deleteEvent(req.params.id, req.body);
+    const options = { ...req.query, ...req.body };
+    const deleted = await timelineService.deleteEvent(req.params.id, options);
     res.json({ success: deleted });
   } catch (err) {
     res.status(500).json({ error: err.message });

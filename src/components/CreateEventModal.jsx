@@ -41,6 +41,7 @@ export default function CreateEventModal({
 
   const [breakdownItems, setBreakdownItems] = useState([]);
   const [isDayPickerOpen, setIsDayPickerOpen] = useState(false);
+  const [updateScope, setUpdateScope] = useState('single'); // 'single' (Apenas este mês) | 'subsequent' (Deste mês em diante)
 
   // Base Form State
   const [formData, setFormData] = useState({
@@ -237,7 +238,8 @@ export default function CreateEventModal({
         : Number(formData.amount) || 0,
       breakdownItems: breakdownItems.length > 0 ? breakdownItems : undefined,
       labels,
-      isCompleted
+      isCompleted,
+      updateScope: initialData ? updateScope : 'all'
     });
 
     onClose();
@@ -590,6 +592,60 @@ export default function CreateEventModal({
               </button>
             </div>
           </div>
+
+          {/* Âmbito da Alteração (apenas ao editar evento recorrente existente) */}
+          {initialData && (initialData.seriesId || initialData.isRecurring || formData.periodicity === 'recorrente') && (
+            <div className="form-group" style={{ background: 'rgba(99, 102, 241, 0.08)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(99, 102, 241, 0.25)' }}>
+              <label className="form-label" style={{ color: 'var(--primary-light)', marginBottom: '8px' }}>
+                🎯 Âmbito da Alteração
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setUpdateScope('single')}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: updateScope === 'single' ? '2px solid #06b6d4' : '1px solid var(--border-glass)',
+                    background: updateScope === 'single' ? 'rgba(6, 182, 212, 0.15)' : 'var(--bg-glass)',
+                    color: updateScope === 'single' ? '#06b6d4' : 'var(--text-muted)',
+                    fontWeight: '700',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '2px'
+                  }}
+                >
+                  <span>Apenas este Mês</span>
+                  <span style={{ fontSize: '0.66rem', opacity: 0.8 }}>(Sobreposição Pontual)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setUpdateScope('subsequent')}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: updateScope === 'subsequent' ? '2px solid #8b5cf6' : '1px solid var(--border-glass)',
+                    background: updateScope === 'subsequent' ? 'rgba(139, 92, 246, 0.15)' : 'var(--bg-glass)',
+                    color: updateScope === 'subsequent' ? '#a78bfa' : 'var(--text-muted)',
+                    fontWeight: '700',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '2px'
+                  }}
+                >
+                  <span>Deste Mês em Diante</span>
+                  <span style={{ fontSize: '0.66rem', opacity: 0.8 }}>(Nova Versão Incremental)</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Estado / Status */}
           <div className="form-group">

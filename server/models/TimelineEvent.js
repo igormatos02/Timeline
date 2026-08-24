@@ -2,6 +2,10 @@ export class TimelineEvent {
   constructor({
     id,
     seriesId = null,
+    sobrepositionOver = null,
+    version = 0,
+    isTerminated = false,
+    dayOfMonth = null,
     timelineOriginId = 'tl-income',
     timelineOriginName = 'Financeiro',
     timelineOriginIcon = '💰',
@@ -35,6 +39,10 @@ export class TimelineEvent {
   }) {
     this.id = id;
     this.seriesId = seriesId;
+    this.sobrepositionOver = sobrepositionOver;
+    this.version = Number(version) || 0;
+    this.isTerminated = Boolean(isTerminated);
+    this.dayOfMonth = dayOfMonth;
     this.timelineOriginId = timelineOriginId;
     this.timelineOriginName = timelineOriginName;
     this.timelineOriginIcon = timelineOriginIcon;

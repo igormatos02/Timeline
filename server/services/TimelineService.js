@@ -2,6 +2,137 @@ import { timeboardRepository } from '../repositories/TimeboardRepository.js';
 import { timelineRepository } from '../repositories/TimelineRepository.js';
 import { loanContractRepository } from '../repositories/LoanContractRepository.js';
 import { eventRepository } from '../repositories/EventRepository.js';
+import { addMonths, format, parseISO } from 'date-fns';
+
+/**
+ * Motor de Projeção de Eventos:
+ * Transforma eventos únicos e eventos recorrentes base armazenados na BD num fluxo contínuo
+ * de ocorrências projetadas até ao horizonte da timeline, aplicando sobreposições pontuais (sobrepositionOver)
+ * e versões incrementais (version) a partir de datas específicas.
+ */
+export function projectEvents(rawEvents = [], horizonEndDate = '2028-12-31') {
+  const uniqueEvents = [];
+  const recurringSeriesMap = new Map(); // seriesId -> array de versões
+  const overridesMap = new Map(); // `${sobrepositionOver}_${date}` -> override event
+
+  // 1. Classificar os eventos brutos
+  for (const ev of rawEvents) {
+    if (ev.sobrepositionOver) {
+      const key = `${ev.sobrepositionOver}_${ev.date}`;
+      overridesMap.set(key, ev);
+    } else if (ev.isRecurring || ev.periodicity === 'recorrente' || ev.seriesId) {
+      const sId = ev.seriesId || ev.id;
+      const normalizedEv = {
+        ...ev,
+        seriesId: sId,
+        version: ev.version !== undefined ? Number(ev.version) : 0
+      };
+      if (!recurringSeriesMap.has(sId)) {
+        recurringSeriesMap.set(sId, []);
+      }
+      recurringSeriesMap.get(sId).push(normalizedEv);
+    } else {
+      uniqueEvents.push(ev);
+    }
+  }
+
+  const projectedInstances = [];
+
+  // 2. Projetar cada série recorrente
+  for (const [seriesId, versions] of recurringSeriesMap.entries()) {
+    // Ordenar versões de forma crescente por número de versão e data
+    versions.sort((a, b) => a.version - b.version || (a.date > b.date ? 1 : -1));
+    const rootVersion = versions[0];
+    if (!rootVersion || !rootVersion.date) continue;
+
+    let baseDate;
+    try {
+      baseDate = parseISO(rootVersion.date);
+      if (isNaN(baseDate.getTime())) baseDate = new Date(2026, 0, 1);
+    } catch {
+      baseDate = new Date(2026, 0, 1);
+    }
+
+    const horizonDate = parseISO(horizonEndDate);
+    const dayOfMonth = rootVersion.dayOfMonth || baseDate.getDate() || 1;
+
+    let curDate = baseDate;
+    let safetyCounter = 0;
+
+    while (curDate <= horizonDate && safetyCounter < 120) {
+      safetyCounter++;
+      const curDateStr = format(curDate, 'yyyy-MM-dd');
+      const curMonthKey = curDateStr.substring(0, 7);
+
+      // Encontrar a versão ativa com a versão mais alta cuja data seja <= curDateStr
+      let activeVersion = rootVersion;
+      for (const v of versions) {
+        if (v.date <= curDateStr && v.version >= activeVersion.version) {
+          activeVersion = v;
+        }
+      }
+
+      // Se a versão ativa estiver marcada como terminada a partir desta data, não projetar mais
+      if (activeVersion.isTerminated || activeVersion.isDeleted) {
+        curDate = addMonths(curDate, 1);
+        try {
+          const y = curDate.getFullYear();
+          const m = curDate.getMonth();
+          const lastDay = new Date(y, m + 1, 0).getDate();
+          curDate = new Date(y, m, Math.min(dayOfMonth, lastDay));
+        } catch { }
+        continue;
+      }
+
+      // Verificar se existe sobreposição pontual (sobrepositionOver) para esta data/mês
+      const overrideKey = `${seriesId}_${curDateStr}`;
+      let override = overridesMap.get(overrideKey);
+      if (!override) {
+        for (const [k, ov] of overridesMap.entries()) {
+          if (ov.sobrepositionOver === seriesId && ov.date?.substring(0, 7) === curMonthKey) {
+            override = ov;
+            break;
+          }
+        }
+      }
+
+      if (override) {
+        // Se a sobreposição for uma exclusão (tombstone), omitir a ocorrência
+        if (override.isDeleted || override.status === 'Excluido') {
+          // Omitido
+        } else {
+          projectedInstances.push({
+            ...activeVersion,
+            ...override,
+            isOverridden: true,
+            sobrepositionOver: seriesId
+          });
+        }
+      } else {
+        // Ocorrência gerada a partir da versão ativa
+        projectedInstances.push({
+          ...activeVersion,
+          id: `${seriesId}_${curDateStr}`,
+          seriesId,
+          version: activeVersion.version,
+          date: curDateStr,
+          isProjected: true
+        });
+      }
+
+      // Avançar para o próximo mês mantendo o dia pretendido
+      curDate = addMonths(curDate, 1);
+      try {
+        const y = curDate.getFullYear();
+        const m = curDate.getMonth();
+        const lastDay = new Date(y, m + 1, 0).getDate();
+        curDate = new Date(y, m, Math.min(dayOfMonth, lastDay));
+      } catch { }
+    }
+  }
+
+  return [...uniqueEvents, ...projectedInstances];
+}
 
 export class TimelineService {
   // --- Timeboard Operations ---
@@ -32,9 +163,7 @@ export class TimelineService {
       type: data.type || 'financeiro'
     });
 
-    // Se o timeboard for financeiro, cria automaticamente as 2 timelines obrigatórias do sistema
     if (createdTimeboard.type === 'financeiro') {
-      // 1. Entradas e Rendimentos
       await timelineRepository.create({
         id: `tl-entradas-${createdTimeboard.id}`,
         timeboardId: createdTimeboard.id,
@@ -48,7 +177,6 @@ export class TimelineService {
         endDate: '2027-04-30'
       });
 
-      // 2. Gastos e Saídas
       await timelineRepository.create({
         id: `tl-gastos-${createdTimeboard.id}`,
         timeboardId: createdTimeboard.id,
@@ -71,10 +199,9 @@ export class TimelineService {
   }
 
   async deleteTimeboard(id) {
-    // Cascade delete timelines
     const timelines = await timelineRepository.getAll((tl) => tl.timeboardId === id);
     for (const tl of timelines) {
-      await eventRepository.deleteMany((ev) => ev.timelineOriginId === tl.id);
+      await eventRepository.deleteMany((ev) => ev.timelineOriginId === tl.id || ev.sobrepositionOver);
       await loanContractRepository.deleteMany((loan) => loan.timelineId === tl.id);
       await timelineRepository.delete(tl.id);
     }
@@ -85,12 +212,16 @@ export class TimelineService {
   async getAllTimelines() {
     const timelines = await timelineRepository.getAll();
     const allLoans = await loanContractRepository.getAll();
-    const allEvents = await eventRepository.getAll();
+    const allRawEvents = await eventRepository.getAll();
 
-    // Group loans and events by timeline
+    // Projetar todos os eventos recorrentes
+    const projectedEvents = projectEvents(allRawEvents);
+
     return timelines.map((tl) => {
       const tlLoans = allLoans.filter((l) => l.timelineId === tl.id);
-      const tlEvents = allEvents.filter((ev) => ev.timelineOriginId === tl.id || (tl.id === 'tl-income' && ev.timelineOriginId?.startsWith('tl-loan-')));
+      const tlEvents = projectedEvents.filter(
+        (ev) => ev.timelineOriginId === tl.id || (tl.id === 'tl-income' && ev.timelineOriginId?.startsWith('tl-loan-'))
+      );
 
       return {
         ...tl,
@@ -105,7 +236,12 @@ export class TimelineService {
     if (!timeline) return null;
 
     const loans = await loanContractRepository.findByTimelineId(id);
-    const events = await eventRepository.getAll((ev) => ev.timelineOriginId === id || (id === 'tl-income' && ev.timelineOriginId?.startsWith('tl-loan-')));
+    const allRawEvents = await eventRepository.getAll();
+    const projectedEvents = projectEvents(allRawEvents);
+
+    const events = projectedEvents.filter(
+      (ev) => ev.timelineOriginId === id || (id === 'tl-income' && ev.timelineOriginId?.startsWith('tl-loan-'))
+    );
 
     return {
       ...timeline,
@@ -115,7 +251,6 @@ export class TimelineService {
   }
 
   async createTimeline(data) {
-    // Validar se já existe uma timeline padrão de entradas ou gastos no mesmo timeboard
     if (data.type === 'entradas' || data.type === 'gastos') {
       const existing = await timelineRepository.getAll((tl) => tl.timeboardId === data.timeboardId && tl.type === data.type);
       if (existing.length > 0) {
@@ -145,7 +280,10 @@ export class TimelineService {
 
   // --- Events Operations ---
   async getAllEvents(filter = {}) {
-    return eventRepository.getAll((ev) => {
+    const allRawEvents = await eventRepository.getAll();
+    const projectedEvents = projectEvents(allRawEvents);
+
+    return projectedEvents.filter((ev) => {
       if (filter.timelineOriginId && ev.timelineOriginId !== filter.timelineOriginId) return false;
       if (filter.category && ev.category !== filter.category) return false;
       if (filter.startDate && ev.date < filter.startDate) return false;
@@ -155,71 +293,161 @@ export class TimelineService {
   }
 
   async createEvent(eventData) {
-    return eventRepository.create(eventData);
+    const isRecurring = eventData.periodicity === 'recorrente' || eventData.isRecurring;
+    const seriesId = eventData.seriesId || (isRecurring ? `series-${Date.now()}` : null);
+
+    const payload = {
+      ...eventData,
+      seriesId,
+      version: eventData.version !== undefined ? Number(eventData.version) : 0,
+      isRecurring: Boolean(isRecurring)
+    };
+
+    return eventRepository.create(payload);
   }
 
   async updateEvent(id, updates) {
-    const { propagateForward, updateAllRecurring, previousTitle, ...directUpdates } = updates;
+    const { updateScope, propagateForward, ...directUpdates } = updates;
 
-    const existingEvent = await eventRepository.getById(id);
-    if (!existingEvent) {
-      throw new Error(`Event not found: ${id}`);
-    }
+    const allRawEvents = await eventRepository.getAll();
+    const targetSeriesId = directUpdates.seriesId || updates.seriesId;
 
-    const updatedEvent = await eventRepository.update(id, directUpdates);
+    // Cenário 1: Alteração Única em Ocorrência de Evento Recorrente (sobrepositionOver)
+    if (updateScope === 'single' && targetSeriesId) {
+      const existingOverride = allRawEvents.find(
+        (ev) => ev.sobrepositionOver === targetSeriesId && ev.date === directUpdates.date
+      );
 
-    // If recurring series propagation is requested
-    if ((propagateForward || updateAllRecurring) && existingEvent.seriesId) {
-      const fromDate = updateAllRecurring ? null : existingEvent.date;
-      const seriesUpdates = {};
-
-      if (directUpdates.title !== undefined) seriesUpdates.title = directUpdates.title;
-      if (directUpdates.amount !== undefined) seriesUpdates.amount = directUpdates.amount;
-      if (directUpdates.priority !== undefined) seriesUpdates.priority = directUpdates.priority;
-      if (directUpdates.breakdownItems !== undefined) seriesUpdates.breakdownItems = directUpdates.breakdownItems;
-
-      if (Object.keys(seriesUpdates).length > 0) {
-        await eventRepository.updateRecurringSeries(existingEvent.seriesId, seriesUpdates, fromDate);
-      }
-
-      // If a specific subpart name was renamed across the series
-      if (previousTitle && directUpdates.title) {
-        await eventRepository.updateSubpartNameInSeries(existingEvent.seriesId, previousTitle, directUpdates.title, fromDate);
+      if (existingOverride) {
+        return eventRepository.update(existingOverride.id, directUpdates);
+      } else {
+        return eventRepository.create({
+          ...directUpdates,
+          sobrepositionOver: targetSeriesId,
+          isRecurring: false,
+          periodicity: 'unico'
+        });
       }
     }
 
-    return updatedEvent;
+    // Cenário 2: Alteração Subsequente (Todos os meses a partir desta data -> Nova versão incremental)
+    if ((updateScope === 'subsequent' || propagateForward) && targetSeriesId) {
+      const seriesVersions = allRawEvents.filter((ev) => ev.seriesId === targetSeriesId && !ev.sobrepositionOver);
+      const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
+      const nextVersion = currentHighestVersion + 1;
+
+      return eventRepository.create({
+        ...directUpdates,
+        seriesId: targetSeriesId,
+        version: nextVersion,
+        isRecurring: true,
+        periodicity: 'recorrente'
+      });
+    }
+
+    // Cenário 3: Atualização direta a evento existente
+    const existing = await eventRepository.getById(id);
+    if (existing) {
+      return eventRepository.update(id, directUpdates);
+    }
+
+    // Se for uma ocorrência projetada sem registo direto, criar a sobreposição
+    if (targetSeriesId) {
+      return eventRepository.create({
+        ...directUpdates,
+        sobrepositionOver: targetSeriesId,
+        isRecurring: false
+      });
+    }
+
+    return eventRepository.create({ ...directUpdates, id });
   }
 
   async toggleEventPayment(id) {
     const event = await eventRepository.getById(id);
-    if (!event) throw new Error(`Event not found: ${id}`);
+    if (event) {
+      const isCompleted = !(event.status === 'Pago' || event.status === 'Recebido' || event.isCompleted);
+      const newStatus = isCompleted ? (event.isIncome ? 'Recebido' : 'Pago') : 'Pendente';
 
-    let newStatus = 'Pago';
-    let isCompleted = true;
-
-    if (event.status === 'Pago' || event.isCompleted) {
-      newStatus = 'Pendente';
-      isCompleted = false;
+      return eventRepository.update(id, {
+        status: newStatus,
+        isCompleted
+      });
     }
 
-    return eventRepository.update(id, {
-      status: newStatus,
-      isCompleted
-    });
+    // Se for uma ocorrência projetada, criar sobreposição com status alterado
+    const allRaw = await eventRepository.getAll();
+    const projected = projectEvents(allRaw);
+    const projEv = projected.find((ev) => ev.id === id);
+
+    if (projEv && projEv.seriesId) {
+      const isCompleted = !(projEv.status === 'Pago' || projEv.status === 'Recebido' || projEv.isCompleted);
+      const newStatus = isCompleted ? (projEv.isIncome ? 'Recebido' : 'Pago') : 'Pendente';
+
+      return eventRepository.create({
+        ...projEv,
+        sobrepositionOver: projEv.seriesId,
+        status: newStatus,
+        isCompleted,
+        isRecurring: false
+      });
+    }
+
+    throw new Error(`Event not found: ${id}`);
   }
 
   async deleteEvent(id, options = {}) {
-    const event = await eventRepository.getById(id);
-    if (!event) return false;
+    const { deleteScope = 'single' } = options;
+    const allRawEvents = await eventRepository.getAll();
 
-    if (options.deleteSeries) {
-      const fromDate = options.fromDate || (options.onlySubsequent ? event.date : null);
-      if (event.seriesId) {
-        return eventRepository.deleteMany((ev) => ev.seriesId === event.seriesId && (!fromDate || ev.date >= fromDate));
-      } else {
-        return eventRepository.deleteMany((ev) => ev.title && event.title && ev.title.trim().toLowerCase() === event.title.trim().toLowerCase() && (!fromDate || ev.date >= fromDate));
+    // Verificar se existe registo físico direto com esse id
+    const directEvent = await eventRepository.getById(id);
+    const targetSeriesId = directEvent?.seriesId || directEvent?.sobrepositionOver || options.seriesId;
+
+    // Se for para eliminar TODA a série (ou evento único direto)
+    if (deleteScope === 'all' || options.deleteSeries) {
+      if (targetSeriesId) {
+        await eventRepository.deleteMany(
+          (ev) => ev.seriesId === targetSeriesId || ev.sobrepositionOver === targetSeriesId || ev.id === id
+        );
+        return true;
       }
+      return eventRepository.delete(id);
+    }
+
+    // Se for para eliminar SUBSEQUENTES (deste mês em diante): criar versão terminada
+    if (deleteScope === 'subsequent' && targetSeriesId) {
+      const seriesVersions = allRawEvents.filter((ev) => ev.seriesId === targetSeriesId && !ev.sobrepositionOver);
+      const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
+      const nextVersion = currentHighestVersion + 1;
+
+      await eventRepository.create({
+        ...(directEvent || {}),
+        seriesId: targetSeriesId,
+        version: nextVersion,
+        date: options.date || directEvent?.date,
+        isTerminated: true,
+        isRecurring: true,
+        title: directEvent?.title || 'Série Terminada'
+      });
+      return true;
+    }
+
+    // Se for exclusão de OCORRÊNCIA ÚNICA de série recorrente: criar tombstone (sobrepositionOver com isDeleted: true)
+    if (targetSeriesId) {
+      const targetDate = options.date || directEvent?.date;
+      if (directEvent && directEvent.sobrepositionOver) {
+        return eventRepository.delete(directEvent.id);
+      }
+
+      await eventRepository.create({
+        sobrepositionOver: targetSeriesId,
+        date: targetDate,
+        isDeleted: true,
+        status: 'Excluido',
+        title: 'Ocorrência Excluída'
+      });
+      return true;
     }
 
     return eventRepository.delete(id);
@@ -229,7 +457,6 @@ export class TimelineService {
     const timeline = await timelineRepository.getById(timelineId);
     if (!timeline) return false;
 
-    // Delete all events associated with this timeline
     await eventRepository.deleteMany((ev) => ev.timelineOriginId === timelineId);
     return true;
   }
@@ -247,7 +474,6 @@ export class TimelineService {
     const newRemainingDebt = Math.max(0, loan.remainingDebt - amortAmount);
     const newAmortizedCapital = loan.amortizedCapital + amortAmount;
 
-    // 1. Create amortization event
     const amortEvent = await eventRepository.create({
       timelineOriginId: loan.id,
       timelineOriginName: loan.name,
@@ -263,7 +489,6 @@ export class TimelineService {
       isCompleted: true
     });
 
-    // 2. Update loan contract
     await loanContractRepository.update(loanId, {
       remainingDebt: newRemainingDebt,
       amortizedCapital: newAmortizedCapital

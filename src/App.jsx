@@ -270,113 +270,36 @@ export default function App() {
       }
     }
 
-    if (editingEvent && editingEvent.id) {
-      // Update existing event
-      const isRecurring = Boolean(
-        editingEvent.seriesId ||
-        editingEvent.periodicity === 'recorrente' ||
-        eventData.periodicity === 'recorrente' ||
-        (editingEvent.category && editingEvent.category.includes('recorrente')) ||
-        (eventData.category && eventData.category.includes('recorrente'))
-      );
-
-      const targetSeriesId = editingEvent.seriesId || eventData.seriesId;
-      const previousTitle = editingEvent.title;
-      const newTitle = eventData.title;
-
-      api.updateEvent(editingEvent.id, {
-        ...eventData,
-        timelineOriginId: targetTimelineId,
-        propagateForward: isRecurring,
-        previousTitle
-      }).catch(console.error);
-
-      setTimelines((prev) =>
-        prev.map((tl) => {
-          const events = tl.events || [];
-          const hasEvent = events.some((ev) => ev.id === editingEvent.id);
-          if (!hasEvent) return tl;
-
-          const updatedEvents = events.map((ev) => {
-            if (ev.id === editingEvent.id) {
-              return { ...ev, ...eventData, timelineOriginId: targetTimelineId };
-            }
-
-            const isSameSeries = isRecurring && (
-              (targetSeriesId && ev.seriesId === targetSeriesId) ||
-              (previousTitle && ev.title === previousTitle && ev.category === editingEvent.category)
-            );
-
-            if (isSameSeries) {
-              return {
-                ...ev,
-                title: newTitle || ev.title,
-                ...(eventData.breakdownItems !== undefined ? { breakdownItems: eventData.breakdownItems ? JSON.parse(JSON.stringify(eventData.breakdownItems)) : undefined } : {})
-              };
-            }
-
-            return ev;
+    const saveAsync = async () => {
+      try {
+        if (editingEvent && editingEvent.id) {
+          await api.updateEvent(editingEvent.id, {
+            ...eventData,
+            timelineOriginId: targetTimelineId,
+            seriesId: editingEvent.seriesId,
+            version: editingEvent.version
           });
-
-          return { ...tl, events: updatedEvents };
-        })
-      );
-    } else {
-      // Create new event(s)
-      const isRecurring = eventData.periodicity === 'recorrente' || eventData.isRecurring || (eventData.category && eventData.category.includes('recorrente'));
-
-      if (isRecurring) {
-        const generatedEvents = [];
-        const seriesId = generateUUID();
-        const baseDate = parseISO(eventData.date || '2026-08-01');
-
-        // Project for 24 months forward into subsequent months
-        for (let i = 0; i < 24; i++) {
-          const occDate = addMonths(baseDate, i);
-          const dateStr = format(occDate, 'yyyy-MM-dd');
-          let status = eventData.status || (eventData.financialType === 'entrada' || eventData.isIncome ? 'Previsto' : eventData.financialType === 'investimento' || eventData.isInvestment ? 'Planeado' : 'Pendente');
-          const isCompleted = status === 'Recebido' || status === 'Pago' || status === 'Investido';
-
-          const ev = {
+        } else {
+          const isRecurring = eventData.periodicity === 'recorrente' || eventData.isRecurring || (eventData.category && eventData.category.includes('recorrente'));
+          const newEvent = {
             ...eventData,
             id: generateUUID(),
-            seriesId,
-            timelineOriginId: targetTimelineId,
-            date: dateStr,
-            status,
-            isCompleted
+            seriesId: isRecurring ? generateUUID() : null,
+            version: 0,
+            isRecurring: Boolean(isRecurring),
+            timelineOriginId: targetTimelineId
           };
-          generatedEvents.push(ev);
-          api.createEvent(ev).catch(console.error);
+          await api.createEvent(newEvent);
         }
 
-        setTimelines((prev) =>
-          prev.map((tl) => {
-            if (tl.id === targetTimelineId) {
-              return { ...tl, events: [...generatedEvents, ...(tl.events || [])] };
-            }
-            return tl;
-          })
-        );
-      } else {
-        const newEvent = {
-          ...eventData,
-          id: generateUUID(),
-          timelineOriginId: targetTimelineId
-        };
-
-        api.createEvent(newEvent).catch(console.error);
-
-        setTimelines((prev) =>
-          prev.map((tl) => {
-            if (tl.id === targetTimelineId) {
-              return { ...tl, events: [newEvent, ...(tl.events || [])] };
-            }
-            return tl;
-          })
-        );
+        const updatedTimelines = await api.fetchTimelines();
+        setTimelines(updatedTimelines);
+      } catch (err) {
+        console.error('Error saving event:', err);
       }
-    }
+    };
+
+    saveAsync();
 
     // Restore and lock scroll position exactly where the user was
     const targetMonthKey = (eventData.date || selectedDateForNewEvent || '2026-08-01').substring(0, 7);
@@ -404,52 +327,16 @@ export default function App() {
     setTimeout(restoreScroll, 200);
   };
 
-  const handleUpdateEventDirect = (updatedEvent) => {
+  const handleUpdateEventDirect = async (updatedEvent) => {
     if (!updatedEvent || !updatedEvent.id) return;
 
-    // Sync to backend API
-    api.updateEvent(updatedEvent.id, updatedEvent).catch(console.error);
-
-    setTimelines((prev) =>
-      prev.map((tl) => {
-        const hasEvent = (tl.events || []).some((ev) => ev.id === updatedEvent.id);
-        if (!hasEvent) return tl;
-
-        if (updatedEvent.propagateForward) {
-          const newAmount = updatedEvent.amount !== undefined ? Number(updatedEvent.amount) : undefined;
-          const newTitle = updatedEvent.title;
-          const targetDate = updatedEvent.date;
-
-          const updatedEvents = (tl.events || []).map((ev) => {
-            if (ev.id === updatedEvent.id) {
-              return { ...ev, ...updatedEvent };
-            }
-
-            // Propagar apenas para eventos da mesma série ou mesmo título anterior
-            const isSameSeries = (updatedEvent.seriesId && ev.seriesId === updatedEvent.seriesId) ||
-              (ev.title === (updatedEvent.previousTitle || updatedEvent.title) && ev.category === updatedEvent.category);
-
-            if (isSameSeries && (updatedEvent.updateAllRecurring ? true : ev.date >= targetDate)) {
-              return {
-                ...ev,
-                ...(newTitle ? { title: newTitle } : {}),
-                ...(newAmount !== undefined ? { amount: newAmount } : {}),
-                ...(updatedEvent.breakdownItems !== undefined ? { breakdownItems: updatedEvent.breakdownItems ? JSON.parse(JSON.stringify(updatedEvent.breakdownItems)) : undefined } : {})
-              };
-            }
-
-            return ev;
-          });
-
-          return { ...tl, events: updatedEvents };
-        }
-
-        return {
-          ...tl,
-          events: tl.events.map((ev) => (ev.id === updatedEvent.id ? { ...ev, ...updatedEvent } : ev))
-        };
-      })
-    );
+    try {
+      await api.updateEvent(updatedEvent.id, updatedEvent);
+      const updatedTimelines = await api.fetchTimelines();
+      setTimelines(updatedTimelines);
+    } catch (err) {
+      console.error('Error updating event directly:', err);
+    }
   };
 
   const handleRequestDeleteEvent = (eventOrId) => {
@@ -480,33 +367,21 @@ export default function App() {
       targetEvent = { id: eventId };
     }
 
-    api.deleteEvent(eventId, { onlySubsequent: deleteSubsequent, fromDate: targetEvent.date, deleteSeries: deleteSubsequent }).catch(console.error);
+    const deleteAsync = async () => {
+      try {
+        await api.deleteEvent(eventId, {
+          deleteScope: deleteSubsequent ? 'subsequent' : 'single',
+          seriesId: targetEvent.seriesId,
+          date: targetEvent.date
+        });
+        const updatedTimelines = await api.fetchTimelines();
+        setTimelines(updatedTimelines);
+      } catch (err) {
+        console.error('Error deleting event:', err);
+      }
+    };
 
-    setTimelines((prev) =>
-      prev.map((tl) => {
-        const events = tl.events || [];
-
-        if (deleteSubsequent && targetEvent.date) {
-          const targetDate = targetEvent.date;
-          const updatedEvents = events.filter((ev) => {
-            if (String(ev.id) === String(targetEvent.id) || String(ev.id) === String(eventId)) return false;
-
-            const isSameSeries = (targetEvent.seriesId && ev.seriesId === targetEvent.seriesId) ||
-              (ev.title && targetEvent.title && ev.title.trim().toLowerCase() === targetEvent.title.trim().toLowerCase());
-
-            if (isSameSeries && ev.date >= targetDate) {
-              return false;
-            }
-
-            return true;
-          });
-          return { ...tl, events: updatedEvents };
-        } else {
-          return { ...tl, events: events.filter((ev) => String(ev.id) !== String(eventId) && String(ev.id) !== String(targetEvent.id)) };
-        }
-      })
-    );
-
+    deleteAsync();
     setDeletingEvent(null);
   };
 

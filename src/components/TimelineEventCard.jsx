@@ -468,17 +468,11 @@ export default function TimelineEventCard({
         borderLeft: '4px solid #ef4444',
         borderColor: 'rgba(239, 68, 68, 0.3)'
       };
-    } else if (isReceivedIncome) {
+    } else if (isReceivedIncome || isNextIncome) {
       cardStyle = {
         background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-card) 100%)',
         borderLeft: '4px solid #10b981',
         borderColor: 'rgba(16, 185, 129, 0.28)'
-      };
-    } else if (isNextIncome) {
-      cardStyle = {
-        background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.09) 0%, var(--bg-card) 100%)',
-        borderLeft: '4px solid #3b82f6',
-        borderColor: 'rgba(59, 130, 246, 0.3)'
       };
     } else {
       cardStyle = {

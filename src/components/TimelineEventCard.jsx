@@ -1823,7 +1823,7 @@ export default function TimelineEventCard({
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         gap: '8px',
-                        padding: '3px 0px',
+                        padding: '4px 0px',
                         background: 'transparent'
                       }}
                     >
@@ -1838,13 +1838,11 @@ export default function TimelineEventCard({
                           flex: 1,
                           background: 'transparent',
                           border: 'none',
-                          borderBottom: '3px solid var(--primary-light)',
-                          borderRadius: '0px',
+                          outline: 'none',
                           padding: '2px 0',
                           color: 'var(--text-main)',
                           fontSize: '0.86rem',
-                          fontWeight: '700',
-                          outline: 'none'
+                          fontWeight: '700'
                         }}
                       />
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -1863,8 +1861,8 @@ export default function TimelineEventCard({
                             textAlign: 'right',
                             fontWeight: '700',
                             padding: '2px 0',
-                            borderBottom: '3px solid var(--primary-light)',
-                            borderRadius: '0px'
+                            border: 'none',
+                            outline: 'none'
                           }}
                         />
                         <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-dim)' }}>€</span>
@@ -1892,9 +1890,8 @@ export default function TimelineEventCard({
                     <div
                       style={{
                         height: '3px',
-                        background: 'var(--primary-light)',
-                        opacity: 0.35,
-                        borderRadius: '1px',
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        borderRadius: '2px',
                         width: '100%',
                         margin: '2px 0'
                       }}
@@ -1919,13 +1916,11 @@ export default function TimelineEventCard({
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    borderBottom: '3px solid var(--primary-light)',
-                    borderRadius: '0px',
+                    outline: 'none',
                     padding: '2px 0',
                     fontSize: '0.86rem',
                     fontWeight: '700',
-                    color: 'var(--text-main)',
-                    outline: 'none'
+                    color: 'var(--text-main)'
                   }}
                 />
                 <input
@@ -1939,12 +1934,10 @@ export default function TimelineEventCard({
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    borderBottom: '3px solid var(--primary-light)',
-                    borderRadius: '0px',
+                    outline: 'none',
                     padding: '2px 0',
                     fontSize: '0.86rem',
                     color: 'var(--text-main)',
-                    outline: 'none',
                     fontWeight: '700'
                   }}
                 />

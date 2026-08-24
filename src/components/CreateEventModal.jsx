@@ -9,9 +9,11 @@ import {
   Sparkles,
   Lock,
   Repeat,
-  Zap
+  Zap,
+  Calendar,
+  ChevronDown
 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, getDaysInMonth } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../utils/loanCalculations';
 import { generateUUID } from '../utils/uuid';
@@ -38,6 +40,7 @@ export default function CreateEventModal({
   });
 
   const [breakdownItems, setBreakdownItems] = useState([]);
+  const [isDayPickerOpen, setIsDayPickerOpen] = useState(false);
 
   // Base Form State
   const [formData, setFormData] = useState({
@@ -121,11 +124,15 @@ export default function CreateEventModal({
   // Extract year & month from selected date
   let yearStr = '2026';
   let monthStr = '08';
+  let totalDays = 31;
   try {
     const pDate = parseISO(formData.date);
     yearStr = format(pDate, 'yyyy');
     monthStr = format(pDate, 'MM');
+    totalDays = getDaysInMonth(pDate) || 31;
   } catch (e) { }
+
+  const daysArray = Array.from({ length: totalDays }, (_, i) => i + 1);
 
   // Theme styling configuration based on movementType
   const themeConfig = {
@@ -430,23 +437,109 @@ export default function CreateEventModal({
 
             <div className="form-group">
               <label className="form-label">Dia do Mês</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="number"
-                  min="1"
-                  max="31"
-                  className="form-input"
-                  style={{ fontWeight: '700' }}
-                  value={formData.dayOfMonth}
-                  onChange={(e) => setFormData({ ...formData, dayOfMonth: parseInt(e.target.value) || 1 })}
-                  required
-                />
-                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  de {format(parseISO(`${yearStr}-${monthStr}-01`), 'MMM', { locale: pt })}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'var(--bg-glass)',
+                  border: isDayPickerOpen ? `1px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '6px 10px',
+                  minHeight: '42px',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                  Dia {formData.dayOfMonth} de {format(parseISO(`${yearStr}-${monthStr}-01`), 'MMM', { locale: pt })}
                 </span>
+
+                <button
+                  type="button"
+                  onClick={() => setIsDayPickerOpen(!isDayPickerOpen)}
+                  style={{
+                    background: currentTheme.bgLight,
+                    border: `1px solid ${currentTheme.border}`,
+                    borderRadius: '4px',
+                    color: currentTheme.color,
+                    padding: '4px 8px',
+                    fontSize: '0.75rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Calendar size={13} />
+                  <span>{isDayPickerOpen ? 'Fechar' : 'Escolher'}</span>
+                </button>
               </div>
             </div>
           </div>
+
+          {/* Grid de Seleção de Dia do Mês */}
+          {isDayPickerOpen && (
+            <div
+              style={{
+                marginBottom: '16px',
+                padding: '12px',
+                background: 'var(--bg-glass)',
+                border: `1px solid ${currentTheme.border}`,
+                borderRadius: 'var(--radius-sm)',
+                boxShadow: `0 8px 24px -6px ${currentTheme.bgGlow}`
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid var(--border-glass)' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Escolha o dia ({format(parseISO(`${yearStr}-${monthStr}-01`), 'MMMM yyyy', { locale: pt })})
+                </span>
+                <span style={{ fontSize: '0.75rem', color: currentTheme.color, fontWeight: '700' }}>
+                  Dia {formData.dayOfMonth} selecionado
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, 1fr)',
+                  gap: '6px'
+                }}
+              >
+                {daysArray.map((dNum) => {
+                  const isSelected = Number(formData.dayOfMonth) === dNum;
+                  return (
+                    <button
+                      key={dNum}
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, dayOfMonth: dNum });
+                        setIsDayPickerOpen(false); // Fill e fecha o grid
+                      }}
+                      style={{
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '4px',
+                        border: isSelected ? `2px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
+                        background: isSelected ? currentTheme.color : 'rgba(255, 255, 255, 0.04)',
+                        color: isSelected ? '#ffffff' : 'var(--text-main)',
+                        fontWeight: isSelected ? '800' : '600',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        boxShadow: isSelected ? `0 2px 8px ${currentTheme.bgGlow}` : 'none'
+                      }}
+                    >
+                      {dNum}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Periodicidade: Seletor Segmentado Único vs Recorrente */}
           <div className="form-group">

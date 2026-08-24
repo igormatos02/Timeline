@@ -430,8 +430,10 @@ export class TimelineService {
   async toggleEventPayment(id) {
     const event = await eventRepository.getById(id);
     if (event) {
-      const isCompleted = !(event.status === 'Pago' || event.status === 'Recebido' || event.isCompleted);
-      const newStatus = isCompleted ? (event.isIncome ? 'Recebido' : 'Pago') : 'Pendente';
+      const isInvestment = event.isInvestment || event.financialType === 'investimento' || (event.category && event.category.startsWith('investimento'));
+      const isIncome = event.isIncome || event.financialType === 'entrada' || (event.category && event.category.startsWith('entrada'));
+      const isCompleted = !(event.status === 'Pago' || event.status === 'Recebido' || event.status === 'Investido' || event.isCompleted);
+      const newStatus = isCompleted ? (isIncome ? 'Recebido' : isInvestment ? 'Investido' : 'Pago') : (isInvestment ? 'Planeado' : 'Pendente');
 
       return eventRepository.update(id, {
         status: newStatus,
@@ -445,12 +447,18 @@ export class TimelineService {
     const projEv = projected.find((ev) => ev.id === id);
 
     if (projEv && projEv.seriesId) {
-      const isCompleted = !(projEv.status === 'Pago' || projEv.status === 'Recebido' || projEv.isCompleted);
-      const newStatus = isCompleted ? (projEv.isIncome ? 'Recebido' : 'Pago') : 'Pendente';
+      const isInvestment = projEv.isInvestment || projEv.financialType === 'investimento' || (projEv.category && projEv.category.startsWith('investimento'));
+      const isIncome = projEv.isIncome || projEv.financialType === 'entrada' || (projEv.category && projEv.category.startsWith('entrada'));
+      const isCompleted = !(projEv.status === 'Pago' || projEv.status === 'Recebido' || projEv.status === 'Investido' || projEv.isCompleted);
+      const newStatus = isCompleted ? (isIncome ? 'Recebido' : isInvestment ? 'Investido' : 'Pago') : (isInvestment ? 'Planeado' : 'Pendente');
+
+      const seriesVersions = allRaw.filter((ev) => ev.seriesId === projEv.seriesId || ev.sobrepositionOver === projEv.seriesId);
+      const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
 
       return eventRepository.create({
         ...projEv,
         sobrepositionOver: projEv.seriesId,
+        version: currentHighestVersion + 1,
         status: newStatus,
         isCompleted,
         isRecurring: false

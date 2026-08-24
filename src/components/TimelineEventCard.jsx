@@ -1150,13 +1150,12 @@ export default function TimelineEventCard({
             ) : (
               <button
                 type="button"
-                disabled={event.date > todayStr}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (isLocked) {
                     return; // Bloqueado: clique no cadeado para abrir
                   }
-                  if (event.date <= todayStr && onToggleLoanPayment) {
+                  if (onToggleLoanPayment) {
                     onToggleLoanPayment(event.id);
                   }
                 }}
@@ -1183,8 +1182,8 @@ export default function TimelineEventCard({
                         : '#94a3b8',
                   border: isReceivedIncome
                     ? isLocked
-                      ? '1px solid rgba(16, 185, 129, 0.35)'
-                      : '1.5px dashed rgba(16, 185, 129, 0.65)'
+                    : '1px solid rgba(16, 185, 129, 0.35)'
+                    ? '1.5px dashed rgba(16, 185, 129, 0.65)'
                     : isOverdueIncome
                       ? '1px solid rgba(239, 68, 68, 0.4)'
                       : isNextIncome
@@ -1194,8 +1193,7 @@ export default function TimelineEventCard({
                   padding: '5px 14px',
                   fontSize: '0.78rem',
                   fontWeight: '700',
-                  cursor: isLocked ? 'default' : event.date > todayStr ? 'default' : 'pointer',
-                  opacity: event.date > todayStr ? 0.75 : 1,
+                  cursor: isLocked ? 'default' : 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',

@@ -563,11 +563,8 @@ export default function App() {
   // ----------------------------------------------------
 
   // Toggle installment payment / income / expense / investment status
-  const handleToggleLoanPayment = (installmentId) => {
+  const handleToggleLoanPayment = async (installmentId) => {
     if (!installmentId) return;
-
-    // Sync to backend
-    api.toggleEventPayment(installmentId).catch(console.error);
 
     setTimelines((prevTimelines) => {
       const clickTimeStr = format(new Date(), 'HH:mm');
@@ -585,9 +582,6 @@ export default function App() {
           let nextStatus, nextCompleted;
 
           if (isIncome) {
-            if (ev.date > '2026-08-21') {
-              return ev; // Entradas futuras não podem ser marcadas antes da data
-            }
             nextStatus = ev.status === 'Recebido' ? 'Pendente' : 'Recebido';
             nextCompleted = nextStatus === 'Recebido';
           } else if (isInvestment) {
@@ -616,6 +610,13 @@ export default function App() {
         return { ...tl, events: finalEvents };
       });
     });
+
+    try {
+      await api.toggleEventPayment(installmentId);
+      await refreshTimelines();
+    } catch (err) {
+      console.error('Error toggling payment status:', err);
+    }
   };
 
   // Save changes from EditInstallmentModal (amount, principalAmount, interestPortion, interestAmount, propagateForward)

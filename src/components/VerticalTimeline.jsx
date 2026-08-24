@@ -10,7 +10,8 @@ import {
   isSameMonth,
   getWeek,
   addYears,
-  addMonths
+  addMonths,
+  subMonths
 } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import {
@@ -44,6 +45,7 @@ import {
   CreditCard,
   Gift,
   ArrowUp,
+  ArrowDown,
   FileText,
   Zap,
   Activity
@@ -71,7 +73,9 @@ export default function VerticalTimeline({
   onNavigateToTimeline,
   headerComponent,
   futureHorizonYears = 1,
-  onLoadMoreFuture
+  pastHorizonYears = 1,
+  onLoadMoreFuture,
+  onLoadMorePast
 }) {
   const isFinancialTimeline = timeline.type === 'Financeiro' || timeline.type === 'Entradas' || timeline.id === 'tl-income';
   const [searchQuery, setSearchQuery] = useState('');
@@ -247,8 +251,8 @@ export default function VerticalTimeline({
 
   const isBalancoView = (isFinancialTimeline && activeFinancialTab === 'balanco') || timeline.type === 'Principal';
 
-  // Determine earliest date in timeline (12 meses anteriores ao mês corrente)
-  const startDateObj = parseISO('2025-08-01');
+  // Determine earliest date in timeline (12 meses anteriores expansível)
+  const startDateObj = isBalancoView ? parseISO('2025-08-01') : subMonths(parseISO('2026-08-01'), Math.max(1, pastHorizonYears) * 12);
 
   // Determine latest date in timeline (12 meses futuros expansível)
   const maxDateObj = isBalancoView ? parseISO('2026-08-31') : addMonths(parseISO('2026-08-31'), Math.max(1, futureHorizonYears) * 12);
@@ -969,6 +973,35 @@ export default function VerticalTimeline({
             </div>
           );
         })}
+
+        {/* Botão de Carregar Mais Meses Anteriores (Histórico) */}
+        {onLoadMorePast && !isBalancoView && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0 16px 0', position: 'relative', zIndex: 10 }}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={onLoadMorePast}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 22px',
+                borderRadius: '24px',
+                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(168, 85, 247, 0.18))',
+                border: '1px solid rgba(99, 102, 241, 0.45)',
+                color: 'var(--primary-light)',
+                fontWeight: '700',
+                fontSize: '0.84rem',
+                cursor: 'pointer',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+                transition: 'all var(--transition-fast)'
+              }}
+            >
+              <ArrowDown size={15} />
+              <span>Carregar +12 Meses Anteriores (Histórico)</span>
+            </button>
+          </div>
+        )}
       </div>
     );
   };

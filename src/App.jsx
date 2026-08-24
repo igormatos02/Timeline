@@ -112,12 +112,14 @@ export default function App() {
   const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState('2026-08-21');
   const [eventModalDefaultNature, setEventModalDefaultNature] = useState('income'); // 'income' | 'expense' | 'investment'
   const [futureHorizonYears, setFutureHorizonYears] = useState(1);
+  const [pastHorizonYears, setPastHorizonYears] = useState(1);
   const scrollYBeforeModalRef = React.useRef(0);
 
-  const refreshTimelines = async (horizonYears = futureHorizonYears) => {
-    const endYear = 2026 + horizonYears;
+  const refreshTimelines = async (futureYears = futureHorizonYears, pastYears = pastHorizonYears) => {
+    const endYear = 2026 + futureYears;
+    const startYear = 2026 - pastYears;
     try {
-      const data = await api.fetchTimelines({ startDate: '2025-08-01', endDate: `${endYear}-08-31` });
+      const data = await api.fetchTimelines({ startDate: `${startYear}-08-01`, endDate: `${endYear}-08-31` });
       if (Array.isArray(data) && data.length > 0) {
         setTimelines(data);
       }
@@ -130,7 +132,13 @@ export default function App() {
   const handleLoadMoreFuture = async () => {
     const nextYears = futureHorizonYears + 1;
     setFutureHorizonYears(nextYears);
-    await refreshTimelines(nextYears);
+    await refreshTimelines(nextYears, pastHorizonYears);
+  };
+
+  const handleLoadMorePast = async () => {
+    const nextPast = pastHorizonYears + 1;
+    setPastHorizonYears(nextPast);
+    await refreshTimelines(futureHorizonYears, nextPast);
   };
 
   // Loan Specific Modals
@@ -742,7 +750,9 @@ export default function App() {
             activeFinancialTab={activeFinancialTab}
             onSelectFinancialTab={setActiveFinancialTab}
             futureHorizonYears={futureHorizonYears}
+            pastHorizonYears={pastHorizonYears}
             onLoadMoreFuture={handleLoadMoreFuture}
+            onLoadMorePast={handleLoadMorePast}
             onEditEvent={handleOpenEditEvent}
             onUpdateEventDirect={handleUpdateEventDirect}
             onDeleteEvent={handleRequestDeleteEvent}

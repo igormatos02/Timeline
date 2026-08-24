@@ -1,12 +1,11 @@
 import React from 'react';
-import { Clock, Plus, LayoutGrid, Calendar, Sparkles, Sun, Moon, LocateFixed } from 'lucide-react';
+import { Clock, Plus, LayoutGrid, Sparkles, Sun, Moon, LocateFixed } from 'lucide-react';
 
 export default function Navbar({
   timeboards = [],
   activeTimeboardId,
   onSelectTimeboard,
   onOpenCreateTimeboard,
-  onOpenCreateEvent,
   onScrollToToday,
   theme,
   onToggleTheme
@@ -72,21 +71,14 @@ export default function Navbar({
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
 
+          {/* Novo Timeboard Button (Primary Style) */}
           <button
-            className="btn btn-outline btn-sm"
+            className="btn btn-primary btn-sm"
             onClick={onOpenCreateTimeboard}
             title="Criar novo Timeboard"
           >
             <Plus size={16} />
             <span>Novo Timeboard</span>
-          </button>
-          
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={() => onOpenCreateEvent()}
-          >
-            <Calendar size={16} />
-            <span>Novo Evento</span>
           </button>
         </div>
       </div>

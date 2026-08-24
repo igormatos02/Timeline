@@ -689,7 +689,6 @@ export default function App() {
           setEditingTimeboard(null);
           setIsTimeboardModalOpen(true);
         }}
-        onOpenCreateEvent={() => handleOpenCreateEvent('2026-08-21')}
         onScrollToToday={handleScrollToToday}
         theme={theme}
         onToggleTheme={handleToggleTheme}

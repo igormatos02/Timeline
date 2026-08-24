@@ -925,7 +925,7 @@ export default function TimelineEventCard({
                 style={{
                   background: 'transparent',
                   border: 'none',
-                  borderBottom: '1px solid var(--primary-light)',
+                  borderBottom: '3px solid var(--primary-light)',
                   borderRadius: '0px',
                   padding: '2px 0',
                   fontSize: '0.98rem',
@@ -1823,7 +1823,7 @@ export default function TimelineEventCard({
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         gap: '8px',
-                        padding: '2px 0px',
+                        padding: '3px 0px',
                         background: 'transparent'
                       }}
                     >
@@ -1838,7 +1838,7 @@ export default function TimelineEventCard({
                           flex: 1,
                           background: 'transparent',
                           border: 'none',
-                          borderBottom: '1px solid var(--primary-light)',
+                          borderBottom: '3px solid var(--primary-light)',
                           borderRadius: '0px',
                           padding: '2px 0',
                           color: 'var(--text-main)',
@@ -1857,7 +1857,15 @@ export default function TimelineEventCard({
                           value={item.amount}
                           onFocus={(e) => e.target.select()}
                           onChange={(e) => handleDraftUpdateAmount(idx, e.target.value)}
-                          style={{ width: '75px', fontSize: '0.86rem', textAlign: 'right', fontWeight: '700', padding: '2px 0' }}
+                          style={{
+                            width: '75px',
+                            fontSize: '0.86rem',
+                            textAlign: 'right',
+                            fontWeight: '700',
+                            padding: '2px 0',
+                            borderBottom: '3px solid var(--primary-light)',
+                            borderRadius: '0px'
+                          }}
                         />
                         <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-dim)' }}>€</span>
                         {canEditAmount && (
@@ -1884,7 +1892,8 @@ export default function TimelineEventCard({
                     <div
                       style={{
                         height: '3px',
-                        background: 'rgba(255, 255, 255, 0.12)',
+                        background: 'var(--primary-light)',
+                        opacity: 0.35,
                         borderRadius: '1px',
                         width: '100%',
                         margin: '2px 0'
@@ -1910,7 +1919,7 @@ export default function TimelineEventCard({
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    borderBottom: '1px solid var(--primary-light)',
+                    borderBottom: '3px solid var(--primary-light)',
                     borderRadius: '0px',
                     padding: '2px 0',
                     fontSize: '0.86rem',
@@ -1930,7 +1939,7 @@ export default function TimelineEventCard({
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    borderBottom: '1px solid var(--primary-light)',
+                    borderBottom: '3px solid var(--primary-light)',
                     borderRadius: '0px',
                     padding: '2px 0',
                     fontSize: '0.86rem',

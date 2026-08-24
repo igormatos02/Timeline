@@ -82,6 +82,7 @@ export default function TimelineEventCard({
   const [tempAmount, setTempAmount] = useState(event.amount !== undefined ? event.amount : '');
   const [propagateSubsequent, setPropagateSubsequent] = useState(true);
   const [isDesmembramentoExpanded, setIsDesmembramentoExpanded] = useState(false);
+  const [draftSubparts, setDraftSubparts] = useState([]);
   const [newSubpartName, setNewSubpartName] = useState('');
   const [newSubpartAmount, setNewSubpartAmount] = useState('');
 
@@ -128,77 +129,91 @@ export default function TimelineEventCard({
     setIsEditingAmount(false);
   };
 
-  // Handlers for itemized breakdown editing on the card
-  const handleUpdateBreakdownItemAmount = (idx, newAmountStr) => {
-    const num = Number(newAmountStr);
-    if (isNaN(num) || num < 0) return;
-    const updated = (event.breakdownItems || []).map((it, i) =>
-      i === idx ? { ...it, amount: num } : it
-    );
-    const newTotal = updated.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
-    if (onUpdateEventDirect) {
-      onUpdateEventDirect({
-        ...event,
-        amount: newTotal,
-        breakdownItems: updated,
-        propagateForward: isRecurring ? propagateSubsequent : false
-      });
-    }
-  };
-
-  const handleUpdateBreakdownItemName = (idx, newName) => {
-    const updated = (event.breakdownItems || []).map((it, i) =>
-      i === idx ? { ...it, name: newName } : it
-    );
-    if (onUpdateEventDirect) {
-      onUpdateEventDirect({
-        ...event,
-        breakdownItems: updated,
-        propagateForward: isRecurring ? propagateSubsequent : false
-      });
-    }
-  };
-
-  const handleAddBreakdownItem = (e) => {
+  // Abrir o painel de desmembramento carregando o estado de rascunho
+  const openDesmembramento = (e) => {
     if (e) e.stopPropagation();
-    const current = event.breakdownItems || [];
-    const updated = [
-      ...current,
-      { id: `part-${Date.now()}-${current.length + 1}`, name: `Subparte ${current.length + 1}`, amount: 0 }
-    ];
-    const newTotal = updated.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
-    if (onUpdateEventDirect) {
-      onUpdateEventDirect({
-        ...event,
-        amount: newTotal,
-        breakdownItems: updated,
-        propagateForward: isRecurring ? propagateSubsequent : false
-      });
-    }
-    setIsDesmembramentoExpanded(true);
-  };
-
-  const handleDeleteBreakdownItem = (idx, e) => {
-    if (e) e.stopPropagation();
-    const updated = (event.breakdownItems || []).filter((_, i) => i !== idx);
-    const newTotal = updated.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
-    if (onUpdateEventDirect) {
-      onUpdateEventDirect({
-        ...event,
-        amount: newTotal,
-        breakdownItems: updated.length > 0 ? updated : undefined,
-        propagateForward: isRecurring ? propagateSubsequent : false
-      });
-    }
-  };
-
-  const handleConvertToBreakdown = (e) => {
-    if (e) e.stopPropagation();
-    const currentAmt = Number(event.amount) || 0;
+    const existing = event.breakdownItems ? JSON.parse(JSON.stringify(event.breakdownItems)) : [];
+    setDraftSubparts(existing);
     setNewSubpartName('');
-    setNewSubpartAmount(currentAmt ? currentAmt.toString() : '');
+    setNewSubpartAmount(existing.length > 0 ? '' : (event.amount !== undefined ? event.amount.toString() : ''));
     setIsEditingAmount(false);
     setIsDesmembramentoExpanded(true);
+  };
+
+  // Salvar desmembramento definitivamente
+  const handleSaveDesmembramento = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    let finalItems = [...draftSubparts];
+    if (newSubpartName.trim()) {
+      const amt = Number(newSubpartAmount) || 0;
+      finalItems.push({
+        id: `part-${Date.now()}-${finalItems.length + 1}`,
+        name: newSubpartName.trim(),
+        amount: amt
+      });
+      setNewSubpartName('');
+      setNewSubpartAmount('');
+    }
+
+    const calculatedSum = finalItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
+
+    if (onUpdateEventDirect) {
+      onUpdateEventDirect({
+        ...event,
+        amount: finalItems.length > 0 ? calculatedSum : event.amount,
+        breakdownItems: finalItems.length > 0 ? finalItems : undefined,
+        propagateForward: isRecurring ? propagateSubsequent : false
+      });
+    }
+    setIsDesmembramentoExpanded(false);
+  };
+
+  // Cancelar e fechar desmembramento sem guardar
+  const handleCancelDesmembramento = (e) => {
+    if (e) e.stopPropagation();
+    setDraftSubparts(event.breakdownItems ? JSON.parse(JSON.stringify(event.breakdownItems)) : []);
+    setNewSubpartName('');
+    setNewSubpartAmount('');
+    setIsDesmembramentoExpanded(false);
+  };
+
+  // Handlers para manipular o rascunho (draft)
+  const handleDraftUpdateAmount = (idx, newAmountStr) => {
+    const num = Number(newAmountStr);
+    if (isNaN(num) || num < 0) return;
+    setDraftSubparts((prev) =>
+      prev.map((it, i) => (i === idx ? { ...it, amount: num } : it))
+    );
+  };
+
+  const handleDraftUpdateName = (idx, newName) => {
+    setDraftSubparts((prev) =>
+      prev.map((it, i) => (i === idx ? { ...it, name: newName } : it))
+    );
+  };
+
+  const handleDraftDeleteSubpart = (idx, e) => {
+    if (e) e.stopPropagation();
+    setDraftSubparts((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleDraftAddSubpart = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (newSubpartName.trim()) {
+      const amt = Number(newSubpartAmount) || 0;
+      setDraftSubparts((prev) => [
+        ...prev,
+        { id: `part-${Date.now()}-${prev.length + 1}`, name: newSubpartName.trim(), amount: amt }
+      ]);
+      setNewSubpartName('');
+      setNewSubpartAmount('');
+    }
   };
 
   const renderEditableAmount = (prefix = '', defaultColor = 'var(--text-main)') => {
@@ -208,7 +223,11 @@ export default function TimelineEventCard({
         <span
           onClick={(e) => {
             e.stopPropagation();
-            setIsDesmembramentoExpanded((prev) => !prev);
+            if (isDesmembramentoExpanded) {
+              handleCancelDesmembramento(e);
+            } else {
+              openDesmembramento(e);
+            }
           }}
           title="Valor desmembrado em subpartes. Clique para ver/editar as subpartes abaixo."
           style={{
@@ -225,7 +244,11 @@ export default function TimelineEventCard({
           <span
             onClick={(e) => {
               e.stopPropagation();
-              setIsDesmembramentoExpanded((prev) => !prev);
+              if (isDesmembramentoExpanded) {
+                handleCancelDesmembramento(e);
+              } else {
+                openDesmembramento(e);
+              }
             }}
             style={{
               fontSize: '0.72rem',
@@ -324,7 +347,7 @@ export default function TimelineEventCard({
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
-            onClick={handleConvertToBreakdown}
+            onClick={openDesmembramento}
             title="Desmembrar valor em subpartes com nomes associados"
             style={{
               background: 'rgba(99, 102, 241, 0.14)',
@@ -1597,10 +1620,10 @@ export default function TimelineEventCard({
         );
       })()}
 
-      {/* 🧩 Painel de Desmembramento do Valor (In-place, exatamente como a secção de Notas) */}
+      {/* 🧩 Painel de Desmembramento do Valor (In-place, com Salvar e Cancelar) */}
       {isDesmembramentoExpanded && (() => {
-        const allSubparts = Array.isArray(event.breakdownItems) ? event.breakdownItems : [];
-        const totalCalculated = allSubparts.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
+        const pendingAmount = Number(newSubpartAmount) || 0;
+        const totalCalculated = draftSubparts.reduce((acc, it) => acc + (Number(it.amount) || 0), 0) + (newSubpartName.trim() ? pendingAmount : 0);
 
         return (
           <div
@@ -1608,7 +1631,7 @@ export default function TimelineEventCard({
             style={{
               marginTop: '10px',
               marginBottom: '10px',
-              padding: '12px 14px',
+              padding: '14px',
               background: 'rgba(255, 255, 255, 0.03)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
@@ -1616,28 +1639,33 @@ export default function TimelineEventCard({
               borderRadius: '12px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '10px'
+              gap: '12px'
             }}
           >
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', fontWeight: '700', color: 'var(--primary-light)' }}>
-                <Layers size={14} style={{ color: 'var(--primary-light)' }} />
-                <span>Desmembramento do Valor ({allSubparts.length} subpartes)</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: '700', color: 'var(--primary-light)' }}>
+                <Layers size={15} style={{ color: 'var(--primary-light)' }} />
+                <span>Desmembramento do Valor ({draftSubparts.length} subpartes)</span>
               </div>
               <button
                 type="button"
-                onClick={() => setIsDesmembramentoExpanded(false)}
+                onClick={handleCancelDesmembramento}
                 style={{
                   background: 'transparent',
                   border: 'none',
                   color: 'var(--text-dim)',
                   cursor: 'pointer',
-                  fontSize: '0.72rem',
-                  padding: '2px 6px'
+                  fontSize: '0.74rem',
+                  padding: '2px 6px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px'
                 }}
+                title="Cancelar alterações"
               >
-                ✕ Fechar
+                <X size={13} />
+                <span>Cancelar</span>
               </button>
             </div>
 
@@ -1655,21 +1683,21 @@ export default function TimelineEventCard({
             >
               <div>
                 <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                  Total Acumulado (Exibido Acima)
+                  Total Acumulado das Subpartes
                 </div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  A soma das subpartes determina a totalidade desta entrada
+                  A soma das subpartes definirá a totalidade desta entrada ao salvar
                 </div>
               </div>
-              <span style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--primary-light)' }}>
+              <span style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--primary-light)' }}>
                 {formatCurrency(totalCalculated)}
               </span>
             </div>
 
-            {/* List of existing subparts */}
-            {allSubparts.length > 0 ? (
+            {/* List of draft subparts */}
+            {draftSubparts.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {allSubparts.map((item, idx) => (
+                {draftSubparts.map((item, idx) => (
                   <div
                     key={item.id || idx}
                     style={{
@@ -1687,7 +1715,7 @@ export default function TimelineEventCard({
                       type="text"
                       disabled={!canEditAmount}
                       value={item.name}
-                      onChange={(e) => handleUpdateBreakdownItemName(idx, e.target.value)}
+                      onChange={(e) => handleDraftUpdateName(idx, e.target.value)}
                       placeholder="Nome da subparte..."
                       style={{
                         flex: 1,
@@ -1708,14 +1736,14 @@ export default function TimelineEventCard({
                         className="inline-amount-input"
                         value={item.amount}
                         onFocus={(e) => e.target.select()}
-                        onChange={(e) => handleUpdateBreakdownItemAmount(idx, e.target.value)}
+                        onChange={(e) => handleDraftUpdateAmount(idx, e.target.value)}
                         style={{ width: '80px', fontSize: '0.86rem', textAlign: 'right', fontWeight: '700' }}
                       />
                       <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-dim)' }}>€</span>
                       {canEditAmount && (
                         <button
                           type="button"
-                          onClick={(e) => handleDeleteBreakdownItem(idx, e)}
+                          onClick={(e) => handleDraftDeleteSubpart(idx, e)}
                           style={{
                             background: 'transparent',
                             border: 'none',
@@ -1734,38 +1762,13 @@ export default function TimelineEventCard({
                   </div>
                 ))}
               </div>
-            ) : (
-              <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
-                Nenhuma subparte criada. Adicione subpartes abaixo para desmembrar o valor total.
-              </span>
             )}
 
             {/* Add New Subpart Form */}
             {canEditAmount && (
               <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (newSubpartName.trim()) {
-                    const amt = Number(newSubpartAmount) || 0;
-                    const updated = [
-                      ...allSubparts,
-                      { id: `part-${Date.now()}-${allSubparts.length + 1}`, name: newSubpartName.trim(), amount: amt }
-                    ];
-                    const newTotal = updated.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
-                    if (onUpdateEventDirect) {
-                      onUpdateEventDirect({
-                        ...event,
-                        amount: newTotal,
-                        breakdownItems: updated,
-                        propagateForward: isRecurring ? propagateSubsequent : false
-                      });
-                    }
-                    setNewSubpartName('');
-                    setNewSubpartAmount('');
-                  }
-                }}
-                style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr auto', gap: '6px', marginTop: '4px' }}
+                onSubmit={handleDraftAddSubpart}
+                style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr auto', gap: '6px', marginTop: '2px' }}
               >
                 <input
                   type="text"
@@ -1777,7 +1780,7 @@ export default function TimelineEventCard({
                     border: '1px solid var(--border-glass)',
                     borderRadius: '6px',
                     padding: '6px 10px',
-                    fontSize: '0.76rem',
+                    fontSize: '0.78rem',
                     color: 'var(--text-main)',
                     outline: 'none'
                   }}
@@ -1788,13 +1791,14 @@ export default function TimelineEventCard({
                   min="0"
                   placeholder="Valor (€)"
                   value={newSubpartAmount}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => setNewSubpartAmount(e.target.value)}
                   style={{
                     background: 'rgba(0, 0, 0, 0.15)',
                     border: '1px solid var(--border-glass)',
                     borderRadius: '6px',
                     padding: '6px 10px',
-                    fontSize: '0.76rem',
+                    fontSize: '0.78rem',
                     color: 'var(--text-main)',
                     outline: 'none',
                     fontWeight: '700'
@@ -1803,18 +1807,15 @@ export default function TimelineEventCard({
                 <button
                   type="submit"
                   disabled={!newSubpartName.trim()}
-                  className="btn btn-primary btn-sm"
+                  className="btn btn-secondary btn-sm"
                   style={{
                     padding: '4px 12px',
                     fontSize: '0.74rem',
-                    background: 'var(--primary)',
-                    color: '#ffffff',
-                    border: 'none',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '4px'
                   }}
-                  title="Adicionar subparte"
+                  title="Adicionar mais uma subparte à lista"
                 >
                   <Plus size={13} />
                   <span>Adicionar</span>
@@ -1822,11 +1823,11 @@ export default function TimelineEventCard({
               </form>
             )}
 
-            {/* Footer controls: Mudar subsequentes e Voltar a Valor Único */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px', paddingTop: '6px', borderTop: '1px solid var(--border-glass)' }}>
+            {/* Footer Actions: Switch Subsequentes, Salvar e Cancelar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px', paddingTop: '8px', borderTop: '1px solid var(--border-glass)' }}>
               {isRecurring ? (
                 <label
-                  title="Ativar para aplicar este desmembramento a todos os meses subsequentes"
+                  title="Ativar para aplicar este desmembramento a todos os meses subsequentes ao salvar"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1848,7 +1849,7 @@ export default function TimelineEventCard({
               ) : <div />}
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {canEditAmount && allSubparts.length > 0 && (
+                {canEditAmount && (draftSubparts.length > 0 || hasBreakdown) && (
                   <button
                     type="button"
                     onClick={() => {
@@ -1868,7 +1869,8 @@ export default function TimelineEventCard({
                       cursor: 'pointer',
                       fontSize: '0.72rem',
                       fontWeight: '600',
-                      textDecoration: 'underline'
+                      textDecoration: 'underline',
+                      marginRight: '6px'
                     }}
                   >
                     Voltar a Valor Único
@@ -1876,15 +1878,40 @@ export default function TimelineEventCard({
                 )}
                 <button
                   type="button"
-                  onClick={() => setIsDesmembramentoExpanded(false)}
+                  onClick={handleCancelDesmembramento}
                   className="btn btn-secondary btn-sm"
                   style={{
-                    fontSize: '0.72rem',
-                    padding: '3px 10px',
-                    borderRadius: '6px'
+                    fontSize: '0.74rem',
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
                   }}
                 >
-                  ✕ Fechar
+                  <X size={13} />
+                  <span>Cancelar</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveDesmembramento}
+                  className="btn btn-primary btn-sm"
+                  style={{
+                    fontSize: '0.74rem',
+                    padding: '5px 14px',
+                    borderRadius: '6px',
+                    background: '#10b981',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontWeight: '700',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 10px rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  <Check size={14} strokeWidth={2.5} />
+                  <span>Salvar Desmembramento</span>
                 </button>
               </div>
             </div>
@@ -2040,12 +2067,12 @@ export default function TimelineEventCard({
                     <button
                       type="button"
                       className="action-icon-btn"
-                      onClick={() => {
-                        if (!isDesmembramentoExpanded && !hasBreakdown) {
-                          setNewSubpartName('');
-                          setNewSubpartAmount(event.amount !== undefined ? event.amount.toString() : '');
+                      onClick={(e) => {
+                        if (isDesmembramentoExpanded) {
+                          handleCancelDesmembramento(e);
+                        } else {
+                          openDesmembramento(e);
                         }
-                        setIsDesmembramentoExpanded(!isDesmembramentoExpanded);
                       }}
                       title={hasBreakdown ? `Ver / Editar Desmembramento (${allSubparts.length} subpartes)` : "Desmembrar Valor"}
                       style={{

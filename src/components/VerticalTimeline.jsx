@@ -677,7 +677,7 @@ export default function VerticalTimeline({
           });
 
           // No Balanço: Se for mês passado ou atual, computar o que foi efetivamente recebido/pago/investido para atualizar dinamicamente com o status
-          const effectiveIncome = isBalancoView ? (isFutureMonth ? mMonthIncome : (mMonthIncomePaid > 0 ? mMonthIncomePaid : mMonthIncome)) : mMonthIncome;
+          const effectiveIncome = isBalancoView ? (isFutureMonth ? mMonthIncome : mMonthIncomePaid) : mMonthIncome;
           const effectiveExpense = isBalancoView ? (isFutureMonth ? mMonthExpense : mMonthExpensePaid) : mMonthExpense;
           const effectiveInvestment = isBalancoView ? (isFutureMonth ? mMonthInvestment : mMonthInvestmentPaid) : mMonthInvestment;
           const mNetMonth = effectiveIncome - (effectiveExpense + effectiveInvestment);

@@ -474,14 +474,15 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     const isUpToCurrent = ev.date <= todayStr || evMonth <= currentMonthKey;
 
     if (isIncome) {
-      // Todo o rendimento do período computado até ao período corrente (sem pendências/cancelamentos)
-      if (isUpToCurrent && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+      // Apenas o que foi efetivamente recebido entra no Saldo Líquido Realizado
+      const isReceived = ev.status === 'Recebido' || ev.isCompleted;
+      if (isUpToCurrent && isReceived) {
         totalReceived += amt;
       }
       totalForecastIncome += amt;
       if (evMonth === currentMonthKey) {
         currentMonthIncome += amt;
-        if (ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+        if (isReceived) {
           currentMonthIncomeReceived += amt;
         }
       }

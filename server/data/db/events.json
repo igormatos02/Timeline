@@ -8443,7 +8443,7 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
+    "updatedAt": "2026-08-24T23:13:56.264Z"
   },
   {
     "id": "f3ced9c4-196b-451f-bc46-ff07a0195de1",
@@ -37140,7 +37140,7 @@
       }
     ],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
+    "updatedAt": "2026-08-24T23:12:19.833Z"
   },
   {
     "id": "7eb82b1e-8956-405a-96b7-8b809204ff1c",
@@ -58226,151 +58226,5 @@
     "breakdownItems": [],
     "createdAt": "2026-08-24T19:53:00.502Z",
     "updatedAt": "2026-08-24T19:53:00.502Z"
-  },
-  {
-    "title": "Condomínio",
-    "date": "2026-08-01",
-    "dayOfMonth": 1,
-    "time": "09:00",
-    "status": "Pendente",
-    "periodicity": "recorrente",
-    "amount": 20,
-    "priority": "Normal",
-    "labelsInput": "",
-    "category": "saida_recorrente",
-    "financialType": "gasto",
-    "isIncome": false,
-    "isExpense": true,
-    "isInvestment": false,
-    "labels": [],
-    "isCompleted": false,
-    "updateScope": "all",
-    "id": "908cb3e0-7b22-483d-938a-3d868d2d7f45",
-    "seriesId": "7de77405-8a40-49b1-89de-982aa0e31efb",
-    "version": 0,
-    "isRecurring": true,
-    "timelineOriginId": "a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d",
-    "createdAt": "2026-08-24T20:44:47.626Z",
-    "updatedAt": "2026-08-24T20:44:47.626Z"
-  },
-  {
-    "title": "Transferência Rafael",
-    "date": "2026-08-28",
-    "dayOfMonth": 28,
-    "time": "09:00",
-    "status": "Pendente",
-    "periodicity": "recorrente",
-    "amount": 200,
-    "priority": "Normal",
-    "labelsInput": "",
-    "category": "saida_recorrente",
-    "financialType": "gasto",
-    "isIncome": false,
-    "isExpense": true,
-    "isInvestment": false,
-    "breakdownItems": [
-      {
-        "id": "0c7dee39-f172-46f9-a25d-ac76264b2db5",
-        "name": "Violão Cello",
-        "amount": 25
-      },
-      {
-        "id": "13fde59b-3d63-4b15-98af-eb9ac988fec6",
-        "name": "Karate",
-        "amount": 30
-      },
-      {
-        "id": "aaa4e649-3520-4dd6-b7fe-2136423a9e1e",
-        "name": "Escola ",
-        "amount": 50
-      },
-      {
-        "id": "9a1675b3-2c49-47e7-a8c0-0eee1b6094a8",
-        "name": "Conservatório",
-        "amount": 70
-      },
-      {
-        "id": "c623cb44-f300-4750-b016-449e7e51c75a",
-        "name": "Outros",
-        "amount": 25
-      }
-    ],
-    "labels": [],
-    "isCompleted": false,
-    "updateScope": "all",
-    "id": "f1500a87-3c4d-4524-932d-7b9e4fea7371",
-    "seriesId": "604f498f-bd3d-4ee7-a1d5-731288fd7fae",
-    "version": 0,
-    "isRecurring": true,
-    "timelineOriginId": "a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d",
-    "createdAt": "2026-08-24T20:47:58.844Z",
-    "updatedAt": "2026-08-24T20:47:58.844Z"
-  },
-  {
-    "id": "604f498f-bd3d-4ee7-a1d5-731288fd7fae_2026-08-28",
-    "seriesId": "604f498f-bd3d-4ee7-a1d5-731288fd7fae",
-    "sobrepositionOver": null,
-    "version": 0,
-    "isTerminated": false,
-    "dayOfMonth": 28,
-    "timelineOriginId": "a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d",
-    "timelineOriginName": "Financeiro",
-    "timelineOriginIcon": "💰",
-    "date": "2026-08-28",
-    "time": "00:03",
-    "title": "Transferência Rafael",
-    "description": "",
-    "category": "saida_recorrente",
-    "financialType": "gasto",
-    "periodicity": "recorrente",
-    "status": "Pago",
-    "priority": "Normal",
-    "amount": 200,
-    "isIncome": false,
-    "isExpense": true,
-    "isInvestment": false,
-    "isRecurring": true,
-    "isCompleted": true,
-    "isLocked": false,
-    "isSystemLoanEvent": false,
-    "principalAmount": 0,
-    "interestPortion": 0,
-    "interestAmount": 0,
-    "balanceAfter": 0,
-    "installmentNumber": null,
-    "totalInstallments": null,
-    "labels": [],
-    "breakdownItems": [
-      {
-        "id": "0c7dee39-f172-46f9-a25d-ac76264b2db5",
-        "name": "Violão Cello",
-        "amount": 25
-      },
-      {
-        "id": "13fde59b-3d63-4b15-98af-eb9ac988fec6",
-        "name": "Karate",
-        "amount": 30
-      },
-      {
-        "id": "aaa4e649-3520-4dd6-b7fe-2136423a9e1e",
-        "name": "Escola ",
-        "amount": 50
-      },
-      {
-        "id": "9a1675b3-2c49-47e7-a8c0-0eee1b6094a8",
-        "name": "Conservatório",
-        "amount": 70
-      },
-      {
-        "id": "c623cb44-f300-4750-b016-449e7e51c75a",
-        "name": "Outros",
-        "amount": 25
-      }
-    ],
-    "createdAt": "2026-08-24T20:47:58.844Z",
-    "updatedAt": "2026-08-24T23:10:35.834Z",
-    "isProjected": true,
-    "completedAtTime": "00:03",
-    "timelineOriginColor": "#f43f5e"
   }
 ]

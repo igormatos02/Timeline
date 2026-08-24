@@ -246,7 +246,8 @@ export default function App() {
         if (!hasEvent) return tl;
 
         if (updatedEvent.propagateForward) {
-          const newAmount = Number(updatedEvent.amount);
+          const newAmount = updatedEvent.amount !== undefined ? Number(updatedEvent.amount) : undefined;
+          const newTitle = updatedEvent.title;
           const targetDate = updatedEvent.date;
 
           const updatedEvents = (tl.events || []).map((ev) => {
@@ -254,15 +255,16 @@ export default function App() {
               return { ...ev, ...updatedEvent };
             }
 
-            // Propagar apenas para eventos subsequentes do mesmo tipo/série/título
+            // Propagar apenas para eventos da mesma série ou mesmo título anterior
             const isSameSeries = (updatedEvent.seriesId && ev.seriesId === updatedEvent.seriesId) ||
-              (ev.title === updatedEvent.title && ev.category === updatedEvent.category && (ev.timelineOriginId === updatedEvent.timelineOriginId || tl.id === 'tl-income'));
+              (ev.title === (updatedEvent.previousTitle || updatedEvent.title) && ev.category === updatedEvent.category && (ev.timelineOriginId === updatedEvent.timelineOriginId || tl.id === 'tl-income'));
 
-            if (isSameSeries && ev.date >= targetDate) {
+            if (isSameSeries && (updatedEvent.updateAllRecurring ? true : ev.date >= targetDate)) {
               return {
                 ...ev,
-                amount: newAmount,
-                breakdownItems: updatedEvent.breakdownItems ? JSON.parse(JSON.stringify(updatedEvent.breakdownItems)) : undefined
+                ...(newTitle ? { title: newTitle } : {}),
+                ...(newAmount !== undefined ? { amount: newAmount } : {}),
+                ...(updatedEvent.breakdownItems !== undefined ? { breakdownItems: updatedEvent.breakdownItems ? JSON.parse(JSON.stringify(updatedEvent.breakdownItems)) : undefined } : {})
               };
             }
 

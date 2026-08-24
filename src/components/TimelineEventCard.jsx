@@ -80,6 +80,8 @@ export default function TimelineEventCard({
 
   const [isEditingAmount, setIsEditingAmount] = useState(false);
   const [tempAmount, setTempAmount] = useState(event.amount !== undefined ? event.amount : '');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [tempTitle, setTempTitle] = useState(event.title || '');
   const [propagateSubsequent, setPropagateSubsequent] = useState(true);
   const [isDesmembramentoExpanded, setIsDesmembramentoExpanded] = useState(false);
   const [draftSubparts, setDraftSubparts] = useState([]);
@@ -91,6 +93,10 @@ export default function TimelineEventCard({
   React.useEffect(() => {
     setTempAmount(event.amount !== undefined ? event.amount : '');
   }, [event.amount]);
+
+  React.useEffect(() => {
+    setTempTitle(event.title || '');
+  }, [event.title]);
 
   // Lock rule: locked events cannot be edited (unless in future months where lock doesn't apply)
   const canEditAmount = isInertFuture || !isLocked;
@@ -127,6 +133,31 @@ export default function TimelineEventCard({
     if (e) e.stopPropagation();
     setTempAmount(event.amount !== undefined ? event.amount : '');
     setIsEditingAmount(false);
+  };
+
+  // Handlers para edição inline do Título / Nome
+  const handleSaveTitle = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const trimmed = tempTitle.trim();
+    if (trimmed && trimmed !== event.title && onUpdateEventDirect) {
+      onUpdateEventDirect({
+        ...event,
+        previousTitle: event.title,
+        title: trimmed,
+        propagateForward: isRecurring,
+        updateAllRecurring: isRecurring
+      });
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleCancelTitle = (e) => {
+    if (e) e.stopPropagation();
+    setTempTitle(event.title || '');
+    setIsEditingTitle(false);
   };
 
   // Abrir o painel de desmembramento carregando o estado de rascunho
@@ -876,10 +907,105 @@ export default function TimelineEventCard({
             {isRecurring ? <Repeat size={14} strokeWidth={2.2} /> : <Zap size={14} strokeWidth={2.2} />}
           </span>
 
-          {/* Título do evento limpo */}
-          <h3 className="event-title" style={{ margin: 0, color: isInertFuture ? 'var(--text-muted)' : 'var(--text-main)' }}>
-            {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
-          </h3>
+          {/* Título do evento limpo e editável ao clicar */}
+          {isEditingTitle ? (
+            <form
+              onSubmit={handleSaveTitle}
+              onClick={(e) => e.stopPropagation()}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0, margin: 0, padding: 0 }}
+            >
+              <input
+                type="text"
+                autoFocus
+                value={tempTitle}
+                onFocus={(e) => e.target.select()}
+                onBlur={handleSaveTitle}
+                onChange={(e) => setTempTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') handleCancelTitle(e);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  background: 'rgba(0, 0, 0, 0.25)',
+                  border: '1px solid var(--primary-light)',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                  fontSize: '0.98rem',
+                  fontWeight: '700',
+                  color: 'var(--text-main)',
+                  outline: 'none',
+                  flex: 1,
+                  minWidth: '120px'
+                }}
+              />
+              <button
+                type="submit"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={handleSaveTitle}
+                style={{
+                  background: '#10b981',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '4px 6px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center'
+                }}
+                title={isRecurring ? "Guardar nome (atualiza todos os meses desta despesa/receita recorrente)" : "Guardar nome"}
+              >
+                <Check size={13} strokeWidth={3} />
+              </button>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={handleCancelTitle}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: 'var(--text-dim)',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '4px 6px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center'
+                }}
+                title="Cancelar"
+              >
+                <X size={13} strokeWidth={2.5} />
+              </button>
+            </form>
+          ) : (
+            <h3
+              className="event-title"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (canEditAmount && !isLoanInstallment) {
+                  setIsEditingTitle(true);
+                }
+              }}
+              title={
+                isLoanInstallment
+                  ? (event.title || '')
+                  : canEditAmount
+                    ? (isRecurring ? "Clique para editar o nome (altera em todos os meses)" : "Clique para editar o nome")
+                    : (event.title || '')
+              }
+              style={{
+                margin: 0,
+                color: isInertFuture ? 'var(--text-muted)' : 'var(--text-main)',
+                cursor: canEditAmount && !isLoanInstallment ? 'pointer' : 'default',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
+              {canEditAmount && !isLoanInstallment && (
+                <Edit3 size={11} style={{ opacity: 0.35, color: 'var(--text-dim)' }} />
+              )}
+            </h3>
+          )}
         </div>
 
         {/* Origin / Sub-vision Clean Text Indicator aligned to the RIGHT - ONLY on Balanço / Principal view */}

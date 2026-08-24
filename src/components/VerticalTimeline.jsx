@@ -289,7 +289,7 @@ export default function VerticalTimeline({
         const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
         if (activeFinancialTab === 'entradas' && !isIncome) return false;
-        if (activeFinancialTab === 'gastos' && !isExpense) return false;
+        if (activeFinancialTab === 'gastos' && !isExpense && !isLoan) return false;
         if (activeFinancialTab === 'investimentos' && !isInvestment) return false;
         if (activeFinancialTab === 'jeep' && !isJeep) return false;
         if (activeFinancialTab === 'dacia' && !isDacia) return false;
@@ -600,8 +600,9 @@ export default function VerticalTimeline({
 
           mGroup.events.forEach((ev) => {
             const amt = Number(ev.amount || 0);
-            const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment;
-            const isExpense = ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto';
+            const isLoan = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.timelineOriginId === 'tl-loan-jeep' || ev.timelineOriginId === 'tl-loan-dacia' || ev.timelineOriginId === 'tl-loan-80004197726';
+            const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
+            const isExpense = ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto' || isLoan;
             const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
             if (isIncome && ev.status === 'Recebido') mMonthIncome += amt;

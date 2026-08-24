@@ -101,7 +101,7 @@ export default function IncomeEvolutionChart({
           // Match active financial tab
           let applies = true;
           if (activeFinancialTab === 'entradas') applies = isIncome;
-          else if (activeFinancialTab === 'gastos') applies = isExpense;
+          else if (activeFinancialTab === 'gastos') applies = isExpense || isLoan;
           else if (activeFinancialTab === 'investimentos') applies = isInvestment;
           else if (activeFinancialTab === 'emprestimos') applies = isLoan;
           // 'balanco' considers net (income - expense - investment - loan)
@@ -134,23 +134,16 @@ export default function IncomeEvolutionChart({
       } else if (chartMode !== 'acumulado_real') {
         // Projected future month fallbacks
         if (activeFinancialTab === 'entradas') {
-          monthTotal = isNaN(baseSalary) ? 3300 : baseSalary;
-          if (monthNum === 6) {
-            monthTotal += 1650.00;
-            notes.push('Bónus Semestral Estimado (+1.650 €)');
-          } else if (monthNum === 12) {
-            monthTotal += 2000.00;
-            notes.push('Bónus Fim de Ano Estimado (+2.000 €)');
-          }
+          monthTotal = isNaN(baseSalary) ? 3349.60 : baseSalary;
         } else if (activeFinancialTab === 'gastos') {
-          monthTotal = 1175.00;
+          monthTotal = 1438.55;
         } else if (activeFinancialTab === 'investimentos') {
           monthTotal = 600.00;
         } else if (activeFinancialTab === 'emprestimos') {
           monthTotal = 218.47;
         } else {
           // Balanço líquido mensal
-          monthTotal = 1525.00;
+          monthTotal = 1311.05;
         }
       }
 

@@ -332,13 +332,10 @@ export default function VerticalTimeline({
     new Set(allEvents.flatMap((ev) => ev.labels || []))
   );
 
-  // Determine earliest date in timeline
-  let startDateObj = parseISO(timeline.startDate || '2026-01-01');
-  if (isNaN(startDateObj.getTime())) {
-    startDateObj = parseISO('2026-01-01');
-  }
+  // Determine earliest date in timeline (12 meses anteriores ao mês corrente)
+  let startDateObj = parseISO('2025-08-01');
 
-  // Determine latest date in timeline (Balanço mostra até ao mês corrente; outras abas horizonte expansível)
+  // Determine latest date in timeline (12 meses futuros expansível)
   const isBalancoView = (isFinancialTimeline && activeFinancialTab === 'balanco') || timeline.type === 'Principal';
   let maxDateObj = isBalancoView ? parseISO('2026-08-31') : addMonths(parseISO('2026-08-31'), Math.max(1, futureHorizonYears) * 12);
 

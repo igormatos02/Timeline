@@ -83,8 +83,8 @@ export default function App() {
         console.info('Using local timeboards cache:', err.message);
       });
 
-    // 2. Load Timelines
-    api.fetchTimelines()
+    // 2. Load Timelines (12 meses anteriores e 12 meses futuros)
+    api.fetchTimelines({ startDate: '2025-08-01', endDate: '2027-08-31' })
       .then((data) => {
         if (isMounted && Array.isArray(data) && data.length > 0) {
           setTimelines(data);
@@ -109,19 +109,23 @@ export default function App() {
   const [futureHorizonYears, setFutureHorizonYears] = useState(1);
   const scrollYBeforeModalRef = React.useRef(0);
 
-  const handleLoadMoreFuture = async () => {
-    const nextYears = futureHorizonYears + 1;
-    setFutureHorizonYears(nextYears);
-    const endYear = 2026 + nextYears;
-    const endDateStr = `${endYear}-08-31`;
+  const refreshTimelines = async (horizonYears = futureHorizonYears) => {
+    const endYear = 2026 + horizonYears;
     try {
-      const data = await api.fetchTimelines({ startDate: '2025-08-01', endDate: endDateStr });
+      const data = await api.fetchTimelines({ startDate: '2025-08-01', endDate: `${endYear}-08-31` });
       if (Array.isArray(data) && data.length > 0) {
         setTimelines(data);
       }
+      return data;
     } catch (e) {
-      console.error('Error loading more future months:', e);
+      console.error('Error refreshing timelines:', e);
     }
+  };
+
+  const handleLoadMoreFuture = async () => {
+    const nextYears = futureHorizonYears + 1;
+    setFutureHorizonYears(nextYears);
+    await refreshTimelines(nextYears);
   };
 
   // Loan Specific Modals
@@ -307,8 +311,7 @@ export default function App() {
           await api.createEvent(newEvent);
         }
 
-        const updatedTimelines = await api.fetchTimelines();
-        setTimelines(updatedTimelines);
+        await refreshTimelines();
       } catch (err) {
         console.error('Error saving event:', err);
       }
@@ -347,8 +350,7 @@ export default function App() {
 
     try {
       await api.updateEvent(updatedEvent.id, updatedEvent);
-      const updatedTimelines = await api.fetchTimelines();
-      setTimelines(updatedTimelines);
+      await refreshTimelines();
     } catch (err) {
       console.error('Error updating event directly:', err);
     }
@@ -389,8 +391,7 @@ export default function App() {
           seriesId: targetEvent.seriesId,
           date: targetEvent.date
         });
-        const updatedTimelines = await api.fetchTimelines();
-        setTimelines(updatedTimelines);
+        await refreshTimelines();
       } catch (err) {
         console.error('Error deleting event:', err);
       }
@@ -424,8 +425,7 @@ export default function App() {
         await api.resetTimeline(targetTlId);
       }
 
-      const updatedTimelines = await api.fetchTimelines();
-      setTimelines(updatedTimelines);
+      await refreshTimelines();
     } catch (err) {
       console.error('Error resetting timeline:', err);
     }

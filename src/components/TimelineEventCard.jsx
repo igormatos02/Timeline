@@ -490,9 +490,6 @@ export default function TimelineEventCard({
         }}
       >
         {prefix}{formatCurrency(event.amount)}
-        {canEditAmount && (
-          <Edit3 size={11} style={{ opacity: 0.4, color: defaultColor }} />
-        )}
       </span>
     );
   };
@@ -926,10 +923,11 @@ export default function TimelineEventCard({
                 }}
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                  background: 'rgba(0, 0, 0, 0.25)',
-                  border: '1px solid var(--primary-light)',
-                  borderRadius: '6px',
-                  padding: '3px 8px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: '1px solid var(--primary-light)',
+                  borderRadius: '0px',
+                  padding: '2px 0',
                   fontSize: '0.98rem',
                   fontWeight: '700',
                   color: 'var(--text-main)',
@@ -994,16 +992,10 @@ export default function TimelineEventCard({
               style={{
                 margin: 0,
                 color: isInertFuture ? 'var(--text-muted)' : 'var(--text-main)',
-                cursor: canEditAmount && !isLoanInstallment ? 'pointer' : 'default',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px'
+                cursor: canEditAmount && !isLoanInstallment ? 'pointer' : 'default'
               }}
             >
               {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
-              {canEditAmount && !isLoanInstallment && (
-                <Edit3 size={11} style={{ opacity: 0.35, color: 'var(--text-dim)' }} />
-              )}
             </h3>
           )}
         </div>

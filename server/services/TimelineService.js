@@ -242,11 +242,36 @@ export class TimelineService {
     // Projetar todos os eventos com suporte aos filtros de data
     const projectedEvents = projectEvents(allRawEvents, query);
 
+    const loanTimelineIds = new Set(
+      timelines.filter((tl) => tl.type === 'emprestimo' || tl.type === 'Empréstimo').map((tl) => tl.id)
+    );
+
     return timelines.map((tl) => {
       const tlLoans = allLoans.filter((l) => l.timelineId === tl.id);
-      const tlEvents = projectedEvents.filter(
-        (ev) => ev.timelineOriginId === tl.id || (tl.id === 'tl-income' && ev.timelineOriginId?.startsWith('tl-loan-'))
-      );
+
+      let tlEvents = [];
+      if (tl.type === 'gastos') {
+        // Na timeline de Gastos, incluir despesas normais desta timeline E também as parcelas de empréstimos do timeboard
+        tlEvents = projectedEvents.filter(
+          (ev) => (ev.timelineOriginId === tl.id || 
+                  ev.category === 'parcela_emprestimo' || 
+                  ev.category === 'amortizacao' || 
+                  ev.isSystemLoanEvent || 
+                  loanTimelineIds.has(ev.timelineOriginId)) &&
+                  !ev.isIncome && ev.financialType !== 'entrada'
+        );
+      } else if (tl.type === 'entradas') {
+        // Na timeline de Entradas, apenas eventos de entrada (nunca empréstimos nem despesas)
+        tlEvents = projectedEvents.filter(
+          (ev) => ev.timelineOriginId === tl.id && 
+                  !loanTimelineIds.has(ev.timelineOriginId) && 
+                  ev.category !== 'parcela_emprestimo' &&
+                  !ev.isExpense && ev.financialType !== 'gasto'
+        );
+      } else {
+        // Para timelines individuais (ex: Crédito Jeep, Investimentos, etc.)
+        tlEvents = projectedEvents.filter((ev) => ev.timelineOriginId === tl.id);
+      }
 
       return {
         ...tl,
@@ -260,13 +285,35 @@ export class TimelineService {
     const timeline = await timelineRepository.getById(id);
     if (!timeline) return null;
 
+    const timelines = await timelineRepository.getAll();
     const loans = await loanContractRepository.findByTimelineId(id);
     const allRawEvents = await eventRepository.getAll();
     const projectedEvents = projectEvents(allRawEvents, query);
 
-    const events = projectedEvents.filter(
-      (ev) => ev.timelineOriginId === id || (id === 'tl-income' && ev.timelineOriginId?.startsWith('tl-loan-'))
+    const loanTimelineIds = new Set(
+      timelines.filter((tl) => tl.type === 'emprestimo' || tl.type === 'Empréstimo').map((tl) => tl.id)
     );
+
+    let events = [];
+    if (timeline.type === 'gastos') {
+      events = projectedEvents.filter(
+        (ev) => (ev.timelineOriginId === id || 
+                ev.category === 'parcela_emprestimo' || 
+                ev.category === 'amortizacao' || 
+                ev.isSystemLoanEvent || 
+                loanTimelineIds.has(ev.timelineOriginId)) &&
+                !ev.isIncome && ev.financialType !== 'entrada'
+      );
+    } else if (timeline.type === 'entradas') {
+      events = projectedEvents.filter(
+        (ev) => ev.timelineOriginId === id && 
+                !loanTimelineIds.has(ev.timelineOriginId) && 
+                ev.category !== 'parcela_emprestimo' &&
+                !ev.isExpense && ev.financialType !== 'gasto'
+      );
+    } else {
+      events = projectedEvents.filter((ev) => ev.timelineOriginId === id);
+    }
 
     return {
       ...timeline,

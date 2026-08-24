@@ -378,7 +378,7 @@ export default function App() {
     }
   };
 
-  const handleConfirmDeleteEvent = (eventId, deleteSubsequent = false) => {
+  const handleConfirmDeleteEvent = (eventId, deleteScope = 'single') => {
     let targetEvent = deletingEvent && (deletingEvent.id === eventId || String(deletingEvent.id) === String(eventId)) ? deletingEvent : null;
     if (!targetEvent) {
       timelines.forEach((tl) => {
@@ -396,8 +396,9 @@ export default function App() {
 
     const deleteAsync = async () => {
       try {
+        const scope = typeof deleteScope === 'string' ? deleteScope : (deleteScope ? 'subsequent' : 'single');
         await api.deleteEvent(eventId, {
-          deleteScope: deleteSubsequent ? 'subsequent' : 'single',
+          deleteScope: scope,
           seriesId: targetEvent.seriesId,
           date: targetEvent.date
         });

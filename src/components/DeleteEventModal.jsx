@@ -10,11 +10,11 @@ export default function DeleteEventModal({
   event,
   onConfirmDelete
 }) {
-  const [deleteSubsequent, setDeleteSubsequent] = useState(true);
+  const [deleteScope, setDeleteScope] = useState('subsequent'); // 'single' | 'subsequent' | 'all'
 
   useEffect(() => {
     if (isOpen) {
-      setDeleteSubsequent(true);
+      setDeleteScope('subsequent');
     }
   }, [isOpen, event]);
 
@@ -42,7 +42,7 @@ export default function DeleteEventModal({
 
   const handleDelete = () => {
     if (onConfirmDelete) {
-      onConfirmDelete(event.id, isRecurring ? deleteSubsequent : false);
+      onConfirmDelete(event.id, isRecurring ? deleteScope : 'single');
     }
     onClose();
   };
@@ -52,7 +52,7 @@ export default function DeleteEventModal({
       <div
         className="modal-card"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '480px' }}
+        style={{ maxWidth: '500px' }}
       >
         {/* Header */}
         <div className="modal-header">
@@ -77,7 +77,7 @@ export default function DeleteEventModal({
                 Eliminar Registo
               </h2>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
-                Confirmação de exclusão
+                Escolha o âmbito da eliminação
               </p>
             </div>
           </div>
@@ -93,11 +93,11 @@ export default function DeleteEventModal({
             background: 'var(--bg-app)',
             border: '1px solid var(--border-glass)',
             borderRadius: '12px',
-            padding: '14px 16px',
-            marginBottom: '16px',
+            padding: '12px 16px',
+            marginBottom: '14px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '8px'
+            gap: '6px'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
@@ -144,75 +144,109 @@ export default function DeleteEventModal({
           </div>
         </div>
 
-        {/* Warning Text */}
-        <p style={{ margin: '0 0 16px 0', fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
-          Tem a certeza que deseja eliminar este movimento? Esta ação não pode ser desfeita.
-        </p>
-
-        {/* Recurring Propagation Switch */}
-        {isRecurring && (
-          <div
-            onClick={() => setDeleteSubsequent(!deleteSubsequent)}
-            style={{
-              background: deleteSubsequent ? 'rgba(244, 63, 94, 0.08)' : 'var(--bg-app)',
-              border: deleteSubsequent ? '1px solid rgba(244, 63, 94, 0.35)' : '1px solid var(--border-glass)',
-              borderRadius: '12px',
-              padding: '12px 14px',
-              marginBottom: '20px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'space-between',
-              gap: '12px',
-              transition: 'all 0.2s ease',
-              userSelect: 'none'
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              <span
-                style={{
-                  fontSize: '0.84rem',
-                  fontWeight: '700',
-                  color: deleteSubsequent ? '#f43f5e' : 'var(--text-main)'
-                }}
-              >
-                Eliminar ocorrências subsequentes
-              </span>
-              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: '1.35' }}>
-                {deleteSubsequent
-                  ? 'Elimina este mês e todos os meses futuros da série. Os meses passados permanecem guardados.'
-                  : 'Elimina apenas este registo específico. Os restantes meses da série são mantidos.'}
-              </span>
-            </div>
-
-            {/* Visual Switch */}
+        {/* 3 Scope Selector Options for Recurring Series */}
+        {isRecurring ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
+            {/* Opção 1: Apenas este mês */}
             <div
+              onClick={() => setDeleteScope('single')}
               style={{
-                width: '36px',
-                height: '20px',
-                background: deleteSubsequent ? '#f43f5e' : 'rgba(148, 163, 184, 0.35)',
-                borderRadius: '9999px',
-                position: 'relative',
-                flexShrink: 0,
-                marginTop: '2px',
-                transition: 'background 0.2s ease'
+                background: deleteScope === 'single' ? 'rgba(6, 182, 212, 0.12)' : 'var(--bg-app)',
+                border: deleteScope === 'single' ? '2px solid #06b6d4' : '1px solid var(--border-glass)',
+                borderRadius: '10px',
+                padding: '10px 14px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                transition: 'all 0.15s ease'
               }}
             >
-              <div
-                style={{
-                  width: '14px',
-                  height: '14px',
-                  background: '#ffffff',
-                  borderRadius: '50%',
-                  position: 'absolute',
-                  top: '3px',
-                  left: deleteSubsequent ? '19px' : '3px',
-                  transition: 'left 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
-                }}
+              <input
+                type="radio"
+                name="deleteScope"
+                checked={deleteScope === 'single'}
+                onChange={() => setDeleteScope('single')}
+                style={{ accentColor: '#06b6d4', cursor: 'pointer' }}
               />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: deleteScope === 'single' ? '#06b6d4' : 'var(--text-main)' }}>
+                  Apenas este mês ({formattedDate})
+                </span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Oculta este mês com flag de exclusão. Os meses anteriores e futuros continuam normais.
+                </span>
+              </div>
+            </div>
+
+            {/* Opção 2: Deste mês em diante (Subsequentes) */}
+            <div
+              onClick={() => setDeleteScope('subsequent')}
+              style={{
+                background: deleteScope === 'subsequent' ? 'rgba(244, 63, 94, 0.12)' : 'var(--bg-app)',
+                border: deleteScope === 'subsequent' ? '2px solid #f43f5e' : '1px solid var(--border-glass)',
+                borderRadius: '10px',
+                padding: '10px 14px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <input
+                type="radio"
+                name="deleteScope"
+                checked={deleteScope === 'subsequent'}
+                onChange={() => setDeleteScope('subsequent')}
+                style={{ accentColor: '#f43f5e', cursor: 'pointer' }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: deleteScope === 'subsequent' ? '#f43f5e' : 'var(--text-main)' }}>
+                  Deste mês em diante (Subsequentes)
+                </span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Cria versão de encerramento para cessar a série deste mês para a frente. O histórico anterior é preservado.
+                </span>
+              </div>
+            </div>
+
+            {/* Opção 3: Apagar toda a série (Histórico + Futuro) */}
+            <div
+              onClick={() => setDeleteScope('all')}
+              style={{
+                background: deleteScope === 'all' ? 'rgba(220, 38, 38, 0.16)' : 'var(--bg-app)',
+                border: deleteScope === 'all' ? '2px solid #dc2626' : '1px solid var(--border-glass)',
+                borderRadius: '10px',
+                padding: '10px 14px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <input
+                type="radio"
+                name="deleteScope"
+                checked={deleteScope === 'all'}
+                onChange={() => setDeleteScope('all')}
+                style={{ accentColor: '#dc2626', cursor: 'pointer' }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '0.84rem', fontWeight: '800', color: deleteScope === 'all' ? '#ef4444' : 'var(--text-main)' }}>
+                  Apagar toda a série (Histórico + Futuro)
+                </span>
+                <span style={{ fontSize: '0.72rem', color: '#f87171' }}>
+                  ⚠️ Remove completamente do JSON todos os registos e versões desta série.
+                </span>
+              </div>
             </div>
           </div>
+        ) : (
+          <p style={{ margin: '0 0 16px 0', fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
+            Tem a certeza que deseja eliminar este movimento? Esta ação não pode ser desfeita.
+          </p>
         )}
 
         {/* Action Buttons */}

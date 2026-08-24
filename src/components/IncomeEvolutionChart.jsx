@@ -100,10 +100,27 @@ export default function IncomeEvolutionChart({
 
           const isValid = chartMode === 'acumulado_real' ? isReceived : true;
           if (isValid) {
-            if (isIncome) monthIncome += amt;
-            if (isExpense || isLoan) monthExpense += amt;
-            if (isInvestment) monthInvestment += amt;
-            if (ev.title && !notes.includes(ev.title)) notes.push(ev.title);
+            if (isIncome) {
+              monthIncome += amt;
+              if (activeFinancialTab === 'entradas' && ev.title && !notes.includes(ev.title)) {
+                notes.push(ev.title);
+              }
+            }
+            if (isExpense || isLoan) {
+              monthExpense += amt;
+              if ((activeFinancialTab === 'gastos' || activeFinancialTab === 'emprestimos' || activeFinancialTab === 'jeep' || activeFinancialTab === 'dacia' || activeFinancialTab === 'casa1' || activeFinancialTab === 'casa2') && ev.title && !notes.includes(ev.title)) {
+                notes.push(ev.title);
+              }
+            }
+            if (isInvestment) {
+              monthInvestment += amt;
+              if (activeFinancialTab === 'investimentos' && ev.title && !notes.includes(ev.title)) {
+                notes.push(ev.title);
+              }
+            }
+            if (activeFinancialTab === 'balanco' && ev.title && !notes.includes(ev.title)) {
+              notes.push(ev.title);
+            }
           }
         });
       }

@@ -61,6 +61,7 @@ export default function TimelineHeader({
 
   const isPrincipal = timeline.type === 'Principal';
   const isLoanTimeline = timeline.type === 'Empréstimo';
+  const isIncomeTimeline = timeline.type === 'Entradas' || timeline.type === 'Financeiro' || timeline.id === 'tl-income';
   const isJeepActive = isIncomeTimeline && (activeFinancialTab === 'jeep' || activeFinancialTab === 'emprestimos');
   const isDaciaActive = isIncomeTimeline && activeFinancialTab === 'dacia';
   const isCarLoanActive = isJeepActive || isDaciaActive;

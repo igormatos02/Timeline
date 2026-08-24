@@ -817,43 +817,17 @@ export default function TimelineHeader({
                   )}
 
                   {activeFinancialTab === 'balanco' && (
-                    <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '8px', marginBottom: '8px' }}>
-                      <div className="meta-item" style={{ padding: '6px 10px' }}>
-                        <div className="meta-icon-box" style={{ color: '#10b981' }}>
-                          <DollarSign size={16} />
-                        </div>
-                        <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Entradas</div>
-                          <div className="meta-value" style={{ color: '#10b981', fontSize: '0.94rem', fontWeight: '800' }}>
-                            +{formatCurrency(finMetrics.totalReceived)}
-                          </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>{formatCurrency(3349.60)}/mês</div>
-                        </div>
-                      </div>
-
-                      <div className="meta-item" style={{ padding: '6px 10px' }}>
-                        <div className="meta-icon-box" style={{ color: '#f43f5e' }}>
-                          <ShoppingCart size={16} />
-                        </div>
-                        <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Gastos</div>
-                          <div className="meta-value" style={{ color: '#f43f5e', fontSize: '0.94rem', fontWeight: '800' }}>
-                            -{formatCurrency(finMetrics.totalPaidExpenses)}
-                          </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>-1.040,00 €/mês</div>
-                        </div>
-                      </div>
-
+                    <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', marginBottom: '8px' }}>
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#6366f1' }}>
                           <PiggyBank size={16} />
                         </div>
                         <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Investimentos</div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Investido</div>
                           <div className="meta-value" style={{ color: 'var(--primary-light)', fontSize: '0.94rem', fontWeight: '800' }}>
-                            -{formatCurrency(finMetrics.totalInvested)}
+                            {formatCurrency(finMetrics.totalInvested)}
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>-600,00 €/mês</div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Aportes acumulados</div>
                         </div>
                       </div>
 

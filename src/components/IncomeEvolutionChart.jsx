@@ -117,34 +117,12 @@ export default function IncomeEvolutionChart({
                 monthTotal += isNaN(signedAmt) ? 0 : signedAmt;
               }
             } else {
-              if (evIsPast) {
-                if (isReceived) {
-                  monthTotal += isNaN(signedAmt) ? 0 : signedAmt;
-                }
-              } else {
-                monthTotal += isNaN(signedAmt) ? 0 : signedAmt;
-              }
+              monthTotal += isNaN(signedAmt) ? 0 : signedAmt;
             }
 
-            if (ev.category === 'entrada_esporadica' || amt > 2500) {
-              if (ev.title) notes.push(ev.title);
-            }
+            if (ev.title && !notes.includes(ev.title)) notes.push(ev.title);
           }
         });
-      } else if (chartMode !== 'acumulado_real') {
-        // Projected future month fallbacks
-        if (activeFinancialTab === 'entradas') {
-          monthTotal = isNaN(baseSalary) ? 3349.60 : baseSalary;
-        } else if (activeFinancialTab === 'gastos') {
-          monthTotal = 1438.55;
-        } else if (activeFinancialTab === 'investimentos') {
-          monthTotal = 600.00;
-        } else if (activeFinancialTab === 'emprestimos') {
-          monthTotal = 218.47;
-        } else {
-          // Balanço líquido mensal
-          monthTotal = 1311.05;
-        }
       }
 
       runningTotal += monthTotal;
@@ -169,8 +147,11 @@ export default function IncomeEvolutionChart({
 
   // Overall Statistics for the active view
   const maxCumulative = chartData.length > 0 ? chartData[chartData.length - 1].runningTotal : 0;
-  const maxMonthly = Math.max(...chartData.map((d) => d.monthTotal), 1);
-  const averageMonthly = chartData.length > 0 ? Math.round(maxCumulative / chartData.length) : baseSalary;
+  const maxMonthly = Math.max(...chartData.map((d) => Math.abs(d.monthTotal)), 1);
+  const nonZeroMonths = chartData.filter((d) => d.monthTotal > 0);
+  const averageMonthly = nonZeroMonths.length > 0
+    ? Math.round(nonZeroMonths.reduce((sum, d) => sum + d.monthTotal, 0) / nonZeroMonths.length)
+    : (chartData.length > 0 ? Math.round(maxCumulative / chartData.length) : 0);
 
   // SVG Dimensions & Scales
   const width = 860;
@@ -517,21 +498,30 @@ export default function IncomeEvolutionChart({
                 const y = getYMonthly(d.monthTotal);
                 const barHeight = padding.top + graphHeight - y;
                 const isHovered = hoveredData?.dateKey === d.dateKey;
-                const hasBonus = d.monthTotal > baseSalary;
+                const hasBonus = d.monthTotal > (averageMonthly > 0 ? averageMonthly * 1.15 : baseSalary);
 
                 return (
                   <g key={d.dateKey}>
-                    <rect
-                      x={x - barWidth / 2}
-                      y={y}
-                      width={barWidth}
-                      height={Math.max(2, barHeight)}
-                      rx={barWidth > 6 ? 3 : 1}
-                      fill={hasBonus ? 'url(#amberBarGrad)' : 'url(#cyanBarGrad)'}
-                      opacity={isHovered ? 1 : d.isPast ? 0.9 : 0.65}
-                      stroke={isHovered ? '#ffffff' : 'transparent'}
-                      strokeWidth="1"
-                    />
+                    {d.monthTotal > 0 ? (
+                      <rect
+                        x={x - barWidth / 2}
+                        y={y}
+                        width={barWidth}
+                        height={Math.max(2, barHeight)}
+                        rx={barWidth > 6 ? 3 : 1}
+                        fill={hasBonus ? 'url(#amberBarGrad)' : 'url(#cyanBarGrad)'}
+                        opacity={isHovered ? 1 : d.isPast ? 0.9 : 0.75}
+                        stroke={isHovered ? '#ffffff' : 'transparent'}
+                        strokeWidth="1"
+                      />
+                    ) : (
+                      <circle
+                        cx={x}
+                        cy={padding.top + graphHeight}
+                        r={isHovered ? 3 : 1.5}
+                        fill="rgba(148, 163, 184, 0.3)"
+                      />
+                    )}
                   </g>
                 );
               })}

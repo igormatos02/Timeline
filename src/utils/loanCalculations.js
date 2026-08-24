@@ -449,9 +449,6 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
   let totalPaidExpenses = 0;
   let totalPlannedExpenses = 0;
   let totalPlannedExpensesUpToCurrent = 0;
-  let totalInvested = 0;
-  let totalPlannedInvestments = 0;
-  let totalPlannedInvestmentsUpToCurrent = 0;
 
   let nextIncome = null;
   let nextExpense = null;
@@ -461,7 +458,25 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
   let currentYearExpenses = 0;
   const expenseMonthsSet = new Set();
   let monthlyExpensesSum = 0;
+
+  // 1. Coletar todo o valor inicial já investido anteriormente (base de património existente)
   const seenInitialInvestments = new Set();
+  let totalPriorInvestedAll = 0;
+  (allEvents || []).forEach((ev) => {
+    if (!ev) return;
+    const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento')) || ev.timelineOriginId === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
+    if (isInvestment && (Number(ev.initialInvestedAmount || 0) > 0)) {
+      const initialKey = ev.seriesId || ev.id;
+      if (!seenInitialInvestments.has(initialKey)) {
+        totalPriorInvestedAll += Number(ev.initialInvestedAmount);
+        seenInitialInvestments.add(initialKey);
+      }
+    }
+  });
+
+  let totalInvested = totalPriorInvestedAll;
+  let totalPlannedInvestments = totalPriorInvestedAll;
+  let totalPlannedInvestmentsUpToCurrent = totalPriorInvestedAll;
   let totalMonthlyAportesRealized = 0;
   let totalMonthlyAportesPlannedCurrent = 0;
 
@@ -474,7 +489,7 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     const isLoan = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.timelineOriginId === 'tl-loan-jeep' || ev.timelineOriginId === 'tl-loan-dacia' || ev.timelineOriginId === 'tl-loan-casa1' || ev.timelineOriginId === 'tl-loan-casa2' || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
     const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
     const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan;
-    const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+    const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento')) || ev.timelineOriginId === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
 
     const evMonth = ev.date ? ev.date.substring(0, 7) : '';
     const isUpToCurrent = ev.date <= todayStr || evMonth <= currentMonthKey;
@@ -524,27 +539,18 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
         monthlyExpensesSum += amt;
       }
     } else if (isInvestment) {
-      const initialKey = ev.seriesId || ev.id;
-      let initialAmt = 0;
-      if (ev.initialInvestedAmount && !seenInitialInvestments.has(initialKey)) {
-        initialAmt = Number(ev.initialInvestedAmount) || 0;
-        seenInitialInvestments.add(initialKey);
-      }
-
       // Investimentos realizados / aportados até ao período atual
       const isInvestedDone = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted || (isPast && ev.status !== 'Pendente' && ev.status !== 'Cancelado');
       if (isUpToCurrent && isInvestedDone) {
-        totalInvested += amt + initialAmt;
+        totalInvested += amt;
         totalMonthlyAportesRealized += amt;
-      } else if (isUpToCurrent && initialAmt > 0) {
-        totalInvested += initialAmt;
       }
 
       if (isUpToCurrent && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
-        totalPlannedInvestmentsUpToCurrent += amt + initialAmt;
+        totalPlannedInvestmentsUpToCurrent += amt;
         totalMonthlyAportesPlannedCurrent += amt;
       }
-      totalPlannedInvestments += amt + initialAmt;
+      totalPlannedInvestments += amt;
     }
   });
 

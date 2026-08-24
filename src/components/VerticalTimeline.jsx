@@ -78,7 +78,14 @@ export default function VerticalTimeline({
   onLoadMoreFuture,
   onLoadMorePast
 }) {
-  const isFinancialTimeline = timeline.type === 'Financeiro' || timeline.type === 'Entradas' || timeline.id === 'tl-income';
+  const isFinancialTimeline =
+    timeline.type === 'Financeiro' ||
+    timeline.type === 'Entradas' ||
+    timeline.type === 'entradas' ||
+    timeline.type === 'gastos' ||
+    timeline.type === 'investimentos' ||
+    timeline.id === 'tl-income' ||
+    timeline.id === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('Todos');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('Todos');
@@ -561,7 +568,14 @@ export default function VerticalTimeline({
 
     const monthsList = Array.from(monthMap.values());
 
-    const isFinancialTimeline = timeline.type === 'Financeiro' || timeline.type === 'Entradas' || timeline.id === 'tl-income';
+    const isFinancialTimeline =
+      timeline.type === 'Financeiro' ||
+      timeline.type === 'Entradas' ||
+      timeline.type === 'entradas' ||
+      timeline.type === 'gastos' ||
+      timeline.type === 'investimentos' ||
+      timeline.id === 'tl-income' ||
+      timeline.id === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
 
     // Pre-calculate chronological running cumulative metrics
     const monthCumulativeMap = new Map();

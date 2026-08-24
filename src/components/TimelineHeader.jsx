@@ -96,17 +96,26 @@ export default function TimelineHeader({
 
   const isPrincipal = timeline.type === 'Principal';
   const isLoanTimeline = timeline.type === 'Empréstimo';
-  const isIncomeTimeline = timeline.type === 'Entradas' || timeline.type === 'Financeiro' || timeline.id === 'tl-income';
+  const isIncomeTimeline =
+    timeline.type === 'Entradas' ||
+    timeline.type === 'Financeiro' ||
+    timeline.type === 'entradas' ||
+    timeline.type === 'gastos' ||
+    timeline.type === 'investimentos' ||
+    timeline.id === 'tl-income' ||
+    timeline.id === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
 
   const isSystemDefaultTimeline =
     isPrincipal ||
     activeFinancialTab === 'balanco' ||
     activeFinancialTab === 'entradas' ||
     activeFinancialTab === 'gastos' ||
+    activeFinancialTab === 'investimentos' ||
     timeline.isSystemDefault ||
     timeline.canDelete === false ||
     timeline.type === 'entradas' ||
-    timeline.type === 'gastos';
+    timeline.type === 'gastos' ||
+    timeline.type === 'investimentos';
 
   const canDeleteTimeline = !isSystemDefaultTimeline;
   const canEditTimeline = !isPrincipal && activeFinancialTab !== 'balanco';
@@ -755,7 +764,7 @@ export default function TimelineHeader({
                     </div>
                   )}
 
-                  {activeFinancialTab === 'investimentos' && (
+                  {(activeFinancialTab === 'investimentos' || timeline.type === 'investimentos' || timeline.id === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e') && (
                     <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '8px', marginBottom: '8px' }}>
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#6366f1' }}>

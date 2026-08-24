@@ -1592,7 +1592,7 @@ export default function TimelineEventCard({
                 <button
                   type="button"
                   className="action-icon-btn delete"
-                  onClick={() => onDelete(event.id)}
+                  onClick={() => onDelete(event)}
                   title="Eliminar Evento"
                 >
                   <Trash2 size={15} />

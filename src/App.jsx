@@ -6,6 +6,7 @@ import TimelineHeader from './components/TimelineHeader';
 import VerticalTimeline from './components/VerticalTimeline';
 import CreateTimelineModal from './components/CreateTimelineModal';
 import CreateEventModal from './components/CreateEventModal';
+import DeleteEventModal from './components/DeleteEventModal';
 import AmortizationModal from './components/AmortizationModal';
 import EditInstallmentModal from './components/EditInstallmentModal';
 import {
@@ -46,6 +47,7 @@ export default function App() {
 
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [deletingEvent, setDeletingEvent] = useState(null);
   const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState('2026-08-21');
   const [eventModalDefaultNature, setEventModalDefaultNature] = useState('income'); // 'income' | 'expense' | 'investment'
 
@@ -278,14 +280,51 @@ export default function App() {
     );
   };
 
-  const handleDeleteEvent = (eventId) => {
+  const handleRequestDeleteEvent = (eventOrId) => {
+    if (!eventOrId) return;
+    if (typeof eventOrId === 'object' && eventOrId.id) {
+      setDeletingEvent(eventOrId);
+      return;
+    }
+    const found = (activeTimeline?.events || []).find((ev) => ev.id === eventOrId);
+    if (found) {
+      setDeletingEvent(found);
+    }
+  };
+
+  const handleConfirmDeleteEvent = (eventId, deleteSubsequent = false) => {
     if (!activeTimeline) return;
-    if (window.confirm('Tem a certeza que deseja eliminar este evento?')) {
+
+    const targetEvent = (activeTimeline.events || []).find((ev) => ev.id === eventId);
+    if (!targetEvent) return;
+
+    if (deleteSubsequent) {
+      const targetDate = targetEvent.date;
+      const updatedEvents = (activeTimeline.events || []).filter((ev) => {
+        if (ev.id === targetEvent.id) return false;
+
+        // Verificar se é da mesma série recorrente e data subsequente
+        const isSameSeries = (targetEvent.seriesId && ev.seriesId === targetEvent.seriesId) ||
+          (ev.title === targetEvent.title && ev.category === targetEvent.category && (ev.timelineOriginId === targetEvent.timelineOriginId || activeTimeline.id === 'tl-income'));
+
+        if (isSameSeries && ev.date >= targetDate) {
+          return false; // Eliminar ocorrência subsequente
+        }
+
+        return true; // Manter passados e outros
+      });
+
+      setTimelines((prev) =>
+        prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
+      );
+    } else {
       const updatedEvents = (activeTimeline.events || []).filter((ev) => ev.id !== eventId);
       setTimelines((prev) =>
         prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
       );
     }
+
+    setDeletingEvent(null);
   };
 
   const handleToggleTask = (eventId, taskIdx) => {
@@ -567,7 +606,7 @@ export default function App() {
             onSelectFinancialTab={setActiveFinancialTab}
             onEditEvent={handleOpenEditEvent}
             onUpdateEventDirect={handleUpdateEventDirect}
-            onDeleteEvent={handleDeleteEvent}
+            onDeleteEvent={handleRequestDeleteEvent}
             onToggleTask={handleToggleTask}
             onAddEventForDate={(dateStr, nature) => handleOpenCreateEvent(dateStr, nature || (activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income'))}
             onCompleteFloatingTask={handleCompleteFloatingTask}
@@ -644,6 +683,14 @@ export default function App() {
         onClose={() => setEditingInstallment(null)}
         installment={editingInstallment}
         onSave={handleSaveEditInstallment}
+      />
+
+      {/* Delete Event Confirmation Modal */}
+      <DeleteEventModal
+        isOpen={Boolean(deletingEvent)}
+        onClose={() => setDeletingEvent(null)}
+        event={deletingEvent}
+        onConfirmDelete={handleConfirmDeleteEvent}
       />
     </div>
   );

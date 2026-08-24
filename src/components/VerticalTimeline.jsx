@@ -319,7 +319,10 @@ export default function VerticalTimeline({
         const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
         if (activeFinancialTab === 'entradas' && !isIncome) return false;
-        if (activeFinancialTab === 'gastos' && !isExpense && !isLoan && !isInvestment) return false;
+        if (activeFinancialTab === 'gastos') {
+          if (isInvestment && Number(ev.amount || 0) <= 0) return false;
+          if (!isExpense && !isLoan && !isInvestment) return false;
+        }
         if (activeFinancialTab === 'investimentos' && !isInvestment) return false;
         if (activeFinancialTab === 'jeep' && !isJeep) return false;
         if (activeFinancialTab === 'dacia' && !isDacia) return false;
@@ -562,6 +565,7 @@ export default function VerticalTimeline({
 
     // Pre-calculate chronological running cumulative metrics
     const monthCumulativeMap = new Map();
+    const seenInitialInvestments = new Set();
     let runningIncome = 0;
     let runningExpense = 0;
     let runningInvestment = 0;
@@ -579,9 +583,16 @@ export default function VerticalTimeline({
         const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan;
         const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
+        const initialKey = ev.seriesId || ev.id;
+        let initialAmt = 0;
+        if (isInvestment && ev.initialInvestedAmount && !seenInitialInvestments.has(initialKey)) {
+          initialAmt = Number(ev.initialInvestedAmount) || 0;
+          seenInitialInvestments.add(initialKey);
+        }
+
         if (isIncome) mInc += amt;
         if (isExpense) mExp += amt;
-        if (isInvestment) mInv += amt;
+        if (isInvestment) mInv += amt + initialAmt;
       });
 
       runningIncome += mInc;

@@ -1363,10 +1363,21 @@ export default function TimelineEventCard({
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                Valor Aportado / Investimento
+                {Number(event.amount || 0) > 0 ? 'Aporte do Mês' : 'Aporte Mensal'}
               </span>
               {renderEditableAmount('+', isInertFuture ? '#94a3b8' : 'var(--primary-light)')}
             </div>
+
+            {Number(event.initialInvestedAmount || 0) > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                  Património Anterior
+                </span>
+                <span style={{ fontSize: '0.9rem', fontWeight: '800', color: isInertFuture ? 'var(--text-dim)' : 'var(--primary-light)' }}>
+                  {formatCurrency(event.initialInvestedAmount)}
+                </span>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

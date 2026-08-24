@@ -461,6 +461,9 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
   let currentYearExpenses = 0;
   const expenseMonthsSet = new Set();
   let monthlyExpensesSum = 0;
+  const seenInitialInvestments = new Set();
+  let totalMonthlyAportesRealized = 0;
+  let totalMonthlyAportesPlannedCurrent = 0;
 
   allEvents.forEach((ev) => {
     if (!ev || !ev.date) return;
@@ -521,15 +524,27 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
         monthlyExpensesSum += amt;
       }
     } else if (isInvestment) {
+      const initialKey = ev.seriesId || ev.id;
+      let initialAmt = 0;
+      if (ev.initialInvestedAmount && !seenInitialInvestments.has(initialKey)) {
+        initialAmt = Number(ev.initialInvestedAmount) || 0;
+        seenInitialInvestments.add(initialKey);
+      }
+
       // Investimentos realizados / aportados até ao período atual
       const isInvestedDone = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted || (isPast && ev.status !== 'Pendente' && ev.status !== 'Cancelado');
       if (isUpToCurrent && isInvestedDone) {
-        totalInvested += amt;
+        totalInvested += amt + initialAmt;
+        totalMonthlyAportesRealized += amt;
+      } else if (isUpToCurrent && initialAmt > 0) {
+        totalInvested += initialAmt;
       }
+
       if (isUpToCurrent && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
-        totalPlannedInvestmentsUpToCurrent += amt;
+        totalPlannedInvestmentsUpToCurrent += amt + initialAmt;
+        totalMonthlyAportesPlannedCurrent += amt;
       }
-      totalPlannedInvestments += amt;
+      totalPlannedInvestments += amt + initialAmt;
     }
   });
 
@@ -539,8 +554,8 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     ? (annualProjectedIncome / 12)
     : (currentMonthIncome || 0);
 
-  const netRealized = totalReceived - totalPaidExpenses - totalInvested;
-  const netProjectedCurrent = totalForecastIncomeUpToCurrent - totalPlannedExpensesUpToCurrent - totalPlannedInvestmentsUpToCurrent;
+  const netRealized = totalReceived - totalPaidExpenses - totalMonthlyAportesRealized;
+  const netProjectedCurrent = totalForecastIncomeUpToCurrent - totalPlannedExpensesUpToCurrent - totalMonthlyAportesPlannedCurrent;
   const netProjected = totalForecastIncome - totalPlannedExpenses - totalPlannedInvestments;
   const savingsRate = totalReceived > 0 ? Math.round(((totalInvested + Math.max(0, netRealized)) / totalReceived) * 100) : 0;
 

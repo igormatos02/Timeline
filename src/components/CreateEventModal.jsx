@@ -52,6 +52,7 @@ export default function CreateEventModal({
     status: 'Previsto',
     periodicity: 'recorrente', // 'recorrente' | 'unica'
     amount: 100,
+    initialInvestedAmount: '',
     priority: 'Normal',
     labelsInput: ''
   });
@@ -89,6 +90,7 @@ export default function CreateEventModal({
         status: initialData.status || (initType === 'entrada' ? 'Previsto' : initType === 'saida' ? 'Pendente' : 'Planeado'),
         periodicity: isRecurrent ? 'recorrente' : 'unica',
         amount: initialData.amount !== undefined ? initialData.amount : 100,
+        initialInvestedAmount: initialData.initialInvestedAmount !== undefined ? initialData.initialInvestedAmount : '',
         priority: initialData.priority || 'Normal',
         labelsInput: initialData.labels ? initialData.labels.join(', ') : ''
       });
@@ -114,6 +116,7 @@ export default function CreateEventModal({
         status: initStatus,
         periodicity: 'recorrente',
         amount: '',
+        initialInvestedAmount: '',
         priority: 'Normal',
         labelsInput: ''
       });
@@ -223,6 +226,22 @@ export default function CreateEventModal({
     }
 
     const isCompleted = finalStatus === 'Recebido' || finalStatus === 'Pago' || finalStatus === 'Investido';
+    const priorInvested = movementType === 'investimento' ? (Number(formData.initialInvestedAmount) || 0) : 0;
+    const finalAmount = breakdownItems.length > 0
+      ? breakdownItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0)
+      : (formData.amount !== '' && formData.amount !== undefined ? Number(formData.amount) : 0);
+
+    if (movementType === 'investimento') {
+      if (priorInvested <= 0 && finalAmount <= 0) {
+        alert('Por favor indique o aporte do mês ou o valor já investido anteriormente.');
+        return;
+      }
+    } else {
+      if (finalAmount <= 0) {
+        alert('Por favor indique um valor maior que zero.');
+        return;
+      }
+    }
 
     onSave({
       ...formData,
@@ -234,9 +253,8 @@ export default function CreateEventModal({
       isExpense,
       isInvestment,
       status: finalStatus,
-      amount: breakdownItems.length > 0
-        ? breakdownItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0)
-        : Number(formData.amount) || 0,
+      amount: finalAmount,
+      initialInvestedAmount: priorInvested,
       breakdownItems: breakdownItems.length > 0 ? breakdownItems : undefined,
       labels,
       isCompleted,
@@ -403,10 +421,48 @@ export default function CreateEventModal({
             />
           </div>
 
+          {/* Campo Especial para Investimentos: Valor Já Investido Anteriormente */}
+          {movementType === 'investimento' && (
+            <div className="form-group" style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)', borderRadius: '10px', padding: '12px', marginBottom: '14px' }}>
+              <label className="form-label" style={{ color: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span>Valor Já Investido Anteriormente (€)</span>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 'normal' }}>Base de Património</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0,00 (ex: 5000 € já acumulados)"
+                  className="form-input"
+                  style={{
+                    borderColor: 'rgba(99, 102, 241, 0.35)',
+                    fontSize: '1rem',
+                    fontWeight: '700',
+                    color: 'var(--primary-light)',
+                    paddingLeft: '28px'
+                  }}
+                  value={formData.initialInvestedAmount !== undefined ? formData.initialInvestedAmount : ''}
+                  onChange={(e) => setFormData({ ...formData, initialInvestedAmount: e.target.value })}
+                />
+                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: 'var(--primary-light)' }}>
+                  €
+                </span>
+              </div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '5px', lineHeight: '1.35' }}>
+                💡 Este valor é contabilizado no <strong>Total Investido</strong> / Património, mas <strong>NÃO</strong> entra como despesa de saída nos gastos mensais.
+              </div>
+            </div>
+          )}
+
           {/* Linha: Valor (€) e Dia do Mês */}
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Valor Total (€) *</label>
+              <label className="form-label">
+                {movementType === 'investimento'
+                  ? (Number(formData.initialInvestedAmount) > 0 ? 'Aporte do Mês (€)' : 'Aporte do Mês (€) *')
+                  : 'Valor Total (€) *'}
+              </label>
               <div style={{ position: 'relative' }}>
                 <input
                   type="number"
@@ -432,7 +488,7 @@ export default function CreateEventModal({
                     }
                   }}
                   readOnly={breakdownItems.length > 0}
-                  required
+                  required={movementType !== 'investimento' || !(Number(formData.initialInvestedAmount) > 0)}
                 />
                 <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: currentTheme.color }}>
                   €

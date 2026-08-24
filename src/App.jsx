@@ -105,9 +105,24 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [deletingEvent, setDeletingEvent] = useState(null);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
-  const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState('2026-08-21');
   const [eventModalDefaultNature, setEventModalDefaultNature] = useState('income'); // 'income' | 'expense' | 'investment'
+  const [futureHorizonYears, setFutureHorizonYears] = useState(1);
   const scrollYBeforeModalRef = React.useRef(0);
+
+  const handleLoadMoreFuture = async () => {
+    const nextYears = futureHorizonYears + 1;
+    setFutureHorizonYears(nextYears);
+    const endYear = 2026 + nextYears;
+    const endDateStr = `${endYear}-08-31`;
+    try {
+      const data = await api.fetchTimelines({ startDate: '2025-08-01', endDate: endDateStr });
+      if (Array.isArray(data) && data.length > 0) {
+        setTimelines(data);
+      }
+    } catch (e) {
+      console.error('Error loading more future months:', e);
+    }
+  };
 
   // Loan Specific Modals
   const [isAmortizationModalOpen, setIsAmortizationModalOpen] = useState(false);
@@ -721,6 +736,8 @@ export default function App() {
             timeline={activeTimeline}
             activeFinancialTab={activeFinancialTab}
             onSelectFinancialTab={setActiveFinancialTab}
+            futureHorizonYears={futureHorizonYears}
+            onLoadMoreFuture={handleLoadMoreFuture}
             onEditEvent={handleOpenEditEvent}
             onUpdateEventDirect={handleUpdateEventDirect}
             onDeleteEvent={handleRequestDeleteEvent}

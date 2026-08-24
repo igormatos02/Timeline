@@ -6,7 +6,7 @@ export const timelinesRouter = Router();
 // GET /api/timelines
 timelinesRouter.get('/', async (req, res) => {
   try {
-    const timelines = await timelineService.getAllTimelines();
+    const timelines = await timelineService.getAllTimelines(req.query);
     res.json(timelines);
   } catch (err) {
     console.error('Error fetching timelines:', err);
@@ -17,7 +17,7 @@ timelinesRouter.get('/', async (req, res) => {
 // GET /api/timelines/:id
 timelinesRouter.get('/:id', async (req, res) => {
   try {
-    const timeline = await timelineService.getTimelineById(req.params.id);
+    const timeline = await timelineService.getTimelineById(req.params.id, req.query);
     if (!timeline) return res.status(404).json({ error: 'Timeline not found' });
     res.json(timeline);
   } catch (err) {

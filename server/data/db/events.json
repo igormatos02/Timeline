@@ -48176,5 +48176,33 @@
     "seriesId": null,
     "createdAt": "2026-08-24T17:26:05.136Z",
     "updatedAt": "2026-08-24T17:26:05.136Z"
+  },
+  {
+    "title": "Salário UJET",
+    "date": "2026-08-27",
+    "dayOfMonth": 27,
+    "time": "09:00",
+    "status": "Previsto",
+    "periodicity": "recorrente",
+    "amount": 3178,
+    "priority": "Normal",
+    "labelsInput": "Salário",
+    "category": "entrada_recorrente",
+    "financialType": "entrada",
+    "isIncome": true,
+    "isExpense": false,
+    "isInvestment": false,
+    "labels": [
+      "Salário"
+    ],
+    "isCompleted": false,
+    "updateScope": "all",
+    "id": "7912c069-e0c2-4c98-8085-861f02a4e53b",
+    "seriesId": "459f68f6-8930-4bca-b922-98a21e5ec3b5",
+    "version": 0,
+    "isRecurring": true,
+    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
+    "createdAt": "2026-08-24T18:42:49.592Z",
+    "updatedAt": "2026-08-24T18:42:49.592Z"
   }
 ]

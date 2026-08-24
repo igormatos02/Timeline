@@ -7,10 +7,14 @@ import { addMonths, format, parseISO } from 'date-fns';
 /**
  * Motor de Projeção de Eventos:
  * Transforma eventos únicos e eventos recorrentes base armazenados na BD num fluxo contínuo
- * de ocorrências projetadas até ao horizonte da timeline, aplicando sobreposições pontuais (sobrepositionOver)
+ * de ocorrências projetadas dentro da janela temporal [startDate, endDate], aplicando sobreposições pontuais (sobrepositionOver)
  * e versões incrementais (version) a partir de datas específicas.
  */
-export function projectEvents(rawEvents = [], horizonEndDate = '2028-12-31') {
+export function projectEvents(rawEvents = [], options = {}) {
+  const horizonEndDate = typeof options === 'string' ? options : (options.endDate || '2028-12-31');
+  const filterStartDate = options.startDate || null;
+  const filterEndDate = options.endDate || horizonEndDate;
+
   const uniqueEvents = [];
   const recurringSeriesMap = new Map(); // seriesId -> array de versões
   const overridesMap = new Map(); // `${sobrepositionOver}_${date}` -> override event
@@ -131,7 +135,14 @@ export function projectEvents(rawEvents = [], horizonEndDate = '2028-12-31') {
     }
   }
 
-  return [...uniqueEvents, ...projectedInstances];
+  const allGenerated = [...uniqueEvents, ...projectedInstances];
+
+  // Filtrar pela janela [filterStartDate, filterEndDate] se especificada
+  return allGenerated.filter((ev) => {
+    if (filterStartDate && ev.date < filterStartDate) return false;
+    if (filterEndDate && ev.date > filterEndDate) return false;
+    return true;
+  });
 }
 
 export class TimelineService {
@@ -209,13 +220,13 @@ export class TimelineService {
   }
 
   // --- Timeline Operations ---
-  async getAllTimelines() {
+  async getAllTimelines(query = {}) {
     const timelines = await timelineRepository.getAll();
     const allLoans = await loanContractRepository.getAll();
     const allRawEvents = await eventRepository.getAll();
 
-    // Projetar todos os eventos recorrentes
-    const projectedEvents = projectEvents(allRawEvents);
+    // Projetar todos os eventos com suporte aos filtros de data
+    const projectedEvents = projectEvents(allRawEvents, query);
 
     return timelines.map((tl) => {
       const tlLoans = allLoans.filter((l) => l.timelineId === tl.id);
@@ -231,13 +242,13 @@ export class TimelineService {
     });
   }
 
-  async getTimelineById(id) {
+  async getTimelineById(id, query = {}) {
     const timeline = await timelineRepository.getById(id);
     if (!timeline) return null;
 
     const loans = await loanContractRepository.findByTimelineId(id);
     const allRawEvents = await eventRepository.getAll();
-    const projectedEvents = projectEvents(allRawEvents);
+    const projectedEvents = projectEvents(allRawEvents, query);
 
     const events = projectedEvents.filter(
       (ev) => ev.timelineOriginId === id || (id === 'tl-income' && ev.timelineOriginId?.startsWith('tl-loan-'))
@@ -281,13 +292,11 @@ export class TimelineService {
   // --- Events Operations ---
   async getAllEvents(filter = {}) {
     const allRawEvents = await eventRepository.getAll();
-    const projectedEvents = projectEvents(allRawEvents);
+    const projectedEvents = projectEvents(allRawEvents, filter);
 
     return projectedEvents.filter((ev) => {
       if (filter.timelineOriginId && ev.timelineOriginId !== filter.timelineOriginId) return false;
       if (filter.category && ev.category !== filter.category) return false;
-      if (filter.startDate && ev.date < filter.startDate) return false;
-      if (filter.endDate && ev.date > filter.endDate) return false;
       return true;
     });
   }

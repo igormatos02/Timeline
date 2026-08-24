@@ -67,7 +67,9 @@ export default function VerticalTimeline({
   onToggleLoanPayment,
   onOpenEditInstallment,
   onNavigateToTimeline,
-  headerComponent
+  headerComponent,
+  futureHorizonYears = 1,
+  onLoadMoreFuture
 }) {
   const isFinancialTimeline = timeline.type === 'Financeiro' || timeline.type === 'Entradas' || timeline.id === 'tl-income';
   const [searchQuery, setSearchQuery] = useState('');
@@ -336,9 +338,9 @@ export default function VerticalTimeline({
     startDateObj = parseISO('2026-01-01');
   }
 
-  // Determine latest date in timeline (Balanço mostra até ao mês corrente; outras abas horizonte fixo de 2.5 anos para estabilidade de scroll)
+  // Determine latest date in timeline (Balanço mostra até ao mês corrente; outras abas horizonte expansível)
   const isBalancoView = (isFinancialTimeline && activeFinancialTab === 'balanco') || timeline.type === 'Principal';
-  let maxDateObj = isBalancoView ? parseISO('2026-08-31') : parseISO('2028-12-31');
+  let maxDateObj = isBalancoView ? parseISO('2026-08-31') : addMonths(parseISO('2026-08-31'), Math.max(1, futureHorizonYears) * 12);
 
   // Generate array of days from startDate up to maxDateObj (Descending: future at top, past at bottom)
   let daysArray = [];
@@ -564,6 +566,35 @@ export default function VerticalTimeline({
           className="timeline-spine-gradient"
           style={{ background: timeline.color || 'var(--timeline-line-active)' }}
         />
+
+        {/* Botão de Carregar / Projetar Mais Meses Futuros */}
+        {onLoadMoreFuture && !isBalancoView && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0 28px 0', position: 'relative', zIndex: 10 }}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={onLoadMoreFuture}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 22px',
+                borderRadius: '24px',
+                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(168, 85, 247, 0.18))',
+                border: '1px solid rgba(99, 102, 241, 0.45)',
+                color: 'var(--primary-light)',
+                fontWeight: '700',
+                fontSize: '0.84rem',
+                cursor: 'pointer',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+                transition: 'all var(--transition-fast)'
+              }}
+            >
+              <ArrowUp size={15} />
+              <span>Projetar +12 Meses Futuros</span>
+            </button>
+          </div>
+        )}
 
         {monthsList.map((mGroup) => {
           const currentMonthKey = format(todayDate, 'yyyy-MM');

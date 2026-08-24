@@ -879,7 +879,7 @@ export default function VerticalTimeline({
                             }}
                             title="Total de Investimentos / Aportes"
                           >
-                            Investido: -{formatCurrency(mMonthInvestment)}
+                            -{formatCurrency(mMonthInvestment)}
                           </span>
 
                           <span

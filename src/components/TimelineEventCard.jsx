@@ -87,6 +87,7 @@ export default function TimelineEventCard({
   const [draftSubparts, setDraftSubparts] = useState([]);
   const [newSubpartName, setNewSubpartName] = useState('');
   const [newSubpartAmount, setNewSubpartAmount] = useState('');
+  const [editingSubpartIdx, setEditingSubpartIdx] = useState(null);
 
   const hasBreakdown = Array.isArray(event.breakdownItems) && event.breakdownItems.length > 0;
 
@@ -1825,28 +1826,54 @@ export default function TimelineEventCard({
                       gap: '8px',
                       padding: '4px 0px',
                       background: 'transparent',
-                      borderBottom: '3px solid var(--primary-light)',
+                      borderBottom: '3px solid rgba(165, 180, 252, 0.65)',
                       width: '100%'
                     }}
                   >
-                    <input
-                      type="text"
-                      disabled={!canEditAmount}
-                      value={item.name}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) => handleDraftUpdateName(idx, e.target.value)}
-                      placeholder="Nome da subparte..."
-                      style={{
-                        flex: 1,
-                        background: 'transparent',
-                        border: 'none',
-                        outline: 'none',
-                        padding: '2px 0',
-                        color: 'var(--text-main)',
-                        fontSize: '0.86rem',
-                        fontWeight: '700'
-                      }}
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
+                      <input
+                        type="text"
+                        disabled={!canEditAmount}
+                        value={item.name}
+                        onFocus={(e) => {
+                          e.target.select();
+                          setEditingSubpartIdx(idx);
+                        }}
+                        onBlur={() => setEditingSubpartIdx(null)}
+                        onChange={(e) => handleDraftUpdateName(idx, e.target.value)}
+                        placeholder="Nome da subparte..."
+                        style={{
+                          flex: 1,
+                          background: 'transparent',
+                          border: 'none',
+                          outline: 'none',
+                          padding: '2px 0',
+                          color: 'var(--text-main)',
+                          fontSize: '0.86rem',
+                          fontWeight: '700'
+                        }}
+                      />
+                      {canEditAmount && (
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => setEditingSubpartIdx(null)}
+                          style={{
+                            background: '#10b981',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '2px 5px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center'
+                          }}
+                          title="Confirmar nome da subparte"
+                        >
+                          <Check size={11} strokeWidth={3} />
+                        </button>
+                      )}
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <input
                         type="number"

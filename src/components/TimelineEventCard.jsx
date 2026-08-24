@@ -1814,7 +1814,7 @@ export default function TimelineEventCard({
 
             {/* List of draft subparts */}
             {draftSubparts.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {draftSubparts.map((item, idx) => (
                   <div
                     key={item.id || idx}
@@ -1823,10 +1823,10 @@ export default function TimelineEventCard({
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       gap: '8px',
-                      padding: '6px 10px',
-                      background: 'rgba(255, 255, 255, 0.04)',
+                      padding: '8px 10px',
+                      background: 'rgba(255, 255, 255, 0.03)',
                       borderRadius: '6px',
-                      borderLeft: '3px solid var(--primary)'
+                      borderBottom: '3px solid rgba(255, 255, 255, 0.08)'
                     }}
                   >
                     <input
@@ -1880,6 +1880,11 @@ export default function TimelineEventCard({
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* Separador de 3px antes do formulário */}
+            {draftSubparts.length > 0 && (
+              <div style={{ height: '3px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '2px', margin: '2px 0' }} />
             )}
 
             {/* Add New Subpart Form */}

@@ -186,7 +186,7 @@ export default function VerticalTimeline({
 
   React.useEffect(() => {
     const handleScroll = () => {
-      if (currentKeyRef.current) {
+      if (currentKeyRef.current && window.scrollY > 0) {
         scrollPositionsRef.current[currentKeyRef.current] = window.scrollY;
       }
     };
@@ -598,7 +598,8 @@ export default function VerticalTimeline({
           return (
             <div
               key={format(mGroup.monthDate, 'yyyy-MM')}
-              id={isCurrentMonth ? 'timeline-node-today' : undefined}
+              id={isCurrentMonth ? 'timeline-node-today' : `timeline-month-${format(mGroup.monthDate, 'yyyy-MM')}`}
+              data-month-key={format(mGroup.monthDate, 'yyyy-MM')}
               className={`timeline-day-row ${isCurrentMonth ? 'is-today' : ''} ${isFutureMonth ? 'is-future-month' : ''}`}
             >
               <div className="day-date-col">

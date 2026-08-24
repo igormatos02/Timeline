@@ -554,13 +554,14 @@ export default function VerticalTimeline({
 
       mG.events.forEach((ev) => {
         const amt = Number(ev.amount || 0);
-        const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment;
-        const isExpense = ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto';
+        const isLoan = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
+        const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
+        const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan;
         const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
-        if (isIncome && ev.status === 'Recebido') mInc += amt;
-        if (isExpense && (ev.status === 'Pago' || ev.isCompleted)) mExp += amt;
-        if (isInvestment && (ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted)) mInv += amt;
+        if (isIncome) mInc += amt;
+        if (isExpense) mExp += amt;
+        if (isInvestment) mInv += amt;
       });
 
       runningIncome += mInc;
@@ -626,17 +627,18 @@ export default function VerticalTimeline({
 
           mGroup.events.forEach((ev) => {
             const amt = Number(ev.amount || 0);
-            const isLoan = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.timelineOriginId === 'tl-loan-jeep' || ev.timelineOriginId === 'tl-loan-dacia' || ev.timelineOriginId === 'tl-loan-80004197726';
+            const isLoan = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
             const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
-            const isExpense = ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto' || isLoan;
+            const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan;
             const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
-            if (isIncome && ev.status === 'Recebido') mMonthIncome += amt;
-            if (isExpense && (ev.status === 'Pago' || ev.isCompleted)) mMonthExpense += amt;
-            if (isInvestment && (ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted)) mMonthInvestment += amt;
+            if (isIncome) mMonthIncome += amt;
+            if (isExpense) mMonthExpense += amt;
+            if (isInvestment) mMonthInvestment += amt;
           });
 
-          const mNetMonth = mMonthIncome - mMonthExpense;
+          // Balanço Mensal = Soma(Entradas) - (Soma(Gastos + Empréstimos) + Soma(Investimentos))
+          const mNetMonth = mMonthIncome - (mMonthExpense + mMonthInvestment);
           const cumData = monthCumulativeMap.get(monthKeyStr) || { income: 0, expense: 0, investment: 0 };
 
           if (!showEmptyDays && !hasEvents && !isCurrentMonth) return null;
@@ -832,11 +834,12 @@ export default function VerticalTimeline({
                               height: '26px',
                               boxSizing: 'border-box',
                               color: isFutureMonth ? 'var(--text-dim)' : '#10b981',
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : undefined,
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : undefined,
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : 'rgba(16, 185, 129, 0.25)',
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : 'rgba(16, 185, 129, 0.08)',
                               fontWeight: '800',
                               fontSize: '0.74rem'
                             }}
+                            title="Total de Entradas"
                           >
                             +{formatCurrency(mMonthIncome)}
                           </span>
@@ -850,21 +853,43 @@ export default function VerticalTimeline({
                               height: '26px',
                               boxSizing: 'border-box',
                               color: isFutureMonth ? 'var(--text-dim)' : '#f43f5e',
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : undefined,
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : undefined,
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : 'rgba(244, 63, 94, 0.25)',
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : 'rgba(244, 63, 94, 0.08)',
                               fontWeight: '800',
                               fontSize: '0.74rem'
                             }}
+                            title="Total de Gastos (inclui Empréstimos)"
                           >
                             -{formatCurrency(mMonthExpense)}
                           </span>
+
+                          {mMonthInvestment > 0 && (
+                            <span
+                              className="group-card-badge"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                height: '26px',
+                                boxSizing: 'border-box',
+                                color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)',
+                                borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : 'rgba(99, 102, 241, 0.25)',
+                                background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : 'rgba(99, 102, 241, 0.08)',
+                                fontWeight: '800',
+                                fontSize: '0.74rem'
+                              }}
+                              title="Total de Investimentos"
+                            >
+                              Inv: -{formatCurrency(mMonthInvestment)}
+                            </span>
+                          )}
 
                           <span
                             className="group-card-badge"
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px',
+                              gap: '5px',
                               height: '26px',
                               boxSizing: 'border-box',
                               background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mNetMonth >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)'),
@@ -873,8 +898,9 @@ export default function VerticalTimeline({
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
+                            title={`Balanço Mensal = ${formatCurrency(mMonthIncome)} - (${formatCurrency(mMonthExpense)} + ${formatCurrency(mMonthInvestment)})`}
                           >
-                            <span>Líquido: {mNetMonth >= 0 ? '+' : ''}{formatCurrency(mNetMonth)}</span>
+                            <span>Balanço Mensal: {mNetMonth >= 0 ? '+' : ''}{formatCurrency(mNetMonth)}</span>
                           </span>
                         </>
                       )}

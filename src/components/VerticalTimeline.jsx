@@ -896,9 +896,9 @@ export default function VerticalTimeline({
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
-                            title={`Balanço Mensal = ${formatCurrency(mMonthIncome)} - (${formatCurrency(mMonthExpense)} + ${formatCurrency(mMonthInvestment)})`}
+                            title={`Balanço = ${formatCurrency(mMonthIncome)} - (${formatCurrency(mMonthExpense)} + ${formatCurrency(mMonthInvestment)})`}
                           >
-                            <span>Balanço Mensal: {mNetMonth >= 0 ? '+' : ''}{formatCurrency(mNetMonth)}</span>
+                            <span>Balanço: {mNetMonth >= 0 ? '+' : ''}{formatCurrency(mNetMonth)}</span>
                           </span>
                         </>
                       )}

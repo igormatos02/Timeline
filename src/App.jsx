@@ -105,6 +105,7 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [deletingEvent, setDeletingEvent] = useState(null);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState('2026-08-21');
   const [eventModalDefaultNature, setEventModalDefaultNature] = useState('income'); // 'income' | 'expense' | 'investment'
   const [futureHorizonYears, setFutureHorizonYears] = useState(1);
   const scrollYBeforeModalRef = React.useRef(0);

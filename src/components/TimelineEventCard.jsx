@@ -686,14 +686,14 @@ export default function TimelineEventCard({
             background: isInertFuture
               ? 'rgba(148, 163, 184, 0.04)'
               : isNextIncome
-                ? 'rgba(59, 130, 246, 0.08)'
+                ? 'rgba(245, 158, 11, 0.08)'
                 : isFarFutureIncome
                   ? 'rgba(255, 255, 255, 0.02)'
                   : 'rgba(16, 185, 129, 0.08)',
             border: isInertFuture
               ? '1px solid rgba(148, 163, 184, 0.18)'
               : isNextIncome
-                ? '1px solid rgba(59, 130, 246, 0.28)'
+                ? '1px solid rgba(245, 158, 11, 0.32)'
                 : isFarFutureIncome
                   ? '1px solid var(--border-glass)'
                   : '1px solid rgba(16, 185, 129, 0.22)',
@@ -712,7 +712,7 @@ export default function TimelineEventCard({
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                 Valor a Receber / Creditado
               </span>
-              {renderEditableAmount('+', isInertFuture ? '#94a3b8' : (isNextIncome ? '#60a5fa' : isFarFutureIncome ? '#94a3b8' : '#10b981'))}
+              {renderEditableAmount('+', isInertFuture ? '#94a3b8' : (isNextIncome ? '#f59e0b' : isFarFutureIncome ? '#94a3b8' : '#10b981'))}
             </div>
           </div>
 
@@ -763,14 +763,14 @@ export default function TimelineEventCard({
                     : isOverdueIncome
                       ? 'rgba(239, 68, 68, 0.16)'
                       : isNextIncome
-                        ? 'rgba(59, 130, 246, 0.12)'
+                        ? 'rgba(245, 158, 11, 0.14)'
                         : 'rgba(148, 163, 184, 0.1)',
                   color: isReceivedIncome
                     ? '#10b981'
                     : isOverdueIncome
                       ? '#f87171'
                       : isNextIncome
-                        ? '#60a5fa'
+                        ? '#f59e0b'
                         : '#94a3b8',
                   border: isReceivedIncome
                     ? isLocked
@@ -779,7 +779,7 @@ export default function TimelineEventCard({
                     : isOverdueIncome
                       ? '1px solid rgba(239, 68, 68, 0.4)'
                       : isNextIncome
-                        ? '1px solid rgba(59, 130, 246, 0.3)'
+                        ? '1px solid rgba(245, 158, 11, 0.35)'
                         : '1px solid rgba(148, 163, 184, 0.2)',
                   borderRadius: '9999px',
                   padding: '5px 14px',
@@ -815,7 +815,7 @@ export default function TimelineEventCard({
                   </>
                 ) : (
                   <>
-                    <Clock size={14} style={{ color: isNextIncome ? '#60a5fa' : '#94a3b8' }} />
+                    <Clock size={14} style={{ color: isNextIncome ? '#f59e0b' : '#94a3b8' }} />
                     <span>A Receber</span>
                   </>
                 )}

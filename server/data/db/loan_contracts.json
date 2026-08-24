@@ -13,8 +13,8 @@
     "periodicity": "mensal",
     "dueDay": 15,
     "timelineId": "tl-income",
-    "createdAt": "2026-08-24T16:45:23.084Z",
-    "updatedAt": "2026-08-24T16:45:23.084Z"
+    "createdAt": "2026-08-24T16:46:23.091Z",
+    "updatedAt": "2026-08-24T16:46:23.091Z"
   },
   {
     "id": "tl-loan-dacia",
@@ -33,8 +33,8 @@
     "periodicity": "mensal",
     "dueDay": 28,
     "timelineId": "tl-income",
-    "createdAt": "2026-08-24T16:45:23.084Z",
-    "updatedAt": "2026-08-24T16:45:23.084Z"
+    "createdAt": "2026-08-24T16:46:23.091Z",
+    "updatedAt": "2026-08-24T16:46:23.091Z"
   },
   {
     "id": "tl-loan-casa1",
@@ -56,8 +56,8 @@
     "periodicity": "mensal",
     "dueDay": 1,
     "timelineId": "tl-income",
-    "createdAt": "2026-08-24T16:45:23.084Z",
-    "updatedAt": "2026-08-24T16:45:23.084Z"
+    "createdAt": "2026-08-24T16:46:23.091Z",
+    "updatedAt": "2026-08-24T16:46:23.091Z"
   },
   {
     "id": "tl-loan-casa2",
@@ -79,7 +79,7 @@
     "periodicity": "mensal",
     "dueDay": 1,
     "timelineId": "tl-income",
-    "createdAt": "2026-08-24T16:45:23.084Z",
-    "updatedAt": "2026-08-24T16:45:23.084Z"
+    "createdAt": "2026-08-24T16:46:23.091Z",
+    "updatedAt": "2026-08-24T16:46:23.091Z"
   }
 ]

@@ -306,9 +306,9 @@ function createFinancialEvents() {
   const mealAllowanceAmount = 171.60;
   const todayStr = '2026-08-21';
 
-  // Gerar movimentos mensais de Janeiro de 2026 a Agosto de 2027
+  // Gerar movimentos mensais de Janeiro de 2026 a Abril de 2027
   for (let year = 2026; year <= 2027; year++) {
-    const maxMonth = year === 2027 ? 8 : 12;
+    const maxMonth = year === 2027 ? 4 : 12;
     for (let month = 1; month <= maxMonth; month++) {
       const monthStr = month.toString().padStart(2, '0');
       
@@ -470,7 +470,7 @@ export const initialTimelines = [
     name: "Financeiro",
     description: "",
     startDate: "2026-01-01",
-    endDate: "2027-08-31",
+    endDate: "2027-04-30",
     status: "Em Progresso",
     type: "Financeiro",
     color: "#10b981",

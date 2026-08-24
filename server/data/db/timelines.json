@@ -10,8 +10,8 @@
     "status": "Em Progresso",
     "periodicity": "mensal",
     "monthlySalary": 3349.6,
-    "createdAt": "2026-08-24T16:45:23.083Z",
-    "updatedAt": "2026-08-24T16:45:23.083Z"
+    "createdAt": "2026-08-24T16:46:23.090Z",
+    "updatedAt": "2026-08-24T16:46:23.090Z"
   },
   {
     "id": "tl-income",
@@ -20,11 +20,11 @@
     "color": "#10b981",
     "description": "",
     "startDate": "2026-01-01",
-    "endDate": "2027-08-31",
+    "endDate": "2027-04-30",
     "status": "Em Progresso",
     "periodicity": "mensal",
     "monthlySalary": 3349.6,
-    "createdAt": "2026-08-24T16:45:23.083Z",
-    "updatedAt": "2026-08-24T16:45:23.083Z"
+    "createdAt": "2026-08-24T16:46:23.090Z",
+    "updatedAt": "2026-08-24T16:46:23.090Z"
   }
 ]

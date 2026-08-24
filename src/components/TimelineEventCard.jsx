@@ -978,21 +978,21 @@ export default function TimelineEventCard({
               className="event-title"
               onClick={(e) => {
                 e.stopPropagation();
-                if (canEditAmount && !isLoanInstallment) {
+                if (!isLoanInstallment) {
                   setIsEditingTitle(true);
                 }
               }}
               title={
                 isLoanInstallment
                   ? (event.title || '')
-                  : canEditAmount
-                    ? (isRecurring ? "Clique para editar o nome (altera em todos os meses)" : "Clique para editar o nome")
-                    : (event.title || '')
+                  : isRecurring
+                    ? "Clique para editar o nome (altera em todos os meses)"
+                    : "Clique para editar o nome"
               }
               style={{
                 margin: 0,
                 color: isInertFuture ? 'var(--text-muted)' : 'var(--text-main)',
-                cursor: canEditAmount && !isLoanInstallment ? 'pointer' : 'default'
+                cursor: !isLoanInstallment ? 'pointer' : 'default'
               }}
             >
               {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}

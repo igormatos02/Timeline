@@ -418,29 +418,41 @@ export default function App() {
   };
 
   const handleConfirmResetTimeline = async () => {
-    let targetTlId = activeTimelineId;
+    let targetTlIds = [];
 
-    if (activeFinancialTab === 'entradas') {
+    if (activeFinancialTab === 'balanco') {
+      targetTlIds = activeTimeboardTimelines.map((t) => t.id);
+    } else if (activeFinancialTab === 'entradas') {
       const found = activeTimeboardTimelines.find((t) => t.type === 'entradas');
-      if (found) targetTlId = found.id;
+      if (found) targetTlIds = [found.id];
     } else if (activeFinancialTab === 'gastos') {
       const found = activeTimeboardTimelines.find((t) => t.type === 'gastos');
-      if (found) targetTlId = found.id;
+      if (found) targetTlIds = [found.id];
     } else if (activeFinancialTab === 'investimentos') {
       const found = activeTimeboardTimelines.find((t) => t.type === 'investimentos');
-      if (found) targetTlId = found.id;
+      if (found) targetTlIds = [found.id];
+    } else if (activeFinancialTab === 'emprestimos') {
+      targetTlIds = activeTimeboardTimelines.filter((t) => t.type === 'emprestimo' || t.type === 'Empréstimo').map((t) => t.id);
+    } else if (activeFinancialTab === 'jeep') {
+      const found = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('jeep')) || t.contractNumber === '80004197726');
+      if (found) targetTlIds = [found.id];
+    } else if (activeFinancialTab === 'dacia') {
+      const found = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('dacia')) || t.contractNumber === 'CRD19605103001');
+      if (found) targetTlIds = [found.id];
+    } else if (activeFinancialTab === 'casa1') {
+      const found = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('casa 1')) || (t.name && t.name.includes('02012642')));
+      if (found) targetTlIds = [found.id];
+    } else if (activeFinancialTab === 'casa2') {
+      const found = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('casa 2')) || (t.name && t.name.includes('02015122')));
+      if (found) targetTlIds = [found.id];
+    } else if (activeTimelineId) {
+      targetTlIds = [activeTimelineId];
     }
 
     try {
-      if (activeFinancialTab === 'balanco') {
-        const tlIdsToReset = activeTimeboardTimelines.map((t) => t.id);
-        for (const tId of tlIdsToReset) {
-          await api.resetTimeline(tId);
-        }
-      } else if (targetTlId) {
-        await api.resetTimeline(targetTlId);
+      for (const tId of targetTlIds) {
+        await api.resetTimeline(tId);
       }
-
       await refreshTimelines();
     } catch (err) {
       console.error('Error resetting timeline:', err);
@@ -882,7 +894,9 @@ export default function App() {
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     {activeFinancialTab === 'balanco'
                       ? 'Limpar todos os movimentos do Timeboard'
-                      : `Limpar ${activeFinancialTab.toUpperCase()}`}
+                      : activeFinancialTab === 'emprestimos'
+                      ? 'Limpar todos os empréstimos e financiamentos'
+                      : `Limpar movimentos de ${activeFinancialTab.toUpperCase()}`}
                   </div>
                 </div>
               </div>

@@ -363,8 +363,8 @@ export default function TimelineHeader({
           </div>
         </div>
 
-        {/* Lado Direito da Barra de Título: Botão Nova Timeline e Resumo Compacto */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* Lado Direito da Barra de Título: Botão Nova Timeline, Resetar e Resumo Compacto */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {/* Modo Compacto: resumo à direita */}
           {collapsed && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(99, 102, 241, 0.08)', padding: '3px 10px', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
@@ -373,6 +373,37 @@ export default function TimelineHeader({
                 {selectedViewTitle}
               </span>
             </div>
+          )}
+
+          {onReset && (
+            <button
+              type="button"
+              onClick={onReset}
+              className="btn btn-outline btn-sm"
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.76rem',
+                fontWeight: '700',
+                borderColor: 'rgba(245, 158, 11, 0.35)',
+                color: '#f59e0b',
+                background: 'rgba(245, 158, 11, 0.08)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                borderRadius: '7px',
+                cursor: 'pointer'
+              }}
+              title={
+                activeFinancialTab === 'balanco'
+                  ? 'Resetar Timeboard (apagar todos os movimentos)'
+                  : activeFinancialTab === 'emprestimos'
+                  ? 'Resetar todos os empréstimos'
+                  : `Resetar ${selectedViewTitle}`
+              }
+            >
+              <RotateCcw size={13} strokeWidth={2.2} />
+              <span>Resetar</span>
+            </button>
           )}
 
           {onOpenCreateTimeline && (

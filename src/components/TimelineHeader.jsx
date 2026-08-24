@@ -519,18 +519,6 @@ export default function TimelineHeader({
                 </button>
               )}
 
-              {onReset && (
-                <button
-                  className="btn btn-outline btn-sm"
-                  onClick={onReset}
-                  style={{ color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.35)', padding: '5px 10px' }}
-                  title="Resetar timeline (apagar todos os eventos desta timeline)"
-                >
-                  <RotateCcw size={13} />
-                  <span>Resetar</span>
-                </button>
-              )}
-
               {canEditTimeline && (
                 <button
                   className="btn btn-secondary btn-sm"

@@ -193,11 +193,11 @@ function createCasa1LoanEvents() {
   const regularMonthly = 288.01;
   const totalMonths = 432; // 36 anos (94 pagas + 338 remanescentes)
 
-  // Base: Outubro de 2018 (Prestação 1) até Outubro de 2054 (Prestação 432)
+  // Base: Novembro de 2018 (Prestação 1) até Outubro de 2054 (Prestação 432)
   for (let i = 1; i <= totalMonths; i++) {
-    const totalMonthOffset = i - 1; // 0 = Outubro 2018
+    const totalMonthOffset = i - 1; // 0 = Novembro 2018
     const startYear = 2018;
-    const startMonth = 10; // Outubro
+    const startMonth = 11; // Novembro
 
     const absoluteMonth = startMonth + totalMonthOffset;
     const year = startYear + Math.floor((absoluteMonth - 1) / 12);
@@ -513,7 +513,7 @@ export const initialTimelines = [
         name: "Crédito Hipotecário - Casa 1",
         contractNumber: "02012642",
         description: "Crédito Hipotecário Nº 02012642 (TAN 2.690%). Prestação nº 94. Próximo débito 01/08/2026.",
-        startDate: "2018-10-01",
+        startDate: "2018-11-01",
         endDate: "2054-10-01",
         status: "Em Progresso",
         type: "Empréstimo",

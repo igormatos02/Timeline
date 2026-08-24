@@ -108,7 +108,7 @@ export default function TimelineHeader({
     name: "Crédito Hipotecário - Casa 1",
     contractNumber: "02012642",
     description: "Crédito Hipotecário Nº 02012642 (TAN 2.690%). Prestação nº 94. Próximo débito 01/08/2026.",
-    startDate: "2018-10-01",
+    startDate: "2018-11-01",
     endDate: "2054-10-01",
     status: "Em Progresso",
     type: "Empréstimo",

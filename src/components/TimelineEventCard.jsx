@@ -1853,7 +1853,7 @@ export default function TimelineEventCard({
                           fontWeight: '700'
                         }}
                       />
-                      {canEditAmount && (
+                      {canEditAmount && editingSubpartIdx === idx && (
                         <button
                           type="button"
                           onMouseDown={(e) => e.preventDefault()}

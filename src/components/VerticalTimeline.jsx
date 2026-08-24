@@ -347,6 +347,14 @@ export default function VerticalTimeline({
       }
 
       return matchesSearch && matchesStatus && matchesCategory && matchesLabel;
+    }).sort((a, b) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      const timeA = a.time || '00:00';
+      const timeB = b.time || '00:00';
+      if (timeA !== timeB) return timeA.localeCompare(timeB);
+      return (a.title || '').localeCompare(b.title || '');
     });
   }, [
     timelineEvents,
@@ -534,6 +542,18 @@ export default function VerticalTimeline({
       if (monthMap.has(monthKey)) {
         monthMap.get(monthKey).events.push(ev);
       }
+    });
+
+    monthMap.forEach((mEntry) => {
+      mEntry.events.sort((a, b) => {
+        const dateA = a.date || '';
+        const dateB = b.date || '';
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        const timeA = a.time || '00:00';
+        const timeB = b.time || '00:00';
+        if (timeA !== timeB) return timeA.localeCompare(timeB);
+        return (a.title || '').localeCompare(b.title || '');
+      });
     });
 
     const monthsList = Array.from(monthMap.values());

@@ -92,6 +92,7 @@ export default function CreateEventModal({
         priority: initialData.priority || 'Normal',
         labelsInput: initialData.labels ? initialData.labels.join(', ') : ''
       });
+      setUpdateScope('subsequent');
       setBreakdownItems(initialData.breakdownItems ? JSON.parse(JSON.stringify(initialData.breakdownItems)) : []);
     } else {
       let initialMovement = 'entrada';

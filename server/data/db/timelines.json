@@ -10,8 +10,8 @@
     "status": "Em Progresso",
     "periodicity": "mensal",
     "monthlySalary": 3349.6,
-    "createdAt": "2026-08-24T16:41:05.427Z",
-    "updatedAt": "2026-08-24T16:41:05.427Z"
+    "createdAt": "2026-08-24T16:45:23.083Z",
+    "updatedAt": "2026-08-24T16:45:23.083Z"
   },
   {
     "id": "tl-income",
@@ -19,12 +19,12 @@
     "type": "Financeiro",
     "color": "#10b981",
     "description": "",
-    "startDate": "2024-01-01",
+    "startDate": "2026-01-01",
     "endDate": "2027-08-31",
     "status": "Em Progresso",
     "periodicity": "mensal",
     "monthlySalary": 3349.6,
-    "createdAt": "2026-08-24T16:41:05.427Z",
-    "updatedAt": "2026-08-24T16:41:05.427Z"
+    "createdAt": "2026-08-24T16:45:23.083Z",
+    "updatedAt": "2026-08-24T16:45:23.083Z"
   }
 ]

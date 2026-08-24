@@ -306,8 +306,8 @@ function createFinancialEvents() {
   const mealAllowanceAmount = 171.60;
   const todayStr = '2026-08-21';
 
-  // Gerar movimentos mensais de 2024 a Agosto de 2027
-  for (let year = 2024; year <= 2027; year++) {
+  // Gerar movimentos mensais de Janeiro de 2026 a Agosto de 2027
+  for (let year = 2026; year <= 2027; year++) {
     const maxMonth = year === 2027 ? 8 : 12;
     for (let month = 1; month <= maxMonth; month++) {
       const monthStr = month.toString().padStart(2, '0');
@@ -469,7 +469,7 @@ export const initialTimelines = [
     id: "tl-income",
     name: "Financeiro",
     description: "",
-    startDate: "2024-01-01",
+    startDate: "2026-01-01",
     endDate: "2027-08-31",
     status: "Em Progresso",
     type: "Financeiro",

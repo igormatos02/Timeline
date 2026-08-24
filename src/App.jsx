@@ -29,7 +29,7 @@ export default function App() {
     } catch (e) { }
 
     try {
-      const saved = localStorage.getItem('chrono_timelines_data_v24');
+      const saved = localStorage.getItem('chrono_timelines_data_v25');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -98,16 +98,16 @@ export default function App() {
   // Save to localStorage safely when timelines state updates
   useEffect(() => {
     try {
-      localStorage.setItem('chrono_timelines_data_v24', JSON.stringify(timelines));
+      localStorage.setItem('chrono_timelines_data_v25', JSON.stringify(timelines));
     } catch (err) {
       console.warn('LocalStorage save failed, cleaning older keys:', err);
       try {
         Object.keys(localStorage).forEach((key) => {
-          if (key.startsWith('chrono_timelines_data_v') && key !== 'chrono_timelines_data_v24') {
+          if (key.startsWith('chrono_timelines_data_v') && key !== 'chrono_timelines_data_v25') {
             localStorage.removeItem(key);
           }
         });
-        localStorage.setItem('chrono_timelines_data_v24', JSON.stringify(timelines));
+        localStorage.setItem('chrono_timelines_data_v25', JSON.stringify(timelines));
       } catch (e) {
         console.warn('LocalStorage quota still exceeded:', e);
       }

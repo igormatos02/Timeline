@@ -195,16 +195,8 @@ export default function TimelineEventCard({
   const handleConvertToBreakdown = (e) => {
     if (e) e.stopPropagation();
     const currentAmt = Number(event.amount) || 0;
-    const initialParts = [
-      { id: `part-${Date.now()}-1`, name: 'Subparte 1', amount: currentAmt }
-    ];
-    if (onUpdateEventDirect) {
-      onUpdateEventDirect({
-        ...event,
-        breakdownItems: initialParts,
-        propagateForward: isRecurring ? propagateSubsequent : false
-      });
-    }
+    setNewSubpartName('');
+    setNewSubpartAmount(currentAmt ? currentAmt.toString() : '');
     setIsEditingAmount(false);
     setIsDesmembramentoExpanded(true);
   };
@@ -2048,7 +2040,13 @@ export default function TimelineEventCard({
                     <button
                       type="button"
                       className="action-icon-btn"
-                      onClick={() => setIsDesmembramentoExpanded(!isDesmembramentoExpanded)}
+                      onClick={() => {
+                        if (!isDesmembramentoExpanded && !hasBreakdown) {
+                          setNewSubpartName('');
+                          setNewSubpartAmount(event.amount !== undefined ? event.amount.toString() : '');
+                        }
+                        setIsDesmembramentoExpanded(!isDesmembramentoExpanded);
+                      }}
                       title={hasBreakdown ? `Ver / Editar Desmembramento (${allSubparts.length} subpartes)` : "Desmembrar Valor"}
                       style={{
                         color: hasBreakdown ? 'var(--primary-light)' : 'var(--text-dim)',

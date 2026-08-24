@@ -707,7 +707,7 @@ export default function CreateEventModal({
                       onClick={() => {
                         const currentVal = parseFloat(formData.amount) || 0;
                         setBreakdownItems([
-                          { id: `part-${Date.now()}-1`, name: 'Subparte 1', amount: currentVal || 0 }
+                          { id: `part-${Date.now()}-1`, name: '', amount: currentVal || 0 }
                         ]);
                       }}
                       style={{

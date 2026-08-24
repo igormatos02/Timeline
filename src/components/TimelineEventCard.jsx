@@ -38,7 +38,6 @@ import {
   Check,
   X
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { formatCurrency } from '../utils/loanCalculations';
 
 export default function TimelineEventCard({
@@ -610,12 +609,7 @@ export default function TimelineEventCard({
   const originInfo = getEventOriginInfo();
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      transition={{ duration: 0.2 }}
+    <div
       className={`event-card ${isMemoryCard ? 'memory-card' : ''} ${isInertFuture ? 'is-inert-future-card' : ''}`}
       style={cardStyle}
     >
@@ -1574,6 +1568,6 @@ export default function TimelineEventCard({
           </div>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }

@@ -48,7 +48,6 @@ import {
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
 import FloatingTaskStack from './FloatingTaskStack';
-import { motion, AnimatePresence } from 'framer-motion';
 import { getGroupingForPeriodicity, formatCurrency } from '../utils/loanCalculations';
 
 export default function VerticalTimeline({
@@ -1130,28 +1129,26 @@ export default function VerticalTimeline({
 
               <div className="day-content-col">
                 {hasEvents ? (
-                  <AnimatePresence>
-                    {dayEvents.map((ev) => (
-                      <div
-                        key={ev.id}
-                        id={ev.status === 'Atrasada' ? 'loan-inst-overdue' : undefined}
-                      >
-                        <TimelineEventCard
-                          event={ev}
-                          currentTimelineId={timeline.id}
-                          timelineType={timeline.type}
-                          activeFinancialTab={activeFinancialTab}
-                          onEdit={onEditEvent}
-                          onUpdateEventDirect={onUpdateEventDirect}
-                          onDelete={onDeleteEvent}
-                          onToggleTask={onToggleTask}
-                          onToggleLoanPayment={onToggleLoanPayment}
-                          onOpenEditInstallment={onOpenEditInstallment}
-                          onNavigateToTimeline={onNavigateToTimeline}
-                        />
-                      </div>
-                    ))}
-                  </AnimatePresence>
+                  dayEvents.map((ev) => (
+                    <div
+                      key={ev.id}
+                      id={ev.status === 'Atrasada' ? 'loan-inst-overdue' : undefined}
+                    >
+                      <TimelineEventCard
+                        event={ev}
+                        currentTimelineId={timeline.id}
+                        timelineType={timeline.type}
+                        activeFinancialTab={activeFinancialTab}
+                        onEdit={onEditEvent}
+                        onUpdateEventDirect={onUpdateEventDirect}
+                        onDelete={onDeleteEvent}
+                        onToggleTask={onToggleTask}
+                        onToggleLoanPayment={onToggleLoanPayment}
+                        onOpenEditInstallment={onOpenEditInstallment}
+                        onNavigateToTimeline={onNavigateToTimeline}
+                      />
+                    </div>
+                  ))
                 ) : (
                   <div
                     className="empty-day-row"
@@ -1466,11 +1463,13 @@ export default function VerticalTimeline({
           />
         )}
 
-        {/* Render Selected Timeline View (Fixed Monthly) */}
-        {groupBy === 'semana' && renderWeekView()}
-        {groupBy === 'mes' && renderMonthView()}
-        {groupBy === 'ano' && renderYearView()}
-        {groupBy === 'dia' && renderDayView()}
+        {/* Render Selected Timeline View with Key Isolation per view & tab */}
+        <div key={`${timeline.id}-${activeFinancialTab || 'all'}-${groupBy}`} className="timeline-view-wrapper">
+          {groupBy === 'semana' && renderWeekView()}
+          {groupBy === 'mes' && renderMonthView()}
+          {groupBy === 'ano' && renderYearView()}
+          {groupBy === 'dia' && renderDayView()}
+        </div>
 
         {/* Fallback if no matching events */}
         {filteredEvents.length === 0 && !showEmptyDays && (

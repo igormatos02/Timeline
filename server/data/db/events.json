@@ -48204,5 +48204,31 @@
     "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
     "createdAt": "2026-08-24T18:42:49.592Z",
     "updatedAt": "2026-08-24T18:42:49.592Z"
+  },
+  {
+    "title": "Subsídio Alimentação",
+    "date": "2026-08-27",
+    "dayOfMonth": 27,
+    "time": "09:00",
+    "status": "Previsto",
+    "periodicity": "recorrente",
+    "amount": 171,
+    "priority": "Normal",
+    "labelsInput": "",
+    "category": "entrada_recorrente",
+    "financialType": "entrada",
+    "isIncome": true,
+    "isExpense": false,
+    "isInvestment": false,
+    "labels": [],
+    "isCompleted": false,
+    "updateScope": "all",
+    "id": "c18c2231-89d0-42d0-afce-1ff73344fce6",
+    "seriesId": "ec6f52ba-8eb8-4456-868e-9b0dafcadff3",
+    "version": 0,
+    "isRecurring": true,
+    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
+    "createdAt": "2026-08-24T19:06:39.317Z",
+    "updatedAt": "2026-08-24T19:06:39.317Z"
   }
 ]

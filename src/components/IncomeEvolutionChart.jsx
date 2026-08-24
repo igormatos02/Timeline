@@ -222,6 +222,24 @@ export default function IncomeEvolutionChart({
   // Active theme color definitions
   const activeColor = isGastos ? '#f43f5e' : isInvest ? '#8b5cf6' : '#10b981';
   const activeGradId = isGastos ? 'roseBarGrad' : isInvest ? 'indigoBarGrad' : 'emeraldBarGrad';
+  
+  const handleMouseMove = (e) => {
+    if (!chartData || chartData.length === 0) return;
+    const svgRect = e.currentTarget.getBoundingClientRect();
+    if (!svgRect.width) return;
+    const clientX = e.clientX - svgRect.left;
+    const svgX = (clientX / svgRect.width) * width;
+
+    if (svgX < padding.left || svgX > width - padding.right) {
+      setHoveredData(null);
+      return;
+    }
+
+    const relRatio = (svgX - padding.left) / graphWidth;
+    const rawIdx = relRatio * (chartData.length - 1);
+    const closestIdx = Math.min(chartData.length - 1, Math.max(0, Math.round(rawIdx)));
+    setHoveredData(chartData[closestIdx]);
+  };
 
   return (
     <div
@@ -413,7 +431,8 @@ export default function IncomeEvolutionChart({
       <div style={{ width: '100%', position: 'relative', overflowX: 'auto' }}>
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          style={{ width: '100%', height: 'auto', minWidth: '600px', display: 'block' }}
+          style={{ width: '100%', height: 'auto', minWidth: '600px', display: 'block', cursor: 'crosshair' }}
+          onMouseMove={handleMouseMove}
           onMouseLeave={() => setHoveredData(null)}
         >
           <defs>
@@ -452,51 +471,66 @@ export default function IncomeEvolutionChart({
             </linearGradient>
           </defs>
 
-          {/* Grid horizontal lines */}
-          {isBalanco ? (
-            [-1, -0.5, 0, 0.5, 1].map((ratio, i) => {
-              const val = ratio >= 0 ? maxPositiveBalanco * ratio : -minNegativeBalanco * ratio;
-              const y = getYMonthly(val);
-              const isZero = ratio === 0;
+          {/* Grid Background Lines (Horizontal) */}
+          {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+            const y = padding.top + ratio * graphHeight;
+            return (
+              <line
+                key={`grid-h-${ratio}`}
+                x1={padding.left}
+                y1={y}
+                x2={padding.left + graphWidth}
+                y2={y}
+                stroke="rgba(255, 255, 255, 0.05)"
+                strokeDasharray="2 2"
+                pointerEvents="none"
+              />
+            );
+          })}
 
+          {/* Y Axis Reference Labels */}
+          {isBalanco ? (
+            [-1, -0.5, 0, 0.5, 1].map((step) => {
+              const val = step > 0 ? (step * maxPositiveBalanco) : (Math.abs(step) * minNegativeBalanco);
+              const y = getYMonthly(val);
               return (
-                <g key={i}>
+                <g key={`y-axis-${step}`} pointerEvents="none">
                   <line
                     x1={padding.left}
                     y1={y}
-                    x2={width - padding.right}
+                    x2={padding.left + graphWidth}
                     y2={y}
-                    stroke={isZero ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.06)'}
-                    strokeWidth={isZero ? 1.5 : 1}
-                    strokeDasharray={isZero ? 'none' : '4 4'}
+                    stroke={step === 0 ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.04)'}
+                    strokeWidth={step === 0 ? '1.5' : '1'}
+                    strokeDasharray={step === 0 ? '' : '3 3'}
                   />
                   <text
                     x={padding.left - 10}
                     y={y + 4}
-                    fill={isZero ? 'var(--text-main)' : 'var(--text-dim)'}
+                    fill={step === 0 ? 'var(--text-main)' : 'var(--text-dim)'}
                     fontSize="10"
-                    fontWeight={isZero ? '800' : '500'}
+                    fontWeight={step === 0 ? '700' : '500'}
                     textAnchor="end"
                     fontFamily="inherit"
                   >
-                    {val > 0 ? `+${Math.round(val)} €` : val < 0 ? `${Math.round(val)} €` : '0 €'}
+                    {step === 0 ? '0 €' : `${val >= 0 ? '+' : ''}${Math.round(val / 1000)}k €`}
                   </text>
                 </g>
               );
             })
           ) : (
-            [0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
-              const y = padding.top + graphHeight * (1 - ratio);
-              const isCumulativeView = chartMode === 'acumulativo' || chartMode === 'acumulado_real';
-              const labelVal = isCumulativeView ? maxCumulative * ratio : maxMonthly * ratio;
+            [0, 0.33, 0.66, 1].map((ratio) => {
+              const y = padding.top + graphHeight - ratio * graphHeight;
+              const maxRef = chartMode === 'variante' ? maxMonthly : maxCumulative;
+              const labelVal = ratio * maxRef;
               return (
-                <g key={i}>
+                <g key={`y-axis-${ratio}`} pointerEvents="none">
                   <line
                     x1={padding.left}
                     y1={y}
-                    x2={width - padding.right}
+                    x2={padding.left + graphWidth}
                     y2={y}
-                    stroke="rgba(255, 255, 255, 0.07)"
+                    stroke={ratio === 0 ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.04)'}
                     strokeDasharray="4 4"
                   />
                   <text
@@ -516,7 +550,7 @@ export default function IncomeEvolutionChart({
 
           {/* Today Indicator Line */}
           {todayX && (
-            <g>
+            <g pointerEvents="none">
               <line
                 x1={todayX}
                 y1={padding.top}
@@ -548,9 +582,24 @@ export default function IncomeEvolutionChart({
             </g>
           )}
 
+          {/* Hovered Guide Line */}
+          {hoveredData && (
+            <g pointerEvents="none">
+              <line
+                x1={getX(hoveredData.index)}
+                y1={padding.top}
+                x2={getX(hoveredData.index)}
+                y2={padding.top + graphHeight}
+                stroke="rgba(255, 255, 255, 0.35)"
+                strokeWidth="1.5"
+                strokeDasharray="3 3"
+              />
+            </g>
+          )}
+
           {/* MODE 1 & 2: Acumulado Real & Projeção Acumulativa (Area and Line) */}
           {(chartMode === 'acumulativo' || chartMode === 'acumulado_real') && (
-            <g>
+            <g pointerEvents="none">
               <path d={cumulativeAreaPath} fill={isGastos ? 'url(#roseAreaGrad)' : 'url(#emeraldAreaGrad)'} />
               <path
                 d={cumulativePath}
@@ -588,7 +637,7 @@ export default function IncomeEvolutionChart({
 
           {/* MODE 3: Variante Mensal (Bar columns) */}
           {chartMode === 'variante' && (
-            <g>
+            <g pointerEvents="none">
               {chartData.map((d, i) => {
                 const x = getX(i);
                 const barWidth = Math.max(3, Math.min(18, (graphWidth / chartData.length) * 0.75));
@@ -675,27 +724,10 @@ export default function IncomeEvolutionChart({
                 fontWeight="700"
                 textAnchor="middle"
                 fontFamily="inherit"
+                pointerEvents="none"
               >
                 {d.label}
               </text>
-            );
-          })}
-
-          {/* Transparent Overlay Rectangles for Smooth Hover Interaction */}
-          {chartData.map((d, i) => {
-            const x = getX(i);
-            const stepWidth = Math.max(8, graphWidth / chartData.length);
-            return (
-              <rect
-                key={`hover-${d.dateKey}`}
-                x={x - stepWidth / 2}
-                y={padding.top}
-                width={stepWidth}
-                height={graphHeight}
-                fill="transparent"
-                style={{ cursor: 'pointer' }}
-                onMouseEnter={() => setHoveredData(d)}
-              />
             );
           })}
         </svg>

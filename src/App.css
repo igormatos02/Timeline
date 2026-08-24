@@ -269,17 +269,6 @@
   box-shadow: var(--shadow-sm);
 }
 
-.timeline-hero::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 6px;
-  height: 100%;
-  background: var(--active-timeline-color, var(--primary));
-  box-shadow: 0 0 15px var(--active-timeline-color, var(--primary));
-}
-
 .hero-top {
   display: flex;
   align-items: flex-start;

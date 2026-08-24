@@ -574,57 +574,61 @@ export default function TimelineHeader({
 
                   {activeFinancialTab === 'gastos' && (
                     <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', marginBottom: '8px' }}>
+                      {/* 1. Média de Gastos Mensais */}
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#f43f5e' }}>
                           <ShoppingCart size={16} />
                         </div>
                         <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Gastos Fixos Recorrentes</div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Média de Gastos Mensais</div>
                           <div className="meta-value" style={{ color: '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
-                            -1.040,00 € / mês
+                            -{formatCurrency(finMetrics.monthlyAverageExpenses)} / mês
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Despesas fixas mensais</div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Despesas médias por mês</div>
                         </div>
                       </div>
 
+                      {/* 2. Gasto Mês Corrente */}
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#fb7185' }}>
+                          <Calendar size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Gasto Mês Corrente</div>
+                          <div className="meta-value" style={{ color: '#fb7185', fontSize: '0.96rem', fontWeight: '800' }}>
+                            -{formatCurrency(finMetrics.currentMonthExpenses)}
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
+                            {formatCurrency(finMetrics.currentMonthExpensesPaid)} já liquidados
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 3. Projeção Gasto Anual */}
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#f59e0b' }}>
+                          <TrendingUp size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Projeção Gasto Anual</div>
+                          <div className="meta-value" style={{ fontSize: '0.96rem', fontWeight: '800', color: '#f59e0b' }}>
+                            -{formatCurrency(finMetrics.projectedAnnualExpenses)} / ano
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Projeção calculada para 12 meses</div>
+                        </div>
+                      </div>
+
+                      {/* 4. Total Gasto até Hoje */}
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#94a3b8' }}>
                           <Repeat size={16} />
                         </div>
                         <div>
                           <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Gasto até Hoje</div>
-                          <div className="meta-value" style={{ color: '#fb7185', fontSize: '0.96rem', fontWeight: '800' }}>
+                          <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800' }}>
                             -{formatCurrency(finMetrics.totalPaidExpenses)}
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Gastos pagos e consolidados</div>
-                        </div>
-                      </div>
-
-                      <div className="meta-item" style={{ padding: '6px 10px' }}>
-                        <div className="meta-icon-box" style={{ color: '#f59e0b' }}>
-                          <Calendar size={16} />
-                        </div>
-                        <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Próxima Saída Prevista</div>
-                          <div className="meta-value" style={{ fontSize: '0.85rem', fontWeight: '700' }}>
-                            {finMetrics.nextExpense ? formatDateShort(finMetrics.nextExpense.date) : '02/09/2026'}
-                          </div>
-                          <div style={{ fontSize: '0.66rem', color: '#f43f5e', fontWeight: '700' }}>
-                            {finMetrics.nextExpense ? `-${formatCurrency(finMetrics.nextExpense.amount)} (${finMetrics.nextExpense.title})` : '-20,00 €'}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="meta-item" style={{ padding: '6px 10px' }}>
-                        <div className="meta-icon-box" style={{ color: '#94a3b8' }}>
-                          <Layers size={16} />
-                        </div>
-                        <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Gastos Totais Projetados</div>
-                          <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800' }}>
-                            -{formatCurrency(finMetrics.totalPlannedExpenses)}
-                          </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>No horizonte da timeline</div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Histórico consolidado acumulado</div>
                         </div>
                       </div>
                     </div>

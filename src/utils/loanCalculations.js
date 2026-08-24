@@ -431,6 +431,8 @@ export function getConsolidatedLoanMetrics(timelines, selectedIds = null) {
 export function getFinancialMetrics(timeline, events = []) {
   const allEvents = events.length > 0 ? events : (timeline.events || []);
   const todayStr = '2026-08-21';
+  const currentMonthKey = todayStr.substring(0, 7); // '2026-08'
+  const currentYearKey = todayStr.substring(0, 4); // '2026'
 
   let totalReceived = 0;
   let totalForecastIncome = 0;
@@ -441,6 +443,12 @@ export function getFinancialMetrics(timeline, events = []) {
 
   let nextIncome = null;
   let nextExpense = null;
+
+  let currentMonthExpenses = 0;
+  let currentMonthExpensesPaid = 0;
+  let currentYearExpenses = 0;
+  const expenseMonthsSet = new Set();
+  let monthlyExpensesSum = 0;
 
   allEvents.forEach((ev) => {
     const amt = Number(ev.amount || 0);
@@ -457,11 +465,28 @@ export function getFinancialMetrics(timeline, events = []) {
       if (isPast && (ev.status === 'Pago' || ev.isCompleted)) totalPaidExpenses += amt;
       totalPlannedExpenses += amt;
       if (!isPast && (!nextExpense || ev.date < nextExpense.date)) nextExpense = ev;
+
+      const evMonth = ev.date ? ev.date.substring(0, 7) : '';
+      const evYear = ev.date ? ev.date.substring(0, 4) : '';
+      if (evMonth === currentMonthKey) {
+        currentMonthExpenses += amt;
+        if (isPast && (ev.status === 'Pago' || ev.isCompleted)) currentMonthExpensesPaid += amt;
+      }
+      if (evYear === currentYearKey) {
+        currentYearExpenses += amt;
+      }
+      if (evMonth) {
+        expenseMonthsSet.add(evMonth);
+        monthlyExpensesSum += amt;
+      }
     } else if (isInvestment) {
       if (isPast && (ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted)) totalInvested += amt;
       totalPlannedInvestments += amt;
     }
   });
+
+  const monthlyAverageExpenses = expenseMonthsSet.size > 0 ? (monthlyExpensesSum / expenseMonthsSet.size) : (currentMonthExpenses || 1040);
+  const projectedAnnualExpenses = currentYearExpenses > 0 ? currentYearExpenses : (monthlyAverageExpenses * 12);
 
   const netRealized = totalReceived - totalPaidExpenses - totalInvested;
   const netProjected = totalForecastIncome - totalPlannedExpenses - totalPlannedInvestments;
@@ -474,6 +499,10 @@ export function getFinancialMetrics(timeline, events = []) {
     totalPlannedExpenses,
     totalInvested,
     totalPlannedInvestments,
+    currentMonthExpenses,
+    currentMonthExpensesPaid,
+    monthlyAverageExpenses,
+    projectedAnnualExpenses,
     netRealized,
     netProjected,
     savingsRate,

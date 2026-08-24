@@ -261,7 +261,8 @@ export default function App() {
             if (isSameSeries && ev.date >= targetDate) {
               return {
                 ...ev,
-                amount: newAmount
+                amount: newAmount,
+                breakdownItems: updatedEvent.breakdownItems ? JSON.parse(JSON.stringify(updatedEvent.breakdownItems)) : undefined
               };
             }
 

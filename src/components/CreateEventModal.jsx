@@ -44,6 +44,7 @@ export default function CreateEventModal({
   
   // 1. Tipo de Movimento: 'entrada' | 'saida' | 'investimento'
   const [movementType, setMovementType] = useState('entrada');
+  const [breakdownItems, setBreakdownItems] = useState([]);
 
   // Base state
   const [formData, setFormData] = useState({
@@ -103,6 +104,7 @@ export default function CreateEventModal({
         labelsInput: initialData.labels ? initialData.labels.join(', ') : '',
         tasks: initialData.tasks || []
       });
+      setBreakdownItems(initialData.breakdownItems ? JSON.parse(JSON.stringify(initialData.breakdownItems)) : []);
     } else {
       const isPast = targetDate <= todayStr;
       const initialMovement = defaultNature === 'expense' ? 'saida' : defaultNature === 'investment' ? 'investimento' : 'entrada';
@@ -148,6 +150,7 @@ export default function CreateEventModal({
         labelsInput: isFinancialTimeline ? initLabels : '',
         tasks: []
       });
+      setBreakdownItems([]);
     }
   }, [initialData, defaultDate, isOpen, isFinancialTimeline, defaultNature]);
 
@@ -384,7 +387,12 @@ export default function CreateEventModal({
       loanTimelineId: formData.subtype === 'emprestimo' ? formData.selectedLoanId : undefined,
       subtype: formData.subtype,
       status: isFinancialTimeline ? finalStatus : formData.status,
-      amount: isFinancialTimeline ? Number(formData.amount) || 0 : undefined,
+      amount: isFinancialTimeline
+        ? (breakdownItems.length > 0
+            ? breakdownItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0)
+            : Number(formData.amount) || 0)
+        : undefined,
+      breakdownItems: breakdownItems.length > 0 ? breakdownItems : undefined,
       labels,
       isCompleted: isPast
     });
@@ -689,40 +697,231 @@ export default function CreateEventModal({
                 </div>
               )}
 
-              {/* 6. Valor (€) */}
+              {/* 6. Valor (€) ou Destrinchar em Partes */}
               <div className="form-group">
-                <label className="form-label">Valor (€) *</label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="form-input"
-                    placeholder="0.00"
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <label className="form-label" style={{ margin: 0 }}>Valor (€) *</label>
+                  {breakdownItems.length === 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentVal = parseFloat(formData.amount) || 0;
+                        setBreakdownItems([
+                          { id: `part-${Date.now()}-1`, name: 'Parte 1', amount: currentVal || 0 }
+                        ]);
+                      }}
+                      style={{
+                        background: 'rgba(99, 102, 241, 0.12)',
+                        border: '1px solid rgba(99, 102, 241, 0.3)',
+                        borderRadius: '6px',
+                        color: 'var(--primary-light)',
+                        padding: '3px 8px',
+                        fontSize: '0.74rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Layers size={12} />
+                      <span>Destrinchar em Partes</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const total = breakdownItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
+                        setFormData({ ...formData, amount: total });
+                        setBreakdownItems([]);
+                      }}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                        borderRadius: '6px',
+                        color: '#f87171',
+                        padding: '3px 8px',
+                        fontSize: '0.74rem',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Voltar a Valor Único
+                    </button>
+                  )}
+                </div>
+
+                {breakdownItems.length === 0 ? (
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="form-input"
+                      placeholder="0.00"
+                      value={formData.amount}
+                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                      style={{
+                        paddingLeft: '32px',
+                        fontSize: '1.2rem',
+                        fontWeight: '800',
+                        color: movementType === 'entrada' ? '#10b981' : movementType === 'saida' ? '#f43f5e' : '#6366f1'
+                      }}
+                      required
+                    />
+                    <span
+                      style={{
+                        position: 'absolute',
+                        left: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        fontWeight: '800',
+                        fontSize: '1.1rem',
+                        color: movementType === 'entrada' ? '#10b981' : movementType === 'saida' ? '#f43f5e' : '#6366f1'
+                      }}
+                    >
+                      €
+                    </span>
+                  </div>
+                ) : (
+                  <div
                     style={{
-                      paddingLeft: '32px',
-                      fontSize: '1.2rem',
-                      fontWeight: '800',
-                      color: movementType === 'entrada' ? '#10b981' : movementType === 'saida' ? '#f43f5e' : '#6366f1'
-                    }}
-                    required
-                  />
-                  <span
-                    style={{
-                      position: 'absolute',
-                      left: '12px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      fontWeight: '800',
-                      fontSize: '1.1rem',
-                      color: movementType === 'entrada' ? '#10b981' : movementType === 'saida' ? '#f43f5e' : '#6366f1'
+                      background: 'var(--bg-app)',
+                      border: '1px solid var(--border-glass)',
+                      borderRadius: '10px',
+                      padding: '12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px'
                     }}
                   >
-                    €
-                  </span>
-                </div>
+                    {/* Total Calculado Bloqueado */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 12px',
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        border: '1px solid var(--border-glass-glow)',
+                        borderRadius: '8px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                          Valor Total (Soma Automática)
+                        </span>
+                        <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                          Calculado exclusivamente pela soma das partes abaixo
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '1.25rem',
+                          fontWeight: '800',
+                          color: movementType === 'entrada' ? '#10b981' : movementType === 'saida' ? '#f43f5e' : '#6366f1'
+                        }}
+                      >
+                        {formatCurrency(breakdownItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0))}
+                      </span>
+                    </div>
+
+                    {/* Lista de Partes com Nome e Valor */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {breakdownItems.map((item, idx) => (
+                        <div
+                          key={item.id || idx}
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '1.5fr 1fr auto',
+                            gap: '8px',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <input
+                            type="text"
+                            className="form-input"
+                            placeholder="Nome da parte (ex: Seguro, Luz)"
+                            value={item.name}
+                            onChange={(e) => {
+                              const updated = [...breakdownItems];
+                              updated[idx] = { ...updated[idx], name: e.target.value };
+                              setBreakdownItems(updated);
+                            }}
+                            style={{ fontSize: '0.86rem', padding: '6px 10px' }}
+                            required
+                          />
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              className="form-input"
+                              placeholder="0.00"
+                              value={item.amount}
+                              onChange={(e) => {
+                                const updated = [...breakdownItems];
+                                updated[idx] = { ...updated[idx], amount: e.target.value };
+                                setBreakdownItems(updated);
+                              }}
+                              style={{ fontSize: '0.9rem', fontWeight: '700', padding: '6px 10px', paddingRight: '24px' }}
+                              required
+                            />
+                            <span style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: '700' }}>€</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = breakdownItems.filter((_, i) => i !== idx);
+                              setBreakdownItems(updated);
+                            }}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: '#f43f5e',
+                              cursor: 'pointer',
+                              padding: '6px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Remover parte"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBreakdownItems([
+                          ...breakdownItems,
+                          { id: `part-${Date.now()}-${breakdownItems.length + 1}`, name: `Parte ${breakdownItems.length + 1}`, amount: 0 }
+                        ]);
+                      }}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px dashed var(--border-glass)',
+                        borderRadius: '6px',
+                        color: 'var(--primary-light)',
+                        padding: '6px 12px',
+                        fontSize: '0.8rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        marginTop: '4px'
+                      }}
+                    >
+                      <Plus size={14} />
+                      <span>Adicionar Outra Parte</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* 7. Data (Mês/Ano Fixos + Escolha do Dia) */}

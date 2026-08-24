@@ -81,6 +81,9 @@ export default function TimelineEventCard({
   const [isEditingAmount, setIsEditingAmount] = useState(false);
   const [tempAmount, setTempAmount] = useState(event.amount !== undefined ? event.amount : '');
   const [propagateSubsequent, setPropagateSubsequent] = useState(true);
+  const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(true);
+
+  const hasBreakdown = Array.isArray(event.breakdownItems) && event.breakdownItems.length > 0;
 
   React.useEffect(() => {
     setTempAmount(event.amount !== undefined ? event.amount : '');
@@ -123,7 +126,128 @@ export default function TimelineEventCard({
     setIsEditingAmount(false);
   };
 
+  // Handlers for itemized breakdown editing on the card
+  const handleUpdateBreakdownItemAmount = (idx, newAmountStr) => {
+    const num = Number(newAmountStr);
+    if (isNaN(num) || num < 0) return;
+    const updated = (event.breakdownItems || []).map((it, i) =>
+      i === idx ? { ...it, amount: num } : it
+    );
+    const newTotal = updated.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
+    if (onUpdateEventDirect) {
+      onUpdateEventDirect({
+        ...event,
+        amount: newTotal,
+        breakdownItems: updated,
+        propagateForward: isRecurring ? propagateSubsequent : false
+      });
+    }
+  };
+
+  const handleUpdateBreakdownItemName = (idx, newName) => {
+    const updated = (event.breakdownItems || []).map((it, i) =>
+      i === idx ? { ...it, name: newName } : it
+    );
+    if (onUpdateEventDirect) {
+      onUpdateEventDirect({
+        ...event,
+        breakdownItems: updated,
+        propagateForward: isRecurring ? propagateSubsequent : false
+      });
+    }
+  };
+
+  const handleAddBreakdownItem = (e) => {
+    if (e) e.stopPropagation();
+    const current = event.breakdownItems || [];
+    const updated = [
+      ...current,
+      { id: `part-${Date.now()}-${current.length + 1}`, name: `Parte ${current.length + 1}`, amount: 0 }
+    ];
+    const newTotal = updated.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
+    if (onUpdateEventDirect) {
+      onUpdateEventDirect({
+        ...event,
+        amount: newTotal,
+        breakdownItems: updated,
+        propagateForward: isRecurring ? propagateSubsequent : false
+      });
+    }
+  };
+
+  const handleDeleteBreakdownItem = (idx, e) => {
+    if (e) e.stopPropagation();
+    const updated = (event.breakdownItems || []).filter((_, i) => i !== idx);
+    const newTotal = updated.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
+    if (onUpdateEventDirect) {
+      onUpdateEventDirect({
+        ...event,
+        amount: newTotal,
+        breakdownItems: updated.length > 0 ? updated : undefined,
+        propagateForward: isRecurring ? propagateSubsequent : false
+      });
+    }
+  };
+
+  const handleConvertToBreakdown = (e) => {
+    if (e) e.stopPropagation();
+    const currentAmt = Number(event.amount) || 0;
+    const initialParts = [
+      { id: `part-${Date.now()}-1`, name: 'Parte 1', amount: currentAmt }
+    ];
+    if (onUpdateEventDirect) {
+      onUpdateEventDirect({
+        ...event,
+        breakdownItems: initialParts,
+        propagateForward: isRecurring ? propagateSubsequent : false
+      });
+    }
+    setIsEditingAmount(false);
+    setIsBreakdownExpanded(true);
+  };
+
   const renderEditableAmount = (prefix = '', defaultColor = 'var(--text-main)') => {
+    // Se o valor estiver destrinchado em partes, o total NÃO é alterado diretamente
+    if (hasBreakdown) {
+      return (
+        <span
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsBreakdownExpanded((prev) => !prev);
+          }}
+          title="Valor composto por partes. Clique para ver/editar as partes individuais abaixo."
+          style={{
+            fontSize: '1.05rem',
+            fontWeight: '800',
+            color: defaultColor,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
+          {prefix}{formatCurrency(event.amount)}
+          <span
+            style={{
+              fontSize: '0.68rem',
+              fontWeight: '700',
+              color: 'var(--primary-light)',
+              background: 'rgba(99, 102, 241, 0.14)',
+              border: '1px solid rgba(99, 102, 241, 0.3)',
+              borderRadius: '9999px',
+              padding: '1px 7px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '3px'
+            }}
+          >
+            <Layers size={10} />
+            {event.breakdownItems.length} partes (soma)
+          </span>
+        </span>
+      );
+    }
+
     if (isEditingAmount) {
       return (
         <form
@@ -190,6 +314,31 @@ export default function TimelineEventCard({
             title="Cancelar"
           >
             <X size={13} strokeWidth={2.5} />
+          </button>
+
+          {/* Botão para Destrinchar valor em partes */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={handleConvertToBreakdown}
+            title="Destrinchar valor em partes com nomes associados"
+            style={{
+              background: 'rgba(99, 102, 241, 0.14)',
+              color: 'var(--primary-light)',
+              border: '1px solid rgba(99, 102, 241, 0.3)',
+              borderRadius: '4px',
+              padding: '3px 6px',
+              cursor: 'pointer',
+              fontSize: '0.7rem',
+              fontWeight: '700',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '3px',
+              marginLeft: '2px'
+            }}
+          >
+            <Layers size={11} />
+            <span>Destrinchar</span>
           </button>
 
           {/* Switch para Mudar os valores subsequentes (Default: true) */}
@@ -287,6 +436,117 @@ export default function TimelineEventCard({
           <Edit3 size={11} style={{ opacity: 0.4, color: defaultColor }} />
         )}
       </span>
+    );
+  };
+
+  // Renderizador da caixa de detalhes de partes destrinchadas
+  const renderBreakdownDetails = () => {
+    if (!hasBreakdown || !isBreakdownExpanded) return null;
+    return (
+      <div
+        className="event-breakdown-box"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          marginTop: '8px',
+          padding: '8px 12px',
+          background: 'var(--bg-app)',
+          border: '1px solid var(--border-glass)',
+          borderRadius: '8px',
+          width: '100%'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: '700', color: 'var(--text-dim)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Layers size={12} style={{ color: 'var(--primary-light)' }} />
+            Partes do Valor ({event.breakdownItems.length})
+          </span>
+          {canEditAmount && (
+            <button
+              type="button"
+              onClick={handleAddBreakdownItem}
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--primary-light)',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: '700',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px'
+              }}
+            >
+              <Plus size={11} /> Adicionar Parte
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          {event.breakdownItems.map((item, idx) => (
+            <div
+              key={item.id || idx}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '8px',
+                padding: '3px 0',
+                borderBottom: idx < event.breakdownItems.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none'
+              }}
+            >
+              <input
+                type="text"
+                disabled={!canEditAmount}
+                value={item.name}
+                onChange={(e) => handleUpdateBreakdownItemName(idx, e.target.value)}
+                placeholder="Nome da parte"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-main)',
+                  fontSize: '0.84rem',
+                  fontWeight: '600',
+                  flex: 1,
+                  outline: 'none'
+                }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  disabled={!canEditAmount}
+                  className="inline-amount-input"
+                  value={item.amount}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => handleUpdateBreakdownItemAmount(idx, e.target.value)}
+                  style={{ width: '80px', fontSize: '0.86rem', textAlign: 'right' }}
+                />
+                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-dim)' }}>€</span>
+                {canEditAmount && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteBreakdownItem(idx, e)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#f43f5e',
+                      cursor: 'pointer',
+                      padding: '3px',
+                      opacity: 0.7,
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    title="Remover parte"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     );
   };
 
@@ -780,6 +1040,7 @@ export default function TimelineEventCard({
               {renderEditableAmount('+', isInertFuture ? '#94a3b8' : (isNextIncome ? '#f59e0b' : isFarFutureIncome ? '#94a3b8' : '#10b981'))}
             </div>
           </div>
+          {renderBreakdownDetails()}
 
           {/* Status Pill for Income */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -914,7 +1175,7 @@ export default function TimelineEventCard({
               </span>
               {renderEditableAmount('-', isInertFuture ? '#94a3b8' : '#f43f5e')}
             </div>
-
+            {renderBreakdownDetails()}
             {event.priority && !isInertFuture && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
@@ -1027,6 +1288,7 @@ export default function TimelineEventCard({
               {renderEditableAmount('+', isInertFuture ? '#94a3b8' : 'var(--primary-light)')}
             </div>
           </div>
+          {renderBreakdownDetails()}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {isInertFuture ? (

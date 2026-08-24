@@ -218,7 +218,7 @@ export class TimelineService {
       if (event.seriesId) {
         return eventRepository.deleteMany((ev) => ev.seriesId === event.seriesId && (!fromDate || ev.date >= fromDate));
       } else {
-        return eventRepository.deleteMany((ev) => ev.title === event.title && (ev.timelineOriginId === event.timelineOriginId || ev.category === event.category) && (!fromDate || ev.date >= fromDate));
+        return eventRepository.deleteMany((ev) => ev.title && event.title && ev.title.trim().toLowerCase() === event.title.trim().toLowerCase() && (!fromDate || ev.date >= fromDate));
       }
     }
 

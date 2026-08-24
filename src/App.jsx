@@ -435,16 +435,20 @@ export default function App() {
   };
 
   const handleConfirmDeleteEvent = (eventId, deleteSubsequent = false) => {
-    let targetEvent = null;
-    timelines.forEach((tl) => {
-      const found = (tl.events || []).find((ev) => ev.id === eventId);
-      if (found) targetEvent = found;
-    });
+    let targetEvent = deletingEvent && (deletingEvent.id === eventId || String(deletingEvent.id) === String(eventId)) ? deletingEvent : null;
+    if (!targetEvent) {
+      timelines.forEach((tl) => {
+        const found = (tl.events || []).find((ev) => String(ev.id) === String(eventId));
+        if (found) targetEvent = found;
+      });
+    }
 
     if (!targetEvent && activeTimeline) {
-      targetEvent = (activeTimeline.events || []).find((ev) => ev.id === eventId);
+      targetEvent = (activeTimeline.events || []).find((ev) => String(ev.id) === String(eventId));
     }
-    if (!targetEvent) return;
+    if (!targetEvent) {
+      targetEvent = { id: eventId };
+    }
 
     api.deleteEvent(eventId, { onlySubsequent: deleteSubsequent, fromDate: targetEvent.date, deleteSeries: deleteSubsequent }).catch(console.error);
 
@@ -452,13 +456,13 @@ export default function App() {
       prev.map((tl) => {
         const events = tl.events || [];
 
-        if (deleteSubsequent) {
+        if (deleteSubsequent && targetEvent.date) {
           const targetDate = targetEvent.date;
           const updatedEvents = events.filter((ev) => {
-            if (ev.id === targetEvent.id) return false;
+            if (String(ev.id) === String(targetEvent.id) || String(ev.id) === String(eventId)) return false;
 
             const isSameSeries = (targetEvent.seriesId && ev.seriesId === targetEvent.seriesId) ||
-              (ev.title === targetEvent.title && (ev.timelineOriginId === targetEvent.timelineOriginId || ev.category === targetEvent.category));
+              (ev.title && targetEvent.title && ev.title.trim().toLowerCase() === targetEvent.title.trim().toLowerCase());
 
             if (isSameSeries && ev.date >= targetDate) {
               return false;
@@ -468,7 +472,7 @@ export default function App() {
           });
           return { ...tl, events: updatedEvents };
         } else {
-          return { ...tl, events: events.filter((ev) => ev.id !== eventId) };
+          return { ...tl, events: events.filter((ev) => String(ev.id) !== String(eventId) && String(ev.id) !== String(targetEvent.id)) };
         }
       })
     );

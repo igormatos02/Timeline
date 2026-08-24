@@ -833,9 +833,9 @@ export default function VerticalTimeline({
                               gap: '4px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              color: isFutureMonth ? 'var(--text-dim)' : '#10b981',
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : 'rgba(16, 185, 129, 0.25)',
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+                              color: '#10b981',
+                              borderColor: 'rgba(16, 185, 129, 0.25)',
+                              background: 'rgba(16, 185, 129, 0.08)',
                               fontWeight: '800',
                               fontSize: '0.74rem'
                             }}
@@ -852,9 +852,9 @@ export default function VerticalTimeline({
                               gap: '4px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              color: isFutureMonth ? 'var(--text-dim)' : '#f43f5e',
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : 'rgba(244, 63, 94, 0.25)',
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : 'rgba(244, 63, 94, 0.08)',
+                              color: '#f43f5e',
+                              borderColor: 'rgba(244, 63, 94, 0.25)',
+                              background: 'rgba(244, 63, 94, 0.08)',
                               fontWeight: '800',
                               fontSize: '0.74rem'
                             }}
@@ -871,9 +871,9 @@ export default function VerticalTimeline({
                               gap: '4px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)',
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : 'rgba(99, 102, 241, 0.25)',
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : 'rgba(99, 102, 241, 0.08)',
+                              color: 'var(--primary-light, #818cf8)',
+                              borderColor: 'rgba(99, 102, 241, 0.25)',
+                              background: 'rgba(99, 102, 241, 0.08)',
                               fontWeight: '800',
                               fontSize: '0.74rem'
                             }}
@@ -890,15 +890,15 @@ export default function VerticalTimeline({
                               gap: '5px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mNetMonth >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)'),
-                              color: isFutureMonth ? 'var(--text-dim)' : (mNetMonth >= 0 ? '#10b981' : '#f43f5e'),
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mNetMonth >= 0 ? 'rgba(16, 185, 129, 0.35)' : 'rgba(244, 63, 94, 0.35)'),
+                              background: mNetMonth >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
+                              color: mNetMonth >= 0 ? '#10b981' : '#f43f5e',
+                              borderColor: mNetMonth >= 0 ? 'rgba(16, 185, 129, 0.35)' : 'rgba(244, 63, 94, 0.35)',
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
                             title={`Balanço = ${formatCurrency(mMonthIncome)} - (${formatCurrency(mMonthExpense)} + ${formatCurrency(mMonthInvestment)})`}
                           >
-                            <span>Balanço: {mNetMonth >= 0 ? '+' : ''}{formatCurrency(mNetMonth)}</span>
+                            <span>Balanço: {mNetMonth > 0 ? '+' : ''}{formatCurrency(mNetMonth)}</span>
                           </span>
                         </>
                       )}

@@ -29,8 +29,88 @@ export const DEFAULT_LABELS = [
   { id: 'debito_direto', name: 'Débito Direto', color: '#06b6d4' }
 ];
 
-// Helper to generate the exact Real Contract Crédito Automóvel - DACIA SANDERO II (Contrato CRD19605103001)
-function createRealCarLoanEvents() {
+// Helper to generate Crédito Automóvel - Jeep (Contrato 80004197726)
+function createJeepLoanEvents() {
+  const events = [];
+  const totalDebt = 15456.60;
+  const regularMonthly = 218.47;
+  const totalMonths = 120; // 120 prestações (Maio 2024 a Abril 2034)
+
+  let runningBalance = totalDebt;
+
+  for (let i = 1; i <= totalMonths; i++) {
+    const totalMonthOffset = i - 1; // 0 = Maio 2024
+    const startYear = 2024;
+    const startMonth = 5; // Maio
+
+    const absoluteMonth = startMonth + totalMonthOffset;
+    const year = startYear + Math.floor((absoluteMonth - 1) / 12);
+    const monthNumber = ((absoluteMonth - 1) % 12) + 1;
+    const monthStr = monthNumber.toString().padStart(2, '0');
+    const dateStr = `${year}-${monthStr}-15`;
+
+    const isPastPaid = i < 28; // Prestações 1 a 27 (Maio 2024 a Julho 2026) estão pagas
+    const isAugustDue = i === 28; // Prestação 28 (15 de Agosto de 2026)
+
+    let status = 'Pendente';
+    if (isPastPaid) {
+      status = 'Pago';
+    } else if (isAugustDue) {
+      status = 'Atrasada';
+    }
+
+    let principalAmount;
+    let interestPortion;
+
+    if (i === 28) {
+      principalAmount = 89.08;
+      interestPortion = 129.39; // 124.41 + 4.98
+    } else if (i < 28) {
+      principalAmount = Math.round((70 + (i * 0.7)) * 100) / 100;
+      interestPortion = Math.round((regularMonthly - principalAmount) * 100) / 100;
+    } else {
+      principalAmount = Math.min(runningBalance, Math.round((89.08 + (i - 28) * 1.15) * 100) / 100);
+      interestPortion = Math.max(0, Math.round((regularMonthly - principalAmount) * 100) / 100);
+    }
+
+    if (i === 28) {
+      runningBalance = 13259.93;
+    } else {
+      runningBalance = Math.max(0, Math.round((runningBalance - principalAmount) * 100) / 100);
+    }
+
+    events.push({
+      id: `jeep-loan-inst-${i}`,
+      timelineOriginId: 'tl-loan-jeep',
+      timelineOriginName: 'Crédito Automóvel - Jeep',
+      timelineOriginIcon: '🚙',
+      date: dateStr,
+      time: '08:30',
+      title: `Prestação Jeep #${i} de ${totalMonths}`,
+      description: i === 28
+        ? `Débito Direto PT50002300004549878663394 (${formatCurrency(principalAmount)} capital + ${formatCurrency(124.41)} juros + ${formatCurrency(4.98)} imp. selo).`
+        : `Débito Direto em conta (${formatCurrency(principalAmount)} capital + ${formatCurrency(interestPortion)} juros/selo).`,
+      category: 'parcela_emprestimo',
+      status: status,
+      priority: isAugustDue ? 'Urgente' : 'Normal',
+      amount: regularMonthly,
+      principalAmount: principalAmount,
+      interestPortion: interestPortion,
+      interestAmount: 0,
+      balanceAfter: runningBalance,
+      installmentNumber: i,
+      totalInstallments: totalMonths,
+      isSystemLoanEvent: true,
+      isCompleted: isPastPaid,
+      labels: ['Jeep Renegade', isAugustDue ? 'Atrasada' : (isPastPaid ? 'Pago' : 'Pendente')]
+    });
+  }
+
+  return events;
+}
+
+// Helper to generate Crédito Automóvel - DACIA SANDERO II (Contrato CRD19605103001)
+function createDaciaLoanEvents() {
   const events = [];
   const totalDebt = 9584.45;
   const regularMonthly = 180.08;
@@ -80,8 +160,8 @@ function createRealCarLoanEvents() {
 
     events.push({
       id: `dacia-loan-inst-${i}`,
-      timelineOriginId: 'tl-loan-crd19605103001',
-      timelineOriginName: 'Crédito Automóvel - DACIA SANDERO II',
+      timelineOriginId: 'tl-loan-dacia',
+      timelineOriginName: 'Crédito Automóvel - Dacia Sandero',
       timelineOriginIcon: '🚗',
       date: dateStr,
       time: '08:30',
@@ -370,25 +450,40 @@ export const initialTimelines = [
     color: "#10b981",
     periodicity: "mensal",
     monthlySalary: 3300.00,
-    dueDay: 27,
-    carLoanContract: {
-      id: "tl-loan-crd19605103001",
-      name: "Crédito Automóvel - DACIA SANDERO II",
-      description: "Contrato CRD19605103001 (Matrícula: 46-XP-14). RCI Banque / Mobilize FS (TAEG 5.40%). Débito Direto PT50002300004549878663394.",
-      startDate: "2019-05-29",
-      endDate: "2027-05-28",
-      status: "Em Progresso",
-      type: "Empréstimo",
-      color: "#6366f1",
-      totalDebt: 9584.45,
-      remainingDebt: 972.74,
-      installmentAmount: 180.08,
-      financialPortion: 124.17,
-      servicesPortion: 55.91,
-      periodicity: "mensal",
-      dueDay: 28
-    },
-    events: [...createFinancialEvents(), ...createRealCarLoanEvents()]
+    carLoans: [
+      {
+        id: "tl-loan-jeep",
+        name: "Crédito Automóvel - Jeep",
+        description: "Contrato Nº 80004197726 (TAN 11.183%). Débito Direto PT50002300004549878663394.",
+        startDate: "2024-05-15",
+        endDate: "2034-04-15",
+        status: "Em Progresso",
+        type: "Empréstimo",
+        color: "#6366f1",
+        totalDebt: 15456.60,
+        installmentAmount: 218.47,
+        periodicity: "mensal",
+        dueDay: 15
+      },
+      {
+        id: "tl-loan-dacia",
+        name: "Crédito Automóvel - Dacia Sandero",
+        description: "Contrato CRD19605103001 (Matrícula: 46-XP-14). RCI Banque / Mobilize FS (TAEG 5.40%). Débito Direto PT50002300004549878663394.",
+        startDate: "2019-05-29",
+        endDate: "2027-05-28",
+        status: "Em Progresso",
+        type: "Empréstimo",
+        color: "#8b5cf6",
+        totalDebt: 9584.45,
+        remainingDebt: 972.74,
+        installmentAmount: 180.08,
+        financialPortion: 124.17,
+        servicesPortion: 55.91,
+        periodicity: "mensal",
+        dueDay: 28
+      }
+    ],
+    events: [...createFinancialEvents(), ...createJeepLoanEvents(), ...createDaciaLoanEvents()]
   },
 
   // 3. CRÉDITO HABITAÇÃO (CASA - 60.000€ / 34 ANOS / 2% TAN DESDE 2018)

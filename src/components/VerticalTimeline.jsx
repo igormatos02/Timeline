@@ -281,7 +281,9 @@ export default function VerticalTimeline({
 
       // Financial Tabs Filter
       if (isFinancialTimeline) {
-        const isLoan = ev.category === 'parcela_emprestimo' || ev.timelineOriginId === 'tl-loan-80004197726' || ev.isSystemLoanEvent || ev.category === 'amortizacao';
+        const isJeep = ev.timelineOriginId === 'tl-loan-jeep' || ev.timelineOriginId === 'tl-loan-80004197726' || (ev.title && ev.title.includes('Jeep')) || (ev.isSystemLoanEvent && ev.amount === 218.47);
+        const isDacia = ev.timelineOriginId === 'tl-loan-dacia' || ev.timelineOriginId === 'tl-loan-crd19605103001' || (ev.title && ev.title.includes('Dacia')) || (ev.isSystemLoanEvent && ev.amount === 180.08);
+        const isLoan = isJeep || isDacia || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.category === 'amortizacao';
         const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
         const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') && !isLoan;
         const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
@@ -289,6 +291,8 @@ export default function VerticalTimeline({
         if (activeFinancialTab === 'entradas' && !isIncome) return false;
         if (activeFinancialTab === 'gastos' && !isExpense) return false;
         if (activeFinancialTab === 'investimentos' && !isInvestment) return false;
+        if (activeFinancialTab === 'jeep' && !isJeep) return false;
+        if (activeFinancialTab === 'dacia' && !isDacia) return false;
         if (activeFinancialTab === 'emprestimos' && !isLoan) return false;
         // 'balanco' shows all
       }
@@ -303,7 +307,8 @@ export default function VerticalTimeline({
       }
 
       // Entradas / Gastos / Investimentos em Financeiro: máximo 1 ano à frente da data atual (21/08/2026 -> 31/08/2027)
-      if (isFinancialTimeline && activeFinancialTab !== 'emprestimos' && !isBalancoView) {
+      const isCarLoanTab = activeFinancialTab === 'jeep' || activeFinancialTab === 'dacia' || activeFinancialTab === 'emprestimos';
+      if (isFinancialTimeline && !isCarLoanTab && !isBalancoView) {
         const oneYearAheadStr = format(addYears(todayDate, 1), 'yyyy-MM-31');
         if (ev.date > oneYearAheadStr) {
           return false;
@@ -1239,15 +1244,28 @@ export default function VerticalTimeline({
 
               <button
                 type="button"
-                className={`sidebar-filter-item ${activeFinancialTab === 'emprestimos' ? 'active' : ''}`}
-                onClick={() => onSelectFinancialTab && onSelectFinancialTab('emprestimos')}
-                style={activeFinancialTab === 'emprestimos' ? { borderColor: '#8b5cf6', background: 'rgba(139, 92, 246, 0.14)', color: '#8b5cf6' } : {}}
+                className={`sidebar-filter-item ${activeFinancialTab === 'jeep' ? 'active' : ''}`}
+                onClick={() => onSelectFinancialTab && onSelectFinancialTab('jeep')}
+                style={activeFinancialTab === 'jeep' ? { borderColor: '#6366f1', background: 'rgba(99, 102, 241, 0.14)', color: 'var(--primary-light)' } : {}}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <CreditCard size={14} />
-                  <span style={{ fontWeight: '700' }}>Crédito Automóvel (Dacia Sandero)</span>
+                  <span style={{ fontWeight: '700' }}>Empréstimo Jeep</span>
                 </div>
-                {activeFinancialTab === 'emprestimos' && <span style={{ fontSize: '0.75rem', color: '#8b5cf6' }}>✓</span>}
+                {activeFinancialTab === 'jeep' && <span style={{ fontSize: '0.75rem', color: 'var(--primary-light)' }}>✓</span>}
+              </button>
+
+              <button
+                type="button"
+                className={`sidebar-filter-item ${activeFinancialTab === 'dacia' ? 'active' : ''}`}
+                onClick={() => onSelectFinancialTab && onSelectFinancialTab('dacia')}
+                style={activeFinancialTab === 'dacia' ? { borderColor: '#8b5cf6', background: 'rgba(139, 92, 246, 0.14)', color: '#8b5cf6' } : {}}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <CreditCard size={14} />
+                  <span style={{ fontWeight: '700' }}>Empréstimo Dacia</span>
+                </div>
+                {activeFinancialTab === 'dacia' && <span style={{ fontSize: '0.75rem', color: '#8b5cf6' }}>✓</span>}
               </button>
             </div>
           </div>

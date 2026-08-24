@@ -61,14 +61,15 @@ export default function TimelineHeader({
 
   const isPrincipal = timeline.type === 'Principal';
   const isLoanTimeline = timeline.type === 'Empréstimo';
-  const isIncomeTimeline = timeline.type === 'Entradas' || timeline.type === 'Financeiro' || timeline.id === 'tl-income';
-  const isCarLoanActive = isIncomeTimeline && activeFinancialTab === 'emprestimos';
+  const isJeepActive = isIncomeTimeline && (activeFinancialTab === 'jeep' || activeFinancialTab === 'emprestimos');
+  const isDaciaActive = isIncomeTimeline && activeFinancialTab === 'dacia';
+  const isCarLoanActive = isJeepActive || isDaciaActive;
   const effectiveIsLoan = isLoanTimeline || isCarLoanActive;
 
-  const carLoanContract = timeline.carLoanContract || {
-    id: "tl-loan-80004197726",
-    name: "Crédito Automóvel Nº 80004197726",
-    description: "Com reserva de propriedade (TAN 11.183000%). Débito Direto IBAN: PT50002300004549878663394.",
+  const jeepContract = {
+    id: "tl-loan-jeep",
+    name: "Crédito Automóvel - Jeep",
+    description: "Contrato Nº 80004197726 (TAN 11.183%). Débito Direto PT50002300004549878663394.",
     startDate: "2024-05-15",
     endDate: "2034-04-15",
     status: "Em Progresso",
@@ -80,12 +81,35 @@ export default function TimelineHeader({
     dueDay: 15
   };
 
-  const carLoanEvents = (timeline.events || []).filter(
-    (e) => e.category === 'parcela_emprestimo' || e.timelineOriginId === 'tl-loan-80004197726' || e.isSystemLoanEvent || e.category === 'amortizacao'
-  );
+  const daciaContract = {
+    id: "tl-loan-dacia",
+    name: "Crédito Automóvel - Dacia Sandero",
+    description: "Contrato CRD19605103001 (Matrícula: 46-XP-14). RCI Banque / Mobilize FS (TAEG 5.40%). Débito Direto PT50002300004549878663394.",
+    startDate: "2019-05-29",
+    endDate: "2027-05-28",
+    status: "Em Progresso",
+    type: "Empréstimo",
+    color: "#8b5cf6",
+    totalDebt: 9584.45,
+    remainingDebt: 972.74,
+    installmentAmount: 180.08,
+    financialPortion: 124.17,
+    servicesPortion: 55.91,
+    periodicity: "mensal",
+    dueDay: 28
+  };
+
+  const currentCarContract = isDaciaActive ? daciaContract : jeepContract;
+
+  const carLoanEvents = (timeline.events || []).filter((e) => {
+    if (isDaciaActive) {
+      return e.timelineOriginId === 'tl-loan-dacia' || e.timelineOriginId === 'tl-loan-crd19605103001' || e.title?.includes('Dacia') || (e.isSystemLoanEvent && e.amount === 180.08);
+    }
+    return e.timelineOriginId === 'tl-loan-jeep' || e.timelineOriginId === 'tl-loan-80004197726' || e.title?.includes('Jeep') || (e.isSystemLoanEvent && e.amount === 218.47);
+  });
 
   const loanMetrics = isLoanTimeline ? getLoanMetrics(timeline, timeline.events || []) : null;
-  const carLoanMetrics = isCarLoanActive ? getLoanMetrics(carLoanContract, carLoanEvents) : null;
+  const carLoanMetrics = isCarLoanActive ? getLoanMetrics(currentCarContract, carLoanEvents) : null;
   const activeLoanMetrics = isLoanTimeline ? loanMetrics : carLoanMetrics;
 
   const incomeMetrics = isIncomeTimeline ? getIncomeMetrics(timeline, timeline.events || []) : null;
@@ -704,7 +728,7 @@ export default function TimelineHeader({
                   )}
 
                   {/* 🚗 Aba Crédito Automóvel em Financeiro */}
-                  {activeFinancialTab === 'emprestimos' && carLoanMetrics && (
+                  {(activeFinancialTab === 'jeep' || activeFinancialTab === 'dacia' || activeFinancialTab === 'emprestimos') && carLoanMetrics && (
                     <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '8px', marginBottom: '8px' }}>
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#8b5cf6' }}>

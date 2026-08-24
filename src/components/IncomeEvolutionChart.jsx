@@ -22,10 +22,10 @@ export default function IncomeEvolutionChart({
   activeFinancialTab = 'balanco'
 }) {
   // Chart Mode: 'acumulado_real' (Historical Real Received up to Today), 'acumulativo' (Cumulative with Future Projection), 'variante' (Monthly Variation)
-  const [chartMode, setChartMode] = useState('acumulado_real');
+  const [chartMode, setChartMode] = useState('variante');
 
   // Horizon in Years: 1 to 10 years ahead
-  const [horizonYears, setHorizonYears] = useState(5);
+  const [horizonYears, setHorizonYears] = useState(2);
 
   // Hover state for interactive tooltips
   const [hoveredData, setHoveredData] = useState(null);
@@ -38,10 +38,10 @@ export default function IncomeEvolutionChart({
   const chartData = useMemo(() => {
     let start;
     try {
-      start = parseISO(timeline?.startDate || (activeFinancialTab === 'emprestimos' ? '2024-05-15' : '2024-01-01'));
-      if (isNaN(start.getTime())) start = new Date(2024, 0, 1);
+      start = parseISO(timeline?.startDate || (activeFinancialTab === 'emprestimos' ? '2024-05-15' : '2026-01-01'));
+      if (isNaN(start.getTime())) start = new Date(2026, 0, 1);
     } catch {
-      start = new Date(2024, 0, 1);
+      start = new Date(2026, 0, 1);
     }
     const currentMonthKey = todayStr.substring(0, 7); // '2026-08'
 
@@ -58,7 +58,7 @@ export default function IncomeEvolutionChart({
       const startMonth = start.getMonth();
       const curYear = todayDate.getFullYear();
       const curMonth = todayDate.getMonth();
-      totalMonths = Math.max(1, (curYear - startYear) * 12 + (curMonth - startMonth) + 1); // 32 months (Jan 2024 to Aug 2026)
+      totalMonths = Math.max(1, (curYear - startYear) * 12 + (curMonth - startMonth) + 1);
     } else {
       totalMonths = Math.max(12, horizonYears * 12);
     }
@@ -80,17 +80,17 @@ export default function IncomeEvolutionChart({
     for (let i = 0; i < totalMonths; i++) {
       const monthKey = format(curDate, 'yyyy-MM');
       const labelShort = format(curDate, 'MMM yy', { locale: pt });
-      const monthNum = curDate.getMonth() + 1;
       const isPast = monthKey < currentMonthKey;
       const isCurrent = monthKey === currentMonthKey;
 
-      let monthTotal = 0;
+      let monthIncome = 0;
+      let monthExpense = 0;
+      let monthInvestment = 0;
       let notes = [];
 
       if (eventsByMonth[monthKey] && eventsByMonth[monthKey].length > 0) {
         eventsByMonth[monthKey].forEach((ev) => {
           const amt = Number(ev.amount || 0);
-          const evIsPast = ev.date <= todayStr;
           const isReceived = ev.status === 'Recebido' || ev.status === 'Pago' || ev.status === 'Investido' || ev.isCompleted;
 
           const isLoan = ev.category === 'parcela_emprestimo' || ev.timelineOriginId === 'tl-loan-80004197726' || ev.isSystemLoanEvent || ev.category === 'amortizacao';
@@ -98,31 +98,26 @@ export default function IncomeEvolutionChart({
           const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') && !isLoan;
           const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
-          // Match active financial tab
-          let applies = true;
-          if (activeFinancialTab === 'entradas') applies = isIncome;
-          else if (activeFinancialTab === 'gastos') applies = isExpense || isLoan;
-          else if (activeFinancialTab === 'investimentos') applies = isInvestment;
-          else if (activeFinancialTab === 'emprestimos') applies = isLoan;
-          // 'balanco' considers net (income - expense - investment - loan)
-
-          if (applies) {
-            let signedAmt = amt;
-            if (activeFinancialTab === 'balanco') {
-              if (isExpense || isLoan || isInvestment) signedAmt = -amt;
-            }
-
-            if (chartMode === 'acumulado_real') {
-              if (isReceived) {
-                monthTotal += isNaN(signedAmt) ? 0 : signedAmt;
-              }
-            } else {
-              monthTotal += isNaN(signedAmt) ? 0 : signedAmt;
-            }
-
+          const isValid = chartMode === 'acumulado_real' ? isReceived : true;
+          if (isValid) {
+            if (isIncome) monthIncome += amt;
+            if (isExpense || isLoan) monthExpense += amt;
+            if (isInvestment) monthInvestment += amt;
             if (ev.title && !notes.includes(ev.title)) notes.push(ev.title);
           }
         });
+      }
+
+      let monthTotal = 0;
+      if (activeFinancialTab === 'entradas') {
+        monthTotal = monthIncome;
+      } else if (activeFinancialTab === 'gastos' || activeFinancialTab === 'emprestimos') {
+        monthTotal = monthExpense;
+      } else if (activeFinancialTab === 'investimentos') {
+        monthTotal = monthInvestment;
+      } else {
+        // Balanço líquido = Entradas - Gastos/Empréstimos - Investimentos
+        monthTotal = monthIncome - monthExpense - monthInvestment;
       }
 
       runningTotal += monthTotal;
@@ -132,6 +127,9 @@ export default function IncomeEvolutionChart({
         dateKey: monthKey,
         label: labelShort,
         monthTotal,
+        monthIncome,
+        monthExpense,
+        monthInvestment,
         runningTotal,
         isPast,
         isCurrent,
@@ -143,15 +141,25 @@ export default function IncomeEvolutionChart({
     }
 
     return data;
-  }, [timeline?.startDate, events, horizonYears, baseSalary, todayStr, chartMode, activeFinancialTab]);
+  }, [timeline?.startDate, events, horizonYears, todayStr, chartMode, activeFinancialTab]);
 
   // Overall Statistics for the active view
+  const isBalanco = activeFinancialTab === 'balanco';
+  const isGastos = activeFinancialTab === 'gastos' || activeFinancialTab === 'emprestimos';
+  const isInvest = activeFinancialTab === 'investimentos';
+  const isEntradas = activeFinancialTab === 'entradas';
+
   const maxCumulative = chartData.length > 0 ? chartData[chartData.length - 1].runningTotal : 0;
   const maxMonthly = Math.max(...chartData.map((d) => Math.abs(d.monthTotal)), 1);
-  const nonZeroMonths = chartData.filter((d) => d.monthTotal > 0);
+  const nonZeroMonths = chartData.filter((d) => Math.abs(d.monthTotal) > 0);
   const averageMonthly = nonZeroMonths.length > 0
     ? Math.round(nonZeroMonths.reduce((sum, d) => sum + d.monthTotal, 0) / nonZeroMonths.length)
-    : (chartData.length > 0 ? Math.round(maxCumulative / chartData.length) : 0);
+    : 0;
+
+  // Max/Min for Balanço with negative and positive values
+  const maxPositiveBalanco = Math.max(0, ...chartData.map((d) => d.monthTotal));
+  const minNegativeBalanco = Math.min(0, ...chartData.map((d) => d.monthTotal));
+  const balancoSpan = (maxPositiveBalanco - minNegativeBalanco) || 1000;
 
   // SVG Dimensions & Scales
   const width = 860;
@@ -162,8 +170,30 @@ export default function IncomeEvolutionChart({
 
   // Scaling helpers
   const getX = (idx) => padding.left + (idx / Math.max(1, chartData.length - 1)) * graphWidth;
-  const getYCumulative = (val) => padding.top + graphHeight - (val / Math.max(1, maxCumulative)) * graphHeight;
-  const getYMonthly = (val) => padding.top + graphHeight - (val / Math.max(1, maxMonthly)) * graphHeight;
+
+  const getYCumulative = (val) => {
+    if (isBalanco) {
+      const maxCum = Math.max(1, ...chartData.map((d) => Math.abs(d.runningTotal)));
+      return padding.top + graphHeight / 2 - (val / maxCum) * (graphHeight / 2);
+    }
+    const maxCum = Math.max(1, ...chartData.map((d) => d.runningTotal));
+    return padding.top + graphHeight - (val / maxCum) * graphHeight;
+  };
+
+  const getZeroY = () => {
+    if (isBalanco) {
+      return padding.top + (maxPositiveBalanco / balancoSpan) * graphHeight;
+    }
+    return padding.top + graphHeight;
+  };
+
+  const getYMonthly = (val) => {
+    if (isBalanco) {
+      return padding.top + ((maxPositiveBalanco - val) / balancoSpan) * graphHeight;
+    }
+    const maxVal = Math.max(1, ...chartData.map((d) => d.monthTotal));
+    return padding.top + graphHeight - (val / maxVal) * graphHeight;
+  };
 
   // Build SVG Path for Cumulative Curve
   const cumulativePath = useMemo(() => {
@@ -175,19 +205,23 @@ export default function IncomeEvolutionChart({
         return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
       })
       .join(' ');
-  }, [chartData, maxCumulative, graphWidth, graphHeight]);
+  }, [chartData, graphWidth, graphHeight, isBalanco]);
 
   const cumulativeAreaPath = useMemo(() => {
     if (!cumulativePath || chartData.length === 0) return '';
     const firstX = getX(0);
     const lastX = getX(chartData.length - 1);
-    const bottomY = padding.top + graphHeight;
-    return `${cumulativePath} L ${lastX.toFixed(1)} ${bottomY} L ${firstX.toFixed(1)} ${bottomY} Z`;
-  }, [cumulativePath, chartData, graphWidth, graphHeight]);
+    const zeroY = getZeroY();
+    return `${cumulativePath} L ${lastX.toFixed(1)} ${zeroY} L ${firstX.toFixed(1)} ${zeroY} Z`;
+  }, [cumulativePath, chartData, graphWidth, graphHeight, isBalanco, maxPositiveBalanco, balancoSpan]);
 
   // Find index of Today in dataset
   const todayIndex = chartData.findIndex((d) => d.isCurrent);
   const todayX = todayIndex >= 0 && chartMode !== 'acumulado_real' ? getX(todayIndex) : null;
+
+  // Active theme color definitions
+  const activeColor = isGastos ? '#f43f5e' : isInvest ? '#8b5cf6' : '#10b981';
+  const activeGradId = isGastos ? 'roseBarGrad' : isInvest ? 'indigoBarGrad' : 'emeraldBarGrad';
 
   return (
     <div
@@ -226,6 +260,25 @@ export default function IncomeEvolutionChart({
           >
             <button
               type="button"
+              onClick={() => setChartMode('variante')}
+              className={`btn btn-sm ${chartMode === 'variante' ? 'btn-primary' : 'btn-ghost'}`}
+              style={{
+                padding: '4px 12px',
+                fontSize: '0.78rem',
+                borderRadius: '6px',
+                background: chartMode === 'variante' ? (isGastos ? 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)' : isInvest ? 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)') : 'transparent',
+                color: chartMode === 'variante' ? '#fff' : 'var(--text-muted)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              title="Variante Mensal: valores mês a mês específicos da visão ativa"
+            >
+              <BarChart2 size={13} />
+              <span>Variante Mensal</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setChartMode('acumulado_real')}
               className={`btn btn-sm ${chartMode === 'acumulado_real' ? 'btn-primary' : 'btn-ghost'}`}
               style={{
@@ -238,7 +291,7 @@ export default function IncomeEvolutionChart({
                 alignItems: 'center',
                 gap: '6px'
               }}
-              title="Acumulado Real: apenas valores efetivamente recebidos do passado até ao mês atual (sem projeção)"
+              title="Acumulado Real: apenas valores efetivamente liquidados/recebidos até hoje"
             >
               <Sparkles size={13} />
               <span>Acumulado Real</span>
@@ -257,29 +310,10 @@ export default function IncomeEvolutionChart({
                 alignItems: 'center',
                 gap: '6px'
               }}
-              title="Acumulado com Projeção: histórico recebido + projeção futura de 1 a 10 anos"
+              title="Projeção Acumulativa: histórico + projeção futura de 1 a 10 anos"
             >
               <TrendingUp size={13} />
               <span>Projeção Acumulativa</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setChartMode('variante')}
-              className={`btn btn-sm ${chartMode === 'variante' ? 'btn-primary' : 'btn-ghost'}`}
-              style={{
-                padding: '4px 12px',
-                fontSize: '0.78rem',
-                borderRadius: '6px',
-                background: chartMode === 'variante' ? 'linear-gradient(135deg, #06b6d4 0%, #0284c7 100%)' : 'transparent',
-                color: chartMode === 'variante' ? '#fff' : 'var(--text-muted)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-              title="Variante Mensal: valores mês a mês com picos de bónus e subsídios"
-            >
-              <BarChart2 size={13} />
-              <span>Variante Mensal</span>
             </button>
           </div>
         </div>
@@ -288,19 +322,34 @@ export default function IncomeEvolutionChart({
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-              {chartMode === 'acumulado_real' ? 'Total Real Recebido' : chartMode === 'acumulativo' ? 'Total Projetado' : 'Média / Mês'}
+              {isBalanco ? 'Balanço Médio / Mês' : isGastos ? 'Gasto Médio / Mês' : isInvest ? 'Aporte Médio / Mês' : 'Entrada Média / Mês'}
             </span>
-            <span style={{ fontSize: '0.95rem', fontWeight: '800', color: chartMode === 'acumulado_real' ? '#10b981' : chartMode === 'acumulativo' ? '#818cf8' : '#06b6d4' }}>
-              {chartMode === 'variante' ? formatCurrency(averageMonthly) : formatCurrency(maxCumulative)}
+            <span
+              style={{
+                fontSize: '0.95rem',
+                fontWeight: '800',
+                color: isBalanco
+                  ? (averageMonthly >= 0 ? '#10b981' : '#f43f5e')
+                  : activeColor
+              }}
+            >
+              {isBalanco && averageMonthly > 0 ? '+' : isGastos && averageMonthly > 0 ? '-' : ''}
+              {formatCurrency(averageMonthly)}
             </span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '12px' }}>
             <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-              {chartMode === 'variante' ? 'Pico Mensal' : 'Média Mensal'}
+              {chartMode === 'variante' ? 'Pico Mensal' : 'Total no Período'}
             </span>
-            <span style={{ fontSize: '0.95rem', fontWeight: '800', color: chartMode === 'variante' ? '#f59e0b' : '#06b6d4' }}>
-              {chartMode === 'variante' ? formatCurrency(maxMonthly) : formatCurrency(averageMonthly)}
+            <span
+              style={{
+                fontSize: '0.95rem',
+                fontWeight: '800',
+                color: chartMode === 'variante' ? '#f59e0b' : activeColor
+              }}
+            >
+              {chartMode === 'variante' ? formatCurrency(maxMonthly) : formatCurrency(maxCumulative)}
             </span>
           </div>
         </div>
@@ -334,26 +383,26 @@ export default function IncomeEvolutionChart({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                  Horizonte Temporal:
+                  Horizonte:
                 </span>
                 <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--primary-light)' }}>
-                  {horizonYears} {horizonYears === 1 ? 'Ano' : 'Anos'} ({chartData.length} meses)
+                  {horizonYears} {horizonYears === 1 ? 'Ano' : 'Anos'} ({chartData.length}m)
                 </span>
               </div>
               <input
                 type="range"
                 min="1"
-                max="10"
+                max="5"
                 step="1"
                 value={horizonYears}
                 onChange={(e) => setHorizonYears(Number(e.target.value))}
                 style={{
-                  width: '130px',
+                  width: '120px',
                   accentColor: 'var(--primary-light)',
                   cursor: 'pointer',
                   height: '4px'
                 }}
-                title="Arraste para projetar até 10 anos à frente"
+                title="Arraste para ajustar o horizonte de projeção"
               />
             </div>
           </div>
@@ -368,56 +417,104 @@ export default function IncomeEvolutionChart({
           onMouseLeave={() => setHoveredData(null)}
         >
           <defs>
-            {/* Emerald Gradient for Cumulative Mode */}
-            <linearGradient id="emeraldGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10b981" stopOpacity="0.45" />
-              <stop offset="85%" stopColor="#10b981" stopOpacity="0.03" />
-              <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+            {/* Emerald Gradient (Green - Entradas / Balanço Positivo) */}
+            <linearGradient id="emeraldBarGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#10b981" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#059669" stopOpacity="0.45" />
             </linearGradient>
 
-            {/* Cyan Gradient for Monthly Variation Mode */}
-            <linearGradient id="cyanBarGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.9" />
-              <stop offset="100%" stopColor="#0284c7" stopOpacity="0.4" />
+            <linearGradient id="emeraldAreaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#10b981" stopOpacity="0.02" />
             </linearGradient>
 
-            {/* Amber Gradient for Spikes / Bonuses */}
+            {/* Rose Gradient (Red - Gastos / Balanço Negativo) */}
+            <linearGradient id="roseBarGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#e11d48" stopOpacity="0.45" />
+            </linearGradient>
+
+            <linearGradient id="roseAreaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.02" />
+            </linearGradient>
+
+            {/* Indigo Gradient (Investimentos) */}
+            <linearGradient id="indigoBarGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#6d28d9" stopOpacity="0.45" />
+            </linearGradient>
+
+            {/* Amber Gradient for Peaks */}
             <linearGradient id="amberBarGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.95" />
-              <stop offset="100%" stopColor="#d97706" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#d97706" stopOpacity="0.45" />
             </linearGradient>
           </defs>
 
           {/* Grid horizontal lines */}
-          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
-            const y = padding.top + graphHeight * (1 - ratio);
-            const isCumulativeView = chartMode === 'acumulativo' || chartMode === 'acumulado_real';
-            const labelVal = isCumulativeView ? maxCumulative * ratio : maxMonthly * ratio;
-            return (
-              <g key={i}>
-                <line
-                  x1={padding.left}
-                  y1={y}
-                  x2={width - padding.right}
-                  y2={y}
-                  stroke="rgba(255, 255, 255, 0.07)"
-                  strokeDasharray="4 4"
-                />
-                <text
-                  x={padding.left - 10}
-                  y={y + 4}
-                  fill="var(--text-dim)"
-                  fontSize="10"
-                  textAnchor="end"
-                  fontFamily="inherit"
-                >
-                  {labelVal >= 1000 ? `${Math.round(labelVal / 1000)}k €` : `${Math.round(labelVal)} €`}
-                </text>
-              </g>
-            );
-          })}
+          {isBalanco ? (
+            [-1, -0.5, 0, 0.5, 1].map((ratio, i) => {
+              const val = ratio >= 0 ? maxPositiveBalanco * ratio : -minNegativeBalanco * ratio;
+              const y = getYMonthly(val);
+              const isZero = ratio === 0;
 
-          {/* Today Indicator Line (21 Ago 2026) */}
+              return (
+                <g key={i}>
+                  <line
+                    x1={padding.left}
+                    y1={y}
+                    x2={width - padding.right}
+                    y2={y}
+                    stroke={isZero ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.06)'}
+                    strokeWidth={isZero ? 1.5 : 1}
+                    strokeDasharray={isZero ? 'none' : '4 4'}
+                  />
+                  <text
+                    x={padding.left - 10}
+                    y={y + 4}
+                    fill={isZero ? 'var(--text-main)' : 'var(--text-dim)'}
+                    fontSize="10"
+                    fontWeight={isZero ? '800' : '500'}
+                    textAnchor="end"
+                    fontFamily="inherit"
+                  >
+                    {val > 0 ? `+${Math.round(val)} €` : val < 0 ? `${Math.round(val)} €` : '0 €'}
+                  </text>
+                </g>
+              );
+            })
+          ) : (
+            [0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+              const y = padding.top + graphHeight * (1 - ratio);
+              const isCumulativeView = chartMode === 'acumulativo' || chartMode === 'acumulado_real';
+              const labelVal = isCumulativeView ? maxCumulative * ratio : maxMonthly * ratio;
+              return (
+                <g key={i}>
+                  <line
+                    x1={padding.left}
+                    y1={y}
+                    x2={width - padding.right}
+                    y2={y}
+                    stroke="rgba(255, 255, 255, 0.07)"
+                    strokeDasharray="4 4"
+                  />
+                  <text
+                    x={padding.left - 10}
+                    y={y + 4}
+                    fill="var(--text-dim)"
+                    fontSize="10"
+                    textAnchor="end"
+                    fontFamily="inherit"
+                  >
+                    {labelVal >= 1000 ? `${Math.round(labelVal / 1000)}k €` : `${Math.round(labelVal)} €`}
+                  </text>
+                </g>
+              );
+            })
+          )}
+
+          {/* Today Indicator Line */}
           {todayX && (
             <g>
               <line
@@ -454,11 +551,11 @@ export default function IncomeEvolutionChart({
           {/* MODE 1 & 2: Acumulado Real & Projeção Acumulativa (Area and Line) */}
           {(chartMode === 'acumulativo' || chartMode === 'acumulado_real') && (
             <g>
-              <path d={cumulativeAreaPath} fill="url(#emeraldGrad)" />
+              <path d={cumulativeAreaPath} fill={isGastos ? 'url(#roseAreaGrad)' : 'url(#emeraldAreaGrad)'} />
               <path
                 d={cumulativePath}
                 fill="none"
-                stroke="#10b981"
+                stroke={activeColor}
                 strokeWidth="3"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -478,7 +575,7 @@ export default function IncomeEvolutionChart({
                         cx={x}
                         cy={y}
                         r={isHovered ? 6 : isYearMarker ? 4 : 3}
-                        fill={d.isCurrent ? '#6366f1' : '#10b981'}
+                        fill={d.isCurrent ? '#6366f1' : activeColor}
                         stroke="var(--bg-app)"
                         strokeWidth="2"
                       />
@@ -495,31 +592,63 @@ export default function IncomeEvolutionChart({
               {chartData.map((d, i) => {
                 const x = getX(i);
                 const barWidth = Math.max(3, Math.min(18, (graphWidth / chartData.length) * 0.75));
-                const y = getYMonthly(d.monthTotal);
-                const barHeight = padding.top + graphHeight - y;
+                const zeroY = getZeroY();
                 const isHovered = hoveredData?.dateKey === d.dateKey;
-                const hasBonus = d.monthTotal > (averageMonthly > 0 ? averageMonthly * 1.15 : baseSalary);
+
+                let barY = zeroY;
+                let barHeight = 0;
+                let barFill = 'url(#emeraldBarGrad)';
+
+                if (isBalanco) {
+                  if (d.monthTotal >= 0) {
+                    const topY = getYMonthly(d.monthTotal);
+                    barY = topY;
+                    barHeight = Math.max(2, zeroY - topY);
+                    barFill = 'url(#emeraldBarGrad)'; // Verde para positivo
+                  } else {
+                    const bottomY = getYMonthly(d.monthTotal);
+                    barY = zeroY;
+                    barHeight = Math.max(2, bottomY - zeroY);
+                    barFill = 'url(#roseBarGrad)'; // Vermelho para negativo
+                  }
+                } else if (isGastos) {
+                  const topY = getYMonthly(d.monthTotal);
+                  barY = topY;
+                  barHeight = Math.max(2, padding.top + graphHeight - topY);
+                  barFill = 'url(#roseBarGrad)'; // Vermelho para saídas
+                } else if (isInvest) {
+                  const topY = getYMonthly(d.monthTotal);
+                  barY = topY;
+                  barHeight = Math.max(2, padding.top + graphHeight - topY);
+                  barFill = 'url(#indigoBarGrad)'; // Roxo para investimentos
+                } else {
+                  // Entradas
+                  const topY = getYMonthly(d.monthTotal);
+                  barY = topY;
+                  barHeight = Math.max(2, padding.top + graphHeight - topY);
+                  barFill = 'url(#emeraldBarGrad)'; // Verde para entradas
+                }
 
                 return (
                   <g key={d.dateKey}>
-                    {d.monthTotal > 0 ? (
+                    {Math.abs(d.monthTotal) > 0 ? (
                       <rect
                         x={x - barWidth / 2}
-                        y={y}
+                        y={barY}
                         width={barWidth}
-                        height={Math.max(2, barHeight)}
+                        height={barHeight}
                         rx={barWidth > 6 ? 3 : 1}
-                        fill={hasBonus ? 'url(#amberBarGrad)' : 'url(#cyanBarGrad)'}
-                        opacity={isHovered ? 1 : d.isPast ? 0.9 : 0.75}
+                        fill={barFill}
+                        opacity={isHovered ? 1 : d.isPast ? 0.95 : 0.8}
                         stroke={isHovered ? '#ffffff' : 'transparent'}
-                        strokeWidth="1"
+                        strokeWidth="1.5"
                       />
                     ) : (
                       <circle
                         cx={x}
-                        cy={padding.top + graphHeight}
+                        cy={zeroY}
                         r={isHovered ? 3 : 1.5}
-                        fill="rgba(148, 163, 184, 0.3)"
+                        fill="rgba(148, 163, 184, 0.35)"
                       />
                     )}
                   </g>
@@ -584,7 +713,7 @@ export default function IncomeEvolutionChart({
               borderRadius: '10px',
               padding: '10px 14px',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-              minWidth: '200px',
+              minWidth: '220px',
               pointerEvents: 'none',
               zIndex: 10
             }}
@@ -603,21 +732,40 @@ export default function IncomeEvolutionChart({
                   fontWeight: '700'
                 }}
               >
-                {chartMode === 'acumulado_real' ? 'Realizado' : hoveredData.isPast ? 'Recebido' : hoveredData.isCurrent ? 'Mês Atual' : 'Projeção'}
+                {chartMode === 'acumulado_real' ? 'Realizado' : hoveredData.isPast ? 'Liquidado' : hoveredData.isCurrent ? 'Mês Atual' : 'Projeção'}
               </span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                <span style={{ color: 'var(--text-dim)' }}>{chartMode === 'acumulado_real' ? 'Recebido no Mês:' : 'Entrada do Mês:'}</span>
-                <span style={{ fontWeight: '800', color: '#06b6d4' }}>
-                  +{formatCurrency(hoveredData.monthTotal)}
+                <span style={{ color: 'var(--text-dim)' }}>
+                  {isBalanco ? 'Balanço Líquido:' : isGastos ? 'Total Saídas:' : isInvest ? 'Total Aportes:' : 'Total Entradas:'}
+                </span>
+                <span
+                  style={{
+                    fontWeight: '800',
+                    color: isBalanco
+                      ? (hoveredData.monthTotal >= 0 ? '#10b981' : '#f43f5e')
+                      : (isGastos ? '#f43f5e' : isInvest ? '#a78bfa' : '#10b981')
+                  }}
+                >
+                  {isBalanco && hoveredData.monthTotal > 0 ? '+' : isGastos && hoveredData.monthTotal > 0 ? '-' : ''}
+                  {formatCurrency(hoveredData.monthTotal)}
                 </span>
               </div>
 
+              {isBalanco && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                  <span>Entradas vs Saídas:</span>
+                  <span>
+                    <span style={{ color: '#10b981' }}>+{formatCurrency(hoveredData.monthIncome)}</span> / <span style={{ color: '#f43f5e' }}>-{formatCurrency(hoveredData.monthExpense)}</span>
+                  </span>
+                </div>
+              )}
+
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
                 <span style={{ color: 'var(--text-dim)' }}>{chartMode === 'acumulado_real' ? 'Acumulado Real:' : 'Total Acumulado:'}</span>
-                <span style={{ fontWeight: '800', color: '#10b981' }}>
+                <span style={{ fontWeight: '800', color: activeColor }}>
                   {formatCurrency(hoveredData.runningTotal)}
                 </span>
               </div>

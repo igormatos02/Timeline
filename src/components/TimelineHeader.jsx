@@ -65,6 +65,19 @@ export default function TimelineHeader({
   const isPrincipal = timeline.type === 'Principal';
   const isLoanTimeline = timeline.type === 'Empréstimo';
   const isIncomeTimeline = timeline.type === 'Entradas' || timeline.type === 'Financeiro' || timeline.id === 'tl-income';
+
+  const isSystemDefaultTimeline =
+    isPrincipal ||
+    activeFinancialTab === 'balanco' ||
+    activeFinancialTab === 'entradas' ||
+    activeFinancialTab === 'gastos' ||
+    timeline.isSystemDefault ||
+    timeline.canDelete === false ||
+    timeline.type === 'entradas' ||
+    timeline.type === 'gastos';
+
+  const canDeleteTimeline = !isSystemDefaultTimeline;
+  const canEditTimeline = !isPrincipal && activeFinancialTab !== 'balanco';
   const isJeepActive = isIncomeTimeline && (activeFinancialTab === 'jeep' || activeFinancialTab === 'emprestimos');
   const isDaciaActive = isIncomeTimeline && activeFinancialTab === 'dacia';
   const isCasa1Active = isIncomeTimeline && activeFinancialTab === 'casa1';
@@ -487,26 +500,27 @@ export default function TimelineHeader({
                 </button>
               )}
 
-              {!isPrincipal && (
-                <>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={onEdit}
-                    style={{ padding: '5px 10px' }}
-                    title="Editar detalhes da timeline"
-                  >
-                    <Edit2 size={14} />
-                    <span>Editar</span>
-                  </button>
-                  <button
-                    className="btn btn-outline btn-sm"
-                    onClick={onDelete}
-                    style={{ color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.3)', padding: '5px 8px' }}
-                    title="Eliminar timeline"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </>
+              {canEditTimeline && (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={onEdit}
+                  style={{ padding: '5px 10px' }}
+                  title="Editar detalhes da timeline"
+                >
+                  <Edit2 size={14} />
+                  <span>Editar</span>
+                </button>
+              )}
+
+              {canDeleteTimeline && (
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={onDelete}
+                  style={{ color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.3)', padding: '5px 8px' }}
+                  title="Eliminar timeline"
+                >
+                  <Trash2 size={14} />
+                </button>
               )}
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { addDays, addWeeks, addMonths, addYears, format, parseISO, isBefore, isAfter, differenceInDays } from 'date-fns';
+import { generateUUID } from './uuid.js';
 
 /**
  * Format currency in EUR (€)
@@ -86,7 +87,7 @@ export function generateLoanSchedule({
     remainingBalance = balanceAfter;
 
     events.push({
-      id: `loan-inst-${i}-${Date.now()}`,
+      id: generateUUID(),
       date: dueDateStr,
       time: '09:00',
       title: `Prestação #${i} de ${totalInstallments}`,
@@ -237,7 +238,7 @@ export function applyExtraordinaryAmortization({
   if (isNaN(amortVal) || amortVal <= 0) return eventsList;
 
   const amortEvent = {
-    id: `amort-${Date.now()}`,
+    id: generateUUID(),
     date: amortizationDateStr,
     time: '12:00',
     title: `Amortização Extraordinária: ${formatCurrency(amortVal)}`,
@@ -586,7 +587,7 @@ export function generateIncomeSchedule({
 
     const isPast = dateStr <= todayStr;
     events.push({
-      id: `income-gen-${counter}-${Date.now()}`,
+      id: generateUUID(),
       date: dateStr,
       time: '10:00',
       title: `Salário Mensal (${formatCurrency(monthlySalary)})`,

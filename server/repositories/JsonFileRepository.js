@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -74,7 +75,7 @@ export class JsonFileRepository extends IRepository {
 
   async create(data) {
     const rawItems = await this._readAllRaw();
-    const id = data.id || `item_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const id = data.id || crypto.randomUUID();
     const now = new Date().toISOString();
     const newItem = {
       ...data,
@@ -93,7 +94,7 @@ export class JsonFileRepository extends IRepository {
     const now = new Date().toISOString();
     const newItems = dataArray.map((data) => ({
       ...data,
-      id: data.id || `item_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: data.id || crypto.randomUUID(),
       createdAt: data.createdAt || now,
       updatedAt: now
     }));

@@ -1,7 +1,7 @@
 [
   {
-    "id": "tl-entradas",
-    "timeboardId": "tb-principal",
+    "id": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
+    "timeboardId": "e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b",
     "name": "Entradas e Rendimentos",
     "type": "entradas",
     "color": "#10b981",
@@ -13,12 +13,12 @@
     "status": "Em Progresso",
     "periodicity": "mensal",
     "monthlySalary": 3349.6,
-    "createdAt": "2026-08-24T17:24:26.955Z",
-    "updatedAt": "2026-08-24T17:24:26.955Z"
+    "createdAt": "2026-08-24T17:26:05.130Z",
+    "updatedAt": "2026-08-24T17:26:05.130Z"
   },
   {
-    "id": "tl-gastos",
-    "timeboardId": "tb-principal",
+    "id": "a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d",
+    "timeboardId": "e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b",
     "name": "Gastos e Saídas",
     "type": "gastos",
     "color": "#f43f5e",
@@ -29,12 +29,12 @@
     "endDate": "2027-04-30",
     "status": "Em Progresso",
     "periodicity": "mensal",
-    "createdAt": "2026-08-24T17:24:26.955Z",
-    "updatedAt": "2026-08-24T17:24:26.955Z"
+    "createdAt": "2026-08-24T17:26:05.130Z",
+    "updatedAt": "2026-08-24T17:26:05.130Z"
   },
   {
-    "id": "tl-investimentos",
-    "timeboardId": "tb-principal",
+    "id": "b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e",
+    "timeboardId": "e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b",
     "name": "Investimentos e Poupança",
     "type": "investimentos",
     "color": "#6366f1",
@@ -45,12 +45,12 @@
     "endDate": "2027-04-30",
     "status": "Em Progresso",
     "periodicity": "mensal",
-    "createdAt": "2026-08-24T17:24:26.955Z",
-    "updatedAt": "2026-08-24T17:24:26.955Z"
+    "createdAt": "2026-08-24T17:26:05.130Z",
+    "updatedAt": "2026-08-24T17:26:05.130Z"
   },
   {
-    "id": "tl-loan-jeep",
-    "timeboardId": "tb-principal",
+    "id": "c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f",
+    "timeboardId": "e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b",
     "name": "Crédito Jeep",
     "type": "emprestimo",
     "color": "#6366f1",
@@ -68,12 +68,12 @@
     "totalInstallments": 120,
     "currentInstallmentNumber": 28,
     "dueDay": 15,
-    "createdAt": "2026-08-24T17:24:26.955Z",
-    "updatedAt": "2026-08-24T17:24:26.955Z"
+    "createdAt": "2026-08-24T17:26:05.130Z",
+    "updatedAt": "2026-08-24T17:26:05.130Z"
   },
   {
-    "id": "tl-loan-dacia",
-    "timeboardId": "tb-principal",
+    "id": "d5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9a",
+    "timeboardId": "e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b",
     "name": "Crédito Dacia",
     "type": "emprestimo",
     "color": "#8b5cf6",
@@ -90,12 +90,12 @@
     "totalInstallments": 96,
     "currentInstallmentNumber": 87,
     "dueDay": 28,
-    "createdAt": "2026-08-24T17:24:26.955Z",
-    "updatedAt": "2026-08-24T17:24:26.955Z"
+    "createdAt": "2026-08-24T17:26:05.130Z",
+    "updatedAt": "2026-08-24T17:26:05.130Z"
   },
   {
-    "id": "tl-loan-casa1",
-    "timeboardId": "tb-principal",
+    "id": "e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0b",
+    "timeboardId": "e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b",
     "name": "Crédito Casa 1",
     "type": "emprestimo",
     "color": "#0ea5e9",
@@ -115,12 +115,12 @@
     "currentInstallmentNumber": 94,
     "remainingMonths": 338,
     "dueDay": 1,
-    "createdAt": "2026-08-24T17:24:26.955Z",
-    "updatedAt": "2026-08-24T17:24:26.955Z"
+    "createdAt": "2026-08-24T17:26:05.130Z",
+    "updatedAt": "2026-08-24T17:26:05.130Z"
   },
   {
-    "id": "tl-loan-casa2",
-    "timeboardId": "tb-principal",
+    "id": "f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+    "timeboardId": "e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b",
     "name": "Crédito Casa 2",
     "type": "emprestimo",
     "color": "#14b8a6",
@@ -140,7 +140,7 @@
     "currentInstallmentNumber": 17,
     "remainingMonths": 331,
     "dueDay": 1,
-    "createdAt": "2026-08-24T17:24:26.955Z",
-    "updatedAt": "2026-08-24T17:24:26.955Z"
+    "createdAt": "2026-08-24T17:26:05.130Z",
+    "updatedAt": "2026-08-24T17:26:05.130Z"
   }
 ]

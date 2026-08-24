@@ -39,6 +39,7 @@ import {
   X
 } from 'lucide-react';
 import { formatCurrency } from '../utils/loanCalculations';
+import { generateUUID } from '../utils/uuid';
 
 export default function TimelineEventCard({
   event,
@@ -182,7 +183,7 @@ export default function TimelineEventCard({
     if (newSubpartName.trim()) {
       const amt = Number(newSubpartAmount) || 0;
       finalItems.push({
-        id: `part-${Date.now()}-${finalItems.length + 1}`,
+        id: generateUUID(),
         name: newSubpartName.trim(),
         amount: amt
       });
@@ -241,7 +242,7 @@ export default function TimelineEventCard({
       const amt = Number(newSubpartAmount) || 0;
       setDraftSubparts((prev) => [
         ...prev,
-        { id: `part-${Date.now()}-${prev.length + 1}`, name: newSubpartName.trim(), amount: amt }
+        { id: generateUUID(), name: newSubpartName.trim(), amount: amt }
       ]);
       setNewSubpartName('');
       setNewSubpartAmount('');

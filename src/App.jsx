@@ -17,6 +17,7 @@ import {
   getLoanMetrics
 } from './utils/loanCalculations';
 import * as api from './services/api';
+import { generateUUID } from './utils/uuid';
 import './App.css';
 
 export default function App() {
@@ -32,7 +33,7 @@ export default function App() {
     return initialTimeboards;
   });
 
-  const [activeTimeboardId, setActiveTimeboardId] = useState('tb-principal');
+  const [activeTimeboardId, setActiveTimeboardId] = useState('e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b');
   const [isTimeboardModalOpen, setIsTimeboardModalOpen] = useState(false);
   const [editingTimeboard, setEditingTimeboard] = useState(null);
 
@@ -206,7 +207,8 @@ export default function App() {
       // Create new timeline
       const newTl = {
         ...formData,
-        id: `tl-${Date.now()}`,
+        id: generateUUID(),
+        timeboardId: activeTimeboardId,
         events: []
       };
       setTimelines((prev) => [newTl, ...prev]);
@@ -292,7 +294,7 @@ export default function App() {
 
       if (isRecurring) {
         const generatedEvents = [];
-        const seriesId = `series-${Date.now()}`;
+        const seriesId = generateUUID();
         const baseDate = parseISO(eventData.date || '2026-08-01');
 
         // Project for 24 months forward into subsequent months
@@ -312,7 +314,7 @@ export default function App() {
 
           generatedEvents.push({
             ...eventData,
-            id: `ev-${seriesId}-${i}`,
+            id: generateUUID(),
             seriesId,
             date: dateStr,
             status,
@@ -327,7 +329,7 @@ export default function App() {
       } else {
         const newEvent = {
           ...eventData,
-          id: `ev-${Date.now()}`
+          id: generateUUID()
         };
 
         const updatedEvents = [newEvent, ...(activeTimeline.events || [])];
@@ -513,7 +515,7 @@ export default function App() {
     if (!activeTimeline) return;
     const newFloatingTask = {
       ...taskData,
-      id: `ev-task-${Date.now()}`
+      id: generateUUID()
     };
 
     const updatedEvents = [newFloatingTask, ...(activeTimeline.events || [])];
@@ -704,7 +706,7 @@ export default function App() {
     } else {
       const newTb = {
         ...formData,
-        id: `tb-${Date.now()}`
+        id: generateUUID()
       };
       setTimeboards((prev) => [...prev, newTb]);
       setActiveTimeboardId(newTb.id);

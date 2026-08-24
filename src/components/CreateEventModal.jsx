@@ -29,6 +29,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../utils/loanCalculations';
+import { generateUUID } from '../utils/uuid';
 
 export default function CreateEventModal({
   isOpen,
@@ -707,7 +708,7 @@ export default function CreateEventModal({
                       onClick={() => {
                         const currentVal = parseFloat(formData.amount) || 0;
                         setBreakdownItems([
-                          { id: `part-${Date.now()}-1`, name: '', amount: currentVal || 0 }
+                          { id: generateUUID(), name: '', amount: currentVal || 0 }
                         ]);
                       }}
                       style={{
@@ -898,7 +899,7 @@ export default function CreateEventModal({
                       onClick={() => {
                         setBreakdownItems([
                           ...breakdownItems,
-                          { id: `part-${Date.now()}-${breakdownItems.length + 1}`, name: `Parte ${breakdownItems.length + 1}`, amount: 0 }
+                          { id: generateUUID(), name: `Parte ${breakdownItems.length + 1}`, amount: 0 }
                         ]);
                       }}
                       style={{

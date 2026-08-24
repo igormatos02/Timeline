@@ -97,33 +97,18 @@ export default function CreateEventModal({
 
       setMovementType(initialMovement);
 
-      let initTitle = 'Salário';
-      let initAmt = 3300;
-      let initStatus = 'Previsto';
-      let initLabels = 'Salário, A Receber';
-
-      if (initialMovement === 'saida') {
-        initTitle = 'Alimentação & Supermercado';
-        initAmt = 250;
-        initStatus = 'Pendente';
-        initLabels = 'Gastos, Supermercado';
-      } else if (initialMovement === 'investimento') {
-        initTitle = 'Aporte Poupança / Reserva';
-        initAmt = 350;
-        initStatus = 'Planeado';
-        initLabels = 'Poupança, Reserva';
-      }
+      const initStatus = initialMovement === 'saida' ? 'Pendente' : initialMovement === 'investimento' ? 'Planeado' : 'Previsto';
 
       setFormData({
-        title: initTitle,
+        title: '',
         date: targetDate,
         dayOfMonth: parsedDay,
         time: '09:00',
         status: initStatus,
         periodicity: 'recorrente',
-        amount: initAmt,
+        amount: '',
         priority: 'Normal',
-        labelsInput: initLabels
+        labelsInput: ''
       });
       setBreakdownItems([]);
     }
@@ -185,34 +170,11 @@ export default function CreateEventModal({
   const handleSelectMovementType = (typeKey) => {
     if (!isBalancoView) return;
     setMovementType(typeKey);
-    let newTitle = formData.title;
-    let newAmt = formData.amount;
-    let newStatus = formData.status;
-    let newLabels = formData.labelsInput;
-
-    if (typeKey === 'entrada') {
-      newTitle = 'Salário';
-      newAmt = 3300;
-      newStatus = 'Previsto';
-      newLabels = 'Salário, A Receber';
-    } else if (typeKey === 'saida') {
-      newTitle = 'Alimentação & Supermercado';
-      newAmt = 250;
-      newStatus = 'Pendente';
-      newLabels = 'Gastos, Supermercado';
-    } else if (typeKey === 'investimento') {
-      newTitle = 'Aporte Poupança / Reserva';
-      newAmt = 350;
-      newStatus = 'Planeado';
-      newLabels = 'Poupança, Reserva';
-    }
+    const newStatus = typeKey === 'saida' ? 'Pendente' : typeKey === 'investimento' ? 'Planeado' : 'Previsto';
 
     setFormData({
       ...formData,
-      title: newTitle,
-      amount: newAmt,
-      status: newStatus,
-      labelsInput: newLabels
+      status: newStatus
     });
   };
 
@@ -436,6 +398,7 @@ export default function CreateEventModal({
                   type="number"
                   step="0.01"
                   min="0"
+                  placeholder="0,00"
                   className="form-input"
                   style={{
                     borderColor: currentTheme.border,
@@ -447,11 +410,11 @@ export default function CreateEventModal({
                   value={
                     breakdownItems.length > 0
                       ? breakdownItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0)
-                      : formData.amount
+                      : (formData.amount !== undefined ? formData.amount : '')
                   }
                   onChange={(e) => {
                     if (breakdownItems.length === 0) {
-                      setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 });
+                      setFormData({ ...formData, amount: e.target.value });
                     }
                   }}
                   readOnly={breakdownItems.length > 0}

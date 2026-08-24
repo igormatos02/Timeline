@@ -177,10 +177,39 @@ export default function App() {
     if (!activeTimeline) return;
 
     if (editingEvent && editingEvent.id) {
-      // Update event
-      const updatedEvents = (activeTimeline.events || []).map((ev) =>
-        ev.id === editingEvent.id ? { ...ev, ...eventData } : ev
+      // Update event (propagate title and series changes if recurring)
+      const isRecurring = Boolean(
+        editingEvent.seriesId ||
+        editingEvent.periodicity === 'recorrente' ||
+        eventData.periodicity === 'recorrente' ||
+        (editingEvent.category && editingEvent.category.includes('recorrente')) ||
+        (eventData.category && eventData.category.includes('recorrente'))
       );
+
+      const targetSeriesId = editingEvent.seriesId || eventData.seriesId;
+      const previousTitle = editingEvent.title;
+      const newTitle = eventData.title;
+
+      const updatedEvents = (activeTimeline.events || []).map((ev) => {
+        if (ev.id === editingEvent.id) {
+          return { ...ev, ...eventData };
+        }
+
+        const isSameSeries = isRecurring && (
+          (targetSeriesId && ev.seriesId === targetSeriesId) ||
+          (previousTitle && ev.title === previousTitle && ev.category === editingEvent.category)
+        );
+
+        if (isSameSeries) {
+          return {
+            ...ev,
+            title: newTitle || ev.title,
+            ...(eventData.breakdownItems !== undefined ? { breakdownItems: eventData.breakdownItems ? JSON.parse(JSON.stringify(eventData.breakdownItems)) : undefined } : {})
+          };
+        }
+
+        return ev;
+      });
 
       setTimelines((prev) =>
         prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))

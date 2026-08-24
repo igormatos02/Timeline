@@ -68,15 +68,30 @@ export default function TimelineEventCard({
 
   const isInertFuture = event.date > '2026-08-31';
 
-  const isReceivedIncome = isIncomeEvent && (event.status === 'Recebido' || event.isCompleted);
-  const isOverdueIncome = isIncomeEvent && event.date < todayStr && !isReceivedIncome;
+  const isCompleted =
+    event.status === 'Pago' ||
+    event.status === 'Recebido' ||
+    event.status === 'Investido' ||
+    event.status === 'Liquidado' ||
+    event.status === 'Concluído' ||
+    Boolean(event.isCompleted);
+
+  const isOverdue = Boolean(event.date && event.date < todayStr && !isCompleted && event.status !== 'Cancelado' && event.status !== 'Excluido');
+
+  const isReceivedIncome = isIncomeEvent && isCompleted;
+  const isOverdueIncome = isIncomeEvent && isOverdue;
   const isNextIncome = isIncomeEvent && event.date >= todayStr && event.date <= '2026-08-31' && !isReceivedIncome;
   const isFarFutureIncome = isIncomeEvent && event.date > '2026-08-31' && !isReceivedIncome;
 
-  const isPaidExpense = isExpenseEvent && (event.status === 'Pago' || event.isCompleted);
-  const isCompletedInvestment = isInvestmentEvent && (event.status === 'Investido' || event.status === 'Pago' || event.isCompleted);
+  const isPaidExpense = isExpenseEvent && isCompleted;
+  const isOverdueExpense = isExpenseEvent && isOverdue;
 
-  const isCompleted = isReceivedIncome || isPaidExpense || isCompletedInvestment || (isLoanInstallment && event.status === 'Pago');
+  const isCompletedInvestment = isInvestmentEvent && isCompleted;
+  const isOverdueInvestment = isInvestmentEvent && isOverdue;
+
+  const isPaidLoan = isLoanInstallment && (event.status === 'Pago' || event.status === 'Liquidado' || event.isCompleted);
+  const isOverdueLoan = isLoanInstallment && (isOverdue || event.status === 'Atrasada');
+
   const isLocked = event.isLocked !== undefined ? !!event.isLocked : isCompleted;
 
   const [isEditingAmount, setIsEditingAmount] = useState(false);
@@ -635,7 +650,7 @@ export default function TimelineEventCard({
       }
       if (isOverdueIncome) {
         return {
-          label: 'Em Atraso',
+          label: 'Atrasada',
           icon: <AlertCircle size={11} />,
           bg: 'rgba(239, 68, 68, 0.18)',
           color: '#f87171',
@@ -662,7 +677,7 @@ export default function TimelineEventCard({
     }
 
     if (isLoanInstallment) {
-      if (event.status === 'Pago' || event.isCompleted) {
+      if (isPaidLoan) {
         return {
           label: `Liquidado às ${getCompletedTimeStr()}`,
           icon: <CheckCircle2 size={11} />,
@@ -671,7 +686,7 @@ export default function TimelineEventCard({
           border: 'rgba(16, 185, 129, 0.3)'
         };
       }
-      if (event.status === 'Atrasada') {
+      if (isOverdueLoan) {
         return {
           label: 'Atrasada',
           icon: <AlertCircle size={11} />,
@@ -690,23 +705,72 @@ export default function TimelineEventCard({
       };
     }
 
-    if (isPaidExpense) {
+    if (isExpenseEvent) {
+      if (isPaidExpense) {
+        return {
+          label: `Pago às ${getCompletedTimeStr()}`,
+          icon: <CheckCircle2 size={11} />,
+          bg: 'rgba(244, 63, 94, 0.15)',
+          color: '#f43f5e',
+          border: 'rgba(244, 63, 94, 0.3)'
+        };
+      }
+      if (isOverdueExpense) {
+        return {
+          label: 'Atrasada',
+          icon: <AlertCircle size={11} />,
+          bg: 'rgba(239, 68, 68, 0.18)',
+          color: '#f87171',
+          border: 'rgba(239, 68, 68, 0.4)',
+          pulsing: true
+        };
+      }
       return {
-        label: `Pago às ${getCompletedTimeStr()}`,
-        icon: <CheckCircle2 size={11} />,
-        bg: 'rgba(244, 63, 94, 0.15)',
-        color: '#f43f5e',
-        border: 'rgba(244, 63, 94, 0.3)'
+        label: 'Pendente',
+        icon: <Clock size={11} />,
+        bg: 'rgba(245, 158, 11, 0.15)',
+        color: '#f59e0b',
+        border: 'rgba(245, 158, 11, 0.3)'
       };
     }
 
-    if (isCompletedInvestment) {
+    if (isInvestmentEvent) {
+      if (isCompletedInvestment) {
+        return {
+          label: `Investido às ${getCompletedTimeStr()}`,
+          icon: <CheckCircle2 size={11} />,
+          bg: 'rgba(99, 102, 241, 0.15)',
+          color: 'var(--primary-light)',
+          border: 'rgba(99, 102, 241, 0.3)'
+        };
+      }
+      if (isOverdueInvestment) {
+        return {
+          label: 'Atrasado',
+          icon: <AlertCircle size={11} />,
+          bg: 'rgba(239, 68, 68, 0.18)',
+          color: '#f87171',
+          border: 'rgba(239, 68, 68, 0.4)',
+          pulsing: true
+        };
+      }
       return {
-        label: `Investido às ${getCompletedTimeStr()}`,
-        icon: <CheckCircle2 size={11} />,
-        bg: 'rgba(99, 102, 241, 0.15)',
+        label: 'Planeado',
+        icon: <Clock size={11} />,
+        bg: 'rgba(99, 102, 241, 0.1)',
         color: 'var(--primary-light)',
-        border: 'rgba(99, 102, 241, 0.3)'
+        border: 'rgba(99, 102, 241, 0.2)'
+      };
+    }
+
+    if (!isCompleted && isOverdue) {
+      return {
+        label: 'Atrasado',
+        icon: <AlertCircle size={11} />,
+        bg: 'rgba(239, 68, 68, 0.18)',
+        color: '#f87171',
+        border: 'rgba(239, 68, 68, 0.4)',
+        pulsing: true
       };
     }
 
@@ -733,14 +797,14 @@ export default function TimelineEventCard({
 
   // Card specific backgrounds
   let cardStyle = {};
-  if (isIncomeEvent) {
-    if (isOverdueIncome) {
-      cardStyle = {
-        background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, var(--bg-card) 100%)',
-        borderLeft: '4px solid #ef4444',
-        borderColor: 'rgba(239, 68, 68, 0.3)'
-      };
-    } else if (isReceivedIncome || isNextIncome) {
+  if (isOverdueIncome || isOverdueExpense || isOverdueInvestment || isOverdueLoan || (isOverdue && !isCompleted)) {
+    cardStyle = {
+      background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, var(--bg-card) 100%)',
+      borderLeft: '4px solid #ef4444',
+      borderColor: 'rgba(239, 68, 68, 0.32)'
+    };
+  } else if (isIncomeEvent) {
+    if (isReceivedIncome || isNextIncome) {
       cardStyle = {
         background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-card) 100%)',
         borderLeft: '4px solid #10b981',
@@ -766,12 +830,7 @@ export default function TimelineEventCard({
       borderColor: 'rgba(99, 102, 241, 0.25)'
     };
   } else if (isLoanInstallment) {
-    if (event.status === 'Atrasada') {
-      cardStyle = {
-        background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, var(--bg-card) 100%)',
-        borderLeft: '4px solid #ef4444'
-      };
-    } else if (event.status === 'Pago') {
+    if (isPaidLoan) {
       cardStyle = {
         background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, var(--bg-card) 100%)',
         borderLeft: '4px solid #10b981'
@@ -1305,13 +1364,23 @@ export default function TimelineEventCard({
                   : 'Clique para alternar o status'
               }
               style={{
-                background: isPaidExpense ? 'rgba(244, 63, 94, 0.16)' : 'rgba(245, 158, 11, 0.14)',
-                color: isPaidExpense ? '#f43f5e' : '#f59e0b',
+                background: isPaidExpense
+                  ? 'rgba(244, 63, 94, 0.16)'
+                  : isOverdueExpense
+                    ? 'rgba(239, 68, 68, 0.16)'
+                    : 'rgba(245, 158, 11, 0.14)',
+                color: isPaidExpense
+                  ? '#f43f5e'
+                  : isOverdueExpense
+                    ? '#f87171'
+                    : '#f59e0b',
                 border: isPaidExpense
                   ? isLocked
                     ? '1px solid rgba(244, 63, 94, 0.35)'
                     : '1.5px dashed rgba(244, 63, 94, 0.65)'
-                  : '1px solid rgba(245, 158, 11, 0.35)',
+                  : isOverdueExpense
+                    ? '1px solid rgba(239, 68, 68, 0.4)'
+                    : '1px solid rgba(245, 158, 11, 0.35)',
                 borderRadius: '9999px',
                 padding: '5px 14px',
                 fontSize: '0.78rem',
@@ -1331,6 +1400,11 @@ export default function TimelineEventCard({
                   ) : (
                     <Unlock size={12} style={{ color: 'var(--text-dim)', marginLeft: '2px' }} title="Status aberto para alteração" />
                   )}
+                </>
+              ) : isOverdueExpense ? (
+                <>
+                  <AlertCircle size={14} style={{ color: '#f87171' }} />
+                  <span>Atrasada</span>
                 </>
               ) : (
                 <>
@@ -1418,13 +1492,23 @@ export default function TimelineEventCard({
                     : 'Clique para alternar o status'
                 }
                 style={{
-                  background: isCompletedInvestment ? 'rgba(139, 92, 246, 0.16)' : 'rgba(148, 163, 184, 0.12)',
-                  color: isCompletedInvestment ? '#8b5cf6' : '#94a3b8',
+                  background: isCompletedInvestment
+                    ? 'rgba(139, 92, 246, 0.16)'
+                    : isOverdueInvestment
+                      ? 'rgba(239, 68, 68, 0.16)'
+                      : 'rgba(148, 163, 184, 0.12)',
+                  color: isCompletedInvestment
+                    ? '#8b5cf6'
+                    : isOverdueInvestment
+                      ? '#f87171'
+                      : '#94a3b8',
                   border: isCompletedInvestment
                     ? isLocked
                       ? '1px solid rgba(139, 92, 246, 0.35)'
                       : '1.5px dashed rgba(139, 92, 246, 0.65)'
-                    : '1px solid rgba(148, 163, 184, 0.3)',
+                    : isOverdueInvestment
+                      ? '1px solid rgba(239, 68, 68, 0.4)'
+                      : '1px solid rgba(148, 163, 184, 0.3)',
                   borderRadius: '9999px',
                   padding: '5px 14px',
                   fontSize: '0.78rem',
@@ -1444,6 +1528,11 @@ export default function TimelineEventCard({
                     ) : (
                       <Unlock size={12} style={{ color: 'var(--text-dim)', marginLeft: '2px' }} title="Status aberto para alteração" />
                     )}
+                  </>
+                ) : isOverdueInvestment ? (
+                  <>
+                    <AlertCircle size={14} style={{ color: '#f87171' }} />
+                    <span>Atrasado</span>
                   </>
                 ) : (
                   <>
@@ -1567,21 +1656,21 @@ export default function TimelineEventCard({
                     : 'Clique para alternar o status'
                 }
                 style={{
-                  background: event.status === 'Pago'
+                  background: isPaidLoan
                     ? 'rgba(16, 185, 129, 0.16)'
-                    : event.status === 'Atrasada'
+                    : isOverdueLoan
                       ? 'rgba(239, 68, 68, 0.16)'
                       : 'rgba(245, 158, 11, 0.14)',
-                  color: event.status === 'Pago'
+                  color: isPaidLoan
                     ? '#10b981'
-                    : event.status === 'Atrasada'
+                    : isOverdueLoan
                       ? '#f87171'
                       : '#f59e0b',
-                  border: event.status === 'Pago'
+                  border: isPaidLoan
                     ? isLocked
                       ? '1px solid rgba(16, 185, 129, 0.35)'
                       : '1.5px dashed rgba(16, 185, 129, 0.65)'
-                    : event.status === 'Atrasada'
+                    : isOverdueLoan
                       ? '1px solid rgba(239, 68, 68, 0.4)'
                       : '1px solid rgba(245, 158, 11, 0.35)',
                   borderRadius: '9999px',
@@ -1593,12 +1682,12 @@ export default function TimelineEventCard({
                   alignItems: 'center',
                   gap: '6px',
                   transition: 'all 0.2s',
-                  boxShadow: event.status === 'Pago'
+                  boxShadow: isPaidLoan
                     ? '0 2px 8px rgba(16, 185, 129, 0.2)'
                     : 'none'
                 }}
               >
-                {event.status === 'Pago' ? (
+                {isPaidLoan ? (
                   <>
                     <CheckCircle2 size={14} style={{ color: '#10b981' }} />
                     <span>Liquidado às {getCompletedTimeStr()}</span>
@@ -1608,7 +1697,7 @@ export default function TimelineEventCard({
                       <Unlock size={12} style={{ color: 'var(--text-dim)', marginLeft: '2px' }} title="Status aberto para alteração" />
                     )}
                   </>
-                ) : event.status === 'Atrasada' ? (
+                ) : isOverdueLoan ? (
                   <>
                     <AlertCircle size={14} style={{ color: '#f87171' }} />
                     <span>Atrasada</span>

@@ -9,7 +9,8 @@ import {
   isSameWeek,
   isSameMonth,
   getWeek,
-  addYears
+  addYears,
+  addMonths
 } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import {

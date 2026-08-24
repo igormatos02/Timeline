@@ -48250,5 +48250,31 @@
     "id": "8d038e4e-e9a8-4b17-ae60-93627e797306",
     "createdAt": "2026-08-24T19:53:00.502Z",
     "updatedAt": "2026-08-24T19:53:00.502Z"
+  },
+  {
+    "title": "teste",
+    "date": "2026-08-01",
+    "dayOfMonth": 1,
+    "time": "09:00",
+    "status": "Previsto",
+    "periodicity": "recorrente",
+    "amount": 2,
+    "priority": "Normal",
+    "labelsInput": "",
+    "category": "entrada_recorrente",
+    "financialType": "entrada",
+    "isIncome": true,
+    "isExpense": false,
+    "isInvestment": false,
+    "labels": [],
+    "isCompleted": false,
+    "updateScope": "all",
+    "id": "5c9bb13f-d684-44ad-8fd8-1b26bc44aaf1",
+    "seriesId": "255774ce-9166-4658-b7d1-db4c7df52ead",
+    "version": 0,
+    "isRecurring": true,
+    "timelineOriginId": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
+    "createdAt": "2026-08-24T19:59:13.384Z",
+    "updatedAt": "2026-08-24T19:59:13.384Z"
   }
 ]

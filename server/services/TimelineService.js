@@ -548,37 +548,56 @@ export class TimelineService {
       return eventRepository.delete(id);
     }
 
-    // Se for para eliminar SUBSEQUENTES (deste mês em diante): criar versão terminada
+    // Se for para eliminar SUBSEQUENTES (deste mês em diante): criar versão terminada com versão superior
     if (deleteScope === 'subsequent' && targetSeriesId) {
-      const seriesVersions = allRawEvents.filter((ev) => ev.seriesId === targetSeriesId && !ev.sobrepositionOver);
+      const seriesVersions = allRawEvents.filter((ev) => ev.seriesId === targetSeriesId || ev.sobrepositionOver === targetSeriesId);
       const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
       const nextVersion = currentHighestVersion + 1;
+      const targetDate = options.date || directEvent?.date;
 
       await eventRepository.create({
         ...(directEvent || {}),
         seriesId: targetSeriesId,
         version: nextVersion,
-        date: options.date || directEvent?.date,
+        date: targetDate,
         isTerminated: true,
+        isDeleted: true,
         isRecurring: true,
-        title: directEvent?.title || 'Série Terminada'
+        periodicity: 'recorrente',
+        title: directEvent?.title ? `${directEvent.title} (Encerrada)` : 'Série Encerrada'
       });
       return true;
     }
 
-    // Se for exclusão de OCORRÊNCIA ÚNICA de série recorrente: criar tombstone (sobrepositionOver com isDeleted: true)
+    // Se for exclusão de OCORRÊNCIA ÚNICA de série recorrente: criar tombstone com versão superior
     if (targetSeriesId) {
       const targetDate = options.date || directEvent?.date;
-      if (directEvent && directEvent.sobrepositionOver) {
-        return eventRepository.delete(directEvent.id);
+      const seriesVersions = allRawEvents.filter((ev) => ev.seriesId === targetSeriesId || ev.sobrepositionOver === targetSeriesId);
+      const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
+      const nextVersion = currentHighestVersion + 1;
+
+      const existingOverride = allRawEvents.find(
+        (ev) => ev.sobrepositionOver === targetSeriesId && ev.date === targetDate
+      );
+
+      if (existingOverride) {
+        return eventRepository.update(existingOverride.id, {
+          isDeleted: true,
+          status: 'Excluido',
+          version: nextVersion
+        });
       }
 
       await eventRepository.create({
+        seriesId: targetSeriesId,
         sobrepositionOver: targetSeriesId,
         date: targetDate,
+        version: nextVersion,
         isDeleted: true,
         status: 'Excluido',
-        title: 'Ocorrência Excluída'
+        title: directEvent?.title ? `${directEvent.title} (Excluído)` : 'Ocorrência Excluída',
+        isRecurring: false,
+        periodicity: 'unico'
       });
       return true;
     }

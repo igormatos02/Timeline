@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   format,
   parseISO,
   eachDayOfInterval,
+  eachMonthOfInterval,
   subDays,
   startOfWeek,
   endOfWeek,
@@ -258,21 +259,22 @@ export default function VerticalTimeline({
   const maxDateObj = isBalancoView ? parseISO('2026-08-31') : addMonths(parseISO('2026-08-31'), Math.max(1, futureHorizonYears) * 12);
 
   // Generate array of days from startDate up to maxDateObj (Descending: future at top, past at bottom)
-  let daysArray = [];
-  try {
-    const daysAscending = eachDayOfInterval({
-      start: startDateObj,
-      end: maxDateObj
-    });
-    daysArray = daysAscending.reverse();
-  } catch (err) {
-    daysArray = [todayDate];
-  }
+  const daysArray = useMemo(() => {
+    try {
+      const daysAscending = eachDayOfInterval({
+        start: startDateObj,
+        end: maxDateObj
+      });
+      return daysAscending.reverse();
+    } catch (err) {
+      return [todayDate];
+    }
+  }, [startDateObj.getTime(), maxDateObj.getTime()]);
 
   // Filter events based on search query, status, category, and label
-  const filterEvents = (events) => {
-    if (!events) return [];
-    return events.filter((ev) => {
+  const filteredEvents = useMemo(() => {
+    if (!timelineEvents) return [];
+    return timelineEvents.filter((ev) => {
       const matchesSearch =
         searchQuery === '' ||
         ((ev.title || '').toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -346,23 +348,35 @@ export default function VerticalTimeline({
 
       return matchesSearch && matchesStatus && matchesCategory && matchesLabel;
     });
-  };
-
-  const filteredEvents = filterEvents(timelineEvents);
+  }, [
+    timelineEvents,
+    searchQuery,
+    selectedStatusFilter,
+    selectedCategoryFilter,
+    selectedLabelFilter,
+    selectedTimelineIds,
+    isFinancialTimeline,
+    activeFinancialTab,
+    isBalancoView,
+    maxDateObj
+  ]);
 
   // Collect all unique labels for filter pills
-  const availableLabels = Array.from(
-    new Set(allEvents.flatMap((ev) => ev.labels || []))
-  );
+  const availableLabels = useMemo(() => {
+    return Array.from(new Set(allEvents.flatMap((ev) => ev.labels || [])));
+  }, [allEvents]);
 
   // Map events by date (YYYY-MM-DD)
-  const eventsByDate = {};
-  filteredEvents.forEach((ev) => {
-    if (!eventsByDate[ev.date]) {
-      eventsByDate[ev.date] = [];
-    }
-    eventsByDate[ev.date].push(ev);
-  });
+  const eventsByDate = useMemo(() => {
+    const map = {};
+    filteredEvents.forEach((ev) => {
+      if (!map[ev.date]) {
+        map[ev.date] = [];
+      }
+      map[ev.date].push(ev);
+    });
+    return map;
+  }, [filteredEvents]);
 
   // ========================================================
   // RENDER ENGINES BY GROUPBY MODE
@@ -497,29 +511,29 @@ export default function VerticalTimeline({
   const renderMonthView = () => {
     const monthMap = new Map();
 
-    daysArray.forEach((dayObj) => {
-      const monthKey = format(dayObj, 'yyyy-MM');
-      if (!monthMap.has(monthKey)) {
+    try {
+      const allMonthsDesc = eachMonthOfInterval({
+        start: startDateObj,
+        end: maxDateObj
+      }).reverse();
+
+      allMonthsDesc.forEach((mDate) => {
+        const monthKey = format(mDate, 'yyyy-MM');
         monthMap.set(monthKey, {
-          monthDate: dayObj,
+          monthDate: mDate,
           events: []
         });
-      }
-    });
+      });
+    } catch {
+      monthMap.set(format(todayDate, 'yyyy-MM'), { monthDate: todayDate, events: [] });
+    }
 
     filteredEvents.forEach((ev) => {
-      try {
-        const evDate = parseISO(ev.date);
-        const monthKey = format(evDate, 'yyyy-MM');
-        if (monthMap.has(monthKey)) {
-          monthMap.get(monthKey).events.push(ev);
-        } else {
-          monthMap.set(monthKey, {
-            monthDate: evDate,
-            events: [ev]
-          });
-        }
-      } catch (e) { }
+      if (!ev || !ev.date) return;
+      const monthKey = ev.date.substring(0, 7);
+      if (monthMap.has(monthKey)) {
+        monthMap.get(monthKey).events.push(ev);
+      }
     });
 
     const monthsList = Array.from(monthMap.values());

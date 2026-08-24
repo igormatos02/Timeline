@@ -14731,14 +14731,14 @@
     "category": "parcela_emprestimo",
     "financialType": "gasto",
     "periodicity": "recorrente",
-    "status": "Pago",
+    "status": "Pendente",
     "priority": "Normal",
     "amount": 288.01,
     "isIncome": false,
     "isExpense": false,
     "isInvestment": false,
     "isRecurring": false,
-    "isCompleted": true,
+    "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
     "principalAmount": 115.61,
@@ -14775,7 +14775,7 @@
       }
     ],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z"
+    "updatedAt": "2026-08-24T23:15:10.654Z"
   },
   {
     "id": "968ba50d-c6fd-44e9-b217-ed871cf8b187",
@@ -37096,14 +37096,14 @@
     "category": "parcela_emprestimo",
     "financialType": "gasto",
     "periodicity": "recorrente",
-    "status": "Pago",
+    "status": "Pendente",
     "priority": "Normal",
     "amount": 293.05,
     "isIncome": false,
     "isExpense": false,
     "isInvestment": false,
     "isRecurring": false,
-    "isCompleted": true,
+    "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
     "principalAmount": 83,
@@ -37140,7 +37140,7 @@
       }
     ],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T23:12:19.833Z"
+    "updatedAt": "2026-08-24T23:15:13.181Z"
   },
   {
     "id": "7eb82b1e-8956-405a-96b7-8b809204ff1c",

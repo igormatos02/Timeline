@@ -442,13 +442,16 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
 
   let totalReceived = 0;
   let totalForecastIncome = 0;
+  let totalForecastIncomeUpToCurrent = 0;
   let annualProjectedIncome = 0;
   let currentMonthIncome = 0;
   let currentMonthIncomeReceived = 0;
   let totalPaidExpenses = 0;
   let totalPlannedExpenses = 0;
+  let totalPlannedExpensesUpToCurrent = 0;
   let totalInvested = 0;
   let totalPlannedInvestments = 0;
+  let totalPlannedInvestmentsUpToCurrent = 0;
 
   let nextIncome = null;
   let nextExpense = null;
@@ -479,6 +482,9 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
       if (isUpToCurrent && isReceived) {
         totalReceived += amt;
       }
+      if (isUpToCurrent && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+        totalForecastIncomeUpToCurrent += amt;
+      }
       totalForecastIncome += amt;
       if (evMonth === currentMonthKey) {
         currentMonthIncome += amt;
@@ -495,6 +501,9 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
       const isPaidOrNoPending = ev.status === 'Pago' || ev.status === 'Recebido' || ev.isCompleted || (isPast && ev.status !== 'Pendente' && ev.status !== 'Atrasada' && ev.status !== 'Cancelado');
       if (isUpToCurrent && isPaidOrNoPending) {
         totalPaidExpenses += amt;
+      }
+      if (isUpToCurrent && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+        totalPlannedExpensesUpToCurrent += amt;
       }
       totalPlannedExpenses += amt;
       if (!isPast && (!nextExpense || ev.date < nextExpense.date)) nextExpense = ev;
@@ -517,6 +526,9 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
       if (isUpToCurrent && isInvestedDone) {
         totalInvested += amt;
       }
+      if (isUpToCurrent && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+        totalPlannedInvestmentsUpToCurrent += amt;
+      }
       totalPlannedInvestments += amt;
     }
   });
@@ -528,6 +540,7 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     : (currentMonthIncome || 0);
 
   const netRealized = totalReceived - totalPaidExpenses - totalInvested;
+  const netProjectedCurrent = totalForecastIncomeUpToCurrent - totalPlannedExpensesUpToCurrent - totalPlannedInvestmentsUpToCurrent;
   const netProjected = totalForecastIncome - totalPlannedExpenses - totalPlannedInvestments;
   const savingsRate = totalReceived > 0 ? Math.round(((totalInvested + Math.max(0, netRealized)) / totalReceived) * 100) : 0;
 
@@ -547,6 +560,7 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     monthlyAverageExpenses,
     projectedAnnualExpenses,
     netRealized,
+    netProjectedCurrent,
     netProjected,
     savingsRate,
     nextIncome,

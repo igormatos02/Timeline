@@ -4,8 +4,8 @@
     "name": "Timeboard Principal",
     "description": "Gestão e controle financeiro consolidado.",
     "tenant": "default",
-    "type": null,
+    "type": "financeiro",
     "createdAt": "2026-08-24T17:55:00.000Z",
-    "updatedAt": "2026-08-24T16:56:42.687Z"
+    "updatedAt": "2026-08-24T17:24:26.954Z"
   }
 ]

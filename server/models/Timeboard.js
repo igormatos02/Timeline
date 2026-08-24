@@ -4,7 +4,7 @@ export class Timeboard {
     name = 'Timeboard Principal',
     description = '',
     tenant = 'default',
-    type = null,
+    type = 'financeiro', // 'financeiro' | 'projetos' | 'pessoal'
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
   }) {

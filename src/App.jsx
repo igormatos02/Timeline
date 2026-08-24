@@ -139,10 +139,48 @@ export default function App() {
   // Selected Timeboard
   const activeTimeboard = timeboards.find((tb) => tb.id === activeTimeboardId) || timeboards[0];
 
-  // Active Timeline within current Timeboard (Default to tl-income)
-  const rawActiveTimeline = timelines.find((tl) => tl.id === activeTimelineId || tl.timeboardId === activeTimeboardId) || timelines[0];
+  // All timelines belonging to active Timeboard
+  const activeTimeboardTimelines = timelines.filter(
+    (tl) => tl.timeboardId === activeTimeboardId || (!tl.timeboardId && activeTimeboardId === 'tb-principal')
+  );
 
-  const activeTimeline = rawActiveTimeline;
+  // Dynamic consolidated timeline aggregating all financial timelines of the active Timeboard
+  const activeTimeline = React.useMemo(() => {
+    const allEvents = [];
+    activeTimeboardTimelines.forEach((tl) => {
+      (tl.events || []).forEach((ev) => {
+        allEvents.push({
+          ...ev,
+          timelineOriginId: ev.timelineOriginId || tl.id,
+          timelineOriginName: ev.timelineOriginName || tl.name,
+          timelineOriginColor: ev.timelineOriginColor || tl.color
+        });
+      });
+    });
+
+    const carLoans = [];
+    activeTimeboardTimelines.forEach((tl) => {
+      if (tl.type === 'emprestimo') {
+        carLoans.push(tl);
+      }
+      if (Array.isArray(tl.carLoans)) {
+        tl.carLoans.forEach((loan) => carLoans.push(loan));
+      }
+    });
+
+    return {
+      id: activeTimeboard?.id || 'tb-principal',
+      name: activeTimeboard?.name || 'Timeboard Principal',
+      type: 'Financeiro',
+      description: activeTimeboard?.description || '',
+      startDate: '2026-01-01',
+      endDate: '2027-04-30',
+      monthlySalary: 3349.60,
+      carLoans,
+      events: allEvents,
+      timelines: activeTimeboardTimelines
+    };
+  }, [activeTimeboard, activeTimeboardTimelines]);
 
   // ----------------------------------------------------
   // Timeline Handlers

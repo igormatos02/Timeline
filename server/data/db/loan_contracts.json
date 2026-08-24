@@ -12,9 +12,9 @@
     "installmentAmount": 218.47,
     "periodicity": "mensal",
     "dueDay": 15,
-    "timelineId": "tl-income",
-    "createdAt": "2026-08-24T16:56:42.689Z",
-    "updatedAt": "2026-08-24T16:56:42.689Z"
+    "timelineId": "tl-loan-jeep",
+    "createdAt": "2026-08-24T17:24:26.956Z",
+    "updatedAt": "2026-08-24T17:24:26.956Z"
   },
   {
     "id": "tl-loan-dacia",
@@ -32,9 +32,9 @@
     "servicesPortion": 55.91,
     "periodicity": "mensal",
     "dueDay": 28,
-    "timelineId": "tl-income",
-    "createdAt": "2026-08-24T16:56:42.689Z",
-    "updatedAt": "2026-08-24T16:56:42.689Z"
+    "timelineId": "tl-loan-dacia",
+    "createdAt": "2026-08-24T17:24:26.956Z",
+    "updatedAt": "2026-08-24T17:24:26.956Z"
   },
   {
     "id": "tl-loan-casa1",
@@ -55,9 +55,9 @@
     "remainingMonths": 338,
     "periodicity": "mensal",
     "dueDay": 1,
-    "timelineId": "tl-income",
-    "createdAt": "2026-08-24T16:56:42.689Z",
-    "updatedAt": "2026-08-24T16:56:42.689Z"
+    "timelineId": "tl-loan-casa1",
+    "createdAt": "2026-08-24T17:24:26.956Z",
+    "updatedAt": "2026-08-24T17:24:26.956Z"
   },
   {
     "id": "tl-loan-casa2",
@@ -78,8 +78,8 @@
     "remainingMonths": 331,
     "periodicity": "mensal",
     "dueDay": 1,
-    "timelineId": "tl-income",
-    "createdAt": "2026-08-24T16:56:42.689Z",
-    "updatedAt": "2026-08-24T16:56:42.689Z"
+    "timelineId": "tl-loan-casa2",
+    "createdAt": "2026-08-24T17:24:26.956Z",
+    "updatedAt": "2026-08-24T17:24:26.956Z"
   }
 ]

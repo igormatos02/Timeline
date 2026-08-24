@@ -9,9 +9,8 @@ export const EVENT_CATEGORIES = [
 ];
 
 export const TIMELINE_TYPES = [
-  'Principal',
-  'Entradas',
-  'Empréstimo'
+  'Empréstimo',
+  'Investimentos'
 ];
 
 export const TIMELINE_STATUSES = [

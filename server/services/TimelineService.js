@@ -27,7 +27,43 @@ export class TimelineService {
   }
 
   async createTimeboard(data) {
-    return timeboardRepository.create(data);
+    const createdTimeboard = await timeboardRepository.create({
+      ...data,
+      type: data.type || 'financeiro'
+    });
+
+    // Se o timeboard for financeiro, cria automaticamente as 2 timelines obrigatórias do sistema
+    if (createdTimeboard.type === 'financeiro') {
+      // 1. Entradas e Rendimentos
+      await timelineRepository.create({
+        id: `tl-entradas-${createdTimeboard.id}`,
+        timeboardId: createdTimeboard.id,
+        name: 'Entradas e Rendimentos',
+        type: 'entradas',
+        color: '#10b981',
+        description: 'Receitas recorrentes, salários e rendimentos.',
+        isSystemDefault: true,
+        canDelete: false,
+        startDate: '2026-01-01',
+        endDate: '2027-04-30'
+      });
+
+      // 2. Gastos e Saídas
+      await timelineRepository.create({
+        id: `tl-gastos-${createdTimeboard.id}`,
+        timeboardId: createdTimeboard.id,
+        name: 'Gastos e Saídas',
+        type: 'gastos',
+        color: '#f43f5e',
+        description: 'Despesas correntes, fixas e variáveis.',
+        isSystemDefault: true,
+        canDelete: false,
+        startDate: '2026-01-01',
+        endDate: '2027-04-30'
+      });
+    }
+
+    return this.getTimeboardById(createdTimeboard.id);
   }
 
   async updateTimeboard(id, updates) {
@@ -38,7 +74,9 @@ export class TimelineService {
     // Cascade delete timelines
     const timelines = await timelineRepository.getAll((tl) => tl.timeboardId === id);
     for (const tl of timelines) {
-      await this.deleteTimeline(tl.id);
+      await eventRepository.deleteMany((ev) => ev.timelineOriginId === tl.id);
+      await loanContractRepository.deleteMany((loan) => loan.timelineId === tl.id);
+      await timelineRepository.delete(tl.id);
     }
     return timeboardRepository.delete(id);
   }
@@ -77,6 +115,14 @@ export class TimelineService {
   }
 
   async createTimeline(data) {
+    // Validar se já existe uma timeline padrão de entradas ou gastos no mesmo timeboard
+    if (data.type === 'entradas' || data.type === 'gastos') {
+      const existing = await timelineRepository.getAll((tl) => tl.timeboardId === data.timeboardId && tl.type === data.type);
+      if (existing.length > 0) {
+        throw new Error(`O Timeboard já possui uma timeline de ${data.type === 'entradas' ? 'Entradas' : 'Gastos'} (única permitida).`);
+      }
+    }
+
     return timelineRepository.create(data);
   }
 
@@ -85,6 +131,13 @@ export class TimelineService {
   }
 
   async deleteTimeline(id) {
+    const timeline = await timelineRepository.getById(id);
+    if (!timeline) return false;
+
+    if (timeline.isSystemDefault) {
+      throw new Error('Não é permitido excluir timelines padrão do sistema (Entradas e Gastos).');
+    }
+
     await eventRepository.deleteMany((ev) => ev.timelineOriginId === id);
     await loanContractRepository.deleteMany((loan) => loan.timelineId === id);
     return timelineRepository.delete(id);

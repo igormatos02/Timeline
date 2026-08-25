@@ -77,6 +77,8 @@ export function projectEvents(rawEvents = [], options = {}) {
     const horizonDate = parseISO(horizonEndDate);
     const dayOfMonth = rootVersion.dayOfMonth || baseDate.getDate() || 1;
 
+    const seriesTargetAmount = sortedVersions.find(v => v.targetAmount !== undefined && v.targetAmount !== null && Number(v.targetAmount) > 0)?.targetAmount;
+
     let curDate = baseDate;
     let safetyCounter = 0;
 
@@ -127,7 +129,7 @@ export function projectEvents(rawEvents = [], options = {}) {
           projectedInstances.push({
             ...activeVersion,
             ...override,
-            targetAmount: (override.targetAmount !== undefined && override.targetAmount !== null) ? override.targetAmount : activeVersion.targetAmount,
+            targetAmount: (override.targetAmount !== undefined && override.targetAmount !== null) ? override.targetAmount : (activeVersion.targetAmount || seriesTargetAmount),
             initialInvestedAmount: (override.initialInvestedAmount !== undefined && override.initialInvestedAmount !== null) ? override.initialInvestedAmount : activeVersion.initialInvestedAmount,
             isOverridden: true,
             sobrepositionOver: seriesId,
@@ -141,6 +143,7 @@ export function projectEvents(rawEvents = [], options = {}) {
           id: `${seriesId}_${curDateStr}`,
           seriesId,
           version: activeVersion.version,
+          targetAmount: activeVersion.targetAmount || seriesTargetAmount,
           date: curDateStr,
           isProjected: !isFirstOccurrence,
           isFirstOccurrence
@@ -378,6 +381,13 @@ export class TimelineService {
 
     // --- REGRAS DE ENTRADAS / GASTOS / RECORRENTES (Sem data de fim) ---
     const targetSeriesId = directUpdates.seriesId || updates.seriesId;
+
+    if (targetSeriesId && directUpdates.targetAmount !== undefined && directUpdates.targetAmount !== '') {
+      await eventRepository.updateMany(
+        (ev) => ev.seriesId === targetSeriesId || ev.sobrepositionOver === targetSeriesId,
+        { targetAmount: Number(directUpdates.targetAmount) || directUpdates.targetAmount }
+      );
+    }
 
     // Cenário 1: Alteração Única em Ocorrência de Evento Recorrente (sobrepositionOver)
     if (updateScope === 'single' && targetSeriesId) {

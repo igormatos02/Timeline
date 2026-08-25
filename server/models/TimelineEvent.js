@@ -20,6 +20,7 @@ export class TimelineEvent {
     priority = 'Normal', // 'Urgente' | 'Alta' | 'Normal' | 'Baixa'
     amount = 0,
     initialInvestedAmount = 0,
+    targetAmount = 0,
     isIncome = false,
     isExpense = false,
     isInvestment = false,
@@ -58,6 +59,7 @@ export class TimelineEvent {
     this.priority = priority;
     this.amount = Number(amount) || 0;
     this.initialInvestedAmount = Number(initialInvestedAmount) || 0;
+    this.targetAmount = Number(targetAmount) || 0;
     this.isIncome = isIncome;
     this.isExpense = isExpense;
     this.isInvestment = isInvestment;

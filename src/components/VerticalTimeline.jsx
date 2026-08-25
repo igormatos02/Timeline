@@ -681,25 +681,25 @@ export default function VerticalTimeline({
 
             const amt = Number(ev.amount || 0);
             const isLoan = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
-            const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
-            const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan;
             const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+            const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
+            const isExpense = ((ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan) && !isInvestment;
 
             const isIncomeReceived = ev.status === 'Recebido' || ev.isCompleted;
-            const isExpensePaid = ev.status === 'Pago' || ev.isCompleted;
+            const isExpensePaid = ev.status === 'Pago' || ev.status === 'Liquidado' || ev.isCompleted;
             const isInvested = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted;
 
             if (isIncome) {
               mMonthIncome += amt;
-              if (isIncomeReceived || isFutureMonth) mMonthIncomePaid += amt;
+              if (isIncomeReceived) mMonthIncomePaid += amt;
             }
             if (isExpense) {
               mMonthExpense += amt;
-              if (isExpensePaid || isFutureMonth) mMonthExpensePaid += amt;
+              if (isExpensePaid) mMonthExpensePaid += amt;
             }
             if (isInvestment) {
               mMonthInvestment += amt;
-              if (isInvested || isFutureMonth) mMonthInvestmentPaid += amt;
+              if (isInvested) mMonthInvestmentPaid += amt;
             }
           });
 
@@ -810,9 +810,10 @@ export default function VerticalTimeline({
                         </>
                       )}
 
-                      {/* Badges para a aba Gastos (Apenas Gastos + Empréstimos) */}
+                      {/* Badges para a aba Gastos (Total Previsto e Total Realizado) */}
                       {isFinancialTimeline && activeFinancialTab === 'gastos' && (
                         <>
+                          {/* Total Previsto */}
                           <span
                             className="group-card-badge"
                             style={{
@@ -821,16 +822,19 @@ export default function VerticalTimeline({
                               gap: '5px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthExpense > 0 ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
-                              color: isFutureMonth ? 'var(--text-dim)' : (mMonthExpense > 0 ? '#f43f5e' : 'var(--text-dim)'),
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthExpense > 0 ? 'rgba(244, 63, 94, 0.35)' : 'var(--border-glass)'),
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthExpense > 0 ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.04)'),
+                              color: isFutureMonth ? 'var(--text-dim)' : (mMonthExpense > 0 ? 'var(--primary-light)' : 'var(--text-dim)'),
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthExpense > 0 ? 'rgba(99, 102, 241, 0.3)' : 'var(--border-glass)'),
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
+                            title="Total de saídas planeadas/previstas para este mês"
                           >
-                            <span>Total Saídas: -{formatCurrency(mMonthExpense)}</span>
+                            <Clock size={12} />
+                            <span>Total Previsto: -{formatCurrency(mMonthExpense)}</span>
                           </span>
 
+                          {/* Total Realizado */}
                           <span
                             className="group-card-badge"
                             style={{
@@ -839,14 +843,16 @@ export default function VerticalTimeline({
                               gap: '5px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (cumData.expense > 0 ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
-                              color: isFutureMonth ? 'var(--text-dim)' : (cumData.expense > 0 ? '#fb7185' : 'var(--text-dim)'),
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (cumData.expense > 0 ? 'rgba(244, 63, 94, 0.35)' : 'var(--border-glass)'),
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthExpensePaid > 0 ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
+                              color: isFutureMonth ? 'var(--text-dim)' : (mMonthExpensePaid > 0 ? '#f43f5e' : 'var(--text-dim)'),
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthExpensePaid > 0 ? 'rgba(244, 63, 94, 0.35)' : 'var(--border-glass)'),
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
+                            title="Total de saídas que já foram pagas/liquidadas neste mês"
                           >
-                            <span>Acumulado: -{formatCurrency(cumData.expense)}</span>
+                            <CheckCircle2 size={12} />
+                            <span>Total Realizado: -{formatCurrency(mMonthExpensePaid)}</span>
                           </span>
                         </>
                       )}

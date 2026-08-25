@@ -11,7 +11,7 @@ import { addMonths, format, parseISO } from 'date-fns';
  * e versões incrementais (version) a partir de datas específicas.
  */
 export function projectEvents(rawEvents = [], options = {}) {
-  const horizonEndDate = typeof options === 'string' ? options : (options.endDate || '2028-12-31');
+  const horizonEndDate = typeof options === 'string' ? options : (options.endDate || '2056-12-31');
   const filterStartDate = options.startDate || null;
   const filterEndDate = options.endDate || horizonEndDate;
 
@@ -82,7 +82,7 @@ export function projectEvents(rawEvents = [], options = {}) {
     let curDate = baseDate;
     let safetyCounter = 0;
 
-    while (curDate <= horizonDate && safetyCounter < 120) {
+    while (curDate <= horizonDate && safetyCounter < 480) {
       safetyCounter++;
       const curDateStr = format(curDate, 'yyyy-MM-dd');
       const curMonthKey = curDateStr.substring(0, 7);

@@ -30,6 +30,15 @@ export default function EditInstallmentModal({
     }
   }, [installment]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !installment) return null;
 
   // Sync total when principal or interest portion changes

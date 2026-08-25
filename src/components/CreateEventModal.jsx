@@ -59,6 +59,22 @@ export default function CreateEventModal({
     labelsInput: ''
   });
 
+  // Handle Escape key to close modal or day picker
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (isDayPickerOpen) {
+          setIsDayPickerOpen(false);
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isDayPickerOpen, onClose]);
+
   useEffect(() => {
     const todayStr = '2026-08-21';
     const targetDate = initialData?.date || defaultDate || todayStr;

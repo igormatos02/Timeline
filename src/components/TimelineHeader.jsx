@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Calendar,
@@ -81,6 +81,15 @@ export default function TimelineHeader({
     }
     setIsDatePickerOpen(false);
   };
+
+  useEffect(() => {
+    if (!isDatePickerOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setIsDatePickerOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDatePickerOpen]);
 
   const getFormattedMonthLabel = (monthStr) => {
     if (!monthStr || monthStr === '1900-01') return 'Todo o Histórico';

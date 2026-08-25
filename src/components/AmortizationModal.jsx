@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, DollarSign, Calendar, FileText, X, TrendingDown, Clock } from 'lucide-react';
 import { formatCurrency } from '../utils/loanCalculations';
 
@@ -7,6 +7,15 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
   const [date, setDate] = useState('2026-08-21');
   const [strategy, setStrategy] = useState('reduce_term'); // 'reduce_term' | 'reduce_installment'
   const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 

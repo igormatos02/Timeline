@@ -45,6 +45,7 @@ import { generateUUID } from '../utils/uuid';
 
 export default function TimelineEventCard({
   event,
+  allEvents = [],
   currentTimelineId,
   timelineType,
   activeFinancialTab = 'balanco',
@@ -1643,7 +1644,20 @@ export default function TimelineEventCard({
 
         {/* 🎯 Barra de Progresso da Meta de Poupança / Investimento */}
         {Number(event.targetAmount || 0) > 0 && (() => {
-          const currentSaved = (Number(event.initialInvestedAmount || 0) || 0) + (isCompletedInvestment ? Number(event.amount || 0) : 0);
+          const seriesId = event.seriesId || event.id;
+          const baseInitial = Number(event.initialInvestedAmount || 0);
+
+          const priorAportes = (allEvents || [])
+            .filter((ev) => {
+              if (!ev || !ev.date || ev.date >= event.date) return false;
+              const matchSeries = (ev.seriesId && ev.seriesId === seriesId) || (ev.id === seriesId) || (ev.sobrepositionOver === seriesId) || (ev.category === event.category && ev.financialType === 'investimento');
+              const isDone = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted;
+              return matchSeries && isDone;
+            })
+            .reduce((sum, ev) => sum + Number(ev.amount || 0), 0);
+
+          const thisMonthContribution = isCompletedInvestment ? Number(event.amount || 0) : 0;
+          const currentSaved = baseInitial + priorAportes + thisMonthContribution;
           const targetVal = Number(event.targetAmount);
           const progressPct = Math.min(100, Math.max(0, Math.round((currentSaved / targetVal) * 100)));
 

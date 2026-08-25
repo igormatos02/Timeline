@@ -493,6 +493,7 @@ export default function VerticalTimeline({
                         </div>
                         <TimelineEventCard
                           event={ev}
+                          allEvents={timeline.events || []}
                           currentTimelineId={timeline.id}
                           timelineType={timeline.type}
                           activeFinancialTab={activeFinancialTab}
@@ -1040,6 +1041,7 @@ export default function VerticalTimeline({
                         </div>
                         <TimelineEventCard
                           event={ev}
+                          allEvents={timeline.events || []}
                           currentTimelineId={timeline.id}
                           timelineType={timeline.type}
                           activeFinancialTab={activeFinancialTab}
@@ -1246,6 +1248,7 @@ export default function VerticalTimeline({
                             <TimelineEventCard
                               key={ev.id}
                               event={ev}
+                              allEvents={timeline.events || []}
                               currentTimelineId={timeline.id}
                               timelineType={timeline.type}
                               activeFinancialTab={activeFinancialTab}
@@ -1344,6 +1347,7 @@ export default function VerticalTimeline({
                     >
                       <TimelineEventCard
                         event={ev}
+                        allEvents={timeline.events || []}
                         currentTimelineId={timeline.id}
                         timelineType={timeline.type}
                         activeFinancialTab={activeFinancialTab}

@@ -1036,31 +1036,41 @@ export default function TimelineHeader({
 
                       {/* 🔮 LINHA 2: PREVISTOS (Projeções / Planeamento) */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {/* ⏱️ Barra de Progressão de Tempo Mensal (Mês Atual até +5 Anos) */}
+                        {/* Título de Previstos em Azul */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#38bdf8', display: 'inline-block' }} />
+                            Previstos (Planeamento & Projeção)
+                          </span>
+                        </div>
+
+                        {/* ⏱️ Barra de Progressão de Tempo Mensal (Fundo Branco) */}
                         <div
                           style={{
-                            background: 'linear-gradient(135deg, rgba(19, 23, 34, 0.85) 0%, rgba(30, 41, 59, 0.55) 100%)',
-                            border: '1px solid var(--border-glass-glow, rgba(99, 102, 241, 0.28))',
+                            background: '#ffffff',
+                            color: '#1e293b',
+                            border: '1px solid rgba(226, 232, 240, 0.95)',
                             borderRadius: '12px',
                             padding: '10px 14px',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '8px'
+                            gap: '8px',
+                            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.06)'
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <div style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '5px', borderRadius: '7px', display: 'flex' }}>
+                              <div style={{ background: 'rgba(2, 132, 199, 0.12)', color: '#0284c7', padding: '5px', borderRadius: '7px', display: 'flex' }}>
                                 <Clock size={15} />
                               </div>
-                              <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                              <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#1e293b' }}>
                                 Horizonte dos Previstos:
                               </span>
                               <span
                                 style={{
-                                  background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(99, 102, 241, 0.25) 100%)',
-                                  color: '#38bdf8',
-                                  border: '1px solid rgba(56, 189, 248, 0.4)',
+                                  background: 'rgba(2, 132, 199, 0.1)',
+                                  color: '#0284c7',
+                                  border: '1px solid rgba(2, 132, 199, 0.3)',
                                   padding: '2px 9px',
                                   borderRadius: '6px',
                                   fontSize: '0.76rem',
@@ -1086,14 +1096,17 @@ export default function TimelineHeader({
                                   key={preset.months}
                                   type="button"
                                   onClick={() => setProjectionMonthsAhead(preset.months)}
-                                  className={`btn btn-sm ${projectionMonthsAhead === preset.months ? 'btn-primary' : 'btn-ghost'}`}
                                   style={{
                                     padding: '2px 8px',
                                     fontSize: '0.69rem',
                                     height: '22px',
                                     borderRadius: '5px',
-                                    background: projectionMonthsAhead === preset.months ? 'var(--primary)' : 'rgba(255,255,255,0.04)',
-                                    color: projectionMonthsAhead === preset.months ? '#fff' : 'var(--text-muted)'
+                                    border: projectionMonthsAhead === preset.months ? '1px solid #0284c7' : '1px solid #e2e8f0',
+                                    background: projectionMonthsAhead === preset.months ? '#0284c7' : '#f8fafc',
+                                    color: projectionMonthsAhead === preset.months ? '#ffffff' : '#475569',
+                                    cursor: 'pointer',
+                                    fontWeight: projectionMonthsAhead === preset.months ? '700' : '500',
+                                    transition: 'all 0.15s ease'
                                   }}
                                 >
                                   {preset.label}
@@ -1104,7 +1117,7 @@ export default function TimelineHeader({
 
                           {/* Slider de Progressão */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: '700', whiteSpace: 'nowrap' }}>
                               Hoje (Ago 2026)
                             </span>
                             <input
@@ -1116,13 +1129,13 @@ export default function TimelineHeader({
                               onChange={(e) => setProjectionMonthsAhead(Number(e.target.value))}
                               style={{
                                 flex: 1,
-                                accentColor: '#38bdf8',
+                                accentColor: '#0284c7',
                                 cursor: 'pointer',
                                 height: '6px'
                               }}
                               title={`Projetar até ${projectedHorizonLabel}`}
                             />
-                            <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: '700', whiteSpace: 'nowrap' }}>
                               +5 Anos (Ago 2031)
                             </span>
                           </div>

@@ -992,7 +992,7 @@ export default function TimelineHeader({
                             </div>
                             <div style={{ flex: 1 }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
-                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Total Investido</span>
+                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Investimentos</span>
                                 <span style={{ color: 'var(--primary-light)', fontSize: '0.96rem', fontWeight: '800' }}>
                                   {formatCurrency(finMetrics.totalInvested)}
                                 </span>

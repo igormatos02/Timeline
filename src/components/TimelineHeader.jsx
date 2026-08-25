@@ -884,9 +884,20 @@ export default function TimelineHeader({
                           <div className="meta-value" style={{ color: 'var(--primary-light)', fontSize: '0.94rem', fontWeight: '800' }}>
                             {formatCurrency(finMetrics.totalInvestedMarket ?? (finMetrics.totalInvested + (finMetrics.totalPatrimonioGain || 0)))}
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                            Investido: {formatCurrency(finMetrics.totalInvested)}
-                          </div>
+                          {finMetrics.totalPatrimonioGain !== 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '2px', fontSize: '0.66rem', color: 'var(--text-dim)' }}>
+                              <div>
+                                Investido: <strong style={{ color: 'var(--primary-light)' }}>{formatCurrency(finMetrics.totalInvested)}</strong>
+                              </div>
+                              <div>
+                                Valorizado: <strong style={{ color: finMetrics.totalPatrimonioGain >= 0 ? '#10b981' : '#f43f5e' }}>{finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}{formatCurrency(finMetrics.totalPatrimonioGain)} ({finMetrics.totalInvested > 0 ? `${finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}${((finMetrics.totalPatrimonioGain / finMetrics.totalInvested) * 100).toFixed(1)}%` : ''})</strong>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
+                              Investido: {formatCurrency(finMetrics.totalInvested)}
+                            </div>
+                          )}
                         </div>
                       </div>
 

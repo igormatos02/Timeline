@@ -1086,7 +1086,7 @@ export default function TimelineHeader({
                                   textTransform: 'capitalize'
                                 }}
                               >
-                                {projectedHorizonLabel} {projectionMonthsAhead === 0 ? '(Mês Atual)' : `(+${projectionMonthsAhead} ${projectionMonthsAhead === 1 ? 'mês' : 'meses'})`}
+                                {projectedHorizonLabel} {projectionMonthsAhead === 0 ? '(Mês Atual)' : projectionMonthsAhead >= 12 && projectionMonthsAhead % 12 === 0 ? `(+${projectionMonthsAhead / 12} ${projectionMonthsAhead / 12 === 1 ? 'ano' : 'anos'})` : `(+${projectionMonthsAhead} ${projectionMonthsAhead === 1 ? 'mês' : 'meses'})`}
                               </span>
                             </div>
 
@@ -1098,7 +1098,9 @@ export default function TimelineHeader({
                                 { label: '+1 Ano', months: 12 },
                                 { label: '+2 Anos', months: 24 },
                                 { label: '+3 Anos', months: 36 },
-                                { label: '+5 Anos', months: 60 }
+                                { label: '+5 Anos', months: 60 },
+                                { label: '+10 Anos', months: 120 },
+                                { label: '+30 Anos', months: 360 }
                               ].map((preset) => (
                                 <button
                                   key={preset.months}
@@ -1131,7 +1133,7 @@ export default function TimelineHeader({
                             <input
                               type="range"
                               min="0"
-                              max="60"
+                              max="360"
                               step="1"
                               value={projectionMonthsAhead}
                               onChange={(e) => setProjectionMonthsAhead(Number(e.target.value))}
@@ -1144,7 +1146,7 @@ export default function TimelineHeader({
                               title={`Projetar até ${projectedHorizonLabel}`}
                             />
                             <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: '700', whiteSpace: 'nowrap' }}>
-                              +5 Anos (Ago 2031)
+                              +30 Anos (Ago 2056)
                             </span>
                           </div>
                         </div>

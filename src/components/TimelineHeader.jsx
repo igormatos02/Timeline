@@ -854,37 +854,48 @@ export default function TimelineHeader({
                   {activeFinancialTab === 'balanco' && (
                     <>
                       <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', marginBottom: '8px' }}>
-                        {/* Card 1: Total Investido (Total + Poupança) */}
+                        {/* Card 1: Total Investido (Total + Poupança / Património / Outros) */}
                         <div className="meta-item" style={{ padding: '6px 12px' }}>
                           <div className="meta-icon-box" style={{ color: '#6366f1' }}>
                             <PiggyBank size={16} />
                           </div>
                           <div style={{ flex: 1 }}>
-                            <div className="meta-label" style={{ fontSize: '0.7rem', marginBottom: '2px' }}>Total Investido</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+                              <span className="meta-label" style={{ fontSize: '0.7rem' }}>Total Investido</span>
+                              <span style={{ color: 'var(--primary-light)', fontSize: '0.94rem', fontWeight: '800' }}>
+                                {formatCurrency(finMetrics.totalInvested)}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Total:</span>
-                                <span style={{ color: 'var(--primary-light)', fontSize: '0.88rem', fontWeight: '800' }}>
-                                  {formatCurrency(finMetrics.totalInvested)}
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Poupança:</span>
+                                <span style={{ color: '#10b981', fontSize: '0.82rem', fontWeight: '800' }}>
+                                  {formatCurrency(finMetrics.totalPoupanca || 0)}
                                 </span>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Poupança:</span>
-                                <span style={{ color: '#10b981', fontSize: '0.88rem', fontWeight: '800' }}>
-                                  {formatCurrency(finMetrics.totalPoupanca || 0)}
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Património:</span>
+                                <span style={{ color: '#c084fc', fontSize: '0.82rem', fontWeight: '800' }}>
+                                  {formatCurrency(finMetrics.totalPatrimonio || 0)}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Outros:</span>
+                                <span style={{ color: '#38bdf8', fontSize: '0.82rem', fontWeight: '800' }}>
+                                  {formatCurrency(finMetrics.totalOutros || 0)}
                                 </span>
                               </div>
                             </div>
                           </div>
                         </div>
 
-                        {/* Card 2: Saldo Líquido (Realizado + Previsto) */}
+                        {/* Card 2: Total Saldo Líquido (Realizado + Previsto) */}
                         <div className="meta-item" style={{ padding: '6px 12px' }}>
                           <div className="meta-icon-box" style={{ color: finMetrics.netRealized >= 0 ? '#10b981' : '#f43f5e' }}>
                             <Scale size={16} />
                           </div>
                           <div style={{ flex: 1 }}>
-                            <div className="meta-label" style={{ fontSize: '0.7rem', marginBottom: '2px' }}>Saldo Líquido</div>
+                            <div className="meta-label" style={{ fontSize: '0.7rem', marginBottom: '2px' }}>Total Saldo Líquido</div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                 <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Realizado:</span>

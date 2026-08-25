@@ -58913,5 +58913,32 @@
     "breakdownItems": [],
     "isFirstOccurrence": true,
     "timelineOriginColor": "#10b981"
+  },
+  {
+    "title": "Pagamento Guarnições Porta",
+    "date": "2026-08-31",
+    "dayOfMonth": 31,
+    "time": "09:00",
+    "status": "Pendente",
+    "periodicity": "recorrente",
+    "amount": 300,
+    "initialInvestedAmount": 0,
+    "priority": "Normal",
+    "labelsInput": "",
+    "category": "saida_recorrente",
+    "financialType": "gasto",
+    "isIncome": false,
+    "isExpense": true,
+    "isInvestment": false,
+    "labels": [],
+    "isCompleted": false,
+    "updateScope": "all",
+    "id": "3f4c218a-b820-4674-8599-4f5d84aa13a0",
+    "seriesId": "50607bc6-1061-4a59-917a-8399687ba763",
+    "version": 0,
+    "isRecurring": true,
+    "timelineOriginId": "a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d",
+    "createdAt": "2026-08-25T01:00:08.230Z",
+    "updatedAt": "2026-08-25T01:00:08.230Z"
   }
 ]

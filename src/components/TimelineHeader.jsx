@@ -844,7 +844,7 @@ export default function TimelineHeader({
 
                   {activeFinancialTab === 'balanco' && (
                     <>
-                      <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px', marginBottom: '8px' }}>
+                      <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', marginBottom: '8px' }}>
                         {/* Card 1: Total Investido */}
                         <div className="meta-item" style={{ padding: '6px 10px' }}>
                           <div className="meta-icon-box" style={{ color: '#6366f1' }}>
@@ -861,71 +861,55 @@ export default function TimelineHeader({
                           </div>
                         </div>
 
-                        {/* Card 2: Saldo Líquido Realizado */}
-                        <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        {/* Card 2: Saldo Líquido (Realizado + Previsto) */}
+                        <div className="meta-item" style={{ padding: '6px 12px' }}>
                           <div className="meta-icon-box" style={{ color: finMetrics.netRealized >= 0 ? '#10b981' : '#f43f5e' }}>
                             <Scale size={16} />
                           </div>
-                          <div>
-                            <div className="meta-label" style={{ fontSize: '0.7rem' }}>Saldo Líquido Realizado</div>
-                            <div className="meta-value" style={{ color: finMetrics.netRealized >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
-                              {finMetrics.netRealized >= 0 ? '+' : ''}{formatCurrency(finMetrics.netRealized)}
-                            </div>
-                            <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                              Sobra confirmada até hoje
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Card 3: Saldo Líquido Previsto */}
-                        <div className="meta-item" style={{ padding: '6px 10px' }}>
-                          <div className="meta-icon-box" style={{ color: finMetrics.netProjectedCurrent >= 0 ? '#38bdf8' : '#f43f5e' }}>
-                            <TrendingUp size={16} />
-                          </div>
-                          <div>
-                            <div className="meta-label" style={{ fontSize: '0.7rem' }}>Saldo Líquido Previsto</div>
-                            <div className="meta-value" style={{ color: finMetrics.netProjectedCurrent >= 0 ? '#38bdf8' : '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
-                              {finMetrics.netProjectedCurrent >= 0 ? '+' : ''}{formatCurrency(finMetrics.netProjectedCurrent)}
-                            </div>
-                            <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                              Estimativa (todas as entradas)
+                          <div style={{ flex: 1 }}>
+                            <div className="meta-label" style={{ fontSize: '0.7rem', marginBottom: '2px' }}>Saldo Líquido</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Realizado:</span>
+                                <span style={{ color: finMetrics.netRealized >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.88rem', fontWeight: '800' }}>
+                                  {finMetrics.netRealized >= 0 ? '+' : ''}{formatCurrency(finMetrics.netRealized)}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Previsto:</span>
+                                <span style={{ color: finMetrics.netProjectedCurrent >= 0 ? '#38bdf8' : '#f43f5e', fontSize: '0.88rem', fontWeight: '800' }}>
+                                  {finMetrics.netProjectedCurrent >= 0 ? '+' : ''}{formatCurrency(finMetrics.netProjectedCurrent)}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
 
-                        {/* Card 4: Total Capital Amortizado */}
-                        <div className="meta-item" style={{ padding: '6px 10px' }}>
-                          <div className="meta-icon-box" style={{ color: '#10b981' }}>
-                            <CheckCircle2 size={16} />
-                          </div>
-                          <div>
-                            <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Capital Amortizado</div>
-                            <div className="meta-value" style={{ color: '#10b981', fontSize: '0.96rem', fontWeight: '800' }}>
-                              {formatCurrency(totalAllLoansAmortized)}
-                            </div>
-                            <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                              Soma dos 4 empréstimos
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Card 5: Total Devido */}
-                        <div className="meta-item" style={{ padding: '6px 10px' }}>
-                          <div className="meta-icon-box" style={{ color: '#f43f5e' }}>
+                        {/* Card 3: Total Capital (Amortizado + Devido) */}
+                        <div className="meta-item" style={{ padding: '6px 12px' }}>
+                          <div className="meta-icon-box" style={{ color: '#8b5cf6' }}>
                             <CreditCard size={16} />
                           </div>
-                          <div>
-                            <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Devido</div>
-                            <div className="meta-value" style={{ color: '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
-                              {formatCurrency(totalAllLoansRemaining)}
-                            </div>
-                            <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                              Dívida restante dos empréstimos
+                          <div style={{ flex: 1 }}>
+                            <div className="meta-label" style={{ fontSize: '0.7rem', marginBottom: '2px' }}>Total Capital</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Amortizado:</span>
+                                <span style={{ color: '#10b981', fontSize: '0.88rem', fontWeight: '800' }}>
+                                  {formatCurrency(totalAllLoansAmortized)}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Devido:</span>
+                                <span style={{ color: '#f43f5e', fontSize: '0.88rem', fontWeight: '800' }}>
+                                  {formatCurrency(totalAllLoansRemaining)}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
 
-                        {/* Card 6: Computar a partir de (Quadrado interativo ao lado) */}
+                        {/* Card 4: Computar a partir de (Quadrado interativo ao lado) */}
                         <div
                           className="meta-item"
                           onClick={() => {

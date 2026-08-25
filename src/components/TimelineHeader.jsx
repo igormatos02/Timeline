@@ -978,7 +978,7 @@ export default function TimelineHeader({
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Investido:</span>
                                   <span style={{ color: 'var(--primary-light, #818cf8)', fontSize: '0.78rem', fontWeight: '700' }}>
-                                    -{formatCurrency(finMetrics.totalMonthlyAportesRealized || 0)}
+                                    -{formatCurrency(finMetrics.totalInvested || 0)}
                                   </span>
                                 </div>
                               </div>
@@ -1176,7 +1176,7 @@ export default function TimelineHeader({
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Investimentos:</span>
                                   <span style={{ color: '#c084fc', fontSize: '0.78rem', fontWeight: '700' }}>
-                                    -{formatCurrency(finMetrics?.totalMonthlyAportesPlannedHorizon || 0)}
+                                    -{formatCurrency(finMetrics?.totalPlannedInvestmentsHorizon || 0)}
                                   </span>
                                 </div>
                               </div>

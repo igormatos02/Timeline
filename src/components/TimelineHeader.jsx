@@ -994,9 +994,9 @@ export default function TimelineHeader({
                             </div>
                             <div style={{ flex: 1 }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
-                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Valor Investimentos</span>
+                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Valor em Investimentos</span>
                                 <span style={{ color: 'var(--primary-light)', fontSize: '0.96rem', fontWeight: '800' }}>
-                                  {formatCurrency(finMetrics.totalInvested)}
+                                  {formatCurrency(finMetrics.totalInvestedMarket ?? (finMetrics.totalInvested + (finMetrics.totalPatrimonioGain || 0)))}
                                 </span>
                               </div>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
@@ -1203,9 +1203,9 @@ export default function TimelineHeader({
                             </div>
                             <div style={{ flex: 1 }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
-                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Valor Investimentos</span>
+                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Valor em Investimentos</span>
                                 <span style={{ color: 'var(--primary-light)', fontSize: '0.96rem', fontWeight: '800' }}>
-                                  {formatCurrency(finMetrics?.totalPlannedInvestmentsHorizon || 0)}
+                                  {formatCurrency(finMetrics?.totalPlannedInvestmentsMarketHorizon ?? (finMetrics?.totalPlannedInvestmentsHorizon + (finMetrics?.totalPatrimonioGainHorizon || 0)))}
                                 </span>
                               </div>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>

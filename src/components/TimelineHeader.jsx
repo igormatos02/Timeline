@@ -1008,13 +1008,15 @@ export default function TimelineHeader({
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Património:</span>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
-                                      Inv: <strong style={{ color: 'var(--primary-light)' }}>{formatCurrency(finMetrics.totalPatrimonioAcquisition || 0)}</strong>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <span style={{ color: '#c084fc', fontSize: '0.8rem', fontWeight: '800' }}>
+                                      {formatCurrency(finMetrics.totalPatrimonioAcquisition || 0)}
                                     </span>
-                                    <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
-                                      Val: <strong style={{ color: '#c084fc' }}>{formatCurrency(finMetrics.totalPatrimonio || 0)}</strong>
-                                    </span>
+                                    {finMetrics.totalPatrimonioGain !== 0 && (
+                                      <span style={{ color: finMetrics.totalPatrimonioGain >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.74rem', fontWeight: '700' }}>
+                                        ({finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}{formatCurrency(finMetrics.totalPatrimonioGain)})
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
@@ -1215,13 +1217,15 @@ export default function TimelineHeader({
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Património:</span>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
-                                      Inv: <strong style={{ color: 'var(--primary-light)' }}>{formatCurrency(finMetrics?.totalPatrimonioAcquisition || 0)}</strong>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <span style={{ color: '#c084fc', fontSize: '0.8rem', fontWeight: '800' }}>
+                                      {formatCurrency(finMetrics?.totalPatrimonioAcquisition || 0)}
                                     </span>
-                                    <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
-                                      Val: <strong style={{ color: '#c084fc' }}>{formatCurrency(finMetrics?.totalPatrimonioHorizon || 0)}</strong>
-                                    </span>
+                                    {(finMetrics?.totalPatrimonioGainHorizon || 0) !== 0 && (
+                                      <span style={{ color: (finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.74rem', fontWeight: '700' }}>
+                                        ({(finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '+' : ''}{formatCurrency(finMetrics?.totalPatrimonioGainHorizon || 0)})
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>

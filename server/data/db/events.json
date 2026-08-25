@@ -52072,7 +52072,8 @@
     "isRecurring": true,
     "timelineOriginId": "b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e",
     "createdAt": "2026-08-25T01:41:34.776Z",
-    "updatedAt": "2026-08-25T01:41:34.776Z"
+    "updatedAt": "2026-08-25T01:41:34.776Z",
+    "targetAmount": 100000
   },
   {
     "id": "be06a864-e21b-4e87-8b90-f3ace2560ddd_2026-07-30",
@@ -52113,7 +52114,8 @@
     "createdAt": "2026-08-25T01:41:34.776Z",
     "updatedAt": "2026-08-25T01:41:37.384Z",
     "isProjected": false,
-    "isFirstOccurrence": true
+    "isFirstOccurrence": true,
+    "targetAmount": 100000
   },
   {
     "id": "be06a864-e21b-4e87-8b90-f3ace2560ddd_2026-08-30",
@@ -52154,6 +52156,34 @@
     "createdAt": "2026-08-25T01:41:34.776Z",
     "updatedAt": "2026-08-25T01:42:30.365Z",
     "isProjected": true,
-    "isFirstOccurrence": false
+    "isFirstOccurrence": false,
+    "targetAmount": 100000
+  },
+  {
+    "title": "Poupança",
+    "date": "2026-08-30",
+    "dayOfMonth": 30,
+    "time": "09:00",
+    "status": "Planeado",
+    "periodicity": "recorrente",
+    "amount": 1500,
+    "initialInvestedAmount": 10000,
+    "targetAmount": 100000,
+    "priority": "Normal",
+    "labelsInput": "",
+    "category": "investimento_poupanca",
+    "financialType": "investimento",
+    "isIncome": false,
+    "isExpense": false,
+    "isInvestment": true,
+    "labels": [],
+    "isCompleted": false,
+    "timelineOriginId": "b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e",
+    "seriesId": "be06a864-e21b-4e87-8b90-f3ace2560ddd",
+    "version": 1,
+    "isRecurring": true,
+    "id": "d865ad53-54e1-424c-a05e-c4e40c359ffd",
+    "createdAt": "2026-08-25T09:26:44.962Z",
+    "updatedAt": "2026-08-25T09:26:44.962Z"
   }
 ]

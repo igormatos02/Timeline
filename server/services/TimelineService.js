@@ -127,6 +127,8 @@ export function projectEvents(rawEvents = [], options = {}) {
           projectedInstances.push({
             ...activeVersion,
             ...override,
+            targetAmount: (override.targetAmount !== undefined && override.targetAmount !== null) ? override.targetAmount : activeVersion.targetAmount,
+            initialInvestedAmount: (override.initialInvestedAmount !== undefined && override.initialInvestedAmount !== null) ? override.initialInvestedAmount : activeVersion.initialInvestedAmount,
             isOverridden: true,
             sobrepositionOver: seriesId,
             isFirstOccurrence
@@ -406,11 +408,31 @@ export class TimelineService {
       }
     }
 
-    // Cenário 2: Alteração Subsequente (Todos os meses a partir desta data -> Nova versão incremental)
+    // Cenário 2: Alteração em Toda a Série (updateScope === 'all')
+    if (updateScope === 'all' && targetSeriesId) {
+      await eventRepository.updateMany(
+        (ev) => ev.seriesId === targetSeriesId || ev.sobrepositionOver === targetSeriesId,
+        directUpdates
+      );
+      return true;
+    }
+
+    // Cenário 3: Alteração Subsequente (Todos os meses a partir desta data -> Nova versão incremental)
     if ((updateScope === 'subsequent' || propagateForward) && targetSeriesId) {
       const seriesVersions = allRawEvents.filter((ev) => ev.seriesId === targetSeriesId && !ev.sobrepositionOver);
       const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
       const nextVersion = currentHighestVersion + 1;
+
+      const targetDate = directUpdates.date;
+      await eventRepository.updateMany(
+        (ev) => ev.sobrepositionOver === targetSeriesId && (!targetDate || ev.date >= targetDate),
+        {
+          targetAmount: directUpdates.targetAmount,
+          initialInvestedAmount: directUpdates.initialInvestedAmount,
+          title: directUpdates.title,
+          category: directUpdates.category
+        }
+      );
 
       return eventRepository.create({
         ...directUpdates,

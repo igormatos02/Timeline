@@ -1484,13 +1484,17 @@ export default function TimelineEventCard({
         </div>
       )}
 
-      {/* 📈 Investment (Investimento/Poupança) Financial Highlight Strip */}
+      {/* 📈 Investment (Investimento/Poupança/Património) Financial Highlight Strip */}
       {isInvestmentEvent && (
         <div
           className="loan-breakdown-strip"
           style={{
-            background: isInertFuture ? 'rgba(148, 163, 184, 0.04)' : 'rgba(99, 102, 241, 0.08)',
-            border: isInertFuture ? '1px solid rgba(148, 163, 184, 0.18)' : '1px solid rgba(99, 102, 241, 0.22)',
+            background: event.category === 'investimento_patrimonio'
+              ? 'linear-gradient(135deg, rgba(192, 132, 252, 0.08) 0%, var(--bg-card) 100%)'
+              : isInertFuture ? 'rgba(148, 163, 184, 0.04)' : 'rgba(99, 102, 241, 0.08)',
+            border: event.category === 'investimento_patrimonio'
+              ? '1px solid rgba(192, 132, 252, 0.3)'
+              : isInertFuture ? '1px solid rgba(148, 163, 184, 0.18)' : '1px solid rgba(99, 102, 241, 0.22)',
             borderRadius: '10px',
             padding: '8px 12px',
             margin: '10px 0',
@@ -1504,12 +1508,31 @@ export default function TimelineEventCard({
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                {Number(event.amount || 0) > 0 ? 'Aporte do Mês' : 'Aporte Mensal'}
+                {event.category === 'investimento_patrimonio'
+                  ? 'Valor do Património'
+                  : (Number(event.amount || 0) > 0 ? 'Aporte do Mês' : 'Aporte Mensal')}
               </span>
-              {renderEditableAmount('+', isInertFuture ? '#94a3b8' : 'var(--primary-light)')}
+              {event.category === 'investimento_patrimonio' ? (
+                <span style={{ fontSize: '1.08rem', fontWeight: '800', color: '#c084fc' }}>
+                  +{formatCurrency(event.amount || event.initialInvestedAmount || 0)}
+                </span>
+              ) : (
+                renderEditableAmount('+', isInertFuture ? '#94a3b8' : 'var(--primary-light)')
+              )}
             </div>
 
-            {Number(event.initialInvestedAmount || 0) > 0 && (event.isFirstOccurrence === true || (!event.isProjected && !event.seriesId) || (event.isFirstOccurrence !== false && !event.isProjected)) && (
+            {event.category === 'investimento_patrimonio' && event.linkedLoanTimelineName && (
+              <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
+                <span style={{ fontSize: '0.7rem', color: '#38bdf8', textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <CreditCard size={11} /> Financiamento
+                </span>
+                <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#38bdf8' }}>
+                  {event.linkedLoanTimelineName}
+                </span>
+              </div>
+            )}
+
+            {event.category !== 'investimento_patrimonio' && Number(event.initialInvestedAmount || 0) > 0 && (event.isFirstOccurrence === true || (!event.isProjected && !event.seriesId) || (event.isFirstOccurrence !== false && !event.isProjected)) && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                   Património Anterior
@@ -1520,7 +1543,7 @@ export default function TimelineEventCard({
               </div>
             )}
 
-            {Number(event.targetAmount || 0) > 0 && (
+            {event.category !== 'investimento_patrimonio' && Number(event.targetAmount || 0) > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
                 <span style={{ fontSize: '0.7rem', color: '#a78bfa', textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
                   <Target size={11} /> Meta
@@ -1571,23 +1594,29 @@ export default function TimelineEventCard({
                     : 'Clique para alternar o status'
                 }
                 style={{
-                  background: isCompletedInvestment
-                    ? 'rgba(139, 92, 246, 0.16)'
-                    : isOverdueInvestment
-                      ? 'rgba(239, 68, 68, 0.16)'
-                      : 'rgba(148, 163, 184, 0.12)',
-                  color: isCompletedInvestment
-                    ? '#8b5cf6'
-                    : isOverdueInvestment
-                      ? '#f87171'
-                      : '#94a3b8',
-                  border: isCompletedInvestment
-                    ? isLocked
-                      ? '1px solid rgba(139, 92, 246, 0.35)'
-                      : '1.5px dashed rgba(139, 92, 246, 0.65)'
-                    : isOverdueInvestment
-                      ? '1px solid rgba(239, 68, 68, 0.4)'
-                      : '1px solid rgba(148, 163, 184, 0.3)',
+                  background: event.category === 'investimento_patrimonio'
+                    ? (event.status === 'Financiado' ? 'rgba(2, 132, 199, 0.16)' : 'rgba(16, 185, 129, 0.16)')
+                    : isCompletedInvestment
+                      ? 'rgba(139, 92, 246, 0.16)'
+                      : isOverdueInvestment
+                        ? 'rgba(239, 68, 68, 0.16)'
+                        : 'rgba(148, 163, 184, 0.12)',
+                  color: event.category === 'investimento_patrimonio'
+                    ? (event.status === 'Financiado' ? '#38bdf8' : '#10b981')
+                    : isCompletedInvestment
+                      ? '#8b5cf6'
+                      : isOverdueInvestment
+                        ? '#f87171'
+                        : '#94a3b8',
+                  border: event.category === 'investimento_patrimonio'
+                    ? (event.status === 'Financiado' ? '1px solid rgba(2, 132, 199, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)')
+                    : isCompletedInvestment
+                      ? isLocked
+                        ? '1px solid rgba(139, 92, 246, 0.35)'
+                        : '1.5px dashed rgba(139, 92, 246, 0.65)'
+                      : isOverdueInvestment
+                        ? '1px solid rgba(239, 68, 68, 0.4)'
+                        : '1px solid rgba(148, 163, 184, 0.3)',
                   borderRadius: '9999px',
                   padding: '5px 14px',
                   fontSize: '0.78rem',
@@ -1598,7 +1627,19 @@ export default function TimelineEventCard({
                   gap: '6px'
                 }}
               >
-                {isCompletedInvestment ? (
+                {event.category === 'investimento_patrimonio' ? (
+                  event.status === 'Financiado' ? (
+                    <>
+                      <CreditCard size={14} style={{ color: '#38bdf8' }} />
+                      <span>Financiado</span>
+                    </>
+                  ) : (
+                    <>
+                      <Landmark size={14} style={{ color: '#10b981' }} />
+                      <span>Quitado</span>
+                    </>
+                  )
+                ) : isCompletedInvestment ? (
                   <>
                     <CheckCircle2 size={14} style={{ color: '#8b5cf6' }} />
                     <span>Investido às {getCompletedTimeStr()}</span>

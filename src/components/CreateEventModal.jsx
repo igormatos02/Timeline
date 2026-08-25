@@ -13,7 +13,8 @@ import {
   Zap,
   Calendar,
   ChevronDown,
-  Target
+  Target,
+  CreditCard
 } from 'lucide-react';
 import { format, parseISO, getDaysInMonth, addMonths } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -59,7 +60,9 @@ export default function CreateEventModal({
     initialInvestedAmount: '',
     targetAmount: '',
     priority: 'Normal',
-    labelsInput: ''
+    labelsInput: '',
+    linkedLoanTimelineId: '',
+    linkedLoanTimelineName: ''
   });
 
   // Handle Escape key to close modal or day picker
@@ -124,19 +127,26 @@ export default function CreateEventModal({
         initPeriodicity = 'unica';
       }
 
+      let defaultStatus = initialData.status || (initType === 'entrada' ? 'Previsto' : initType === 'saida' ? 'Pendente' : 'Planeado');
+      if (initialData.category === 'investimento_patrimonio') {
+        defaultStatus = initialData.status || 'Quitado';
+      }
+
       setFormData({
         title: initialData.title || '',
         date: targetDate,
         dayOfMonth: parsedDay,
         time: initialData.time || '09:00',
-        status: initialData.status || (initType === 'entrada' ? 'Previsto' : initType === 'saida' ? 'Pendente' : 'Planeado'),
+        status: defaultStatus,
         periodicity: initPeriodicity,
         recurrenceEndDate: initialData.recurrenceEndDate || initialData.endDate || '',
-        amount: initialData.amount !== undefined ? initialData.amount : 100,
+        amount: initialData.amount !== undefined ? initialData.amount : (initialData.initialInvestedAmount || 100),
         initialInvestedAmount: initialData.initialInvestedAmount !== undefined ? initialData.initialInvestedAmount : '',
         targetAmount: targetAmtVal,
         priority: initialData.priority || 'Normal',
-        labelsInput: initialData.labels ? initialData.labels.join(', ') : ''
+        labelsInput: initialData.labels ? initialData.labels.join(', ') : '',
+        linkedLoanTimelineId: initialData.linkedLoanTimelineId || '',
+        linkedLoanTimelineName: initialData.linkedLoanTimelineName || ''
       });
       setUpdateScope('subsequent');
       setBreakdownItems(initialData.breakdownItems ? JSON.parse(JSON.stringify(initialData.breakdownItems)) : []);
@@ -170,7 +180,9 @@ export default function CreateEventModal({
         initialInvestedAmount: '',
         targetAmount: '',
         priority: 'Normal',
-        labelsInput: ''
+        labelsInput: '',
+        linkedLoanTimelineId: '',
+        linkedLoanTimelineName: ''
       });
       setBreakdownItems([]);
     }
@@ -263,6 +275,8 @@ export default function CreateEventModal({
     let isInvestment = false;
     let finalStatus = formData.status || 'Previsto';
 
+    const isPatrimonio = movementType === 'investimento' && investmentSubtype === 'investimento_patrimonio';
+
     if (movementType === 'entrada') {
       isIncome = true;
       finalCategory = (formData.periodicity === 'recorrente' || formData.periodicity === 'periodo') ? 'entrada_recorrente' : 'entrada_esporadica';
@@ -274,19 +288,35 @@ export default function CreateEventModal({
     } else if (movementType === 'investimento') {
       isInvestment = true;
       finalCategory = investmentSubtype || 'investimento_poupanca';
-      finalStatus = formData.status || 'Planeado';
+      if (isPatrimonio) {
+        finalStatus = formData.status === 'Financiado' ? 'Financiado' : 'Quitado';
+      } else {
+        finalStatus = formData.status || 'Planeado';
+      }
     }
 
-    const isCompleted = finalStatus === 'Recebido' || finalStatus === 'Pago' || finalStatus === 'Investido';
-    const priorInvested = movementType === 'investimento' ? (Number(formData.initialInvestedAmount) || 0) : 0;
-    const finalAmount = breakdownItems.length > 0
-      ? breakdownItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0)
-      : (formData.amount !== '' && formData.amount !== undefined ? Number(formData.amount) : 0);
+    const isCompleted = isPatrimonio || finalStatus === 'Recebido' || finalStatus === 'Pago' || finalStatus === 'Investido' || finalStatus === 'Quitado';
+    const priorInvested = isPatrimonio
+      ? (Number(formData.amount) || 0)
+      : (movementType === 'investimento' ? (Number(formData.initialInvestedAmount) || 0) : 0);
+      
+    const finalAmount = isPatrimonio
+      ? (Number(formData.amount) || 0)
+      : (breakdownItems.length > 0
+          ? breakdownItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0)
+          : (formData.amount !== '' && formData.amount !== undefined ? Number(formData.amount) : 0));
 
     if (movementType === 'investimento') {
-      if (priorInvested <= 0 && finalAmount <= 0) {
-        alert('Por favor indique o aporte do mês ou o valor já investido anteriormente.');
-        return;
+      if (isPatrimonio) {
+        if (finalAmount <= 0) {
+          alert('Por favor indique o valor do património.');
+          return;
+        }
+      } else {
+        if (priorInvested <= 0 && finalAmount <= 0) {
+          alert('Por favor indique o aporte do mês ou o valor já investido anteriormente.');
+          return;
+        }
       }
     } else {
       if (finalAmount <= 0) {
@@ -295,9 +325,9 @@ export default function CreateEventModal({
       }
     }
 
-    const targetAmountVal = movementType === 'investimento' && formData.targetAmount !== '' ? (Number(formData.targetAmount) || 0) : undefined;
-    const isRecurring = formData.periodicity === 'recorrente' || formData.periodicity === 'periodo';
-    const recurrenceEndDate = formData.periodicity === 'periodo' && formData.recurrenceEndDate ? formData.recurrenceEndDate : null;
+    const targetAmountVal = !isPatrimonio && movementType === 'investimento' && formData.targetAmount !== '' ? (Number(formData.targetAmount) || 0) : undefined;
+    const isRecurring = !isPatrimonio && (formData.periodicity === 'recorrente' || formData.periodicity === 'periodo');
+    const recurrenceEndDate = !isPatrimonio && formData.periodicity === 'periodo' && formData.recurrenceEndDate ? formData.recurrenceEndDate : null;
 
     onSave({
       ...formData,
@@ -309,16 +339,18 @@ export default function CreateEventModal({
       isExpense,
       isInvestment,
       isRecurring,
-      periodicity: formData.periodicity,
+      periodicity: isPatrimonio ? 'unica' : formData.periodicity,
       recurrenceEndDate,
       endDate: recurrenceEndDate,
       status: finalStatus,
       amount: finalAmount,
       initialInvestedAmount: priorInvested,
       targetAmount: targetAmountVal,
-      breakdownItems: breakdownItems.length > 0 ? breakdownItems : undefined,
+      breakdownItems: !isPatrimonio && breakdownItems.length > 0 ? breakdownItems : undefined,
       labels,
       isCompleted,
+      linkedLoanTimelineId: isPatrimonio && finalStatus === 'Financiado' ? formData.linkedLoanTimelineId || null : null,
+      linkedLoanTimelineName: isPatrimonio && finalStatus === 'Financiado' ? formData.linkedLoanTimelineName || null : null,
       updateScope: initialData ? updateScope : 'all'
     });
 
@@ -505,7 +537,11 @@ export default function CreateEventModal({
 
           {/* Título do Movimento */}
           <div className="form-group">
-            <label className="form-label">Título do Movimento *</label>
+            <label className="form-label">
+              {movementType === 'investimento' && investmentSubtype === 'investimento_patrimonio'
+                ? 'Nome do Bem / Imóvel *'
+                : 'Título do Movimento *'}
+            </label>
             <input
               type="text"
               className="form-input"
@@ -519,6 +555,8 @@ export default function CreateEventModal({
                   ? 'Ex: Salário Mensal, Renda de Aluguer, Venda...'
                   : movementType === 'saida'
                   ? 'Ex: Supermercado, Eletricidade, Jantar, Ginásio...'
+                  : investmentSubtype === 'investimento_patrimonio'
+                  ? 'Ex: Casa em Cinfães, Apartamento Porto, Terreno Sintra...'
                   : 'Ex: Aporte ETF Mundial, Depósito Poupança...'
               }
               value={formData.title}
@@ -528,14 +566,14 @@ export default function CreateEventModal({
             />
           </div>
 
-          {/* Campo Especial para Investimentos: Valor Já Investido Anteriormente e Meta a Atingir */}
-          {movementType === 'investimento' && (
+          {/* Campo Especial para Investimentos (Poupança e Outros): Valor Anterior e Meta */}
+          {movementType === 'investimento' && investmentSubtype !== 'investimento_patrimonio' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '14px' }}>
               {/* Valor Já Investido Anteriormente */}
               <div className="form-group" style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)', borderRadius: '10px', padding: '12px', margin: 0 }}>
                 <label className="form-label" style={{ color: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <span>Valor Já Investido Anteriormente (€)</span>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 'normal' }}>Base de Património</span>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 'normal' }}>Base de Poupança</span>
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -557,9 +595,6 @@ export default function CreateEventModal({
                   <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: 'var(--primary-light)' }}>
                     €
                   </span>
-                </div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '5px', lineHeight: '1.35' }}>
-                  💡 Este valor é contabilizado no <strong>Total Investido</strong> / Património, mas <strong>NÃO</strong> entra como despesa de saída nos gastos mensais.
                 </div>
               </div>
 
@@ -593,80 +628,208 @@ export default function CreateEventModal({
                     €
                   </span>
                 </div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '5px', lineHeight: '1.35' }}>
-                  🎯 Defina o objetivo financeiro desta poupança para acompanhar a % de progresso atingida.
-                </div>
               </div>
             </div>
           )}
 
-          {/* Linha: Valor (€) e Dia do Mês */}
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">
-                {movementType === 'investimento'
-                  ? (Number(formData.initialInvestedAmount) > 0 ? 'Aporte do Mês (€)' : 'Aporte do Mês (€) *')
-                  : 'Valor Total (€) *'}
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0,00"
-                  className="form-input"
-                  style={{
-                    borderColor: currentTheme.border,
-                    fontSize: '1.05rem',
-                    fontWeight: '700',
-                    color: currentTheme.color,
-                    paddingLeft: '28px'
-                  }}
-                  value={
-                    breakdownItems.length > 0
-                      ? breakdownItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0)
-                      : (formData.amount !== undefined ? formData.amount : '')
-                  }
-                  onChange={(e) => {
-                    if (breakdownItems.length === 0) {
-                      setFormData({ ...formData, amount: e.target.value });
-                    }
-                  }}
-                  readOnly={breakdownItems.length > 0}
-                  required={movementType !== 'investimento' || !(Number(formData.initialInvestedAmount) > 0)}
-                />
-                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: currentTheme.color }}>
-                  €
-                </span>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Dia do Mês</label>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: 'var(--bg-glass)',
-                  border: isDayPickerOpen ? `1px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
-                  borderRadius: 'var(--radius-sm)',
-                  padding: '6px 10px',
-                  cursor: 'pointer',
-                  height: '42px'
-                }}
-                onClick={() => setIsDayPickerOpen(!isDayPickerOpen)}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Calendar size={15} style={{ color: currentTheme.color }} />
-                  <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                    Dia {formData.dayOfMonth}
+          {/* Se for Património: Bloco Dedicado de Valor Consolidado e Estado (Quitado vs Financiado) */}
+          {movementType === 'investimento' && investmentSubtype === 'investimento_patrimonio' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '14px' }}>
+              {/* Valor do Património */}
+              <div className="form-group" style={{ background: 'rgba(192, 132, 252, 0.08)', border: '1px solid rgba(192, 132, 252, 0.28)', borderRadius: '10px', padding: '12px', margin: 0 }}>
+                <label className="form-label" style={{ color: '#c084fc', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Landmark size={15} />
+                    <span>Valor do Património (€) *</span>
+                  </span>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 'normal' }}>Ativo Consolidado</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00 (ex: 51500 €)"
+                    className="form-input"
+                    style={{
+                      borderColor: 'rgba(192, 132, 252, 0.45)',
+                      fontSize: '1.1rem',
+                      fontWeight: '800',
+                      color: '#c084fc',
+                      paddingLeft: '28px'
+                    }}
+                    value={formData.amount !== undefined ? formData.amount : ''}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    required
+                  />
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: '#c084fc' }}>
+                    €
                   </span>
                 </div>
-                <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: isDayPickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '5px', lineHeight: '1.35' }}>
+                  🏛️ O património é consolidado: integra diretamente o seu valor patrimonial total sem gerar gastos correntes mensais.
+                </div>
+              </div>
+
+              {/* Estado do Património: Quitado vs Financiado */}
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label" style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginBottom: '6px' }}>
+                  Estado do Bem Patrimonial
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, status: 'Quitado', linkedLoanTimelineId: '', linkedLoanTimelineName: '' })}
+                    style={{
+                      padding: '10px 8px',
+                      borderRadius: '8px',
+                      border: formData.status === 'Quitado' || !formData.status || formData.status === 'Investido' ? '2px solid #10b981' : '1px solid var(--border-glass)',
+                      background: formData.status === 'Quitado' || !formData.status || formData.status === 'Investido' ? 'rgba(16, 185, 129, 0.18)' : 'var(--bg-glass)',
+                      color: formData.status === 'Quitado' || !formData.status || formData.status === 'Investido' ? '#10b981' : 'var(--text-muted)',
+                      fontWeight: '700',
+                      fontSize: '0.82rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <Landmark size={15} />
+                    <span>Quitado (100% Pago)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, status: 'Financiado' })}
+                    style={{
+                      padding: '10px 8px',
+                      borderRadius: '8px',
+                      border: formData.status === 'Financiado' ? '2px solid #0284c7' : '1px solid var(--border-glass)',
+                      background: formData.status === 'Financiado' ? 'rgba(2, 132, 199, 0.18)' : 'var(--bg-glass)',
+                      color: formData.status === 'Financiado' ? '#38bdf8' : 'var(--text-muted)',
+                      fontWeight: '700',
+                      fontSize: '0.82rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <CreditCard size={15} />
+                    <span>Financiado (Com Crédito)</span>
+                  </button>
+                </div>
+
+                {/* Se Financiado: Selecionar Crédito Associado */}
+                {formData.status === 'Financiado' && (
+                  <div style={{ marginTop: '10px', padding: '10px 12px', background: 'rgba(2, 132, 199, 0.08)', border: '1px solid rgba(2, 132, 199, 0.25)', borderRadius: '8px' }}>
+                    <label className="form-label" style={{ color: '#0284c7', fontSize: '0.74rem', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <CreditCard size={13} />
+                      <span>Financiamento Associado (Informativo)</span>
+                    </label>
+                    <select
+                      className="form-select"
+                      style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-main)' }}
+                      value={formData.linkedLoanTimelineId || ''}
+                      onChange={(e) => {
+                        const targetId = e.target.value;
+                        const selectedTl = (allTimelines || []).find(t => t.id === targetId);
+                        setFormData({
+                          ...formData,
+                          linkedLoanTimelineId: targetId,
+                          linkedLoanTimelineName: selectedTl ? selectedTl.name : ''
+                        });
+                      }}
+                    >
+                      <option value="">Nenhum / Não associado</option>
+                      {(allTimelines || [])
+                        .filter(t => t.type === 'emprestimo' || t.type === 'Empréstimo')
+                        .map(loanTl => (
+                          <option key={loanTl.id} value={loanTl.id}>
+                            {loanTl.name} ({loanTl.contractNumber ? `Contrato: ${loanTl.contractNumber}` : 'Crédito'})
+                          </option>
+                        ))}
+                    </select>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '4px' }}>
+                      💡 Associação meramente informativa para referência rápida do crédito vinculado a este imóvel.
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          ) : (
+            /* Linha Normal: Valor (€) e Dia do Mês para Entradas, Gastos e Poupança */
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">
+                  {movementType === 'investimento'
+                    ? (Number(formData.initialInvestedAmount) > 0 ? 'Aporte do Mês (€)' : 'Aporte do Mês (€) *')
+                    : 'Valor Total (€) *'}
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00"
+                    className="form-input"
+                    style={{
+                      borderColor: currentTheme.border,
+                      fontSize: '1.05rem',
+                      fontWeight: '700',
+                      color: currentTheme.color,
+                      paddingLeft: '28px'
+                    }}
+                    value={
+                      breakdownItems.length > 0
+                        ? breakdownItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0)
+                        : (formData.amount !== undefined ? formData.amount : '')
+                    }
+                    onChange={(e) => {
+                      if (breakdownItems.length === 0) {
+                        setFormData({ ...formData, amount: e.target.value });
+                      }
+                    }}
+                    readOnly={breakdownItems.length > 0}
+                    required={movementType !== 'investimento' || !(Number(formData.initialInvestedAmount) > 0)}
+                  />
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: currentTheme.color }}>
+                    €
+                  </span>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Dia do Mês</label>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'var(--bg-glass)',
+                    border: isDayPickerOpen ? `1px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '6px 10px',
+                    cursor: 'pointer',
+                    height: '42px'
+                  }}
+                  onClick={() => setIsDayPickerOpen(!isDayPickerOpen)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Calendar size={15} style={{ color: currentTheme.color }} />
+                    <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                      Dia {formData.dayOfMonth}
+                    </span>
+                  </div>
+                  <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: isDayPickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Grid Popover de Seleção Rápida de Dias (1..31) */}
           {isDayPickerOpen && (
@@ -765,8 +928,8 @@ export default function CreateEventModal({
             </div>
           )}
 
-          {/* Periodicidade: Seletor de Único, Recorrente, Período */}
-          {!initialData && (
+          {/* Periodicidade: Seletor de Único, Recorrente, Período (Oculto para Património) */}
+          {!initialData && !(movementType === 'investimento' && investmentSubtype === 'investimento_patrimonio') && (
             <div className="form-group" style={{ marginBottom: '14px' }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span>Periodicidade do Movimento</span>
@@ -894,8 +1057,8 @@ export default function CreateEventModal({
             </div>
           )}
 
-          {/* Estado Inicial (Apenas na Criação) */}
-          {!initialData && (
+          {/* Estado Inicial (Apenas na Criação para Entradas, Gastos e Poupança) */}
+          {!initialData && !(movementType === 'investimento' && investmentSubtype === 'investimento_patrimonio') && (
             <div className="form-group">
               <label className="form-label">Estado Inicial</label>
               <select
@@ -916,99 +1079,101 @@ export default function CreateEventModal({
             </div>
           )}
 
-          {/* Desmembramento em Subpartes (Opcional) */}
-          <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-glass)', border: '1px solid var(--border-glass)', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: breakdownItems.length > 0 ? '10px' : '0' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Subpartes {breakdownItems.length > 0 && `(${breakdownItems.length})`}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (breakdownItems.length === 0) {
-                    const curVal = parseFloat(formData.amount) || 0;
-                    setBreakdownItems([
-                      { id: generateUUID(), name: 'Parte 1', amount: curVal || 0 }
-                    ]);
-                  } else {
-                    setBreakdownItems([
-                      ...breakdownItems,
-                      { id: generateUUID(), name: `Parte ${breakdownItems.length + 1}`, amount: 0 }
-                    ]);
-                  }
-                }}
-                style={{
-                  background: currentTheme.bgLight,
-                  border: `1px solid ${currentTheme.border}`,
-                  borderRadius: '4px',
-                  color: currentTheme.color,
-                  padding: '3px 8px',
-                  fontSize: '0.75rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                <Plus size={12} /> {breakdownItems.length === 0 ? 'Dividir em Subpartes' : 'Adicionar Subparte'}
-              </button>
-            </div>
+          {/* Desmembramento em Subpartes (Opcional - Oculto para Património) */}
+          {!(movementType === 'investimento' && investmentSubtype === 'investimento_patrimonio') && (
+            <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-glass)', border: '1px solid var(--border-glass)', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: breakdownItems.length > 0 ? '10px' : '0' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Subpartes {breakdownItems.length > 0 && `(${breakdownItems.length})`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (breakdownItems.length === 0) {
+                      const curVal = parseFloat(formData.amount) || 0;
+                      setBreakdownItems([
+                        { id: generateUUID(), name: 'Parte 1', amount: curVal || 0 }
+                      ]);
+                    } else {
+                      setBreakdownItems([
+                        ...breakdownItems,
+                        { id: generateUUID(), name: `Parte ${breakdownItems.length + 1}`, amount: 0 }
+                      ]);
+                    }
+                  }}
+                  style={{
+                    background: currentTheme.bgLight,
+                    border: `1px solid ${currentTheme.border}`,
+                    borderRadius: '4px',
+                    color: currentTheme.color,
+                    padding: '3px 8px',
+                    fontSize: '0.75rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <Plus size={12} /> {breakdownItems.length === 0 ? 'Dividir em Subpartes' : 'Adicionar Subparte'}
+                </button>
+              </div>
 
-            {breakdownItems.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {breakdownItems.map((item, idx) => (
-                  <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 28px', gap: '8px', alignItems: 'center' }}>
-                    <input
-                      type="text"
-                      className="form-input"
-                      style={{ padding: '6px 10px', fontSize: '0.85rem' }}
-                      placeholder={`Nome da parte ${idx + 1}`}
-                      value={item.name}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setBreakdownItems((prev) => prev.map((it, i) => (i === idx ? { ...it, name: val } : it)));
-                      }}
-                    />
-                    <div style={{ position: 'relative' }}>
+              {breakdownItems.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {breakdownItems.map((item, idx) => (
+                    <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 28px', gap: '8px', alignItems: 'center' }}>
                       <input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
                         className="form-input"
-                        style={{ padding: '6px 10px', fontSize: '0.85rem', fontWeight: '700', paddingLeft: '22px' }}
-                        value={item.amount}
+                        style={{ padding: '6px 10px', fontSize: '0.85rem' }}
+                        placeholder={`Nome da parte ${idx + 1}`}
+                        value={item.name}
                         onChange={(e) => {
-                          const val = parseFloat(e.target.value) || 0;
-                          setBreakdownItems((prev) => prev.map((it, i) => (i === idx ? { ...it, amount: val } : it)));
+                          const val = e.target.value;
+                          setBreakdownItems((prev) => prev.map((it, i) => (i === idx ? { ...it, name: val } : it)));
                         }}
                       />
-                      <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: currentTheme.color }}>
-                        €
-                      </span>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="form-input"
+                          style={{ padding: '6px 10px', fontSize: '0.85rem', fontWeight: '700', paddingLeft: '22px' }}
+                          value={item.amount}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0;
+                            setBreakdownItems((prev) => prev.map((it, i) => (i === idx ? { ...it, amount: val } : it)));
+                          }}
+                        />
+                        <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: currentTheme.color }}>
+                          €
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setBreakdownItems((prev) => prev.filter((_, i) => i !== idx))}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#f43f5e',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '4px'
+                        }}
+                        title="Remover subparte"
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setBreakdownItems((prev) => prev.filter((_, i) => i !== idx))}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#f43f5e',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '4px'
-                      }}
-                      title="Remover subparte"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Etiquetas */}
           <div className="form-group" style={{ marginBottom: 0 }}>

@@ -231,6 +231,23 @@ export default function TimelineHeader({
   const finMetrics = isIncomeTimeline ? getFinancialMetrics(timeline, timeline.events || [], computeFromMonth) : null;
   const consolidatedMetrics = isPrincipal ? getConsolidatedLoanMetrics(allTimelines, selectedTimelineIds) : null;
 
+  // Consolidated loan metrics across all 4 loan contracts
+  const allLoanTimelinesList = [jeepContract, daciaContract, casa1Contract, casa2Contract];
+  const loanTimelinesFromAll = (allTimelines || []).filter(t => t.type === 'Empréstimo' || t.type === 'emprestimo');
+  const totalAllLoansAmortized = loanTimelinesFromAll.length >= 4
+    ? loanTimelinesFromAll.reduce((acc, t) => {
+        const m = getLoanMetrics(t, t.events || []);
+        return acc + (Number(m.totalPrincipalAmortized || t.amortizedCapital || 0));
+      }, 0)
+    : allLoanTimelinesList.reduce((acc, c) => acc + (Number(c.amortizedCapital || 0)), 0);
+
+  const totalAllLoansRemaining = loanTimelinesFromAll.length >= 4
+    ? loanTimelinesFromAll.reduce((acc, t) => {
+        const m = getLoanMetrics(t, t.events || []);
+        return acc + (Number(m.remainingBalance || t.remainingDebt || 0));
+      }, 0)
+    : allLoanTimelinesList.reduce((acc, c) => acc + (Number(c.remainingDebt || 0)), 0);
+
   const collapsed = isCollapsed;
 
   // Format dates safely
@@ -827,7 +844,7 @@ export default function TimelineHeader({
 
                   {activeFinancialTab === 'balanco' && (
                     <>
-                      <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(165px, 1fr))', gap: '8px', marginBottom: '8px' }}>
+                      <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px', marginBottom: '8px' }}>
                         {/* Card 1: Total Investido */}
                         <div className="meta-item" style={{ padding: '6px 10px' }}>
                           <div className="meta-icon-box" style={{ color: '#6366f1' }}>
@@ -876,7 +893,39 @@ export default function TimelineHeader({
                           </div>
                         </div>
 
-                        {/* Card 4: Computar a partir de (Quadrado interativo ao lado) */}
+                        {/* Card 4: Total Capital Amortizado */}
+                        <div className="meta-item" style={{ padding: '6px 10px' }}>
+                          <div className="meta-icon-box" style={{ color: '#10b981' }}>
+                            <CheckCircle2 size={16} />
+                          </div>
+                          <div>
+                            <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Capital Amortizado</div>
+                            <div className="meta-value" style={{ color: '#10b981', fontSize: '0.96rem', fontWeight: '800' }}>
+                              {formatCurrency(totalAllLoansAmortized)}
+                            </div>
+                            <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
+                              Soma dos 4 empréstimos
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Card 5: Total Devido */}
+                        <div className="meta-item" style={{ padding: '6px 10px' }}>
+                          <div className="meta-icon-box" style={{ color: '#f43f5e' }}>
+                            <CreditCard size={16} />
+                          </div>
+                          <div>
+                            <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Devido</div>
+                            <div className="meta-value" style={{ color: '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
+                              {formatCurrency(totalAllLoansRemaining)}
+                            </div>
+                            <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
+                              Dívida restante dos empréstimos
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Card 6: Computar a partir de (Quadrado interativo ao lado) */}
                         <div
                           className="meta-item"
                           onClick={() => {

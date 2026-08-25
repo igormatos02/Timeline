@@ -35,7 +35,7 @@ import {
   RotateCcw,
   X
 } from 'lucide-react';
-import { format, parseISO, differenceInDays } from 'date-fns';
+import { format, parseISO, differenceInDays, addMonths } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import {
   formatCurrency,
@@ -73,6 +73,7 @@ export default function TimelineHeader({
   });
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [tempComputeMonth, setTempComputeMonth] = useState(computeFromMonth);
+  const [projectionMonthsAhead, setProjectionMonthsAhead] = useState(0); // 0 (mês atual) até 60 (5 anos)
 
   useEffect(() => {
     if (timeline?.computeFromMonth && timeline.computeFromMonth !== computeFromMonth) {
@@ -264,8 +265,14 @@ export default function TimelineHeader({
   const carLoanMetrics = isCarLoanActive ? getLoanMetrics(currentCarContract, fullLoanEvents) : null;
   const activeLoanMetrics = isLoanTimeline ? loanMetrics : carLoanMetrics;
 
+  const todayStr = '2026-08-21';
+  const currentMonthDate = parseISO('2026-08-01');
+  const projectedHorizonDate = addMonths(currentMonthDate, projectionMonthsAhead);
+  const projectedHorizonMonth = format(projectedHorizonDate, 'yyyy-MM');
+  const projectedHorizonLabel = format(projectedHorizonDate, "MMMM 'de' yyyy", { locale: pt });
+
   const incomeMetrics = isIncomeTimeline ? getIncomeMetrics(timeline, timeline.events || []) : null;
-  const finMetrics = isIncomeTimeline ? getFinancialMetrics(timeline, timeline.events || [], computeFromMonth) : null;
+  const finMetrics = isIncomeTimeline ? getFinancialMetrics(timeline, timeline.events || [], computeFromMonth, projectedHorizonMonth) : null;
   const consolidatedMetrics = isPrincipal ? getConsolidatedLoanMetrics(allTimelines, selectedTimelineIds) : null;
 
   // Consolidated loan metrics across all 4 loan contracts
@@ -284,6 +291,18 @@ export default function TimelineHeader({
         return acc + (Number(m.remainingBalance || t.remainingDebt || 0));
       }, 0)
     : allLoanTimelinesList.reduce((acc, c) => acc + (Number(c.remainingDebt || 0)), 0);
+
+  // Remaining debt at projected horizon month (taking into account future amortizations up to projectedHorizonMonth)
+  const totalAllLoansRemainingAtHorizon = loanTimelinesFromAll.length >= 4
+    ? loanTimelinesFromAll.reduce((acc, t) => {
+        const allEvts = t.events || [];
+        const totalDebt = Number(t.totalDebt || 0);
+        const amortizedUpToHorizon = allEvts
+          .filter(e => e.date && e.date.substring(0, 7) <= projectedHorizonMonth && e.status !== 'Cancelado' && e.status !== 'Excluido')
+          .reduce((sum, e) => sum + Number(e.principalPaid || e.amortizationAmount || (e.amount && !e.interestPaid ? e.amount : 0) || 0), 0);
+        return acc + Math.max(0, totalDebt - amortizedUpToHorizon);
+      }, 0)
+    : totalAllLoansRemaining;
 
   const collapsed = isCollapsed;
 
@@ -1016,12 +1035,97 @@ export default function TimelineHeader({
                       </div>
 
                       {/* 🔮 LINHA 2: PREVISTOS (Projeções / Planeamento) */}
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                          <span style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#38bdf8', display: 'inline-block' }} />
-                            Previstos (Planeamento & Projeção)
-                          </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {/* ⏱️ Barra de Progressão de Tempo Mensal (Mês Atual até +5 Anos) */}
+                        <div
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(19, 23, 34, 0.85) 0%, rgba(30, 41, 59, 0.55) 100%)',
+                            border: '1px solid var(--border-glass-glow, rgba(99, 102, 241, 0.28))',
+                            borderRadius: '12px',
+                            padding: '10px 14px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '5px', borderRadius: '7px', display: 'flex' }}>
+                                <Clock size={15} />
+                              </div>
+                              <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                                Horizonte dos Previstos:
+                              </span>
+                              <span
+                                style={{
+                                  background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(99, 102, 241, 0.25) 100%)',
+                                  color: '#38bdf8',
+                                  border: '1px solid rgba(56, 189, 248, 0.4)',
+                                  padding: '2px 9px',
+                                  borderRadius: '6px',
+                                  fontSize: '0.76rem',
+                                  fontWeight: '800',
+                                  textTransform: 'capitalize'
+                                }}
+                              >
+                                {projectedHorizonLabel} {projectionMonthsAhead === 0 ? '(Mês Atual)' : `(+${projectionMonthsAhead} ${projectionMonthsAhead === 1 ? 'mês' : 'meses'})`}
+                              </span>
+                            </div>
+
+                            {/* Botões de Atalho */}
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+                              {[
+                                { label: 'Mês Atual', months: 0 },
+                                { label: '+6 Meses', months: 6 },
+                                { label: '+1 Ano', months: 12 },
+                                { label: '+2 Anos', months: 24 },
+                                { label: '+3 Anos', months: 36 },
+                                { label: '+5 Anos', months: 60 }
+                              ].map((preset) => (
+                                <button
+                                  key={preset.months}
+                                  type="button"
+                                  onClick={() => setProjectionMonthsAhead(preset.months)}
+                                  className={`btn btn-sm ${projectionMonthsAhead === preset.months ? 'btn-primary' : 'btn-ghost'}`}
+                                  style={{
+                                    padding: '2px 8px',
+                                    fontSize: '0.69rem',
+                                    height: '22px',
+                                    borderRadius: '5px',
+                                    background: projectionMonthsAhead === preset.months ? 'var(--primary)' : 'rgba(255,255,255,0.04)',
+                                    color: projectionMonthsAhead === preset.months ? '#fff' : 'var(--text-muted)'
+                                  }}
+                                >
+                                  {preset.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Slider de Progressão */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                              Hoje (Ago 2026)
+                            </span>
+                            <input
+                              type="range"
+                              min="0"
+                              max="60"
+                              step="1"
+                              value={projectionMonthsAhead}
+                              onChange={(e) => setProjectionMonthsAhead(Number(e.target.value))}
+                              style={{
+                                flex: 1,
+                                accentColor: '#38bdf8',
+                                cursor: 'pointer',
+                                height: '6px'
+                              }}
+                              title={`Projetar até ${projectedHorizonLabel}`}
+                            />
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                              +5 Anos (Ago 2031)
+                            </span>
+                          </div>
                         </div>
 
                         <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
@@ -1033,21 +1137,21 @@ export default function TimelineHeader({
                             <div style={{ flex: 1 }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
                                 <span className="meta-label" style={{ fontSize: '0.7rem' }}>Saldo Líquido</span>
-                                <span style={{ color: finMetrics.netProjectedCurrent >= 0 ? '#38bdf8' : '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
-                                  {finMetrics.netProjectedCurrent >= 0 ? '+' : ''}{formatCurrency(finMetrics.netProjectedCurrent)}
+                                <span style={{ color: (finMetrics?.netProjectedHorizon ?? 0) >= 0 ? '#38bdf8' : '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
+                                  {(finMetrics?.netProjectedHorizon ?? 0) >= 0 ? '+' : ''}{formatCurrency(finMetrics?.netProjectedHorizon ?? 0)}
                                 </span>
                               </div>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '4px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Entradas Previstas:</span>
                                   <span style={{ color: '#38bdf8', fontSize: '0.78rem', fontWeight: '700' }}>
-                                    +{formatCurrency(finMetrics.totalForecastIncomeUpToCurrent || 0)}
+                                    +{formatCurrency(finMetrics?.totalForecastIncomeHorizon || 0)}
                                   </span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Saídas Previstas:</span>
                                   <span style={{ color: '#fb7185', fontSize: '0.78rem', fontWeight: '700' }}>
-                                    -{formatCurrency(finMetrics.totalPlannedExpensesUpToCurrent || 0)}
+                                    -{formatCurrency(finMetrics?.totalPlannedExpensesHorizon || 0)}
                                   </span>
                                 </div>
                               </div>
@@ -1063,11 +1167,11 @@ export default function TimelineHeader({
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
                                 <span className="meta-label" style={{ fontSize: '0.7rem' }}>Capital Devido (Créditos)</span>
                                 <span style={{ color: '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
-                                  {formatCurrency(totalAllLoansRemaining)}
+                                  {formatCurrency(totalAllLoansRemainingAtHorizon)}
                                 </span>
                               </div>
                               <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '4px' }}>
-                                Dívida restante em todos os contratos
+                                Dívida restante em {projectedHorizonLabel}
                               </div>
                             </div>
                           </div>
@@ -1081,11 +1185,11 @@ export default function TimelineHeader({
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
                                 <span className="meta-label" style={{ fontSize: '0.7rem' }}>Aportes / Invest. Planeados</span>
                                 <span style={{ color: '#c084fc', fontSize: '0.96rem', fontWeight: '800' }}>
-                                  {formatCurrency(finMetrics.totalPlannedInvestments)}
+                                  {formatCurrency(finMetrics?.totalPlannedInvestmentsHorizon || 0)}
                                 </span>
                               </div>
                               <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '4px' }}>
-                                Total de investimentos programados
+                                Acumulado até {projectedHorizonLabel}
                               </div>
                             </div>
                           </div>

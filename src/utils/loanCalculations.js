@@ -422,14 +422,14 @@ export function getConsolidatedLoanMetrics(timelines, selectedIds = null) {
     totalInstallments,
     paidInstallments,
     overdueInstallments,
-    progressPercent
+  progressPercent
   };
 }
 
 /**
  * Calculate metrics for Financial (Entradas, Gastos, Investimentos, Balanço) timelines
  */
-export function getFinancialMetrics(timeline, events = [], computeStartDate = null) {
+export function getFinancialMetrics(timeline, events = [], computeStartDate = null, targetHorizonMonth = null) {
   const allEvents = events.length > 0 ? events : (timeline.events || []);
   const todayStr = '2026-08-21';
   const currentMonthKey = todayStr.substring(0, 7); // '2026-08'
@@ -437,27 +437,27 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
   const currentMonthDate = parseISO(`${currentMonthKey}-01`);
   const oneYearAheadDate = addMonths(currentMonthDate, 12);
   const oneYearAheadKey = format(oneYearAheadDate, 'yyyy-MM');
-
-  const startBound = computeStartDate ? (computeStartDate.length === 7 ? `${computeStartDate}-01` : computeStartDate) : null;
+  const horizonMonthKey = targetHorizonMonth || currentMonthKey;
 
   let totalReceived = 0;
   let totalForecastIncome = 0;
   let totalForecastIncomeUpToCurrent = 0;
+  let totalForecastIncomeHorizon = 0;
   let annualProjectedIncome = 0;
   let currentMonthIncome = 0;
   let currentMonthIncomeReceived = 0;
   let totalPaidExpenses = 0;
   let totalPlannedExpenses = 0;
   let totalPlannedExpensesUpToCurrent = 0;
-
-  let nextIncome = null;
-  let nextExpense = null;
-
+  let totalPlannedExpensesHorizon = 0;
   let currentMonthExpenses = 0;
   let currentMonthExpensesPaid = 0;
   let currentYearExpenses = 0;
   const expenseMonthsSet = new Set();
   let monthlyExpensesSum = 0;
+
+  let nextIncome = null;
+  let nextExpense = null;
 
   // 1. Coletar todo o valor inicial já investido anteriormente por subtipo (Poupança, Património, Outros) e Metas
   const seenInitialInvestments = new Set();
@@ -467,6 +467,8 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
   let totalPriorPatrimonio = 0;
   let totalPriorOutros = 0;
   let totalTargetSavings = 0;
+
+  const startBound = computeStartDate && computeStartDate !== '1900-01' ? `${computeStartDate}-01` : null;
 
   (allEvents || []).forEach((ev) => {
     if (!ev) return;
@@ -521,8 +523,10 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
   let totalInvested = totalPriorInvestedAll;
   let totalPlannedInvestments = totalPriorInvestedAll;
   let totalPlannedInvestmentsUpToCurrent = totalPriorInvestedAll;
+  let totalPlannedInvestmentsHorizon = totalPriorInvestedAll;
   let totalMonthlyAportesRealized = 0;
   let totalMonthlyAportesPlannedCurrent = 0;
+  let totalMonthlyAportesPlannedHorizon = 0;
 
   allEvents.forEach((ev) => {
     if (!ev || !ev.date) return;
@@ -537,6 +541,7 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
 
     const evMonth = ev.date ? ev.date.substring(0, 7) : '';
     const isUpToCurrent = ev.date <= todayStr || evMonth <= currentMonthKey;
+    const isUpToHorizon = !horizonMonthKey || evMonth <= horizonMonthKey;
 
     if (isIncome) {
       // Apenas o que foi efetivamente recebido entra no Saldo Líquido Realizado
@@ -546,6 +551,9 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
       }
       if (isUpToCurrent && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
         totalForecastIncomeUpToCurrent += amt;
+      }
+      if (isUpToHorizon && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+        totalForecastIncomeHorizon += amt;
       }
       totalForecastIncome += amt;
       if (evMonth === currentMonthKey) {
@@ -566,6 +574,9 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
       }
       if (isUpToCurrent && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
         totalPlannedExpensesUpToCurrent += amt;
+      }
+      if (isUpToHorizon && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+        totalPlannedExpensesHorizon += amt;
       }
       totalPlannedExpenses += amt;
       if (!isPast && (!nextExpense || ev.date < nextExpense.date)) nextExpense = ev;
@@ -601,6 +612,10 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
         totalPlannedInvestmentsUpToCurrent += amt;
         totalMonthlyAportesPlannedCurrent += amt;
       }
+      if (isUpToHorizon && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+        totalPlannedInvestmentsHorizon += amt;
+        totalMonthlyAportesPlannedHorizon += amt;
+      }
       totalPlannedInvestments += amt;
     }
   });
@@ -617,6 +632,7 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
 
   const netRealized = totalReceived - totalPaidExpenses - totalMonthlyAportesRealized;
   const netProjectedCurrent = totalForecastIncomeUpToCurrent - totalPlannedExpensesUpToCurrent - totalMonthlyAportesPlannedCurrent;
+  const netProjectedHorizon = totalForecastIncomeHorizon - totalPlannedExpensesHorizon - totalMonthlyAportesPlannedHorizon;
   const netProjected = totalForecastIncome - totalPlannedExpenses - totalPlannedInvestments;
   const savingsRate = totalReceived > 0 ? Math.round(((totalInvested + Math.max(0, netRealized)) / totalReceived) * 100) : 0;
 
@@ -624,6 +640,7 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     totalReceived,
     totalForecastIncome,
     totalForecastIncomeUpToCurrent,
+    totalForecastIncomeHorizon,
     annualProjectedIncome,
     currentMonthIncome,
     currentMonthIncomeReceived,
@@ -631,6 +648,7 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     totalPaidExpenses,
     totalPlannedExpenses,
     totalPlannedExpensesUpToCurrent,
+    totalPlannedExpensesHorizon,
     totalInvested,
     totalPoupanca,
     totalPatrimonio,
@@ -638,12 +656,14 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     totalTargetSavings,
     totalPlannedInvestments,
     totalPlannedInvestmentsUpToCurrent,
+    totalPlannedInvestmentsHorizon,
     currentMonthExpenses,
     currentMonthExpensesPaid,
     monthlyAverageExpenses,
     projectedAnnualExpenses,
     netRealized,
     netProjectedCurrent,
+    netProjectedHorizon,
     netProjected,
     savingsRate,
     nextIncome,

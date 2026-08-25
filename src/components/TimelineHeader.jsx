@@ -659,6 +659,9 @@ export default function TimelineHeader({
             </div>
           </div>
 
+          {/* Linha Divisória Horizontal do Cabeçalho */}
+          <div style={{ width: '100%', height: '1px', background: 'var(--border-glass, rgba(255, 255, 255, 0.08))', margin: '4px 0 14px 0' }} />
+
           {/* VIEW MODE 1: CHART EVOLUTION VIEW */}
           {viewMode === 'chart' ? (
             <IncomeEvolutionChart

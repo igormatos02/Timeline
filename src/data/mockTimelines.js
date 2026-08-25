@@ -190,7 +190,7 @@ function createDaciaLoanEvents() {
 function createCasa1LoanEvents() {
   const events = [];
   const regularMonthly = 288.01;
-  const totalMonths = 432; // 36 anos (94 pagas + 338 remanescentes)
+  const totalMonths = 332; // (94 pagas + 238 remanescentes)
 
   // Base: Novembro de 2018 (Prestação 1) até Outubro de 2054 (Prestação 432)
   for (let i = 1; i <= totalMonths; i++) {

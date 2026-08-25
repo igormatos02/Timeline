@@ -136,9 +136,9 @@ export async function runSeed() {
       amortizedCapital: 9877.49,
       installmentAmount: 288.01,
       tan: 2.690,
-      totalInstallments: 433,
+      totalInstallments: 332,
       currentInstallmentNumber: 94,
-      remainingMonths: 339,
+      remainingMonths: 238,
       dueDay: 3
     },
     {
@@ -216,12 +216,12 @@ export async function runSeed() {
       amortizedCapital: 9877.49,
       installmentAmount: 288.01,
       tan: 2.690,
-      totalInstallments: 433,
+      totalInstallments: 332,
       currentInstallmentNumber: 94,
-      remainingMonths: 339,
+      remainingMonths: 238,
       dueDay: 3,
       startDate: '2018-11-03',
-      endDate: '2054-11-03'
+      endDate: '2046-06-03'
     },
     {
       id: GUIDS.TL_LOAN_CASA2,

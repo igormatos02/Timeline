@@ -173,9 +173,9 @@ export default function TimelineHeader({
     id: "tl-loan-casa1",
     name: "Crédito Egas Moniz",
     contractNumber: "02012642",
-    description: "Crédito Nº 02012642 (TAN 2.690%). Prestação nº 94 (339 meses restantes).",
+    description: "Crédito Nº 02012642 (TAN 2.690%). Prestação nº 94 (238 meses restantes).",
     startDate: "2018-11-03",
-    endDate: "2054-11-03",
+    endDate: "2046-06-03",
     status: "Em Progresso",
     type: "Empréstimo",
     color: "#0ea5e9",
@@ -184,9 +184,9 @@ export default function TimelineHeader({
     amortizedCapital: 9877.49,
     installmentAmount: 288.01,
     tan: 2.690,
-    totalInstallments: 433,
+    totalInstallments: 332,
     currentInstallmentNumber: 94,
-    remainingMonths: 339,
+    remainingMonths: 238,
     periodicity: "mensal",
     dueDay: 3
   };

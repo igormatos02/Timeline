@@ -195,9 +195,9 @@ export default function TimelineHeader({
     id: "tl-loan-casa2",
     name: "Hipoteca Egas Moniz",
     contractNumber: "02015122",
-    description: "Hipoteca Nº 02015122 (TAN 3.990%). Prestação nº 17 (332 meses restantes).",
+    description: "Hipoteca Nº 02015122 (TAN 3.990%). Prestação nº 17 (322 meses restantes).",
     startDate: "2025-04-03",
-    endDate: "2054-04-03",
+    endDate: "2053-06-03",
     status: "Em Progresso",
     type: "Empréstimo",
     color: "#14b8a6",
@@ -206,9 +206,9 @@ export default function TimelineHeader({
     amortizedCapital: 1279.79,
     installmentAmount: 293.05,
     tan: 3.990,
-    totalInstallments: 349,
+    totalInstallments: 339,
     currentInstallmentNumber: 17,
-    remainingMonths: 332,
+    remainingMonths: 322,
     periodicity: "mensal",
     dueDay: 3
   };

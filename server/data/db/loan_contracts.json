@@ -73,12 +73,12 @@
     "amortizedCapital": 1279.79,
     "installmentAmount": 293.05,
     "tan": 3.99,
-    "totalInstallments": 349,
+    "totalInstallments": 339,
     "currentInstallmentNumber": 17,
-    "remainingMonths": 332,
+    "remainingMonths": 322,
     "dueDay": 3,
     "startDate": "2025-04-01",
-    "endDate": "2054-04-03",
+    "endDate": "2053-06-03",
     "createdAt": "2026-08-24T17:26:05.131Z",
     "updatedAt": "2026-08-24T17:26:05.131Z"
   }

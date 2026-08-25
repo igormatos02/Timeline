@@ -159,9 +159,9 @@ export async function runSeed() {
       amortizedCapital: 1279.79,
       installmentAmount: 293.05,
       tan: 3.990,
-      totalInstallments: 349,
+      totalInstallments: 339,
       currentInstallmentNumber: 17,
-      remainingMonths: 332,
+      remainingMonths: 322,
       dueDay: 3
     }
   ];
@@ -236,12 +236,12 @@ export async function runSeed() {
       amortizedCapital: 1279.79,
       installmentAmount: 293.05,
       tan: 3.990,
-      totalInstallments: 349,
+      totalInstallments: 339,
       currentInstallmentNumber: 17,
-      remainingMonths: 332,
+      remainingMonths: 322,
       dueDay: 3,
       startDate: '2025-04-03',
-      endDate: '2054-04-03'
+      endDate: '2053-06-03'
     }
   ];
 

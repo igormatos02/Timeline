@@ -246,7 +246,7 @@ function createCasa1LoanEvents() {
 function createCasa2LoanEvents() {
   const events = [];
   const regularMonthly = 293.05;
-  const totalMonths = 348; // 29 anos (17 pagas + 331 remanescentes)
+  const totalMonths = 339; // (17 pagas + 322 remanescentes)
 
   // Base: Abril de 2025 (Prestação 1) até Março de 2054 (Prestação 348)
   for (let i = 1; i <= totalMonths; i++) {

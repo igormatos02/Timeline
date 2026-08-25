@@ -519,6 +519,9 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
   let totalAportesPoupanca = 0;
   let totalAportesPatrimonio = 0;
   let totalAportesOutros = 0;
+  let totalAportesPoupancaHorizon = 0;
+  let totalAportesPatrimonioHorizon = 0;
+  let totalAportesOutrosHorizon = 0;
 
   let totalInvested = totalPriorInvestedAll;
   let totalPlannedInvestments = totalPriorInvestedAll;
@@ -615,6 +618,13 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
       if (isUpToHorizon && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
         totalPlannedInvestmentsHorizon += amt;
         totalMonthlyAportesPlannedHorizon += amt;
+        if (ev.category === 'investimento_patrimonio') {
+          totalAportesPatrimonioHorizon += amt;
+        } else if (ev.category === 'investimento_outros' || ev.category?.includes('etf') || ev.category?.includes('acoes') || ev.category?.includes('extra')) {
+          totalAportesOutrosHorizon += amt;
+        } else {
+          totalAportesPoupancaHorizon += amt;
+        }
       }
       totalPlannedInvestments += amt;
     }
@@ -623,6 +633,10 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
   const totalPoupanca = totalPriorPoupanca + totalAportesPoupanca;
   const totalPatrimonio = totalPriorPatrimonio + totalAportesPatrimonio;
   const totalOutros = totalPriorOutros + totalAportesOutros;
+
+  const totalPoupancaHorizon = totalPriorPoupanca + totalAportesPoupancaHorizon;
+  const totalPatrimonioHorizon = totalPriorPatrimonio + totalAportesPatrimonioHorizon;
+  const totalOutrosHorizon = totalPriorOutros + totalAportesOutrosHorizon;
 
   const monthlyAverageExpenses = expenseMonthsSet.size > 0 ? (monthlyExpensesSum / expenseMonthsSet.size) : (currentMonthExpenses || 0);
   const projectedAnnualExpenses = currentYearExpenses > 0 ? currentYearExpenses : (monthlyAverageExpenses * 12);
@@ -653,6 +667,9 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     totalPoupanca,
     totalPatrimonio,
     totalOutros,
+    totalPoupancaHorizon,
+    totalPatrimonioHorizon,
+    totalOutrosHorizon,
     totalTargetSavings,
     totalPlannedInvestments,
     totalPlannedInvestmentsUpToCurrent,

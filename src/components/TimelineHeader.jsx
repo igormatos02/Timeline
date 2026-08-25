@@ -292,7 +292,7 @@ export default function TimelineHeader({
       }, 0)
     : allLoanTimelinesList.reduce((acc, c) => acc + (Number(c.remainingDebt || 0)), 0);
 
-  // Remaining debt at projected horizon month (taking into account future amortizations up to projectedHorizonMonth)
+  // Remaining debt and amortized capital at projected horizon month (taking into account future amortizations up to projectedHorizonMonth)
   const totalAllLoansRemainingAtHorizon = loanTimelinesFromAll.length >= 4
     ? loanTimelinesFromAll.reduce((acc, t) => {
         const allEvts = t.events || [];
@@ -303,6 +303,16 @@ export default function TimelineHeader({
         return acc + Math.max(0, totalDebt - amortizedUpToHorizon);
       }, 0)
     : totalAllLoansRemaining;
+
+  const totalAllLoansAmortizedAtHorizon = loanTimelinesFromAll.length >= 4
+    ? loanTimelinesFromAll.reduce((acc, t) => {
+        const allEvts = t.events || [];
+        const amortizedUpToHorizon = allEvts
+          .filter(e => e.date && e.date.substring(0, 7) <= projectedHorizonMonth && e.status !== 'Cancelado' && e.status !== 'Excluido')
+          .reduce((sum, e) => sum + Number(e.principalPaid || e.amortizationAmount || (e.amount && !e.interestPaid ? e.amount : 0) || 0), 0);
+        return acc + amortizedUpToHorizon;
+      }, 0)
+    : totalAllLoansAmortized;
 
   const collapsed = isCollapsed;
 
@@ -1191,38 +1201,63 @@ export default function TimelineHeader({
                             </div>
                           </div>
 
-                          {/* Card 2: Total Capital Devido */}
+                          {/* Card 2: Investimentos Previstos */}
                           <div className="meta-item" style={{ padding: '8px 12px' }}>
-                            <div className="meta-icon-box" style={{ color: '#f43f5e' }}>
-                              <CreditCard size={16} />
+                            <div className="meta-icon-box" style={{ color: '#6366f1' }}>
+                              <PiggyBank size={16} />
                             </div>
                             <div style={{ flex: 1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Capital Devido (Créditos)</span>
-                                <span style={{ color: '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
-                                  {formatCurrency(totalAllLoansRemainingAtHorizon)}
-                                </span>
-                              </div>
-                              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '4px' }}>
-                                Dívida restante em {projectedHorizonLabel}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Card 3: Total Aportes Planeados */}
-                          <div className="meta-item" style={{ padding: '8px 12px' }}>
-                            <div className="meta-icon-box" style={{ color: '#a855f7' }}>
-                              <Sparkles size={16} />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Aportes / Invest. Planeados</span>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Investimentos</span>
                                 <span style={{ color: '#c084fc', fontSize: '0.96rem', fontWeight: '800' }}>
                                   {formatCurrency(finMetrics?.totalPlannedInvestmentsHorizon || 0)}
                                 </span>
                               </div>
-                              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '4px' }}>
-                                Acumulado até {projectedHorizonLabel}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                  <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Poupança:</span>
+                                  <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: '800' }}>
+                                    {formatCurrency(finMetrics?.totalPoupancaHorizon || 0)}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                  <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Património:</span>
+                                  <span style={{ color: '#c084fc', fontSize: '0.8rem', fontWeight: '800' }}>
+                                    {formatCurrency(finMetrics?.totalPatrimonioHorizon || 0)}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                  <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Outros:</span>
+                                  <span style={{ color: '#38bdf8', fontSize: '0.8rem', fontWeight: '800' }}>
+                                    {formatCurrency(finMetrics?.totalOutrosHorizon || 0)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Card 3: Empréstimos e Financiamentos Previstos */}
+                          <div className="meta-item" style={{ padding: '8px 12px' }}>
+                            <div className="meta-icon-box" style={{ color: '#10b981' }}>
+                              <CreditCard size={16} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Empréstimos e Financiamentos</span>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '2px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                  <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Capital Amortizado:</span>
+                                  <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: '800' }}>
+                                    {formatCurrency(totalAllLoansAmortizedAtHorizon)}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                  <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Capital Devido:</span>
+                                  <span style={{ color: '#f43f5e', fontSize: '0.8rem', fontWeight: '800' }}>
+                                    {formatCurrency(totalAllLoansRemainingAtHorizon)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>

@@ -988,14 +988,14 @@ export default function TimelineHeader({
                             </div>
                           </div>
 
-                          {/* Card 2: Total Investido Realizado */}
+                          {/* Card 2: Valor Investimentos */}
                           <div className="meta-item" style={{ padding: '8px 12px' }}>
                             <div className="meta-icon-box" style={{ color: '#6366f1' }}>
                               <PiggyBank size={16} />
                             </div>
                             <div style={{ flex: 1 }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
-                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Investimentos</span>
+                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Valor Investimentos</span>
                                 <span style={{ color: 'var(--primary-light)', fontSize: '0.96rem', fontWeight: '800' }}>
                                   {formatCurrency(finMetrics.totalInvested)}
                                 </span>
@@ -1009,32 +1009,20 @@ export default function TimelineHeader({
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Património:</span>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                    <span style={{ color: '#c084fc', fontSize: '0.8rem', fontWeight: '800' }}>
-                                      {formatCurrency(finMetrics.totalPatrimonio || 0)}
-                                    </span>
-                                    {finMetrics.totalPatrimonioGain !== 0 && (
-                                      <span
-                                        style={{
-                                          fontSize: '0.64rem',
-                                          color: finMetrics.totalPatrimonioGain >= 0 ? '#10b981' : '#f43f5e',
-                                          background: finMetrics.totalPatrimonioGain >= 0 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
-                                          border: finMetrics.totalPatrimonioGain >= 0 ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
-                                          borderRadius: '4px',
-                                          padding: '0 4px',
-                                          fontWeight: '800'
-                                        }}
-                                        title={`Aquisição: ${formatCurrency(finMetrics.totalPatrimonioAcquisition)} | Mais-valia: ${finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}${formatCurrency(finMetrics.totalPatrimonioGain)} (${finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}${finMetrics.totalPatrimonioGainPercent.toFixed(1)}%)`}
-                                      >
-                                        {finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}{formatCurrency(finMetrics.totalPatrimonioGain)}
-                                      </span>
-                                    )}
-                                  </div>
+                                  <span style={{ color: '#c084fc', fontSize: '0.8rem', fontWeight: '800' }}>
+                                    {formatCurrency(finMetrics.totalPatrimonio || 0)}
+                                  </span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Outros:</span>
                                   <span style={{ color: '#38bdf8', fontSize: '0.8rem', fontWeight: '800' }}>
                                     {formatCurrency(finMetrics.totalOutros || 0)}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                  <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Valorização Património:</span>
+                                  <span style={{ color: finMetrics.totalPatrimonioGain >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.8rem', fontWeight: '800' }}>
+                                    {finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}{formatCurrency(finMetrics.totalPatrimonioGain)}
                                   </span>
                                 </div>
                               </div>
@@ -1216,14 +1204,14 @@ export default function TimelineHeader({
                             </div>
                           </div>
 
-                          {/* Card 2: Investimentos Previstos */}
+                          {/* Card 2: Valor Investimentos */}
                           <div className="meta-item" style={{ padding: '8px 12px' }}>
                             <div className="meta-icon-box" style={{ color: '#6366f1' }}>
                               <PiggyBank size={16} />
                             </div>
                             <div style={{ flex: 1 }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
-                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Investimentos</span>
+                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Valor Investimentos</span>
                                 <span style={{ color: '#c084fc', fontSize: '0.96rem', fontWeight: '800' }}>
                                   {formatCurrency(finMetrics?.totalPlannedInvestmentsHorizon || 0)}
                                 </span>
@@ -1237,32 +1225,20 @@ export default function TimelineHeader({
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Património:</span>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                    <span style={{ color: '#c084fc', fontSize: '0.8rem', fontWeight: '800' }}>
-                                      {formatCurrency(finMetrics?.totalPatrimonioHorizon || 0)}
-                                    </span>
-                                    {finMetrics?.totalPatrimonioGainHorizon !== 0 && (
-                                      <span
-                                        style={{
-                                          fontSize: '0.64rem',
-                                          color: (finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '#10b981' : '#f43f5e',
-                                          background: (finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
-                                          border: (finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
-                                          borderRadius: '4px',
-                                          padding: '0 4px',
-                                          fontWeight: '800'
-                                        }}
-                                        title={`Aquisição: ${formatCurrency(finMetrics?.totalPatrimonioAcquisition || 0)} | Mais-valia: ${(finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '+' : ''}${formatCurrency(finMetrics?.totalPatrimonioGainHorizon || 0)}`}
-                                      >
-                                        {(finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '+' : ''}{formatCurrency(finMetrics?.totalPatrimonioGainHorizon || 0)}
-                                      </span>
-                                    )}
-                                  </div>
+                                  <span style={{ color: '#c084fc', fontSize: '0.8rem', fontWeight: '800' }}>
+                                    {formatCurrency(finMetrics?.totalPatrimonioHorizon || 0)}
+                                  </span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Outros:</span>
                                   <span style={{ color: '#38bdf8', fontSize: '0.8rem', fontWeight: '800' }}>
                                     {formatCurrency(finMetrics?.totalOutrosHorizon || 0)}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                  <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Valorização Património:</span>
+                                  <span style={{ color: (finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.8rem', fontWeight: '800' }}>
+                                    {(finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '+' : ''}{formatCurrency(finMetrics?.totalPatrimonioGainHorizon || 0)}
                                   </span>
                                 </div>
                               </div>

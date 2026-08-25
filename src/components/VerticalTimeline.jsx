@@ -979,7 +979,7 @@ export default function VerticalTimeline({
                             </span>
                           </span>
 
-                          {/* Badge Único: Balanço (Linha 1: Realizado, Linha 2: Previsto) */}
+                          {/* Badge Único: Saldo (Linha 1: Realizado, Linha 2: Previsto) */}
                           <span
                             className="group-card-badge"
                             style={{
@@ -994,10 +994,10 @@ export default function VerticalTimeline({
                               borderColor: mNetRealizedMonth >= 0 ? 'rgba(16, 185, 129, 0.35)' : 'rgba(244, 63, 94, 0.35)',
                               lineHeight: '1.2'
                             }}
-                            title={`Balanço do Mês: Realizado = ${formatCurrency(mNetRealizedMonth)} | Previsto = ${formatCurrency(mNetProjectedMonth)}`}
+                            title={`Saldo do Mês: Realizado = ${formatCurrency(mNetRealizedMonth)} | Previsto = ${formatCurrency(mNetProjectedMonth)}`}
                           >
                             <span style={{ fontWeight: '800', fontSize: '0.74rem', color: mNetRealizedMonth >= 0 ? '#10b981' : '#f43f5e' }}>
-                              Balanço: {mNetRealizedMonth > 0 ? '+' : ''}{formatCurrency(mNetRealizedMonth)}
+                              Saldo: {mNetRealizedMonth > 0 ? '+' : ''}{formatCurrency(mNetRealizedMonth)}
                             </span>
                             <span style={{ fontSize: '0.66rem', fontWeight: '600', color: mNetProjectedMonth >= 0 ? '#38bdf8' : '#fb7185', opacity: 0.9 }}>
                               {mNetProjectedMonth > 0 ? '+' : ''}{formatCurrency(mNetProjectedMonth)}

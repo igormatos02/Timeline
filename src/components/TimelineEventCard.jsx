@@ -1624,24 +1624,85 @@ export default function TimelineEventCard({
                       title={isLocked ? 'Cadeado trancado (Clique para destravar)' : 'Cadeado aberto (Clique para trancar)'}
                     >
                       {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                    </span>
-                  </>
-                ) : isOverdueInvestment ? (
-                  <>
-                    <AlertCircle size={14} style={{ color: '#f87171' }} />
-                    <span>Atrasado</span>
-                  </>
-                ) : (
-                  <>
-                    <Clock size={14} style={{ color: '#94a3b8' }} />
-                    <span>Planeado</span>
-                  </>
-                )}
-              </button>
-            )}
-          </div>
+                  </span>
+                </>
+              ) : isOverdueInvestment ? (
+                <>
+                  <AlertCircle size={14} style={{ color: '#f87171' }} />
+                  <span>Atrasado</span>
+                </>
+              ) : (
+                <>
+                  <Clock size={14} style={{ color: '#94a3b8' }} />
+                  <span>Planeado</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
-      )}
+
+        {/* 🎯 Barra de Progresso da Meta de Poupança / Investimento */}
+        {Number(event.targetAmount || 0) > 0 && (() => {
+          const currentSaved = (Number(event.initialInvestedAmount || 0) || 0) + (isCompletedInvestment ? Number(event.amount || 0) : 0);
+          const targetVal = Number(event.targetAmount);
+          const progressPct = Math.min(100, Math.max(0, Math.round((currentSaved / targetVal) * 100)));
+
+          return (
+            <div
+              style={{
+                width: '100%',
+                marginTop: '10px',
+                paddingTop: '8px',
+                borderTop: '1px solid rgba(139, 92, 246, 0.15)'
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '0.73rem',
+                  fontWeight: '700',
+                  color: '#a78bfa',
+                  marginBottom: '5px'
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Target size={12} />
+                  <span>Progresso da Meta ({formatCurrency(currentSaved)} de {formatCurrency(targetVal)})</span>
+                </span>
+                <span style={{ color: progressPct >= 100 ? '#10b981' : '#c084fc', fontWeight: '800' }}>
+                  {progressPct}% {progressPct >= 100 ? '🎉 Meta Atingida!' : 'alcançado'}
+                </span>
+              </div>
+              <div
+                style={{
+                  width: '100%',
+                  height: '6px',
+                  background: 'rgba(148, 163, 184, 0.15)',
+                  borderRadius: '9999px',
+                  overflow: 'hidden',
+                  position: 'relative'
+                }}
+              >
+                <div
+                  style={{
+                    width: `${progressPct}%`,
+                    height: '100%',
+                    background: progressPct >= 100
+                      ? 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'
+                      : 'linear-gradient(90deg, #8b5cf6 0%, #a855f7 100%)',
+                    borderRadius: '9999px',
+                    transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: '0 0 10px rgba(139, 92, 246, 0.4)'
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+    )}
 
       {/* 🏦 Loan Installment Principal / Interest Breakdown Strip */}
       {isLoanInstallment && (

@@ -110,6 +110,12 @@ export default function CreateEventModal({
         setInvestmentSubtype('investimento_poupanca');
       }
 
+      let targetAmtVal = initialData.targetAmount !== undefined && initialData.targetAmount !== null ? initialData.targetAmount : '';
+      if ((targetAmtVal === '' || targetAmtVal === undefined) && initialData.seriesId) {
+        const match = (allTimelines || []).flatMap(t => t.events || []).find(ev => ev.seriesId === initialData.seriesId && ev.targetAmount);
+        if (match) targetAmtVal = match.targetAmount;
+      }
+
       setFormData({
         title: initialData.title || '',
         date: targetDate,
@@ -119,7 +125,7 @@ export default function CreateEventModal({
         periodicity: isRecurrent ? 'recorrente' : 'unica',
         amount: initialData.amount !== undefined ? initialData.amount : 100,
         initialInvestedAmount: initialData.initialInvestedAmount !== undefined ? initialData.initialInvestedAmount : '',
-        targetAmount: initialData.targetAmount !== undefined ? initialData.targetAmount : '',
+        targetAmount: targetAmtVal,
         priority: initialData.priority || 'Normal',
         labelsInput: initialData.labels ? initialData.labels.join(', ') : ''
       });

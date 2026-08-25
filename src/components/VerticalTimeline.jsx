@@ -923,7 +923,7 @@ export default function VerticalTimeline({
                               +{formatCurrency(mMonthIncomePaid)}
                             </span>
                             <span style={{ fontSize: '0.66rem', opacity: 0.75, fontWeight: '600' }}>
-                              / +{formatCurrency(mMonthIncome)}
+                              +{formatCurrency(mMonthIncome)}
                             </span>
                           </span>
 
@@ -949,7 +949,7 @@ export default function VerticalTimeline({
                               -{formatCurrency(mMonthExpensePaid)}
                             </span>
                             <span style={{ fontSize: '0.66rem', opacity: 0.75, fontWeight: '600' }}>
-                              / -{formatCurrency(mMonthExpense)}
+                              -{formatCurrency(mMonthExpense)}
                             </span>
                           </span>
 
@@ -975,7 +975,7 @@ export default function VerticalTimeline({
                               -{formatCurrency(mMonthInvestmentPaid)}
                             </span>
                             <span style={{ fontSize: '0.66rem', opacity: 0.75, fontWeight: '600' }}>
-                              / -{formatCurrency(mMonthInvestment)}
+                              -{formatCurrency(mMonthInvestment)}
                             </span>
                           </span>
 

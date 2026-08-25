@@ -1740,54 +1740,6 @@ export default function VerticalTimeline({
           </div>
         )}
       </div>
-
-      {/* 🎯 Floating Quick Novo Button (Aligned with UI Design System) */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          zIndex: 99
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => {
-            const nature = activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income';
-            onAddEventForDate(todayStr, nature);
-          }}
-          className="btn btn-primary"
-          style={{
-            borderRadius: '9999px',
-            padding: '10px 20px',
-            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontWeight: '700',
-            fontSize: '0.86rem',
-            background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-            border: '1px solid rgba(255, 255, 255, 0.22)',
-            color: '#ffffff',
-            cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
-            e.currentTarget.style.boxShadow = '0 12px 28px rgba(99, 102, 241, 0.55)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0) scale(1)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(99, 102, 241, 0.4)';
-          }}
-          title="Criar novo registo / movimento"
-        >
-          <Plus size={16} strokeWidth={2.5} />
-          <span>Novo</span>
-        </button>
-      </div>
     </div>
   );
 }

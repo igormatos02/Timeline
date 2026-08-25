@@ -16,7 +16,9 @@ export class TimelineEvent {
     description = '',
     category = 'saida_recorrente',
     financialType = 'gasto', // 'entrada' | 'gasto' | 'investimento'
-    periodicity = 'recorrente', // 'recorrente' | 'unico'
+    periodicity = 'recorrente', // 'recorrente' | 'unico' | 'periodo'
+    recurrenceEndDate = null,
+    endDate = null,
     status = 'Pendente', // 'Pago' | 'Recebido' | 'Investido' | 'Pendente' | 'Atrasada' | 'Planeado'
     priority = 'Normal', // 'Urgente' | 'Alta' | 'Normal' | 'Baixa'
     amount = 0,
@@ -57,6 +59,8 @@ export class TimelineEvent {
     this.category = category;
     this.financialType = financialType;
     this.periodicity = periodicity;
+    this.recurrenceEndDate = recurrenceEndDate || endDate || null;
+    this.endDate = this.recurrenceEndDate;
     this.status = status;
     this.priority = priority;
     this.amount = Number(amount) || 0;

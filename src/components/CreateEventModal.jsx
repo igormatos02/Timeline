@@ -15,7 +15,7 @@ import {
   ChevronDown,
   Target
 } from 'lucide-react';
-import { format, parseISO, getDaysInMonth } from 'date-fns';
+import { format, parseISO, getDaysInMonth, addMonths } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../utils/loanCalculations';
 import { generateUUID } from '../utils/uuid';
@@ -53,7 +53,8 @@ export default function CreateEventModal({
     dayOfMonth: 1,
     time: '09:00',
     status: 'Previsto',
-    periodicity: 'recorrente', // 'recorrente' | 'unica'
+    periodicity: 'recorrente', // 'recorrente' | 'unica' | 'periodo'
+    recurrenceEndDate: '', // 'YYYY-MM'
     amount: 100,
     initialInvestedAmount: '',
     targetAmount: '',
@@ -116,13 +117,21 @@ export default function CreateEventModal({
         if (match) targetAmtVal = match.targetAmount;
       }
 
+      let initPeriodicity = 'recorrente';
+      if (initialData.periodicity === 'periodo' || initialData.recurrenceEndDate || initialData.endDate) {
+        initPeriodicity = 'periodo';
+      } else if (initialData.periodicity === 'unica' || initialData.periodicity === 'unico' || (!isRecurrent && !initialData.seriesId)) {
+        initPeriodicity = 'unica';
+      }
+
       setFormData({
         title: initialData.title || '',
         date: targetDate,
         dayOfMonth: parsedDay,
         time: initialData.time || '09:00',
         status: initialData.status || (initType === 'entrada' ? 'Previsto' : initType === 'saida' ? 'Pendente' : 'Planeado'),
-        periodicity: isRecurrent ? 'recorrente' : 'unica',
+        periodicity: initPeriodicity,
+        recurrenceEndDate: initialData.recurrenceEndDate || initialData.endDate || '',
         amount: initialData.amount !== undefined ? initialData.amount : 100,
         initialInvestedAmount: initialData.initialInvestedAmount !== undefined ? initialData.initialInvestedAmount : '',
         targetAmount: targetAmtVal,
@@ -144,6 +153,11 @@ export default function CreateEventModal({
 
       const initStatus = initialMovement === 'saida' ? 'Pendente' : initialMovement === 'investimento' ? 'Planeado' : 'Previsto';
 
+      let defaultEndMonth = '2026-12';
+      try {
+        defaultEndMonth = format(addMonths(parseISO(targetDate), 6), 'yyyy-MM');
+      } catch { }
+
       setFormData({
         title: '',
         date: targetDate,
@@ -151,6 +165,7 @@ export default function CreateEventModal({
         time: '09:00',
         status: initStatus,
         periodicity: 'recorrente',
+        recurrenceEndDate: defaultEndMonth,
         amount: '',
         initialInvestedAmount: '',
         targetAmount: '',
@@ -250,11 +265,11 @@ export default function CreateEventModal({
 
     if (movementType === 'entrada') {
       isIncome = true;
-      finalCategory = formData.periodicity === 'recorrente' ? 'entrada_recorrente' : 'entrada_esporadica';
+      finalCategory = (formData.periodicity === 'recorrente' || formData.periodicity === 'periodo') ? 'entrada_recorrente' : 'entrada_esporadica';
       finalStatus = formData.status || 'Previsto';
     } else if (movementType === 'saida') {
       isExpense = true;
-      finalCategory = formData.periodicity === 'recorrente' ? 'saida_recorrente' : 'saida_esporadica';
+      finalCategory = (formData.periodicity === 'recorrente' || formData.periodicity === 'periodo') ? 'saida_recorrente' : 'saida_esporadica';
       finalStatus = formData.status || 'Pendente';
     } else if (movementType === 'investimento') {
       isInvestment = true;
@@ -281,6 +296,8 @@ export default function CreateEventModal({
     }
 
     const targetAmountVal = movementType === 'investimento' && formData.targetAmount !== '' ? (Number(formData.targetAmount) || 0) : undefined;
+    const isRecurring = formData.periodicity === 'recorrente' || formData.periodicity === 'periodo';
+    const recurrenceEndDate = formData.periodicity === 'periodo' && formData.recurrenceEndDate ? formData.recurrenceEndDate : null;
 
     onSave({
       ...formData,
@@ -291,6 +308,10 @@ export default function CreateEventModal({
       isIncome,
       isExpense,
       isInvestment,
+      isRecurring,
+      periodicity: formData.periodicity,
+      recurrenceEndDate,
+      endDate: recurrenceEndDate,
       status: finalStatus,
       amount: finalAmount,
       initialInvestedAmount: priorInvested,
@@ -744,55 +765,132 @@ export default function CreateEventModal({
             </div>
           )}
 
-          {/* Periodicidade: Seletor Segmentado Único vs Recorrente (Apenas na Criação) */}
+          {/* Periodicidade: Seletor de Único, Recorrente, Período */}
           {!initialData && (
-            <div className="form-group">
-              <label className="form-label">Periodicidade do Movimento</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, periodicity: 'recorrente' })}
-                  style={{
-                    padding: '9px 12px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: formData.periodicity === 'recorrente' ? `2px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
-                    background: formData.periodicity === 'recorrente' ? currentTheme.bgLight : 'var(--bg-glass)',
-                    color: formData.periodicity === 'recorrente' ? currentTheme.color : 'var(--text-muted)',
-                    fontWeight: '700',
-                    fontSize: '0.85rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                    transition: 'all var(--transition-fast)'
-                  }}
-                >
-                  <Repeat size={15} /> Recorrente (Mensal)
-                </button>
-
+            <div className="form-group" style={{ marginBottom: '14px' }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Periodicidade do Movimento</span>
+                {formData.periodicity === 'periodo' && (
+                  <span style={{ fontSize: '0.72rem', color: currentTheme.color, fontWeight: '700' }}>
+                    Com data de término
+                  </span>
+                )}
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, periodicity: 'unica' })}
                   style={{
-                    padding: '9px 12px',
+                    padding: '8px 6px',
                     borderRadius: 'var(--radius-sm)',
                     border: formData.periodicity === 'unica' ? `2px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
                     background: formData.periodicity === 'unica' ? currentTheme.bgLight : 'var(--bg-glass)',
                     color: formData.periodicity === 'unica' ? currentTheme.color : 'var(--text-muted)',
                     fontWeight: '700',
-                    fontSize: '0.85rem',
+                    fontSize: '0.8rem',
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '6px',
+                    gap: '4px',
                     cursor: 'pointer',
                     transition: 'all var(--transition-fast)'
                   }}
                 >
-                  <Zap size={15} /> Único (Apenas este Mês)
+                  <Zap size={15} />
+                  <span>Único</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, periodicity: 'recorrente' })}
+                  style={{
+                    padding: '8px 6px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: formData.periodicity === 'recorrente' ? `2px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
+                    background: formData.periodicity === 'recorrente' ? currentTheme.bgLight : 'var(--bg-glass)',
+                    color: formData.periodicity === 'recorrente' ? currentTheme.color : 'var(--text-muted)',
+                    fontWeight: '700',
+                    fontSize: '0.8rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                    transition: 'all var(--transition-fast)'
+                  }}
+                >
+                  <Repeat size={15} />
+                  <span>Recorrente</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const fallbackEnd = format(addMonths(parseISO(formData.date || '2026-08-21'), 6), 'yyyy-MM');
+                    setFormData({
+                      ...formData,
+                      periodicity: 'periodo',
+                      recurrenceEndDate: formData.recurrenceEndDate || fallbackEnd
+                    });
+                  }}
+                  style={{
+                    padding: '8px 6px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: formData.periodicity === 'periodo' ? `2px solid ${currentTheme.color}` : '1px solid var(--border-glass)',
+                    background: formData.periodicity === 'periodo' ? currentTheme.bgLight : 'var(--bg-glass)',
+                    color: formData.periodicity === 'periodo' ? currentTheme.color : 'var(--text-muted)',
+                    fontWeight: '700',
+                    fontSize: '0.8rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                    transition: 'all var(--transition-fast)'
+                  }}
+                >
+                  <Calendar size={15} />
+                  <span>Período</span>
                 </button>
               </div>
+
+              {/* Se for Período: Campo Mês de Fim */}
+              {formData.periodicity === 'periodo' && (
+                <div
+                  style={{
+                    marginTop: '10px',
+                    padding: '12px',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: `1px solid ${currentTheme.border}`,
+                    borderRadius: 'var(--radius-sm)'
+                  }}
+                >
+                  <label className="form-label" style={{ color: currentTheme.color, fontSize: '0.78rem', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Calendar size={13} />
+                    <span>Mês de Fim do Período</span>
+                  </label>
+                  <input
+                    type="month"
+                    className="form-input"
+                    style={{
+                      borderColor: currentTheme.border,
+                      fontWeight: '700',
+                      color: 'var(--text-main)',
+                      fontSize: '0.9rem'
+                    }}
+                    min={(formData.date || '2026-08').substring(0, 7)}
+                    value={formData.recurrenceEndDate || ''}
+                    onChange={(e) => setFormData({ ...formData, recurrenceEndDate: e.target.value })}
+                    required={formData.periodicity === 'periodo'}
+                  />
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '5px', lineHeight: 1.3 }}>
+                    O evento será gerado todos os meses desde <strong>{(formData.date || '2026-08').substring(0, 7)}</strong> até <strong>{formData.recurrenceEndDate || '...'}</strong>.
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

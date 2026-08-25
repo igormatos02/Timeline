@@ -95,6 +95,17 @@ export function projectEvents(rawEvents = [], options = {}) {
         }
       }
 
+      // Se a versão ativa ou root tiver periodicidade 'periodo' com data de fim:
+      const seriesEndDate = activeVersion.recurrenceEndDate || activeVersion.endDate || rootVersion.recurrenceEndDate || rootVersion.endDate;
+      const isPeriodo = activeVersion.periodicity === 'periodo' || rootVersion.periodicity === 'periodo' || Boolean(seriesEndDate);
+
+      if (isPeriodo && seriesEndDate) {
+        const endMonthKey = seriesEndDate.length === 7 ? seriesEndDate : seriesEndDate.substring(0, 7);
+        if (curMonthKey > endMonthKey) {
+          break; // Atingiu o mês de fim definido pelo usuário no período!
+        }
+      }
+
       // Se a versão ativa estiver marcada como terminada a partir desta data, não projetar mais
       if (activeVersion.isTerminated || activeVersion.isDeleted) {
         curDate = addMonths(curDate, 1);
@@ -191,6 +202,9 @@ function hasEventMeaningfullyChanged(base, updates) {
   if (updates.dayOfMonth !== undefined && Number(updates.dayOfMonth) !== Number(base.dayOfMonth)) return true;
   if (updates.isCompleted !== undefined && Boolean(updates.isCompleted) !== Boolean(base.isCompleted)) return true;
   if (updates.isLocked !== undefined && Boolean(updates.isLocked) !== Boolean(base.isLocked)) return true;
+  if (updates.periodicity !== undefined && updates.periodicity !== base.periodicity) return true;
+  if (updates.recurrenceEndDate !== undefined && updates.recurrenceEndDate !== base.recurrenceEndDate) return true;
+  if (updates.endDate !== undefined && updates.endDate !== base.endDate) return true;
 
   if (updates.breakdownItems !== undefined) {
     const bItems = JSON.stringify(base.breakdownItems || []);

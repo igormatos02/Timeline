@@ -1008,12 +1008,12 @@ export default function TimelineHeader({
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Património:</span>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                    <span style={{ color: '#c084fc', fontSize: '0.8rem', fontWeight: '800' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: '1.2' }}>
+                                    <span style={{ color: '#c084fc', fontSize: '0.78rem', fontWeight: '800' }}>
                                       {formatCurrency(finMetrics.totalPatrimonioAcquisition || 0)}
                                     </span>
                                     {finMetrics.totalPatrimonioGain !== 0 && (
-                                      <span style={{ color: finMetrics.totalPatrimonioGain >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.74rem', fontWeight: '700' }}>
+                                      <span style={{ color: finMetrics.totalPatrimonioGain >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.64rem', fontWeight: '700' }}>
                                         ({finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}{formatCurrency(finMetrics.totalPatrimonioGain)})
                                       </span>
                                     )}
@@ -1217,12 +1217,12 @@ export default function TimelineHeader({
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Património:</span>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                    <span style={{ color: '#c084fc', fontSize: '0.8rem', fontWeight: '800' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: '1.2' }}>
+                                    <span style={{ color: '#c084fc', fontSize: '0.78rem', fontWeight: '800' }}>
                                       {formatCurrency(finMetrics?.totalPatrimonioAcquisition || 0)}
                                     </span>
                                     {(finMetrics?.totalPatrimonioGainHorizon || 0) !== 0 && (
-                                      <span style={{ color: (finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.74rem', fontWeight: '700' }}>
+                                      <span style={{ color: (finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.64rem', fontWeight: '700' }}>
                                         ({(finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '+' : ''}{formatCurrency(finMetrics?.totalPatrimonioGainHorizon || 0)})
                                       </span>
                                     )}

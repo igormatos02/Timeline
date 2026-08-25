@@ -219,6 +219,11 @@ export default function TimelineHeader({
         ? daciaContract
         : jeepContract;
 
+  const daciaTimelineFromAll = (allTimelines || []).find((t) => t.id === 'd5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9a' || t.name?.toLowerCase().includes('dacia') || t.contractNumber === 'CRD19605103001');
+  const jeepTimelineFromAll = (allTimelines || []).find((t) => t.id === 'c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f' || t.name?.toLowerCase().includes('jeep') || t.contractNumber === '80004197726');
+  const casa1TimelineFromAll = (allTimelines || []).find((t) => t.id === 'e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0b' || t.name?.includes('02012642') || (t.name?.includes('Egas Moniz') && !t.name?.includes('Hipoteca')));
+  const casa2TimelineFromAll = (allTimelines || []).find((t) => t.id === 'f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c' || t.name?.includes('02015122') || t.name?.includes('Hipoteca'));
+
   const carLoanEvents = (timeline.events || []).filter((e) => {
     if (isCasa1Active) {
       return e.timelineOriginId === 'tl-loan-casa1' || e.timelineOriginId === 'e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0b' || e.title?.includes('02012642') || e.title?.includes('Egas Moniz') || e.title?.includes('Casa 1');
@@ -227,13 +232,23 @@ export default function TimelineHeader({
       return e.timelineOriginId === 'tl-loan-casa2' || e.timelineOriginId === 'f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c' || e.title?.includes('02015122') || e.title?.includes('Hipoteca') || e.title?.includes('Casa 2');
     }
     if (isDaciaActive) {
-      return e.timelineOriginId === 'tl-loan-dacia' || e.timelineOriginId === 'tl-loan-crd19605103001' || e.title?.includes('Dacia') || (e.isSystemLoanEvent && e.amount === 180.08);
+      return e.timelineOriginId === 'tl-loan-dacia' || e.timelineOriginId === 'tl-loan-crd19605103001' || e.timelineOriginId === 'd5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9a' || e.title?.includes('Dacia') || (e.isSystemLoanEvent && e.amount === 180.08);
     }
-    return e.timelineOriginId === 'tl-loan-jeep' || e.timelineOriginId === 'tl-loan-80004197726' || e.title?.includes('Jeep') || (e.isSystemLoanEvent && e.amount === 218.47);
+    return e.timelineOriginId === 'tl-loan-jeep' || e.timelineOriginId === 'tl-loan-80004197726' || e.timelineOriginId === 'c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f' || e.title?.includes('Jeep') || (e.isSystemLoanEvent && e.amount === 218.47);
   });
 
+  const fullLoanEvents = isCasa1Active && casa1TimelineFromAll?.events?.length
+    ? casa1TimelineFromAll.events
+    : isCasa2Active && casa2TimelineFromAll?.events?.length
+      ? casa2TimelineFromAll.events
+      : isDaciaActive && daciaTimelineFromAll?.events?.length
+        ? daciaTimelineFromAll.events
+        : isJeepActive && jeepTimelineFromAll?.events?.length
+          ? jeepTimelineFromAll.events
+          : carLoanEvents;
+
   const loanMetrics = isLoanTimeline ? getLoanMetrics(timeline, timeline.events || []) : null;
-  const carLoanMetrics = isCarLoanActive ? getLoanMetrics(currentCarContract, carLoanEvents) : null;
+  const carLoanMetrics = isCarLoanActive ? getLoanMetrics(currentCarContract, fullLoanEvents) : null;
   const activeLoanMetrics = isLoanTimeline ? loanMetrics : carLoanMetrics;
 
   const incomeMetrics = isIncomeTimeline ? getIncomeMetrics(timeline, timeline.events || []) : null;

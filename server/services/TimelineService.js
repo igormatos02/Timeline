@@ -160,8 +160,12 @@ export function projectEvents(rawEvents = [], options = {}) {
 
   // Filtrar pela janela [filterStartDate, filterEndDate] se especificada
   return allGenerated.filter((ev) => {
-    if (filterStartDate && ev.date < filterStartDate) return false;
-    if (filterEndDate && ev.date > filterEndDate) return false;
+    const isLoan = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.category === 'amortizacao' || (ev.timelineOriginId && (String(ev.timelineOriginId).includes('loan') || String(ev.timelineOriginId).startsWith('d5e6f7a8') || String(ev.timelineOriginId).startsWith('e6f7a8b9') || String(ev.timelineOriginId).startsWith('f7a8b9c0') || String(ev.timelineOriginId).startsWith('c4d5e6f7')));
+    // Eventos de empréstimos contratuais preservam o histórico completo para cálculo de amortização e dívida restante
+    if (!isLoan) {
+      if (filterStartDate && ev.date < filterStartDate) return false;
+      if (filterEndDate && ev.date > filterEndDate) return false;
+    }
     return true;
   });
 }

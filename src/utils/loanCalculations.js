@@ -528,8 +528,8 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
         const initialKey = ev.seriesId || ev.id;
         if (!seenInitialInvestments.has(initialKey)) {
           const currentVal = Number(ev.amount || ev.initialInvestedAmount || 0);
-          const acqVal = Number(ev.initialInvestedAmount || ev.amount || 0);
-          totalPriorInvestedAll += currentVal;
+          const acqVal = Number(ev.initialInvestedAmount !== undefined && ev.initialInvestedAmount !== '' && Number(ev.initialInvestedAmount) > 0 ? ev.initialInvestedAmount : (ev.amount || 0));
+          totalPriorInvestedAll += acqVal;
           totalPriorPatrimonio += currentVal;
           totalPriorPatrimonioAcquisition += acqVal;
           seenInitialInvestments.add(initialKey);

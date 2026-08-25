@@ -988,7 +988,6 @@ export default function TimelineHeader({
                             </div>
                           </div>
 
-                          {/* Card 2: Valor Investimentos */}
                           <div className="meta-item" style={{ padding: '8px 12px' }}>
                             <div className="meta-icon-box" style={{ color: '#6366f1' }}>
                               <PiggyBank size={16} />
@@ -1007,11 +1006,16 @@ export default function TimelineHeader({
                                     {formatCurrency(finMetrics.totalPoupanca || 0)}
                                   </span>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Património:</span>
-                                  <span style={{ color: '#c084fc', fontSize: '0.8rem', fontWeight: '800' }}>
-                                    {formatCurrency(finMetrics.totalPatrimonio || 0)}
-                                  </span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
+                                      Inv: <strong style={{ color: 'var(--primary-light)' }}>{formatCurrency(finMetrics.totalPatrimonioAcquisition || 0)}</strong>
+                                    </span>
+                                    <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
+                                      Val: <strong style={{ color: '#c084fc' }}>{formatCurrency(finMetrics.totalPatrimonio || 0)}</strong>
+                                    </span>
+                                  </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Outros:</span>
@@ -1019,17 +1023,10 @@ export default function TimelineHeader({
                                     {formatCurrency(finMetrics.totalOutros || 0)}
                                   </span>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                                  <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Valorização Património:</span>
-                                  <span style={{ color: finMetrics.totalPatrimonioGain >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.8rem', fontWeight: '800' }}>
-                                    {finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}{formatCurrency(finMetrics.totalPatrimonioGain)}
-                                  </span>
-                                </div>
                               </div>
                             </div>
                           </div>
 
-                          {/* Card 3: Empréstimos e Financiamentos */}
                           <div className="meta-item" style={{ padding: '8px 12px' }}>
                             <div className="meta-icon-box" style={{ color: '#10b981' }}>
                               <CreditCard size={16} />
@@ -1057,9 +1054,7 @@ export default function TimelineHeader({
                         </div>
                       </div>
 
-                      {/* 🔮 LINHA 2: PREVISTOS (Projeções / Planeamento) */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {/* Título de Previstos em Azul */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#38bdf8', display: 'inline-block' }} />
@@ -1067,7 +1062,6 @@ export default function TimelineHeader({
                           </span>
                         </div>
 
-                        {/* ⏱️ Barra de Progressão de Tempo Mensal (Fundo Branco) */}
                         <div
                           style={{
                             background: '#ffffff',
@@ -1105,7 +1099,6 @@ export default function TimelineHeader({
                               </span>
                             </div>
 
-                            {/* Botões de Atalho */}
                             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
                               {[
                                 { label: 'Mês Atual', months: 0 },
@@ -1142,7 +1135,6 @@ export default function TimelineHeader({
                             </div>
                           </div>
 
-                          {/* Slider de Progressão */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: '700', whiteSpace: 'nowrap' }}>
                               Hoje (Ago 2026)
@@ -1169,7 +1161,6 @@ export default function TimelineHeader({
                         </div>
 
                         <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
-                          {/* Card 1: Saldo Líquido Previsto */}
                           <div className="meta-item" style={{ padding: '8px 12px' }}>
                             <div className="meta-icon-box" style={{ color: '#38bdf8' }}>
                               <TrendingUp size={16} />
@@ -1196,7 +1187,7 @@ export default function TimelineHeader({
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Investimentos:</span>
-                                  <span style={{ color: '#c084fc', fontSize: '0.78rem', fontWeight: '700' }}>
+                                  <span style={{ color: 'var(--primary-light, #818cf8)', fontSize: '0.78rem', fontWeight: '700' }}>
                                     -{formatCurrency(finMetrics?.totalPlannedInvestmentsHorizon || 0)}
                                   </span>
                                 </div>
@@ -1204,7 +1195,6 @@ export default function TimelineHeader({
                             </div>
                           </div>
 
-                          {/* Card 2: Valor Investimentos */}
                           <div className="meta-item" style={{ padding: '8px 12px' }}>
                             <div className="meta-icon-box" style={{ color: '#6366f1' }}>
                               <PiggyBank size={16} />
@@ -1212,7 +1202,7 @@ export default function TimelineHeader({
                             <div style={{ flex: 1 }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
                                 <span className="meta-label" style={{ fontSize: '0.7rem' }}>Valor Investimentos</span>
-                                <span style={{ color: '#c084fc', fontSize: '0.96rem', fontWeight: '800' }}>
+                                <span style={{ color: 'var(--primary-light)', fontSize: '0.96rem', fontWeight: '800' }}>
                                   {formatCurrency(finMetrics?.totalPlannedInvestmentsHorizon || 0)}
                                 </span>
                               </div>
@@ -1223,22 +1213,21 @@ export default function TimelineHeader({
                                     {formatCurrency(finMetrics?.totalPoupancaHorizon || 0)}
                                   </span>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Património:</span>
-                                  <span style={{ color: '#c084fc', fontSize: '0.8rem', fontWeight: '800' }}>
-                                    {formatCurrency(finMetrics?.totalPatrimonioHorizon || 0)}
-                                  </span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
+                                      Inv: <strong style={{ color: 'var(--primary-light)' }}>{formatCurrency(finMetrics?.totalPatrimonioAcquisition || 0)}</strong>
+                                    </span>
+                                    <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
+                                      Val: <strong style={{ color: '#c084fc' }}>{formatCurrency(finMetrics?.totalPatrimonioHorizon || 0)}</strong>
+                                    </span>
+                                  </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Outros:</span>
                                   <span style={{ color: '#38bdf8', fontSize: '0.8rem', fontWeight: '800' }}>
                                     {formatCurrency(finMetrics?.totalOutrosHorizon || 0)}
-                                  </span>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                                  <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Valorização Património:</span>
-                                  <span style={{ color: (finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.8rem', fontWeight: '800' }}>
-                                    {(finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '+' : ''}{formatCurrency(finMetrics?.totalPatrimonioGainHorizon || 0)}
                                   </span>
                                 </div>
                               </div>

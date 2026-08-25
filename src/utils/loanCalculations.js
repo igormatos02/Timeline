@@ -657,6 +657,8 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     totalPlannedInvestments,
     totalPlannedInvestmentsUpToCurrent,
     totalPlannedInvestmentsHorizon,
+    totalMonthlyAportesRealized,
+    totalMonthlyAportesPlannedHorizon,
     currentMonthExpenses,
     currentMonthExpensesPaid,
     monthlyAverageExpenses,

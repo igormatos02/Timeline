@@ -12,7 +12,8 @@ import {
   Repeat,
   Zap,
   Calendar,
-  ChevronDown
+  ChevronDown,
+  Target
 } from 'lucide-react';
 import { format, parseISO, getDaysInMonth } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -55,6 +56,7 @@ export default function CreateEventModal({
     periodicity: 'recorrente', // 'recorrente' | 'unica'
     amount: 100,
     initialInvestedAmount: '',
+    targetAmount: '',
     priority: 'Normal',
     labelsInput: ''
   });
@@ -117,6 +119,7 @@ export default function CreateEventModal({
         periodicity: isRecurrent ? 'recorrente' : 'unica',
         amount: initialData.amount !== undefined ? initialData.amount : 100,
         initialInvestedAmount: initialData.initialInvestedAmount !== undefined ? initialData.initialInvestedAmount : '',
+        targetAmount: initialData.targetAmount !== undefined ? initialData.targetAmount : '',
         priority: initialData.priority || 'Normal',
         labelsInput: initialData.labels ? initialData.labels.join(', ') : ''
       });
@@ -144,6 +147,7 @@ export default function CreateEventModal({
         periodicity: 'recorrente',
         amount: '',
         initialInvestedAmount: '',
+        targetAmount: '',
         priority: 'Normal',
         labelsInput: ''
       });
@@ -270,6 +274,8 @@ export default function CreateEventModal({
       }
     }
 
+    const targetAmountVal = movementType === 'investimento' && formData.targetAmount !== '' ? (Number(formData.targetAmount) || 0) : undefined;
+
     onSave({
       ...formData,
       title: formData.title.trim(),
@@ -282,6 +288,7 @@ export default function CreateEventModal({
       status: finalStatus,
       amount: finalAmount,
       initialInvestedAmount: priorInvested,
+      targetAmount: targetAmountVal,
       breakdownItems: breakdownItems.length > 0 ? breakdownItems : undefined,
       labels,
       isCompleted,
@@ -494,36 +501,74 @@ export default function CreateEventModal({
             />
           </div>
 
-          {/* Campo Especial para Investimentos: Valor Já Investido Anteriormente */}
+          {/* Campo Especial para Investimentos: Valor Já Investido Anteriormente e Meta a Atingir */}
           {movementType === 'investimento' && (
-            <div className="form-group" style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)', borderRadius: '10px', padding: '12px', marginBottom: '14px' }}>
-              <label className="form-label" style={{ color: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span>Valor Já Investido Anteriormente (€)</span>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 'normal' }}>Base de Património</span>
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0,00 (ex: 5000 € já acumulados)"
-                  className="form-input"
-                  style={{
-                    borderColor: 'rgba(99, 102, 241, 0.35)',
-                    fontSize: '1rem',
-                    fontWeight: '700',
-                    color: 'var(--primary-light)',
-                    paddingLeft: '28px'
-                  }}
-                  value={formData.initialInvestedAmount !== undefined ? formData.initialInvestedAmount : ''}
-                  onChange={(e) => setFormData({ ...formData, initialInvestedAmount: e.target.value })}
-                />
-                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: 'var(--primary-light)' }}>
-                  €
-                </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '14px' }}>
+              {/* Valor Já Investido Anteriormente */}
+              <div className="form-group" style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)', borderRadius: '10px', padding: '12px', margin: 0 }}>
+                <label className="form-label" style={{ color: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span>Valor Já Investido Anteriormente (€)</span>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 'normal' }}>Base de Património</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00 (ex: 5000 € já acumulados)"
+                    className="form-input"
+                    style={{
+                      borderColor: 'rgba(99, 102, 241, 0.35)',
+                      fontSize: '1rem',
+                      fontWeight: '700',
+                      color: 'var(--primary-light)',
+                      paddingLeft: '28px'
+                    }}
+                    value={formData.initialInvestedAmount !== undefined ? formData.initialInvestedAmount : ''}
+                    onChange={(e) => setFormData({ ...formData, initialInvestedAmount: e.target.value })}
+                  />
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: 'var(--primary-light)' }}>
+                    €
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '5px', lineHeight: '1.35' }}>
+                  💡 Este valor é contabilizado no <strong>Total Investido</strong> / Património, mas <strong>NÃO</strong> entra como despesa de saída nos gastos mensais.
+                </div>
               </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '5px', lineHeight: '1.35' }}>
-                💡 Este valor é contabilizado no <strong>Total Investido</strong> / Património, mas <strong>NÃO</strong> entra como despesa de saída nos gastos mensais.
+
+              {/* Meta a Ser Atingida (€) */}
+              <div className="form-group" style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.25)', borderRadius: '10px', padding: '12px', margin: 0 }}>
+                <label className="form-label" style={{ color: '#a78bfa', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Target size={14} />
+                    <span>Meta a Ser Atingida (€)</span>
+                  </span>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 'normal' }}>Objetivo / Meta</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00 (ex: 20000 € para Reserva / Objetivo)"
+                    className="form-input"
+                    style={{
+                      borderColor: 'rgba(139, 92, 246, 0.35)',
+                      fontSize: '1rem',
+                      fontWeight: '700',
+                      color: '#a78bfa',
+                      paddingLeft: '28px'
+                    }}
+                    value={formData.targetAmount !== undefined ? formData.targetAmount : ''}
+                    onChange={(e) => setFormData({ ...formData, targetAmount: e.target.value })}
+                  />
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: '#a78bfa' }}>
+                    €
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '5px', lineHeight: '1.35' }}>
+                  🎯 Defina o objetivo financeiro desta poupança para acompanhar a % de progresso atingida.
+                </div>
               </div>
             </div>
           )}

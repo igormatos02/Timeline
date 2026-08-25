@@ -37,7 +37,8 @@ import {
   Landmark,
   Unlock,
   Check,
-  X
+  X,
+  Target
 } from 'lucide-react';
 import { formatCurrency } from '../utils/loanCalculations';
 import { generateUUID } from '../utils/uuid';
@@ -1514,6 +1515,17 @@ export default function TimelineEventCard({
                 </span>
                 <span style={{ fontSize: '0.9rem', fontWeight: '800', color: isInertFuture ? 'var(--text-dim)' : 'var(--primary-light)' }}>
                   {formatCurrency(event.initialInvestedAmount)}
+                </span>
+              </div>
+            )}
+
+            {Number(event.targetAmount || 0) > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
+                <span style={{ fontSize: '0.7rem', color: '#a78bfa', textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <Target size={11} /> Meta
+                </span>
+                <span style={{ fontSize: '0.9rem', fontWeight: '800', color: '#a78bfa' }}>
+                  {formatCurrency(event.targetAmount)}
                 </span>
               </div>
             )}

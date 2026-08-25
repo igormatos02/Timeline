@@ -393,8 +393,7 @@ export default function TimelineHeader({
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '12px',
-          paddingBottom: collapsed ? '0' : '12px',
-          borderBottom: collapsed ? 'none' : '1px solid var(--border-glass)'
+          paddingBottom: collapsed ? '0' : '8px'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

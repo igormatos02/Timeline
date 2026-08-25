@@ -36,6 +36,7 @@ import {
   Scale,
   ShoppingCart,
   PiggyBank,
+  Landmark,
   CheckCircle2,
   AlertCircle,
   Play,
@@ -1609,14 +1610,16 @@ export default function VerticalTimeline({
               <span>Categoria / Tipo</span>
             </div>
             <div className="sidebar-btn-group">
-              {(timeline.type === 'Entradas' || timeline.type === 'Financeiro'
+              {(timeline.type === 'Entradas' || timeline.type === 'Financeiro' || timeline.type === 'investimentos'
                 ? [
                   { id: 'Todos', name: 'Todas as Categorias', icon: <Layers size={13} /> },
                   { id: 'entrada_recorrente', name: 'Salários / Rendas', icon: <DollarSign size={13} /> },
                   { id: 'entrada_esporadica', name: 'Bónus / Extras', icon: <Gift size={13} /> },
                   { id: 'saida_recorrente', name: 'Despesas Fixas', icon: <CreditCard size={13} /> },
                   { id: 'gasto', name: 'Gastos Variáveis', icon: <Tag size={13} /> },
-                  { id: 'investimento_poupanca', name: 'Poupança / Aportes', icon: <TrendingUp size={13} /> }
+                  { id: 'investimento_poupanca', name: 'Poupança', icon: <PiggyBank size={13} /> },
+                  { id: 'investimento_patrimonio', name: 'Património', icon: <Landmark size={13} /> },
+                  { id: 'investimento_outros', name: 'Outros Investimentos', icon: <Sparkles size={13} /> }
                 ]
                 : timeline.type === 'Empréstimo'
                   ? [

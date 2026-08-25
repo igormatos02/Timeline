@@ -6,6 +6,7 @@ import {
   DollarSign,
   ShoppingCart,
   PiggyBank,
+  Landmark,
   Sparkles,
   Lock,
   Repeat,
@@ -42,6 +43,7 @@ export default function CreateEventModal({
   const [breakdownItems, setBreakdownItems] = useState([]);
   const [isDayPickerOpen, setIsDayPickerOpen] = useState(false);
   const [updateScope, setUpdateScope] = useState('single'); // 'single' (Apenas este mês) | 'subsequent' (Deste mês em diante)
+  const [investmentSubtype, setInvestmentSubtype] = useState('investimento_poupanca'); // 'investimento_poupanca' | 'investimento_patrimonio' | 'investimento_outros'
 
   // Base Form State
   const [formData, setFormData] = useState({
@@ -82,6 +84,14 @@ export default function CreateEventModal({
       setMovementType(initType);
       const isRecurrent = initialData.category === 'entrada_recorrente' || initialData.category === 'saida_recorrente' || initialData.category === 'investimento_poupanca' || initialData.periodicity === 'recorrente';
 
+      if (initialData.category === 'investimento_patrimonio') {
+        setInvestmentSubtype('investimento_patrimonio');
+      } else if (initialData.category === 'investimento_outros' || initialData.category?.includes('etf') || initialData.category?.includes('acoes') || initialData.category?.includes('extra')) {
+        setInvestmentSubtype('investimento_outros');
+      } else {
+        setInvestmentSubtype('investimento_poupanca');
+      }
+
       setFormData({
         title: initialData.title || '',
         date: targetDate,
@@ -105,6 +115,7 @@ export default function CreateEventModal({
       }
 
       setMovementType(initialMovement);
+      setInvestmentSubtype('investimento_poupanca');
 
       const initStatus = initialMovement === 'saida' ? 'Pendente' : initialMovement === 'investimento' ? 'Planeado' : 'Previsto';
 
@@ -221,7 +232,7 @@ export default function CreateEventModal({
       finalStatus = formData.status || 'Pendente';
     } else if (movementType === 'investimento') {
       isInvestment = true;
-      finalCategory = formData.periodicity === 'recorrente' ? 'investimento_poupanca' : 'investimento_extra';
+      finalCategory = investmentSubtype || 'investimento_poupanca';
       finalStatus = formData.status || 'Planeado';
     }
 
@@ -392,6 +403,52 @@ export default function CreateEventModal({
                 >
                   <PiggyBank size={14} /> Investimento
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Subtipo de Investimento: Poupança, Património, Outros */}
+          {movementType === 'investimento' && (
+            <div className="form-group" style={{ marginBottom: '14px' }}>
+              <label className="form-label" style={{ color: 'var(--primary-light)', fontSize: '0.8rem', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>Tipo de Investimento</span>
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                {[
+                  { id: 'investimento_poupanca', label: 'Poupança', icon: <PiggyBank size={16} />, desc: 'Reserva / Depósitos' },
+                  { id: 'investimento_patrimonio', label: 'Património', icon: <Landmark size={16} />, desc: 'Bens / Imóveis' },
+                  { id: 'investimento_outros', label: 'Outros', icon: <Sparkles size={16} />, desc: 'ETFs / Fundos / Ações' }
+                ].map((sub) => {
+                  const isSelected = investmentSubtype === sub.id;
+                  return (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() => setInvestmentSubtype(sub.id)}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        padding: '10px 6px',
+                        borderRadius: '10px',
+                        border: isSelected ? '2px solid #818cf8' : '1px solid var(--border-glass)',
+                        background: isSelected ? 'rgba(99, 102, 241, 0.22)' : 'var(--bg-glass)',
+                        color: isSelected ? '#a5b4fc' : 'var(--text-muted)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: isSelected ? '0 0 12px rgba(99, 102, 241, 0.3)' : 'none'
+                      }}
+                    >
+                      <div style={{ color: isSelected ? '#818cf8' : 'var(--text-dim)' }}>
+                        {sub.icon}
+                      </div>
+                      <span style={{ fontSize: '0.84rem', fontWeight: '800' }}>{sub.label}</span>
+                      <span style={{ fontSize: '0.64rem', color: 'var(--text-dim)', textAlign: 'center' }}>{sub.desc}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

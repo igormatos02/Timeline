@@ -34,6 +34,7 @@ import {
   Zap,
   ShoppingCart,
   PiggyBank,
+  Landmark,
   Unlock,
   Check,
   X
@@ -563,17 +564,26 @@ export default function TimelineEventCard({
         };
       case 'investimento_poupanca':
         return {
-          label: 'Poupança / Reserva',
-          icon: <TrendingUp size={12} />,
+          label: 'Poupança',
+          icon: <PiggyBank size={12} />,
           bg: 'rgba(99, 102, 241, 0.15)',
           color: 'var(--primary-light)',
           border: 'rgba(99, 102, 241, 0.3)'
         };
+      case 'investimento_patrimonio':
+        return {
+          label: 'Património',
+          icon: <Landmark size={12} />,
+          bg: 'rgba(168, 85, 247, 0.15)',
+          color: '#c084fc',
+          border: 'rgba(168, 85, 247, 0.3)'
+        };
+      case 'investimento_outros':
       case 'investimento_etf':
       case 'investimento_acoes':
       case 'investimento_extra':
         return {
-          label: 'Investimento / Aporte',
+          label: 'Outros Investimentos',
           icon: <Sparkles size={12} />,
           bg: 'rgba(99, 102, 241, 0.15)',
           color: '#818cf8',

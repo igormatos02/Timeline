@@ -874,17 +874,19 @@ export default function TimelineHeader({
 
                   {(activeFinancialTab === 'investimentos' || timeline.type === 'investimentos' || timeline.id === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e') && (
                     <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '8px', marginBottom: '8px' }}>
-                      {/* Card 1: Total Investido */}
+                      {/* Card 1: Valor em Investimentos */}
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#6366f1' }}>
                           <DollarSign size={16} />
                         </div>
                         <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Investido</div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Valor em Investimentos</div>
                           <div className="meta-value" style={{ color: 'var(--primary-light)', fontSize: '0.94rem', fontWeight: '800' }}>
-                            {formatCurrency(finMetrics.totalInvested)}
+                            {formatCurrency(finMetrics.totalInvestedMarket ?? (finMetrics.totalInvested + (finMetrics.totalPatrimonioGain || 0)))}
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Património consolidado</div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
+                            Investido: {formatCurrency(finMetrics.totalInvested)}
+                          </div>
                         </div>
                       </div>
 
@@ -909,19 +911,21 @@ export default function TimelineHeader({
                         </div>
                         <div>
                           <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Património</div>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                            <div className="meta-value" style={{ color: '#c084fc', fontSize: '0.94rem', fontWeight: '800' }}>
-                              {formatCurrency(finMetrics.totalPatrimonio || 0)}
+                          <div className="meta-value" style={{ color: '#c084fc', fontSize: '0.94rem', fontWeight: '800' }}>
+                            {formatCurrency(finMetrics.totalPatrimonio || 0)}
+                          </div>
+                          {finMetrics.totalPatrimonioGain !== 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '2px', fontSize: '0.66rem', color: 'var(--text-dim)' }}>
+                              <div>
+                                Investido: <strong style={{ color: 'var(--primary-light)' }}>{formatCurrency(finMetrics.totalPatrimonioAcquisition || 0)}</strong>
+                              </div>
+                              <div>
+                                Valorizado: <strong style={{ color: finMetrics.totalPatrimonioGain >= 0 ? '#10b981' : '#f43f5e' }}>{finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}{formatCurrency(finMetrics.totalPatrimonioGain)} ({finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}{finMetrics.totalPatrimonioGainPercent.toFixed(1)}%)</strong>
+                              </div>
                             </div>
-                            {finMetrics.totalPatrimonioGain !== 0 && (
-                              <span style={{ fontSize: '0.68rem', color: finMetrics.totalPatrimonioGain >= 0 ? '#10b981' : '#f43f5e', fontWeight: '700' }}>
-                                ({finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}{formatCurrency(finMetrics.totalPatrimonioGain)})
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                            {finMetrics.totalPatrimonioGain !== 0 ? `Valorização: ${finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}${finMetrics.totalPatrimonioGainPercent.toFixed(1)}%` : 'Bens e imóveis'}
-                          </div>
+                          ) : (
+                            <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Bens e imóveis</div>
+                          )}
                         </div>
                       </div>
 

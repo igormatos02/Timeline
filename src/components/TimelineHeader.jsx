@@ -54,9 +54,10 @@ export default function TimelineHeader({
   selectedTimelineIds = null,
   activeFinancialTab = 'entradas',
   onSelectFinancialTab,
-  onEditTimeline,
-  onDeleteTimeline,
-  onResetTimeline,
+  onEdit,
+  onDelete,
+  onReset,
+  onOpenCreateTimeline,
   onOpenAmortizationModal,
   onScrollToOverdue
 }) {

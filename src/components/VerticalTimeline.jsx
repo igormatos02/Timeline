@@ -706,7 +706,8 @@ export default function VerticalTimeline({
           const effectiveIncome = isBalancoView ? (isFutureMonth ? mMonthIncome : mMonthIncomePaid) : mMonthIncome;
           const effectiveExpense = isBalancoView ? (isFutureMonth ? mMonthExpense : mMonthExpensePaid) : mMonthExpense;
           const effectiveInvestment = isBalancoView ? (isFutureMonth ? mMonthInvestment : mMonthInvestmentPaid) : mMonthInvestment;
-          const mNetMonth = effectiveIncome - (effectiveExpense + effectiveInvestment);
+          const mNetRealizedMonth = effectiveIncome - (effectiveExpense + effectiveInvestment);
+          const mNetProjectedMonth = mMonthIncome - (mMonthExpense + mMonthInvestment);
           const cumData = monthCumulativeMap.get(monthKeyStr) || { income: 0, expense: 0, investment: 0 };
 
           if (!showEmptyDays && !hasEvents && !isCurrentMonth) return null;
@@ -950,23 +951,44 @@ export default function VerticalTimeline({
                             -{formatCurrency(effectiveInvestment)}
                           </span>
 
+                          {/* Badge 1: Budget (Realizado / Liquidado até à data) */}
                           <span
                             className="group-card-badge"
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '5px',
+                              gap: '4px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              background: mNetMonth >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
-                              color: mNetMonth >= 0 ? '#10b981' : '#f43f5e',
-                              borderColor: mNetMonth >= 0 ? 'rgba(16, 185, 129, 0.35)' : 'rgba(244, 63, 94, 0.35)',
+                              background: mNetRealizedMonth >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
+                              color: mNetRealizedMonth >= 0 ? '#10b981' : '#f43f5e',
+                              borderColor: mNetRealizedMonth >= 0 ? 'rgba(16, 185, 129, 0.35)' : 'rgba(244, 63, 94, 0.35)',
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
-                            title={`Balanço = ${formatCurrency(effectiveIncome)} - (${formatCurrency(effectiveExpense)} + ${formatCurrency(effectiveInvestment)})`}
+                            title={`Budget (Sobra Líquida Realizada) = ${formatCurrency(effectiveIncome)} - (${formatCurrency(effectiveExpense)} + ${formatCurrency(effectiveInvestment)})`}
                           >
-                            <span>Balanço: {mNetMonth > 0 ? '+' : ''}{formatCurrency(mNetMonth)}</span>
+                            <span>Budget: {mNetRealizedMonth > 0 ? '+' : ''}{formatCurrency(mNetRealizedMonth)}</span>
+                          </span>
+
+                          {/* Badge 2: Balanço (Previsto / Estimativa total do mês em azul) */}
+                          <span
+                            className="group-card-badge"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              height: '26px',
+                              boxSizing: 'border-box',
+                              background: mNetProjectedMonth >= 0 ? 'rgba(56, 189, 248, 0.15)' : 'rgba(244, 63, 94, 0.15)',
+                              color: mNetProjectedMonth >= 0 ? '#38bdf8' : '#f43f5e',
+                              borderColor: mNetProjectedMonth >= 0 ? 'rgba(56, 189, 248, 0.35)' : 'rgba(244, 63, 94, 0.35)',
+                              fontWeight: '800',
+                              fontSize: '0.76rem'
+                            }}
+                            title={`Balanço Previsto (Total do Mês) = ${formatCurrency(mMonthIncome)} - (${formatCurrency(mMonthExpense)} + ${formatCurrency(mMonthInvestment)})`}
+                          >
+                            <span>Balanço: {mNetProjectedMonth > 0 ? '+' : ''}{formatCurrency(mNetProjectedMonth)}</span>
                           </span>
                         </>
                       )}

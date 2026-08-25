@@ -901,64 +901,82 @@ export default function VerticalTimeline({
                       {/* Badges para a aba Balanço */}
                       {isFinancialTimeline && activeFinancialTab === 'balanco' && (
                         <>
-                          {/* Entradas: Realizado de Previsto */}
+                          {/* Entradas: Realizado (linha 1) / Previsto (linha 2) */}
                           <span
                             className="group-card-badge"
                             style={{
                               display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              height: '26px',
+                              flexDirection: 'column',
+                              alignItems: 'flex-start',
+                              justifyContent: 'center',
+                              padding: '3px 8px',
+                              height: 'auto',
                               boxSizing: 'border-box',
                               color: '#10b981',
                               borderColor: 'rgba(16, 185, 129, 0.25)',
                               background: 'rgba(16, 185, 129, 0.08)',
-                              fontWeight: '800',
-                              fontSize: '0.74rem'
+                              lineHeight: '1.2'
                             }}
                             title={`Entradas: +${formatCurrency(mMonthIncomePaid)} realizado de +${formatCurrency(mMonthIncome)} previsto`}
                           >
-                            +{formatCurrency(mMonthIncomePaid)} de +{formatCurrency(mMonthIncome)}
+                            <span style={{ fontWeight: '800', fontSize: '0.74rem' }}>
+                              +{formatCurrency(mMonthIncomePaid)}
+                            </span>
+                            <span style={{ fontSize: '0.66rem', opacity: 0.75, fontWeight: '600' }}>
+                              / +{formatCurrency(mMonthIncome)}
+                            </span>
                           </span>
 
-                          {/* Saídas: Realizado de Previsto */}
+                          {/* Saídas: Realizado (linha 1) / Previsto (linha 2) */}
                           <span
                             className="group-card-badge"
                             style={{
                               display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              height: '26px',
+                              flexDirection: 'column',
+                              alignItems: 'flex-start',
+                              justifyContent: 'center',
+                              padding: '3px 8px',
+                              height: 'auto',
                               boxSizing: 'border-box',
                               color: '#f43f5e',
                               borderColor: 'rgba(244, 63, 94, 0.25)',
                               background: 'rgba(244, 63, 94, 0.08)',
-                              fontWeight: '800',
-                              fontSize: '0.74rem'
+                              lineHeight: '1.2'
                             }}
                             title={`Saídas: -${formatCurrency(mMonthExpensePaid)} realizado de -${formatCurrency(mMonthExpense)} previsto`}
                           >
-                            -{formatCurrency(mMonthExpensePaid)} de -{formatCurrency(mMonthExpense)}
+                            <span style={{ fontWeight: '800', fontSize: '0.74rem' }}>
+                              -{formatCurrency(mMonthExpensePaid)}
+                            </span>
+                            <span style={{ fontSize: '0.66rem', opacity: 0.75, fontWeight: '600' }}>
+                              / -{formatCurrency(mMonthExpense)}
+                            </span>
                           </span>
 
-                          {/* Investimentos: Realizado de Previsto */}
+                          {/* Investimentos: Realizado (linha 1) / Previsto (linha 2) */}
                           <span
                             className="group-card-badge"
                             style={{
                               display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              height: '26px',
+                              flexDirection: 'column',
+                              alignItems: 'flex-start',
+                              justifyContent: 'center',
+                              padding: '3px 8px',
+                              height: 'auto',
                               boxSizing: 'border-box',
                               color: 'var(--primary-light, #818cf8)',
                               borderColor: 'rgba(99, 102, 241, 0.25)',
                               background: 'rgba(99, 102, 241, 0.08)',
-                              fontWeight: '800',
-                              fontSize: '0.74rem'
+                              lineHeight: '1.2'
                             }}
                             title={`Investimentos: -${formatCurrency(mMonthInvestmentPaid)} realizado de -${formatCurrency(mMonthInvestment)} previsto`}
                           >
-                            -{formatCurrency(mMonthInvestmentPaid)} de -{formatCurrency(mMonthInvestment)}
+                            <span style={{ fontWeight: '800', fontSize: '0.74rem' }}>
+                              -{formatCurrency(mMonthInvestmentPaid)}
+                            </span>
+                            <span style={{ fontSize: '0.66rem', opacity: 0.75, fontWeight: '600' }}>
+                              / -{formatCurrency(mMonthInvestment)}
+                            </span>
                           </span>
 
                           {/* Badge 1: Realizado (Liquidado até à data) */}

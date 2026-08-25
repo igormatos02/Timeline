@@ -328,8 +328,8 @@ export default function VerticalTimeline({
 
         if (activeFinancialTab === 'entradas' && !isIncome) return false;
         if (activeFinancialTab === 'gastos') {
-          if (isInvestment && Number(ev.amount || 0) <= 0) return false;
-          if (!isExpense && !isLoan && !isInvestment) return false;
+          if (isInvestment) return false;
+          if (!isExpense && !isLoan) return false;
         }
         if (activeFinancialTab === 'investimentos' && !isInvestment) return false;
         if (activeFinancialTab === 'jeep' && !isJeep) return false;
@@ -810,7 +810,7 @@ export default function VerticalTimeline({
                         </>
                       )}
 
-                      {/* Badges para a aba Gastos (Gastos + Empréstimos + Investimentos) */}
+                      {/* Badges para a aba Gastos (Apenas Gastos + Empréstimos) */}
                       {isFinancialTimeline && activeFinancialTab === 'gastos' && (
                         <>
                           <span
@@ -821,14 +821,14 @@ export default function VerticalTimeline({
                               gap: '5px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : ((mMonthExpense + mMonthInvestment) > 0 ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
-                              color: isFutureMonth ? 'var(--text-dim)' : ((mMonthExpense + mMonthInvestment) > 0 ? '#f43f5e' : 'var(--text-dim)'),
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : ((mMonthExpense + mMonthInvestment) > 0 ? 'rgba(244, 63, 94, 0.35)' : 'var(--border-glass)'),
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthExpense > 0 ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
+                              color: isFutureMonth ? 'var(--text-dim)' : (mMonthExpense > 0 ? '#f43f5e' : 'var(--text-dim)'),
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthExpense > 0 ? 'rgba(244, 63, 94, 0.35)' : 'var(--border-glass)'),
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
                           >
-                            <span>Total Saídas: -{formatCurrency(mMonthExpense + mMonthInvestment)}</span>
+                            <span>Total Saídas: -{formatCurrency(mMonthExpense)}</span>
                           </span>
 
                           <span
@@ -839,14 +839,14 @@ export default function VerticalTimeline({
                               gap: '5px',
                               height: '26px',
                               boxSizing: 'border-box',
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : ((cumData.expense + cumData.investment) > 0 ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
-                              color: isFutureMonth ? 'var(--text-dim)' : ((cumData.expense + cumData.investment) > 0 ? '#fb7185' : 'var(--text-dim)'),
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : ((cumData.expense + cumData.investment) > 0 ? 'rgba(244, 63, 94, 0.35)' : 'var(--border-glass)'),
+                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (cumData.expense > 0 ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
+                              color: isFutureMonth ? 'var(--text-dim)' : (cumData.expense > 0 ? '#fb7185' : 'var(--text-dim)'),
+                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (cumData.expense > 0 ? 'rgba(244, 63, 94, 0.35)' : 'var(--border-glass)'),
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
                           >
-                            <span>Acumulado: -{formatCurrency(cumData.expense + cumData.investment)}</span>
+                            <span>Acumulado: -{formatCurrency(cumData.expense)}</span>
                           </span>
                         </>
                       )}

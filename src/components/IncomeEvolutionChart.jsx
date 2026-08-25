@@ -147,7 +147,7 @@ export default function IncomeEvolutionChart({
       if (activeFinancialTab === 'entradas') {
         monthTotal = monthIncome;
       } else if (activeFinancialTab === 'gastos') {
-        monthTotal = monthExpense + monthInvestment;
+        monthTotal = monthExpense;
       } else if (activeFinancialTab === 'emprestimos' || activeFinancialTab === 'jeep' || activeFinancialTab === 'dacia' || activeFinancialTab === 'casa1' || activeFinancialTab === 'casa2') {
         monthTotal = monthExpense;
       } else if (activeFinancialTab === 'investimentos') {

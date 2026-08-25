@@ -957,7 +957,7 @@ export default function TimelineHeader({
                             </div>
                             <div style={{ flex: 1 }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Saldo Líquido</span>
+                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Saldo Líquido Acumulado</span>
                                 <span style={{ color: finMetrics.netRealized >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
                                   {finMetrics.netRealized >= 0 ? '+' : ''}{formatCurrency(finMetrics.netRealized)}
                                 </span>
@@ -1149,7 +1149,7 @@ export default function TimelineHeader({
                             </div>
                             <div style={{ flex: 1 }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Saldo Líquido</span>
+                                <span className="meta-label" style={{ fontSize: '0.7rem' }}>Saldo Líquido Acumulado</span>
                                 <span style={{ color: (finMetrics?.netProjectedHorizon ?? 0) >= 0 ? '#38bdf8' : '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
                                   {(finMetrics?.netProjectedHorizon ?? 0) >= 0 ? '+' : ''}{formatCurrency(finMetrics?.netProjectedHorizon ?? 0)}
                                 </span>

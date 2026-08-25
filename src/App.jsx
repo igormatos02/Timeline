@@ -87,8 +87,8 @@ export default function App() {
         console.info('Using local timeboards cache:', err.message);
       });
 
-    // 2. Load Timelines (12 meses anteriores e 12 meses futuros)
-    api.fetchTimelines({ startDate: '2025-08-01', endDate: '2027-08-31' })
+    // 2. Load Timelines (com horizonte amplo para permitir projeção de até 30 anos)
+    api.fetchTimelines({ startDate: '2024-01-01', endDate: '2056-12-31' })
       .then((data) => {
         if (isMounted && Array.isArray(data) && data.length > 0) {
           setTimelines(data);
@@ -115,11 +115,9 @@ export default function App() {
   const [pastHorizonYears, setPastHorizonYears] = useState(1);
   const scrollYBeforeModalRef = React.useRef(0);
 
-  const refreshTimelines = async (futureYears = futureHorizonYears, pastYears = pastHorizonYears) => {
-    const endYear = 2026 + futureYears;
-    const startYear = 2026 - pastYears;
+  const refreshTimelines = async () => {
     try {
-      const data = await api.fetchTimelines({ startDate: `${startYear}-08-01`, endDate: `${endYear}-08-31` });
+      const data = await api.fetchTimelines({ startDate: '2024-01-01', endDate: '2056-12-31' });
       if (Array.isArray(data) && data.length > 0) {
         setTimelines(data);
       }

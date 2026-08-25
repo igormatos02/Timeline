@@ -1020,7 +1020,7 @@ export default function TimelineHeader({
                             </div>
                           </div>
 
-                          {/* Card 3: Total Capital Amortizado */}
+                          {/* Card 3: Total Capital Amortizado & Devido */}
                           <div className="meta-item" style={{ padding: '8px 12px' }}>
                             <div className="meta-icon-box" style={{ color: '#10b981' }}>
                               <CheckCircle2 size={16} />
@@ -1032,8 +1032,13 @@ export default function TimelineHeader({
                                   {formatCurrency(totalAllLoansAmortized)}
                                 </span>
                               </div>
-                              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '4px' }}>
-                                Total liquidado nos empréstimos
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '4px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                  <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Capital Devido (Créditos):</span>
+                                  <span style={{ color: '#f43f5e', fontSize: '0.8rem', fontWeight: '800' }}>
+                                    {formatCurrency(totalAllLoansRemaining)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>

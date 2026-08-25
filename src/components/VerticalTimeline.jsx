@@ -979,44 +979,29 @@ export default function VerticalTimeline({
                             </span>
                           </span>
 
-                          {/* Badge 1: Realizado (Liquidado até à data) */}
+                          {/* Badge Único: Balanço (Linha 1: Realizado, Linha 2: Previsto) */}
                           <span
                             className="group-card-badge"
                             style={{
                               display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              height: '26px',
+                              flexDirection: 'column',
+                              alignItems: 'flex-start',
+                              justifyContent: 'center',
+                              padding: '3px 8px',
+                              height: 'auto',
                               boxSizing: 'border-box',
-                              background: mNetRealizedMonth >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
-                              color: mNetRealizedMonth >= 0 ? '#10b981' : '#f43f5e',
+                              background: mNetRealizedMonth >= 0 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
                               borderColor: mNetRealizedMonth >= 0 ? 'rgba(16, 185, 129, 0.35)' : 'rgba(244, 63, 94, 0.35)',
-                              fontWeight: '800',
-                              fontSize: '0.76rem'
+                              lineHeight: '1.2'
                             }}
-                            title={`Saldo Líquido Realizado = ${formatCurrency(effectiveIncome)} - (${formatCurrency(effectiveExpense)} + ${formatCurrency(effectiveInvestment)})`}
+                            title={`Balanço do Mês: Realizado = ${formatCurrency(mNetRealizedMonth)} | Previsto = ${formatCurrency(mNetProjectedMonth)}`}
                           >
-                            <span>Realizado: {mNetRealizedMonth > 0 ? '+' : ''}{formatCurrency(mNetRealizedMonth)}</span>
-                          </span>
-
-                          {/* Badge 2: Previsto (Estimativa total do mês em azul) */}
-                          <span
-                            className="group-card-badge"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              height: '26px',
-                              boxSizing: 'border-box',
-                              background: mNetProjectedMonth >= 0 ? 'rgba(56, 189, 248, 0.15)' : 'rgba(244, 63, 94, 0.15)',
-                              color: mNetProjectedMonth >= 0 ? '#38bdf8' : '#f43f5e',
-                              borderColor: mNetProjectedMonth >= 0 ? 'rgba(56, 189, 248, 0.35)' : 'rgba(244, 63, 94, 0.35)',
-                              fontWeight: '800',
-                              fontSize: '0.76rem'
-                            }}
-                            title={`Saldo Líquido Previsto (Total do Mês) = ${formatCurrency(mMonthIncome)} - (${formatCurrency(mMonthExpense)} + ${formatCurrency(mMonthInvestment)})`}
-                          >
-                            <span>Previsto: {mNetProjectedMonth > 0 ? '+' : ''}{formatCurrency(mNetProjectedMonth)}</span>
+                            <span style={{ fontWeight: '800', fontSize: '0.74rem', color: mNetRealizedMonth >= 0 ? '#10b981' : '#f43f5e' }}>
+                              Balanço: {mNetRealizedMonth > 0 ? '+' : ''}{formatCurrency(mNetRealizedMonth)}
+                            </span>
+                            <span style={{ fontSize: '0.66rem', fontWeight: '600', color: mNetProjectedMonth >= 0 ? '#38bdf8' : '#fb7185', opacity: 0.9 }}>
+                              {mNetProjectedMonth > 0 ? '+' : ''}{formatCurrency(mNetProjectedMonth)}
+                            </span>
                           </span>
                         </>
                       )}

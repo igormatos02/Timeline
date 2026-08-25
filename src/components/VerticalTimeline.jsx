@@ -951,7 +951,7 @@ export default function VerticalTimeline({
                             -{formatCurrency(effectiveInvestment)}
                           </span>
 
-                          {/* Badge 1: Budget (Realizado / Liquidado até à data) */}
+                          {/* Badge 1: Realizado (Liquidado até à data) */}
                           <span
                             className="group-card-badge"
                             style={{
@@ -966,12 +966,12 @@ export default function VerticalTimeline({
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
-                            title={`Budget (Sobra Líquida Realizada) = ${formatCurrency(effectiveIncome)} - (${formatCurrency(effectiveExpense)} + ${formatCurrency(effectiveInvestment)})`}
+                            title={`Saldo Líquido Realizado = ${formatCurrency(effectiveIncome)} - (${formatCurrency(effectiveExpense)} + ${formatCurrency(effectiveInvestment)})`}
                           >
-                            <span>Budget: {mNetRealizedMonth > 0 ? '+' : ''}{formatCurrency(mNetRealizedMonth)}</span>
+                            <span>Realizado: {mNetRealizedMonth > 0 ? '+' : ''}{formatCurrency(mNetRealizedMonth)}</span>
                           </span>
 
-                          {/* Badge 2: Balanço (Previsto / Estimativa total do mês em azul) */}
+                          {/* Badge 2: Previsto (Estimativa total do mês em azul) */}
                           <span
                             className="group-card-badge"
                             style={{
@@ -986,9 +986,9 @@ export default function VerticalTimeline({
                               fontWeight: '800',
                               fontSize: '0.76rem'
                             }}
-                            title={`Balanço Previsto (Total do Mês) = ${formatCurrency(mMonthIncome)} - (${formatCurrency(mMonthExpense)} + ${formatCurrency(mMonthInvestment)})`}
+                            title={`Saldo Líquido Previsto (Total do Mês) = ${formatCurrency(mMonthIncome)} - (${formatCurrency(mMonthExpense)} + ${formatCurrency(mMonthInvestment)})`}
                           >
-                            <span>Balanço: {mNetProjectedMonth > 0 ? '+' : ''}{formatCurrency(mNetProjectedMonth)}</span>
+                            <span>Previsto: {mNetProjectedMonth > 0 ? '+' : ''}{formatCurrency(mNetProjectedMonth)}</span>
                           </span>
                         </>
                       )}

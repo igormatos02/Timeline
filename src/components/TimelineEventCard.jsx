@@ -710,9 +710,9 @@ export default function TimelineEventCard({
         return {
           label: `Pago às ${getCompletedTimeStr()}`,
           icon: <CheckCircle2 size={11} />,
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#f43f5e',
-          border: 'rgba(244, 63, 94, 0.3)'
+          bg: 'rgba(16, 185, 129, 0.15)',
+          color: '#10b981',
+          border: 'rgba(16, 185, 129, 0.3)'
         };
       }
       if (isOverdueExpense) {
@@ -818,11 +818,19 @@ export default function TimelineEventCard({
       };
     }
   } else if (isExpenseEvent) {
-    cardStyle = {
-      background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.06) 0%, var(--bg-card) 100%)',
-      borderLeft: '4px solid #f43f5e',
-      borderColor: 'rgba(244, 63, 94, 0.25)'
-    };
+    if (isPaidExpense) {
+      cardStyle = {
+        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, var(--bg-card) 100%)',
+        borderLeft: '4px solid #10b981',
+        borderColor: 'rgba(16, 185, 129, 0.25)'
+      };
+    } else {
+      cardStyle = {
+        background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.06) 0%, var(--bg-card) 100%)',
+        borderLeft: '4px solid #f43f5e',
+        borderColor: 'rgba(244, 63, 94, 0.25)'
+      };
+    }
   } else if (isInvestmentEvent) {
     cardStyle = {
       background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, var(--bg-card) 100%)',
@@ -1365,19 +1373,19 @@ export default function TimelineEventCard({
               }
               style={{
                 background: isPaidExpense
-                  ? 'rgba(244, 63, 94, 0.16)'
+                  ? 'rgba(16, 185, 129, 0.16)'
                   : isOverdueExpense
                     ? 'rgba(239, 68, 68, 0.16)'
                     : 'rgba(245, 158, 11, 0.14)',
                 color: isPaidExpense
-                  ? '#f43f5e'
+                  ? '#10b981'
                   : isOverdueExpense
                     ? '#f87171'
                     : '#f59e0b',
                 border: isPaidExpense
                   ? isLocked
-                    ? '1px solid rgba(244, 63, 94, 0.35)'
-                    : '1.5px dashed rgba(244, 63, 94, 0.65)'
+                    ? '1px solid rgba(16, 185, 129, 0.35)'
+                    : '1.5px dashed rgba(16, 185, 129, 0.65)'
                   : isOverdueExpense
                     ? '1px solid rgba(239, 68, 68, 0.4)'
                     : '1px solid rgba(245, 158, 11, 0.35)',
@@ -1393,7 +1401,7 @@ export default function TimelineEventCard({
             >
               {isPaidExpense ? (
                 <>
-                  <CheckCircle2 size={14} style={{ color: '#f43f5e' }} />
+                  <CheckCircle2 size={14} style={{ color: '#10b981' }} />
                   <span>Pago às {getCompletedTimeStr()}</span>
                   {isLocked ? (
                     <Lock size={12} style={{ color: '#f59e0b', marginLeft: '2px' }} title="Status travado" />

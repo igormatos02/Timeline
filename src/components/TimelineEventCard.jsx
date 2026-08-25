@@ -884,7 +884,7 @@ export default function TimelineEventCard({
     if (
       event.timelineOriginId === 'tl-loan-casa1' ||
       event.timelineOriginId === 'e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0b' ||
-      (event.title && (event.title.includes('02012642') || event.title.includes('Egas Moniz') || event.title.includes('Casa 1')))
+      ((event.title && (event.title.includes('02012642') || event.title.includes('Crédito Egas Moniz') || event.title.includes('Casa 1'))) && !event.title?.includes('Hipoteca'))
     ) {
       return {
         label: 'Crédito Egas Moniz',

@@ -228,7 +228,7 @@ export default function TimelineHeader({
 
   const carLoanEvents = (timeline.events || []).filter((e) => {
     if (isCasa1Active) {
-      return e.timelineOriginId === 'tl-loan-casa1' || e.timelineOriginId === 'e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0b' || e.title?.includes('02012642') || e.title?.includes('Egas Moniz') || e.title?.includes('Casa 1');
+      return (e.timelineOriginId === 'tl-loan-casa1' || e.timelineOriginId === 'e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0b' || e.title?.includes('02012642') || e.title?.includes('Crédito Egas Moniz') || e.title?.includes('Casa 1')) && !e.title?.includes('Hipoteca');
     }
     if (isCasa2Active) {
       return e.timelineOriginId === 'tl-loan-casa2' || e.timelineOriginId === 'f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c' || e.title?.includes('02015122') || e.title?.includes('Hipoteca') || e.title?.includes('Casa 2');

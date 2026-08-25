@@ -1041,13 +1041,13 @@ export default function TimelineHeader({
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Entradas Previstas:</span>
                                   <span style={{ color: '#38bdf8', fontSize: '0.78rem', fontWeight: '700' }}>
-                                    +{formatCurrency(finMetrics.totalForecastIncome)}
+                                    +{formatCurrency(finMetrics.totalForecastIncomeUpToCurrent || 0)}
                                   </span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Saídas Previstas:</span>
                                   <span style={{ color: '#fb7185', fontSize: '0.78rem', fontWeight: '700' }}>
-                                    -{formatCurrency(finMetrics.totalPlannedExpenses)}
+                                    -{formatCurrency(finMetrics.totalPlannedExpensesUpToCurrent || 0)}
                                   </span>
                                 </div>
                               </div>

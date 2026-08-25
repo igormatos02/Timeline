@@ -909,10 +909,19 @@ export default function TimelineHeader({
                         </div>
                         <div>
                           <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Património</div>
-                          <div className="meta-value" style={{ color: '#c084fc', fontSize: '0.94rem', fontWeight: '800' }}>
-                            {formatCurrency(finMetrics.totalPatrimonio || 0)}
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                            <div className="meta-value" style={{ color: '#c084fc', fontSize: '0.94rem', fontWeight: '800' }}>
+                              {formatCurrency(finMetrics.totalPatrimonio || 0)}
+                            </div>
+                            {finMetrics.totalPatrimonioGain !== 0 && (
+                              <span style={{ fontSize: '0.68rem', color: finMetrics.totalPatrimonioGain >= 0 ? '#10b981' : '#f43f5e', fontWeight: '700' }}>
+                                ({finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}{formatCurrency(finMetrics.totalPatrimonioGain)})
+                              </span>
+                            )}
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Bens e imóveis</div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
+                            {finMetrics.totalPatrimonioGain !== 0 ? `Valorização: ${finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}${finMetrics.totalPatrimonioGainPercent.toFixed(1)}%` : 'Bens e imóveis'}
+                          </div>
                         </div>
                       </div>
 
@@ -1000,9 +1009,27 @@ export default function TimelineHeader({
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Património:</span>
-                                  <span style={{ color: '#c084fc', fontSize: '0.8rem', fontWeight: '800' }}>
-                                    {formatCurrency(finMetrics.totalPatrimonio || 0)}
-                                  </span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <span style={{ color: '#c084fc', fontSize: '0.8rem', fontWeight: '800' }}>
+                                      {formatCurrency(finMetrics.totalPatrimonio || 0)}
+                                    </span>
+                                    {finMetrics.totalPatrimonioGain !== 0 && (
+                                      <span
+                                        style={{
+                                          fontSize: '0.64rem',
+                                          color: finMetrics.totalPatrimonioGain >= 0 ? '#10b981' : '#f43f5e',
+                                          background: finMetrics.totalPatrimonioGain >= 0 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
+                                          border: finMetrics.totalPatrimonioGain >= 0 ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
+                                          borderRadius: '4px',
+                                          padding: '0 4px',
+                                          fontWeight: '800'
+                                        }}
+                                        title={`Aquisição: ${formatCurrency(finMetrics.totalPatrimonioAcquisition)} | Mais-valia: ${finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}${formatCurrency(finMetrics.totalPatrimonioGain)} (${finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}${finMetrics.totalPatrimonioGainPercent.toFixed(1)}%)`}
+                                      >
+                                        {finMetrics.totalPatrimonioGain >= 0 ? '+' : ''}{formatCurrency(finMetrics.totalPatrimonioGain)}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Outros:</span>
@@ -1101,27 +1128,29 @@ export default function TimelineHeader({
                                 { label: '+5 Anos', months: 60 },
                                 { label: '+10 Anos', months: 120 },
                                 { label: '+30 Anos', months: 360 }
-                              ].map((preset) => (
-                                <button
-                                  key={preset.months}
-                                  type="button"
-                                  onClick={() => setProjectionMonthsAhead(preset.months)}
-                                  style={{
-                                    padding: '2px 8px',
-                                    fontSize: '0.69rem',
-                                    height: '22px',
-                                    borderRadius: '5px',
-                                    border: projectionMonthsAhead === preset.months ? '1px solid #0284c7' : '1px solid #e2e8f0',
-                                    background: projectionMonthsAhead === preset.months ? '#0284c7' : '#f8fafc',
-                                    color: projectionMonthsAhead === preset.months ? '#ffffff' : '#475569',
-                                    cursor: 'pointer',
-                                    fontWeight: projectionMonthsAhead === preset.months ? '700' : '500',
-                                    transition: 'all 0.15s ease'
-                                  }}
-                                >
-                                  {preset.label}
-                                </button>
-                              ))}
+                              ].map((preset) => {
+                                const isSelected = projectionMonthsAhead === preset.months;
+                                return (
+                                  <button
+                                    key={preset.label}
+                                    type="button"
+                                    onClick={() => setProjectionMonthsAhead(preset.months)}
+                                    style={{
+                                      padding: '3px 9px',
+                                      borderRadius: '6px',
+                                      fontSize: '0.72rem',
+                                      fontWeight: isSelected ? '800' : '600',
+                                      cursor: 'pointer',
+                                      border: isSelected ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                                      background: isSelected ? '#0284c7' : '#f8fafc',
+                                      color: isSelected ? '#ffffff' : '#334155',
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                  >
+                                    {preset.label}
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
 
@@ -1208,9 +1237,27 @@ export default function TimelineHeader({
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Património:</span>
-                                  <span style={{ color: '#c084fc', fontSize: '0.8rem', fontWeight: '800' }}>
-                                    {formatCurrency(finMetrics?.totalPatrimonioHorizon || 0)}
-                                  </span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <span style={{ color: '#c084fc', fontSize: '0.8rem', fontWeight: '800' }}>
+                                      {formatCurrency(finMetrics?.totalPatrimonioHorizon || 0)}
+                                    </span>
+                                    {finMetrics?.totalPatrimonioGainHorizon !== 0 && (
+                                      <span
+                                        style={{
+                                          fontSize: '0.64rem',
+                                          color: (finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '#10b981' : '#f43f5e',
+                                          background: (finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
+                                          border: (finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
+                                          borderRadius: '4px',
+                                          padding: '0 4px',
+                                          fontWeight: '800'
+                                        }}
+                                        title={`Aquisição: ${formatCurrency(finMetrics?.totalPatrimonioAcquisition || 0)} | Mais-valia: ${(finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '+' : ''}${formatCurrency(finMetrics?.totalPatrimonioGainHorizon || 0)}`}
+                                      >
+                                        {(finMetrics?.totalPatrimonioGainHorizon || 0) >= 0 ? '+' : ''}{formatCurrency(finMetrics?.totalPatrimonioGainHorizon || 0)}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Outros:</span>

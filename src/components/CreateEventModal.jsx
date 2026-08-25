@@ -297,11 +297,11 @@ export default function CreateEventModal({
 
     const isCompleted = isPatrimonio || finalStatus === 'Recebido' || finalStatus === 'Pago' || finalStatus === 'Investido' || finalStatus === 'Quitado';
     const priorInvested = isPatrimonio
-      ? (Number(formData.amount) || 0)
+      ? (formData.initialInvestedAmount !== '' && formData.initialInvestedAmount !== undefined ? Number(formData.initialInvestedAmount) : (Number(formData.amount) || 0))
       : (movementType === 'investimento' ? (Number(formData.initialInvestedAmount) || 0) : 0);
       
     const finalAmount = isPatrimonio
-      ? (Number(formData.amount) || 0)
+      ? (formData.amount !== '' && formData.amount !== undefined ? Number(formData.amount) : (Number(formData.initialInvestedAmount) || 0))
       : (breakdownItems.length > 0
           ? breakdownItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0)
           : (formData.amount !== '' && formData.amount !== undefined ? Number(formData.amount) : 0));
@@ -632,44 +632,105 @@ export default function CreateEventModal({
             </div>
           )}
 
-          {/* Se for Património: Bloco Dedicado de Valor Consolidado e Estado (Quitado vs Financiado) */}
+          {/* Se for Património: Bloco Dedicado de Valor Inicial de Aquisição e Valor Atual de Mercado */}
           {movementType === 'investimento' && investmentSubtype === 'investimento_patrimonio' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '14px' }}>
-              {/* Valor do Património */}
-              <div className="form-group" style={{ background: 'rgba(192, 132, 252, 0.08)', border: '1px solid rgba(192, 132, 252, 0.28)', borderRadius: '10px', padding: '12px', margin: 0 }}>
-                <label className="form-label" style={{ color: '#c084fc', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Landmark size={15} />
-                    <span>Valor do Património (€) *</span>
-                  </span>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 'normal' }}>Ativo Consolidado</span>
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0,00 (ex: 51500 €)"
-                    className="form-input"
-                    style={{
-                      borderColor: 'rgba(192, 132, 252, 0.45)',
-                      fontSize: '1.1rem',
-                      fontWeight: '800',
-                      color: '#c084fc',
-                      paddingLeft: '28px'
-                    }}
-                    value={formData.amount !== undefined ? formData.amount : ''}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    required
-                  />
-                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: '#c084fc' }}>
-                    €
-                  </span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {/* 1. Valor Inicial Investido / Aquisição */}
+                <div className="form-group" style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.28)', borderRadius: '10px', padding: '12px', margin: 0 }}>
+                  <label className="form-label" style={{ color: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: '700' }}>Valor de Aquisição (€)</span>
+                    <span style={{ fontSize: '0.64rem', color: 'var(--text-dim)', fontWeight: 'normal' }}>Informativo</span>
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0,00 (ex: 75000 €)"
+                      className="form-input"
+                      style={{
+                        borderColor: 'rgba(99, 102, 241, 0.35)',
+                        fontSize: '1rem',
+                        fontWeight: '700',
+                        color: 'var(--primary-light)',
+                        paddingLeft: '26px'
+                      }}
+                      value={formData.initialInvestedAmount !== undefined ? formData.initialInvestedAmount : ''}
+                      onChange={(e) => setFormData({ ...formData, initialInvestedAmount: e.target.value })}
+                    />
+                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: 'var(--primary-light)' }}>
+                      €
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.64rem', color: 'var(--text-dim)', marginTop: '4px' }}>
+                    Custo inicial de compra
+                  </div>
                 </div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '5px', lineHeight: '1.35' }}>
-                  🏛️ O património é consolidado: integra diretamente o seu valor patrimonial total sem gerar gastos correntes mensais.
+
+                {/* 2. Valor Atual do Património */}
+                <div className="form-group" style={{ background: 'rgba(192, 132, 252, 0.08)', border: '1px solid rgba(192, 132, 252, 0.28)', borderRadius: '10px', padding: '12px', margin: 0 }}>
+                  <label className="form-label" style={{ color: '#c084fc', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: '800' }}>Valor Atual (€) *</span>
+                    <span style={{ fontSize: '0.64rem', color: '#c084fc', fontWeight: 'normal' }}>Contabilizado</span>
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0,00 (ex: 250000 €)"
+                      className="form-input"
+                      style={{
+                        borderColor: 'rgba(192, 132, 252, 0.45)',
+                        fontSize: '1.05rem',
+                        fontWeight: '800',
+                        color: '#c084fc',
+                        paddingLeft: '26px'
+                      }}
+                      value={formData.amount !== undefined ? formData.amount : ''}
+                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                      required
+                    />
+                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: '#c084fc' }}>
+                      €
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.64rem', color: 'var(--text-dim)', marginTop: '4px' }}>
+                    Valor atual de mercado
+                  </div>
                 </div>
               </div>
+
+              {/* Box de Valorização Estimada (Se ambos estiverem preenchidos) */}
+              {Number(formData.amount) > 0 && Number(formData.initialInvestedAmount) > 0 && (
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    background: (Number(formData.amount) - Number(formData.initialInvestedAmount)) >= 0
+                      ? 'rgba(16, 185, 129, 0.12)'
+                      : 'rgba(244, 63, 94, 0.12)',
+                    border: (Number(formData.amount) - Number(formData.initialInvestedAmount)) >= 0
+                      ? '1px solid rgba(16, 185, 129, 0.3)'
+                      : '1px solid rgba(244, 63, 94, 0.3)',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: '0.78rem'
+                  }}
+                >
+                  <span style={{ color: (Number(formData.amount) - Number(formData.initialInvestedAmount)) >= 0 ? '#10b981' : '#f43f5e', fontWeight: '700' }}>
+                    ✨ Valorização Estimada:
+                  </span>
+                  <span style={{ color: (Number(formData.amount) - Number(formData.initialInvestedAmount)) >= 0 ? '#10b981' : '#f43f5e', fontWeight: '800' }}>
+                    {(Number(formData.amount) - Number(formData.initialInvestedAmount)) >= 0 ? '+' : ''}
+                    {formatCurrency(Number(formData.amount) - Number(formData.initialInvestedAmount))}
+                    {' '}({(Number(formData.amount) - Number(formData.initialInvestedAmount)) >= 0 ? '+' : ''}
+                    {(((Number(formData.amount) - Number(formData.initialInvestedAmount)) / Number(formData.initialInvestedAmount)) * 100).toFixed(1)}%)
+                  </span>
+                </div>
+              )}
 
               {/* Estado do Património: Quitado vs Financiado */}
               <div className="form-group" style={{ margin: 0 }}>

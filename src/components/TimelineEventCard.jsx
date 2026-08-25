@@ -1509,7 +1509,7 @@ export default function TimelineEventCard({
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                 {event.category === 'investimento_patrimonio'
-                  ? 'Valor do Património'
+                  ? 'Valor Atual do Património'
                   : (Number(event.amount || 0) > 0 ? 'Aporte do Mês' : 'Aporte Mensal')}
               </span>
               {event.category === 'investimento_patrimonio' ? (
@@ -1520,6 +1520,33 @@ export default function TimelineEventCard({
                 renderEditableAmount('+', isInertFuture ? '#94a3b8' : 'var(--primary-light)')
               )}
             </div>
+
+            {event.category === 'investimento_patrimonio' && Number(event.initialInvestedAmount || 0) > 0 && Number(event.amount || 0) > 0 && Number(event.initialInvestedAmount) !== Number(event.amount) && (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                    Aquisição
+                  </span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--primary-light)' }}>
+                    {formatCurrency(event.initialInvestedAmount)}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
+                  <span style={{ fontSize: '0.7rem', color: (Number(event.amount) - Number(event.initialInvestedAmount)) >= 0 ? '#10b981' : '#f43f5e', textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    <TrendingUp size={11} /> Valorização
+                  </span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: '800', color: (Number(event.amount) - Number(event.initialInvestedAmount)) >= 0 ? '#10b981' : '#f43f5e' }}>
+                    {(Number(event.amount) - Number(event.initialInvestedAmount)) >= 0 ? '+' : ''}
+                    {formatCurrency(Number(event.amount) - Number(event.initialInvestedAmount))}
+                    <span style={{ fontSize: '0.75rem', marginLeft: '4px', fontWeight: '700' }}>
+                      ({(Number(event.amount) - Number(event.initialInvestedAmount)) >= 0 ? '+' : ''}
+                      {(((Number(event.amount) - Number(event.initialInvestedAmount)) / Number(event.initialInvestedAmount)) * 100).toFixed(1)}%)
+                    </span>
+                  </span>
+                </div>
+              </>
+            )}
 
             {event.category === 'investimento_patrimonio' && event.linkedLoanTimelineName && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>

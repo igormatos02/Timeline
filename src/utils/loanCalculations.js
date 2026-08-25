@@ -514,6 +514,7 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
   let totalPriorInvestedAll = 0;
   let totalPriorPoupanca = 0;
   let totalPriorPatrimonio = 0;
+  let totalPriorPatrimonioAcquisition = 0;
   let totalPriorOutros = 0;
   let totalTargetSavings = 0;
 
@@ -523,14 +524,22 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     if (!ev) return;
     const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento')) || ev.timelineOriginId === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
     if (isInvestment) {
-      if (Number(ev.initialInvestedAmount || 0) > 0) {
+      if (ev.category === 'investimento_patrimonio') {
+        const initialKey = ev.seriesId || ev.id;
+        if (!seenInitialInvestments.has(initialKey)) {
+          const currentVal = Number(ev.amount || ev.initialInvestedAmount || 0);
+          const acqVal = Number(ev.initialInvestedAmount || ev.amount || 0);
+          totalPriorInvestedAll += currentVal;
+          totalPriorPatrimonio += currentVal;
+          totalPriorPatrimonioAcquisition += acqVal;
+          seenInitialInvestments.add(initialKey);
+        }
+      } else if (Number(ev.initialInvestedAmount || 0) > 0) {
         const initialKey = ev.seriesId || ev.id;
         if (!seenInitialInvestments.has(initialKey)) {
           const initAmt = Number(ev.initialInvestedAmount);
           totalPriorInvestedAll += initAmt;
-          if (ev.category === 'investimento_patrimonio') {
-            totalPriorPatrimonio += initAmt;
-          } else if (ev.category === 'investimento_outros' || ev.category?.includes('etf') || ev.category?.includes('acoes')) {
+          if (ev.category === 'investimento_outros' || ev.category?.includes('etf') || ev.category?.includes('acoes')) {
             totalPriorOutros += initAmt;
           } else {
             totalPriorPoupanca += initAmt;
@@ -548,14 +557,12 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
       }
 
       // Se o aporte foi feito e liquidado (Investido/Pago) antes do mês de início da computação, soma ao património prévio
-      if (startBound && ev.date < startBound) {
+      if (startBound && ev.date < startBound && ev.category !== 'investimento_patrimonio') {
         const isDone = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted;
         if (isDone) {
           const amt = Number(ev.amount || 0);
           totalPriorInvestedAll += amt;
-          if (ev.category === 'investimento_patrimonio') {
-            totalPriorPatrimonio += amt;
-          } else if (ev.category === 'investimento_outros' || ev.category?.includes('etf') || ev.category?.includes('acoes')) {
+          if (ev.category === 'investimento_outros' || ev.category?.includes('etf') || ev.category?.includes('acoes')) {
             totalPriorOutros += amt;
           } else {
             totalPriorPoupanca += amt;
@@ -646,36 +653,34 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
         monthlyExpensesSum += amt;
       }
     } else if (isInvestment) {
-      // Investimentos realizados / aportados até ao período atual
-      const isInvestedDone = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted || (isPast && ev.status !== 'Pendente' && ev.status !== 'Cancelado');
-      if (isUpToCurrent && isInvestedDone) {
-        totalInvested += amt;
-        totalMonthlyAportesRealized += amt;
-        if (ev.category === 'investimento_patrimonio') {
-          totalAportesPatrimonio += amt;
-        } else if (ev.category === 'investimento_outros' || ev.category?.includes('etf') || ev.category?.includes('acoes') || ev.category?.includes('extra')) {
-          totalAportesOutros += amt;
-        } else {
-          totalAportesPoupanca += amt;
+      // Investimentos realizados / aportados até ao período atual (Património é estático/consolidado)
+      if (ev.category !== 'investimento_patrimonio') {
+        const isInvestedDone = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted || (isPast && ev.status !== 'Pendente' && ev.status !== 'Cancelado');
+        if (isUpToCurrent && isInvestedDone) {
+          totalInvested += amt;
+          totalMonthlyAportesRealized += amt;
+          if (ev.category === 'investimento_outros' || ev.category?.includes('etf') || ev.category?.includes('acoes') || ev.category?.includes('extra')) {
+            totalAportesOutros += amt;
+          } else {
+            totalAportesPoupanca += amt;
+          }
         }
-      }
 
-      if (isUpToCurrent && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
-        totalPlannedInvestmentsUpToCurrent += amt;
-        totalMonthlyAportesPlannedCurrent += amt;
-      }
-      if (isUpToHorizon && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
-        totalPlannedInvestmentsHorizon += amt;
-        totalMonthlyAportesPlannedHorizon += amt;
-        if (ev.category === 'investimento_patrimonio') {
-          totalAportesPatrimonioHorizon += amt;
-        } else if (ev.category === 'investimento_outros' || ev.category?.includes('etf') || ev.category?.includes('acoes') || ev.category?.includes('extra')) {
-          totalAportesOutrosHorizon += amt;
-        } else {
-          totalAportesPoupancaHorizon += amt;
+        if (isUpToCurrent && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+          totalPlannedInvestmentsUpToCurrent += amt;
+          totalMonthlyAportesPlannedCurrent += amt;
         }
+        if (isUpToHorizon && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+          totalPlannedInvestmentsHorizon += amt;
+          totalMonthlyAportesPlannedHorizon += amt;
+          if (ev.category === 'investimento_outros' || ev.category?.includes('etf') || ev.category?.includes('acoes') || ev.category?.includes('extra')) {
+            totalAportesOutrosHorizon += amt;
+          } else {
+            totalAportesPoupancaHorizon += amt;
+          }
+        }
+        totalPlannedInvestments += amt;
       }
-      totalPlannedInvestments += amt;
     }
   });
 
@@ -686,6 +691,16 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
   const totalPoupancaHorizon = totalPriorPoupanca + totalAportesPoupancaHorizon;
   const totalPatrimonioHorizon = totalPriorPatrimonio + totalAportesPatrimonioHorizon;
   const totalOutrosHorizon = totalPriorOutros + totalAportesOutrosHorizon;
+
+  const totalPatrimonioGain = totalPatrimonio - totalPriorPatrimonioAcquisition;
+  const totalPatrimonioGainPercent = totalPriorPatrimonioAcquisition > 0
+    ? ((totalPatrimonio - totalPriorPatrimonioAcquisition) / totalPriorPatrimonioAcquisition) * 100
+    : 0;
+
+  const totalPatrimonioGainHorizon = totalPatrimonioHorizon - totalPriorPatrimonioAcquisition;
+  const totalPatrimonioGainPercentHorizon = totalPriorPatrimonioAcquisition > 0
+    ? ((totalPatrimonioHorizon - totalPriorPatrimonioAcquisition) / totalPriorPatrimonioAcquisition) * 100
+    : 0;
 
   const monthlyAverageExpenses = expenseMonthsSet.size > 0 ? (monthlyExpensesSum / expenseMonthsSet.size) : (currentMonthExpenses || 0);
   const projectedAnnualExpenses = currentYearExpenses > 0 ? currentYearExpenses : (monthlyAverageExpenses * 12);
@@ -715,9 +730,14 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     totalInvested,
     totalPoupanca,
     totalPatrimonio,
+    totalPatrimonioAcquisition: totalPriorPatrimonioAcquisition,
+    totalPatrimonioGain,
+    totalPatrimonioGainPercent,
     totalOutros,
     totalPoupancaHorizon,
     totalPatrimonioHorizon,
+    totalPatrimonioGainHorizon,
+    totalPatrimonioGainPercentHorizon,
     totalOutrosHorizon,
     totalTargetSavings,
     totalPlannedInvestments,

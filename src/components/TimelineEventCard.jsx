@@ -818,19 +818,11 @@ export default function TimelineEventCard({
       };
     }
   } else if (isExpenseEvent) {
-    if (isPaidExpense) {
-      cardStyle = {
-        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, var(--bg-card) 100%)',
-        borderLeft: '4px solid #10b981',
-        borderColor: 'rgba(16, 185, 129, 0.25)'
-      };
-    } else {
-      cardStyle = {
-        background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.06) 0%, var(--bg-card) 100%)',
-        borderLeft: '4px solid #f43f5e',
-        borderColor: 'rgba(244, 63, 94, 0.25)'
-      };
-    }
+    cardStyle = {
+      background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.06) 0%, var(--bg-card) 100%)',
+      borderLeft: '4px solid #f43f5e',
+      borderColor: 'rgba(244, 63, 94, 0.25)'
+    };
   } else if (isInvestmentEvent) {
     cardStyle = {
       background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, var(--bg-card) 100%)',
@@ -1304,8 +1296,16 @@ export default function TimelineEventCard({
         <div
           className="loan-breakdown-strip"
           style={{
-            background: isInertFuture ? 'rgba(148, 163, 184, 0.04)' : 'rgba(244, 63, 94, 0.08)',
-            border: isInertFuture ? '1px solid rgba(148, 163, 184, 0.18)' : '1px solid rgba(244, 63, 94, 0.22)',
+            background: isInertFuture
+              ? 'rgba(148, 163, 184, 0.04)'
+              : isPaidExpense
+                ? 'rgba(16, 185, 129, 0.08)'
+                : 'rgba(244, 63, 94, 0.08)',
+            border: isInertFuture
+              ? '1px solid rgba(148, 163, 184, 0.18)'
+              : isPaidExpense
+                ? '1px solid rgba(16, 185, 129, 0.28)'
+                : '1px solid rgba(244, 63, 94, 0.22)',
             borderRadius: '10px',
             padding: '8px 12px',
             margin: '10px 0',
@@ -1313,7 +1313,8 @@ export default function TimelineEventCard({
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: '12px'
+            gap: '12px',
+            transition: 'all 0.2s ease'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
@@ -1321,7 +1322,7 @@ export default function TimelineEventCard({
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                 Valor Pago / Débito
               </span>
-              {renderEditableAmount('-', isInertFuture ? '#94a3b8' : '#f43f5e')}
+              {renderEditableAmount('-', isInertFuture ? '#94a3b8' : isPaidExpense ? '#10b981' : '#f43f5e')}
             </div>
             {event.priority && !isInertFuture && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>

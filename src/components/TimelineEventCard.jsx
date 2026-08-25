@@ -1646,19 +1646,49 @@ export default function TimelineEventCard({
         {Number(event.targetAmount || 0) > 0 && (() => {
           const seriesId = event.seriesId || event.id;
           const baseInitial = Number(event.initialInvestedAmount || 0);
+          const isInvestmentsView = activeFinancialTab === 'investimentos' || timelineType === 'investimentos' || event.timelineOriginId === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
+          const isFuture = event.date > todayStr;
+          const useForecast = isInvestmentsView && isFuture;
 
-          const priorAportes = (allEvents || [])
-            .filter((ev) => {
-              if (!ev || !ev.date || ev.date >= event.date) return false;
-              const matchSeries = (ev.seriesId && ev.seriesId === seriesId) || (ev.id === seriesId) || (ev.sobrepositionOver === seriesId) || (ev.category === event.category && ev.financialType === 'investimento');
-              const isDone = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted;
-              return matchSeries && isDone;
-            })
-            .reduce((sum, ev) => sum + Number(ev.amount || 0), 0);
+          let currentSaved = baseInitial;
 
-          const currentSaved = baseInitial + priorAportes;
+          if (useForecast) {
+            // Em visão de Investimentos no futuro: computar a projeção/previsão acumulada
+            const priorPlannedAportes = (allEvents || [])
+              .filter((ev) => {
+                if (!ev || !ev.date || ev.date >= event.date) return false;
+                const matchSeries = (ev.seriesId && ev.seriesId === seriesId) || (ev.id === seriesId) || (ev.sobrepositionOver === seriesId) || (ev.category === event.category && ev.financialType === 'investimento');
+                const isValid = ev.status !== 'Cancelado' && ev.status !== 'Excluido';
+                return matchSeries && isValid;
+              })
+              .reduce((sum, ev) => sum + Number(ev.amount || 0), 0);
+
+            const thisMonthAmount = Number(event.amount || 0);
+            currentSaved = baseInitial + priorPlannedAportes + thisMonthAmount;
+          } else {
+            // Em visão de Balanço ou histórico realizado: computar apenas o património e aportes efetivamente liquidados até à data
+            const priorRealizedAportes = (allEvents || [])
+              .filter((ev) => {
+                if (!ev || !ev.date || ev.date >= event.date) return false;
+                const matchSeries = (ev.seriesId && ev.seriesId === seriesId) || (ev.id === seriesId) || (ev.sobrepositionOver === seriesId) || (ev.category === event.category && ev.financialType === 'investimento');
+                const isDone = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted;
+                return matchSeries && isDone;
+              })
+              .reduce((sum, ev) => sum + Number(ev.amount || 0), 0);
+
+            currentSaved = baseInitial + priorRealizedAportes;
+          }
+
           const targetVal = Number(event.targetAmount);
           const progressPct = Math.min(100, Math.max(0, Math.round((currentSaved / targetVal) * 100)));
+
+          const labelTitle = useForecast
+            ? `Previsão de Progresso da Meta (${formatCurrency(currentSaved)} de ${formatCurrency(targetVal)})`
+            : `Progresso da Meta (${formatCurrency(currentSaved)} de ${formatCurrency(targetVal)})`;
+
+          const labelPercent = useForecast
+            ? (progressPct >= 100 ? '🎉 Meta Atingida (Previsão)!' : `${progressPct}% previsto`)
+            : (progressPct >= 100 ? '🎉 Meta Atingida!' : `${progressPct}% alcançado`);
 
           return (
             <div
@@ -1676,16 +1706,16 @@ export default function TimelineEventCard({
                   justifyContent: 'space-between',
                   fontSize: '0.73rem',
                   fontWeight: '700',
-                  color: '#a78bfa',
+                  color: useForecast ? '#c084fc' : '#a78bfa',
                   marginBottom: '5px'
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <Target size={12} />
-                  <span>Progresso da Meta ({formatCurrency(currentSaved)} de {formatCurrency(targetVal)})</span>
+                  <span>{labelTitle}</span>
                 </span>
-                <span style={{ color: progressPct >= 100 ? '#10b981' : '#c084fc', fontWeight: '800' }}>
-                  {progressPct}% {progressPct >= 100 ? '🎉 Meta Atingida!' : 'alcançado'}
+                <span style={{ color: progressPct >= 100 ? '#10b981' : (useForecast ? '#38bdf8' : '#c084fc'), fontWeight: '800' }}>
+                  {labelPercent}
                 </span>
               </div>
               <div
@@ -1704,10 +1734,12 @@ export default function TimelineEventCard({
                     height: '100%',
                     background: progressPct >= 100
                       ? 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'
-                      : 'linear-gradient(90deg, #8b5cf6 0%, #a855f7 100%)',
+                      : useForecast
+                        ? 'linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #38bdf8 100%)'
+                        : 'linear-gradient(90deg, #8b5cf6 0%, #a855f7 100%)',
                     borderRadius: '9999px',
                     transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    boxShadow: '0 0 10px rgba(139, 92, 246, 0.4)'
+                    boxShadow: useForecast ? '0 0 12px rgba(56, 189, 248, 0.35)' : '0 0 10px rgba(139, 92, 246, 0.4)'
                   }}
                 />
               </div>

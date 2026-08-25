@@ -422,7 +422,55 @@ export function getConsolidatedLoanMetrics(timelines, selectedIds = null) {
     totalInstallments,
     paidInstallments,
     overdueInstallments,
-  progressPercent
+    progressPercent
+  };
+}
+
+/**
+ * Calculate Consolidated Loan Metrics at a specific future or past Horizon Month
+ */
+export function getConsolidatedLoanMetricsAtHorizon(timelines, targetHorizonMonth = null, selectedIds = null) {
+  const loanTimelines = (timelines || []).filter(
+    (tl) => (tl.type === 'Empréstimo' || tl.type === 'emprestimo') && (!selectedIds || selectedIds.includes(tl.id))
+  );
+
+  let totalContractedDebt = 0;
+  let totalPrincipalAmortized = 0;
+  let totalRemainingBalance = 0;
+
+  loanTimelines.forEach((tl) => {
+    const totalDebt = Number(tl.totalDebt || 0);
+    totalContractedDebt += totalDebt;
+
+    const allEvts = tl.events || [];
+    let amortizedForLoan = 0;
+
+    allEvts.forEach((ev) => {
+      if (!ev || !ev.date) return;
+      if (ev.status === 'Cancelado' || ev.status === 'Excluido') return;
+      const evMonth = ev.date.substring(0, 7);
+      if (targetHorizonMonth && evMonth > targetHorizonMonth) return;
+
+      if (ev.category === 'parcela_emprestimo') {
+        const totalAmt = Number(ev.amount || 0);
+        const principal = ev.principalAmount !== undefined 
+          ? Number(ev.principalAmount) 
+          : (ev.principalPaid !== undefined ? Number(ev.principalPaid) : Math.round(totalAmt * 0.82));
+        amortizedForLoan += principal;
+      } else if (ev.category === 'amortizacao') {
+        const amort = Number(ev.amortizationAmount || ev.amount || 0);
+        amortizedForLoan += amort;
+      }
+    });
+
+    totalPrincipalAmortized += amortizedForLoan;
+    totalRemainingBalance += Math.max(0, totalDebt - amortizedForLoan);
+  });
+
+  return {
+    totalContractedDebt,
+    totalPrincipalAmortized,
+    totalRemainingBalance
   };
 }
 

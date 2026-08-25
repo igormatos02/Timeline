@@ -43,6 +43,7 @@ import {
   getIncomeMetrics,
   getFinancialMetrics,
   getConsolidatedLoanMetrics,
+  getConsolidatedLoanMetricsAtHorizon,
   getPeriodicityLabel
 } from '../utils/loanCalculations';
 import IncomeEvolutionChart from './IncomeEvolutionChart';
@@ -292,27 +293,10 @@ export default function TimelineHeader({
       }, 0)
     : allLoanTimelinesList.reduce((acc, c) => acc + (Number(c.remainingDebt || 0)), 0);
 
-  // Remaining debt and amortized capital at projected horizon month (taking into account future amortizations up to projectedHorizonMonth)
-  const totalAllLoansRemainingAtHorizon = loanTimelinesFromAll.length >= 4
-    ? loanTimelinesFromAll.reduce((acc, t) => {
-        const allEvts = t.events || [];
-        const totalDebt = Number(t.totalDebt || 0);
-        const amortizedUpToHorizon = allEvts
-          .filter(e => e.date && e.date.substring(0, 7) <= projectedHorizonMonth && e.status !== 'Cancelado' && e.status !== 'Excluido')
-          .reduce((sum, e) => sum + Number(e.principalPaid || e.amortizationAmount || (e.amount && !e.interestPaid ? e.amount : 0) || 0), 0);
-        return acc + Math.max(0, totalDebt - amortizedUpToHorizon);
-      }, 0)
-    : totalAllLoansRemaining;
-
-  const totalAllLoansAmortizedAtHorizon = loanTimelinesFromAll.length >= 4
-    ? loanTimelinesFromAll.reduce((acc, t) => {
-        const allEvts = t.events || [];
-        const amortizedUpToHorizon = allEvts
-          .filter(e => e.date && e.date.substring(0, 7) <= projectedHorizonMonth && e.status !== 'Cancelado' && e.status !== 'Excluido')
-          .reduce((sum, e) => sum + Number(e.principalPaid || e.amortizationAmount || (e.amount && !e.interestPaid ? e.amount : 0) || 0), 0);
-        return acc + amortizedUpToHorizon;
-      }, 0)
-    : totalAllLoansAmortized;
+  // Consolidated loan metrics at projected horizon month (taking into account future amortizations up to projectedHorizonMonth)
+  const horizonLoanMetrics = getConsolidatedLoanMetricsAtHorizon(allTimelines, projectedHorizonMonth, selectedTimelineIds);
+  const totalAllLoansRemainingAtHorizon = horizonLoanMetrics.totalRemainingBalance;
+  const totalAllLoansAmortizedAtHorizon = horizonLoanMetrics.totalPrincipalAmortized;
 
   const collapsed = isCollapsed;
 

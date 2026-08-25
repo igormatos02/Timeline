@@ -6,6 +6,7 @@
     "tenant": "default",
     "type": "financeiro",
     "createdAt": "2026-08-24T17:55:00.000Z",
-    "updatedAt": "2026-08-24T17:26:05.126Z"
+    "updatedAt": "2026-08-24T17:26:05.126Z",
+    "tenantId": "tenant-igor"
   }
 ]

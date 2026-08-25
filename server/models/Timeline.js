@@ -1,6 +1,7 @@
 export class Timeline {
   constructor({
     id,
+    tenantId = 'tenant-igor',
     timeboardId = 'tb-principal',
     name,
     type = 'gastos', // 'entradas' | 'gastos' | 'investimentos' | 'emprestimo'
@@ -27,6 +28,7 @@ export class Timeline {
     updatedAt = new Date().toISOString()
   }) {
     this.id = id;
+    this.tenantId = tenantId || 'tenant-igor';
     this.timeboardId = timeboardId;
     this.name = name;
     this.type = type;

@@ -3,7 +3,8 @@ export class Timeboard {
     id,
     name = 'Timeboard Principal',
     description = '',
-    tenant = 'default',
+    tenantId = 'tenant-igor',
+    tenant = 'tenant-igor',
     type = 'financeiro', // 'financeiro' | 'projetos' | 'pessoal'
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
@@ -11,7 +12,8 @@ export class Timeboard {
     this.id = id;
     this.name = name;
     this.description = description;
-    this.tenant = tenant;
+    this.tenantId = tenantId || tenant || 'tenant-igor';
+    this.tenant = this.tenantId;
     this.type = type;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;

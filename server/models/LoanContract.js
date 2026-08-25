@@ -1,6 +1,7 @@
 export class LoanContract {
   constructor({
     id,
+    tenantId = 'tenant-igor',
     timelineId = 'tl-income',
     contractNumber = '',
     name,
@@ -27,6 +28,7 @@ export class LoanContract {
     updatedAt = new Date().toISOString()
   }) {
     this.id = id;
+    this.tenantId = tenantId || 'tenant-igor';
     this.timelineId = timelineId;
     this.contractNumber = contractNumber;
     this.name = name;

@@ -1,6 +1,7 @@
 export class TimelineEvent {
   constructor({
     id,
+    tenantId = 'tenant-igor',
     seriesId = null,
     sobrepositionOver = null,
     version = 0,
@@ -40,6 +41,7 @@ export class TimelineEvent {
     updatedAt = new Date().toISOString()
   }) {
     this.id = id;
+    this.tenantId = tenantId || 'tenant-igor';
     this.seriesId = seriesId;
     this.sobrepositionOver = sobrepositionOver;
     this.version = Number(version) || 0;

@@ -14,7 +14,8 @@
     "periodicity": "mensal",
     "monthlySalary": 3349.6,
     "createdAt": "2026-08-24T17:26:05.130Z",
-    "updatedAt": "2026-08-24T17:26:05.130Z"
+    "updatedAt": "2026-08-24T17:26:05.130Z",
+    "tenantId": "tenant-igor"
   },
   {
     "id": "a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d",
@@ -30,7 +31,8 @@
     "status": "Em Progresso",
     "periodicity": "mensal",
     "createdAt": "2026-08-24T17:26:05.130Z",
-    "updatedAt": "2026-08-24T17:26:05.130Z"
+    "updatedAt": "2026-08-24T17:26:05.130Z",
+    "tenantId": "tenant-igor"
   },
   {
     "id": "b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e",
@@ -46,7 +48,8 @@
     "status": "Em Progresso",
     "periodicity": "mensal",
     "createdAt": "2026-08-24T17:26:05.130Z",
-    "updatedAt": "2026-08-24T17:26:05.130Z"
+    "updatedAt": "2026-08-24T17:26:05.130Z",
+    "tenantId": "tenant-igor"
   },
   {
     "id": "c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f",
@@ -69,7 +72,8 @@
     "currentInstallmentNumber": 28,
     "dueDay": 15,
     "createdAt": "2026-08-24T17:26:05.130Z",
-    "updatedAt": "2026-08-24T17:26:05.130Z"
+    "updatedAt": "2026-08-24T17:26:05.130Z",
+    "tenantId": "tenant-igor"
   },
   {
     "id": "d5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9a",
@@ -91,7 +95,8 @@
     "currentInstallmentNumber": 87,
     "dueDay": 28,
     "createdAt": "2026-08-24T17:26:05.130Z",
-    "updatedAt": "2026-08-24T17:26:05.130Z"
+    "updatedAt": "2026-08-24T17:26:05.130Z",
+    "tenantId": "tenant-igor"
   },
   {
     "id": "e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0b",
@@ -116,7 +121,8 @@
     "remainingMonths": 238,
     "dueDay": 3,
     "createdAt": "2026-08-24T17:26:05.130Z",
-    "updatedAt": "2026-08-24T17:26:05.130Z"
+    "updatedAt": "2026-08-24T17:26:05.130Z",
+    "tenantId": "tenant-igor"
   },
   {
     "id": "f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
@@ -141,6 +147,7 @@
     "remainingMonths": 322,
     "dueDay": 3,
     "createdAt": "2026-08-24T17:26:05.130Z",
-    "updatedAt": "2026-08-24T17:26:05.130Z"
+    "updatedAt": "2026-08-24T17:26:05.130Z",
+    "tenantId": "tenant-igor"
   }
 ]

@@ -26,7 +26,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 70.7,
     "interestPortion": 147.77,
     "interestAmount": 0,
     "balanceAfter": 15385.9,
@@ -38,8 +38,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.100Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "85b5714e-39b2-4791-8274-f6c24bb56060",
@@ -68,7 +70,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 71.4,
     "interestPortion": 147.07,
     "interestAmount": 0,
     "balanceAfter": 15314.5,
@@ -80,8 +82,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "aebe35b1-2469-429b-b927-33d358be5382",
@@ -110,7 +114,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 72.1,
     "interestPortion": 146.37,
     "interestAmount": 0,
     "balanceAfter": 15242.4,
@@ -122,8 +126,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "6272def1-ee6f-46ec-aca3-c83d127448eb",
@@ -152,7 +158,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 72.8,
     "interestPortion": 145.67,
     "interestAmount": 0,
     "balanceAfter": 15169.6,
@@ -164,8 +170,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "4f7e0adb-0ee7-45e7-8483-70a11bffc896",
@@ -194,7 +202,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 73.5,
     "interestPortion": 144.97,
     "interestAmount": 0,
     "balanceAfter": 15096.1,
@@ -206,8 +214,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "ea3cf6ab-6c3e-4df2-b4fe-94c82300e51e",
@@ -236,7 +246,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 74.2,
     "interestPortion": 144.27,
     "interestAmount": 0,
     "balanceAfter": 15021.9,
@@ -248,8 +258,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "44e41da5-2020-40f5-842e-dd28bad6e940",
@@ -278,7 +290,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 74.9,
     "interestPortion": 143.57,
     "interestAmount": 0,
     "balanceAfter": 14947,
@@ -290,8 +302,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "0d60e654-0c63-45a4-9cbb-d23dd1a6dcb2",
@@ -320,7 +334,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 75.6,
     "interestPortion": 142.87,
     "interestAmount": 0,
     "balanceAfter": 14871.4,
@@ -332,8 +346,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "d2fa98fb-b1de-49c1-b91c-1a1b9b8cc405",
@@ -362,7 +378,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 76.3,
     "interestPortion": 142.17,
     "interestAmount": 0,
     "balanceAfter": 14795.1,
@@ -374,8 +390,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "87e951cb-dfd1-41fb-a351-e591e3905f15",
@@ -404,7 +422,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 77,
     "interestPortion": 141.47,
     "interestAmount": 0,
     "balanceAfter": 14718.1,
@@ -416,8 +434,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "854257c4-dea3-4ee7-ad4d-300a79781a1e",
@@ -446,7 +466,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 77.7,
     "interestPortion": 140.77,
     "interestAmount": 0,
     "balanceAfter": 14640.4,
@@ -458,8 +478,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "3f6afe6e-945c-4e28-94d1-ba9590f0d33c",
@@ -488,7 +510,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 78.4,
     "interestPortion": 140.07,
     "interestAmount": 0,
     "balanceAfter": 14562,
@@ -500,8 +522,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "54a01535-c084-41d3-bf69-e7dbcf9cd0af",
@@ -530,7 +554,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 79.1,
     "interestPortion": 139.37,
     "interestAmount": 0,
     "balanceAfter": 14482.9,
@@ -542,8 +566,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "0a79543e-de26-4075-b0b8-054d046e0523",
@@ -572,7 +598,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 79.8,
     "interestPortion": 138.67,
     "interestAmount": 0,
     "balanceAfter": 14403.1,
@@ -584,8 +610,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "e5e5cb6e-ad4f-4be4-af5e-a5b2a40afc7b",
@@ -614,7 +642,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 80.5,
     "interestPortion": 137.97,
     "interestAmount": 0,
     "balanceAfter": 14322.6,
@@ -626,8 +654,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "93790bba-0566-4e91-aa05-360ce75ac119",
@@ -656,7 +686,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 81.2,
     "interestPortion": 137.27,
     "interestAmount": 0,
     "balanceAfter": 14241.4,
@@ -668,8 +698,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "86be48c0-efec-4eac-adce-240a0b3d7b63",
@@ -698,7 +730,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 81.9,
     "interestPortion": 136.57,
     "interestAmount": 0,
     "balanceAfter": 14159.5,
@@ -710,8 +742,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "a9c0fde7-dc88-4f69-8b20-197d86b7d402",
@@ -740,7 +774,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 82.6,
     "interestPortion": 135.87,
     "interestAmount": 0,
     "balanceAfter": 14076.9,
@@ -752,8 +786,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "89ce99fb-92d1-4dea-8123-f12a79cec9fc",
@@ -782,7 +818,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 83.3,
     "interestPortion": 135.17,
     "interestAmount": 0,
     "balanceAfter": 13993.6,
@@ -794,8 +830,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "f7e76579-aa78-48e8-9cd7-6bd1ba5f8a58",
@@ -824,7 +862,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 84,
     "interestPortion": 134.47,
     "interestAmount": 0,
     "balanceAfter": 13909.6,
@@ -836,8 +874,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "85339446-c164-4b43-9ce9-9d6da795fc46",
@@ -866,7 +906,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 84.7,
     "interestPortion": 133.77,
     "interestAmount": 0,
     "balanceAfter": 13824.9,
@@ -878,8 +918,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "0b1b27e8-f780-4623-ae23-ae80e43a659c",
@@ -908,7 +950,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 85.4,
     "interestPortion": 133.07,
     "interestAmount": 0,
     "balanceAfter": 13739.5,
@@ -920,8 +962,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "2fb97bf4-af89-451c-a7c3-f27482a85210",
@@ -950,7 +994,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 86.1,
     "interestPortion": 132.37,
     "interestAmount": 0,
     "balanceAfter": 13653.4,
@@ -962,8 +1006,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "719cf201-f8ae-470b-966e-815ac1b1f1f0",
@@ -992,7 +1038,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 86.8,
     "interestPortion": 131.67,
     "interestAmount": 0,
     "balanceAfter": 13566.6,
@@ -1004,8 +1050,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "d82cdc9c-a8ef-4a83-9677-7bff2dc67b10",
@@ -1034,7 +1082,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 87.5,
     "interestPortion": 130.97,
     "interestAmount": 0,
     "balanceAfter": 13479.1,
@@ -1046,8 +1094,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "e71368cf-27c4-4859-89e3-5b2e0ec3bf64",
@@ -1076,7 +1126,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.36,
+    "principalAmount": 88.2,
     "interestPortion": 130.27,
     "interestAmount": 0,
     "balanceAfter": 13390.9,
@@ -1088,8 +1138,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "8a73b04e-5943-4146-9d0b-4b687fd14b19",
@@ -1118,7 +1170,7 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 81.31,
+    "principalAmount": 88.9,
     "interestPortion": 129.57,
     "interestAmount": 0,
     "balanceAfter": 13302,
@@ -1130,8 +1182,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "ee2b530f-7276-4692-ad64-2a17e6cd756d",
@@ -1160,20 +1214,22 @@
     "isCompleted": true,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 94.9,
-    "interestPortion": 123.57,
+    "principalAmount": 89.08,
+    "interestPortion": 124.41,
     "interestAmount": 0,
     "balanceAfter": 13165.03,
     "installmentNumber": 28,
     "totalInstallments": 120,
     "labels": [
       "Jeep Renegade",
-      "Atrasada"
+      "Pago"
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T23:48:02.630Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:00:24.101Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "555edfe8-c1a2-4195-b47b-5481cd18e4e8",
@@ -1202,8 +1258,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 95.78,
-    "interestPortion": 122.69,
+    "principalAmount": 90.23,
+    "interestPortion": 128.24,
     "interestAmount": 0,
     "balanceAfter": 13069.25,
     "installmentNumber": 29,
@@ -1214,8 +1270,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "6b610e00-f6dc-420f-abc2-83550b509c89",
@@ -1244,8 +1302,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 96.68,
-    "interestPortion": 121.79,
+    "principalAmount": 91.38,
+    "interestPortion": 127.09,
     "interestAmount": 0,
     "balanceAfter": 12972.57,
     "installmentNumber": 30,
@@ -1256,8 +1314,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "9f5f4b19-c50c-464e-8aa7-967f684d0c1c",
@@ -1286,8 +1346,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 97.58,
-    "interestPortion": 120.89,
+    "principalAmount": 92.53,
+    "interestPortion": 125.94,
     "interestAmount": 0,
     "balanceAfter": 12874.99,
     "installmentNumber": 31,
@@ -1298,8 +1358,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "063cd833-0485-4eb2-a4b2-9395a2a641ec",
@@ -1328,8 +1390,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 98.49,
-    "interestPortion": 119.98,
+    "principalAmount": 93.68,
+    "interestPortion": 124.79,
     "interestAmount": 0,
     "balanceAfter": 12776.5,
     "installmentNumber": 32,
@@ -1340,8 +1402,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "92bfb243-490f-4ceb-9aa4-08d48fc17b6f",
@@ -1370,8 +1434,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 99.4,
-    "interestPortion": 119.07,
+    "principalAmount": 94.83,
+    "interestPortion": 123.64,
     "interestAmount": 0,
     "balanceAfter": 12677.1,
     "installmentNumber": 33,
@@ -1382,8 +1446,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "45f3fefd-9a38-475b-881e-cafc202994a3",
@@ -1412,8 +1478,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 100.33,
-    "interestPortion": 118.14,
+    "principalAmount": 95.98,
+    "interestPortion": 122.49,
     "interestAmount": 0,
     "balanceAfter": 12576.77,
     "installmentNumber": 34,
@@ -1424,8 +1490,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "ea4a61a5-b733-4f22-86ea-d6de670eddf6",
@@ -1454,8 +1522,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 101.26,
-    "interestPortion": 117.21,
+    "principalAmount": 97.13,
+    "interestPortion": 121.34,
     "interestAmount": 0,
     "balanceAfter": 12475.51,
     "installmentNumber": 35,
@@ -1466,8 +1534,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "ebb97d6d-09b4-4e0c-b1bf-891d8317ddb7",
@@ -1496,8 +1566,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 102.21,
-    "interestPortion": 116.26,
+    "principalAmount": 98.28,
+    "interestPortion": 120.19,
     "interestAmount": 0,
     "balanceAfter": 12373.3,
     "installmentNumber": 36,
@@ -1508,8 +1578,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "e664c6e0-cae8-41c9-a6a0-9fa404ddd38f",
@@ -1538,8 +1610,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 103.16,
-    "interestPortion": 115.31,
+    "principalAmount": 99.43,
+    "interestPortion": 119.04,
     "interestAmount": 0,
     "balanceAfter": 12270.14,
     "installmentNumber": 37,
@@ -1550,8 +1622,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "ebcb982f-9fe0-4375-b9d8-99a1cf56d160",
@@ -1580,8 +1654,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 104.12,
-    "interestPortion": 114.35,
+    "principalAmount": 100.58,
+    "interestPortion": 117.89,
     "interestAmount": 0,
     "balanceAfter": 12166.02,
     "installmentNumber": 38,
@@ -1592,8 +1666,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "7f96e363-6e68-4cf6-a912-747fcf41a788",
@@ -1622,8 +1698,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 105.09,
-    "interestPortion": 113.38,
+    "principalAmount": 101.73,
+    "interestPortion": 116.74,
     "interestAmount": 0,
     "balanceAfter": 12060.93,
     "installmentNumber": 39,
@@ -1634,8 +1710,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "a7526910-1eb8-479b-9780-97ee14931a89",
@@ -1664,8 +1742,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 106.07,
-    "interestPortion": 112.4,
+    "principalAmount": 102.88,
+    "interestPortion": 115.59,
     "interestAmount": 0,
     "balanceAfter": 11954.86,
     "installmentNumber": 40,
@@ -1676,8 +1754,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "9e18611a-77c8-433e-9222-cbcdb6c57a0c",
@@ -1706,8 +1786,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 107.06,
-    "interestPortion": 111.41,
+    "principalAmount": 104.03,
+    "interestPortion": 114.44,
     "interestAmount": 0,
     "balanceAfter": 11847.8,
     "installmentNumber": 41,
@@ -1718,8 +1798,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "9304edfd-c83f-47a4-846b-2e2b395d7c17",
@@ -1748,8 +1830,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 108.06,
-    "interestPortion": 110.41,
+    "principalAmount": 105.18,
+    "interestPortion": 113.29,
     "interestAmount": 0,
     "balanceAfter": 11739.74,
     "installmentNumber": 42,
@@ -1760,8 +1842,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "629e8cb9-3bb7-4cc5-9159-43ce4af001b1",
@@ -1790,8 +1874,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 109.07,
-    "interestPortion": 109.4,
+    "principalAmount": 106.33,
+    "interestPortion": 112.14,
     "interestAmount": 0,
     "balanceAfter": 11630.67,
     "installmentNumber": 43,
@@ -1802,8 +1886,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "1e97430d-f4c8-44f4-9935-c27f37d69c47",
@@ -1832,8 +1918,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 110.08,
-    "interestPortion": 108.39,
+    "principalAmount": 107.48,
+    "interestPortion": 110.99,
     "interestAmount": 0,
     "balanceAfter": 11520.59,
     "installmentNumber": 44,
@@ -1844,8 +1930,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "9f60e092-7201-407d-9834-6e3ee8cb8127",
@@ -1874,8 +1962,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 111.11,
-    "interestPortion": 107.36,
+    "principalAmount": 108.63,
+    "interestPortion": 109.84,
     "interestAmount": 0,
     "balanceAfter": 11409.48,
     "installmentNumber": 45,
@@ -1886,8 +1974,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "e902db3e-7e9d-4253-9641-11d71ed56e96",
@@ -1916,8 +2006,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 112.14,
-    "interestPortion": 106.33,
+    "principalAmount": 109.78,
+    "interestPortion": 108.69,
     "interestAmount": 0,
     "balanceAfter": 11297.34,
     "installmentNumber": 46,
@@ -1928,8 +2018,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "eb74c8bb-92f9-4b2c-85a4-7f2a4fd15b5f",
@@ -1958,8 +2050,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 113.19,
-    "interestPortion": 105.28,
+    "principalAmount": 110.93,
+    "interestPortion": 107.54,
     "interestAmount": 0,
     "balanceAfter": 11184.15,
     "installmentNumber": 47,
@@ -1970,8 +2062,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "4c8987ad-fea9-48b1-8246-50686fb834af",
@@ -2000,8 +2094,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 114.24,
-    "interestPortion": 104.23,
+    "principalAmount": 112.08,
+    "interestPortion": 106.39,
     "interestAmount": 0,
     "balanceAfter": 11069.91,
     "installmentNumber": 48,
@@ -2012,8 +2106,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "6102301a-4aab-492d-8490-7a0ec6df5c6e",
@@ -2042,8 +2138,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 115.31,
-    "interestPortion": 103.16,
+    "principalAmount": 113.23,
+    "interestPortion": 105.24,
     "interestAmount": 0,
     "balanceAfter": 10954.6,
     "installmentNumber": 49,
@@ -2054,8 +2150,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "d49d83fa-010a-4aef-940a-d34dbeeb8bc0",
@@ -2084,8 +2182,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 116.38,
-    "interestPortion": 102.09,
+    "principalAmount": 114.38,
+    "interestPortion": 104.09,
     "interestAmount": 0,
     "balanceAfter": 10838.22,
     "installmentNumber": 50,
@@ -2096,8 +2194,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "2857c340-c6cb-4dae-a3a4-0635e655f921",
@@ -2126,8 +2226,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 117.47,
-    "interestPortion": 101,
+    "principalAmount": 115.53,
+    "interestPortion": 102.94,
     "interestAmount": 0,
     "balanceAfter": 10720.75,
     "installmentNumber": 51,
@@ -2138,8 +2238,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "b0c5e050-b384-4fe9-aa0b-2c90c4b48a1d",
@@ -2168,8 +2270,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 118.56,
-    "interestPortion": 99.91,
+    "principalAmount": 116.68,
+    "interestPortion": 101.79,
     "interestAmount": 0,
     "balanceAfter": 10602.19,
     "installmentNumber": 52,
@@ -2180,8 +2282,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "cbecf867-d124-410e-978e-3f1736050b48",
@@ -2210,8 +2314,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 119.67,
-    "interestPortion": 98.8,
+    "principalAmount": 117.83,
+    "interestPortion": 100.64,
     "interestAmount": 0,
     "balanceAfter": 10482.52,
     "installmentNumber": 53,
@@ -2222,8 +2326,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "846434ff-dcbf-486c-a472-f0b7e4d82d2f",
@@ -2252,8 +2358,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 120.78,
-    "interestPortion": 97.69,
+    "principalAmount": 118.98,
+    "interestPortion": 99.49,
     "interestAmount": 0,
     "balanceAfter": 10361.74,
     "installmentNumber": 54,
@@ -2264,8 +2370,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "5db6009f-8e70-4dc8-9d53-916697ab487f",
@@ -2294,8 +2402,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 121.91,
-    "interestPortion": 96.56,
+    "principalAmount": 120.13,
+    "interestPortion": 98.34,
     "interestAmount": 0,
     "balanceAfter": 10239.83,
     "installmentNumber": 55,
@@ -2306,8 +2414,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "c77a0e78-15c5-45a0-8401-2a1f8a8a5752",
@@ -2336,8 +2446,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 123.04,
-    "interestPortion": 95.43,
+    "principalAmount": 121.28,
+    "interestPortion": 97.19,
     "interestAmount": 0,
     "balanceAfter": 10116.79,
     "installmentNumber": 56,
@@ -2348,8 +2458,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "91adcedb-d84e-4a27-9b6e-08f7a0ef99e4",
@@ -2378,8 +2490,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 124.19,
-    "interestPortion": 94.28,
+    "principalAmount": 122.43,
+    "interestPortion": 96.04,
     "interestAmount": 0,
     "balanceAfter": 9992.6,
     "installmentNumber": 57,
@@ -2390,8 +2502,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "d50d32bb-665f-4531-85dd-4af3e0e0a27c",
@@ -2420,8 +2534,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 125.35,
-    "interestPortion": 93.12,
+    "principalAmount": 123.58,
+    "interestPortion": 94.89,
     "interestAmount": 0,
     "balanceAfter": 9867.25,
     "installmentNumber": 58,
@@ -2432,8 +2546,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "feb63cd7-e7e9-444d-8674-4aa74e45ae74",
@@ -2462,8 +2578,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 126.52,
-    "interestPortion": 91.95,
+    "principalAmount": 124.73,
+    "interestPortion": 93.74,
     "interestAmount": 0,
     "balanceAfter": 9740.73,
     "installmentNumber": 59,
@@ -2474,8 +2590,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "cc0fcd4b-3fba-4346-bc00-2cec62a6d77b",
@@ -2504,8 +2622,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 127.69,
-    "interestPortion": 90.78,
+    "principalAmount": 125.88,
+    "interestPortion": 92.59,
     "interestAmount": 0,
     "balanceAfter": 9613.04,
     "installmentNumber": 60,
@@ -2516,8 +2634,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "3319b4e4-6137-45a7-b602-8b7a4501989c",
@@ -2546,8 +2666,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 128.88,
-    "interestPortion": 89.59,
+    "principalAmount": 127.03,
+    "interestPortion": 91.44,
     "interestAmount": 0,
     "balanceAfter": 9484.16,
     "installmentNumber": 61,
@@ -2558,8 +2678,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "776579ba-058b-4226-a9f1-6792c41bbb93",
@@ -2588,8 +2710,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 130.09,
-    "interestPortion": 88.38,
+    "principalAmount": 128.18,
+    "interestPortion": 90.29,
     "interestAmount": 0,
     "balanceAfter": 9354.07,
     "installmentNumber": 62,
@@ -2600,8 +2722,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "ffa01e08-febe-47b4-a123-a222c8c11ae0",
@@ -2630,8 +2754,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 131.3,
-    "interestPortion": 87.17,
+    "principalAmount": 129.33,
+    "interestPortion": 89.14,
     "interestAmount": 0,
     "balanceAfter": 9222.77,
     "installmentNumber": 63,
@@ -2642,8 +2766,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "f48e6633-0f0d-422a-b7c8-70b85d3986a2",
@@ -2672,8 +2798,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 132.52,
-    "interestPortion": 85.95,
+    "principalAmount": 130.48,
+    "interestPortion": 87.99,
     "interestAmount": 0,
     "balanceAfter": 9090.25,
     "installmentNumber": 64,
@@ -2684,8 +2810,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "4513f2bb-9a2c-4364-b774-ed10f22c0cc1",
@@ -2714,8 +2842,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 133.76,
-    "interestPortion": 84.71,
+    "principalAmount": 131.63,
+    "interestPortion": 86.84,
     "interestAmount": 0,
     "balanceAfter": 8956.49,
     "installmentNumber": 65,
@@ -2726,8 +2854,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "bf8c51ff-e7e4-40bd-bc19-6ca228c2b606",
@@ -2756,8 +2886,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 135,
-    "interestPortion": 83.47,
+    "principalAmount": 132.78,
+    "interestPortion": 85.69,
     "interestAmount": 0,
     "balanceAfter": 8821.49,
     "installmentNumber": 66,
@@ -2768,8 +2898,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "9ab766e8-559b-4ddf-9f97-18e97fb3cf56",
@@ -2798,8 +2930,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 136.26,
-    "interestPortion": 82.21,
+    "principalAmount": 133.93,
+    "interestPortion": 84.54,
     "interestAmount": 0,
     "balanceAfter": 8685.23,
     "installmentNumber": 67,
@@ -2810,8 +2942,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "a9eedcb4-e76d-4ef7-b855-2474a2e0126f",
@@ -2840,8 +2974,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 137.53,
-    "interestPortion": 80.94,
+    "principalAmount": 135.08,
+    "interestPortion": 83.39,
     "interestAmount": 0,
     "balanceAfter": 8547.7,
     "installmentNumber": 68,
@@ -2852,8 +2986,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "1b98a2de-e64f-4456-a136-3c958d6dac80",
@@ -2882,8 +3018,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 138.81,
-    "interestPortion": 79.66,
+    "principalAmount": 136.23,
+    "interestPortion": 82.24,
     "interestAmount": 0,
     "balanceAfter": 8408.89,
     "installmentNumber": 69,
@@ -2894,8 +3030,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "c43fd588-d5d5-446f-93e6-2e977890a5bf",
@@ -2924,8 +3062,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 140.11,
-    "interestPortion": 78.36,
+    "principalAmount": 137.38,
+    "interestPortion": 81.09,
     "interestAmount": 0,
     "balanceAfter": 8268.78,
     "installmentNumber": 70,
@@ -2936,8 +3074,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "1c9d5c6a-f4d5-46eb-904a-3d63118d1477",
@@ -2966,8 +3106,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 141.41,
-    "interestPortion": 77.06,
+    "principalAmount": 138.53,
+    "interestPortion": 79.94,
     "interestAmount": 0,
     "balanceAfter": 8127.37,
     "installmentNumber": 71,
@@ -2978,8 +3118,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "3808e157-3488-4096-8f06-4609d82f550d",
@@ -3008,8 +3150,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 142.73,
-    "interestPortion": 75.74,
+    "principalAmount": 139.68,
+    "interestPortion": 78.79,
     "interestAmount": 0,
     "balanceAfter": 7984.64,
     "installmentNumber": 72,
@@ -3020,8 +3162,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "a4ae59f5-678e-4859-9349-f2ebbce86b9c",
@@ -3050,8 +3194,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 144.06,
-    "interestPortion": 74.41,
+    "principalAmount": 140.83,
+    "interestPortion": 77.64,
     "interestAmount": 0,
     "balanceAfter": 7840.58,
     "installmentNumber": 73,
@@ -3062,8 +3206,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "8bb8af4e-5f27-4c60-95a1-73d3fc8d8202",
@@ -3092,8 +3238,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 145.4,
-    "interestPortion": 73.07,
+    "principalAmount": 141.98,
+    "interestPortion": 76.49,
     "interestAmount": 0,
     "balanceAfter": 7695.18,
     "installmentNumber": 74,
@@ -3104,8 +3250,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "2cd6c18a-1c48-4acd-b19c-7d7ddb47ae8c",
@@ -3134,8 +3282,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 146.76,
-    "interestPortion": 71.71,
+    "principalAmount": 143.13,
+    "interestPortion": 75.34,
     "interestAmount": 0,
     "balanceAfter": 7548.42,
     "installmentNumber": 75,
@@ -3146,8 +3294,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "f05e19d5-55cf-4fa8-88d6-a52c83bf1c1c",
@@ -3176,8 +3326,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 148.13,
-    "interestPortion": 70.34,
+    "principalAmount": 144.28,
+    "interestPortion": 74.19,
     "interestAmount": 0,
     "balanceAfter": 7400.29,
     "installmentNumber": 76,
@@ -3188,8 +3338,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "91535038-df1d-4203-82cd-b449ca27aad2",
@@ -3218,8 +3370,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 149.51,
-    "interestPortion": 68.96,
+    "principalAmount": 145.43,
+    "interestPortion": 73.04,
     "interestAmount": 0,
     "balanceAfter": 7250.78,
     "installmentNumber": 77,
@@ -3230,8 +3382,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "4fa77f0f-15ad-4e23-8653-0e74c5918023",
@@ -3260,8 +3414,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 150.9,
-    "interestPortion": 67.57,
+    "principalAmount": 146.58,
+    "interestPortion": 71.89,
     "interestAmount": 0,
     "balanceAfter": 7099.88,
     "installmentNumber": 78,
@@ -3272,8 +3426,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "5849e8b0-57e8-4b30-b409-8dc25421f5bd",
@@ -3302,8 +3458,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 152.31,
-    "interestPortion": 66.16,
+    "principalAmount": 147.73,
+    "interestPortion": 70.74,
     "interestAmount": 0,
     "balanceAfter": 6947.57,
     "installmentNumber": 79,
@@ -3314,8 +3470,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "9f09002c-ba24-426a-9e07-a794e4f5dd34",
@@ -3344,8 +3502,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 153.72,
-    "interestPortion": 64.75,
+    "principalAmount": 148.88,
+    "interestPortion": 69.59,
     "interestAmount": 0,
     "balanceAfter": 6793.85,
     "installmentNumber": 80,
@@ -3356,8 +3514,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "ec20fdbd-9337-44b1-85f0-aab6dbbfe9ca",
@@ -3386,8 +3546,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 155.16,
-    "interestPortion": 63.31,
+    "principalAmount": 150.03,
+    "interestPortion": 68.44,
     "interestAmount": 0,
     "balanceAfter": 6638.69,
     "installmentNumber": 81,
@@ -3398,8 +3558,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "7a26b28b-6137-4186-8cd3-ba2c8043a583",
@@ -3428,8 +3590,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 156.6,
-    "interestPortion": 61.87,
+    "principalAmount": 151.18,
+    "interestPortion": 67.29,
     "interestAmount": 0,
     "balanceAfter": 6482.09,
     "installmentNumber": 82,
@@ -3440,8 +3602,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "e4b07b46-2a46-4471-88de-46840dd5eabc",
@@ -3470,8 +3634,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 158.06,
-    "interestPortion": 60.41,
+    "principalAmount": 152.33,
+    "interestPortion": 66.14,
     "interestAmount": 0,
     "balanceAfter": 6324.03,
     "installmentNumber": 83,
@@ -3482,8 +3646,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "b2935a43-8b5b-499e-a72d-98210c772e51",
@@ -3512,8 +3678,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 159.54,
-    "interestPortion": 58.93,
+    "principalAmount": 153.48,
+    "interestPortion": 64.99,
     "interestAmount": 0,
     "balanceAfter": 6164.49,
     "installmentNumber": 84,
@@ -3524,8 +3690,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "7c6a795a-b873-472c-b19c-6640b6f83368",
@@ -3554,8 +3722,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 161.02,
-    "interestPortion": 57.45,
+    "principalAmount": 154.63,
+    "interestPortion": 63.84,
     "interestAmount": 0,
     "balanceAfter": 6003.47,
     "installmentNumber": 85,
@@ -3566,8 +3734,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "6437c7f6-427b-46d6-8e5f-c9b817443862",
@@ -3596,8 +3766,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 162.52,
-    "interestPortion": 55.95,
+    "principalAmount": 155.78,
+    "interestPortion": 62.69,
     "interestAmount": 0,
     "balanceAfter": 5840.95,
     "installmentNumber": 86,
@@ -3608,8 +3778,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "12867f8b-7827-40fc-8eb6-cd1048d42b71",
@@ -3638,8 +3810,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 164.04,
-    "interestPortion": 54.43,
+    "principalAmount": 156.93,
+    "interestPortion": 61.54,
     "interestAmount": 0,
     "balanceAfter": 5676.91,
     "installmentNumber": 87,
@@ -3650,8 +3822,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "b0ddf8b3-6398-4ae1-b3a7-91d8b162ca63",
@@ -3680,8 +3854,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 165.57,
-    "interestPortion": 52.9,
+    "principalAmount": 158.08,
+    "interestPortion": 60.39,
     "interestAmount": 0,
     "balanceAfter": 5511.34,
     "installmentNumber": 88,
@@ -3692,8 +3866,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "4dc01ce0-b21c-4940-b053-8ef90e670286",
@@ -3722,8 +3898,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 167.11,
-    "interestPortion": 51.36,
+    "principalAmount": 159.23,
+    "interestPortion": 59.24,
     "interestAmount": 0,
     "balanceAfter": 5344.23,
     "installmentNumber": 89,
@@ -3734,8 +3910,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "6b1baae5-d6c9-465f-acbb-be0d0d2f340e",
@@ -3764,8 +3942,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 168.67,
-    "interestPortion": 49.8,
+    "principalAmount": 160.38,
+    "interestPortion": 58.09,
     "interestAmount": 0,
     "balanceAfter": 5175.56,
     "installmentNumber": 90,
@@ -3776,8 +3954,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "97ab4f0f-cc41-4a5d-8976-115b896c7db8",
@@ -3806,8 +3986,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 170.24,
-    "interestPortion": 48.23,
+    "principalAmount": 161.53,
+    "interestPortion": 56.94,
     "interestAmount": 0,
     "balanceAfter": 5005.32,
     "installmentNumber": 91,
@@ -3818,8 +3998,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "6e2f5277-1de7-4f7c-b95b-b81b21692cd8",
@@ -3848,8 +4030,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 171.82,
-    "interestPortion": 46.65,
+    "principalAmount": 162.68,
+    "interestPortion": 55.79,
     "interestAmount": 0,
     "balanceAfter": 4833.5,
     "installmentNumber": 92,
@@ -3860,8 +4042,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "a5c96c53-843f-4ddd-807e-ea5e64da0037",
@@ -3890,8 +4074,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 173.43,
-    "interestPortion": 45.04,
+    "principalAmount": 163.83,
+    "interestPortion": 54.64,
     "interestAmount": 0,
     "balanceAfter": 4660.07,
     "installmentNumber": 93,
@@ -3902,8 +4086,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "c053e7b3-d62d-4b74-a7d3-944d851d0ea6",
@@ -3932,8 +4118,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 175.04,
-    "interestPortion": 43.43,
+    "principalAmount": 164.98,
+    "interestPortion": 53.49,
     "interestAmount": 0,
     "balanceAfter": 4485.03,
     "installmentNumber": 94,
@@ -3944,8 +4130,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "6fb02be9-2201-49ca-b748-450437cbeb22",
@@ -3974,8 +4162,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 176.67,
-    "interestPortion": 41.8,
+    "principalAmount": 166.13,
+    "interestPortion": 52.34,
     "interestAmount": 0,
     "balanceAfter": 4308.36,
     "installmentNumber": 95,
@@ -3986,8 +4174,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "1e3ee74f-9614-40c4-bb86-24fe5f94e33e",
@@ -4016,8 +4206,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 178.32,
-    "interestPortion": 40.15,
+    "principalAmount": 167.28,
+    "interestPortion": 51.19,
     "interestAmount": 0,
     "balanceAfter": 4130.04,
     "installmentNumber": 96,
@@ -4028,8 +4218,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "08f0f437-aced-413b-ab1f-9afcad3aa257",
@@ -4058,8 +4250,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 179.98,
-    "interestPortion": 38.49,
+    "principalAmount": 168.43,
+    "interestPortion": 50.04,
     "interestAmount": 0,
     "balanceAfter": 3950.06,
     "installmentNumber": 97,
@@ -4070,8 +4262,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "d42a0a7d-4855-4026-b771-753b43b5bb93",
@@ -4100,8 +4294,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 181.66,
-    "interestPortion": 36.81,
+    "principalAmount": 169.58,
+    "interestPortion": 48.89,
     "interestAmount": 0,
     "balanceAfter": 3768.4,
     "installmentNumber": 98,
@@ -4112,8 +4306,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "c9010b94-2a8e-4f13-82c4-27cd9db8926c",
@@ -4142,8 +4338,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 183.35,
-    "interestPortion": 35.12,
+    "principalAmount": 170.73,
+    "interestPortion": 47.74,
     "interestAmount": 0,
     "balanceAfter": 3585.05,
     "installmentNumber": 99,
@@ -4154,8 +4350,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "94fbfc08-e3e1-4d71-b830-25a3fef0d098",
@@ -4184,8 +4382,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 185.06,
-    "interestPortion": 33.41,
+    "principalAmount": 171.88,
+    "interestPortion": 46.59,
     "interestAmount": 0,
     "balanceAfter": 3399.99,
     "installmentNumber": 100,
@@ -4196,8 +4394,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "abf75acb-9a18-4755-8dd5-81698017c795",
@@ -4226,8 +4426,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 186.78,
-    "interestPortion": 31.69,
+    "principalAmount": 173.03,
+    "interestPortion": 45.44,
     "interestAmount": 0,
     "balanceAfter": 3213.21,
     "installmentNumber": 101,
@@ -4238,8 +4438,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "1aee7333-4704-4d63-8023-5848de820901",
@@ -4268,8 +4470,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 188.53,
-    "interestPortion": 29.94,
+    "principalAmount": 174.18,
+    "interestPortion": 44.29,
     "interestAmount": 0,
     "balanceAfter": 3024.68,
     "installmentNumber": 102,
@@ -4280,8 +4482,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "ecd236e0-454e-45aa-bd06-1b7bd0303b3c",
@@ -4310,8 +4514,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 190.28,
-    "interestPortion": 28.19,
+    "principalAmount": 175.33,
+    "interestPortion": 43.14,
     "interestAmount": 0,
     "balanceAfter": 2834.4,
     "installmentNumber": 103,
@@ -4322,8 +4526,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "c2818d90-29df-468b-baf1-0a82ce9bcbc0",
@@ -4352,8 +4558,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 192.06,
-    "interestPortion": 26.41,
+    "principalAmount": 176.48,
+    "interestPortion": 41.99,
     "interestAmount": 0,
     "balanceAfter": 2642.34,
     "installmentNumber": 104,
@@ -4364,8 +4570,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "95d69f3c-45f0-4933-9636-68f0e329f1d7",
@@ -4394,8 +4602,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 193.85,
-    "interestPortion": 24.62,
+    "principalAmount": 177.63,
+    "interestPortion": 40.84,
     "interestAmount": 0,
     "balanceAfter": 2448.49,
     "installmentNumber": 105,
@@ -4406,8 +4614,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "3a5207de-0d9d-4d92-b5f4-c6a5ee63369f",
@@ -4436,8 +4646,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 195.65,
-    "interestPortion": 22.82,
+    "principalAmount": 178.78,
+    "interestPortion": 39.69,
     "interestAmount": 0,
     "balanceAfter": 2252.84,
     "installmentNumber": 106,
@@ -4448,8 +4658,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "983eb632-2d80-43ec-8060-29229ca9a872",
@@ -4478,8 +4690,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 197.48,
-    "interestPortion": 20.99,
+    "principalAmount": 179.93,
+    "interestPortion": 38.54,
     "interestAmount": 0,
     "balanceAfter": 2055.36,
     "installmentNumber": 107,
@@ -4490,8 +4702,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "4feb81a9-7528-4b26-9fe8-82f766be077a",
@@ -4520,8 +4734,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 199.32,
-    "interestPortion": 19.15,
+    "principalAmount": 181.08,
+    "interestPortion": 37.39,
     "interestAmount": 0,
     "balanceAfter": 1856.04,
     "installmentNumber": 108,
@@ -4532,8 +4746,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "77abb319-1bdf-46e4-bb95-fd104dd92797",
@@ -4562,8 +4778,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 201.17,
-    "interestPortion": 17.3,
+    "principalAmount": 182.23,
+    "interestPortion": 36.24,
     "interestAmount": 0,
     "balanceAfter": 1654.87,
     "installmentNumber": 109,
@@ -4574,8 +4790,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "5d86a95b-77a3-41de-80e7-c0fb870ce177",
@@ -4604,8 +4822,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 203.05,
-    "interestPortion": 15.42,
+    "principalAmount": 183.38,
+    "interestPortion": 35.09,
     "interestAmount": 0,
     "balanceAfter": 1451.82,
     "installmentNumber": 110,
@@ -4616,8 +4834,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "46b5a8f3-4483-4ad8-9379-f6705d1088ee",
@@ -4646,8 +4866,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 204.94,
-    "interestPortion": 13.53,
+    "principalAmount": 184.53,
+    "interestPortion": 33.94,
     "interestAmount": 0,
     "balanceAfter": 1246.88,
     "installmentNumber": 111,
@@ -4658,8 +4878,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "33eb1137-4a22-4463-a99f-c34cf9d2628f",
@@ -4688,8 +4910,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 206.85,
-    "interestPortion": 11.62,
+    "principalAmount": 185.68,
+    "interestPortion": 32.79,
     "interestAmount": 0,
     "balanceAfter": 1040.03,
     "installmentNumber": 112,
@@ -4700,8 +4922,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "abaeefae-3683-4767-998d-39837acc087c",
@@ -4730,8 +4954,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 208.78,
-    "interestPortion": 9.69,
+    "principalAmount": 186.83,
+    "interestPortion": 31.64,
     "interestAmount": 0,
     "balanceAfter": 831.25,
     "installmentNumber": 113,
@@ -4742,8 +4966,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "2d85ab87-6cca-4978-8170-f2df012eba23",
@@ -4772,8 +4998,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 210.72,
-    "interestPortion": 7.75,
+    "principalAmount": 187.98,
+    "interestPortion": 30.49,
     "interestAmount": 0,
     "balanceAfter": 620.53,
     "installmentNumber": 114,
@@ -4784,8 +5010,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "9ed6d1c8-2852-467b-9b3b-cbaf96a12347",
@@ -4814,8 +5042,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 212.69,
-    "interestPortion": 5.78,
+    "principalAmount": 189.13,
+    "interestPortion": 29.34,
     "interestAmount": 0,
     "balanceAfter": 407.84,
     "installmentNumber": 115,
@@ -4826,8 +5054,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "065621bd-deb9-4235-93ff-b38c3889ff43",
@@ -4856,8 +5086,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 214.67,
-    "interestPortion": 3.8,
+    "principalAmount": 190.28,
+    "interestPortion": 28.19,
     "interestAmount": 0,
     "balanceAfter": 193.17,
     "installmentNumber": 116,
@@ -4868,8 +5098,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "06e7a2a3-7fb8-4dd5-9d37-5a5320c1c6b3",
@@ -4898,8 +5130,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 193.17,
-    "interestPortion": 25.3,
+    "principalAmount": 191.43,
+    "interestPortion": 27.04,
     "interestAmount": 0,
     "balanceAfter": 0,
     "installmentNumber": 117,
@@ -4910,8 +5142,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "27670a16-f164-4c2f-b0bb-6c7a6ece1a28",
@@ -4940,8 +5174,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 0,
-    "interestPortion": 218.47,
+    "principalAmount": 192.58,
+    "interestPortion": 25.89,
     "interestAmount": 0,
     "balanceAfter": 0,
     "installmentNumber": 118,
@@ -4952,8 +5186,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "5170fd7a-d658-4cd4-84d2-c646c782eaa8",
@@ -4982,8 +5218,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 0,
-    "interestPortion": 218.47,
+    "principalAmount": 193.73,
+    "interestPortion": 24.74,
     "interestAmount": 0,
     "balanceAfter": 0,
     "installmentNumber": 119,
@@ -4994,8 +5230,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "d9222fe9-a58d-47d4-ba58-6396fb0a2e13",
@@ -5024,8 +5262,8 @@
     "isCompleted": false,
     "isLocked": false,
     "isSystemLoanEvent": true,
-    "principalAmount": 0,
-    "interestPortion": 218.47,
+    "principalAmount": 194.88,
+    "interestPortion": 23.59,
     "interestAmount": 0,
     "balanceAfter": 0,
     "installmentNumber": 120,
@@ -5036,8 +5274,10 @@
     ],
     "breakdownItems": [],
     "createdAt": "2026-08-24T17:26:05.136Z",
-    "updatedAt": "2026-08-24T17:26:05.136Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.670Z",
+    "tenantId": "tenant-igor",
+    "isAbatida": false,
+    "originalAmount": 218.47
   },
   {
     "id": "928be741-ad98-49b3-a000-fec1c8a9c6c2",

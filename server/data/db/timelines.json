@@ -66,14 +66,15 @@
     "status": "Em Progresso",
     "totalDebt": 15456.6,
     "remainingDebt": 13259.93,
-    "installmentAmount": 218.47,
+    "installmentAmount": 201.99,
     "tan": 11.183,
     "totalInstallments": 120,
     "currentInstallmentNumber": 28,
     "dueDay": 15,
     "createdAt": "2026-08-24T17:26:05.130Z",
-    "updatedAt": "2026-08-24T17:26:05.130Z",
-    "tenantId": "tenant-igor"
+    "updatedAt": "2026-08-25T22:21:58.683Z",
+    "tenantId": "tenant-igor",
+    "amortizedCapital": 2196.67
   },
   {
     "id": "d5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9a",

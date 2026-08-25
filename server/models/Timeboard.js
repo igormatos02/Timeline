@@ -1,7 +1,7 @@
 export class Timeboard {
   constructor({
     id,
-    name = 'Timeboard Principal',
+    name = 'Timeboard Portugal',
     description = '',
     tenantId = 'tenant-igor',
     tenant = 'tenant-igor',

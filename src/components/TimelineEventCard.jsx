@@ -63,11 +63,11 @@ export default function TimelineEventCard({
   const [newItemText, setNewItemText] = useState('');
   const isBalanceView = timelineType === 'Principal' || activeFinancialTab === 'balanco';
   const todayStr = '2026-08-21';
-  const isLoanInstallment = event.category === 'parcela_emprestimo' || event.isSystemLoanEvent || event.timelineOriginId === 'tl-loan-jeep' || event.timelineOriginId === 'tl-loan-dacia' || event.timelineOriginId === 'tl-loan-casa1' || event.timelineOriginId === 'tl-loan-casa2' || event.timelineOriginId === 'tl-loan-80004197726';
   const isAmortization = event.category === 'amortizacao';
-  const isIncomeEvent = (event.isIncome || event.financialType === 'entrada' || event.category === 'entrada_recorrente' || event.category === 'entrada_esporadica') && !event.isExpense && !event.isInvestment && !isLoanInstallment;
-  const isExpenseEvent = (event.isExpense || event.financialType === 'gasto' || (event.category && event.category.startsWith('saida')) || event.category === 'gasto') && !isLoanInstallment;
-  const isInvestmentEvent = (event.isInvestment || event.financialType === 'investimento' || (event.category && event.category.startsWith('investimento'))) && !isLoanInstallment;
+  const isLoanInstallment = (event.category === 'parcela_emprestimo' || (event.isSystemLoanEvent && !isAmortization) || event.timelineOriginId === 'tl-loan-jeep' || event.timelineOriginId === 'tl-loan-dacia' || event.timelineOriginId === 'tl-loan-casa1' || event.timelineOriginId === 'tl-loan-casa2' || event.timelineOriginId === 'tl-loan-80004197726') && !isAmortization && event.category !== 'investimento_patrimonio';
+  const isIncomeEvent = (event.isIncome || event.financialType === 'entrada' || event.category === 'entrada_recorrente' || event.category === 'entrada_esporadica') && !event.isExpense && !event.isInvestment && !isLoanInstallment && !isAmortization;
+  const isExpenseEvent = (event.isExpense || event.financialType === 'gasto' || (event.category && event.category.startsWith('saida')) || event.category === 'gasto') && !isLoanInstallment && !isAmortization && !event.isInvestment;
+  const isInvestmentEvent = (event.isInvestment || event.financialType === 'investimento' || (event.category && event.category.startsWith('investimento'))) && !isLoanInstallment && !isAmortization;
 
   const isInertFuture = event.date > '2026-08-31';
 
@@ -94,8 +94,29 @@ export default function TimelineEventCard({
 
   const isPaidLoan = isLoanInstallment && (event.status === 'Pago' || event.status === 'Liquidado' || event.isCompleted);
   const isOverdueLoan = isLoanInstallment && (isOverdue || event.status === 'Atrasada');
+  const isAbatida = event.status === 'Abatida' || Boolean(event.isAbatida) || (Array.isArray(event.labels) && event.labels.includes('Abatida'));
 
-  const isLocked = event.isLocked !== undefined ? !!event.isLocked : isCompleted;
+  const abatedBreakdown = React.useMemo(() => {
+    if (!isAbatida) return null;
+    let origCapital = 0;
+    let origInterest = 0;
+    const origTotal = Number(event.originalAmount || (Number(event.amount) > 0 ? event.amount : 218.47));
+
+    if (event.description) {
+      const match = event.description.match(/\(([\d\s.,]+)\s*€?\s*capital\s*\+\s*([\d\s.,]+)\s*€?\s*juros/i);
+      if (match && match[1] && match[2]) {
+        origCapital = parseFloat(match[1].replace(/\s/g, '').replace(',', '.'));
+        origInterest = parseFloat(match[2].replace(/\s/g, '').replace(',', '.'));
+      }
+    }
+    if (!origCapital || isNaN(origCapital)) {
+      origCapital = Math.round(origTotal * 0.85 * 100) / 100;
+      origInterest = Math.round((origTotal - origCapital) * 100) / 100;
+    }
+    return { origTotal, origCapital, origInterest };
+  }, [isAbatida, event.description, event.originalAmount, event.amount]);
+
+  const isLocked = event.isLocked !== undefined ? !!event.isLocked : (isCompleted || isAbatida);
 
   const [isEditingAmount, setIsEditingAmount] = useState(false);
   const [tempAmount, setTempAmount] = useState(event.amount !== undefined ? event.amount : '');
@@ -870,6 +891,18 @@ export default function TimelineEventCard({
     };
   }
 
+  if (isAbatida) {
+    cardStyle = {
+      ...cardStyle,
+      opacity: 0.48,
+      background: 'rgba(148, 163, 184, 0.03)',
+      borderColor: 'rgba(148, 163, 184, 0.2)',
+      borderLeft: '4px solid #94a3b8',
+      filter: 'grayscale(0.35)',
+      pointerEvents: 'none'
+    };
+  }
+
   // Event Origin / Sub-vision info for right-aligned badge (coherent with vision palettes)
   const getEventOriginInfo = () => {
     if (
@@ -1097,31 +1130,78 @@ export default function TimelineEventCard({
               </button>
             </form>
           ) : (
-            <h3
-              className="event-title"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!isLoanInstallment) {
-                  setIsEditingTitle(true);
-                } else if (onNavigateToTimeline && originInfo) {
-                  onNavigateToTimeline(originInfo.timelineId, originInfo.tab);
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h3
+                className="event-title"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isAbatida) return;
+                  if (!isLoanInstallment) {
+                    setIsEditingTitle(true);
+                  } else if (onNavigateToTimeline && originInfo) {
+                    onNavigateToTimeline(originInfo.timelineId, originInfo.tab);
+                  }
+                }}
+                title={
+                  isAbatida
+                    ? 'Esta parcela foi totalmente liquidada/abatida por amortização extraordinária.'
+                    : isLoanInstallment
+                      ? `Clique para ir à timeline do ${originInfo ? originInfo.label : 'Empréstimo'}`
+                      : isRecurring
+                        ? "Clique para editar o nome (altera em todos os meses)"
+                        : "Clique para editar o nome"
                 }
-              }}
-              title={
-                isLoanInstallment
-                  ? `Clique para ir à timeline do ${originInfo ? originInfo.label : 'Empréstimo'}`
-                  : isRecurring
-                    ? "Clique para editar o nome (altera em todos os meses)"
-                    : "Clique para editar o nome"
-              }
-              style={{
-                margin: 0,
-                color: isInertFuture ? 'var(--text-muted)' : 'var(--text-main)',
-                cursor: 'pointer'
-              }}
-            >
-              {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
-            </h3>
+                style={{
+                  margin: 0,
+                  color: isAbatida ? 'var(--text-dim)' : isInertFuture ? 'var(--text-muted)' : 'var(--text-main)',
+                  textDecoration: isAbatida ? 'line-through' : 'none',
+                  cursor: isAbatida ? 'default' : 'pointer'
+                }}
+              >
+                {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
+              </h3>
+
+              {isAbatida && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span
+                    style={{
+                      background: 'rgba(16, 185, 129, 0.14)',
+                      color: '#10b981',
+                      border: '1px solid rgba(16, 185, 129, 0.35)',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      fontSize: '0.68rem',
+                      fontWeight: '800',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.02em',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <CheckCircle2 size={11} /> Abatida (Total Pago: 0,00 €)
+                  </span>
+                  {abatedBreakdown && abatedBreakdown.origInterest > 0 && (
+                    <span
+                      style={{
+                        background: 'rgba(99, 102, 241, 0.12)',
+                        color: 'var(--primary-light)',
+                        border: '1px solid rgba(99, 102, 241, 0.3)',
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        fontSize: '0.68rem',
+                        fontWeight: '800',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Sparkles size={11} /> Poupança: +{formatCurrency(abatedBreakdown.origInterest)} em juros
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -1817,6 +1897,101 @@ export default function TimelineEventCard({
       </div>
     )}
 
+      {/* ⚡ Amortização Extraordinária Strip */}
+      {isAmortization && (
+        <div
+          className="loan-breakdown-strip"
+          style={{
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, var(--bg-app) 100%)',
+            border: '1px solid rgba(16, 185, 129, 0.35)',
+            borderRadius: '10px',
+            padding: '8px 12px',
+            margin: '10px 0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                Valor Amortizado
+              </span>
+              <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#10b981' }}>
+                +{formatCurrency(event.amount || event.amortizationAmount || 0)}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                Finalidade
+              </span>
+              <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--primary-light)' }}>
+                {event.strategy === 'reduce_installment' ? 'Redução da Parcela' : 'Redução do Prazo'}
+              </span>
+            </div>
+
+            {event.balanceAfter !== undefined && (
+              <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                  Saldo Devedor Após
+                </span>
+                <span style={{ fontSize: '0.88rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                  {formatCurrency(event.balanceAfter)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onToggleLoanPayment) {
+                  onToggleLoanPayment(event.id);
+                }
+              }}
+              style={{
+                background: (event.status === 'Amortizado' || event.status === 'Concluído' || event.isCompleted)
+                  ? 'rgba(16, 185, 129, 0.16)'
+                  : 'rgba(245, 158, 11, 0.16)',
+                color: (event.status === 'Amortizado' || event.status === 'Concluído' || event.isCompleted)
+                  ? '#10b981'
+                  : '#f59e0b',
+                border: (event.status === 'Amortizado' || event.status === 'Concluído' || event.isCompleted)
+                  ? '1px solid rgba(16, 185, 129, 0.4)'
+                  : '1px solid rgba(245, 158, 11, 0.4)',
+                borderRadius: '9999px',
+                padding: '5px 14px',
+                fontSize: '0.78rem',
+                fontWeight: '800',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              title="Clique para alternar entre Amortizado (Efetivado) e Pendente (Agendado)"
+            >
+              {(event.status === 'Amortizado' || event.status === 'Concluído' || event.isCompleted) ? (
+                <>
+                  <CheckCircle2 size={13} style={{ color: '#10b981' }} />
+                  <span>Amortizado</span>
+                </>
+              ) : (
+                <>
+                  <Clock size={13} style={{ color: '#f59e0b' }} />
+                  <span>Pendente</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 🏦 Loan Installment Principal / Interest Breakdown Strip */}
       {isLoanInstallment && (
         <div
@@ -1838,33 +2013,48 @@ export default function TimelineEventCard({
             {/* Valor Total da Parcela */}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                Total da Parcela
+                {isAbatida ? 'Total Pago' : 'Total da Parcela'}
               </span>
-              {renderEditableAmount('', isInertFuture ? '#94a3b8' : 'var(--primary-light)')}
+              {isAbatida ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)', textDecoration: 'line-through' }}>
+                    {formatCurrency(abatedBreakdown?.origTotal || event.originalAmount || 218.47)}
+                  </span>
+                  <span style={{ fontSize: '0.94rem', fontWeight: '800', color: '#10b981' }}>
+                    0,00 €
+                  </span>
+                </div>
+              ) : (
+                renderEditableAmount('', isInertFuture ? '#94a3b8' : 'var(--primary-light)')
+              )}
             </div>
 
             {/* Decomposição: Capital Amortizado */}
             <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                Capital (Dívida)
+                {isAbatida ? 'Capital Abatido' : 'Capital (Dívida)'}
               </span>
-              <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isInertFuture ? 'var(--text-muted)' : 'var(--text-main)' }}>
-                {formatCurrency(event.principalAmount !== undefined ? event.principalAmount : Math.round((Number(event.amount) || 0) * 0.82))}
+              <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAbatida ? 'var(--text-main)' : isInertFuture ? 'var(--text-muted)' : 'var(--text-main)' }}>
+                {isAbatida
+                  ? formatCurrency(abatedBreakdown?.origCapital || 194.88)
+                  : formatCurrency(event.principalAmount !== undefined ? event.principalAmount : Math.round((Number(event.amount) || 0) * 0.82))}
               </span>
             </div>
 
-            {/* Juros Embutidos */}
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                Juros
+            {/* Juros Embutidos ou Juros Poupados */}
+            <div style={{ display: 'flex', flexDirection: 'column', borderLeft: isAbatida ? '1px solid var(--border-glass)' : 'none', paddingLeft: isAbatida ? '14px' : '0' }}>
+              <span style={{ fontSize: '0.7rem', color: isAbatida ? '#10b981' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                {isAbatida ? 'Juros Poupados' : 'Juros'}
               </span>
-              <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isInertFuture ? '#94a3b8' : '#f59e0b' }}>
-                {formatCurrency(event.interestPortion !== undefined ? event.interestPortion : Math.round((Number(event.amount) || 0) * 0.18))}
+              <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAbatida ? '#10b981' : isInertFuture ? '#94a3b8' : '#f59e0b' }}>
+                {isAbatida
+                  ? `+${formatCurrency(abatedBreakdown?.origInterest || 23.59)}`
+                  : formatCurrency(event.interestPortion !== undefined ? event.interestPortion : Math.round((Number(event.amount) || 0) * 0.18))}
               </span>
             </div>
 
             {/* Juros Extra de Mora se Atrasada */}
-            {event.interestAmount > 0 && !isInertFuture && (
+            {event.interestAmount > 0 && !isInertFuture && !isAbatida && (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.7rem', color: '#f87171', textTransform: 'uppercase', fontWeight: '700' }}>
                   Mora / Atraso
@@ -1881,7 +2071,7 @@ export default function TimelineEventCard({
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                   Saldo Devedor Restante
                 </span>
-                <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isInertFuture ? '#94a3b8' : 'var(--primary-light)' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAbatida || isInertFuture ? '#94a3b8' : 'var(--primary-light)' }}>
                   {formatCurrency(event.balanceAfter)}
                 </span>
               </div>
@@ -1890,7 +2080,28 @@ export default function TimelineEventCard({
 
           {/* Inline Loan Payment Fast Toggle */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {isInertFuture ? (
+            {isAbatida ? (
+              <div
+                style={{
+                  background: 'rgba(148, 163, 184, 0.12)',
+                  color: '#94a3b8',
+                  border: '1px solid rgba(148, 163, 184, 0.3)',
+                  borderRadius: '9999px',
+                  padding: '5px 14px',
+                  fontSize: '0.78rem',
+                  fontWeight: '800',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'not-allowed',
+                  userSelect: 'none'
+                }}
+                title="Parcela abatida por amortização extraordinária antecipada."
+              >
+                <CheckCircle2 size={13} style={{ color: '#94a3b8' }} />
+                <span>Abatida</span>
+              </div>
+            ) : isInertFuture ? (
               <div
                 style={{
                   background: 'rgba(148, 163, 184, 0.08)',

@@ -134,6 +134,21 @@ export function recalculateLoanState(timeline, eventsList) {
 
   const updatedEvents = sorted.map((ev) => {
     if (ev.category === 'parcela_emprestimo') {
+      const isAbatida = ev.status === 'Abatida' || Boolean(ev.isAbatida);
+      if (isAbatida) {
+        return {
+          ...ev,
+          status: 'Abatida',
+          isAbatida: true,
+          isCompleted: true,
+          amount: 0,
+          principalAmount: 0,
+          interestPortion: 0,
+          interestAmount: 0,
+          balanceAfter: runningBalance
+        };
+      }
+
       const totalAmount = Number(ev.amount || 0);
 
       // Amortização de capital vs Juros embutidos
@@ -172,13 +187,16 @@ export function recalculateLoanState(timeline, eventsList) {
         balanceAfter: runningBalance
       };
     } else if (ev.category === 'amortizacao') {
-      const amortAmount = Number(ev.amortizationAmount || ev.amount || 0);
-      runningBalance = Math.max(0, Math.round((runningBalance - amortAmount) * 100) / 100);
+      const isAmortized = ev.status === 'Amortizado' || ev.status === 'Concluído' || Boolean(ev.isCompleted);
+      if (isAmortized) {
+        const amortAmount = Number(ev.amortizationAmount || ev.amount || 0);
+        runningBalance = Math.max(0, Math.round((runningBalance - amortAmount) * 100) / 100);
+      }
       return {
         ...ev,
         balanceAfter: runningBalance,
-        status: 'Concluído',
-        isCompleted: true
+        status: isAmortized ? 'Amortizado' : 'Pendente',
+        isCompleted: isAmortized
       };
     }
     return ev;
@@ -232,12 +250,13 @@ export function applyExtraordinaryAmortization({
   amortizationAmount,
   amortizationDateStr,
   strategy = 'reduce_term',
-  notes = ''
+  notes = '',
+  existingAmortEvent = null
 }) {
   const amortVal = Number(amortizationAmount);
   if (isNaN(amortVal) || amortVal <= 0) return eventsList;
 
-  const amortEvent = {
+  const amortEvent = existingAmortEvent || {
     id: generateUUID(),
     date: amortizationDateStr,
     time: '12:00',
@@ -250,52 +269,89 @@ export function applyExtraordinaryAmortization({
     amortizationAmount: amortVal,
     strategy: strategy,
     isCompleted: true,
-    labels: ['Amortização', 'Extraordinária']
+    labels: ['Amortização', strategy === 'reduce_term' ? 'Redução Prazo' : 'Redução Parcela']
   };
 
-  let updatedList = [...eventsList, amortEvent];
+  let updatedList = eventsList.some((e) => e.id === amortEvent.id) ? [...eventsList] : [...eventsList, amortEvent];
 
   if (strategy === 'reduce_installment') {
+    // 2. Diminuir Parcela: Reduz o valor das parcelas dali para a frente proporcionalmente
     const futureUnpaid = updatedList.filter(
       (ev) => ev.category === 'parcela_emprestimo' && ev.status !== 'Pago' && ev.date >= amortizationDateStr
     );
 
     if (futureUnpaid.length > 0) {
-      const state = recalculateLoanState(timeline, updatedList);
-      const amortEvUpdated = state.find((e) => e.id === amortEvent.id);
-      const remainingBalanceAfter = amortEvUpdated ? amortEvUpdated.balanceAfter : (Number(timeline.totalDebt) - amortVal);
-
-      const newMonthlyPrincipal = Math.max(10, Math.round((remainingBalanceAfter / futureUnpaid.length) * 100) / 100);
-      const estimatedInterest = Math.round(newMonthlyPrincipal * 0.18 * 100) / 100;
-      const newTotal = newMonthlyPrincipal + estimatedInterest;
+      const currentRemainingDebt = Number(timeline.remainingDebt || timeline.totalDebt || 13259.93);
+      const originalInstallment = Number(timeline.installmentAmount || futureUnpaid[0].originalAmount || futureUnpaid[0].amount || 218.47);
+      const newFuturePrincipal = Math.max(0, currentRemainingDebt - amortVal);
+      const reductionRatio = currentRemainingDebt > 0 ? (newFuturePrincipal / currentRemainingDebt) : 1;
+      const newTotal = Math.max(1, Math.round(originalInstallment * reductionRatio * 100) / 100);
 
       updatedList = updatedList.map((ev) => {
         if (ev.category === 'parcela_emprestimo' && ev.status !== 'Pago' && ev.date >= amortizationDateStr) {
+          const origAmt = Number(ev.originalAmount || ev.amount || originalInstallment);
+          const origCap = Number(ev.principalAmount || Math.round(origAmt * 0.82 * 100) / 100);
+          const origJur = Number(ev.interestPortion || Math.round(origAmt * 0.18 * 100) / 100);
           return {
             ...ev,
+            originalAmount: origAmt,
             amount: newTotal,
-            principalAmount: newMonthlyPrincipal,
-            interestPortion: estimatedInterest
+            principalAmount: Math.round(origCap * reductionRatio * 100) / 100,
+            interestPortion: Math.round(origJur * reductionRatio * 100) / 100
           };
         }
         return ev;
       });
     }
   } else {
-    // Strategy: 'reduce_term'
-    const recalculated = recalculateLoanState(timeline, updatedList);
-    let zeroBalancePassed = false;
-    updatedList = recalculated.filter((ev) => {
-      if (ev.category !== 'parcela_emprestimo') return true;
-      if (zeroBalancePassed && ev.status !== 'Pago') return false;
-      if (ev.balanceAfter <= 0 && ev.amount <= 0) {
-        zeroBalancePassed = true;
-        return false;
+    // 1. Diminuir Prazo: Abater parcelas do fim para trás mantendo visíveis com status Abatida
+    const futureUnpaid = updatedList
+      .filter((ev) => ev.category === 'parcela_emprestimo' && ev.status !== 'Pago' && ev.status !== 'Abatida' && !ev.isAbatida && ev.date >= amortizationDateStr)
+      .sort((a, b) => (a.date > b.date ? 1 : -1));
+
+    let remainingToDeduct = amortVal;
+    const updatesMap = new Map();
+
+    // Iterar do fim para trás (da última parcela para a anterior)
+    for (let i = futureUnpaid.length - 1; i >= 0; i--) {
+      if (remainingToDeduct <= 0) break;
+      const inst = futureUnpaid[i];
+      const instPrincipal = inst.principalAmount !== undefined ? Number(inst.principalAmount) : Number(inst.amount || 0);
+
+      if (remainingToDeduct >= instPrincipal) {
+        // Totalmente abatida: mantém visível mas zerada e com label Abatida
+        updatesMap.set(inst.id, {
+          status: 'Abatida',
+          isAbatida: true,
+          isCompleted: true,
+          originalAmount: inst.amount || instPrincipal,
+          amount: 0,
+          principalAmount: 0,
+          interestPortion: 0,
+          labels: Array.from(new Set([...(inst.labels || []), 'Abatida']))
+        });
+        remainingToDeduct -= instPrincipal;
+      } else {
+        // Abate parcial
+        const newPrincipal = Math.max(0, instPrincipal - remainingToDeduct);
+        const interestPortion = Number(inst.interestPortion || 0);
+        updatesMap.set(inst.id, {
+          amount: Math.round((newPrincipal + interestPortion) * 100) / 100,
+          principalAmount: Math.round(newPrincipal * 100) / 100,
+          labels: Array.from(new Set([...(inst.labels || []), 'Abatida Parcial']))
+        });
+        remainingToDeduct = 0;
       }
-      if (ev.balanceAfter <= 0) {
-        zeroBalancePassed = true;
+    }
+
+    updatedList = updatedList.map((ev) => {
+      if (updatesMap.has(ev.id)) {
+        return {
+          ...ev,
+          ...updatesMap.get(ev.id)
+        };
       }
-      return true;
+      return ev;
     });
   }
 
@@ -327,7 +383,9 @@ export function getLoanMetrics(timeline, eventsList = []) {
       const interestPortion = ev.interestPortion !== undefined ? Number(ev.interestPortion) : totalAmt - principal;
       const lateInterest = Number(ev.interestAmount || 0);
 
-      if (ev.status === 'Pago' || ev.isCompleted) {
+      const isPaidOrAbatida = ev.status === 'Pago' || ev.status === 'Abatida' || Boolean(ev.isAbatida) || Boolean(ev.isCompleted);
+
+      if (isPaidOrAbatida) {
         totalPaid += totalAmt + lateInterest;
         totalContractInterestPaid += interestPortion;
         totalLateInterestPaid += lateInterest;
@@ -344,9 +402,12 @@ export function getLoanMetrics(timeline, eventsList = []) {
         }
       }
     } else if (ev.category === 'amortizacao') {
-      const amort = Number(ev.amortizationAmount || ev.amount || 0);
-      totalPaid += amort;
-      totalPrincipalAmortized += amort;
+      const isAmortized = ev.status === 'Amortizado' || ev.status === 'Concluído' || Boolean(ev.isCompleted);
+      if (isAmortized) {
+        const amort = Number(ev.amortizationAmount || ev.amount || 0);
+        totalPaid += amort;
+        totalPrincipalAmortized += amort;
+      }
     }
   });
 
@@ -362,6 +423,93 @@ export function getLoanMetrics(timeline, eventsList = []) {
     loanStatus = `${overdueInstallmentsCount} Parcela(s) Atrasada(s)`;
   }
 
+  // Identificar a data da última prestação ativa (não abatida)
+  let lastActiveInstallment = null;
+  const activeInstallments = eventsList
+    .filter((ev) => ev.category === 'parcela_emprestimo' && !ev.isAbatida && ev.status !== 'Abatida')
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (activeInstallments.length > 0) {
+    lastActiveInstallment = activeInstallments[activeInstallments.length - 1];
+  } else {
+    const allLoanInst = eventsList
+      .filter((ev) => ev.category === 'parcela_emprestimo')
+      .sort((a, b) => a.date.localeCompare(b.date));
+    lastActiveInstallment = allLoanInst.length > 0 ? allLoanInst[allLoanInst.length - 1] : null;
+  }
+
+  // Contar parcelas abatidas por amortização extraordinária
+  const abatedInstallments = eventsList.filter(
+    (ev) => ev.category === 'parcela_emprestimo' && (ev.isAbatida || ev.status === 'Abatida')
+  );
+  const abatedInstallmentsCount = abatedInstallments.length;
+
+  let advancedMonths = abatedInstallmentsCount;
+  let advancedLabel = '';
+  if (advancedMonths > 0) {
+    if (advancedMonths >= 12) {
+      const yrs = Math.floor(advancedMonths / 12);
+      const rem = advancedMonths % 12;
+      advancedLabel = rem > 0
+        ? `${yrs} ${yrs === 1 ? 'ano' : 'anos'} e ${rem} ${rem === 1 ? 'mês' : 'meses'}`
+        : `${yrs} ${yrs === 1 ? 'ano' : 'anos'}`;
+    } else {
+      advancedLabel = `${advancedMonths} ${advancedMonths === 1 ? 'mês' : 'meses'}`;
+    }
+  }
+
+  // Calcular o total de juros futuros poupados por amortizações (ambas as estratégias: redução de prazo e redução de parcela)
+  let totalSavedInterest = 0;
+
+  // 1. Poupança por redução de prazo (parcelas com status Abatida)
+  eventsList.forEach((ev) => {
+    if (ev.category === 'parcela_emprestimo' && (ev.isAbatida || ev.status === 'Abatida')) {
+      let origJur = 0;
+      if (ev.description) {
+        const match = ev.description.match(/\(([\d\s.,]+)\s*€?\s*capital\s*\+\s*([\d\s.,]+)\s*€?\s*juros/i);
+        if (match && match[2]) {
+          origJur = parseFloat(match[2].replace(/\s/g, '').replace(',', '.'));
+        }
+      }
+      if (!origJur || isNaN(origJur)) {
+        const origAmt = Number(ev.originalAmount || (ev.amount > 0 ? ev.amount : 218.47));
+        origJur = Math.round(origAmt * 0.15 * 100) / 100;
+      }
+      totalSavedInterest += origJur;
+    }
+  });
+
+  // 2. Poupança líquida de juros por redução do valor da parcela (Total reduzido nas prestações - Capital amortizado)
+  const defaultInstAmt = Number(timeline.installmentAmount || 218.47);
+  let totalInstallmentReduction = 0;
+  eventsList.forEach((ev) => {
+    if (ev.category === 'parcela_emprestimo' && !ev.isAbatida && ev.status !== 'Abatida' && ev.status !== 'Pago') {
+      const origAmt = Number(ev.originalAmount || defaultInstAmt);
+      const currentAmt = Number(ev.amount || 0);
+      if (origAmt > currentAmt && currentAmt > 0) {
+        totalInstallmentReduction += (origAmt - currentAmt);
+      }
+    }
+  });
+
+  let amortizedForInstallmentReduction = 0;
+  eventsList.forEach((ev) => {
+    if (ev.category === 'amortizacao' && ev.strategy === 'reduce_installment' && (ev.status === 'Amortizado' || ev.status === 'Concluído' || Boolean(ev.isCompleted))) {
+      amortizedForInstallmentReduction += Number(ev.amount || ev.amortizationAmount || 0);
+    }
+  });
+
+  if (totalInstallmentReduction > 0) {
+    const netInterestSavedFromReduction = Math.max(0, totalInstallmentReduction - amortizedForInstallmentReduction);
+    totalSavedInterest += netInterestSavedFromReduction;
+  }
+
+  totalSavedInterest = Math.round(totalSavedInterest * 100) / 100;
+
+  const lastInstallmentDate = lastActiveInstallment ? lastActiveInstallment.date : (timeline.endDate || null);
+  const monthlyPayment = Number(timeline.installmentAmount || 0) || (nextInstallment ? Number(nextInstallment.amount || 0) : (eventsList.find((e) => e.category === 'parcela_emprestimo')?.amount || 0));
+  const remainingInstallmentsCount = Math.max(0, totalInstallmentsCount - paidInstallmentsCount);
+
   return {
     totalDebt,
     remainingBalance,
@@ -370,11 +518,19 @@ export function getLoanMetrics(timeline, eventsList = []) {
     totalContractInterestPaid,
     totalLateInterestPaid,
     totalInterestPaid,
+    totalSavedInterest,
     paidInstallmentsCount,
+    remainingInstallmentsCount,
     overdueInstallmentsCount,
     totalInstallmentsCount,
+    monthlyPayment,
     progressPercent,
     nextInstallment,
+    lastActiveInstallment,
+    lastInstallmentDate,
+    abatedInstallmentsCount,
+    advancedMonths,
+    advancedLabel,
     loanStatus
   };
 }
@@ -458,8 +614,11 @@ export function getConsolidatedLoanMetricsAtHorizon(timelines, targetHorizonMont
           : (ev.principalPaid !== undefined ? Number(ev.principalPaid) : Math.round(totalAmt * 0.82));
         amortizedForLoan += principal;
       } else if (ev.category === 'amortizacao') {
-        const amort = Number(ev.amortizationAmount || ev.amount || 0);
-        amortizedForLoan += amort;
+        const isAmortized = ev.status === 'Amortizado' || ev.status === 'Concluído' || Boolean(ev.isCompleted);
+        if (isAmortized) {
+          const amort = Number(ev.amortizationAmount || ev.amount || 0);
+          amortizedForLoan += amort;
+        }
       }
     });
 

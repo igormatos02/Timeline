@@ -276,22 +276,17 @@ export default function TimelineHeader({
   const finMetrics = isIncomeTimeline ? getFinancialMetrics(timeline, timeline.events || [], computeFromMonth, projectedHorizonMonth) : null;
   const consolidatedMetrics = isPrincipal ? getConsolidatedLoanMetrics(allTimelines, selectedTimelineIds) : null;
 
-  // Consolidated loan metrics across all 4 loan contracts
-  const allLoanTimelinesList = [jeepContract, daciaContract, casa1Contract, casa2Contract];
+  // Consolidated loan metrics across all loan contracts of the active timeboard
   const loanTimelinesFromAll = (allTimelines || []).filter(t => t.type === 'Empréstimo' || t.type === 'emprestimo');
-  const totalAllLoansAmortized = loanTimelinesFromAll.length >= 4
-    ? loanTimelinesFromAll.reduce((acc, t) => {
-        const m = getLoanMetrics(t, t.events || []);
-        return acc + (Number(m.totalPrincipalAmortized || t.amortizedCapital || 0));
-      }, 0)
-    : allLoanTimelinesList.reduce((acc, c) => acc + (Number(c.amortizedCapital || 0)), 0);
+  const totalAllLoansAmortized = loanTimelinesFromAll.reduce((acc, t) => {
+    const m = getLoanMetrics(t, t.events || []);
+    return acc + (Number(m.totalPrincipalAmortized || t.amortizedCapital || 0));
+  }, 0);
 
-  const totalAllLoansRemaining = loanTimelinesFromAll.length >= 4
-    ? loanTimelinesFromAll.reduce((acc, t) => {
-        const m = getLoanMetrics(t, t.events || []);
-        return acc + (Number(m.remainingBalance || t.remainingDebt || 0));
-      }, 0)
-    : allLoanTimelinesList.reduce((acc, c) => acc + (Number(c.remainingDebt || 0)), 0);
+  const totalAllLoansRemaining = loanTimelinesFromAll.reduce((acc, t) => {
+    const m = getLoanMetrics(t, t.events || []);
+    return acc + (Number(m.remainingBalance || t.remainingDebt || 0));
+  }, 0);
 
   // Consolidated loan metrics at projected horizon month (taking into account future amortizations up to projectedHorizonMonth)
   const horizonLoanMetrics = getConsolidatedLoanMetricsAtHorizon(allTimelines, projectedHorizonMonth, selectedTimelineIds);
@@ -604,17 +599,6 @@ export default function TimelineHeader({
                   <span>Gráfico</span>
                 </button>
               </div>
-
-              {effectiveIsLoan && onOpenAmortizationModal && (
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={onOpenAmortizationModal}
-                  style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)', padding: '5px 12px' }}
-                >
-                  <TrendingDown size={14} />
-                  <span>Amortizar</span>
-                </button>
-              )}
 
               {effectiveIsLoan && activeLoanMetrics && activeLoanMetrics.overdueInstallmentsCount > 0 && (
                 <button
@@ -1471,23 +1455,61 @@ export default function TimelineHeader({
                           <div className="meta-value" style={{ color: '#10b981', fontSize: '0.94rem', fontWeight: '800' }}>
                             {formatCurrency(carLoanMetrics.totalPrincipalAmortized)}
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                            {formatCurrency(carLoanMetrics.totalPaid)} total pago
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap', marginTop: '2px' }}>
+                            <span>{formatCurrency(carLoanMetrics.totalPaid)} total pago</span>
+                            {carLoanMetrics.totalSavedInterest > 0 && (
+                              <span
+                                style={{
+                                  background: 'rgba(16, 185, 129, 0.15)',
+                                  color: '#10b981',
+                                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                                  borderRadius: '4px',
+                                  padding: '1px 5px',
+                                  fontSize: '0.62rem',
+                                  fontWeight: '800',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }}
+                                title={`Total de juros futuros poupados que nunca serão pagos ao banco: ${formatCurrency(carLoanMetrics.totalSavedInterest)}`}
+                              >
+                                💰 +{formatCurrency(carLoanMetrics.totalSavedInterest)} poupados
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
 
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#06b6d4' }}>
-                          <Repeat size={16} />
+                          <CheckCircle2 size={16} />
                         </div>
                         <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Prestação Mensal</div>
-                          <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800' }}>
-                            {formatCurrency(carLoanMetrics.monthlyPayment)} / mês
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Parcelas Pagas</div>
+                          <div className="meta-value" style={{ fontSize: '0.94rem', fontWeight: '800', color: '#06b6d4' }}>
+                            {carLoanMetrics.paidInstallmentsCount} <span style={{ fontSize: '0.76rem', fontWeight: '600', color: 'var(--text-dim)' }}>de {carLoanMetrics.totalInstallmentsCount}</span>
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                            {carLoanMetrics.paidInstallmentsCount} de {carLoanMetrics.totalInstallmentsCount} parcelas pagas
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap', marginTop: '2px' }}>
+                            <span>Última prestação em: <strong style={{ color: 'var(--text-main)', fontWeight: '700' }}>{formatDateShort(carLoanMetrics.lastInstallmentDate || currentCarContract?.endDate || timeline.endDate)}</strong></span>
+                            {carLoanMetrics.advancedMonths > 0 && (
+                              <span
+                                style={{
+                                  background: 'rgba(16, 185, 129, 0.15)',
+                                  color: '#10b981',
+                                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                                  borderRadius: '4px',
+                                  padding: '1px 5px',
+                                  fontSize: '0.64rem',
+                                  fontWeight: '800',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }}
+                                title={`Prazo encurtado em ${carLoanMetrics.advancedLabel} por amortização extraordinária.`}
+                              >
+                                ⚡ -{carLoanMetrics.advancedLabel}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1534,8 +1556,27 @@ export default function TimelineHeader({
                       <div className="meta-value" style={{ color: '#10b981', fontWeight: '700', fontSize: '0.92rem' }}>
                         {formatCurrency(loanMetrics.totalPaid)}
                       </div>
-                      <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                        {formatCurrency(loanMetrics.totalPrincipalAmortized)} cap. + {formatCurrency(loanMetrics.totalInterestPaid)} jur.
+                      <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap', marginTop: '2px' }}>
+                        <span>{formatCurrency(loanMetrics.totalPrincipalAmortized)} cap. + {formatCurrency(loanMetrics.totalInterestPaid)} jur.</span>
+                        {loanMetrics.totalSavedInterest > 0 && (
+                          <span
+                            style={{
+                              background: 'rgba(16, 185, 129, 0.15)',
+                              color: '#10b981',
+                              border: '1px solid rgba(16, 185, 129, 0.35)',
+                              borderRadius: '4px',
+                              padding: '1px 5px',
+                              fontSize: '0.62rem',
+                              fontWeight: '800',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}
+                            title={`Total de juros futuros poupados que nunca serão pagos ao banco: ${formatCurrency(loanMetrics.totalSavedInterest)}`}
+                          >
+                            💰 +{formatCurrency(loanMetrics.totalSavedInterest)} poupados
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1556,18 +1597,37 @@ export default function TimelineHeader({
                     </div>
                   </div>
 
-                  {/* Periodicidade do Pagamento */}
+                  {/* Parcelas Pagas */}
                   <div className="meta-item" style={{ padding: '6px 10px' }}>
-                    <div className="meta-icon-box" style={{ color: '#f59e0b' }}>
-                      <Repeat size={16} />
+                    <div className="meta-icon-box" style={{ color: '#06b6d4' }}>
+                      <CheckCircle2 size={16} />
                     </div>
                     <div>
-                      <div className="meta-label" style={{ fontSize: '0.7rem' }}>Periodicidade</div>
-                      <div className="meta-value" style={{ fontWeight: '700', fontSize: '0.88rem' }}>
-                        {getPeriodicityLabel(timeline.periodicity)}
+                      <div className="meta-label" style={{ fontSize: '0.7rem' }}>Parcelas Pagas</div>
+                      <div className="meta-value" style={{ fontWeight: '800', fontSize: '0.92rem', color: '#06b6d4' }}>
+                        {loanMetrics.paidInstallmentsCount} <span style={{ fontSize: '0.76rem', fontWeight: '600', color: 'var(--text-dim)' }}>de {loanMetrics.totalInstallmentsCount}</span>
                       </div>
-                      <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                        {loanMetrics.paidInstallmentsCount} de {loanMetrics.totalInstallmentsCount} parcelas
+                      <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap', marginTop: '2px' }}>
+                        <span>Última prestação em: <strong style={{ color: 'var(--text-main)', fontWeight: '700' }}>{formatDateShort(loanMetrics.lastInstallmentDate || timeline.endDate)}</strong></span>
+                        {loanMetrics.advancedMonths > 0 && (
+                          <span
+                            style={{
+                              background: 'rgba(16, 185, 129, 0.15)',
+                              color: '#10b981',
+                              border: '1px solid rgba(16, 185, 129, 0.35)',
+                              borderRadius: '4px',
+                              padding: '1px 5px',
+                              fontSize: '0.64rem',
+                              fontWeight: '800',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}
+                            title={`Prazo encurtado em ${loanMetrics.advancedLabel} por amortização extraordinária.`}
+                          >
+                            ⚡ -{loanMetrics.advancedLabel}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -72,6 +72,7 @@ export default function VerticalTimeline({
   onDeleteChecklistItem,
   onToggleLoanPayment,
   onOpenEditInstallment,
+  onOpenAmortizationModal,
   onNavigateToTimeline,
   headerComponent,
   futureHorizonYears = 1,
@@ -87,6 +88,15 @@ export default function VerticalTimeline({
     timeline.type === 'investimentos' ||
     timeline.id === 'tl-income' ||
     timeline.id === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
+
+  const isLoanTimelineOrTab =
+    timeline.type === 'Empréstimo' ||
+    timeline.type === 'emprestimo' ||
+    activeFinancialTab === 'jeep' ||
+    activeFinancialTab === 'dacia' ||
+    activeFinancialTab === 'casa1' ||
+    activeFinancialTab === 'casa2' ||
+    activeFinancialTab === 'emprestimos';
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('Todos');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('Todos');
@@ -317,14 +327,43 @@ export default function VerticalTimeline({
 
       // Financial Tabs Filter
       if (isFinancialTimeline) {
-        const isJeep = ev.timelineOriginId === 'tl-loan-jeep' || ev.timelineOriginId === 'tl-loan-80004197726' || (ev.title && ev.title.includes('Jeep')) || (ev.isSystemLoanEvent && ev.amount === 218.47);
-        const isDacia = ev.timelineOriginId === 'tl-loan-dacia' || ev.timelineOriginId === 'tl-loan-crd19605103001' || (ev.title && ev.title.includes('Dacia')) || (ev.isSystemLoanEvent && ev.amount === 180.08);
-        const isCasa1 = (ev.timelineOriginId === 'tl-loan-casa1' || ev.timelineOriginId === 'e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0b' || (ev.title && (ev.title.includes('02012642') || ev.title.includes('Crédito Egas Moniz') || ev.title.includes('Casa 1')))) && !(ev.title && ev.title.includes('Hipoteca'));
-        const isCasa2 = ev.timelineOriginId === 'tl-loan-casa2' || ev.timelineOriginId === 'f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c' || (ev.title && (ev.title.includes('02015122') || ev.title.includes('Hipoteca') || ev.title.includes('Casa 2')));
+        const isInvestment = Boolean(ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento')));
+
+        const isJeep = !isInvestment && Boolean(
+          ev.timelineOriginId === 'c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f' ||
+          ev.timelineOriginId === 'tl-loan-jeep' ||
+          ev.timelineOriginId === 'tl-loan-80004197726' ||
+          (ev.timelineOriginName && ev.timelineOriginName.toLowerCase().includes('crédito jeep')) ||
+          (ev.title && (ev.title.includes('Crédito Jeep') || ev.title.includes('80004197726'))) ||
+          (ev.isSystemLoanEvent && ev.amount === 218.47)
+        );
+
+        const isDacia = !isInvestment && Boolean(
+          ev.timelineOriginId === 'd5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9a' ||
+          ev.timelineOriginId === 'tl-loan-dacia' ||
+          ev.timelineOriginId === 'tl-loan-crd19605103001' ||
+          (ev.timelineOriginName && ev.timelineOriginName.toLowerCase().includes('crédito dacia')) ||
+          (ev.title && (ev.title.includes('Crédito Dacia') || ev.title.includes('CRD19605103001'))) ||
+          (ev.isSystemLoanEvent && ev.amount === 180.08)
+        );
+
+        const isCasa1 = !isInvestment && Boolean(
+          ev.timelineOriginId === 'e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0b' ||
+          ev.timelineOriginId === 'tl-loan-casa1' ||
+          (ev.timelineOriginName && (ev.timelineOriginName.includes('02012642') || ev.timelineOriginName.includes('Crédito Egas Moniz') || ev.timelineOriginName.includes('Casa 1'))) ||
+          (ev.title && (ev.title.includes('02012642') || ev.title.includes('Crédito Egas Moniz') || ev.title.includes('Casa 1')))
+        ) && !(ev.title && ev.title.includes('Hipoteca')) && !(ev.timelineOriginName && ev.timelineOriginName.includes('Hipoteca'));
+
+        const isCasa2 = !isInvestment && Boolean(
+          ev.timelineOriginId === 'f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c' ||
+          ev.timelineOriginId === 'tl-loan-casa2' ||
+          (ev.timelineOriginName && (ev.timelineOriginName.includes('02015122') || ev.timelineOriginName.includes('Hipoteca') || ev.timelineOriginName.includes('Casa 2'))) ||
+          (ev.title && (ev.title.includes('02015122') || ev.title.includes('Hipoteca') || ev.title.includes('Casa 2')))
+        );
+
         const isLoan = isJeep || isDacia || isCasa1 || isCasa2 || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.category === 'amortizacao';
         const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
         const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') && !isLoan;
-        const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
         if (activeFinancialTab === 'entradas' && !isIncome) return false;
         if (activeFinancialTab === 'gastos') {
@@ -1032,8 +1071,56 @@ export default function VerticalTimeline({
                         </>
                       )}
 
-                      {/* Botão Adicionar Evento no Mês (em frente à data, alinhado à direita) */}
-                      {onAddEventForDate && (
+                      {/* Botão Amortizar no Mês (disponível do mês atual em diante; oculto em meses passados e em parcelas abatidas) */}
+                      {onOpenAmortizationModal && isLoanTimelineOrTab && (() => {
+                        const thisMonthStr = format(mGroup.monthDate, 'yyyy-MM');
+                        // Não exibir o botão amortizar em meses anteriores ao mês atual (2026-08)
+                        if (thisMonthStr < '2026-08') {
+                          return null;
+                        }
+
+                        const monthLoanEvents = mGroup.events.filter((e) => e.category === 'parcela_emprestimo');
+                        // Se as parcelas deste mês estiverem abatidas por amortização extraordinária, ocultar o botão
+                        const isAbatidaMonth = monthLoanEvents.length > 0 && monthLoanEvents.every((e) => e.isAbatida || e.status === 'Abatida');
+                        if (isAbatidaMonth) {
+                          return null;
+                        }
+
+                        return (
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            style={{
+                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                              padding: '4px 12px',
+                              height: '26px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              fontSize: '0.74rem',
+                              fontWeight: '700',
+                              borderRadius: '6px',
+                              marginLeft: '4px',
+                              cursor: 'pointer',
+                              border: 'none',
+                              color: '#ffffff'
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-15');
+                              onOpenAmortizationModal(targetDayStr);
+                            }}
+                            title={`Amortizar extraordinariamente neste mês (${monthTitleStr})`}
+                          >
+                            <TrendingDown size={14} />
+                            <span>Amortizar</span>
+                          </button>
+                        );
+                      })()}
+
+                      {/* Botão Adicionar Evento no Mês (oculto em timelines / abas de empréstimo) */}
+                      {onAddEventForDate && !isLoanTimelineOrTab && (
                         <button
                           type="button"
                           className="btn btn-primary btn-sm"
@@ -1046,7 +1133,7 @@ export default function VerticalTimeline({
                             alignItems: 'center',
                             gap: '4px',
                             borderRadius: '6px',
-                            marginLeft: '6px',
+                            marginLeft: '4px',
                             cursor: 'pointer'
                           }}
                           onClick={(e) => {
@@ -1096,15 +1183,16 @@ export default function VerticalTimeline({
                       </div>
                     ))
                   ) : (
-                    /* Botão em frente à data quando o mês está vazio */
+                    /* Linha informativa quando o mês está vazio */
                     <div
                       className="empty-day-row"
                       onClick={() => {
+                        if (isLoanTimelineOrTab) return;
                         const nature = activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income';
                         onAddEventForDate(format(mGroup.monthDate, 'yyyy-MM-01'), nature);
                       }}
                       style={{
-                        cursor: 'pointer',
+                        cursor: isLoanTimelineOrTab ? 'default' : 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
@@ -1114,26 +1202,28 @@ export default function VerticalTimeline({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
                         <span className="empty-day-text">
-                          Sem registos nesta aba para este mês
+                          {isLoanTimelineOrTab ? 'Nenhuma parcela ou amortização neste mês' : 'Sem registos nesta aba para este mês'}
                         </span>
                       </div>
-                      <span
-                        className="add-event-mini-btn"
-                        style={{
-                          background: 'rgba(16, 185, 129, 0.18)',
-                          color: '#10b981',
-                          border: '1px solid rgba(16, 185, 129, 0.35)',
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          fontWeight: '700',
-                          fontSize: '0.76rem',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        <Plus size={13} /> Adicionar
-                      </span>
+                      {!isLoanTimelineOrTab && (
+                        <span
+                          className="add-event-mini-btn"
+                          style={{
+                            background: 'rgba(16, 185, 129, 0.18)',
+                            color: '#10b981',
+                            border: '1px solid rgba(16, 185, 129, 0.35)',
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            fontWeight: '700',
+                            fontSize: '0.76rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Plus size={13} /> Adicionar
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1487,57 +1577,30 @@ export default function VerticalTimeline({
                 {activeFinancialTab === 'investimentos' && <span style={{ fontSize: '0.75rem', color: 'var(--primary-light)' }}>✓</span>}
               </button>
 
-              <button
-                type="button"
-                className={`sidebar-filter-item ${activeFinancialTab === 'jeep' ? 'active' : ''}`}
-                onClick={() => onSelectFinancialTab && onSelectFinancialTab('jeep')}
-                style={activeFinancialTab === 'jeep' ? { borderColor: '#6366f1', background: 'rgba(99, 102, 241, 0.14)', color: 'var(--primary-light)' } : {}}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CreditCard size={14} />
-                  <span style={{ fontWeight: '700' }}>Empréstimo Jeep</span>
-                </div>
-                {activeFinancialTab === 'jeep' && <span style={{ fontSize: '0.75rem', color: 'var(--primary-light)' }}>✓</span>}
-              </button>
-
-              <button
-                type="button"
-                className={`sidebar-filter-item ${activeFinancialTab === 'dacia' ? 'active' : ''}`}
-                onClick={() => onSelectFinancialTab && onSelectFinancialTab('dacia')}
-                style={activeFinancialTab === 'dacia' ? { borderColor: '#8b5cf6', background: 'rgba(139, 92, 246, 0.14)', color: '#8b5cf6' } : {}}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CreditCard size={14} />
-                  <span style={{ fontWeight: '700' }}>Empréstimo Dacia</span>
-                </div>
-                {activeFinancialTab === 'dacia' && <span style={{ fontSize: '0.75rem', color: '#8b5cf6' }}>✓</span>}
-              </button>
-
-              <button
-                type="button"
-                className={`sidebar-filter-item ${activeFinancialTab === 'casa1' ? 'active' : ''}`}
-                onClick={() => onSelectFinancialTab && onSelectFinancialTab('casa1')}
-                style={activeFinancialTab === 'casa1' ? { borderColor: '#0ea5e9', background: 'rgba(14, 165, 233, 0.14)', color: '#0ea5e9' } : {}}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CreditCard size={14} />
-                  <span style={{ fontWeight: '700' }}>Crédito Egas Moniz</span>
-                </div>
-                {activeFinancialTab === 'casa1' && <span style={{ fontSize: '0.75rem', color: '#0ea5e9' }}>✓</span>}
-              </button>
-
-              <button
-                type="button"
-                className={`sidebar-filter-item ${activeFinancialTab === 'casa2' ? 'active' : ''}`}
-                onClick={() => onSelectFinancialTab && onSelectFinancialTab('casa2')}
-                style={activeFinancialTab === 'casa2' ? { borderColor: '#14b8a6', background: 'rgba(20, 184, 166, 0.14)', color: '#14b8a6' } : {}}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CreditCard size={14} />
-                  <span style={{ fontWeight: '700' }}>Hipoteca Egas Moniz</span>
-                </div>
-                {activeFinancialTab === 'casa2' && <span style={{ fontSize: '0.75rem', color: '#14b8a6' }}>✓</span>}
-              </button>
+              {/* Contratos de Empréstimo do Timeboard */}
+              {timeline.carLoans && timeline.carLoans.length > 0 && (
+                timeline.carLoans.map((loan) => {
+                  const tabKey = (loan.contractNumber === '80004197726' || loan.name?.includes('Jeep')) ? 'jeep'
+                    : (loan.contractNumber === 'CRD19605103001' || loan.name?.includes('Dacia')) ? 'dacia'
+                    : (loan.contractNumber === '02015122' || loan.name?.includes('Hipoteca')) ? 'casa2'
+                    : 'casa1';
+                  return (
+                    <button
+                      key={loan.id}
+                      type="button"
+                      className={`sidebar-filter-item ${activeFinancialTab === tabKey ? 'active' : ''}`}
+                      onClick={() => onSelectFinancialTab && onSelectFinancialTab(tabKey)}
+                      style={activeFinancialTab === tabKey ? { borderColor: loan.color || 'var(--primary-light)', background: 'rgba(99, 102, 241, 0.14)', color: loan.color || 'var(--primary-light)' } : {}}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <CreditCard size={14} />
+                        <span style={{ fontWeight: '700' }}>{loan.name}</span>
+                      </div>
+                      {activeFinancialTab === tabKey && <span style={{ fontSize: '0.75rem', color: loan.color || 'var(--primary-light)' }}>✓</span>}
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
         )}

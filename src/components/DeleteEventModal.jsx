@@ -39,7 +39,7 @@ export default function DeleteEventModal({
        event.category === 'parcela_emprestimo' ||
        event.category === 'repetitivo')
     )
-  ) && event.periodicity !== 'unico' && event.periodicity !== 'pontual' && event.category !== 'saida_esporadica' && event.category !== 'entrada_esporadica';
+  ) && event.periodicity !== 'unico' && event.periodicity !== 'pontual' && event.category !== 'saida_esporadica' && event.category !== 'entrada_esporadica' && event.category !== 'amortizacao' && !event.isAmortization;
 
   const isIncome = event.isIncome || event.financialType === 'entrada' || (event.category && event.category.includes('entrada'));
   const isExpense = event.isExpense || event.financialType === 'gasto' || (event.category && event.category.includes('saida')) || event.category === 'gasto';

@@ -14,7 +14,8 @@ import {
   recalculateLoanState,
   propagateInstallmentAmountForward,
   applyExtraordinaryAmortization,
-  getLoanMetrics
+  getLoanMetrics,
+  formatCurrency
 } from './utils/loanCalculations';
 import * as api from './services/api';
 import { generateUUID } from './utils/uuid';
@@ -25,7 +26,8 @@ export default function App() {
   // Timeboards State (Top Level Grouping)
   const [timeboards, setTimeboards] = useState(() => {
     try {
-      const saved = localStorage.getItem('chrono_timeboards_v1');
+      localStorage.removeItem('chrono_timeboards_v1');
+      const saved = localStorage.getItem('chrono_timeboards_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -34,7 +36,13 @@ export default function App() {
     return initialTimeboards;
   });
 
-  const [activeTimeboardId, setActiveTimeboardId] = useState('e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b');
+  const [activeTimeboardId, setActiveTimeboardId] = useState(() => {
+    try {
+      const saved = localStorage.getItem('chrono_active_timeboard_id');
+      if (saved) return saved;
+    } catch (e) { }
+    return 'e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b';
+  });
   const [isTimeboardModalOpen, setIsTimeboardModalOpen] = useState(false);
   const [editingTimeboard, setEditingTimeboard] = useState(null);
 
@@ -42,13 +50,13 @@ export default function App() {
   const [timelines, setTimelines] = useState(() => {
     try {
       // Clear legacy storage keys to free browser quota
-      for (let i = 1; i <= 23; i++) {
+      for (let i = 1; i <= 26; i++) {
         localStorage.removeItem(`chrono_timelines_data_v${i}`);
       }
     } catch (e) { }
 
     try {
-      const saved = localStorage.getItem('chrono_timelines_data_v26');
+      const saved = localStorage.getItem('chrono_timelines_data_v27');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -78,8 +86,10 @@ export default function App() {
         if (isMounted && Array.isArray(data) && data.length > 0) {
           setTimeboards(data);
           setActiveTimeboardId((currentId) => {
-            const exists = data.some((tb) => tb.id === currentId);
-            return exists ? currentId : data[0].id;
+            const saved = localStorage.getItem('chrono_active_timeboard_id');
+            const targetId = saved || currentId;
+            const exists = data.some((tb) => tb.id === targetId);
+            return exists ? targetId : data[0].id;
           });
         }
       })
@@ -141,7 +151,17 @@ export default function App() {
 
   // Loan Specific Modals
   const [isAmortizationModalOpen, setIsAmortizationModalOpen] = useState(false);
+  const [editingAmortization, setEditingAmortization] = useState(null);
+  const [amortizationDefaultDate, setAmortizationDefaultDate] = useState('2026-08-21');
   const [editingInstallment, setEditingInstallment] = useState(null);
+
+  const handleOpenAmortizationModal = (dateStr, eventObj = null) => {
+    if (dateStr) {
+      setAmortizationDefaultDate(dateStr);
+    }
+    setEditingAmortization(eventObj || null);
+    setIsAmortizationModalOpen(true);
+  };
 
   // Theme (light is default)
   const [theme, setTheme] = useState(() => {
@@ -163,16 +183,24 @@ export default function App() {
   // Save minimal settings to localStorage safely
   useEffect(() => {
     try {
-      localStorage.setItem('chrono_timeboards_v1', JSON.stringify(timeboards));
+      localStorage.setItem('chrono_timeboards_v2', JSON.stringify(timeboards));
     } catch { }
   }, [timeboards]);
+
+  useEffect(() => {
+    try {
+      if (activeTimeboardId) {
+        localStorage.setItem('chrono_active_timeboard_id', activeTimeboardId);
+      }
+    } catch { }
+  }, [activeTimeboardId]);
 
   // Selected Timeboard
   const activeTimeboard = timeboards.find((tb) => tb.id === activeTimeboardId) || timeboards[0];
 
   // All timelines belonging to active Timeboard
   const activeTimeboardTimelines = timelines.filter(
-    (tl) => !tl.timeboardId || tl.timeboardId === activeTimeboardId || tl.timeboardId === activeTimeboard?.id || timeboards.length <= 1
+    (tl) => tl.timeboardId === activeTimeboardId || (!tl.timeboardId && (activeTimeboardId === 'e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b' || activeTimeboard?.id === 'e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b'))
   );
 
   // Dynamic consolidated timeline aggregating all financial timelines of the active Timeboard
@@ -194,24 +222,49 @@ export default function App() {
       });
     });
 
+    const normalizeLoanKey = (loan) => {
+      const num = loan.contractNumber || '';
+      const id = loan.id || '';
+      const name = (loan.name || '').toLowerCase();
+      if (num === '80004197726' || id.includes('jeep') || name.includes('jeep')) return 'jeep';
+      if (num === 'CRD19605103001' || id.includes('dacia') || name.includes('dacia')) return 'dacia';
+      if (num === '02012642' || id.includes('casa1') || (name.includes('egas moniz') && !name.includes('hipoteca'))) return 'casa1';
+      if (num === '02015122' || id.includes('casa2') || name.includes('hipoteca')) return 'casa2';
+      return id || num || name;
+    };
+
+    const seenLoanKeys = new Set();
     const carLoans = [];
     activeTimeboardTimelines.forEach((tl) => {
-      if (tl.type === 'emprestimo') {
-        carLoans.push(tl);
+      if (tl.type === 'emprestimo' || tl.type === 'Empréstimo') {
+        const key = normalizeLoanKey(tl);
+        if (!seenLoanKeys.has(key)) {
+          seenLoanKeys.add(key);
+          carLoans.push(tl);
+        }
       }
       if (Array.isArray(tl.carLoans)) {
-        tl.carLoans.forEach((loan) => carLoans.push(loan));
+        tl.carLoans.forEach((loan) => {
+          const key = normalizeLoanKey(loan);
+          if (!seenLoanKeys.has(key)) {
+            seenLoanKeys.add(key);
+            carLoans.push(loan);
+          }
+        });
       }
     });
 
+    const incomeTimeline = activeTimeboardTimelines.find((tl) => tl.type === 'entradas');
+    const monthlySalary = incomeTimeline?.monthlySalary !== undefined ? incomeTimeline.monthlySalary : (activeTimeboard?.id === 'tb-clean-financial-002' ? 0 : 3349.60);
+
     return {
-      id: activeTimeboard?.id || 'tb-principal',
-      name: activeTimeboard?.name || 'Timeboard Principal',
+      id: activeTimeboard?.id || 'e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b',
+      name: activeTimeboard?.name || 'Timeboard Portugal',
       type: 'Financeiro',
       description: activeTimeboard?.description || '',
       startDate: '2025-08-01',
       endDate: `${2026 + futureHorizonYears}-08-31`,
-      monthlySalary: 3349.60,
+      monthlySalary,
       carLoans,
       events: allEvents,
       timelines: activeTimeboardTimelines
@@ -278,6 +331,10 @@ export default function App() {
 
   const handleOpenEditEvent = (eventObj) => {
     scrollYBeforeModalRef.current = window.scrollY;
+    if (eventObj?.category === 'amortizacao' || eventObj?.financialType === 'amortizacao' || eventObj?.isAmortization) {
+      handleOpenAmortizationModal(eventObj.date, eventObj);
+      return;
+    }
     setEditingEvent(eventObj);
     const nature = eventObj?.isExpense ? 'expense' : eventObj?.isInvestment ? 'investment' : 'income';
     setEventModalDefaultNature(nature);
@@ -653,35 +710,103 @@ export default function App() {
   };
 
   // Save extraordinary amortization event
-  const handleSaveAmortization = ({ amount, date, strategy, notes }) => {
-    if (!activeTimeline) return;
+  const handleSaveAmortization = async ({ id, amount, date, strategy, status = 'Amortizado', notes }) => {
+    const amortVal = Number(amount);
+    if (isNaN(amortVal) || amortVal <= 0) return;
 
-    let targetTimeline = activeTimeline;
-    if (activeTimeline.type === 'Financeiro') {
-      targetTimeline = {
-        ...(activeTimeline.carLoanContract || {
-          id: "tl-loan-80004197726",
-          name: "Crédito Automóvel Nº 80004197726",
-          totalDebt: 15456.60,
-          installmentAmount: 218.47,
-          periodicity: "mensal"
-        }),
-        events: activeTimeline.events
-      };
+    const existingId = id || editingAmortization?.id;
+    if (existingId) {
+      try {
+        await api.deleteEvent(existingId);
+      } catch (e) {
+        console.error('Error rolling back previous amortization version:', e);
+      }
     }
 
-    const finalEvents = applyExtraordinaryAmortization({
-      timeline: targetTimeline,
-      eventsList: activeTimeline.events || [],
-      amortizationAmount: amount,
-      amortizationDateStr: date,
-      strategy: strategy,
-      notes: notes
-    });
+    let targetTimeline = null;
+    if (activeFinancialTab === 'jeep') {
+      targetTimeline = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('jeep')) || t.contractNumber === '80004197726');
+    } else if (activeFinancialTab === 'dacia') {
+      targetTimeline = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('dacia')) || t.contractNumber === 'CRD19605103001');
+    } else if (activeFinancialTab === 'casa1') {
+      targetTimeline = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('casa 1')) || (t.name && t.name.includes('02012642')));
+    } else if (activeFinancialTab === 'casa2') {
+      targetTimeline = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('casa 2')) || (t.name && t.name.includes('02015122')));
+    } else if (activeTimeline?.type === 'emprestimo' || activeTimeline?.type === 'Empréstimo') {
+      targetTimeline = activeTimeline;
+    } else {
+      targetTimeline = activeTimeboardTimelines.find((t) => t.type === 'emprestimo' || t.type === 'Empréstimo') || activeTimeboardTimelines[0];
+    }
 
+    if (!targetTimeline) return;
+
+    const loanName = targetTimeline.name || 'Empréstimo';
+    const targetDate = date || '2026-08-15';
+    const isCompleted = (status || 'Amortizado') === 'Amortizado';
+
+    const amortEvent = {
+      id: generateUUID(),
+      tenantId: 'tenant-igor',
+      timelineOriginId: targetTimeline.id,
+      timelineOriginName: loanName,
+      timelineOriginColor: targetTimeline.color || '#10b981',
+      title: `Amortização ${loanName}: ${formatCurrency(amortVal)}`,
+      description: notes || `Amortização extraordinária para ${strategy === 'reduce_term' ? 'redução do prazo' : 'redução da parcela'}.`,
+      date: targetDate,
+      dayOfMonth: parseInt(targetDate.substring(8, 10), 10) || 15,
+      time: '12:00',
+      amount: amortVal,
+      amortizationAmount: amortVal,
+      category: 'amortizacao',
+      financialType: 'amortizacao',
+      isAmortization: true,
+      isExpense: true,
+      isIncome: false,
+      isInvestment: false,
+      isSystemLoanEvent: true,
+      status: isCompleted ? 'Amortizado' : 'Pendente',
+      isCompleted: isCompleted,
+      priority: 'Alta',
+      strategy: strategy,
+      notes: notes || '',
+      labels: ['Amortização', strategy === 'reduce_term' ? 'Redução Prazo' : 'Redução Parcela'],
+      version: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // 1. Atualizar o estado local imediatamente
     setTimelines((prev) =>
-      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: finalEvents } : tl))
+      prev.map((tl) => {
+        if (tl.id === targetTimeline.id) {
+          if (isCompleted) {
+            const calculated = applyExtraordinaryAmortization({
+              timeline: tl,
+              eventsList: tl.events || [],
+              amortizationAmount: amortVal,
+              amortizationDateStr: targetDate,
+              strategy: strategy,
+              notes: notes,
+              existingAmortEvent: amortEvent
+            });
+            return { ...tl, events: calculated };
+          } else {
+            return { ...tl, events: [...(tl.events || []), amortEvent] };
+          }
+        }
+        return tl;
+      })
     );
+
+    setEditingAmortization(null);
+
+    // 2. Gravar na base de dados
+    try {
+      await api.createEvent(amortEvent);
+      await refreshTimelines();
+    } catch (err) {
+      console.error('Error saving amortization event:', err);
+    }
   };
 
   const loanMetrics = activeTimeline?.type === 'Empréstimo'
@@ -779,6 +904,7 @@ export default function App() {
             onDeleteChecklistItem={handleDeleteChecklistItem}
             onToggleLoanPayment={handleToggleLoanPayment}
             onOpenEditInstallment={(inst) => setEditingInstallment(inst)}
+            onOpenAmortizationModal={handleOpenAmortizationModal}
             onNavigateToTimeline={(timelineId, tab) => {
               if (timelineId) setActiveTimelineId(timelineId);
               if (tab) setActiveFinancialTab(tab);
@@ -786,14 +912,14 @@ export default function App() {
             headerComponent={
               <TimelineHeader
                 timeline={activeTimeline}
-                allTimelines={timelines}
+                allTimelines={activeTimeboardTimelines}
                 activeFinancialTab={activeFinancialTab}
                 onSelectFinancialTab={setActiveFinancialTab}
                 onEdit={handleOpenEditTimeline}
                 onDelete={handleDeleteTimeline}
                 onReset={() => setIsResetConfirmOpen(true)}
                 onOpenCreateTimeline={handleOpenCreateTimeline}
-                onOpenAmortizationModal={() => setIsAmortizationModalOpen(true)}
+                onOpenAmortizationModal={() => handleOpenAmortizationModal()}
                 onScrollToOverdue={handleScrollToOverdue}
               />
             }
@@ -845,8 +971,13 @@ export default function App() {
       {/* Loan Modals */}
       <AmortizationModal
         isOpen={isAmortizationModalOpen}
-        onClose={() => setIsAmortizationModalOpen(false)}
+        onClose={() => {
+          setIsAmortizationModalOpen(false);
+          setEditingAmortization(null);
+        }}
         onSave={handleSaveAmortization}
+        initialEvent={editingAmortization}
+        defaultDate={amortizationDefaultDate}
         remainingBalance={loanMetrics ? loanMetrics.remainingBalance : undefined}
       />
 

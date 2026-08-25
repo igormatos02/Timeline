@@ -485,13 +485,24 @@ function createFinancialEvents() {
 
 export const initialTimeboards = [
   {
-    id: "tb-principal",
-    name: "Timeboard Principal",
+    id: "e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b",
+    name: "Timeboard Portugal",
     description: "Gestão e controle financeiro consolidado.",
     tenant: "default",
-    type: null,
+    type: "financeiro",
     createdAt: "2026-08-24T17:55:00.000Z",
-    updatedAt: "2026-08-24T17:55:00.000Z"
+    updatedAt: "2026-08-24T17:26:05.126Z",
+    tenantId: "tenant-igor"
+  },
+  {
+    id: "tb-clean-financial-002",
+    name: "Timeboard Brasil",
+    description: "Timeboard financeiro novo e em branco.",
+    tenant: "default",
+    type: "financeiro",
+    createdAt: "2026-08-25T20:00:00.000Z",
+    updatedAt: "2026-08-25T20:00:00.000Z",
+    tenantId: "tenant-igor"
   }
 ];
 
@@ -509,79 +520,7 @@ export const initialTimelines = [
     color: "#10b981",
     periodicity: "mensal",
     monthlySalary: 3349.60,
-    carLoans: [
-      {
-        id: "tl-loan-jeep",
-        name: "Crédito Automóvel - Jeep",
-        description: "Contrato Nº 80004197726 (TAN 11.183%). Débito Direto PT50002300004549878663394.",
-        startDate: "2024-05-15",
-        endDate: "2034-04-15",
-        status: "Em Progresso",
-        type: "Empréstimo",
-        color: "#6366f1",
-        totalDebt: 15456.60,
-        installmentAmount: 218.47,
-        periodicity: "mensal",
-        dueDay: 15
-      },
-      {
-        id: "tl-loan-dacia",
-        name: "Crédito Automóvel - Dacia Sandero",
-        description: "Contrato CRD19605103001 (Matrícula: 46-XP-14). RCI Banque / Mobilize FS (TAEG 5.40%). Débito Direto PT50002300004549878663394.",
-        startDate: "2019-05-29",
-        endDate: "2027-05-28",
-        status: "Em Progresso",
-        type: "Empréstimo",
-        color: "#8b5cf6",
-        totalDebt: 9584.45,
-        remainingDebt: 972.74,
-        installmentAmount: 180.08,
-        financialPortion: 124.17,
-        servicesPortion: 55.91,
-        periodicity: "mensal",
-        dueDay: 28
-      },
-      {
-        id: "tl-loan-casa1",
-        name: "Crédito Egas Moniz",
-        contractNumber: "02012642",
-        description: "Crédito Nº 02012642 (TAN 2.690%). Prestação nº 94. Próximo débito 03/08/2026.",
-        startDate: "2018-11-03",
-        endDate: "2054-10-03",
-        status: "Em Progresso",
-        type: "Empréstimo",
-        color: "#0ea5e9",
-        totalDebt: 67884.39,
-        remainingDebt: 58006.90,
-        amortizedCapital: 9877.49,
-        installmentAmount: 288.01,
-        tan: 2.690,
-        currentInstallmentNumber: 94,
-        remainingMonths: 338,
-        periodicity: "mensal",
-        dueDay: 3
-      },
-      {
-        id: "tl-loan-casa2",
-        name: "Hipoteca Egas Moniz",
-        contractNumber: "02015122",
-        description: "Hipoteca Nº 02015122 (TAN 3.990%). Prestação nº 17. Próximo débito 03/08/2026.",
-        startDate: "2025-03-03",
-        endDate: "2054-03-03",
-        status: "Em Progresso",
-        type: "Empréstimo",
-        color: "#14b8a6",
-        totalDebt: 51417.00,
-        remainingDebt: 50137.21,
-        amortizedCapital: 1279.79,
-        installmentAmount: 293.05,
-        tan: 3.990,
-        currentInstallmentNumber: 17,
-        remainingMonths: 331,
-        periodicity: "mensal",
-        dueDay: 3
-      }
-    ],
+    carLoans: [],
     events: [
       ...createFinancialEvents(),
       ...createJeepLoanEvents(),

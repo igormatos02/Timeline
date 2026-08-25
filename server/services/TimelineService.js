@@ -385,7 +385,173 @@ export class TimelineService {
       isRecurring: Boolean(isRecurring)
     };
 
-    return eventRepository.create(payload);
+    const created = await eventRepository.create(payload);
+
+    if (eventData.category === 'amortizacao' || eventData.financialType === 'amortizacao' || eventData.isAmortization) {
+      if (payload.status === 'Amortizado' || payload.status === 'Concluído' || payload.isCompleted) {
+        await this.processLoanAmortization(created);
+      }
+    }
+
+    return created;
+  }
+
+  async processLoanAmortization(amortEvent) {
+    const amortVal = Number(amortEvent.amount || amortEvent.amortizationAmount || 0);
+    if (isNaN(amortVal) || amortVal <= 0) return;
+
+    const loanTlId = amortEvent.timelineOriginId;
+    const amortDate = amortEvent.date;
+    const strategy = amortEvent.strategy || 'reduce_term';
+
+    // 1. Buscar todas as parcelas do empréstimo
+    const rawEvents = await eventRepository._readAllRaw();
+    const loanInstallments = rawEvents.filter(
+      (ev) =>
+        (ev.timelineOriginId === loanTlId || (ev.category === 'parcela_emprestimo' && ev.timelineOriginName === amortEvent.timelineOriginName)) &&
+        ev.category === 'parcela_emprestimo'
+    );
+
+    if (loanInstallments.length === 0) return;
+
+    const now = new Date().toISOString();
+
+function extractInstallmentPrincipal(inst) {
+  if (inst.principalAmount !== undefined && Number(inst.principalAmount) > 0) {
+    return Number(inst.principalAmount);
+  }
+  if (inst.description) {
+    const match = inst.description.match(/\(([\d\s.,]+)\s*€?\s*capital/i);
+    if (match && match[1]) {
+      const parsed = parseFloat(match[1].replace(/\s/g, '').replace(',', '.'));
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  }
+  const total = Number(inst.amount || 0);
+  const interest = Number(inst.interestPortion || 0);
+  if (interest > 0 && interest < total) {
+    return Math.round((total - interest) * 100) / 100;
+  }
+  return Math.max(1, Math.round(total * 0.85 * 100) / 100);
+}
+
+    if (strategy === 'reduce_term') {
+      // 1. Diminuir Prazo: abater parcelas do fim para trás sem juros
+      const futureUnpaid = loanInstallments
+        .filter((ev) => ev.status !== 'Pago' && ev.status !== 'Abatida' && !ev.isAbatida && ev.date >= amortDate)
+        .sort((a, b) => (a.date > b.date ? 1 : -1));
+
+      let remainingToDeduct = amortVal;
+      const updatesMap = new Map();
+
+      for (let i = futureUnpaid.length - 1; i >= 0; i--) {
+        if (remainingToDeduct <= 0) break;
+        const inst = futureUnpaid[i];
+        const instPrincipal = extractInstallmentPrincipal(inst);
+
+        if (remainingToDeduct >= instPrincipal) {
+          // Totalmente amortizada/abatida
+          updatesMap.set(inst.id, {
+            status: 'Abatida',
+            isAbatida: true,
+            isCompleted: true,
+            originalAmount: inst.amount || instPrincipal,
+            amount: 0,
+            principalAmount: 0,
+            interestPortion: 0,
+            labels: Array.from(new Set([...(inst.labels || []), 'Abatida'])),
+            updatedAt: now
+          });
+          remainingToDeduct -= instPrincipal;
+        } else {
+          // Abate parcial
+          const newPrincipal = Math.max(0, Math.round((instPrincipal - remainingToDeduct) * 100) / 100);
+          const interestPortion = Number(inst.interestPortion || 0);
+          updatesMap.set(inst.id, {
+            amount: Math.round((newPrincipal + interestPortion) * 100) / 100,
+            principalAmount: newPrincipal,
+            labels: Array.from(new Set([...(inst.labels || []), 'Abatida Parcial'])),
+            updatedAt: now
+          });
+          remainingToDeduct = 0;
+        }
+      }
+
+      if (updatesMap.size > 0) {
+        const updatedAll = rawEvents.map((ev) => {
+          if (updatesMap.has(ev.id)) {
+            return {
+              ...ev,
+              ...updatesMap.get(ev.id)
+            };
+          }
+          return ev;
+        });
+        await eventRepository._writeAllRaw(updatedAll);
+      }
+    } else {
+      // 2. Diminuir Parcela: recalcular proporcionalmente o valor da prestação mensal com base no capital abatido
+      const futureUnpaid = loanInstallments
+        .filter((ev) => ev.status !== 'Pago' && ev.status !== 'Abatida' && !ev.isAbatida && ev.date >= amortDate);
+
+      if (futureUnpaid.length > 0) {
+        let currentRemainingDebt = 13259.93;
+        try {
+          const loan = await loanContractRepository.getById(loanTlId);
+          if (loan && loan.remainingDebt) {
+            currentRemainingDebt = Number(loan.remainingDebt);
+          }
+        } catch {}
+
+        const originalInstallment = Number(futureUnpaid[0].originalAmount || futureUnpaid[0].amount || 218.47);
+        const newFuturePrincipal = Math.max(0, currentRemainingDebt - amortVal);
+        const reductionRatio = currentRemainingDebt > 0 ? (newFuturePrincipal / currentRemainingDebt) : 1;
+        const newTotal = Math.max(1, Math.round(originalInstallment * reductionRatio * 100) / 100);
+
+        const futureIds = new Set(futureUnpaid.map((e) => e.id));
+        const updatedAll = rawEvents.map((ev) => {
+          if (futureIds.has(ev.id)) {
+            const origAmt = Number(ev.originalAmount || ev.amount || originalInstallment);
+            const origCap = Number(ev.principalAmount || Math.round(origAmt * 0.82 * 100) / 100);
+            const origJur = Number(ev.interestPortion || Math.round(origAmt * 0.18 * 100) / 100);
+            return {
+              ...ev,
+              originalAmount: origAmt,
+              amount: newTotal,
+              principalAmount: Math.round(origCap * reductionRatio * 100) / 100,
+              interestPortion: Math.round(origJur * reductionRatio * 100) / 100,
+              updatedAt: now
+            };
+          }
+          return ev;
+        });
+        await eventRepository._writeAllRaw(updatedAll);
+      }
+    }
+
+    // Atualizar dívida restante e capital amortizado no loan_contracts.json e timelines.json
+    try {
+      const loan = await loanContractRepository.getById(loanTlId);
+      if (loan) {
+        const newRemaining = Math.max(0, Math.round((Number(loan.remainingDebt || loan.totalDebt) - amortVal) * 100) / 100);
+        const newAmortized = Math.round(((Number(loan.amortizedCapital) || 0) + amortVal) * 100) / 100;
+        await loanContractRepository.update(loan.id, {
+          remainingDebt: newRemaining,
+          amortizedCapital: newAmortized
+        });
+      }
+      const tl = await timelineRepository.getById(loanTlId);
+      if (tl) {
+        const newRemaining = Math.max(0, Math.round((Number(tl.remainingDebt || tl.totalDebt) - amortVal) * 100) / 100);
+        const newAmortized = Math.round(((Number(tl.amortizedCapital) || 0) + amortVal) * 100) / 100;
+        await timelineRepository.update(tl.id, {
+          remainingDebt: newRemaining,
+          amortizedCapital: newAmortized
+        });
+      }
+    } catch (e) {
+      console.error('Error updating loan remaining debt in backend:', e);
+    }
   }
 
   async updateEvent(id, updates) {
@@ -540,6 +706,26 @@ export class TimelineService {
   async toggleEventPayment(id) {
     const event = await eventRepository.getById(id);
     if (event) {
+      // Caso 1: Evento de Amortização Extraordinária (Amortizado <-> Pendente)
+      if (event.category === 'amortizacao' || event.financialType === 'amortizacao' || event.isAmortization) {
+        const isCurrentlyAmortized = event.status === 'Amortizado' || event.status === 'Concluído' || Boolean(event.isCompleted);
+        const newStatus = isCurrentlyAmortized ? 'Pendente' : 'Amortizado';
+        const isCompleted = !isCurrentlyAmortized;
+
+        const updated = await eventRepository.update(id, {
+          status: newStatus,
+          isCompleted
+        });
+
+        if (isCompleted) {
+          await this.processLoanAmortization({ ...event, status: 'Amortizado', isCompleted: true });
+        } else {
+          await this.rollbackLoanAmortization(event);
+        }
+
+        return updated;
+      }
+
       const isInvestment = event.isInvestment || event.financialType === 'investimento' || (event.category && event.category.startsWith('investimento'));
       const isIncome = event.isIncome || event.financialType === 'entrada' || (event.category && event.category.startsWith('entrada'));
       const isCompleted = !(event.status === 'Pago' || event.status === 'Recebido' || event.status === 'Investido' || event.isCompleted);
@@ -578,29 +764,97 @@ export class TimelineService {
     throw new Error(`Event not found: ${id}`);
   }
 
+  async rollbackLoanAmortization(amortEvent) {
+    const amortVal = Number(amortEvent.amount || amortEvent.amortizationAmount || 0);
+    const loanTlId = amortEvent.timelineOriginId;
+
+    const rawEvents = await eventRepository._readAllRaw();
+    const now = new Date().toISOString();
+
+    // 1. Obter o valor contratual da prestação padrão do empréstimo
+    let defaultInstallmentAmount = 218.47;
+    try {
+      const loan = await loanContractRepository.getById(loanTlId);
+      if (loan && loan.installmentAmount) {
+        defaultInstallmentAmount = Number(loan.installmentAmount);
+      }
+    } catch {}
+
+    // 2. Restaurar TODAS as parcelas pendentes do empréstimo para os valores e estados contratuais originais
+    const updatedEvents = rawEvents.map((ev) => {
+      if (
+        (ev.timelineOriginId === loanTlId || (ev.category === 'parcela_emprestimo' && ev.timelineOriginName === amortEvent.timelineOriginName)) &&
+        ev.category === 'parcela_emprestimo' &&
+        ev.status !== 'Pago'
+      ) {
+        let cap = 0, jur = 0;
+        if (ev.description) {
+          const match = ev.description.match(/\(([\d\s.,]+)\s*€?\s*capital\s*\+\s*([\d\s.,]+)\s*€?\s*juros/i);
+          if (match && match[1] && match[2]) {
+            cap = parseFloat(match[1].replace(/\s/g, '').replace(',', '.'));
+            jur = parseFloat(match[2].replace(/\s/g, '').replace(',', '.'));
+          }
+        }
+        const origAmt = Number(ev.originalAmount || defaultInstallmentAmount);
+        const filteredLabels = (ev.labels || []).filter((l) => l !== 'Abatida' && l !== 'Abatida Parcial');
+        return {
+          ...ev,
+          status: 'Pendente',
+          isAbatida: false,
+          isCompleted: false,
+          amount: origAmt,
+          principalAmount: cap || Math.round(origAmt * 0.82 * 100) / 100,
+          interestPortion: jur || Math.round(origAmt * 0.18 * 100) / 100,
+          labels: filteredLabels.length > 0 ? filteredLabels : [amortEvent.timelineOriginName || 'Empréstimo', 'Pendente'],
+          updatedAt: now
+        };
+      }
+      return ev;
+    });
+    await eventRepository._writeAllRaw(updatedEvents);
+
+    // 3. Restaurar dívida restante no loan_contracts.json e timelines.json
+    try {
+      const loan = await loanContractRepository.getById(loanTlId);
+      if (loan) {
+        const restoredRemaining = Math.round(((Number(loan.remainingDebt || loan.totalDebt)) + amortVal) * 100) / 100;
+        const restoredAmortized = Math.max(0, Math.round(((Number(loan.amortizedCapital) || 0) - amortVal) * 100) / 100);
+        await loanContractRepository.update(loan.id, {
+          remainingDebt: restoredRemaining,
+          amortizedCapital: restoredAmortized
+        });
+      }
+      const tl = await timelineRepository.getById(loanTlId);
+      if (tl) {
+        const restoredRemaining = Math.round(((Number(tl.remainingDebt || tl.totalDebt)) + amortVal) * 100) / 100;
+        const restoredAmortized = Math.max(0, Math.round(((Number(tl.amortizedCapital) || 0) - amortVal) * 100) / 100);
+        await timelineRepository.update(tl.id, {
+          remainingDebt: restoredRemaining,
+          amortizedCapital: restoredAmortized
+        });
+      }
+    } catch (e) {
+      console.error('Error rolling back loan remaining debt in backend:', e);
+    }
+  }
+
   async deleteEvent(id, options = {}) {
     const { deleteScope = 'single' } = options;
     const allRawEvents = await eventRepository.getAll();
     const directEvent = await eventRepository.getById(id);
 
+    // Se o evento a eliminar for uma amortização extraordinária:
+    if (directEvent?.category === 'amortizacao' || directEvent?.financialType === 'amortizacao' || directEvent?.isAmortization) {
+      await this.rollbackLoanAmortization(directEvent);
+      return eventRepository.delete(id);
+    }
+
     const isLoan = directEvent?.category === 'parcela_emprestimo' ||
                    directEvent?.isSystemLoanEvent ||
-                   directEvent?.category === 'amortizacao' ||
                    directEvent?.timelineOriginId?.startsWith('tl-loan-');
 
     if (isLoan) {
-      const targetDate = options.date || directEvent?.date;
-      const loanTlId = directEvent?.timelineOriginId;
-
-      if (deleteScope === 'subsequent') {
-        await eventRepository.deleteMany((ev) => (ev.timelineOriginId === loanTlId || ev.category === 'parcela_emprestimo') && (!targetDate || ev.date >= targetDate));
-        return true;
-      } else if (deleteScope === 'all') {
-        await eventRepository.deleteMany((ev) => ev.timelineOriginId === loanTlId || ev.id === id);
-        return true;
-      } else {
-        return eventRepository.delete(id);
-      }
+      return eventRepository.delete(id);
     }
 
     const targetSeriesId = directEvent?.seriesId || directEvent?.sobrepositionOver || options.seriesId;

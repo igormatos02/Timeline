@@ -463,8 +463,9 @@ export function getConsolidatedLoanMetricsAtHorizon(timelines, targetHorizonMont
       }
     });
 
-    totalPrincipalAmortized += amortizedForLoan;
-    totalRemainingBalance += Math.max(0, totalDebt - amortizedForLoan);
+    const cappedAmortized = Math.min(totalDebt, amortizedForLoan);
+    totalPrincipalAmortized += cappedAmortized;
+    totalRemainingBalance += Math.max(0, totalDebt - cappedAmortized);
   });
 
   return {

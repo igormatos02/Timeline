@@ -191,6 +191,9 @@ function createCasa1LoanEvents() {
   const events = [];
   const regularMonthly = 288.01;
   const totalMonths = 332; // (94 pagas + 238 remanescentes)
+  const rate = 0.0269 / 12;
+  const insurance = 42.11;
+  let runningBalance = 58006.90;
 
   // Base: Novembro de 2018 (Prestação 1) até Outubro de 2054 (Prestação 432)
   for (let i = 1; i <= totalMonths; i++) {
@@ -206,7 +209,21 @@ function createCasa1LoanEvents() {
 
     const isPastPaid = i <= 94; // Prestações 1 a 94 pagas (até Agosto 2026)
     const status = isPastPaid ? 'Pago' : 'Pendente';
-    const balanceAfter = Math.max(0, Math.round((58006.90 - (i - 94) * 115.61) * 100) / 100);
+    
+    let principalAmount = 115.61;
+    let interestPortion = 130.29;
+
+    if (!isPastPaid) {
+      const isLast = i === totalMonths;
+      interestPortion = Math.round(runningBalance * rate * 100) / 100;
+      if (isLast) {
+        principalAmount = Math.round(runningBalance * 100) / 100;
+      } else {
+        principalAmount = Math.min(runningBalance, Math.round((regularMonthly - insurance - interestPortion) * 100) / 100);
+        if (principalAmount <= 0) principalAmount = Math.round((58006.90 / 238) * 100) / 100;
+      }
+      runningBalance = Math.max(0, Math.round((runningBalance - principalAmount) * 100) / 100);
+    }
 
     events.push({
       id: `casa1-loan-inst-${i}`,
@@ -216,25 +233,25 @@ function createCasa1LoanEvents() {
       date: dateStr,
       time: '08:00',
       title: `Prestação Crédito Egas Moniz #${i} de ${totalMonths}`,
-      description: `Crédito Nº 02012642 (TAN 2.690%). Capital: 115,61 € | Juros: 130,29 € | Seguro de Vida: 42,11 €`,
+      description: `Crédito Nº 02012642 (TAN 2.690%). Capital: ${formatCurrency(principalAmount)} | Juros: ${formatCurrency(interestPortion)} | Seguro: ${formatCurrency(insurance)}`,
       category: 'parcela_emprestimo',
       status: status,
       priority: 'Normal',
       amount: regularMonthly,
-      principalAmount: 115.61,
-      interestPortion: 130.29,
+      principalAmount: principalAmount,
+      interestPortion: interestPortion,
       interestAmount: 0,
-      balanceAfter: balanceAfter,
+      balanceAfter: isPastPaid ? Math.max(0, Math.round((58006.90 - (i - 94) * 115.61) * 100) / 100) : runningBalance,
       installmentNumber: i,
       totalInstallments: totalMonths,
       isSystemLoanEvent: true,
       isCompleted: isPastPaid,
       labels: ['Crédito Egas Moniz', '02012642', isPastPaid ? 'Pago' : 'Pendente'],
       breakdownItems: [
-        { id: `c1-cap-${i}`, name: 'Capital', amount: 115.61 },
-        { id: `c1-jur-${i}`, name: 'Juros', amount: 130.29 },
+        { id: `c1-cap-${i}`, name: 'Capital', amount: principalAmount },
+        { id: `c1-jur-${i}`, name: 'Juros', amount: interestPortion },
         { id: `c1-selo-${i}`, name: 'Imposto do Selo', amount: 0.00 },
-        { id: `c1-seg-${i}`, name: 'Seguro de Vida', amount: 42.11 }
+        { id: `c1-seg-${i}`, name: 'Seguro de Vida', amount: insurance }
       ]
     });
   }
@@ -247,6 +264,10 @@ function createCasa2LoanEvents() {
   const events = [];
   const regularMonthly = 293.05;
   const totalMonths = 339; // (17 pagas + 322 remanescentes)
+  const rate = 0.0399 / 12;
+  const insurance = 36.39;
+  const stampTax = 6.68;
+  let runningBalance = 50137.21;
 
   // Base: Abril de 2025 (Prestação 1) até Março de 2054 (Prestação 348)
   for (let i = 1; i <= totalMonths; i++) {
@@ -262,7 +283,21 @@ function createCasa2LoanEvents() {
 
     const isPastPaid = i <= 17; // Prestações 1 a 17 pagas (até Agosto 2026)
     const status = isPastPaid ? 'Pago' : 'Pendente';
-    const balanceAfter = Math.max(0, Math.round((50137.21 - (i - 17) * 83.00) * 100) / 100);
+    
+    let principalAmount = 83.00;
+    let interestPortion = 166.98;
+
+    if (!isPastPaid) {
+      const isLast = i === totalMonths;
+      interestPortion = Math.round(runningBalance * rate * 100) / 100;
+      if (isLast) {
+        principalAmount = Math.round(runningBalance * 100) / 100;
+      } else {
+        principalAmount = Math.min(runningBalance, Math.round((regularMonthly - insurance - stampTax - interestPortion) * 100) / 100);
+        if (principalAmount <= 0) principalAmount = Math.round((50137.21 / 322) * 100) / 100;
+      }
+      runningBalance = Math.max(0, Math.round((runningBalance - principalAmount) * 100) / 100);
+    }
 
     events.push({
       id: `casa2-loan-inst-${i}`,
@@ -272,25 +307,25 @@ function createCasa2LoanEvents() {
       date: dateStr,
       time: '08:00',
       title: `Prestação Hipoteca Egas Moniz #${i} de ${totalMonths}`,
-      description: `Hipoteca Nº 02015122 (TAN 3.990%). Capital: 83,00 € | Juros: 166,98 € | Imposto Selo: 6,68 € | Seguro Vida: 36,39 €`,
+      description: `Hipoteca Nº 02015122 (TAN 3.990%). Capital: ${formatCurrency(principalAmount)} | Juros: ${formatCurrency(interestPortion)} | Imposto Selo: ${formatCurrency(stampTax)} | Seguro Vida: ${formatCurrency(insurance)}`,
       category: 'parcela_emprestimo',
       status: status,
       priority: 'Normal',
       amount: regularMonthly,
-      principalAmount: 83.00,
-      interestPortion: 166.98,
-      interestAmount: 6.68,
-      balanceAfter: balanceAfter,
+      principalAmount: principalAmount,
+      interestPortion: interestPortion,
+      interestAmount: stampTax,
+      balanceAfter: isPastPaid ? Math.max(0, Math.round((50137.21 - (i - 17) * 83.00) * 100) / 100) : runningBalance,
       installmentNumber: i,
       totalInstallments: totalMonths,
       isSystemLoanEvent: true,
       isCompleted: isPastPaid,
       labels: ['Hipoteca Egas Moniz', '02015122', isPastPaid ? 'Pago' : 'Pendente'],
       breakdownItems: [
-        { id: `c2-cap-${i}`, name: 'Capital', amount: 83.00 },
-        { id: `c2-jur-${i}`, name: 'Juros', amount: 166.98 },
-        { id: `c2-selo-${i}`, name: 'Imposto do Selo', amount: 6.68 },
-        { id: `c2-seg-${i}`, name: 'Seguro de Vida', amount: 36.39 }
+        { id: `c2-cap-${i}`, name: 'Capital', amount: principalAmount },
+        { id: `c2-jur-${i}`, name: 'Juros', amount: interestPortion },
+        { id: `c2-selo-${i}`, name: 'Imposto do Selo', amount: stampTax },
+        { id: `c2-seg-${i}`, name: 'Seguro de Vida', amount: insurance }
       ]
     });
   }

@@ -175,6 +175,38 @@ export function projectEvents(rawEvents = [], options = {}) {
   });
 }
 
+function hasEventMeaningfullyChanged(base, updates) {
+  if (!base) return true;
+
+  if (updates.title !== undefined && (updates.title ?? '').trim() !== (base.title ?? '').trim()) return true;
+  if (updates.amount !== undefined && Number(updates.amount || 0) !== Number(base.amount || 0)) return true;
+  if (updates.initialInvestedAmount !== undefined && Number(updates.initialInvestedAmount || 0) !== Number(base.initialInvestedAmount || 0)) return true;
+  if (updates.targetAmount !== undefined && Number(updates.targetAmount || 0) !== Number(base.targetAmount || 0)) return true;
+  if (updates.category !== undefined && updates.category !== base.category) return true;
+  if (updates.financialType !== undefined && updates.financialType !== base.financialType) return true;
+  if (updates.status !== undefined && updates.status !== base.status) return true;
+  if (updates.priority !== undefined && updates.priority !== base.priority) return true;
+  if (updates.time !== undefined && updates.time !== base.time) return true;
+  if (updates.description !== undefined && (updates.description ?? '').trim() !== (base.description ?? '').trim()) return true;
+  if (updates.dayOfMonth !== undefined && Number(updates.dayOfMonth) !== Number(base.dayOfMonth)) return true;
+  if (updates.isCompleted !== undefined && Boolean(updates.isCompleted) !== Boolean(base.isCompleted)) return true;
+  if (updates.isLocked !== undefined && Boolean(updates.isLocked) !== Boolean(base.isLocked)) return true;
+
+  if (updates.breakdownItems !== undefined) {
+    const bItems = JSON.stringify(base.breakdownItems || []);
+    const uItems = JSON.stringify(updates.breakdownItems || []);
+    if (bItems !== uItems) return true;
+  }
+
+  if (updates.labels !== undefined) {
+    const bLabels = JSON.stringify([...(base.labels || [])].sort());
+    const uLabels = JSON.stringify([...(updates.labels || [])].sort());
+    if (bLabels !== uLabels) return true;
+  }
+
+  return false;
+}
+
 export class TimelineService {
   // --- Timeboard Operations ---
   async getAllTimeboards() {
@@ -381,6 +413,27 @@ export class TimelineService {
 
     // --- REGRAS DE ENTRADAS / GASTOS / RECORRENTES (Sem data de fim) ---
     const targetSeriesId = directUpdates.seriesId || updates.seriesId;
+
+    // Identificar o evento de referência (base) para comparar alterações
+    let baseEvent = existing;
+    if (!baseEvent && targetSeriesId) {
+      const existingOverride = allRawEvents.find(
+        (ev) => ev.sobrepositionOver === targetSeriesId && ev.date === directUpdates.date
+      );
+      if (existingOverride) {
+        baseEvent = existingOverride;
+      } else {
+        const seriesVersions = allRawEvents
+          .filter((ev) => ev.seriesId === targetSeriesId && !ev.sobrepositionOver && (!directUpdates.date || ev.date <= directUpdates.date))
+          .sort((a, b) => (a.date > b.date ? 1 : -1));
+        baseEvent = seriesVersions[seriesVersions.length - 1] || allRawEvents.find((ev) => ev.seriesId === targetSeriesId);
+      }
+    }
+
+    // Se NÃO houver nenhuma alteração significativa nos dados, não criar nova versão nem registo desnecessário
+    if (baseEvent && !hasEventMeaningfullyChanged(baseEvent, directUpdates)) {
+      return baseEvent;
+    }
 
     if (targetSeriesId && directUpdates.targetAmount !== undefined && directUpdates.targetAmount !== '') {
       await eventRepository.updateMany(

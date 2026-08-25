@@ -46,6 +46,7 @@ import {
   getPeriodicityLabel
 } from '../utils/loanCalculations';
 import IncomeEvolutionChart from './IncomeEvolutionChart';
+import * as api from '../services/api';
 
 export default function TimelineHeader({
   timeline,
@@ -53,16 +54,16 @@ export default function TimelineHeader({
   selectedTimelineIds = null,
   activeFinancialTab = 'entradas',
   onSelectFinancialTab,
-  onEdit,
-  onDelete,
-  onReset,
-  onOpenCreateTimeline,
+  onEditTimeline,
+  onDeleteTimeline,
+  onResetTimeline,
   onOpenAmortizationModal,
   onScrollToOverdue
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState('summary'); // 'summary' | 'chart'
   const [computeFromMonth, setComputeFromMonth] = useState(() => {
+    if (timeline?.computeFromMonth) return timeline.computeFromMonth;
     try {
       return localStorage.getItem('timeline_compute_from_month') || '2026-08';
     } catch {
@@ -72,12 +73,21 @@ export default function TimelineHeader({
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [tempComputeMonth, setTempComputeMonth] = useState(computeFromMonth);
 
-  const handleSaveComputeMonth = (val) => {
+  useEffect(() => {
+    if (timeline?.computeFromMonth && timeline.computeFromMonth !== computeFromMonth) {
+      setComputeFromMonth(timeline.computeFromMonth);
+    }
+  }, [timeline?.computeFromMonth]);
+
+  const handleSaveComputeMonth = async (val) => {
     setComputeFromMonth(val);
     try {
       localStorage.setItem('timeline_compute_from_month', val);
+      if (timeline?.id) {
+        await api.updateTimeline(timeline.id, { computeFromMonth: val });
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Error saving computeFromMonth to database:', e);
     }
     setIsDatePickerOpen(false);
   };

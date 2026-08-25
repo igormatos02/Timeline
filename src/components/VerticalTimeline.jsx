@@ -901,6 +901,7 @@ export default function VerticalTimeline({
                       {/* Badges para a aba Balanço */}
                       {isFinancialTimeline && activeFinancialTab === 'balanco' && (
                         <>
+                          {/* Entradas: Realizado de Previsto */}
                           <span
                             className="group-card-badge"
                             style={{
@@ -915,11 +916,12 @@ export default function VerticalTimeline({
                               fontWeight: '800',
                               fontSize: '0.74rem'
                             }}
-                            title="Total de Entradas"
+                            title={`Entradas: +${formatCurrency(mMonthIncomePaid)} realizado de +${formatCurrency(mMonthIncome)} previsto`}
                           >
-                            +{formatCurrency(effectiveIncome)}
+                            +{formatCurrency(mMonthIncomePaid)} de +{formatCurrency(mMonthIncome)}
                           </span>
 
+                          {/* Saídas: Realizado de Previsto */}
                           <span
                             className="group-card-badge"
                             style={{
@@ -934,11 +936,12 @@ export default function VerticalTimeline({
                               fontWeight: '800',
                               fontSize: '0.74rem'
                             }}
-                            title="Total de Gastos Pagos (inclui Empréstimos)"
+                            title={`Saídas: -${formatCurrency(mMonthExpensePaid)} realizado de -${formatCurrency(mMonthExpense)} previsto`}
                           >
-                            -{formatCurrency(effectiveExpense)}
+                            -{formatCurrency(mMonthExpensePaid)} de -{formatCurrency(mMonthExpense)}
                           </span>
 
+                          {/* Investimentos: Realizado de Previsto */}
                           <span
                             className="group-card-badge"
                             style={{
@@ -953,9 +956,9 @@ export default function VerticalTimeline({
                               fontWeight: '800',
                               fontSize: '0.74rem'
                             }}
-                            title="Total de Investimentos / Aportes"
+                            title={`Investimentos: -${formatCurrency(mMonthInvestmentPaid)} realizado de -${formatCurrency(mMonthInvestment)} previsto`}
                           >
-                            -{formatCurrency(effectiveInvestment)}
+                            -{formatCurrency(mMonthInvestmentPaid)} de -{formatCurrency(mMonthInvestment)}
                           </span>
 
                           {/* Badge 1: Realizado (Liquidado até à data) */}

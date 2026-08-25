@@ -501,18 +501,19 @@ export default function TimelineHeader({
       {/* 📦 Parte Inferior: Visão Selecionada, Controlos de Ação, Métricas e Gráfico */}
       {!collapsed && (
         <div style={{ paddingTop: '12px' }}>
-          <div className="hero-top" style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-            <div className="hero-title-group" style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {selectedViewInfo.icon}
-                <h2 className="hero-name" style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0, color: 'var(--text-main)' }}>
-                  {selectedViewTitle}
-                </h2>
-              </div>
+          <div className="hero-top" style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {selectedViewInfo.icon}
+              <h2 className="hero-name" style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0, color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
+                {selectedViewTitle}
+              </h2>
+            </div>
 
-              {/* Botão Interativo 'Computar a partir de' na linha do título */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+              {/* Botão Interativo 'Computar a partir de' ao lado do botão Resumo/Gráfico */}
               {activeFinancialTab === 'balanco' && (
-                <div
+                <button
+                  type="button"
                   onClick={() => {
                     setTempComputeMonth(computeFromMonth);
                     setIsDatePickerOpen(true);
@@ -521,27 +522,28 @@ export default function TimelineHeader({
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    padding: '5px 12px',
+                    padding: '4px 10px',
+                    height: '32px',
+                    boxSizing: 'border-box',
                     background: 'rgba(99, 102, 241, 0.1)',
                     border: isDatePickerOpen ? '1px solid var(--primary)' : '1px solid rgba(99, 102, 241, 0.3)',
                     borderRadius: '8px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    whiteSpace: 'nowrap'
                   }}
                   title="Clique para alterar e salvar o mês inicial de computação do Balanço"
                 >
-                  <Calendar size={14} style={{ color: 'var(--primary-light)' }} />
-                  <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem', fontWeight: '600' }}>Computar a partir de:</span>
-                  <span style={{ color: 'var(--primary-light)', fontSize: '0.82rem', fontWeight: '800' }}>
+                  <Calendar size={13} style={{ color: 'var(--primary-light)' }} />
+                  <span style={{ color: 'var(--text-dim)', fontSize: '0.74rem', fontWeight: '600' }}>Computar:</span>
+                  <span style={{ color: 'var(--primary-light)', fontSize: '0.78rem', fontWeight: '800' }}>
                     {getFormattedMonthLabel(computeFromMonth)}
                   </span>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginLeft: '2px' }}>⚙️ Alterar</span>
-                </div>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>⚙️</span>
+                </button>
               )}
-            </div>
 
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
               {/* View Switcher: Summary vs Graph */}
               <div
                 style={{
@@ -550,7 +552,10 @@ export default function TimelineHeader({
                   border: '1px solid var(--border-glass)',
                   borderRadius: '8px',
                   padding: '3px',
-                  gap: '3px'
+                  gap: '3px',
+                  height: '32px',
+                  boxSizing: 'border-box',
+                  alignItems: 'center'
                 }}
               >
                 <button
@@ -558,8 +563,9 @@ export default function TimelineHeader({
                   onClick={() => setViewMode('summary')}
                   className={`btn btn-sm ${viewMode === 'summary' ? 'btn-primary' : 'btn-ghost'}`}
                   style={{
-                    padding: '4px 10px',
-                    fontSize: '0.76rem',
+                    padding: '3px 10px',
+                    height: '24px',
+                    fontSize: '0.75rem',
                     borderRadius: '6px',
                     background: viewMode === 'summary' ? 'var(--primary)' : 'transparent',
                     color: viewMode === 'summary' ? '#fff' : 'var(--text-muted)'
@@ -573,8 +579,9 @@ export default function TimelineHeader({
                   onClick={() => setViewMode('chart')}
                   className={`btn btn-sm ${viewMode === 'chart' ? 'btn-primary' : 'btn-ghost'}`}
                   style={{
-                    padding: '4px 10px',
-                    fontSize: '0.76rem',
+                    padding: '3px 10px',
+                    height: '24px',
+                    fontSize: '0.75rem',
                     borderRadius: '6px',
                     background: viewMode === 'chart' ? 'var(--primary)' : 'transparent',
                     color: viewMode === 'chart' ? '#fff' : 'var(--text-muted)'

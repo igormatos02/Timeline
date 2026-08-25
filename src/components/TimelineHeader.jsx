@@ -29,6 +29,7 @@ import {
   LayoutDashboard,
   ShoppingCart,
   PiggyBank,
+  Landmark,
   Scale,
   Home,
   RotateCcw,
@@ -766,29 +767,59 @@ export default function TimelineHeader({
 
                   {(activeFinancialTab === 'investimentos' || timeline.type === 'investimentos' || timeline.id === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e') && (
                     <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '8px', marginBottom: '8px' }}>
+                      {/* Card 1: Total Investido */}
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#6366f1' }}>
-                          <PiggyBank size={16} />
+                          <DollarSign size={16} />
                         </div>
                         <div>
                           <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Investido</div>
                           <div className="meta-value" style={{ color: 'var(--primary-light)', fontSize: '0.94rem', fontWeight: '800' }}>
                             {formatCurrency(finMetrics.totalInvested)}
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Aportes realizados</div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Património consolidado</div>
                         </div>
                       </div>
 
+                      {/* Card 2: Total Poupança */}
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#10b981' }}>
-                          <Percent size={16} />
+                          <PiggyBank size={16} />
                         </div>
                         <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Taxa de Poupança</div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Poupança</div>
                           <div className="meta-value" style={{ color: '#10b981', fontSize: '0.94rem', fontWeight: '800' }}>
-                            {finMetrics.savingsRate}%
+                            {formatCurrency(finMetrics.totalPoupanca || 0)}
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Do rendimento mensal</div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Reserva e liquidez</div>
+                        </div>
+                      </div>
+
+                      {/* Card 3: Total Património */}
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#a855f7' }}>
+                          <Landmark size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Património</div>
+                          <div className="meta-value" style={{ color: '#c084fc', fontSize: '0.94rem', fontWeight: '800' }}>
+                            {formatCurrency(finMetrics.totalPatrimonio || 0)}
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Bens e imóveis</div>
+                        </div>
+                      </div>
+
+                      {/* Card 4: Total Outros */}
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#38bdf8' }}>
+                          <Sparkles size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Outros</div>
+                          <div className="meta-value" style={{ color: '#38bdf8', fontSize: '0.94rem', fontWeight: '800' }}>
+                            {formatCurrency(finMetrics.totalOutros || 0)}
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Fundos / Ações / Outros</div>
                         </div>
                       </div>
                     </div>

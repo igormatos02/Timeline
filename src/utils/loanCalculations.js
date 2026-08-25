@@ -459,20 +459,36 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
   const expenseMonthsSet = new Set();
   let monthlyExpensesSum = 0;
 
-  // 1. Coletar todo o valor inicial já investido anteriormente (base de património existente)
+  // 1. Coletar todo o valor inicial já investido anteriormente por subtipo (Poupança, Património, Outros)
   const seenInitialInvestments = new Set();
   let totalPriorInvestedAll = 0;
+  let totalPriorPoupanca = 0;
+  let totalPriorPatrimonio = 0;
+  let totalPriorOutros = 0;
+
   (allEvents || []).forEach((ev) => {
     if (!ev) return;
     const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento')) || ev.timelineOriginId === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
     if (isInvestment && (Number(ev.initialInvestedAmount || 0) > 0)) {
       const initialKey = ev.seriesId || ev.id;
       if (!seenInitialInvestments.has(initialKey)) {
-        totalPriorInvestedAll += Number(ev.initialInvestedAmount);
+        const initAmt = Number(ev.initialInvestedAmount);
+        totalPriorInvestedAll += initAmt;
+        if (ev.category === 'investimento_patrimonio') {
+          totalPriorPatrimonio += initAmt;
+        } else if (ev.category === 'investimento_outros' || ev.category?.includes('etf') || ev.category?.includes('acoes')) {
+          totalPriorOutros += initAmt;
+        } else {
+          totalPriorPoupanca += initAmt;
+        }
         seenInitialInvestments.add(initialKey);
       }
     }
   });
+
+  let totalAportesPoupanca = 0;
+  let totalAportesPatrimonio = 0;
+  let totalAportesOutros = 0;
 
   let totalInvested = totalPriorInvestedAll;
   let totalPlannedInvestments = totalPriorInvestedAll;
@@ -544,6 +560,13 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
       if (isUpToCurrent && isInvestedDone) {
         totalInvested += amt;
         totalMonthlyAportesRealized += amt;
+        if (ev.category === 'investimento_patrimonio') {
+          totalAportesPatrimonio += amt;
+        } else if (ev.category === 'investimento_outros' || ev.category?.includes('etf') || ev.category?.includes('acoes') || ev.category?.includes('extra')) {
+          totalAportesOutros += amt;
+        } else {
+          totalAportesPoupanca += amt;
+        }
       }
 
       if (isUpToCurrent && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
@@ -553,6 +576,10 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
       totalPlannedInvestments += amt;
     }
   });
+
+  const totalPoupanca = totalPriorPoupanca + totalAportesPoupanca;
+  const totalPatrimonio = totalPriorPatrimonio + totalAportesPatrimonio;
+  const totalOutros = totalPriorOutros + totalAportesOutros;
 
   const monthlyAverageExpenses = expenseMonthsSet.size > 0 ? (monthlyExpensesSum / expenseMonthsSet.size) : (currentMonthExpenses || 0);
   const projectedAnnualExpenses = currentYearExpenses > 0 ? currentYearExpenses : (monthlyAverageExpenses * 12);
@@ -575,6 +602,9 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     totalPaidExpenses,
     totalPlannedExpenses,
     totalInvested,
+    totalPoupanca,
+    totalPatrimonio,
+    totalOutros,
     totalPlannedInvestments,
     currentMonthExpenses,
     currentMonthExpensesPaid,

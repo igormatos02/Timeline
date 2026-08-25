@@ -901,6 +901,32 @@ export default function VerticalTimeline({
                       {/* Badges para a aba Balanço */}
                       {isFinancialTimeline && activeFinancialTab === 'balanco' && (
                         <>
+                          {/* Badge Informativo de Legenda (Azul) */}
+                          <span
+                            className="group-card-badge"
+                            style={{
+                              display: 'inline-flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '3px 8px',
+                              height: 'auto',
+                              boxSizing: 'border-box',
+                              color: '#38bdf8',
+                              borderColor: 'rgba(56, 189, 248, 0.35)',
+                              background: 'rgba(56, 189, 248, 0.1)',
+                              lineHeight: '1.2'
+                            }}
+                            title="Legenda dos valores mensais: Linha superior = Realizado | Linha inferior = Previsto"
+                          >
+                            <span style={{ fontWeight: '800', fontSize: '0.69rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                              Realizado
+                            </span>
+                            <span style={{ fontSize: '0.64rem', fontWeight: '700', opacity: 0.85, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                              Previsto
+                            </span>
+                          </span>
+
                           {/* Entradas: Realizado (linha 1) / Previsto (linha 2) */}
                           <span
                             className="group-card-badge"

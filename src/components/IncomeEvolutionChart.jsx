@@ -104,7 +104,7 @@ export default function IncomeEvolutionChart({
       let monthIncome = 0;
       let monthExpense = 0;
       let monthInvestment = 0;
-      let notes = [];
+      let eventCount = 0;
 
       if (eventsByMonth[monthKey] && eventsByMonth[monthKey].length > 0) {
         eventsByMonth[monthKey].forEach((ev) => {
@@ -113,31 +113,25 @@ export default function IncomeEvolutionChart({
 
           const isLoan = ev.category === 'parcela_emprestimo' || ev.timelineOriginId === 'tl-loan-80004197726' || ev.isSystemLoanEvent || ev.category === 'amortizacao';
           const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
-          const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') && !isLoan;
+          const isExpense = ((ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan) && !ev.isInvestment && ev.financialType !== 'investimento';
           const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
           const isValid = chartMode === 'acumulado_real' ? isReceived : true;
           if (isValid) {
             if (isIncome) {
               monthIncome += amt;
-              if (activeFinancialTab === 'entradas' && ev.title && !notes.includes(ev.title)) {
-                notes.push(ev.title);
-              }
+              if (activeFinancialTab === 'entradas') eventCount++;
             }
             if (isExpense || isLoan) {
               monthExpense += amt;
-              if ((activeFinancialTab === 'gastos' || activeFinancialTab === 'emprestimos' || activeFinancialTab === 'jeep' || activeFinancialTab === 'dacia' || activeFinancialTab === 'casa1' || activeFinancialTab === 'casa2') && ev.title && !notes.includes(ev.title)) {
-                notes.push(ev.title);
-              }
+              if (activeFinancialTab === 'gastos' || activeFinancialTab === 'emprestimos' || activeFinancialTab === 'jeep' || activeFinancialTab === 'dacia' || activeFinancialTab === 'casa1' || activeFinancialTab === 'casa2') eventCount++;
             }
             if (isInvestment) {
               monthInvestment += amt;
-              if (activeFinancialTab === 'investimentos' && ev.title && !notes.includes(ev.title)) {
-                notes.push(ev.title);
-              }
+              if (activeFinancialTab === 'investimentos') eventCount++;
             }
-            if (activeFinancialTab === 'balanco' && ev.title && !notes.includes(ev.title)) {
-              notes.push(ev.title);
+            if (activeFinancialTab === 'balanco') {
+              eventCount++;
             }
           }
         });
@@ -171,7 +165,7 @@ export default function IncomeEvolutionChart({
         isPast,
         isCurrent,
         isFuture: !isPast && !isCurrent,
-        notes: notes.join(' • ')
+        eventCount
       });
 
       curDate = addMonths(curDate, 1);
@@ -839,9 +833,9 @@ export default function IncomeEvolutionChart({
                 </span>
               </div>
 
-              {hoveredData.notes && (
-                <div style={{ marginTop: '4px', fontSize: '0.7rem', color: '#f59e0b', fontStyle: 'italic' }}>
-                  ✨ {hoveredData.notes}
+              {hoveredData.eventCount > 0 && (
+                <div style={{ marginTop: '2px', fontSize: '0.68rem', color: 'var(--text-dim)', textAlign: 'right', borderTop: '1px solid var(--border-glass)', paddingTop: '4px' }}>
+                  {hoveredData.eventCount} movimento(s) registado(s)
                 </div>
               )}
             </div>

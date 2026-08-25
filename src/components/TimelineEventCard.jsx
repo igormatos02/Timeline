@@ -1656,8 +1656,7 @@ export default function TimelineEventCard({
             })
             .reduce((sum, ev) => sum + Number(ev.amount || 0), 0);
 
-          const thisMonthContribution = isCompletedInvestment ? Number(event.amount || 0) : 0;
-          const currentSaved = baseInitial + priorAportes + thisMonthContribution;
+          const currentSaved = baseInitial + priorAportes;
           const targetVal = Number(event.targetAmount);
           const progressPct = Math.min(100, Math.max(0, Math.round((currentSaved / targetVal) * 100)));
 

@@ -136,9 +136,9 @@ export async function runSeed() {
       amortizedCapital: 9877.49,
       installmentAmount: 288.01,
       tan: 2.690,
-      totalInstallments: 432,
+      totalInstallments: 433,
       currentInstallmentNumber: 94,
-      remainingMonths: 338,
+      remainingMonths: 339,
       dueDay: 3
     },
     {
@@ -152,16 +152,16 @@ export async function runSeed() {
       canDelete: true,
       contractNumber: '02015122',
       startDate: '2025-04-03',
-      endDate: '2054-03-03',
+      endDate: '2054-04-03',
       status: 'Em Progresso',
       totalDebt: 51417.00,
       remainingDebt: 50137.21,
       amortizedCapital: 1279.79,
       installmentAmount: 293.05,
       tan: 3.990,
-      totalInstallments: 348,
+      totalInstallments: 349,
       currentInstallmentNumber: 17,
-      remainingMonths: 331,
+      remainingMonths: 332,
       dueDay: 3
     }
   ];
@@ -216,12 +216,12 @@ export async function runSeed() {
       amortizedCapital: 9877.49,
       installmentAmount: 288.01,
       tan: 2.690,
-      totalInstallments: 432,
+      totalInstallments: 433,
       currentInstallmentNumber: 94,
-      remainingMonths: 338,
+      remainingMonths: 339,
       dueDay: 3,
       startDate: '2018-11-03',
-      endDate: '2054-10-03'
+      endDate: '2054-11-03'
     },
     {
       id: GUIDS.TL_LOAN_CASA2,
@@ -236,12 +236,12 @@ export async function runSeed() {
       amortizedCapital: 1279.79,
       installmentAmount: 293.05,
       tan: 3.990,
-      totalInstallments: 348,
+      totalInstallments: 349,
       currentInstallmentNumber: 17,
-      remainingMonths: 331,
+      remainingMonths: 332,
       dueDay: 3,
       startDate: '2025-04-03',
-      endDate: '2054-03-03'
+      endDate: '2054-04-03'
     }
   ];
 

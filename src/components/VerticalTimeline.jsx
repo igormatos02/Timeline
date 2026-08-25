@@ -319,8 +319,8 @@ export default function VerticalTimeline({
       if (isFinancialTimeline) {
         const isJeep = ev.timelineOriginId === 'tl-loan-jeep' || ev.timelineOriginId === 'tl-loan-80004197726' || (ev.title && ev.title.includes('Jeep')) || (ev.isSystemLoanEvent && ev.amount === 218.47);
         const isDacia = ev.timelineOriginId === 'tl-loan-dacia' || ev.timelineOriginId === 'tl-loan-crd19605103001' || (ev.title && ev.title.includes('Dacia')) || (ev.isSystemLoanEvent && ev.amount === 180.08);
-        const isCasa1 = ev.timelineOriginId === 'tl-loan-casa1' || (ev.title && ev.title.includes('02012642')) || (ev.title && ev.title.includes('Casa 1'));
-        const isCasa2 = ev.timelineOriginId === 'tl-loan-casa2' || (ev.title && ev.title.includes('02015122')) || (ev.title && ev.title.includes('Casa 2'));
+        const isCasa1 = ev.timelineOriginId === 'tl-loan-casa1' || ev.timelineOriginId === 'e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0b' || (ev.title && (ev.title.includes('02012642') || ev.title.includes('Egas Moniz') || ev.title.includes('Casa 1')));
+        const isCasa2 = ev.timelineOriginId === 'tl-loan-casa2' || ev.timelineOriginId === 'f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c' || (ev.title && (ev.title.includes('02015122') || ev.title.includes('Hipoteca') || ev.title.includes('Casa 2')));
         const isLoan = isJeep || isDacia || isCasa1 || isCasa2 || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.category === 'amortizacao';
         const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
         const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') && !isLoan;
@@ -1457,7 +1457,7 @@ export default function VerticalTimeline({
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <CreditCard size={14} />
-                  <span style={{ fontWeight: '700' }}>Crédito Casa 1</span>
+                  <span style={{ fontWeight: '700' }}>Crédito Egas Moniz</span>
                 </div>
                 {activeFinancialTab === 'casa1' && <span style={{ fontSize: '0.75rem', color: '#0ea5e9' }}>✓</span>}
               </button>
@@ -1470,7 +1470,7 @@ export default function VerticalTimeline({
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <CreditCard size={14} />
-                  <span style={{ fontWeight: '700' }}>Crédito Casa 2</span>
+                  <span style={{ fontWeight: '700' }}>Hipoteca Egas Moniz</span>
                 </div>
                 {activeFinancialTab === 'casa2' && <span style={{ fontSize: '0.75rem', color: '#14b8a6' }}>✓</span>}
               </button>

@@ -883,10 +883,11 @@ export default function TimelineEventCard({
     }
     if (
       event.timelineOriginId === 'tl-loan-casa1' ||
-      (event.title && (event.title.includes('02012642') || event.title.includes('Casa 1')))
+      event.timelineOriginId === 'e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0b' ||
+      (event.title && (event.title.includes('02012642') || event.title.includes('Egas Moniz') || event.title.includes('Casa 1')))
     ) {
       return {
-        label: 'Crédito Casa 1',
+        label: 'Crédito Egas Moniz',
         icon: <Home size={11} strokeWidth={2.4} />,
         bg: 'rgba(14, 165, 233, 0.12)',
         color: '#0ea5e9',
@@ -897,10 +898,11 @@ export default function TimelineEventCard({
     }
     if (
       event.timelineOriginId === 'tl-loan-casa2' ||
-      (event.title && (event.title.includes('02015122') || event.title.includes('Casa 2')))
+      event.timelineOriginId === 'f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c' ||
+      (event.title && (event.title.includes('02015122') || event.title.includes('Hipoteca') || event.title.includes('Casa 2')))
     ) {
       return {
-        label: 'Crédito Casa 2',
+        label: 'Hipoteca Egas Moniz',
         icon: <Home size={11} strokeWidth={2.4} />,
         bg: 'rgba(20, 184, 166, 0.12)',
         color: '#14b8a6',

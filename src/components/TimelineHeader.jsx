@@ -162,9 +162,9 @@ export default function TimelineHeader({
 
   const casa1Contract = {
     id: "tl-loan-casa1",
-    name: "Crédito Hipotecário - Casa 1",
+    name: "Crédito Egas Moniz",
     contractNumber: "02012642",
-    description: "Crédito Hipotecário Nº 02012642 (TAN 2.690%). Prestação nº 94. Próximo débito 03/08/2026.",
+    description: "Crédito Nº 02012642 (TAN 2.690%). Prestação nº 94. Próximo débito 03/08/2026.",
     startDate: "2018-11-03",
     endDate: "2054-10-03",
     status: "Em Progresso",
@@ -183,9 +183,9 @@ export default function TimelineHeader({
 
   const casa2Contract = {
     id: "tl-loan-casa2",
-    name: "Crédito Hipotecário - Casa 2",
+    name: "Hipoteca Egas Moniz",
     contractNumber: "02015122",
-    description: "Crédito Hipotecário Nº 02015122 (TAN 3.990%). Prestação nº 17. Próximo débito 03/08/2026.",
+    description: "Hipoteca Nº 02015122 (TAN 3.990%). Prestação nº 17. Próximo débito 03/08/2026.",
     startDate: "2025-04-03",
     endDate: "2054-03-03",
     status: "Em Progresso",
@@ -212,10 +212,10 @@ export default function TimelineHeader({
 
   const carLoanEvents = (timeline.events || []).filter((e) => {
     if (isCasa1Active) {
-      return e.timelineOriginId === 'tl-loan-casa1' || e.title?.includes('02012642') || e.title?.includes('Casa 1');
+      return e.timelineOriginId === 'tl-loan-casa1' || e.timelineOriginId === 'e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0b' || e.title?.includes('02012642') || e.title?.includes('Egas Moniz') || e.title?.includes('Casa 1');
     }
     if (isCasa2Active) {
-      return e.timelineOriginId === 'tl-loan-casa2' || e.title?.includes('02015122') || e.title?.includes('Casa 2');
+      return e.timelineOriginId === 'tl-loan-casa2' || e.timelineOriginId === 'f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c' || e.title?.includes('02015122') || e.title?.includes('Hipoteca') || e.title?.includes('Casa 2');
     }
     if (isDaciaActive) {
       return e.timelineOriginId === 'tl-loan-dacia' || e.timelineOriginId === 'tl-loan-crd19605103001' || e.title?.includes('Dacia') || (e.isSystemLoanEvent && e.amount === 180.08);
@@ -303,9 +303,9 @@ export default function TimelineHeader({
         case 'dacia':
           return { title: 'Crédito Automóvel - Dacia (CRD19605103001)', icon: <CreditCard size={18} style={{ color: '#8b5cf6' }} /> };
         case 'casa1':
-          return { title: 'Crédito Hipotecário - Casa 1 (Nº 02012642)', icon: <Home size={18} style={{ color: '#0ea5e9' }} /> };
+          return { title: 'Crédito Egas Moniz (Nº 02012642)', icon: <Home size={18} style={{ color: '#0ea5e9' }} /> };
         case 'casa2':
-          return { title: 'Crédito Hipotecário - Casa 2 (Nº 02015122)', icon: <Home size={18} style={{ color: '#14b8a6' }} /> };
+          return { title: 'Hipoteca Egas Moniz (Nº 02015122)', icon: <Home size={18} style={{ color: '#14b8a6' }} /> };
         case 'emprestimos':
           return { title: 'Crédito Automóvel Nº 80004197726', icon: <CreditCard size={18} style={{ color: '#8b5cf6' }} /> };
         default:

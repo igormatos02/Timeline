@@ -114,7 +114,7 @@
     "totalInstallments": 432,
     "currentInstallmentNumber": 94,
     "remainingMonths": 338,
-    "dueDay": 1,
+    "dueDay": 3,
     "createdAt": "2026-08-24T17:26:05.130Z",
     "updatedAt": "2026-08-24T17:26:05.130Z"
   },
@@ -139,7 +139,7 @@
     "totalInstallments": 348,
     "currentInstallmentNumber": 17,
     "remainingMonths": 331,
-    "dueDay": 1,
+    "dueDay": 3,
     "createdAt": "2026-08-24T17:26:05.130Z",
     "updatedAt": "2026-08-24T17:26:05.130Z"
   }

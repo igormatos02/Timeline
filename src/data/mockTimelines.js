@@ -524,15 +524,15 @@ export const initialTimelines = [
         currentInstallmentNumber: 94,
         remainingMonths: 338,
         periodicity: "mensal",
-        dueDay: 1
+        dueDay: 3
       },
       {
         id: "tl-loan-casa2",
         name: "Crédito Hipotecário - Casa 2",
         contractNumber: "02015122",
-        description: "Crédito Hipotecário Nº 02015122 (TAN 3.990%). Prestação nº 17. Próximo débito 01/08/2026.",
-        startDate: "2025-03-01",
-        endDate: "2054-03-01",
+        description: "Crédito Hipotecário Nº 02015122 (TAN 3.990%). Prestação nº 17. Próximo débito 03/08/2026.",
+        startDate: "2025-03-03",
+        endDate: "2054-03-03",
         status: "Em Progresso",
         type: "Empréstimo",
         color: "#14b8a6",
@@ -544,7 +544,7 @@ export const initialTimelines = [
         currentInstallmentNumber: 17,
         remainingMonths: 331,
         periodicity: "mensal",
-        dueDay: 1
+        dueDay: 3
       }
     ],
     events: [

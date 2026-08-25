@@ -163,9 +163,9 @@ export default function TimelineHeader({
     id: "tl-loan-casa1",
     name: "Crédito Hipotecário - Casa 1",
     contractNumber: "02012642",
-    description: "Crédito Hipotecário Nº 02012642 (TAN 2.690%). Prestação nº 94. Próximo débito 01/08/2026.",
-    startDate: "2018-11-01",
-    endDate: "2054-10-01",
+    description: "Crédito Hipotecário Nº 02012642 (TAN 2.690%). Prestação nº 94. Próximo débito 03/08/2026.",
+    startDate: "2018-11-03",
+    endDate: "2054-10-03",
     status: "Em Progresso",
     type: "Empréstimo",
     color: "#0ea5e9",
@@ -177,16 +177,16 @@ export default function TimelineHeader({
     currentInstallmentNumber: 94,
     remainingMonths: 338,
     periodicity: "mensal",
-    dueDay: 1
+    dueDay: 3
   };
 
   const casa2Contract = {
     id: "tl-loan-casa2",
     name: "Crédito Hipotecário - Casa 2",
     contractNumber: "02015122",
-    description: "Crédito Hipotecário Nº 02015122 (TAN 3.990%). Prestação nº 17. Próximo débito 01/08/2026.",
-    startDate: "2025-04-01",
-    endDate: "2054-03-01",
+    description: "Crédito Hipotecário Nº 02015122 (TAN 3.990%). Prestação nº 17. Próximo débito 03/08/2026.",
+    startDate: "2025-04-03",
+    endDate: "2054-03-03",
     status: "Em Progresso",
     type: "Empréstimo",
     color: "#14b8a6",
@@ -198,7 +198,7 @@ export default function TimelineHeader({
     currentInstallmentNumber: 17,
     remainingMonths: 331,
     periodicity: "mensal",
-    dueDay: 1
+    dueDay: 3
   };
 
   const currentCarContract = isCasa1Active

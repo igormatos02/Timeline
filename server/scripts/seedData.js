@@ -139,7 +139,7 @@ export async function runSeed() {
       totalInstallments: 432,
       currentInstallmentNumber: 94,
       remainingMonths: 338,
-      dueDay: 1
+      dueDay: 3
     },
     {
       id: GUIDS.TL_LOAN_CASA2,
@@ -151,8 +151,8 @@ export async function runSeed() {
       isSystemDefault: false,
       canDelete: true,
       contractNumber: '02015122',
-      startDate: '2025-04-01',
-      endDate: '2054-03-01',
+      startDate: '2025-04-03',
+      endDate: '2054-03-03',
       status: 'Em Progresso',
       totalDebt: 51417.00,
       remainingDebt: 50137.21,
@@ -162,7 +162,7 @@ export async function runSeed() {
       totalInstallments: 348,
       currentInstallmentNumber: 17,
       remainingMonths: 331,
-      dueDay: 1
+      dueDay: 3
     }
   ];
 
@@ -219,9 +219,9 @@ export async function runSeed() {
       totalInstallments: 432,
       currentInstallmentNumber: 94,
       remainingMonths: 338,
-      dueDay: 1,
-      startDate: '2018-11-01',
-      endDate: '2054-10-01'
+      dueDay: 3,
+      startDate: '2018-11-03',
+      endDate: '2054-10-03'
     },
     {
       id: GUIDS.TL_LOAN_CASA2,
@@ -239,9 +239,9 @@ export async function runSeed() {
       totalInstallments: 348,
       currentInstallmentNumber: 17,
       remainingMonths: 331,
-      dueDay: 1,
-      startDate: '2025-04-01',
-      endDate: '2054-03-01'
+      dueDay: 3,
+      startDate: '2025-04-03',
+      endDate: '2054-03-03'
     }
   ];
 

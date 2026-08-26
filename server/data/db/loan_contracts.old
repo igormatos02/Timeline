@@ -8,7 +8,7 @@
     "category": "automovel",
     "color": "#6366f1",
     "totalDebt": 15456.6,
-    "remainingDebt": 13259.93,
+    "remainingDebt": 28956.6,
     "installmentAmount": 201.99,
     "tan": 11.183,
     "totalInstallments": 120,
@@ -17,7 +17,7 @@
     "startDate": "2024-05-15",
     "endDate": "2034-04-15",
     "createdAt": "2026-08-24T17:26:05.131Z",
-    "updatedAt": "2026-08-25T22:21:58.681Z",
+    "updatedAt": "2026-08-26T00:39:37.723Z",
     "amortizedCapital": 2196.67
   },
   {

@@ -4,7 +4,6 @@ import { timeboardsRouter } from './routes/timeboardsRoutes.js';
 import { timelinesRouter } from './routes/timelinesRoutes.js';
 import { eventsRouter } from './routes/eventsRoutes.js';
 import { loansRouter } from './routes/loansRoutes.js';
-import { runSeed } from './scripts/seedData.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -33,7 +32,10 @@ app.get('/api/health', (req, res) => {
 async function ensureDatabase() {
   const dbFile = path.resolve(__dirname, 'data/db/timelines.json');
   try {
-    await fs.access(dbFile);
+    app.listen(PORT, () => {
+      console.log(`🚀 Chrono Timeline Backend Server running on http://localhost:${PORT}`);
+      //console.log(`📁 Data Store: server/data/db/*.json`);
+    });
   } catch {
     console.log('Database files not found. Initializing seed...');
     await runSeed();
@@ -43,7 +45,7 @@ async function ensureDatabase() {
 ensureDatabase().then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 Chrono Timeline Backend Server running on http://localhost:${PORT}`);
-    console.log(`📁 Data Store: server/data/db/*.json`);
+    //console.log(`📁 Data Store: server/data/db/*.json`);
   });
 }).catch((err) => {
   console.error('Failed to start server:', err);

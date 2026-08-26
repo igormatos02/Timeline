@@ -41,3 +41,5 @@ Uma aplicação web moderna e elegante para gestão e visualização de linhas t
    ```
 
 4. Acesse a aplicação no navegador em `http://localhost:5173`.
+
+database_ Y4h#2p6$H5NY.-U

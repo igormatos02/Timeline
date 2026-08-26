@@ -1,12 +1,12 @@
 import { Router } from 'express';
-import { timelineService } from '../services/TimelineService.js';
+import { eventService } from '../services/EventService.js';
 
 export const eventsRouter = Router();
 
 // GET /api/events
 eventsRouter.get('/', async (req, res) => {
   try {
-    const events = await timelineService.getAllEvents(req.query);
+    const events = await eventService.getAllEvents(req.query);
     res.json(events);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -16,7 +16,7 @@ eventsRouter.get('/', async (req, res) => {
 // POST /api/events
 eventsRouter.post('/', async (req, res) => {
   try {
-    const newEvent = await timelineService.createEvent(req.body);
+    const newEvent = await eventService.createEvent(req.body);
     res.status(201).json(newEvent);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -26,7 +26,7 @@ eventsRouter.post('/', async (req, res) => {
 // PUT /api/events/:id
 eventsRouter.put('/:id', async (req, res) => {
   try {
-    const updated = await timelineService.updateEvent(req.params.id, req.body);
+    const updated = await eventService.updateEvent(req.params.id, req.body);
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -36,7 +36,7 @@ eventsRouter.put('/:id', async (req, res) => {
 // POST /api/events/:id/toggle-payment
 eventsRouter.post('/:id/toggle-payment', async (req, res) => {
   try {
-    const updated = await timelineService.toggleEventPayment(req.params.id);
+    const updated = await eventService.toggleEventPayment(req.params.id);
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -47,9 +47,10 @@ eventsRouter.post('/:id/toggle-payment', async (req, res) => {
 eventsRouter.delete('/:id', async (req, res) => {
   try {
     const options = { ...req.query, ...req.body };
-    const deleted = await timelineService.deleteEvent(req.params.id, options);
+    const deleted = await eventService.deleteEvent(req.params.id, options);
     res.json({ success: deleted });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+

@@ -79,7 +79,7 @@ export default function App() {
   // Load latest data from Backend JSON Database on mount
   useEffect(() => {
     let isMounted = true;
-    
+
     // 1. Load Timeboards
     api.fetchTimeboards()
       .then((data) => {
@@ -1025,8 +1025,8 @@ export default function App() {
                     {activeFinancialTab === 'balanco'
                       ? 'Limpar todos os movimentos do Timeboard'
                       : activeFinancialTab === 'emprestimos'
-                      ? 'Limpar todos os empréstimos e financiamentos'
-                      : `Limpar movimentos de ${activeFinancialTab.toUpperCase()}`}
+                        ? 'Limpar todos os empréstimos e financiamentos'
+                        : `Limpar movimentos de ${activeFinancialTab.toUpperCase()}`}
                   </div>
                 </div>
               </div>

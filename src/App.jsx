@@ -97,7 +97,7 @@ export default function App() {
         console.info('Using local timeboards cache:', err.message);
       });
 
-    // 2. Load Timelines (com horizonte amplo para permitir projeção de até 30 anos)
+    // 2. Load Timelines
     api.fetchTimelines({ startDate: '2024-01-01', endDate: '2056-12-31' })
       .then((data) => {
         if (isMounted && Array.isArray(data) && data.length > 0) {
@@ -108,8 +108,21 @@ export default function App() {
         console.info('Backend API connected with fallback cache:', err.message);
       });
 
+    // 3. Load All Events
+    api.fetchEvents({ startDate: '2024-01-01', endDate: '2056-12-31' })
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setRawEvents(data);
+        }
+      })
+      .catch((err) => {
+        console.info('Error fetching raw events:', err.message);
+      });
+
     return () => { isMounted = false; };
   }, []);
+
+  const [rawEvents, setRawEvents] = useState([]);
 
   // Modal states
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
@@ -127,13 +140,19 @@ export default function App() {
 
   const refreshTimelines = async () => {
     try {
-      const data = await api.fetchTimelines({ startDate: '2024-01-01', endDate: '2056-12-31' });
-      if (Array.isArray(data) && data.length > 0) {
-        setTimelines(data);
+      const [tlData, evData] = await Promise.all([
+        api.fetchTimelines({ startDate: '2024-01-01', endDate: '2056-12-31' }),
+        api.fetchEvents({ startDate: '2024-01-01', endDate: '2056-12-31' })
+      ]);
+      if (Array.isArray(tlData)) {
+        setTimelines(tlData);
       }
-      return data;
+      if (Array.isArray(evData)) {
+        setRawEvents(evData);
+      }
+      return tlData;
     } catch (e) {
-      console.error('Error refreshing timelines:', e);
+      console.error('Error refreshing timelines and events:', e);
     }
   };
 
@@ -203,10 +222,27 @@ export default function App() {
     (tl) => tl.timeboardId === activeTimeboardId || (!tl.timeboardId && (activeTimeboardId === 'e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b' || activeTimeboard?.id === 'e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b'))
   );
 
-  // Dynamic consolidated timeline aggregating all financial timelines of the active Timeboard
+  // Dynamic consolidated timeline aggregating all financial movements and loan timelines of the active Timeboard
   const activeTimeline = React.useMemo(() => {
     const seenEventIds = new Set();
     const allEvents = [];
+
+    // 1. Add all direct Timeboard events (dynamically typed: entradas, gastos, investimentos)
+    (rawEvents || []).forEach((ev) => {
+      if (!ev || !ev.id) return;
+      const belongsToTimeboard = ev.timeboardId === activeTimeboardId || (!ev.timeboardId && (!activeTimeboardId || activeTimeboardId === '5fcd8a1a-eac7-4405-9c8b-b9607e70b420'));
+      if (belongsToTimeboard && !seenEventIds.has(ev.id)) {
+        seenEventIds.add(ev.id);
+        allEvents.push({
+          ...ev,
+          timelineOriginId: ev.timelineId || ev.timelineOriginId || null,
+          timelineOriginName: ev.timelineOriginName || (ev.isIncome ? 'Entradas' : ev.isInvestment ? 'Investimentos' : 'Gastos'),
+          timelineOriginColor: ev.timelineOriginColor || (ev.isIncome ? '#10b981' : ev.isInvestment ? '#6366f1' : '#f43f5e')
+        });
+      }
+    });
+
+    // 2. Add events from specific real contract timelines (loans)
     activeTimeboardTimelines.forEach((tl) => {
       (tl.events || []).forEach((ev) => {
         if (!ev || !ev.id) return;
@@ -214,7 +250,7 @@ export default function App() {
           seenEventIds.add(ev.id);
           allEvents.push({
             ...ev,
-            timelineOriginId: ev.timelineOriginId || tl.id,
+            timelineOriginId: ev.timelineId || ev.timelineOriginId || tl.id,
             timelineOriginName: ev.timelineOriginName || tl.name,
             timelineOriginColor: ev.timelineOriginColor || tl.color
           });
@@ -344,19 +380,12 @@ export default function App() {
   const handleSaveEvent = (eventData) => {
     const savedScrollPos = scrollYBeforeModalRef.current || window.scrollY;
 
-    // 1. Determinar o timelineOriginId correto dentro do Timeboard ativo
-    let targetTimelineId = eventData.timelineOriginId;
-    if (!targetTimelineId || targetTimelineId === activeTimeboardId) {
-      if (eventData.isIncome || eventData.financialType === 'entrada' || eventData.category?.includes('entrada')) {
-        const entTl = activeTimeboardTimelines.find((tl) => tl.type === 'entradas');
-        targetTimelineId = entTl ? entTl.id : activeTimeboardTimelines[0]?.id;
-      } else if (eventData.isInvestment || eventData.financialType === 'investimento' || eventData.category?.includes('investimento')) {
-        const invTl = activeTimeboardTimelines.find((tl) => tl.type === 'investimentos');
-        targetTimelineId = invTl ? invTl.id : activeTimeboardTimelines[0]?.id;
-      } else {
-        const gastTl = activeTimeboardTimelines.find((tl) => tl.type === 'gastos');
-        targetTimelineId = gastTl ? gastTl.id : activeTimeboardTimelines[0]?.id;
-      }
+    // 1. Determinar se o evento pertence a um contrato específico (empréstimo) ou é dinâmico do Timeboard
+    let targetTimelineId = eventData.timelineId || eventData.timelineOriginId || null;
+    // Se não for um ID de timeline real de empréstimo, fica null (movimento geral do Timeboard)
+    const isRealTimeline = activeTimeboardTimelines.some((tl) => tl.id === targetTimelineId);
+    if (!isRealTimeline) {
+      targetTimelineId = null;
     }
 
     const saveAsync = async () => {
@@ -364,6 +393,8 @@ export default function App() {
         if (editingEvent && editingEvent.id) {
           await api.updateEvent(editingEvent.id, {
             ...eventData,
+            timeboardId: activeTimeboardId,
+            timelineId: targetTimelineId,
             timelineOriginId: targetTimelineId,
             seriesId: editingEvent.seriesId,
             version: editingEvent.version
@@ -373,10 +404,12 @@ export default function App() {
           const newEvent = {
             ...eventData,
             id: generateUUID(),
+            timeboardId: activeTimeboardId,
+            timelineId: targetTimelineId,
+            timelineOriginId: targetTimelineId,
             seriesId: isRecurring ? generateUUID() : null,
             version: 0,
-            isRecurring: Boolean(isRecurring),
-            timelineOriginId: targetTimelineId
+            isRecurring: Boolean(isRecurring)
           };
           await api.createEvent(newEvent);
         }

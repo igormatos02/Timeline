@@ -143,6 +143,17 @@ export async function resetTimeline(id) {
 }
 
 // Events
+export async function fetchEvents(params = {}) {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+  ).toString();
+  const res = await fetch(`${API_BASE}/events${query ? `?${query}` : ''}`, {
+    headers: getHeaders()
+  });
+  if (!res.ok) throw new Error(`Failed to fetch events: ${res.statusText}`);
+  return res.json();
+}
+
 export async function createEvent(eventData) {
   const res = await fetch(`${API_BASE}/events`, {
     method: 'POST',

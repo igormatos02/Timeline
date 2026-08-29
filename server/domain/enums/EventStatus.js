@@ -8,5 +8,7 @@ export const EventStatus = Object.freeze({
   AMORTIZED: 'amortized',
   OVERDUE: 'overdue',
   CANCELLED: 'cancelled',
-  DELETED: 'deleted'
+  DELETED: 'deleted',
+  IN_PROGRESS: 'in_progress',
+  SETTLED: 'settled',
 });

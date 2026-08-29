@@ -1,5 +1,5 @@
 export { TimelineAssociationType } from './TimelineAssociationType.js';
-export { FinancialType } from './FinancialType.js';
+export { FinancialType } from './EventType.js';
 export { TimelineType } from './TimelineType.js';
 export { EventStatus } from './EventStatus.js';
 export { EventPeriodicity } from './EventPeriodicity.js';
@@ -8,6 +8,5 @@ export { TimeboardType } from './TimeboardType.js';
 export { TimelineStatus } from './TimelineStatus.js';
 export { AmortizationStrategy } from './AmortizationStrategy.js';
 export { EventAggregation } from './EventAggregation.js';
-export { LoanCategory } from './LoanCategory.js';
-export { LoanStatus } from './LoanStatus.js';
-export { Periodicity } from './Periodicity.js';
+export { EventCategory } from './EventCategory.js';
+

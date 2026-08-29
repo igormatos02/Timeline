@@ -1,5 +1,8 @@
 export const EventAggregation = Object.freeze({
   MONTHLY: 'monthly',
-  ANNUALLY: 'annually',
-  DAILY: 'daily'
+  DAILY: 'daily',
+  BIWEEKLY: 'biweekly',
+  BIMONTHLY: 'bimounthly',
+  SEMIANNUAL: 'biannual',
+  ANNUAL: 'annual'
 });

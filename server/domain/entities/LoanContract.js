@@ -1,4 +1,5 @@
-import { TimelineType, LoanCategory, LoanStatus, Periodicity } from '../enums/index.js';
+import { EventCategory } from '../enums/EventCategory.js';
+import { TimelineType, EventAggregation, EventStatus } from '../enums/index.js';
 
 /**
  * Aggregate Root: LoanContract
@@ -7,12 +8,13 @@ import { TimelineType, LoanCategory, LoanStatus, Periodicity } from '../enums/in
 export class LoanContract {
   constructor({
     id,
-    tenantId = 'tenant-igor',
+    tenantId = '9e3c3070-d4db-43be-ab03-3f852a9a81da',
     timelineId = null,
     contractNumber = '',
     name,
+    automatic = false,
     type = TimelineType.LOAN,
-    category = LoanCategory.AUTO,
+    category = EventCategory.NONE,
     color = '#6366f1',
     description = '',
     totalDebt = 0,
@@ -28,18 +30,19 @@ export class LoanContract {
     dueDay = 1,
     startDate,
     endDate,
-    status = LoanStatus.IN_PROGRESS,
-    periodicity = Periodicity.MONTHLY,
+    status = EventStatus.LOAN,
+    periodicity = EventAggregation.MONTHLY,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
   }) {
     this.id = id;
-    this.tenantId = tenantId || 'tenant-igor';
+    this.tenantId = tenantId || '9e3c3070-d4db-43be-ab03-3f852a9a81da';
     this.timelineId = timelineId;
     this.contractNumber = contractNumber;
     this.name = name;
     this.type = type;
     this.category = category;
+    this.automatic = automatic;
     this.color = color;
     this.description = description;
     this.totalDebt = Number(totalDebt) || 0;

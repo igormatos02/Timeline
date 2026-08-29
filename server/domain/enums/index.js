@@ -7,3 +7,4 @@ export { EventPriority } from './EventPriority.js';
 export { TimeboardType } from './TimeboardType.js';
 export { TimelineStatus } from './TimelineStatus.js';
 export { AmortizationStrategy } from './AmortizationStrategy.js';
+export { EventAggregation } from './EventAggregation.js';

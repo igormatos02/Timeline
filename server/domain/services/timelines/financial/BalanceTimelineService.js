@@ -30,14 +30,14 @@ export class BalanceTimelineService {
 
     // 4. Active Loans calculations
     const activeLoans = (loanTimelines || []).filter(
-      (tl) => tl.status !== TimelineStatus.INACTIVE && tl.status !== 'Inativo'
+      (tl) => tl.status !== TimelineStatus.INACTIVE
     );
 
     const activeLoanIds = new Set(activeLoans.map((l) => l.id));
     const activeLoanEvents = allEvents.filter(
       (ev) =>
         (ev.timelineId && activeLoanIds.has(ev.timelineId)) ||
-        (ev.category === 'parcela_emprestimo' && (!ev.timelineId || activeLoanIds.has(ev.timelineId)))
+        ((!ev.timelineId || activeLoanIds.has(ev.timelineId)))
     );
 
     const monthlyLoanInstallments = activeLoanEvents

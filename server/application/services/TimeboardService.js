@@ -32,54 +32,51 @@ export class TimeboardService {
       type: data.type || TimeboardType.FINANCIAL
     });
 
-    const isFinancial =
-      createdTimeboard.isFinancial?.() ||
-      createdTimeboard.type === 'financial' ||
-      createdTimeboard.type === TimeboardType.FINANCIAL;
+    const isFinancial = createdTimeboard.type === TimeboardType.FINANCIAL;
 
     if (isFinancial) {
       const defaultTimelines = [
         {
           timeboardId: createdTimeboard.id,
           name: 'Entradas e Rendimentos',
-          type: 'entradas',
+          type: TimelineType.INCOME,
           color: '#10b981',
           description: 'Gestão de salários, rendimentos e receitas',
           isSystemDefault: true,
           canDelete: false,
-          status: 'Ativo',
-          periodicity: 'mensal',
+          status: TimelineStatus.ACTIVE,
+          periodicity: EventAggregation.MONTHLY,
           startDate: '2026-01-01',
           endDate: '2027-04-30',
-          tenantId: createdTimeboard.tenantId || 'tenant-igor'
+          tenantId: createdTimeboard.tenantId || 'd8af4a9a-951b-43f0-b099-44af5eb5e10c'
         },
         {
           timeboardId: createdTimeboard.id,
           name: 'Gastos e Despesas',
-          type: 'gastos',
+          type: TimelineType.EXPENSE,
           color: '#f43f5e',
           description: 'Gestão de despesas fixas, recorrentes e variáveis',
           isSystemDefault: true,
           canDelete: false,
-          status: 'Ativo',
-          periodicity: 'mensal',
+          status: TimelineStatus.ACTIVE,
+          periodicity: EventAggregation.MONTHLY,
           startDate: '2026-01-01',
           endDate: '2027-04-30',
-          tenantId: createdTimeboard.tenantId || 'tenant-igor'
+          tenantId: createdTimeboard.tenantId || 'd8af4a9a-951b-43f0-b099-44af5eb5e10c'
         },
         {
           timeboardId: createdTimeboard.id,
           name: 'Investimentos e Poupança',
-          type: 'investimentos',
+          type: TimelineType.INVESTMENT,
           color: '#6366f1',
           description: 'Gestão de poupança, património e aportes',
           isSystemDefault: true,
           canDelete: false,
-          status: 'Ativo',
-          periodicity: 'mensal',
+          status: TimelineStatus.ACTIVE,
+          periodicity: EventAggregation.MONTHLY,
           startDate: '2026-01-01',
           endDate: '2027-04-30',
-          tenantId: createdTimeboard.tenantId || 'tenant-igor'
+          tenantId: createdTimeboard.tenantId || 'd8af4a9a-951b-43f0-b099-44af5eb5e10c'
         }
       ];
 

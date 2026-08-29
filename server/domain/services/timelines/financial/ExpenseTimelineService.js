@@ -1,4 +1,4 @@
-import { FinancialType } from '../../../enums/index.js';
+import { EventStatus, FinancialType } from '../../../enums/index.js';
 
 /**
  * Domain Service: ExpenseTimelineService
@@ -21,11 +21,7 @@ export class ExpenseTimelineService {
       if (isLoan) return false;
 
       return (
-        ev.financialType === FinancialType.EXPENSE ||
-        ev.financialType === 'gasto' ||
-        ev.isExpense === true ||
-        (ev.category && ev.category.startsWith('saida')) ||
-        ev.category === 'gasto'
+        ev.financialType === FinancialType.EXPENSE
       );
     });
   }
@@ -46,7 +42,7 @@ export class ExpenseTimelineService {
           ev.date &&
           ev.date.startsWith(activeMonth) &&
           !ev.isDeleted &&
-          (ev.status === 'paid' || ev.status === 'settled' || ev.status === 'Pago' || ev.status === 'Liquidado' || ev.isCompleted)
+          (ev.status === EventStatus.PAID)
       )
       .reduce((sum, ev) => sum + (Number(ev.amount) || 0), 0);
 

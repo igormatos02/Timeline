@@ -13,10 +13,7 @@ export class IncomeTimelineService {
       if (!ev || ev.isDeleted) return false;
       if (timelineId && ev.timelineId === timelineId) return true;
       return (
-        ev.financialType === FinancialType.INCOME ||
-        ev.financialType === 'entrada' ||
-        ev.isIncome === true ||
-        (ev.category && ev.category.startsWith('entrada'))
+        ev.financialType === FinancialType.INCOME
       );
     });
   }
@@ -37,7 +34,7 @@ export class IncomeTimelineService {
           ev.date &&
           ev.date.startsWith(activeMonth) &&
           !ev.isDeleted &&
-          (ev.status === 'received' || ev.status === 'paid' || ev.status === 'Recebido' || ev.status === 'Pago' || ev.isCompleted)
+          (ev.status === EventStatus.RECEIVED)
       )
       .reduce((sum, ev) => sum + (Number(ev.amount) || 0), 0);
 

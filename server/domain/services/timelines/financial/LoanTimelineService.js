@@ -13,11 +13,7 @@ export class LoanTimelineService {
       if (!ev || ev.isDeleted) return false;
       if (timelineId && (ev.timelineId === timelineId || ev.timelineOriginId === timelineId)) return true;
       return (
-        ev.category === 'parcela_emprestimo' ||
-        ev.isSystemLoanEvent ||
-        ev.category === 'amortizacao' ||
-        ev.financialType === FinancialType.AMORTIZATION ||
-        Boolean(ev.timelineId && String(ev.timelineId).startsWith('tl-loan-'))
+        ev.financialType === FinancialType.AMORTIZATION
       );
     });
   }
@@ -26,7 +22,7 @@ export class LoanTimelineService {
    * Calculate metrics for a single loan timeline or consolidated active loans
    */
   calculateMetrics(loanTimeline, loanEvents = [], currentMonthKey = null) {
-    const isInactive = loanTimeline && (loanTimeline.status === TimelineStatus.INACTIVE || loanTimeline.status === 'Inativo');
+    const isInactive = loanTimeline && (loanTimeline.status === TimelineStatus.INACTIVE || loanTimeline.status === EventStatus.INACTIVE);
     if (isInactive) {
       return {
         isActive: false,
@@ -53,8 +49,8 @@ export class LoanTimelineService {
           ev.date &&
           ev.date.startsWith(activeMonth) &&
           !ev.isDeleted &&
-          ev.category === 'parcela_emprestimo' &&
-          (ev.status === 'Pago' || ev.isCompleted)
+
+          (ev.status === EventStatus.PAID)
       )
       .reduce((sum, ev) => sum + (Number(ev.amount) || 0), 0);
 

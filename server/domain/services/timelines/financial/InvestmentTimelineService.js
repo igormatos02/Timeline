@@ -13,10 +13,7 @@ export class InvestmentTimelineService {
       if (!ev || ev.isDeleted) return false;
       if (timelineId && ev.timelineId === timelineId) return true;
       return (
-        ev.financialType === FinancialType.INVESTMENT ||
-        ev.financialType === 'investimento' ||
-        ev.isInvestment === true ||
-        (ev.category && ev.category.startsWith('investimento'))
+        ev.financialType === FinancialType.INVESTMENT
       );
     });
   }
@@ -37,7 +34,7 @@ export class InvestmentTimelineService {
           ev.date &&
           ev.date.startsWith(activeMonth) &&
           !ev.isDeleted &&
-          (ev.status === 'invested' || ev.status === 'paid' || ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted)
+          (ev.status === EventStatus.INVESTED)
       )
       .reduce((sum, ev) => sum + (Number(ev.amount) || 0), 0);
 

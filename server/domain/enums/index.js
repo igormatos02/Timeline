@@ -8,3 +8,6 @@ export { TimeboardType } from './TimeboardType.js';
 export { TimelineStatus } from './TimelineStatus.js';
 export { AmortizationStrategy } from './AmortizationStrategy.js';
 export { EventAggregation } from './EventAggregation.js';
+export { LoanCategory } from './LoanCategory.js';
+export { LoanStatus } from './LoanStatus.js';
+export { Periodicity } from './Periodicity.js';

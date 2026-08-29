@@ -29,7 +29,6 @@ export class LoanService {
       time: '12:00',
       title: `Amortização Extraordinária (${loan.name})`,
       description: `Amortização antecipada de ${amortAmount} €. Saldo restante: ${updatedLoanData.remainingDebt} €.`,
-      category: 'amortizacao',
       financialType: FinancialType.AMORTIZATION,
       status: EventStatus.PAID,
       amount: amortAmount,

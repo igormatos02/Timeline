@@ -1,10 +1,10 @@
 import { EventStatus, FinancialType } from '../../../enums/index.js';
 
 /**
- * Domain Service: ExpenseTimelineService
+ * Domain Service: ExpenseDomainService
  * Encapsulates calculation rules and metrics specific to Expense / Outflow timelines.
  */
-export class ExpenseTimelineService {
+export class ExpenseDomainService {
   /**
    * Filter events belonging to expenses (excluding loan installments handled separately)
    */
@@ -12,13 +12,7 @@ export class ExpenseTimelineService {
     return events.filter((ev) => {
       if (!ev || ev.isDeleted) return false;
       if (timelineId && ev.timelineId === timelineId) return true;
-      const isLoan =
-        ev.category === 'parcela_emprestimo' ||
-        ev.isSystemLoanEvent ||
-        ev.category === 'amortizacao' ||
-        ev.financialType === FinancialType.AMORTIZATION ||
-        (ev.timelineId && String(ev.timelineId).startsWith('tl-loan-'));
-      if (isLoan) return false;
+      if (ev.financialType === FinancialType.AMORTIZATION) return false;
 
       return (
         ev.financialType === FinancialType.EXPENSE
@@ -58,4 +52,4 @@ export class ExpenseTimelineService {
   }
 }
 
-export const expenseTimelineService = new ExpenseTimelineService();
+export const expenseDomainService = new ExpenseDomainService();

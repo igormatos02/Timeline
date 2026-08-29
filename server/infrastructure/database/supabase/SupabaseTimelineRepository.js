@@ -83,9 +83,9 @@ export class SupabaseTimelineRepository extends IRepository {
 
   async update(id, updates) {
     const row = entityToRow(updates);
-    const { data, error } = await supabase.from(TABLE).update(row).eq('id', id).select().single();
+    const { data, error } = await supabase.from(TABLE).update(row).eq('id', id).select().maybeSingle();
     if (error) throw new Error(`Supabase update [timelines]: ${error.message}`);
-    return rowToEntity(data);
+    return data ? rowToEntity(data) : null;
   }
 
   async delete(id) {

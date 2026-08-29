@@ -1,10 +1,10 @@
-import { FinancialType } from '../../../enums/index.js';
+import { EventStatus, FinancialType } from '../../../enums/index.js';
 
 /**
- * Domain Service: InvestmentTimelineService
+ * Domain Service: InvestmentDomainService
  * Encapsulates calculation rules and metrics for Savings, Assets, and Investments.
  */
-export class InvestmentTimelineService {
+export class InvestmentDomainService {
   /**
    * Filter events belonging to investments
    */
@@ -52,4 +52,4 @@ export class InvestmentTimelineService {
   }
 }
 
-export const investmentTimelineService = new InvestmentTimelineService();
+export const investmentDomainService = new InvestmentDomainService();

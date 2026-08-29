@@ -18,6 +18,7 @@ import {
 } from './utils/loanCalculations';
 import * as api from './services/api';
 import { generateUUID } from './utils/uuid';
+import { FinancialType, EventStatus, TimelineType, EventPriority, AmortizationStrategy } from './enums/index.js';
 import { RotateCcw, X } from 'lucide-react';
 import './App.css';
 
@@ -296,7 +297,7 @@ export default function App() {
     const carLoans = [];
     activeTimeboardTimelines.forEach((tl) => {
       const isTimelineActive = tl.status !== 'Inativo';
-      if (isTimelineActive && (tl.type === 'emprestimo' || tl.type === 'Empréstimo')) {
+      if (isTimelineActive && (tl.type === TimelineType.LOAN || tl.type === 'emprestimo' || tl.type === 'Empréstimo')) {
         const key = normalizeLoanKey(tl);
         if (!seenLoanKeys.has(key)) {
           seenLoanKeys.add(key);
@@ -316,7 +317,7 @@ export default function App() {
       }
     });
 
-    const incomeTimeline = activeTimeboardTimelines.find((tl) => tl.type === 'entradas');
+    const incomeTimeline = activeTimeboardTimelines.find((tl) => tl.type === TimelineType.INCOME || tl.type === 'entradas');
     const monthlySalary = incomeTimeline?.monthlySalary !== undefined ? incomeTimeline.monthlySalary : (activeTimeboard?.id === 'tb-clean-financial-002' ? 0 : 3349.60);
 
     return {
@@ -766,18 +767,18 @@ export default function App() {
       prevEvents.map((ev) => {
         if (ev.id !== installmentId) return ev;
 
-        const isIncome = ev.isIncome || ev.financialType === 'entrada' || (ev.category && ev.category.startsWith('entrada'));
-        const isInvestment = ev.isInvestment || ev.financialType === 'investimento' || (ev.category && ev.category.startsWith('investimento'));
+        const isIncome = ev.isIncome || ev.financialType === FinancialType.INCOME || ev.financialType === 'entrada' || (ev.category && ev.category.startsWith('entrada'));
+        const isInvestment = ev.isInvestment || ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || (ev.category && ev.category.startsWith('investimento'));
 
         let nextStatus, nextCompleted;
         if (isIncome) {
-          nextStatus = ev.status === 'Recebido' ? 'Pendente' : 'Recebido';
+          nextStatus = ev.status === 'Recebido' || ev.status === EventStatus.RECEIVED ? 'Pendente' : 'Recebido';
           nextCompleted = nextStatus === 'Recebido';
         } else if (isInvestment) {
-          nextStatus = (ev.status === 'Investido' || ev.status === 'Pago') ? 'Planeado' : 'Investido';
+          nextStatus = (ev.status === 'Investido' || ev.status === 'Pago' || ev.status === EventStatus.INVESTED || ev.status === EventStatus.PAID) ? 'Planeado' : 'Investido';
           nextCompleted = nextStatus === 'Investido';
         } else {
-          nextStatus = ev.status === 'Pago' ? 'Pendente' : 'Pago';
+          nextStatus = ev.status === 'Pago' || ev.status === EventStatus.PAID ? 'Pendente' : 'Pago';
           nextCompleted = nextStatus === 'Pago';
         }
 
@@ -801,18 +802,18 @@ export default function App() {
         const updatedEvents = (tl.events || []).map((ev) => {
           if (ev.id !== installmentId) return ev;
 
-          const isIncome = ev.isIncome || ev.financialType === 'entrada' || (ev.category && ev.category.startsWith('entrada'));
-          const isInvestment = ev.isInvestment || ev.financialType === 'investimento' || (ev.category && ev.category.startsWith('investimento'));
+          const isIncome = ev.isIncome || ev.financialType === FinancialType.INCOME || ev.financialType === 'entrada' || (ev.category && ev.category.startsWith('entrada'));
+          const isInvestment = ev.isInvestment || ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || (ev.category && ev.category.startsWith('investimento'));
 
           let nextStatus, nextCompleted;
           if (isIncome) {
-            nextStatus = ev.status === 'Recebido' ? 'Pendente' : 'Recebido';
+            nextStatus = ev.status === 'Recebido' || ev.status === EventStatus.RECEIVED ? 'Pendente' : 'Recebido';
             nextCompleted = nextStatus === 'Recebido';
           } else if (isInvestment) {
-            nextStatus = (ev.status === 'Investido' || ev.status === 'Pago') ? 'Planeado' : 'Investido';
+            nextStatus = (ev.status === 'Investido' || ev.status === 'Pago' || ev.status === EventStatus.INVESTED || ev.status === EventStatus.PAID) ? 'Planeado' : 'Investido';
             nextCompleted = nextStatus === 'Investido';
           } else {
-            nextStatus = ev.status === 'Pago' ? 'Pendente' : 'Pago';
+            nextStatus = ev.status === 'Pago' || ev.status === EventStatus.PAID ? 'Pendente' : 'Pago';
             nextCompleted = nextStatus === 'Pago';
           }
 
@@ -826,7 +827,7 @@ export default function App() {
           };
         });
 
-        const finalEvents = (tl.type === 'Empréstimo' || tl.type === 'emprestimo')
+        const finalEvents = (tl.type === TimelineType.LOAN || tl.type === 'Empréstimo' || tl.type === 'emprestimo')
           ? recalculateLoanState(tl, updatedEvents)
           : updatedEvents;
 
@@ -890,53 +891,47 @@ export default function App() {
       }
     }
 
-    let targetTimeline = null;
-    if (activeFinancialTab === 'jeep') {
-      targetTimeline = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('jeep')) || t.contractNumber === '80004197726');
-    } else if (activeFinancialTab === 'dacia') {
-      targetTimeline = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('dacia')) || t.contractNumber === 'CRD19605103001');
-    } else if (activeFinancialTab === 'casa1') {
-      targetTimeline = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('casa 1')) || (t.name && t.name.includes('02012642')));
-    } else if (activeFinancialTab === 'casa2') {
-      targetTimeline = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('casa 2')) || (t.name && t.name.includes('02015122')));
-    } else if (activeTimeline?.type === 'emprestimo' || activeTimeline?.type === 'Empréstimo') {
+    let targetTimeline = activeTimeboardTimelines.find((t) => t.id === activeFinancialTab || t.id === activeTimelineId);
+    if (!targetTimeline && (activeTimeline?.type === TimelineType.LOAN || activeTimeline?.type === 'loan' || activeTimeline?.type === 'emprestimo' || activeTimeline?.type === 'Empréstimo')) {
       targetTimeline = activeTimeline;
-    } else {
-      targetTimeline = activeTimeboardTimelines.find((t) => t.type === 'emprestimo' || t.type === 'Empréstimo') || activeTimeboardTimelines[0];
+    }
+    if (!targetTimeline) {
+      targetTimeline = activeTimeboardTimelines.find((t) => t.type === TimelineType.LOAN || t.type === 'loan' || t.type === 'emprestimo' || t.type === 'Empréstimo') || activeTimeboardTimelines[0];
     }
 
     if (!targetTimeline) return;
 
     const loanName = targetTimeline.name || 'Empréstimo';
     const targetDate = date || '2026-08-15';
-    const isCompleted = (status || 'Amortizado') === 'Amortizado';
+    const isCompleted = status === EventStatus.AMORTIZED || status === 'Amortizado' || status === EventStatus.PAID || status === 'Pago';
 
     const amortEvent = {
       id: generateUUID(),
       tenantId: 'tenant-igor',
+      timelineId: targetTimeline.id,
       timelineOriginId: targetTimeline.id,
       timelineOriginName: loanName,
       timelineOriginColor: targetTimeline.color || '#10b981',
       title: `Amortização ${loanName}: ${formatCurrency(amortVal)}`,
-      description: notes || `Amortização extraordinária para ${strategy === 'reduce_term' ? 'redução do prazo' : 'redução da parcela'}.`,
+      description: notes || `Amortização extraordinária para ${strategy === AmortizationStrategy.REDUCE_TERM || strategy === 'reduce_term' ? 'redução do prazo' : 'redução da parcela'}.`,
       date: targetDate,
       dayOfMonth: parseInt(targetDate.substring(8, 10), 10) || 15,
       time: '12:00',
       amount: amortVal,
       amortizationAmount: amortVal,
-      category: 'amortizacao',
-      financialType: 'amortizacao',
+      financialType: FinancialType.AMORTIZATION,
       isAmortization: true,
       isExpense: true,
       isIncome: false,
       isInvestment: false,
       isSystemLoanEvent: true,
-      status: isCompleted ? 'Amortizado' : 'Pendente',
+      status: isCompleted ? EventStatus.AMORTIZED : EventStatus.PENDING,
       isCompleted: isCompleted,
-      priority: 'Alta',
-      strategy: strategy,
+      priority: EventPriority.HIGH,
+      strategy: strategy || AmortizationStrategy.REDUCE_TERM,
+      amortizationStrategy: strategy || AmortizationStrategy.REDUCE_TERM,
       notes: notes || '',
-      labels: ['Amortização', strategy === 'reduce_term' ? 'Redução Prazo' : 'Redução Parcela'],
+      labels: ['Amortização', strategy === AmortizationStrategy.REDUCE_TERM || strategy === 'reduce_term' ? 'Redução Prazo' : 'Redução Parcela'],
       version: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

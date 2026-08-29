@@ -41,7 +41,9 @@ export class SupabaseFinancialEventRepository extends IRepository {
       periodicity: row.periodicity,
       // eventId is the canonical series key. Only set for recurring events.
       // For 'once' events, event_id equals the row's own id and must NOT be used as eventId.
-      eventId: row.eventId,
+      eventId: (row.is_recurring || (row.periodicity && row.periodicity !== 'once' && row.periodicity !== 'unico'))
+        ? (row.event_id || null)
+        : null,
       event_id: row.event_id || null,
       version: row.event_version !== undefined ? Number(row.event_version) : (row.version !== undefined ? Number(row.version) : 0),
       eventVersion: row.event_version !== undefined ? Number(row.event_version) : 0,

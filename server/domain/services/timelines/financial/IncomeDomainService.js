@@ -1,10 +1,10 @@
-import { FinancialType } from '../../../enums/index.js';
+import { EventStatus, FinancialType } from '../../../enums/index.js';
 
 /**
- * Domain Service: IncomeTimelineService
+ * Domain Service: IncomeDomainService
  * Encapsulates calculation rules and metrics specific to Income / Revenue timelines.
  */
-export class IncomeTimelineService {
+export class IncomeDomainService {
   /**
    * Filter events belonging to income
    */
@@ -50,4 +50,4 @@ export class IncomeTimelineService {
   }
 }
 
-export const incomeTimelineService = new IncomeTimelineService();
+export const incomeDomainService = new IncomeDomainService();

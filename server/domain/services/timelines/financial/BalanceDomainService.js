@@ -1,15 +1,15 @@
-import { incomeTimelineService } from './IncomeTimelineService.js';
-import { expenseTimelineService } from './ExpenseTimelineService.js';
-import { investmentTimelineService } from './InvestmentTimelineService.js';
-import { loanTimelineService } from './LoanTimelineService.js';
+import { incomeDomainService } from './IncomeDomainService.js';
+import { expenseDomainService } from './ExpenseDomainService.js';
+import { investmentDomainService } from './InvestmentDomainService.js';
+import { loanDomainService } from './LoanDomainService.js';
 import { TimelineStatus } from '../../../enums/index.js';
 
 /**
- * Domain Service: BalanceTimelineService
+ * Domain Service: BalanceDomainService
  * Computes consolidated financial health, net balances, savings rate, and cash flows
  * by aggregating income, expenses, investments, and active loans.
  */
-export class BalanceTimelineService {
+export class BalanceDomainService {
   /**
    * Calculate consolidated monthly balance and financial metrics for a Timeboard
    */
@@ -17,16 +17,16 @@ export class BalanceTimelineService {
     const activeMonth = currentMonthKey || new Date().toISOString().substring(0, 7);
 
     // 1. Income calculations
-    const incomeEvents = incomeTimelineService.filterEvents(allEvents);
-    const incomeMetrics = incomeTimelineService.calculateMetrics(incomeEvents, activeMonth);
+    const incomeEvents = incomeDomainService.filterEvents(allEvents);
+    const incomeMetrics = incomeDomainService.calculateMetrics(incomeEvents, activeMonth);
 
     // 2. Expense calculations
-    const expenseEvents = expenseTimelineService.filterEvents(allEvents);
-    const expenseMetrics = expenseTimelineService.calculateMetrics(expenseEvents, activeMonth);
+    const expenseEvents = expenseDomainService.filterEvents(allEvents);
+    const expenseMetrics = expenseDomainService.calculateMetrics(expenseEvents, activeMonth);
 
     // 3. Investment calculations
-    const investmentEvents = investmentTimelineService.filterEvents(allEvents);
-    const investmentMetrics = investmentTimelineService.calculateMetrics(investmentEvents, activeMonth);
+    const investmentEvents = investmentDomainService.filterEvents(allEvents);
+    const investmentMetrics = investmentDomainService.calculateMetrics(investmentEvents, activeMonth);
 
     // 4. Active Loans calculations
     const activeLoans = (loanTimelines || []).filter(
@@ -76,4 +76,4 @@ export class BalanceTimelineService {
   }
 }
 
-export const balanceTimelineService = new BalanceTimelineService();
+export const balanceDomainService = new BalanceDomainService();

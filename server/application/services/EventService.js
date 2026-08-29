@@ -2,7 +2,7 @@ import { financialEventRepository as eventRepository } from '../../infrastructur
 import { loanContractRepository } from '../../infrastructure/database/json/JsonLoanContractRepository.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
-import { EventStatus, EventPeriodicity, AmortizationStrategy } from '../../domain/enums/index.js';
+import { FinancialType, EventStatus, EventPeriodicity, AmortizationStrategy, TimelineType } from '../../domain/enums/index.js';
 
 export class EventService {
   async getAllEvents(filter = {}) {
@@ -14,7 +14,7 @@ export class EventService {
       if (filter.timelineId && ev.timelineId !== filter.timelineId) return false;
       if (filter.timelineOriginId && ev.timelineOriginId !== filter.timelineOriginId) return false;
       if (filter.financialType && ev.financialType !== filter.financialType) return false;
-      if (filter.category && ev.category !== filter.category) return false;
+      if (filter.status && ev.status !== filter.status) return false;
       return true;
     });
   }
@@ -27,7 +27,7 @@ export class EventService {
       ...eventData,
       timelineId: eventData.timelineId || eventData.timelineOriginId || null,
       timelineOriginId: eventData.timelineId || eventData.timelineOriginId || null,
-      timeboardId: eventData.timeboardId || '5fcd8a1a-eac7-4405-9c8b-b9607e70b420',
+      timeboardId: eventData.timeboardId || null,
       eventId,
       version: eventData.version !== undefined ? Number(eventData.version) : 0,
       isRecurring: Boolean(isRecurring)
@@ -35,7 +35,7 @@ export class EventService {
 
     const created = await eventRepository.create(payload);
 
-    if (created.isAmortizationEvent?.() || payload.isAmortization || payload.category === 'amortizacao') {
+    if (created.isAmortizationEvent?.() || created.financialType === FinancialType.AMORTIZATION || payload.isAmortization || payload.financialType === FinancialType.AMORTIZATION) {
       if (payload.status === EventStatus.AMORTIZED || payload.status === EventStatus.COMPLETED || payload.isCompleted) {
         await this.processLoanAmortization(created);
       }
@@ -50,16 +50,9 @@ export class EventService {
     const allRawEvents = await eventRepository.getAll();
     const existing = await eventRepository.getById(id);
 
-    const isLoan =
-      directUpdates.category === 'parcela_emprestimo' ||
-      existing?.category === 'parcela_emprestimo' ||
-      directUpdates.isSystemLoanEvent ||
-      existing?.isSystemLoanEvent ||
-      directUpdates.timelineOriginId?.startsWith('tl-loan-') ||
-      existing?.timelineOriginId?.startsWith('tl-loan-') ||
-      Boolean(directUpdates.timelineId || existing?.timelineId);
-
     const loanTlId = directUpdates.timelineId || directUpdates.timelineOriginId || existing?.timelineId || existing?.timelineOriginId;
+    const isLoan = Boolean(loanTlId && (directUpdates.isLoanEvent?.() || existing?.isLoanEvent?.() || directUpdates.isSystemLoanEvent || existing?.isSystemLoanEvent || directUpdates.financialType === FinancialType.AMORTIZATION || existing?.financialType === FinancialType.AMORTIZATION));
+
     const targetSeriesId = directUpdates.eventId || directUpdates.event_id || updates.eventId || (isLoan ? loanTlId : (existing?.eventId || id));
     const isAmountOrDateChange =
       (directUpdates.amount !== undefined && existing && Number(directUpdates.amount) !== Number(existing.amount)) ||
@@ -96,13 +89,13 @@ export class EventService {
       return true;
     }
 
-    if (isLoan && (directUpdates.category === 'parcela_emprestimo' || existing?.category === 'parcela_emprestimo')) {
+    if (isLoan) {
       const targetDate = directUpdates.date || existing?.date;
 
       if (updateScope === 'subsequent' || propagateForward) {
         await eventRepository.updateMany(
           (ev) =>
-            ((loanTlId && (ev.timelineId === loanTlId || ev.timelineOriginId === loanTlId)) || ev.category === 'parcela_emprestimo') &&
+            (loanTlId && (ev.timelineId === loanTlId || ev.timelineOriginId === loanTlId)) &&
             (!targetDate || ev.date >= targetDate),
           directUpdates
         );
@@ -160,14 +153,6 @@ export class EventService {
       }
     }
 
-    if (updateScope === 'all' && targetSeriesId) {
-      await eventRepository.updateMany(
-        (ev) => ev.eventId === targetSeriesId || ev.sobrepositionOver === targetSeriesId,
-        directUpdates
-      );
-      return true;
-    }
-
     if ((updateScope === 'subsequent' || propagateForward) && targetSeriesId) {
       const seriesVersions = allRawEvents.filter((ev) => ev.eventId === targetSeriesId && !ev.sobrepositionOver);
       const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
@@ -180,7 +165,7 @@ export class EventService {
           targetAmount: directUpdates.targetAmount,
           initialInvestedAmount: directUpdates.initialInvestedAmount,
           title: directUpdates.title,
-          category: directUpdates.category
+          financialType: directUpdates.financialType
         }
       );
 
@@ -206,7 +191,7 @@ export class EventService {
       const toggled = event.getToggledStatus ? event.getToggledStatus() : { status: EventStatus.PAID, isCompleted: true };
       const updated = await eventRepository.update(id, toggled);
 
-      if (event.isAmortizationEvent?.() || event.category === 'amortizacao') {
+      if (event.isAmortizationEvent?.() || event.financialType === FinancialType.AMORTIZATION || event.isAmortization) {
         if (toggled.isCompleted) {
           await this.processLoanAmortization({ ...event, ...toggled });
         } else {
@@ -245,15 +230,15 @@ export class EventService {
     const allRawEvents = await eventRepository.getAll();
     const directEvent = await eventRepository.getById(id);
 
-    if (directEvent?.isAmortizationEvent?.() || directEvent?.category === 'amortizacao') {
+    if (directEvent?.isAmortizationEvent?.() || directEvent?.financialType === FinancialType.AMORTIZATION || directEvent?.isAmortization) {
       await this.rollbackLoanAmortization(directEvent);
       return eventRepository.delete(id);
     }
 
     const isLoan =
-      directEvent?.category === 'parcela_emprestimo' ||
+      directEvent?.isLoanEvent?.() ||
       directEvent?.isSystemLoanEvent ||
-      directEvent?.timelineOriginId?.startsWith('tl-loan-');
+      directEvent?.financialType === FinancialType.AMORTIZATION;
     if (isLoan) return eventRepository.delete(id);
 
     const targetSeriesId = directEvent?.eventId || directEvent?.event_id || directEvent?.sobrepositionOver || options.eventId;
@@ -324,16 +309,19 @@ export class EventService {
     const amortVal = Number(amortEvent.amount || amortEvent.amortizationAmount || 0);
     if (isNaN(amortVal) || amortVal <= 0) return;
 
-    const loanTlId = amortEvent.timelineId || amortEvent.timelineOriginId;
-    const amortDate = amortEvent.date;
-    const strategy = amortEvent.strategy || AmortizationStrategy.REDUCE_TERM;
+    const loanTimelineId = amortEvent.timelineId || amortEvent.timelineOriginId;
+    if (!loanTimelineId) return;
 
-    const rawEvents = await eventRepository._readAllRaw();
-    const loanInstallments = rawEvents.filter(
+    const amortDate = amortEvent.date;
+    const strategy = amortEvent.strategy || amortEvent.amortizationStrategy || AmortizationStrategy.REDUCE_TERM;
+
+    const allEvents = await eventRepository.getAll();
+    const loanInstallments = allEvents.filter(
       (ev) =>
-        ((loanTlId && (ev.timelineId === loanTlId || ev.timelineOriginId === loanTlId)) ||
-          (ev.category === 'parcela_emprestimo' && ev.timelineOriginName === amortEvent.timelineOriginName)) &&
-        ev.category === 'parcela_emprestimo'
+        (ev.timelineId === loanTimelineId || ev.timelineOriginId === loanTimelineId) &&
+        !ev.isAmortizationEvent?.() &&
+        ev.financialType !== FinancialType.AMORTIZATION &&
+        !ev.isAmortization
     );
     if (loanInstallments.length === 0) return;
 
@@ -341,26 +329,19 @@ export class EventService {
 
     function extractInstallmentPrincipal(inst) {
       if (inst.principalAmount !== undefined && Number(inst.principalAmount) > 0) return Number(inst.principalAmount);
-      if (inst.description) {
-        const match = inst.description.match(/\(([\d\s.,]+)\s*€?\s*capital/i);
-        if (match && match[1]) {
-          const parsed = parseFloat(match[1].replace(/\s/g, '').replace(',', '.'));
-          if (!isNaN(parsed) && parsed > 0) return parsed;
-        }
-      }
       const total = Number(inst.amount || 0);
-      const interest = Number(inst.interestPortion || 0);
+      const interest = Number(inst.interestPortion || inst.interestAmount || 0);
       if (interest > 0 && interest < total) return Math.round((total - interest) * 100) / 100;
-      return Math.max(1, Math.round(total * 0.85 * 100) / 100);
+      return Math.max(1, Math.round(total * 0.82 * 100) / 100);
     }
 
-    if (strategy === AmortizationStrategy.REDUCE_TERM) {
+    if (strategy === AmortizationStrategy.REDUCE_TERM || strategy === 'reduce_term') {
       const futureUnpaid = loanInstallments
-        .filter((ev) => ev.status !== EventStatus.PAID && ev.status !== 'Abatida' && !ev.isAbatida && ev.date >= amortDate)
+        .filter((ev) => ev.status !== EventStatus.PAID && ev.status !== EventStatus.COMPLETED && !ev.isCompleted && ev.status !== 'Abatida' && !ev.isAbatida && ev.date >= amortDate)
         .sort((a, b) => (a.date > b.date ? 1 : -1));
 
       let remainingToDeduct = amortVal;
-      const updatesMap = new Map();
+      const updates = [];
 
       for (let i = futureUnpaid.length - 1; i >= 0; i--) {
         if (remainingToDeduct <= 0) break;
@@ -368,146 +349,126 @@ export class EventService {
         const instPrincipal = extractInstallmentPrincipal(inst);
 
         if (remainingToDeduct >= instPrincipal) {
-          updatesMap.set(inst.id, {
-            status: 'Abatida',
-            isAbatida: true,
-            isCompleted: true,
-            originalAmount: inst.amount || instPrincipal,
-            amount: 0,
-            principalAmount: 0,
-            interestPortion: 0,
-            labels: Array.from(new Set([...(inst.labels || []), 'Abatida'])),
-            updatedAt: now
+          updates.push({
+            id: inst.id,
+            data: {
+              status: 'Abatida',
+              isAbatida: true,
+              isCompleted: true,
+              originalAmount: inst.amount || instPrincipal,
+              amount: 0,
+              principalAmount: 0,
+              interestPortion: 0,
+              interestAmount: 0,
+              labels: Array.from(new Set([...(inst.labels || []), 'Abatida'])),
+              updatedAt: now
+            }
           });
           remainingToDeduct -= instPrincipal;
         } else {
           const newPrincipal = Math.max(0, Math.round((instPrincipal - remainingToDeduct) * 100) / 100);
-          const interestPortion = Number(inst.interestPortion || 0);
-          updatesMap.set(inst.id, {
-            amount: Math.round((newPrincipal + interestPortion) * 100) / 100,
-            principalAmount: newPrincipal,
-            labels: Array.from(new Set([...(inst.labels || []), 'Abatida Parcial'])),
-            updatedAt: now
+          const interestPortion = Number(inst.interestPortion || inst.interestAmount || 0);
+          updates.push({
+            id: inst.id,
+            data: {
+              amount: Math.round((newPrincipal + interestPortion) * 100) / 100,
+              principalAmount: newPrincipal,
+              labels: Array.from(new Set([...(inst.labels || []), 'Abatida Parcial'])),
+              updatedAt: now
+            }
           });
           remainingToDeduct = 0;
         }
       }
 
-      if (updatesMap.size > 0) {
-        const updatedAll = rawEvents.map((ev) => (updatesMap.has(ev.id) ? { ...ev, ...updatesMap.get(ev.id) } : ev));
-        await eventRepository._writeAllRaw(updatedAll);
+      for (let i = 0; i < updates.length; i += 15) {
+        const chunk = updates.slice(i, i + 15);
+        await Promise.all(chunk.map((u) => eventRepository.update(u.id, u.data)));
       }
     } else {
+      // reduce_installment
       const futureUnpaid = loanInstallments.filter(
-        (ev) => ev.status !== EventStatus.PAID && ev.status !== 'Abatida' && !ev.isAbatida && ev.date >= amortDate
+        (ev) => ev.status !== EventStatus.PAID && ev.status !== EventStatus.COMPLETED && !ev.isCompleted && ev.status !== 'Abatida' && !ev.isAbatida && ev.date >= amortDate
       );
       if (futureUnpaid.length > 0) {
-        let currentRemainingDebt = 13259.93;
-        try {
-          const loan = await loanContractRepository.getById(loanTlId);
-          if (loan && loan.remainingDebt) currentRemainingDebt = Number(loan.remainingDebt);
-        } catch {}
+        let currentRemainingDebt = futureUnpaid.reduce((acc, ev) => acc + extractInstallmentPrincipal(ev), 0);
+        if (currentRemainingDebt <= 0) currentRemainingDebt = 13259.93;
 
         const originalInstallment = Number(futureUnpaid[0].originalAmount || futureUnpaid[0].amount || 218.47);
         const newFuturePrincipal = Math.max(0, currentRemainingDebt - amortVal);
         const reductionRatio = currentRemainingDebt > 0 ? newFuturePrincipal / currentRemainingDebt : 1;
         const newTotal = Math.max(1, Math.round(originalInstallment * reductionRatio * 100) / 100);
 
-        const futureIds = new Set(futureUnpaid.map((e) => e.id));
-        const updatedAll = rawEvents.map((ev) => {
-          if (futureIds.has(ev.id)) {
-            const origAmt = Number(ev.originalAmount || ev.amount || originalInstallment);
-            const origCap = Number(ev.principalAmount || Math.round(origAmt * 0.82 * 100) / 100);
-            const origJur = Number(ev.interestPortion || Math.round(origAmt * 0.18 * 100) / 100);
-            return {
-              ...ev,
+        const updates = futureUnpaid.map((ev) => {
+          const origAmt = Number(ev.originalAmount || ev.amount || originalInstallment);
+          const origCap = Number(ev.principalAmount || Math.round(origAmt * 0.82 * 100) / 100);
+          const origJur = Number(ev.interestPortion || ev.interestAmount || Math.round(origAmt * 0.18 * 100) / 100);
+          return {
+            id: ev.id,
+            data: {
               originalAmount: origAmt,
               amount: newTotal,
               principalAmount: Math.round(origCap * reductionRatio * 100) / 100,
               interestPortion: Math.round(origJur * reductionRatio * 100) / 100,
+              interestAmount: Math.round(origJur * reductionRatio * 100) / 100,
               updatedAt: now
-            };
-          }
-          return ev;
-        });
-        await eventRepository._writeAllRaw(updatedAll);
-      }
-    }
-
-    try {
-      if (loanTlId) {
-        const loan = await loanContractRepository.getById(loanTlId);
-        if (loan) {
-          const changes = loan.applyAmortization ? loan.applyAmortization(amortVal) : {
-            remainingDebt: Math.max(0, loan.remainingDebt - amortVal),
-            amortizedCapital: (loan.amortizedCapital || 0) + amortVal
+            }
           };
-          await loanContractRepository.update(loan.id, changes);
-        }
-        const tl = await timelineRepository.getById(loanTlId);
-        if (tl) {
-          await timelineRepository.update(tl.id, {
-            remainingDebt: Math.max(0, Math.round((Number(tl.remainingDebt || tl.totalDebt) - amortVal) * 100) / 100),
-            amortizedCapital: Math.round(((Number(tl.amortizedCapital) || 0) + amortVal) * 100) / 100
-          });
+        });
+
+        for (let i = 0; i < updates.length; i += 15) {
+          const chunk = updates.slice(i, i + 15);
+          await Promise.all(chunk.map((u) => eventRepository.update(u.id, u.data)));
         }
       }
-    } catch (e) {
-      console.error('Error updating loan remaining debt:', e);
     }
   }
 
   async rollbackLoanAmortization(amortEvent) {
-    const amortVal = Number(amortEvent.amount || amortEvent.amortizationAmount || 0);
-    const loanTlId = amortEvent.timelineId || amortEvent.timelineOriginId;
-    const rawEvents = await eventRepository._readAllRaw();
+    const loanTimelineId = amortEvent?.timelineId || amortEvent?.timelineOriginId;
+    if (!loanTimelineId) return;
+
+    const allEvents = await eventRepository.getAll();
     const now = new Date().toISOString();
 
-    let defaultInstallmentAmount = 218.47;
-    try {
-      if (loanTlId) {
-        const loan = await loanContractRepository.getById(loanTlId);
-        if (loan && loan.installmentAmount) defaultInstallmentAmount = Number(loan.installmentAmount);
-      }
-    } catch {}
+    const loanInstallments = allEvents.filter(
+      (ev) =>
+        (ev.timelineId === loanTimelineId || ev.timelineOriginId === loanTimelineId) &&
+        !ev.isAmortizationEvent?.() &&
+        ev.financialType !== FinancialType.AMORTIZATION &&
+        !ev.isAmortization &&
+        ev.status !== EventStatus.PAID &&
+        ev.status !== EventStatus.COMPLETED &&
+        !ev.isCompleted
+    );
 
-    const updatedEvents = rawEvents.map((ev) => {
-      if (
-        ((loanTlId && (ev.timelineId === loanTlId || ev.timelineOriginId === loanTlId)) ||
-          (ev.category === 'parcela_emprestimo' && ev.timelineOriginName === amortEvent.timelineOriginName)) &&
-        ev.category === 'parcela_emprestimo' &&
-        ev.status !== EventStatus.PAID
-      ) {
-        let cap = 0,
-          jur = 0;
-        if (ev.description) {
-          const match = ev.description.match(/\(([\d\s.,]+)\s*€?\s*capital\s*\+\s*([\d\s.,]+)\s*€?\s*juros/i);
-          if (match && match[1] && match[2]) {
-            cap = parseFloat(match[1].replace(/\s/g, '').replace(',', '.'));
-            jur = parseFloat(match[2].replace(/\s/g, '').replace(',', '.'));
-          }
-        }
-        const origAmt = Number(ev.originalAmount || defaultInstallmentAmount);
-        const filteredLabels = (ev.labels || []).filter((l) => l !== 'Abatida' && l !== 'Abatida Parcial');
-        return {
-          ...ev,
+    const updates = loanInstallments.map((ev) => {
+      const origAmt = Number(ev.originalAmount || ev.amount || 218.47);
+      const filteredLabels = (ev.labels || []).filter((l) => l !== 'Abatida' && l !== 'Abatida Parcial');
+      return {
+        id: ev.id,
+        data: {
           status: EventStatus.PENDING,
           isAbatida: false,
           isCompleted: false,
           amount: origAmt,
-          principalAmount: cap || Math.round(origAmt * 0.82 * 100) / 100,
-          interestPortion: jur || Math.round(origAmt * 0.18 * 100) / 100,
-          labels: filteredLabels.length > 0 ? filteredLabels : [amortEvent.timelineOriginName || 'Empréstimo', EventStatus.PENDING],
+          principalAmount: Math.round(origAmt * 0.82 * 100) / 100,
+          interestPortion: Math.round(origAmt * 0.18 * 100) / 100,
+          interestAmount: Math.round(origAmt * 0.18 * 100) / 100,
+          labels: filteredLabels,
           updatedAt: now
-        };
-      }
-      return ev;
+        }
+      };
     });
-    await eventRepository._writeAllRaw(updatedEvents);
+
+    for (let i = 0; i < updates.length; i += 15) {
+      const chunk = updates.slice(i, i + 15);
+      await Promise.all(chunk.map((u) => eventRepository.update(u.id, u.data)));
+    }
 
     try {
-      if (loanTlId) {
-        const loan = await loanContractRepository.getById(loanTlId);
+      if (loanTimelineId) {
+        const loan = await loanContractRepository.getById(loanTimelineId);
         if (loan) {
           const changes = loan.rollbackAmortization ? loan.rollbackAmortization(amortVal) : {
             remainingDebt: Math.round(((Number(loan.remainingDebt || loan.totalDebt)) + amortVal) * 100) / 100,
@@ -540,7 +501,6 @@ function hasEventMeaningfullyChanged(base, updates) {
     return true;
   if (updates.targetAmount !== undefined && Number(updates.targetAmount || 0) !== Number(base.targetAmount || 0))
     return true;
-  if (updates.category !== undefined && updates.category !== base.category) return true;
   if (updates.financialType !== undefined && updates.financialType !== base.financialType) return true;
   if (updates.status !== undefined && updates.status !== base.status) return true;
   if (updates.priority !== undefined && updates.priority !== base.priority) return true;

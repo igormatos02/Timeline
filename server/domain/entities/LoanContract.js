@@ -1,3 +1,5 @@
+import { TimelineType, LoanCategory, LoanStatus, Periodicity } from '../enums/index.js';
+
 /**
  * Aggregate Root: LoanContract
  * Represents a credit contract / loan with debt balance tracking and amortization methods.
@@ -6,11 +8,11 @@ export class LoanContract {
   constructor({
     id,
     tenantId = 'tenant-igor',
-    timelineId = 'tl-income',
+    timelineId = null,
     contractNumber = '',
     name,
-    type = 'Empréstimo',
-    category = 'automovel', // 'automovel' | 'hipotecario' | 'pessoal'
+    type = TimelineType.LOAN,
+    category = LoanCategory.AUTO,
     color = '#6366f1',
     description = '',
     totalDebt = 0,
@@ -26,8 +28,8 @@ export class LoanContract {
     dueDay = 1,
     startDate,
     endDate,
-    status = 'Em Progresso',
-    periodicity = 'mensal',
+    status = LoanStatus.IN_PROGRESS,
+    periodicity = Periodicity.MONTHLY,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
   }) {

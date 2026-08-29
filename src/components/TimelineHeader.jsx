@@ -48,6 +48,7 @@ import {
   getPeriodicityLabel
 } from '../utils/loanCalculations';
 import IncomeEvolutionChart from './IncomeEvolutionChart';
+import { TimelineType } from '../enums/index.js';
 import * as api from '../services/api';
 
 function TimelineHeader({
@@ -273,12 +274,12 @@ function TimelineHeader({
   const projectedHorizonMonth = format(projectedHorizonDate, 'yyyy-MM');
   const projectedHorizonLabel = format(projectedHorizonDate, "MMMM 'de' yyyy", { locale: pt });
 
-  const incomeMetrics = isIncomeTimeline ? getIncomeMetrics(timeline, timeline.events || []) : null;
+  const incomeMetrics = isIncomeTimeline ? getIncomeMetrics(timeline, timeline.events || [], computeFromMonth) : null;
   const finMetrics = isIncomeTimeline ? getFinancialMetrics(timeline, timeline.events || [], computeFromMonth, projectedHorizonMonth) : null;
   const consolidatedMetrics = isPrincipal ? getConsolidatedLoanMetrics(allTimelines, selectedTimelineIds) : null;
 
   // Consolidated loan metrics across all loan contracts of the active timeboard
-  const loanTimelinesFromAll = (allTimelines || []).filter(t => t.type === 'Empréstimo' || t.type === 'emprestimo');
+  const loanTimelinesFromAll = (allTimelines || []).filter(t => t.type === 'Empréstimo' || t.type === 'emprestimo' || t.type === 'loan' || t.type === TimelineType?.LOAN);
   const totalAllLoansAmortized = loanTimelinesFromAll.reduce((acc, t) => {
     const m = getLoanMetrics(t, t.events || []);
     return acc + (Number(m.totalPrincipalAmortized || t.amortizedCapital || 0));
@@ -756,6 +757,7 @@ function TimelineHeader({
                   {/* Cards de Métricas contextuais conforme a aba ativa */}
                   {activeFinancialTab === 'entradas' && incomeMetrics && (
                     <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '8px', marginBottom: '8px' }}>
+                      {/* Card 1: Recebido este Mês */}
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#10b981' }}>
                           <DollarSign size={16} />
@@ -769,101 +771,168 @@ function TimelineHeader({
                         </div>
                       </div>
 
-                      <div className="meta-item" style={{ padding: '6px 10px' }}>
-                        <div className="meta-icon-box" style={{ color: 'var(--primary-light)' }}>
-                          <TrendingUp size={16} />
-                        </div>
-                        <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Recebido</div>
-                          <div className="meta-value" style={{ color: 'var(--primary-light)', fontSize: '0.94rem', fontWeight: '800' }}>
-                            {formatCurrency(incomeMetrics.totalReceived)}
-                          </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Ano corrente</div>
-                        </div>
-                      </div>
-
+                      {/* Card 2: Projeção Anual */}
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#06b6d4' }}>
                           <Sparkles size={16} />
                         </div>
                         <div>
                           <div className="meta-label" style={{ fontSize: '0.7rem' }}>Projeção Anual</div>
-                          <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800' }}>
+                          <div className="meta-value" style={{ fontSize: '0.94rem', fontWeight: '800', color: '#06b6d4' }}>
                             {formatCurrency(incomeMetrics.annualProjected)}
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>12 meses</div>
+                          <div style={{ fontSize: '0.66rem', color: '#10b981', fontWeight: '600' }}>
+                            {formatCurrency(incomeMetrics.totalReceivedYear)} já recebido
+                          </div>
                         </div>
                       </div>
 
+                      {/* Card 3: Total Acumulado Projetado */}
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
-                        <div className="meta-icon-box" style={{ color: '#8b5cf6' }}>
-                          <Calendar size={16} />
+                        <div className="meta-icon-box" style={{ color: 'var(--primary-light)' }}>
+                          <Clock size={16} />
                         </div>
                         <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Próxima Entrada</div>
-                          <div className="meta-value" style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                            {incomeMetrics.nextIncome ? `${formatCurrency(incomeMetrics.nextIncome.amount)}` : 'Nenhuma'}
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Acumulado Projetado</div>
+                          <div className="meta-value" style={{ color: 'var(--primary-light)', fontSize: '0.94rem', fontWeight: '800' }}>
+                            +{formatCurrency(incomeMetrics.totalProjectedUpToCurrent || finMetrics?.totalForecastIncomeUpToCurrent || 0)}
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Até ao mês atual</div>
+                        </div>
+                      </div>
+
+                      {/* Card 4: Total Acumulado Realizado */}
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#10b981' }}>
+                          <TrendingUp size={16} />
+                        </div>
+                        <div>
+                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Acumulado Realizado</div>
+                          <div className="meta-value" style={{ fontSize: '0.94rem', fontWeight: '800', color: '#10b981' }}>
+                            +{formatCurrency(incomeMetrics.totalReceivedAllTime ?? incomeMetrics.totalReceived)}
                           </div>
                           <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                            {incomeMetrics.nextIncome ? formatDateShort(incomeMetrics.nextIncome.date) : '-'}
+                            Do início até ao mês atual
                           </div>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {activeFinancialTab === 'gastos' && (
+                  {activeFinancialTab === 'gastos' && finMetrics && (
                     <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '8px', marginBottom: '8px' }}>
+                      {/* Card 1: Pago este Mês */}
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#f43f5e' }}>
                           <ShoppingCart size={16} />
                         </div>
-                        <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Pago este Mês</div>
-                          <div className="meta-value" style={{ color: '#f43f5e', fontSize: '0.94rem', fontWeight: '800' }}>
-                            {formatCurrency(finMetrics.currentMonthExpensesPaid)}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                            <span className="meta-label" style={{ fontSize: '0.7rem' }}>Pago este Mês</span>
+                            <span style={{ color: '#f43f5e', fontSize: '0.94rem', fontWeight: '800' }}>
+                              {formatCurrency(finMetrics.currentMonthExpensesPaid)}
+                            </span>
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>de {formatCurrency(finMetrics.currentMonthExpenses)} previstos</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '3px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                              <span style={{ fontSize: '0.67rem', color: 'var(--text-dim)' }}>Gastos:</span>
+                              <span style={{ color: '#f43f5e', fontSize: '0.74rem', fontWeight: '700' }}>
+                                {formatCurrency(finMetrics.currentMonthExpensesOnlyPaid)} <span style={{ opacity: 0.65, fontWeight: '400' }}>/ {formatCurrency(finMetrics.currentMonthExpensesOnly)}</span>
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                              <span style={{ fontSize: '0.67rem', color: 'var(--text-dim)' }}>Empréstimos:</span>
+                              <span style={{ color: 'var(--primary-light, #818cf8)', fontSize: '0.74rem', fontWeight: '700' }}>
+                                {formatCurrency(finMetrics.currentMonthLoansPaid)} <span style={{ opacity: 0.65, fontWeight: '400' }}>/ {formatCurrency(finMetrics.currentMonthLoans)}</span>
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="meta-item" style={{ padding: '6px 10px' }}>
-                        <div className="meta-icon-box" style={{ color: '#fb7185' }}>
-                          <TrendingDown size={16} />
-                        </div>
-                        <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Total Pago</div>
-                          <div className="meta-value" style={{ color: '#fb7185', fontSize: '0.94rem', fontWeight: '800' }}>
-                            {formatCurrency(finMetrics.totalPaidExpenses)}
-                          </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Histórico acumulado</div>
-                        </div>
-                      </div>
-
+                      {/* Card 2: Projeção Anual */}
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
                         <div className="meta-icon-box" style={{ color: '#f59e0b' }}>
-                          <Repeat size={16} />
+                          <Sparkles size={16} />
                         </div>
-                        <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Média Mensal</div>
-                          <div className="meta-value" style={{ fontSize: '0.88rem', fontWeight: '800' }}>
-                            {formatCurrency(finMetrics.monthlyAverageExpenses)} / mês
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                            <span className="meta-label" style={{ fontSize: '0.7rem' }}>Projeção Anual</span>
+                            <span style={{ fontSize: '0.94rem', fontWeight: '800', color: '#f59e0b' }}>
+                              {formatCurrency(finMetrics.annualProjectedExpenses || finMetrics.projectedAnnualExpenses)}
+                            </span>
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>Média despesas correntes</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '3px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                              <span style={{ fontSize: '0.67rem', color: 'var(--text-dim)' }}>Gastos:</span>
+                              <span style={{ color: '#f43f5e', fontSize: '0.74rem', fontWeight: '700' }}>
+                                {formatCurrency(finMetrics.annualProjectedExpensesOnly || 0)} <span style={{ opacity: 0.75, fontWeight: '500', color: '#10b981' }}>({formatCurrency(finMetrics.currentYearExpensesOnlyPaid || 0)} pago)</span>
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                              <span style={{ fontSize: '0.67rem', color: 'var(--text-dim)' }}>Empréstimos:</span>
+                              <span style={{ color: 'var(--primary-light, #818cf8)', fontSize: '0.74rem', fontWeight: '700' }}>
+                                {formatCurrency(finMetrics.annualProjectedLoans || 0)} <span style={{ opacity: 0.75, fontWeight: '500', color: '#10b981' }}>({formatCurrency(finMetrics.currentYearLoansPaid || 0)} pago)</span>
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
+                      {/* Card 3: Total Acumulado Projetado */}
                       <div className="meta-item" style={{ padding: '6px 10px' }}>
-                        <div className="meta-icon-box" style={{ color: '#8b5cf6' }}>
-                          <Calendar size={16} />
+                        <div className="meta-icon-box" style={{ color: '#fb7185' }}>
+                          <Clock size={16} />
                         </div>
-                        <div>
-                          <div className="meta-label" style={{ fontSize: '0.7rem' }}>Próxima Saída</div>
-                          <div className="meta-value" style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                            {finMetrics.nextExpense ? `${formatCurrency(finMetrics.nextExpense.amount)}` : 'Nenhuma'}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                            <span className="meta-label" style={{ fontSize: '0.7rem' }}>Total Acumulado Projetado</span>
+                            <span style={{ color: '#fb7185', fontSize: '0.94rem', fontWeight: '800' }}>
+                              -{formatCurrency(finMetrics.totalPlannedExpensesUpToCurrent)}
+                            </span>
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                            {finMetrics.nextExpense ? formatDateShort(finMetrics.nextExpense.date) : '-'}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '3px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                              <span style={{ fontSize: '0.67rem', color: 'var(--text-dim)' }}>Gastos:</span>
+                              <span style={{ color: '#fb7185', fontSize: '0.74rem', fontWeight: '700' }}>
+                                -{formatCurrency(finMetrics.totalPlannedExpensesOnlyUpToCurrent)}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                              <span style={{ fontSize: '0.67rem', color: 'var(--text-dim)' }}>Empréstimos:</span>
+                              <span style={{ color: 'var(--primary-light, #818cf8)', fontSize: '0.74rem', fontWeight: '700' }}>
+                                -{formatCurrency(finMetrics.totalPlannedLoansUpToCurrent)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card 4: Total Acumulado Realizado */}
+                      <div className="meta-item" style={{ padding: '6px 10px' }}>
+                        <div className="meta-icon-box" style={{ color: '#f43f5e' }}>
+                          <TrendingDown size={16} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                            <span className="meta-label" style={{ fontSize: '0.7rem' }}>Total Acumulado Realizado</span>
+                            <span style={{ color: '#f43f5e', fontSize: '0.94rem', fontWeight: '800' }}>
+                              -{formatCurrency(finMetrics.totalPaidExpenses)}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '3px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                              <span style={{ fontSize: '0.67rem', color: 'var(--text-dim)' }}>Gastos:</span>
+                              <span style={{ color: '#f43f5e', fontSize: '0.74rem', fontWeight: '700' }}>
+                                -{formatCurrency(finMetrics.totalPaidExpensesOnly)}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                              <span style={{ fontSize: '0.67rem', color: 'var(--text-dim)' }}>Empréstimos:</span>
+                              <span style={{ color: 'var(--primary-light, #818cf8)', fontSize: '0.74rem', fontWeight: '700' }}>
+                                -{formatCurrency(finMetrics.totalPaidLoans)}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>

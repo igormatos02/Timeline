@@ -3,13 +3,13 @@ import { loanContractRepository } from '../../infrastructure/database/json/JsonL
 import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
 import {
-  incomeTimelineService,
-  expenseTimelineService,
-  investmentTimelineService,
-  loanTimelineService,
-  balanceTimelineService
+  incomeDomainService,
+  expenseDomainService,
+  investmentDomainService,
+  loanDomainService,
+  balanceDomainService
 } from '../../domain/services/timelines/financial/index.js';
-import { TimelineStatus } from '../../domain/enums/TimelineStatus.js';
+import { TimelineType, TimelineStatus } from '../../domain/enums/index.js';
 
 export class TimelineService {
   async getAllTimelines(query = {}) {
@@ -23,18 +23,18 @@ export class TimelineService {
       let tlEvents = [];
       let metrics = {};
 
-      if (tl.type === TimelineStatus.INCOME) {
-        tlEvents = incomeTimelineService.filterEvents(projectedEvents, tl.id);
-        metrics = incomeTimelineService.calculateMetrics(tlEvents, query.currentMonth);
-      } else if (tl.type === TimelineStatus.EXPENSE) {
-        tlEvents = expenseTimelineService.filterEvents(projectedEvents, tl.id);
-        metrics = expenseTimelineService.calculateMetrics(tlEvents, query.currentMonth);
-      } else if (tl.type === TimelineStatus.INVESTMENT) {
-        tlEvents = investmentTimelineService.filterEvents(projectedEvents, tl.id);
-        metrics = investmentTimelineService.calculateMetrics(tlEvents, query.currentMonth);
-      } else if (tl.type === TimelineStatus.LOAN) {
-        tlEvents = loanTimelineService.filterEvents(projectedEvents, tl.id);
-        metrics = loanTimelineService.calculateMetrics(tl, tlEvents, query.currentMonth);
+      if (tl.type === TimelineType.INCOME) {
+        tlEvents = incomeDomainService.filterEvents(projectedEvents, tl.id);
+        metrics = incomeDomainService.calculateMetrics(tlEvents, query.currentMonth);
+      } else if (tl.type === TimelineType.EXPENSE) {
+        tlEvents = expenseDomainService.filterEvents(projectedEvents, tl.id);
+        metrics = expenseDomainService.calculateMetrics(tlEvents, query.currentMonth);
+      } else if (tl.type === TimelineType.INVESTMENT) {
+        tlEvents = investmentDomainService.filterEvents(projectedEvents, tl.id);
+        metrics = investmentDomainService.calculateMetrics(tlEvents, query.currentMonth);
+      } else if (tl.type === TimelineType.LOAN) {
+        tlEvents = loanDomainService.filterEvents(projectedEvents, tl.id);
+        metrics = loanDomainService.calculateMetrics(tl, tlEvents, query.currentMonth);
       } else {
         tlEvents = projectedEvents.filter((ev) => ev.timelineId === tl.id || ev.timelineOriginId === tl.id);
       }
@@ -61,18 +61,18 @@ export class TimelineService {
     let events = [];
     let metrics = {};
 
-    if (timeline.type === TimelineStatus.INCOME) {
-      events = incomeTimelineService.filterEvents(projectedEvents, id);
-      metrics = incomeTimelineService.calculateMetrics(events, query.currentMonth);
-    } else if (timeline.type === TimelineStatus.EXPENSE) {
-      events = expenseTimelineService.filterEvents(projectedEvents, id);
-      metrics = expenseTimelineService.calculateMetrics(events, query.currentMonth);
-    } else if (timeline.type === TimelineStatus.INVESTMENT) {
-      events = investmentTimelineService.filterEvents(projectedEvents, id);
-      metrics = investmentTimelineService.calculateMetrics(events, query.currentMonth);
-    } else if (timeline.type === TimelineStatus.LOAN) {
-      events = loanTimelineService.filterEvents(projectedEvents, id);
-      metrics = loanTimelineService.calculateMetrics(timeline, events, query.currentMonth);
+    if (timeline.type === TimelineType.INCOME) {
+      events = incomeDomainService.filterEvents(projectedEvents, id);
+      metrics = incomeDomainService.calculateMetrics(events, query.currentMonth);
+    } else if (timeline.type === TimelineType.EXPENSE) {
+      events = expenseDomainService.filterEvents(projectedEvents, id);
+      metrics = expenseDomainService.calculateMetrics(events, query.currentMonth);
+    } else if (timeline.type === TimelineType.INVESTMENT) {
+      events = investmentDomainService.filterEvents(projectedEvents, id);
+      metrics = investmentDomainService.calculateMetrics(events, query.currentMonth);
+    } else if (timeline.type === TimelineType.LOAN) {
+      events = loanDomainService.filterEvents(projectedEvents, id);
+      metrics = loanDomainService.calculateMetrics(timeline, events, query.currentMonth);
     } else {
       events = projectedEvents.filter((ev) => ev.timelineId === id || ev.timelineOriginId === id);
     }
@@ -90,9 +90,9 @@ export class TimelineService {
     const allRawEvents = await eventRepository.getAll((ev) => !timeboardId || ev.timeboardId === timeboardId);
     const projectedEvents = projectEvents(allRawEvents, query);
 
-    return balanceTimelineService.calculateBalance({
+    return balanceDomainService.calculateBalance({
       allEvents: projectedEvents,
-      loanTimelines: allTimelines.filter((tl) => tl.type === TimelineStatus.LOAN),
+      loanTimelines: allTimelines.filter((tl) => tl.type === TimelineType.LOAN),
       currentMonthKey: query.currentMonth
     });
   }
@@ -100,7 +100,7 @@ export class TimelineService {
   async createTimeline(data) {
     return timelineRepository.create({
       ...data,
-      type: data.type || TimelineStatus.LOAN,
+      type: data.type || TimelineType.LOAN,
       status: data.status || TimelineStatus.ACTIVE
     });
   }

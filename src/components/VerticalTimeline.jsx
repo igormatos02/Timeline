@@ -55,6 +55,7 @@ import {
 import TimelineEventCard from './TimelineEventCard';
 import FloatingTaskStack from './FloatingTaskStack';
 import { getGroupingForPeriodicity, formatCurrency } from '../utils/loanCalculations';
+import { FinancialType, EventStatus, TimelineType } from '../enums/index.js';
 
 function VerticalTimeline({
   timeline,
@@ -315,7 +316,7 @@ function VerticalTimeline({
 
       // Financial Tabs Filter
       if (isFinancialTimeline) {
-        const isInvestment = Boolean(ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento')));
+        const isInvestment = Boolean(ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento')));
 
         const isJeep = !isInvestment && Boolean(
           ev.timelineOriginId === 'c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f' ||
@@ -349,9 +350,9 @@ function VerticalTimeline({
           (ev.title && (ev.title.includes('02015122') || ev.title.includes('Hipoteca') || ev.title.includes('Casa 2')))
         );
 
-        const isLoan = isJeep || isDacia || isCasa1 || isCasa2 || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.category === 'amortizacao';
-        const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
-        const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') && !isLoan;
+        const isLoan = isJeep || isDacia || isCasa1 || isCasa2 || ev.financialType === FinancialType.AMORTIZATION || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.category === 'amortizacao';
+        const isIncome = (ev.financialType === FinancialType.INCOME || ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
+        const isExpense = (ev.financialType === FinancialType.EXPENSE || ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') && !isLoan;
 
         if (activeFinancialTab === 'entradas' && !isIncome) return false;
         if (activeFinancialTab === 'gastos') {
@@ -603,8 +604,67 @@ function VerticalTimeline({
       timeline.type === 'entradas' ||
       timeline.type === 'gastos' ||
       timeline.type === 'investimentos' ||
+      timeline.type === 'emprestimo' ||
+      timeline.type === 'Empréstimo' ||
+      timeline.type === 'Principal' ||
+      timeline.type === TimelineType.INCOME ||
+      timeline.type === TimelineType.EXPENSE ||
+      timeline.type === TimelineType.INVESTMENT ||
+      timeline.type === TimelineType.LOAN ||
       timeline.id === 'tl-income' ||
       timeline.id === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
+
+    // Pre-calculate total projected expenses per month across all events
+    const monthExpensesTotalMap = useMemo(() => {
+      const map = new Map();
+      (timelineEvents || []).forEach((ev) => {
+        if (!ev || !ev.date || ev.isDeleted) return;
+        if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.status === 'Cancelado' || ev.status === 'Excluido') return;
+        const isLoan = ev.financialType === FinancialType.AMORTIZATION || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
+        const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+        const isExpense = ((ev.financialType === FinancialType.EXPENSE || ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan) && !isInvestment;
+
+        if (isExpense) {
+          const mKey = ev.date.substring(0, 7);
+          map.set(mKey, (map.get(mKey) || 0) + Number(ev.amount || 0));
+        }
+      });
+      return map;
+    }, [timelineEvents]);
+
+    // Pre-calculate total projected income per month across all events
+    const monthIncomeTotalMap = useMemo(() => {
+      const map = new Map();
+      (timelineEvents || []).forEach((ev) => {
+        if (!ev || !ev.date || ev.isDeleted) return;
+        if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.status === 'Cancelado' || ev.status === 'Excluido') return;
+        const isLoan = ev.financialType === FinancialType.AMORTIZATION || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
+        const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+        const isIncome = (ev.financialType === FinancialType.INCOME || ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
+
+        if (isIncome) {
+          const mKey = ev.date.substring(0, 7);
+          map.set(mKey, (map.get(mKey) || 0) + Number(ev.amount || 0));
+        }
+      });
+      return map;
+    }, [timelineEvents]);
+
+    // Pre-calculate total projected investments per month across all events
+    const monthInvestmentsTotalMap = useMemo(() => {
+      const map = new Map();
+      (timelineEvents || []).forEach((ev) => {
+        if (!ev || !ev.date || ev.isDeleted) return;
+        if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.status === 'Cancelado' || ev.status === 'Excluido') return;
+        const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+
+        if (isInvestment) {
+          const mKey = ev.date.substring(0, 7);
+          map.set(mKey, (map.get(mKey) || 0) + Number(ev.amount || 0));
+        }
+      });
+      return map;
+    }, [timelineEvents]);
 
     // Pre-calculate chronological running cumulative metrics
     const monthCumulativeMap = new Map();
@@ -621,10 +681,10 @@ function VerticalTimeline({
 
       mG.events.forEach((ev) => {
         const amt = Number(ev.amount || 0);
-        const isLoan = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
-        const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
-        const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan;
-        const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+        const isLoan = ev.financialType === FinancialType.AMORTIZATION || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
+        const isIncome = (ev.financialType === FinancialType.INCOME || ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
+        const isExpense = (ev.financialType === FinancialType.EXPENSE || ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan;
+        const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
         const initialKey = ev.eventId || ev.seriesId || ev.id;
         let initialAmt = 0;
@@ -704,17 +764,17 @@ function VerticalTimeline({
           let mMonthInvestmentPaid = 0;
 
           mGroup.events.forEach((ev) => {
-            if (ev.status === 'Cancelado' || ev.status === 'Excluido' || ev.isDeleted) return;
+            if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.status === 'Cancelado' || ev.status === 'Excluido' || ev.isDeleted) return;
 
             const amt = Number(ev.amount || 0);
-            const isLoan = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
-            const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
-            const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
-            const isExpense = ((ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan) && !isInvestment;
+            const isLoan = ev.financialType === FinancialType.AMORTIZATION || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
+            const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+            const isIncome = (ev.financialType === FinancialType.INCOME || ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
+            const isExpense = ((ev.financialType === FinancialType.EXPENSE || ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan) && !isInvestment;
 
-            const isIncomeReceived = ev.status === 'Recebido' || ev.isCompleted;
-            const isExpensePaid = ev.status === 'Pago' || ev.status === 'Liquidado' || ev.isCompleted;
-            const isInvested = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted;
+            const isIncomeReceived = ev.status === EventStatus.RECEIVED || ev.status === EventStatus.PAID || ev.status === 'Recebido' || ev.status === 'Pago' || ev.isCompleted;
+            const isExpensePaid = ev.status === EventStatus.PAID || ev.status === 'Pago' || ev.status === 'Liquidado' || ev.isCompleted;
+            const isInvested = ev.status === EventStatus.INVESTED || ev.status === EventStatus.PAID || ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted;
 
             if (isIncome) {
               mMonthIncome += amt;
@@ -737,6 +797,10 @@ function VerticalTimeline({
           const mNetRealizedMonth = effectiveIncome - (effectiveExpense + effectiveInvestment);
           const mNetProjectedMonth = mMonthIncome - (mMonthExpense + mMonthInvestment);
           const cumData = monthCumulativeMap.get(monthKeyStr) || { income: 0, expense: 0, investment: 0 };
+          const mMonthProjectedExpense = monthExpensesTotalMap.get(monthKeyStr) || 0;
+          const mMonthProjectedIncome = monthIncomeTotalMap.get(monthKeyStr) || 0;
+          const mMonthProjectedInvestment = monthInvestmentsTotalMap.get(monthKeyStr) || 0;
+          const mMonthProjectedSaldo = mMonthProjectedIncome - (mMonthProjectedExpense + mMonthProjectedInvestment);
 
           if (!showEmptyDays && !hasEvents && !isCurrentMonth) return null;
 
@@ -773,372 +837,216 @@ function VerticalTimeline({
 
               <div className="day-content-col">
                 <div className="group-card" style={isFutureMonth ? { borderColor: 'rgba(148, 163, 184, 0.18)' } : undefined}>
-                  <div className="group-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                    <h3 className="group-card-title" style={{ textTransform: 'capitalize', color: isFutureMonth ? 'var(--text-muted)' : 'var(--text-main)' }}>
-                      <Clock size={18} style={{ color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)' }} /> {monthTitleStr}
-                    </h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      {/* Badge do Contador */}
-                      <span
-                        className="group-card-badge"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          height: '26px',
-                          boxSizing: 'border-box',
-                          color: isFutureMonth ? 'var(--text-dim)' : 'var(--text-muted)',
-                          borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.18)' : 'var(--border-glass)',
-                          background: isFutureMonth ? 'rgba(148, 163, 184, 0.05)' : undefined
-                        }}
-                      >
-                        {mGroup.events.length} {isFinancialTimeline ? (activeFinancialTab === 'gastos' ? 'saída(s)' : activeFinancialTab === 'investimentos' ? 'aporte(s)' : 'movimento(s)') : 'evento(s)'}
-                      </span>
+                  <div className="group-card-header" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                    {/* Linha Superior: Nome do Mês à esquerda, Contador e Botões de Ação à direita */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', width: '100%' }}>
+                      <h3 className="group-card-title" style={{ margin: 0, textTransform: 'capitalize', color: isFutureMonth ? 'var(--text-muted)' : 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Clock size={18} style={{ color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)' }} /> {monthTitleStr}
+                      </h3>
 
-                      {/* Badges para a aba Entradas */}
-                      {isFinancialTimeline && activeFinancialTab === 'entradas' && (
-                        <>
-                          <span
-                            className="group-card-badge"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                              height: '26px',
-                              boxSizing: 'border-box',
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthIncome > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
-                              color: isFutureMonth ? 'var(--text-dim)' : (mMonthIncome > 0 ? '#10b981' : 'var(--text-dim)'),
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthIncome > 0 ? 'rgba(16, 185, 129, 0.35)' : 'var(--border-glass)'),
-                              fontWeight: '800',
-                              fontSize: '0.76rem'
-                            }}
-                          >
-                            <DollarSign size={12} />
-                            <span>Budget Mensal: {formatCurrency(mMonthIncome)}</span>
-                          </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {/* Badge do Contador */}
+                        <span
+                          className="group-card-badge"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            height: '26px',
+                            boxSizing: 'border-box',
+                            color: isFutureMonth ? 'var(--text-dim)' : 'var(--text-muted)',
+                            borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.18)' : 'var(--border-glass)',
+                            background: isFutureMonth ? 'rgba(148, 163, 184, 0.05)' : undefined
+                          }}
+                        >
+                          {mGroup.events.length} evento(s)
+                        </span>
 
-                          <span
-                            className="group-card-badge"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                              height: '26px',
-                              boxSizing: 'border-box',
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (cumData.income > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
-                              color: isFutureMonth ? 'var(--text-dim)' : (cumData.income > 0 ? 'var(--primary-light)' : 'var(--text-dim)'),
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (cumData.income > 0 ? 'rgba(99, 102, 241, 0.35)' : 'var(--border-glass)'),
-                              fontWeight: '800',
-                              fontSize: '0.76rem'
-                            }}
-                          >
-                            <TrendingUp size={12} />
-                            <span>Budget Acumulado: {formatCurrency(cumData.income)}</span>
-                          </span>
-                        </>
-                      )}
+                        {/* Botão Amortizar no Mês (disponível do mês atual em diante; oculto em meses passados e em parcelas abatidas) */}
+                        {onOpenAmortizationModal && isLoanTimelineOrTab && (() => {
+                          const thisMonthStr = format(mGroup.monthDate, 'yyyy-MM');
+                          if (thisMonthStr < '2026-08') return null;
 
-                      {/* Badges para a aba Gastos (Total Previsto e Total Realizado) */}
-                      {isFinancialTimeline && activeFinancialTab === 'gastos' && (
-                        <>
-                          {/* Total Previsto */}
-                          <span
-                            className="group-card-badge"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                              height: '26px',
-                              boxSizing: 'border-box',
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthExpense > 0 ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.04)'),
-                              color: isFutureMonth ? 'var(--text-dim)' : (mMonthExpense > 0 ? 'var(--primary-light)' : 'var(--text-dim)'),
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthExpense > 0 ? 'rgba(99, 102, 241, 0.3)' : 'var(--border-glass)'),
-                              fontWeight: '800',
-                              fontSize: '0.76rem'
-                            }}
-                            title="Total de saídas planeadas/previstas para este mês"
-                          >
-                            <Clock size={12} />
-                            <span>Total Previsto: -{formatCurrency(mMonthExpense)}</span>
-                          </span>
+                          const monthLoanEvents = mGroup.events.filter((e) => e.category === 'parcela_emprestimo');
+                          const isAbatidaMonth = monthLoanEvents.length > 0 && monthLoanEvents.every((e) => e.isAbatida || e.status === 'Abatida');
+                          if (isAbatidaMonth) return null;
 
-                          {/* Total Realizado */}
-                          <span
-                            className="group-card-badge"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                              height: '26px',
-                              boxSizing: 'border-box',
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthExpensePaid > 0 ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
-                              color: isFutureMonth ? 'var(--text-dim)' : (mMonthExpensePaid > 0 ? '#f43f5e' : 'var(--text-dim)'),
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthExpensePaid > 0 ? 'rgba(244, 63, 94, 0.35)' : 'var(--border-glass)'),
-                              fontWeight: '800',
-                              fontSize: '0.76rem'
-                            }}
-                            title="Total de saídas que já foram pagas/liquidadas neste mês"
-                          >
-                            <CheckCircle2 size={12} />
-                            <span>Total Realizado: -{formatCurrency(mMonthExpensePaid)}</span>
-                          </span>
-                        </>
-                      )}
+                          return (
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              style={{
+                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                                padding: '4px 12px',
+                                height: '26px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                fontSize: '0.74rem',
+                                fontWeight: '700',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                border: 'none',
+                                color: '#ffffff'
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-15');
+                                onOpenAmortizationModal(targetDayStr);
+                              }}
+                              title={`Amortizar extraordinariamente neste mês (${monthTitleStr})`}
+                            >
+                              <TrendingDown size={14} />
+                              <span>Amortizar</span>
+                            </button>
+                          );
+                        })()}
 
-                      {/* Badges para a aba Investimentos */}
-                      {isFinancialTimeline && activeFinancialTab === 'investimentos' && (
-                        <>
-                          <span
-                            className="group-card-badge"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                              height: '26px',
-                              boxSizing: 'border-box',
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthInvestment > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
-                              color: isFutureMonth ? 'var(--text-dim)' : (mMonthInvestment > 0 ? 'var(--primary-light)' : 'var(--text-dim)'),
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthInvestment > 0 ? 'rgba(99, 102, 241, 0.35)' : 'var(--border-glass)'),
-                              fontWeight: '800',
-                              fontSize: '0.76rem'
-                            }}
-                          >
-                            <span>Aportes: +{formatCurrency(mMonthInvestment)}</span>
-                          </span>
-
-                          <span
-                            className="group-card-badge"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                              height: '26px',
-                              boxSizing: 'border-box',
-                              background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (cumData.investment > 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
-                              color: isFutureMonth ? 'var(--text-dim)' : (cumData.investment > 0 ? '#818cf8' : 'var(--text-dim)'),
-                              borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (cumData.investment > 0 ? 'rgba(99, 102, 241, 0.35)' : 'var(--border-glass)'),
-                              fontWeight: '800',
-                              fontSize: '0.76rem'
-                            }}
-                          >
-                            <span>Património: {formatCurrency(cumData.investment)}</span>
-                          </span>
-                        </>
-                      )}
-
-                      {/* Badges para a aba Balanço */}
-                      {isFinancialTimeline && activeFinancialTab === 'balanco' && (
-                        <>
-                          {/* Badge Informativo de Legenda (Azul) */}
-                          <span
-                            className="group-card-badge"
-                            style={{
-                              display: 'inline-flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              padding: '3px 8px',
-                              height: 'auto',
-                              boxSizing: 'border-box',
-                              color: '#38bdf8',
-                              borderColor: 'rgba(56, 189, 248, 0.35)',
-                              background: 'rgba(56, 189, 248, 0.1)',
-                              lineHeight: '1.2'
-                            }}
-                            title="Legenda dos valores mensais: Linha superior = Realizado | Linha inferior = Previsto"
-                          >
-                            <span style={{ fontWeight: '800', fontSize: '0.69rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                              Realizado
-                            </span>
-                            <span style={{ fontSize: '0.64rem', fontWeight: '700', opacity: 0.85, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                              Previsto
-                            </span>
-                          </span>
-
-                          {/* Entradas: Realizado (linha 1) / Previsto (linha 2) */}
-                          <span
-                            className="group-card-badge"
-                            style={{
-                              display: 'inline-flex',
-                              flexDirection: 'column',
-                              alignItems: 'flex-start',
-                              justifyContent: 'center',
-                              padding: '3px 8px',
-                              height: 'auto',
-                              boxSizing: 'border-box',
-                              color: '#10b981',
-                              borderColor: 'rgba(16, 185, 129, 0.25)',
-                              background: 'rgba(16, 185, 129, 0.08)',
-                              lineHeight: '1.2'
-                            }}
-                            title={`Entradas: +${formatCurrency(mMonthIncomePaid)} realizado de +${formatCurrency(mMonthIncome)} previsto`}
-                          >
-                            <span style={{ fontWeight: '800', fontSize: '0.74rem' }}>
-                              +{formatCurrency(mMonthIncomePaid)}
-                            </span>
-                            <span style={{ fontSize: '0.66rem', opacity: 0.75, fontWeight: '600' }}>
-                              +{formatCurrency(mMonthIncome)}
-                            </span>
-                          </span>
-
-                          {/* Saídas: Realizado (linha 1) / Previsto (linha 2) */}
-                          <span
-                            className="group-card-badge"
-                            style={{
-                              display: 'inline-flex',
-                              flexDirection: 'column',
-                              alignItems: 'flex-start',
-                              justifyContent: 'center',
-                              padding: '3px 8px',
-                              height: 'auto',
-                              boxSizing: 'border-box',
-                              color: '#f43f5e',
-                              borderColor: 'rgba(244, 63, 94, 0.25)',
-                              background: 'rgba(244, 63, 94, 0.08)',
-                              lineHeight: '1.2'
-                            }}
-                            title={`Saídas: -${formatCurrency(mMonthExpensePaid)} realizado de -${formatCurrency(mMonthExpense)} previsto`}
-                          >
-                            <span style={{ fontWeight: '800', fontSize: '0.74rem' }}>
-                              -{formatCurrency(mMonthExpensePaid)}
-                            </span>
-                            <span style={{ fontSize: '0.66rem', opacity: 0.75, fontWeight: '600' }}>
-                              -{formatCurrency(mMonthExpense)}
-                            </span>
-                          </span>
-
-                          {/* Investimentos: Realizado (linha 1) / Previsto (linha 2) */}
-                          <span
-                            className="group-card-badge"
-                            style={{
-                              display: 'inline-flex',
-                              flexDirection: 'column',
-                              alignItems: 'flex-start',
-                              justifyContent: 'center',
-                              padding: '3px 8px',
-                              height: 'auto',
-                              boxSizing: 'border-box',
-                              color: 'var(--primary-light, #818cf8)',
-                              borderColor: 'rgba(99, 102, 241, 0.25)',
-                              background: 'rgba(99, 102, 241, 0.08)',
-                              lineHeight: '1.2'
-                            }}
-                            title={`Investimentos: -${formatCurrency(mMonthInvestmentPaid)} realizado de -${formatCurrency(mMonthInvestment)} previsto`}
-                          >
-                            <span style={{ fontWeight: '800', fontSize: '0.74rem' }}>
-                              -{formatCurrency(mMonthInvestmentPaid)}
-                            </span>
-                            <span style={{ fontSize: '0.66rem', opacity: 0.75, fontWeight: '600' }}>
-                              -{formatCurrency(mMonthInvestment)}
-                            </span>
-                          </span>
-
-                          {/* Badge Único: Saldo (Linha 1: Realizado, Linha 2: Previsto) */}
-                          <span
-                            className="group-card-badge"
-                            style={{
-                              display: 'inline-flex',
-                              flexDirection: 'column',
-                              alignItems: 'flex-start',
-                              justifyContent: 'center',
-                              padding: '3px 8px',
-                              height: 'auto',
-                              boxSizing: 'border-box',
-                              background: mNetRealizedMonth >= 0 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
-                              borderColor: mNetRealizedMonth >= 0 ? 'rgba(16, 185, 129, 0.35)' : 'rgba(244, 63, 94, 0.35)',
-                              lineHeight: '1.2'
-                            }}
-                            title={`Saldo do Mês: Realizado = ${formatCurrency(mNetRealizedMonth)} | Previsto = ${formatCurrency(mNetProjectedMonth)}`}
-                          >
-                            <span style={{ fontWeight: '800', fontSize: '0.74rem', color: mNetRealizedMonth >= 0 ? '#10b981' : '#f43f5e' }}>
-                              Saldo: {mNetRealizedMonth > 0 ? '+' : ''}{formatCurrency(mNetRealizedMonth)}
-                            </span>
-                            <span style={{ fontSize: '0.66rem', fontWeight: '600', color: mNetProjectedMonth >= 0 ? '#38bdf8' : '#fb7185', opacity: 0.9 }}>
-                              {mNetProjectedMonth > 0 ? '+' : ''}{formatCurrency(mNetProjectedMonth)}
-                            </span>
-                          </span>
-                        </>
-                      )}
-
-                      {/* Botão Amortizar no Mês (disponível do mês atual em diante; oculto em meses passados e em parcelas abatidas) */}
-                      {onOpenAmortizationModal && isLoanTimelineOrTab && (() => {
-                        const thisMonthStr = format(mGroup.monthDate, 'yyyy-MM');
-                        // Não exibir o botão amortizar em meses anteriores ao mês atual (2026-08)
-                        if (thisMonthStr < '2026-08') {
-                          return null;
-                        }
-
-                        const monthLoanEvents = mGroup.events.filter((e) => e.category === 'parcela_emprestimo');
-                        // Se as parcelas deste mês estiverem abatidas por amortização extraordinária, ocultar o botão
-                        const isAbatidaMonth = monthLoanEvents.length > 0 && monthLoanEvents.every((e) => e.isAbatida || e.status === 'Abatida');
-                        if (isAbatidaMonth) {
-                          return null;
-                        }
-
-                        return (
+                        {/* Botão Adicionar Evento no Mês (oculto em timelines / abas de empréstimo) */}
+                        {onAddEventForDate && !isLoanTimelineOrTab && (
                           <button
                             type="button"
                             className="btn btn-primary btn-sm"
                             style={{
-                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
-                              padding: '4px 12px',
                               height: '26px',
+                              padding: '0 10px',
+                              fontSize: '0.75rem',
+                              fontWeight: '700',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '5px',
-                              fontSize: '0.74rem',
-                              fontWeight: '700',
+                              gap: '4px',
                               borderRadius: '6px',
-                              marginLeft: '4px',
-                              cursor: 'pointer',
-                              border: 'none',
-                              color: '#ffffff'
+                              cursor: 'pointer'
                             }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-15');
-                              onOpenAmortizationModal(targetDayStr);
+                              const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
+                              onAddEventForDate(
+                                targetDayStr,
+                                activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income'
+                              );
                             }}
-                            title={`Amortizar extraordinariamente neste mês (${monthTitleStr})`}
+                            title={`Adicionar novo evento em ${monthTitleStr}`}
                           >
-                            <TrendingDown size={14} />
-                            <span>Amortizar</span>
+                            <Plus size={13} strokeWidth={2.5} />
+                            <span>Adicionar Evento</span>
                           </button>
-                        );
-                      })()}
+                        )}
+                      </div>
+                    </div>
 
-                      {/* Botão Adicionar Evento no Mês (oculto em timelines / abas de empréstimo) */}
-                      {onAddEventForDate && !isLoanTimelineOrTab && (
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-sm"
+                    {/* Linha Inferior: Badges Projetados Unificados para linhas de tempo do Financeiro (oculto em empréstimos e créditos) */}
+                    {isFinancialTimeline && !isLoanTimelineOrTab && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
+                        {/* Indicador Projeção do Mês */}
+                        <span
                           style={{
-                            height: '26px',
-                            padding: '0 10px',
-                            fontSize: '0.75rem',
-                            fontWeight: '700',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '4px',
-                            borderRadius: '6px',
-                            marginLeft: '4px',
-                            cursor: 'pointer'
+                            gap: '5px',
+                            fontSize: '0.72rem',
+                            fontWeight: '700',
+                            color: isFutureMonth ? 'var(--text-dim)' : 'var(--text-muted)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                            marginRight: '2px'
                           }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
-                            onAddEventForDate(
-                              targetDayStr,
-                              activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income'
-                            );
-                          }}
-                          title={`Adicionar novo evento em ${monthTitleStr}`}
                         >
-                          <Plus size={13} strokeWidth={2.5} />
-                          <span>Adicionar Evento</span>
-                        </button>
-                      )}
-                    </div>
+                          <Sparkles size={12} style={{ color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)' }} />
+                          <span>Projeção do Mês:</span>
+                        </span>
+
+                        {/* 1. Entradas Projetadas */}
+                        <span
+                          className="group-card-badge"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            height: '26px',
+                            boxSizing: 'border-box',
+                            background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthProjectedIncome > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
+                            color: isFutureMonth ? 'var(--text-dim)' : (mMonthProjectedIncome > 0 ? '#10b981' : 'var(--text-dim)'),
+                            borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthProjectedIncome > 0 ? 'rgba(16, 185, 129, 0.35)' : 'var(--border-glass)'),
+                            fontWeight: '800',
+                            fontSize: '0.76rem'
+                          }}
+                          title="Total de entradas projetadas para este mês"
+                        >
+                          <DollarSign size={12} />
+                          <span>+{formatCurrency(mMonthProjectedIncome)}</span>
+                        </span>
+
+                        {/* 2. Gasto Projetado */}
+                        <span
+                          className="group-card-badge"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            height: '26px',
+                            boxSizing: 'border-box',
+                            background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthProjectedExpense > 0 ? 'rgba(244, 63, 94, 0.12)' : 'rgba(255, 255, 255, 0.04)'),
+                            color: isFutureMonth ? 'var(--text-dim)' : (mMonthProjectedExpense > 0 ? '#f43f5e' : 'var(--text-dim)'),
+                            borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthProjectedExpense > 0 ? 'rgba(244, 63, 94, 0.3)' : 'var(--border-glass)'),
+                            fontWeight: '800',
+                            fontSize: '0.76rem'
+                          }}
+                          title="Total de gastos projetados para este mês (inclui prestações de empréstimos)"
+                        >
+                          <TrendingDown size={12} />
+                          <span>-{formatCurrency(mMonthProjectedExpense)}</span>
+                        </span>
+
+                        {/* 3. Investimento Projetado */}
+                        <span
+                          className="group-card-badge"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            height: '26px',
+                            boxSizing: 'border-box',
+                            background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthProjectedInvestment > 0 ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.04)'),
+                            color: isFutureMonth ? 'var(--text-dim)' : (mMonthProjectedInvestment > 0 ? '#818cf8' : 'var(--text-dim)'),
+                            borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthProjectedInvestment > 0 ? 'rgba(99, 102, 241, 0.3)' : 'var(--border-glass)'),
+                            fontWeight: '800',
+                            fontSize: '0.76rem'
+                          }}
+                          title="Total de aportes / investimentos projetados para este mês"
+                        >
+                          <PiggyBank size={12} />
+                          <span>{formatCurrency(mMonthProjectedInvestment)}</span>
+                        </span>
+
+                        {/* 4. Saldo Líquido Projetado */}
+                        <span
+                          className="group-card-badge"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            height: '26px',
+                            boxSizing: 'border-box',
+                            background: isFutureMonth
+                              ? 'rgba(148, 163, 184, 0.08)'
+                              : (mMonthProjectedSaldo >= 0 ? 'rgba(56, 189, 248, 0.12)' : 'rgba(244, 63, 94, 0.12)'),
+                            color: isFutureMonth
+                              ? 'var(--text-dim)'
+                              : (mMonthProjectedSaldo >= 0 ? '#38bdf8' : '#f43f5e'),
+                            borderColor: isFutureMonth
+                              ? 'rgba(148, 163, 184, 0.2)'
+                              : (mMonthProjectedSaldo >= 0 ? 'rgba(56, 189, 248, 0.35)' : 'rgba(244, 63, 94, 0.35)'),
+                            fontWeight: '800',
+                            fontSize: '0.76rem'
+                          }}
+                          title="Saldo Projetado do mês = Entradas - (Gastos + Investimentos)"
+                        >
+                          <Scale size={12} />
+                          <span>Saldo: {mMonthProjectedSaldo >= 0 ? '+' : ''}{formatCurrency(mMonthProjectedSaldo)}</span>
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {hasEvents ? (

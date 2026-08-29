@@ -14,6 +14,7 @@ import {
 import { format, parseISO, addMonths } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../utils/loanCalculations';
+import { FinancialType, EventStatus } from '../enums/index.js';
 
 export default function IncomeEvolutionChart({
   timeline = {},
@@ -73,7 +74,7 @@ export default function IncomeEvolutionChart({
     if (activeFinancialTab === 'investimentos') {
       const seenInitial = new Set();
       (events || []).forEach((ev) => {
-        const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+        const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
         if (isInvestment && ev.initialInvestedAmount) {
           const key = ev.eventId || ev.seriesId || ev.id;
           if (!seenInitial.has(key)) {
@@ -109,12 +110,12 @@ export default function IncomeEvolutionChart({
       if (eventsByMonth[monthKey] && eventsByMonth[monthKey].length > 0) {
         eventsByMonth[monthKey].forEach((ev) => {
           const amt = Number(ev.amount || 0);
-          const isReceived = ev.status === 'Recebido' || ev.status === 'Pago' || ev.status === 'Investido' || ev.isCompleted;
+          const isReceived = ev.status === EventStatus.RECEIVED || ev.status === EventStatus.PAID || ev.status === EventStatus.INVESTED || ev.status === 'Recebido' || ev.status === 'Pago' || ev.status === 'Investido' || ev.isCompleted;
 
-          const isLoan = ev.category === 'parcela_emprestimo' || ev.timelineOriginId === 'tl-loan-80004197726' || ev.isSystemLoanEvent || ev.category === 'amortizacao';
-          const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
-          const isExpense = ((ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan) && !ev.isInvestment && ev.financialType !== 'investimento';
-          const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+          const isLoan = ev.financialType === FinancialType.AMORTIZATION || ev.category === 'parcela_emprestimo' || ev.timelineOriginId === 'tl-loan-80004197726' || ev.isSystemLoanEvent || ev.category === 'amortizacao';
+          const isIncome = (ev.financialType === FinancialType.INCOME || ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
+          const isExpense = ((ev.financialType === FinancialType.EXPENSE || ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan) && !ev.isInvestment && ev.financialType !== FinancialType.INVESTMENT && ev.financialType !== 'investimento';
+          const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
           const isValid = chartMode === 'acumulado_real' ? isReceived : true;
           if (isValid) {

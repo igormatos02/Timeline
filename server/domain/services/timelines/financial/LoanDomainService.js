@@ -1,10 +1,10 @@
-import { FinancialType, TimelineStatus } from '../../../enums/index.js';
+import { EventStatus, FinancialType, TimelineStatus } from '../../../enums/index.js';
 
 /**
- * Domain Service: LoanTimelineService
+ * Domain Service: LoanDomainService
  * Encapsulates calculation rules and metrics for Loans, Mortgages, Installments and Amortizations.
  */
-export class LoanTimelineService {
+export class LoanDomainService {
   /**
    * Filter events belonging to loans
    */
@@ -22,7 +22,7 @@ export class LoanTimelineService {
    * Calculate metrics for a single loan timeline or consolidated active loans
    */
   calculateMetrics(loanTimeline, loanEvents = [], currentMonthKey = null) {
-    const isInactive = loanTimeline && (loanTimeline.status === TimelineStatus.INACTIVE || loanTimeline.status === EventStatus.INACTIVE);
+    const isInactive = loanTimeline && loanTimeline.status === TimelineStatus.INACTIVE;
     if (isInactive) {
       return {
         isActive: false,
@@ -49,7 +49,6 @@ export class LoanTimelineService {
           ev.date &&
           ev.date.startsWith(activeMonth) &&
           !ev.isDeleted &&
-
           (ev.status === EventStatus.PAID)
       )
       .reduce((sum, ev) => sum + (Number(ev.amount) || 0), 0);
@@ -66,4 +65,4 @@ export class LoanTimelineService {
   }
 }
 
-export const loanTimelineService = new LoanTimelineService();
+export const loanDomainService = new LoanDomainService();

@@ -1,5 +1,5 @@
-export { IncomeTimelineService, incomeTimelineService } from './IncomeTimelineService.js';
-export { ExpenseTimelineService, expenseTimelineService } from './ExpenseTimelineService.js';
-export { InvestmentTimelineService, investmentTimelineService } from './InvestmentTimelineService.js';
-export { LoanTimelineService, loanTimelineService } from './LoanTimelineService.js';
-export { BalanceTimelineService, balanceTimelineService } from './BalanceTimelineService.js';
+export { IncomeDomainService, incomeDomainService } from './IncomeDomainService.js';
+export { ExpenseDomainService, expenseDomainService } from './ExpenseDomainService.js';
+export { InvestmentDomainService, investmentDomainService } from './InvestmentDomainService.js';
+export { LoanDomainService, loanDomainService } from './LoanDomainService.js';
+export { BalanceDomainService, balanceDomainService } from './BalanceDomainService.js';

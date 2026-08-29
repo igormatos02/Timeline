@@ -34,14 +34,9 @@ export function projectEvents(rawEvents = [], options = {}) {
       (
         ev.isRecurring === true ||
         ev.periodicity === EventPeriodicity.RECURRING ||
-        ev.periodicity === EventPeriodicity.PERIOD ||
-        ev.periodicity === 'recorrente' ||
-        ev.periodicity === 'periodo'
+        ev.periodicity === EventPeriodicity.PERIOD
       ) &&
-      // Guarantee 'once' events never enter the recurring engine,
-      // even if seriesId is set (e.g. old data migration artefacts)
-      ev.periodicity !== EventPeriodicity.ONCE &&
-      ev.periodicity !== 'unico'
+      ev.periodicity !== EventPeriodicity.ONCE
     ) {
       const sId = ev.eventId || ev.id;
       const normalizedEv = {

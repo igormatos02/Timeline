@@ -1,5 +1,6 @@
 import { addDays, addWeeks, addMonths, addYears, format, parseISO, isBefore, isAfter, differenceInDays } from 'date-fns';
 import { generateUUID } from './uuid.js';
+import { FinancialType, EventStatus, TimelineType } from '../enums/index.js';
 
 /**
  * Format currency in EUR (€)
@@ -354,15 +355,25 @@ export function applyExtraordinaryAmortization({
       return ev;
     });
   }
-
-  return recalculateLoanState(timeline, updatedList);
+return recalculateLoanState(timeline, updatedList);
 }
 
 /**
  * Calculate Summary Metrics for the Loan Timeline Header
  */
 export function getLoanMetrics(timeline, eventsList = []) {
-  const totalDebt = Number(timeline.totalDebt || 0);
+  let calculatedTotalDebt = Number(timeline?.totalDebt || timeline?.totalLoanAmount || timeline?.initialDebt || 0);
+  if (!calculatedTotalDebt || calculatedTotalDebt === 0) {
+    calculatedTotalDebt = (eventsList || []).reduce((acc, ev) => {
+      if (ev.category === 'parcela_emprestimo') {
+        const totalAmt = Number(ev.amount || 0);
+        const principal = ev.principalAmount !== undefined ? Number(ev.principalAmount) : Math.round(totalAmt * 0.82 * 100) / 100;
+        return acc + principal;
+      }
+      return acc;
+    }, 0);
+  }
+  const totalDebt = calculatedTotalDebt;
 
   let totalPaid = 0;
   let totalContractInterestPaid = 0;
@@ -383,7 +394,7 @@ export function getLoanMetrics(timeline, eventsList = []) {
       const interestPortion = ev.interestPortion !== undefined ? Number(ev.interestPortion) : totalAmt - principal;
       const lateInterest = Number(ev.interestAmount || 0);
 
-      const isPaidOrAbatida = ev.status === 'Pago' || ev.status === 'Abatida' || Boolean(ev.isAbatida) || Boolean(ev.isCompleted);
+      const isPaidOrAbatida = ev.status === 'Pago' || ev.status === 'paid' || ev.status === 'Abatida' || Boolean(ev.isAbatida) || Boolean(ev.isCompleted);
 
       if (isPaidOrAbatida) {
         totalPaid += totalAmt + lateInterest;
@@ -540,7 +551,7 @@ export function getLoanMetrics(timeline, eventsList = []) {
  */
 export function getConsolidatedLoanMetrics(timelines, selectedIds = null) {
   const loanTimelines = (timelines || []).filter(
-    (tl) => tl.type === 'Empréstimo' && (!selectedIds || selectedIds.includes(tl.id))
+    (tl) => (tl.type === 'Empréstimo' || tl.type === 'emprestimo' || tl.type === 'loan' || tl.type === TimelineType.LOAN) && (!selectedIds || selectedIds.includes(tl.id))
   );
 
   let totalContractedDebt = 0;
@@ -554,7 +565,7 @@ export function getConsolidatedLoanMetrics(timelines, selectedIds = null) {
 
   loanTimelines.forEach((tl) => {
     const metrics = getLoanMetrics(tl, tl.events || []);
-    totalContractedDebt += Number(tl.totalDebt || 0);
+    totalContractedDebt += Number(metrics.totalDebt || tl.totalDebt || 0);
     totalRemainingBalance += Number(metrics.remainingBalance || 0);
     totalPaid += Number(metrics.totalPaid || 0);
     totalPrincipalAmortized += Number(metrics.totalPrincipalAmortized || 0);
@@ -587,7 +598,7 @@ export function getConsolidatedLoanMetrics(timelines, selectedIds = null) {
  */
 export function getConsolidatedLoanMetricsAtHorizon(timelines, targetHorizonMonth = null, selectedIds = null) {
   const loanTimelines = (timelines || []).filter(
-    (tl) => (tl.type === 'Empréstimo' || tl.type === 'emprestimo') && (!selectedIds || selectedIds.includes(tl.id))
+    (tl) => (tl.type === 'Empréstimo' || tl.type === 'emprestimo' || tl.type === 'loan' || tl.type === TimelineType.LOAN) && (!selectedIds || selectedIds.includes(tl.id))
   );
 
   let totalContractedDebt = 0;
@@ -595,7 +606,8 @@ export function getConsolidatedLoanMetricsAtHorizon(timelines, targetHorizonMont
   let totalRemainingBalance = 0;
 
   loanTimelines.forEach((tl) => {
-    const totalDebt = Number(tl.totalDebt || 0);
+    const metrics = getLoanMetrics(tl, tl.events || []);
+    const totalDebt = Number(metrics.totalDebt || tl.totalDebt || 0);
     totalContractedDebt += totalDebt;
 
     const allEvts = tl.events || [];
@@ -655,12 +667,25 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
   let currentMonthIncome = 0;
   let currentMonthIncomeReceived = 0;
   let totalPaidExpenses = 0;
+  let totalPaidExpensesOnly = 0;
+  let totalPaidLoans = 0;
   let totalPlannedExpenses = 0;
   let totalPlannedExpensesUpToCurrent = 0;
+  let totalPlannedExpensesOnlyUpToCurrent = 0;
+  let totalPlannedLoansUpToCurrent = 0;
   let totalPlannedExpensesHorizon = 0;
   let currentMonthExpenses = 0;
   let currentMonthExpensesPaid = 0;
+  let currentMonthExpensesOnly = 0;
+  let currentMonthExpensesOnlyPaid = 0;
+  let currentMonthLoans = 0;
+  let currentMonthLoansPaid = 0;
   let currentYearExpenses = 0;
+  let currentYearExpensesPaid = 0;
+  let currentYearExpensesOnly = 0;
+  let currentYearExpensesOnlyPaid = 0;
+  let currentYearLoans = 0;
+  let currentYearLoansPaid = 0;
   const expenseMonthsSet = new Set();
   let monthlyExpensesSum = 0;
 
@@ -681,7 +706,7 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
 
   (allEvents || []).forEach((ev) => {
     if (!ev) return;
-    const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento')) || ev.timelineOriginId === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
+    const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.financialType === 'investment' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
     if (isInvestment) {
       if (ev.category === 'investimento_patrimonio') {
         const initialKey = ev.eventId || ev.seriesId || ev.id;
@@ -717,7 +742,7 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
 
       // Se o aporte foi feito e liquidado (Investido/Pago) antes do mês de início da computação, soma ao património prévio
       if (startBound && ev.date < startBound && ev.category !== 'investimento_patrimonio') {
-        const isDone = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted;
+        const isDone = ev.status === 'Investido' || ev.status === 'invested' || ev.status === 'Pago' || ev.status === 'paid' || ev.isCompleted;
         if (isDone) {
           const amt = Number(ev.amount || 0);
           totalPriorInvestedAll += amt;
@@ -748,29 +773,28 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
 
   allEvents.forEach((ev) => {
     if (!ev || !ev.date) return;
-    if (startBound && ev.date < startBound) return; // Filtrar eventos anteriores à data de computação
-
     const amt = Number(ev.amount || 0);
     const isPast = ev.date <= todayStr;
-    const isLoan = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.timelineOriginId === 'tl-loan-jeep' || ev.timelineOriginId === 'tl-loan-dacia' || ev.timelineOriginId === 'tl-loan-casa1' || ev.timelineOriginId === 'tl-loan-casa2' || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
-    const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento')) || ev.timelineOriginId === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
-    const isIncome = (ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !isInvestment && !isLoan;
-    const isExpense = ((ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan) && !isInvestment && !isIncome;
+    const isLoan = ev.financialType === FinancialType.AMORTIZATION || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.timelineOriginId === 'tl-loan-jeep' || ev.timelineOriginId === 'tl-loan-dacia' || ev.timelineOriginId === 'tl-loan-casa1' || ev.timelineOriginId === 'tl-loan-casa2' || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
+    const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.financialType === 'investment' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+    const isIncome = (ev.financialType === FinancialType.INCOME || ev.financialType === 'entrada' || ev.financialType === 'income' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
+    const isExpense = ((ev.financialType === FinancialType.EXPENSE || ev.financialType === 'gasto' || ev.financialType === 'expense' || ev.financialType === 'saida' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan) && !isInvestment && !isIncome;
 
     const evMonth = ev.date ? ev.date.substring(0, 7) : '';
-    const isUpToCurrent = ev.date <= todayStr || evMonth <= currentMonthKey;
-    const isUpToHorizon = !horizonMonthKey || evMonth <= horizonMonthKey;
+    const isAfterStartBound = !startBound || ev.date >= startBound;
+    const isUpToCurrent = (ev.date <= todayStr || evMonth <= currentMonthKey) && isAfterStartBound;
+    const isUpToHorizon = (!horizonMonthKey || evMonth <= horizonMonthKey) && isAfterStartBound;
 
     if (isIncome) {
       // Apenas o que foi efetivamente recebido entra no Saldo Líquido Realizado
-      const isReceived = ev.status === 'Recebido' || ev.isCompleted;
+      const isReceived = ev.status === EventStatus.RECEIVED || ev.status === 'received' || ev.status === 'Recebido' || ev.status === EventStatus.PAID || ev.status === 'paid' || ev.status === 'Pago' || ev.isCompleted;
       if (isUpToCurrent && isReceived) {
         totalReceived += amt;
       }
-      if (isUpToCurrent && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+      if (isUpToCurrent && ev.status !== EventStatus.CANCELLED && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
         totalForecastIncomeUpToCurrent += amt;
       }
-      if (isUpToHorizon && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+      if (isUpToHorizon && ev.status !== EventStatus.CANCELLED && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
         totalForecastIncomeHorizon += amt;
       }
       totalForecastIncome += amt;
@@ -786,35 +810,72 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
       if (!isPast && (!nextIncome || ev.date < nextIncome.date)) nextIncome = ev;
     } else if (isExpense) {
       // Gastos/Empréstimos pagos ou sem pendência até ao período atual
-      const isPaidOrNoPending = ev.status === 'Pago' || ev.status === 'Recebido' || ev.isCompleted || (isPast && ev.status !== 'Pendente' && ev.status !== 'Atrasada' && ev.status !== 'Cancelado');
+      const isPaidOrNoPending = ev.status === EventStatus.PAID || ev.status === 'paid' || ev.status === 'Pago' || ev.status === EventStatus.RECEIVED || ev.status === 'received' || ev.status === 'Recebido' || ev.isCompleted || (isPast && ev.status !== EventStatus.PENDING && ev.status !== 'pending' && ev.status !== 'Pendente' && ev.status !== 'Atrasada' && ev.status !== 'Cancelado');
+      const isPlanned = ev.status !== EventStatus.CANCELLED && ev.status !== 'Cancelado' && ev.status !== 'Excluido';
+
       if (isUpToCurrent && isPaidOrNoPending) {
         totalPaidExpenses += amt;
+        if (isLoan) {
+          totalPaidLoans += amt;
+        } else {
+          totalPaidExpensesOnly += amt;
+        }
       }
-      if (isUpToCurrent && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+      if (isUpToCurrent && isPlanned) {
         totalPlannedExpensesUpToCurrent += amt;
+        if (isLoan) {
+          totalPlannedLoansUpToCurrent += amt;
+        } else {
+          totalPlannedExpensesOnlyUpToCurrent += amt;
+        }
       }
-      if (isUpToHorizon && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+      if (isUpToHorizon && isPlanned) {
         totalPlannedExpensesHorizon += amt;
       }
       totalPlannedExpenses += amt;
       if (!isPast && (!nextExpense || ev.date < nextExpense.date)) nextExpense = ev;
 
       const evYear = ev.date ? ev.date.substring(0, 4) : '';
-      if (evMonth === currentMonthKey) {
+      if (evMonth === currentMonthKey && isPlanned) {
         currentMonthExpenses += amt;
-        if (isPaidOrNoPending) currentMonthExpensesPaid += amt;
+        if (isLoan) {
+          currentMonthLoans += amt;
+        } else {
+          currentMonthExpensesOnly += amt;
+        }
+        if (isPaidOrNoPending) {
+          currentMonthExpensesPaid += amt;
+          if (isLoan) {
+            currentMonthLoansPaid += amt;
+          } else {
+            currentMonthExpensesOnlyPaid += amt;
+          }
+        }
       }
-      if (evYear === currentYearKey) {
+      if (evYear === currentYearKey && isPlanned) {
         currentYearExpenses += amt;
+        if (isLoan) {
+          currentYearLoans += amt;
+        } else {
+          currentYearExpensesOnly += amt;
+        }
+        if (isPaidOrNoPending) {
+          currentYearExpensesPaid += amt;
+          if (isLoan) {
+            currentYearLoansPaid += amt;
+          } else {
+            currentYearExpensesOnlyPaid += amt;
+          }
+        }
       }
-      if (evMonth) {
+      if (evMonth && isPlanned) {
         expenseMonthsSet.add(evMonth);
         monthlyExpensesSum += amt;
       }
     } else if (isInvestment) {
       // Investimentos realizados / aportados até ao período atual (Património é estático/consolidado)
       if (ev.category !== 'investimento_patrimonio') {
-        const isInvestedDone = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted || (isPast && ev.status !== 'Pendente' && ev.status !== 'Cancelado');
+        const isInvestedDone = ev.status === EventStatus.INVESTED || ev.status === 'invested' || ev.status === 'Investido' || ev.status === EventStatus.PAID || ev.status === 'paid' || ev.status === 'Pago' || ev.isCompleted || (isPast && ev.status !== EventStatus.PENDING && ev.status !== 'pending' && ev.status !== 'Pendente' && ev.status !== 'Cancelado');
         if (isUpToCurrent && isInvestedDone) {
           totalInvested += amt;
           totalMonthlyAportesRealized += amt;
@@ -825,11 +886,11 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
           }
         }
 
-        if (isUpToCurrent && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+        if (isUpToCurrent && ev.status !== EventStatus.CANCELLED && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
           totalPlannedInvestmentsUpToCurrent += amt;
           totalMonthlyAportesPlannedCurrent += amt;
         }
-        if (isUpToHorizon && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+        if (isUpToHorizon && ev.status !== EventStatus.CANCELLED && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
           totalPlannedInvestmentsHorizon += amt;
           totalMonthlyAportesPlannedHorizon += amt;
           if (ev.category === 'investimento_outros' || ev.category?.includes('etf') || ev.category?.includes('acoes') || ev.category?.includes('extra')) {
@@ -908,6 +969,24 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     totalMonthlyAportesPlannedHorizon,
     currentMonthExpenses,
     currentMonthExpensesPaid,
+    currentMonthExpensesOnly,
+    currentMonthExpensesOnlyPaid,
+    currentMonthLoans,
+    currentMonthLoansPaid,
+    currentYearExpenses,
+    currentYearExpensesPaid,
+    currentYearExpensesOnly,
+    currentYearExpensesOnlyPaid,
+    currentYearLoans,
+    currentYearLoansPaid,
+    annualProjectedExpenses: currentYearExpenses > 0 ? currentYearExpenses : projectedAnnualExpenses,
+    annualProjectedExpensesOnly: currentYearExpensesOnly,
+    annualProjectedLoans: currentYearLoans,
+    totalPaidExpensesYear: currentYearExpensesPaid,
+    totalPaidExpensesOnly,
+    totalPaidLoans,
+    totalPlannedExpensesOnlyUpToCurrent,
+    totalPlannedLoansUpToCurrent,
     monthlyAverageExpenses,
     projectedAnnualExpenses,
     netRealized,
@@ -924,32 +1003,70 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
 /**
  * Calculate metrics for Income (Entradas & Rendimentos) timelines
  */
-export function getIncomeMetrics(timeline, events = []) {
+export function getIncomeMetrics(timeline, events = [], computeStartDate = null) {
   const allEvents = events.length > 0 ? events : (timeline.events || []);
   const todayStr = '2026-08-21';
+  const currentMonthKey = todayStr.substring(0, 7);
+  const currentYearKey = todayStr.substring(0, 4);
 
-  let totalReceived = 0;
+  const rawComputeStartDate = computeStartDate || timeline?.computeStartDate || timeline?.computeFromMonth;
+  const startBound = rawComputeStartDate && rawComputeStartDate !== '1900-01'
+    ? (rawComputeStartDate.length === 7 ? `${rawComputeStartDate}-01` : rawComputeStartDate)
+    : null;
+
+  let totalReceivedAllTime = 0;
+  let totalProjectedUpToCurrent = 0;
   let totalForecast = 0;
   let receivedCount = 0;
   let plannedCount = 0;
-  let monthlyRecurring = Number(timeline.monthlySalary || 3300.00);
+  let monthlyRecurring = Number(timeline.monthlySalary || 3349.00);
   let nextIncome = null;
+  let currentMonthReceived = 0;
+  let totalReceivedYear = 0;
+  let annualProjected = 0;
 
   allEvents.forEach((ev) => {
+    if (!ev || ev.isDeleted) return;
+    const isLoan = ev.financialType === FinancialType.AMORTIZATION || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
+    const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.financialType === 'investment' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+    const isIncome = (ev.financialType === FinancialType.INCOME || ev.financialType === 'entrada' || ev.financialType === 'income' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
+
+    if (!isIncome) return;
+
     const amt = Number(ev.amount || 0);
     const isPast = ev.date <= todayStr;
-    const isReceived = ev.status === 'Recebido';
+    const isReceived = ev.status === EventStatus.RECEIVED || ev.status === 'received' || ev.status === 'Recebido' || ev.status === EventStatus.PAID || ev.status === 'paid' || ev.status === 'Pago' || ev.isCompleted;
+    const evMonth = ev.date ? ev.date.substring(0, 7) : '';
+    const evYear = ev.date ? ev.date.substring(0, 4) : '';
+    const isAfterStartBound = !startBound || ev.date >= startBound;
+    const isUpToCurrent = (ev.date <= todayStr || evMonth <= currentMonthKey) && isAfterStartBound;
+
+    if (isUpToCurrent) {
+      if (ev.status !== EventStatus.CANCELLED && ev.status !== 'Cancelado' && ev.status !== 'Excluido') {
+        totalProjectedUpToCurrent += amt;
+      }
+      if (isReceived) {
+        totalReceivedAllTime += amt;
+      }
+    }
+
+    if (evYear === currentYearKey) {
+      annualProjected += amt;
+      if (isReceived) {
+        totalReceivedYear += amt;
+      }
+    }
+
+    if (evMonth === currentMonthKey && isReceived) {
+      currentMonthReceived += amt;
+    }
 
     if (isPast) {
       if (isReceived) {
-        totalReceived += amt;
         receivedCount++;
         totalForecast += amt;
-      } else {
-        // Entrada passada não recebida (Em Atraso)
       }
     } else {
-      // Futuro a partir da data de hoje: considera-se que vão ser recebidos
       totalForecast += amt;
       plannedCount++;
       if (!nextIncome || ev.date < nextIncome.date) {
@@ -959,8 +1076,13 @@ export function getIncomeMetrics(timeline, events = []) {
   });
 
   return {
-    totalReceived,
-    totalForecast,
+    totalReceived: totalReceivedYear,
+    totalReceivedYear,
+    totalReceivedAllTime,
+    totalProjectedUpToCurrent,
+    annualProjected: annualProjected || (monthlyRecurring * 12),
+    currentMonthReceived,
+    monthlyBaseSalary: monthlyRecurring,
     receivedCount,
     plannedCount,
     totalEventsCount: allEvents.length,

@@ -9,6 +9,7 @@ import {
   loanTimelineService,
   balanceTimelineService
 } from '../../domain/services/timelines/financial/index.js';
+import { TimelineStatus } from '../../domain/enums/TimelineStatus.js';
 
 export class TimelineService {
   async getAllTimelines(query = {}) {
@@ -22,16 +23,16 @@ export class TimelineService {
       let tlEvents = [];
       let metrics = {};
 
-      if (tl.type === 'entradas') {
+      if (tl.type === TimelineStatus.INCOME) {
         tlEvents = incomeTimelineService.filterEvents(projectedEvents, tl.id);
         metrics = incomeTimelineService.calculateMetrics(tlEvents, query.currentMonth);
-      } else if (tl.type === 'gastos') {
+      } else if (tl.type === TimelineStatus.EXPENSE) {
         tlEvents = expenseTimelineService.filterEvents(projectedEvents, tl.id);
         metrics = expenseTimelineService.calculateMetrics(tlEvents, query.currentMonth);
-      } else if (tl.type === 'investimentos') {
+      } else if (tl.type === TimelineStatus.INVESTMENT) {
         tlEvents = investmentTimelineService.filterEvents(projectedEvents, tl.id);
         metrics = investmentTimelineService.calculateMetrics(tlEvents, query.currentMonth);
-      } else if (tl.type === 'emprestimo' || tl.type === 'Empréstimo') {
+      } else if (tl.type === TimelineStatus.LOAN) {
         tlEvents = loanTimelineService.filterEvents(projectedEvents, tl.id);
         metrics = loanTimelineService.calculateMetrics(tl, tlEvents, query.currentMonth);
       } else {
@@ -60,16 +61,16 @@ export class TimelineService {
     let events = [];
     let metrics = {};
 
-    if (timeline.type === 'entradas') {
+    if (timeline.type === TimelineStatus.INCOME) {
       events = incomeTimelineService.filterEvents(projectedEvents, id);
       metrics = incomeTimelineService.calculateMetrics(events, query.currentMonth);
-    } else if (timeline.type === 'gastos') {
+    } else if (timeline.type === TimelineStatus.EXPENSE) {
       events = expenseTimelineService.filterEvents(projectedEvents, id);
       metrics = expenseTimelineService.calculateMetrics(events, query.currentMonth);
-    } else if (timeline.type === 'investimentos') {
+    } else if (timeline.type === TimelineStatus.INVESTMENT) {
       events = investmentTimelineService.filterEvents(projectedEvents, id);
       metrics = investmentTimelineService.calculateMetrics(events, query.currentMonth);
-    } else if (timeline.type === 'emprestimo' || timeline.type === 'Empréstimo') {
+    } else if (timeline.type === TimelineStatus.LOAN) {
       events = loanTimelineService.filterEvents(projectedEvents, id);
       metrics = loanTimelineService.calculateMetrics(timeline, events, query.currentMonth);
     } else {
@@ -91,7 +92,7 @@ export class TimelineService {
 
     return balanceTimelineService.calculateBalance({
       allEvents: projectedEvents,
-      loanTimelines: allTimelines.filter((tl) => tl.type === 'emprestimo' || tl.type === 'Empréstimo'),
+      loanTimelines: allTimelines.filter((tl) => tl.type === TimelineStatus.LOAN),
       currentMonthKey: query.currentMonth
     });
   }
@@ -99,8 +100,8 @@ export class TimelineService {
   async createTimeline(data) {
     return timelineRepository.create({
       ...data,
-      type: data.type || 'emprestimo',
-      status: data.status || 'Ativo'
+      type: data.type || TimelineStatus.LOAN,
+      status: data.status || TimelineStatus.ACTIVE
     });
   }
 

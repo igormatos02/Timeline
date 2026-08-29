@@ -1,5 +1,5 @@
 export const TimeboardType = Object.freeze({
-  FINANCIAL: 'financeiro',
-  PROJECTS: 'projetos',
-  PERSONAL: 'pessoal'
+  FINANCIAL: 'financial',
+  PROJECTS: 'projects',
+  PERSONAL: 'personal'
 });

@@ -41,9 +41,7 @@ export class SupabaseFinancialEventRepository extends IRepository {
       periodicity: row.periodicity,
       // eventId is the canonical series key. Only set for recurring events.
       // For 'once' events, event_id equals the row's own id and must NOT be used as eventId.
-      eventId: (row.is_recurring || (row.periodicity && row.periodicity !== 'once' && row.periodicity !== 'unico'))
-        ? (row.event_id || null)
-        : null,
+      eventId: row.eventId,
       event_id: row.event_id || null,
       version: row.event_version !== undefined ? Number(row.event_version) : (row.version !== undefined ? Number(row.version) : 0),
       eventVersion: row.event_version !== undefined ? Number(row.event_version) : 0,
@@ -84,7 +82,7 @@ export class SupabaseFinancialEventRepository extends IRepository {
       sobreposition_over: data.sobrepositionOver || data.sobreposition_over || null,
       day_of_month: data.dayOfMonth !== undefined ? data.dayOfMonth : (data.day_of_month !== undefined ? data.day_of_month : null),
       is_terminated: Boolean(data.isTerminated || data.is_terminated),
-      
+
       tenant_id: data.tenantId || data.tenant_id || 'tenant-igor',
       timeboard_id: data.timeboardId || data.timeboard_id || '5fcd8a1a-eac7-4405-9c8b-b9607e70b420',
       timeline_id: data.timelineId || data.timeline_id || null,
@@ -101,20 +99,20 @@ export class SupabaseFinancialEventRepository extends IRepository {
       automatic: Boolean(data.automatic !== undefined ? data.automatic : data.isAutomatic),
       is_recurring: Boolean(data.isRecurring !== undefined ? data.isRecurring : data.is_recurring),
       periodicity: data.periodicity || 'unico',
-      
+
       installment_number: data.installmentNumber !== undefined ? data.installmentNumber : data.installment_number || null,
       total_installments: data.totalInstallments !== undefined ? data.totalInstallments : data.total_installments || null,
       amortization_strategy: data.amortizationStrategy || data.amortization_strategy || data.strategy || null,
       interest_amount: Number(data.interestAmount !== undefined ? data.interestAmount : data.interest_amount) || 0,
       principal_amount: Number(data.principalAmount !== undefined ? data.principalAmount : data.principal_amount) || 0,
       remaining_debt_after: Number(data.remainingDebtAfter !== undefined ? data.remainingDebtAfter : (data.remaining_debt_after || data.balanceAfter)) || null,
-      
+
       labels: Array.isArray(data.labels) ? data.labels : [],
       breakdown_items: Array.isArray(data.breakdownItems) ? data.breakdownItems : (Array.isArray(data.breakdown_items) ? data.breakdown_items : []),
       notes: data.notes || '',
       priority: data.priority || 'Normal',
       time: data.time || '09:00',
-      
+
       created_at: data.createdAt || data.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString()
     };

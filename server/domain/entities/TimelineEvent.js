@@ -87,8 +87,8 @@ export class TimelineEvent {
 
     this.timelineOriginName = timelineOriginName;
     this.timelineOriginIcon = timelineOriginIcon;
-    this.eventId = eventId || event_id || null;
-    this.seriesId = this.eventId; // backward-compat alias — will be removed
+    this.eventId = eventId;
+
     this.sobrepositionOver = sobrepositionOver;
     this.version = Number(version) || 0;
     this.isTerminated = Boolean(isTerminated);
@@ -185,11 +185,11 @@ export class TimelineEvent {
       ? isIncome
         ? EventStatus.RECEIVED
         : isInvestment
-        ? EventStatus.INVESTED
-        : EventStatus.PAID
+          ? EventStatus.INVESTED
+          : EventStatus.PAID
       : isInvestment
-      ? EventStatus.PLANNED
-      : EventStatus.PENDING;
+        ? EventStatus.PLANNED
+        : EventStatus.PENDING;
 
     return {
       status: newStatus,

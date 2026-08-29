@@ -1,7 +1,14 @@
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { loanContractRepository } from '../../infrastructure/database/json/JsonLoanContractRepository.js';
-import { eventRepository } from '../../infrastructure/database/json/JsonEventRepository.js';
+import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
+import {
+  incomeTimelineService,
+  expenseTimelineService,
+  investmentTimelineService,
+  loanTimelineService,
+  balanceTimelineService
+} from '../../domain/services/timelines/financial/index.js';
 
 export class TimelineService {
   async getAllTimelines(query = {}) {
@@ -12,13 +19,32 @@ export class TimelineService {
     const projectedEvents = projectEvents(allRawEvents, query);
 
     return timelines.map((tl) => {
+      let tlEvents = [];
+      let metrics = {};
+
+      if (tl.type === 'entradas') {
+        tlEvents = incomeTimelineService.filterEvents(projectedEvents, tl.id);
+        metrics = incomeTimelineService.calculateMetrics(tlEvents, query.currentMonth);
+      } else if (tl.type === 'gastos') {
+        tlEvents = expenseTimelineService.filterEvents(projectedEvents, tl.id);
+        metrics = expenseTimelineService.calculateMetrics(tlEvents, query.currentMonth);
+      } else if (tl.type === 'investimentos') {
+        tlEvents = investmentTimelineService.filterEvents(projectedEvents, tl.id);
+        metrics = investmentTimelineService.calculateMetrics(tlEvents, query.currentMonth);
+      } else if (tl.type === 'emprestimo' || tl.type === 'Empréstimo') {
+        tlEvents = loanTimelineService.filterEvents(projectedEvents, tl.id);
+        metrics = loanTimelineService.calculateMetrics(tl, tlEvents, query.currentMonth);
+      } else {
+        tlEvents = projectedEvents.filter((ev) => ev.timelineId === tl.id || ev.timelineOriginId === tl.id);
+      }
+
       const tlLoans = allLoans.filter((l) => l.timelineId === tl.id);
-      const tlEvents = projectedEvents.filter((ev) => ev.timelineId === tl.id || ev.timelineOriginId === tl.id);
 
       return {
         ...tl,
         carLoans: tlLoans,
-        events: tlEvents
+        events: tlEvents,
+        metrics
       };
     });
   }
@@ -31,17 +57,51 @@ export class TimelineService {
     const allRawEvents = await eventRepository.getAll();
     const projectedEvents = projectEvents(allRawEvents, query);
 
-    const events = projectedEvents.filter((ev) => ev.timelineId === id || ev.timelineOriginId === id);
+    let events = [];
+    let metrics = {};
+
+    if (timeline.type === 'entradas') {
+      events = incomeTimelineService.filterEvents(projectedEvents, id);
+      metrics = incomeTimelineService.calculateMetrics(events, query.currentMonth);
+    } else if (timeline.type === 'gastos') {
+      events = expenseTimelineService.filterEvents(projectedEvents, id);
+      metrics = expenseTimelineService.calculateMetrics(events, query.currentMonth);
+    } else if (timeline.type === 'investimentos') {
+      events = investmentTimelineService.filterEvents(projectedEvents, id);
+      metrics = investmentTimelineService.calculateMetrics(events, query.currentMonth);
+    } else if (timeline.type === 'emprestimo' || timeline.type === 'Empréstimo') {
+      events = loanTimelineService.filterEvents(projectedEvents, id);
+      metrics = loanTimelineService.calculateMetrics(timeline, events, query.currentMonth);
+    } else {
+      events = projectedEvents.filter((ev) => ev.timelineId === id || ev.timelineOriginId === id);
+    }
 
     return {
       ...timeline,
       carLoans: loans,
-      events
+      events,
+      metrics
     };
   }
 
+  async getTimeboardBalance(timeboardId, query = {}) {
+    const allTimelines = await timelineRepository.getAll((tl) => !timeboardId || tl.timeboardId === timeboardId);
+    const allRawEvents = await eventRepository.getAll((ev) => !timeboardId || ev.timeboardId === timeboardId);
+    const projectedEvents = projectEvents(allRawEvents, query);
+
+    return balanceTimelineService.calculateBalance({
+      allEvents: projectedEvents,
+      loanTimelines: allTimelines.filter((tl) => tl.type === 'emprestimo' || tl.type === 'Empréstimo'),
+      currentMonthKey: query.currentMonth
+    });
+  }
+
   async createTimeline(data) {
-    return timelineRepository.create(data);
+    return timelineRepository.create({
+      ...data,
+      type: data.type || 'emprestimo',
+      status: data.status || 'Ativo'
+    });
   }
 
   async updateTimeline(id, updates) {

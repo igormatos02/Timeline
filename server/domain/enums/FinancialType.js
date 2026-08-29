@@ -1,6 +1,6 @@
 export const FinancialType = Object.freeze({
-  INCOME: 'entrada',
-  EXPENSE: 'gasto',
-  INVESTMENT: 'investimento',
-  AMORTIZATION: 'amortizacao'
+  INCOME: 'income',
+  EXPENSE: 'expense',
+  INVESTMENT: 'investment',
+  AMORTIZATION: 'amortization'
 });

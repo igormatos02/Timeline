@@ -1,4 +1,4 @@
-import { eventRepository } from '../../infrastructure/database/json/JsonEventRepository.js';
+import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
 import { loanContractRepository } from '../../infrastructure/database/json/JsonLoanContractRepository.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
@@ -21,14 +21,14 @@ export class EventService {
 
   async createEvent(eventData) {
     const isRecurring = eventData.periodicity === EventPeriodicity.RECURRING || eventData.isRecurring;
-    const seriesId = eventData.seriesId || (isRecurring ? `series-${Date.now()}` : null);
+    const eventId = eventData.eventId || eventData.event_id || (isRecurring ? `series-${Date.now()}` : null);
 
     const payload = {
       ...eventData,
       timelineId: eventData.timelineId || eventData.timelineOriginId || null,
       timelineOriginId: eventData.timelineId || eventData.timelineOriginId || null,
       timeboardId: eventData.timeboardId || '5fcd8a1a-eac7-4405-9c8b-b9607e70b420',
-      seriesId,
+      eventId,
       version: eventData.version !== undefined ? Number(eventData.version) : 0,
       isRecurring: Boolean(isRecurring)
     };
@@ -59,9 +59,45 @@ export class EventService {
       existing?.timelineOriginId?.startsWith('tl-loan-') ||
       Boolean(directUpdates.timelineId || existing?.timelineId);
 
+    const loanTlId = directUpdates.timelineId || directUpdates.timelineOriginId || existing?.timelineId || existing?.timelineOriginId;
+    const targetSeriesId = directUpdates.eventId || directUpdates.event_id || updates.eventId || (isLoan ? loanTlId : (existing?.eventId || id));
+    const isAmountOrDateChange =
+      (directUpdates.amount !== undefined && existing && Number(directUpdates.amount) !== Number(existing.amount)) ||
+      (directUpdates.date !== undefined && existing && directUpdates.date !== existing.date) ||
+      (directUpdates.dayOfMonth !== undefined && existing && Number(directUpdates.dayOfMonth) !== Number(existing.dayOfMonth));
+
+    // 1. Direct Series-Wide Automatic Toggle (when toggling automatic specifically without value/date change)
+    if (!isAmountOrDateChange && (updateScope === 'all_series' || (directUpdates.automatic !== undefined && directUpdates.amount === undefined && directUpdates.date === undefined))) {
+      const matchKey = targetSeriesId || loanTlId || id;
+      await eventRepository.updateMany(
+        (ev) =>
+          (matchKey && (
+            ev.eventId === matchKey ||
+            ev.id === matchKey ||
+            ev.sobrepositionOver === matchKey ||
+            ev.timelineId === matchKey ||
+            ev.timelineOriginId === matchKey
+          )) ||
+          (loanTlId && (ev.timelineId === loanTlId || ev.timelineOriginId === loanTlId)),
+        {
+          automatic: Boolean(directUpdates.automatic),
+          isAutomatic: Boolean(directUpdates.automatic)
+        }
+      );
+
+      if (existing) {
+        await eventRepository.update(id, {
+          automatic: Boolean(directUpdates.automatic),
+          isAutomatic: Boolean(directUpdates.automatic),
+          status: directUpdates.status || existing.status,
+          isCompleted: directUpdates.isCompleted !== undefined ? directUpdates.isCompleted : existing.isCompleted
+        });
+      }
+      return true;
+    }
+
     if (isLoan && (directUpdates.category === 'parcela_emprestimo' || existing?.category === 'parcela_emprestimo')) {
       const targetDate = directUpdates.date || existing?.date;
-      const loanTlId = directUpdates.timelineId || directUpdates.timelineOriginId || existing?.timelineId || existing?.timelineOriginId;
 
       if (updateScope === 'subsequent' || propagateForward) {
         await eventRepository.updateMany(
@@ -77,41 +113,26 @@ export class EventService {
       }
     }
 
-    const targetSeriesId = directUpdates.seriesId || updates.seriesId;
-
-    let baseEvent = existing;
-    if (!baseEvent && targetSeriesId) {
-      const existingOverride = allRawEvents.find(
-        (ev) => ev.sobrepositionOver === targetSeriesId && ev.date === directUpdates.date
-      );
-      if (existingOverride) {
-        baseEvent = existingOverride;
-      } else {
-        const seriesVersions = allRawEvents
-          .filter(
-            (ev) =>
-              ev.seriesId === targetSeriesId &&
-              !ev.sobrepositionOver &&
-              (!directUpdates.date || ev.date <= directUpdates.date)
-          )
-          .sort((a, b) => (a.date > b.date ? 1 : -1));
-        baseEvent =
-          seriesVersions[seriesVersions.length - 1] || allRawEvents.find((ev) => ev.seriesId === targetSeriesId);
+    if (updateScope === 'all_series' || updateScope === 'all') {
+      if (targetSeriesId) {
+        await eventRepository.updateMany(
+          (ev) =>
+            ev.eventId === targetSeriesId ||
+            ev.id === targetSeriesId ||
+            ev.sobrepositionOver === targetSeriesId ||
+            (ev.timelineId && ev.timelineId === targetSeriesId),
+          directUpdates
+        );
       }
-    }
-
-    if (baseEvent && !hasEventMeaningfullyChanged(baseEvent, directUpdates)) return baseEvent;
-
-    if (targetSeriesId && directUpdates.targetAmount !== undefined && directUpdates.targetAmount !== '') {
-      await eventRepository.updateMany(
-        (ev) => ev.seriesId === targetSeriesId || ev.sobrepositionOver === targetSeriesId,
-        { targetAmount: Number(directUpdates.targetAmount) || directUpdates.targetAmount }
-      );
+      if (existing) {
+        await eventRepository.update(id, directUpdates);
+      }
+      return true;
     }
 
     if (updateScope === 'single' && targetSeriesId) {
       const seriesVersions = allRawEvents.filter(
-        (ev) => ev.seriesId === targetSeriesId || ev.sobrepositionOver === targetSeriesId
+        (ev) => ev.eventId === targetSeriesId || ev.sobrepositionOver === targetSeriesId
       );
       const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
       const nextVersion = currentHighestVersion + 1;
@@ -128,8 +149,9 @@ export class EventService {
           periodicity: EventPeriodicity.ONCE
         });
       } else {
+        const { id: _oldId, ...cleanOverrideData } = directUpdates;
         return eventRepository.create({
-          ...directUpdates,
+          ...cleanOverrideData,
           sobrepositionOver: targetSeriesId,
           version: nextVersion,
           isRecurring: false,
@@ -140,14 +162,14 @@ export class EventService {
 
     if (updateScope === 'all' && targetSeriesId) {
       await eventRepository.updateMany(
-        (ev) => ev.seriesId === targetSeriesId || ev.sobrepositionOver === targetSeriesId,
+        (ev) => ev.eventId === targetSeriesId || ev.sobrepositionOver === targetSeriesId,
         directUpdates
       );
       return true;
     }
 
     if ((updateScope === 'subsequent' || propagateForward) && targetSeriesId) {
-      const seriesVersions = allRawEvents.filter((ev) => ev.seriesId === targetSeriesId && !ev.sobrepositionOver);
+      const seriesVersions = allRawEvents.filter((ev) => ev.eventId === targetSeriesId && !ev.sobrepositionOver);
       const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
       const nextVersion = currentHighestVersion + 1;
       const targetDate = directUpdates.date;
@@ -162,9 +184,10 @@ export class EventService {
         }
       );
 
+      const { id: _oldId, ...cleanVersionData } = directUpdates;
       return eventRepository.create({
-        ...directUpdates,
-        seriesId: targetSeriesId,
+        ...cleanVersionData,
+        eventId: targetSeriesId,
         version: nextVersion,
         isRecurring: true,
         periodicity: EventPeriodicity.RECURRING
@@ -198,16 +221,16 @@ export class EventService {
     const projected = projectEvents(allRaw);
     const projEv = projected.find((ev) => ev.id === id);
 
-    if (projEv && projEv.seriesId) {
+    if (projEv && projEv.eventId) {
       const toggled = projEv.getToggledStatus ? projEv.getToggledStatus() : { status: EventStatus.PAID, isCompleted: true };
       const seriesVersions = allRaw.filter(
-        (ev) => ev.seriesId === projEv.seriesId || ev.sobrepositionOver === projEv.seriesId
+        (ev) => ev.eventId === projEv.eventId || ev.sobrepositionOver === projEv.eventId
       );
       const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
 
       return eventRepository.create({
         ...projEv,
-        sobrepositionOver: projEv.seriesId,
+        sobrepositionOver: projEv.eventId,
         version: currentHighestVersion + 1,
         ...toggled,
         isRecurring: false
@@ -233,12 +256,12 @@ export class EventService {
       directEvent?.timelineOriginId?.startsWith('tl-loan-');
     if (isLoan) return eventRepository.delete(id);
 
-    const targetSeriesId = directEvent?.seriesId || directEvent?.sobrepositionOver || options.seriesId;
+    const targetSeriesId = directEvent?.eventId || directEvent?.event_id || directEvent?.sobrepositionOver || options.eventId;
 
     if (deleteScope === 'all' || options.deleteSeries) {
       if (targetSeriesId) {
         await eventRepository.deleteMany(
-          (ev) => ev.seriesId === targetSeriesId || ev.sobrepositionOver === targetSeriesId || ev.id === id
+          (ev) => ev.eventId === targetSeriesId || ev.sobrepositionOver === targetSeriesId || ev.id === id
         );
         return true;
       }
@@ -247,14 +270,14 @@ export class EventService {
 
     if (deleteScope === 'subsequent' && targetSeriesId) {
       const seriesVersions = allRawEvents.filter(
-        (ev) => ev.seriesId === targetSeriesId || ev.sobrepositionOver === targetSeriesId
+        (ev) => ev.eventId === targetSeriesId || ev.sobrepositionOver === targetSeriesId
       );
       const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
       const targetDate = options.date || directEvent?.date;
 
       await eventRepository.create({
         ...(directEvent || {}),
-        seriesId: targetSeriesId,
+        eventId: targetSeriesId,
         version: currentHighestVersion + 1,
         date: targetDate,
         isTerminated: true,
@@ -269,7 +292,7 @@ export class EventService {
     if (targetSeriesId) {
       const targetDate = options.date || directEvent?.date;
       const seriesVersions = allRawEvents.filter(
-        (ev) => ev.seriesId === targetSeriesId || ev.sobrepositionOver === targetSeriesId
+        (ev) => ev.eventId === targetSeriesId || ev.sobrepositionOver === targetSeriesId
       );
       const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
       const nextVersion = currentHighestVersion + 1;
@@ -281,7 +304,7 @@ export class EventService {
         return eventRepository.update(existingOverride.id, { isDeleted: true, status: EventStatus.DELETED, version: nextVersion });
       }
       await eventRepository.create({
-        seriesId: targetSeriesId,
+        eventId: targetSeriesId,
         sobrepositionOver: targetSeriesId,
         date: targetDate,
         version: nextVersion,
@@ -527,6 +550,8 @@ function hasEventMeaningfullyChanged(base, updates) {
   if (updates.dayOfMonth !== undefined && Number(updates.dayOfMonth) !== Number(base.dayOfMonth)) return true;
   if (updates.isCompleted !== undefined && Boolean(updates.isCompleted) !== Boolean(base.isCompleted)) return true;
   if (updates.isLocked !== undefined && Boolean(updates.isLocked) !== Boolean(base.isLocked)) return true;
+  if (updates.automatic !== undefined && Boolean(updates.automatic) !== Boolean(base.automatic ?? base.isAutomatic)) return true;
+  if (updates.isAutomatic !== undefined && Boolean(updates.isAutomatic) !== Boolean(base.automatic ?? base.isAutomatic)) return true;
   if (updates.periodicity !== undefined && updates.periodicity !== base.periodicity) return true;
   if (updates.recurrenceEndDate !== undefined && updates.recurrenceEndDate !== base.recurrenceEndDate) return true;
   if (updates.endDate !== undefined && updates.endDate !== base.endDate) return true;

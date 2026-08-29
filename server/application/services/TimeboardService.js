@@ -32,6 +32,62 @@ export class TimeboardService {
       type: data.type || TimeboardType.FINANCIAL
     });
 
+    const isFinancial =
+      createdTimeboard.isFinancial?.() ||
+      createdTimeboard.type === 'financial' ||
+      createdTimeboard.type === TimeboardType.FINANCIAL;
+
+    if (isFinancial) {
+      const defaultTimelines = [
+        {
+          timeboardId: createdTimeboard.id,
+          name: 'Entradas e Rendimentos',
+          type: 'entradas',
+          color: '#10b981',
+          description: 'Gestão de salários, rendimentos e receitas',
+          isSystemDefault: true,
+          canDelete: false,
+          status: 'Ativo',
+          periodicity: 'mensal',
+          startDate: '2026-01-01',
+          endDate: '2027-04-30',
+          tenantId: createdTimeboard.tenantId || 'tenant-igor'
+        },
+        {
+          timeboardId: createdTimeboard.id,
+          name: 'Gastos e Despesas',
+          type: 'gastos',
+          color: '#f43f5e',
+          description: 'Gestão de despesas fixas, recorrentes e variáveis',
+          isSystemDefault: true,
+          canDelete: false,
+          status: 'Ativo',
+          periodicity: 'mensal',
+          startDate: '2026-01-01',
+          endDate: '2027-04-30',
+          tenantId: createdTimeboard.tenantId || 'tenant-igor'
+        },
+        {
+          timeboardId: createdTimeboard.id,
+          name: 'Investimentos e Poupança',
+          type: 'investimentos',
+          color: '#6366f1',
+          description: 'Gestão de poupança, património e aportes',
+          isSystemDefault: true,
+          canDelete: false,
+          status: 'Ativo',
+          periodicity: 'mensal',
+          startDate: '2026-01-01',
+          endDate: '2027-04-30',
+          tenantId: createdTimeboard.tenantId || 'tenant-igor'
+        }
+      ];
+
+      for (const tl of defaultTimelines) {
+        await timelineRepository.create(tl);
+      }
+    }
+
     return this.getTimeboardById(createdTimeboard.id);
   }
 

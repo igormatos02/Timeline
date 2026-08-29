@@ -1,23 +1,23 @@
-import { TimelineType } from '../enums/index.js';
+import { TimelineType, TimelineStatus } from '../enums/index.js';
 
 /**
  * Aggregate Root: Timeline
- * Represents a timeline track for income, expenses, investments, or contractual loans.
+ * Represents a timeline track for contractual loans.
  */
 export class Timeline {
   constructor({
     id,
     tenantId = 'tenant-igor',
-    timeboardId = 'tb-principal',
+    timeboardId = '5fcd8a1a-eac7-4405-9c8b-b9607e70b420',
     name,
-    type = TimelineType.EXPENSE,
-    color = '#10b981',
+    type = TimelineType.LOAN,
+    color = '#6366f1',
     description = '',
     isSystemDefault = false,
     canDelete = true,
     startDate = '2026-01-01',
     endDate = '2027-04-30',
-    status = 'Em Progresso',
+    status = TimelineStatus.ACTIVE,
     periodicity = 'mensal',
     monthlySalary = 0,
     contractNumber = '',
@@ -62,7 +62,11 @@ export class Timeline {
   }
 
   isLoan() {
-    return this.type === TimelineType.LOAN;
+    return this.type === TimelineType.LOAN || this.type === 'emprestimo' || this.type === 'Empréstimo';
+  }
+
+  isActive() {
+    return this.status === TimelineStatus.ACTIVE || this.status === 'Ativo';
   }
 
   isUniquePerTimeboard() {
@@ -77,9 +81,9 @@ export class Timeline {
     if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') {
       throw new Error('Timeline name is required');
     }
-    const validTypes = Object.values(TimelineType);
-    if (data.type && !validTypes.includes(data.type)) {
-      throw new Error(`Invalid timeline type: ${data.type}`);
+    const validStatuses = Object.values(TimelineStatus);
+    if (data.status && !validStatuses.includes(data.status)) {
+      throw new Error(`Invalid timeline status: ${data.status}`);
     }
     return true;
   }

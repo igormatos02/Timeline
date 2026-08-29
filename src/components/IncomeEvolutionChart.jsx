@@ -75,7 +75,7 @@ export default function IncomeEvolutionChart({
       (events || []).forEach((ev) => {
         const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
         if (isInvestment && ev.initialInvestedAmount) {
-          const key = ev.seriesId || ev.id;
+          const key = ev.eventId || ev.seriesId || ev.id;
           if (!seenInitial.has(key)) {
             runningTotal += Number(ev.initialInvestedAmount) || 0;
             seenInitial.add(key);

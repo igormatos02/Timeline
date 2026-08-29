@@ -15,6 +15,7 @@ export default function CreateTimeboardModal({
   });
 
   useEffect(() => {
+    if (!isOpen) return;
     if (initialData) {
       setFormData(initialData);
     } else {

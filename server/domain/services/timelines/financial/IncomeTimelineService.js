@@ -1,0 +1,56 @@
+import { FinancialType } from '../../../enums/index.js';
+
+/**
+ * Domain Service: IncomeTimelineService
+ * Encapsulates calculation rules and metrics specific to Income / Revenue timelines.
+ */
+export class IncomeTimelineService {
+  /**
+   * Filter events belonging to income
+   */
+  filterEvents(events = [], timelineId = null) {
+    return events.filter((ev) => {
+      if (!ev || ev.isDeleted) return false;
+      if (timelineId && ev.timelineId === timelineId) return true;
+      return (
+        ev.financialType === FinancialType.INCOME ||
+        ev.financialType === 'entrada' ||
+        ev.isIncome === true ||
+        (ev.category && ev.category.startsWith('entrada'))
+      );
+    });
+  }
+
+  /**
+   * Calculate financial metrics for Income
+   */
+  calculateMetrics(incomeEvents = [], currentMonthKey = null) {
+    const activeMonth = currentMonthKey || new Date().toISOString().substring(0, 7);
+
+    const monthlyTotal = incomeEvents
+      .filter((ev) => ev.date && ev.date.startsWith(activeMonth) && !ev.isDeleted)
+      .reduce((sum, ev) => sum + (Number(ev.amount) || 0), 0);
+
+    const receivedTotal = incomeEvents
+      .filter(
+        (ev) =>
+          ev.date &&
+          ev.date.startsWith(activeMonth) &&
+          !ev.isDeleted &&
+          (ev.status === 'received' || ev.status === 'paid' || ev.status === 'Recebido' || ev.status === 'Pago' || ev.isCompleted)
+      )
+      .reduce((sum, ev) => sum + (Number(ev.amount) || 0), 0);
+
+    const pendingTotal = Math.max(0, monthlyTotal - receivedTotal);
+    const annualProjected = monthlyTotal * 12;
+
+    return {
+      monthlyTotal: Math.round(monthlyTotal * 100) / 100,
+      receivedTotal: Math.round(receivedTotal * 100) / 100,
+      pendingTotal: Math.round(pendingTotal * 100) / 100,
+      annualProjected: Math.round(annualProjected * 100) / 100
+    };
+  }
+}
+
+export const incomeTimelineService = new IncomeTimelineService();

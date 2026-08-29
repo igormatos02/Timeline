@@ -32,7 +32,7 @@ export default function DeleteEventModal({
   const isRecurring = Boolean(
     event.periodicity === 'recorrente' ||
     event.isRecurring === true ||
-    Boolean(event.seriesId) ||
+    Boolean(event.eventId || event.seriesId) ||
     Boolean(
       event.category &&
       (event.category.includes('recorrente') ||

@@ -56,7 +56,7 @@ import TimelineEventCard from './TimelineEventCard';
 import FloatingTaskStack from './FloatingTaskStack';
 import { getGroupingForPeriodicity, formatCurrency } from '../utils/loanCalculations';
 
-export default function VerticalTimeline({
+function VerticalTimeline({
   timeline,
   activeFinancialTab = 'balanco',
   onSelectFinancialTab,
@@ -207,51 +207,39 @@ export default function VerticalTimeline({
     }
   };
 
-  // Scroll memory per timeline/tab: remember exact scroll position or jump directly to today without animated gliding
-  const scrollPositionsRef = React.useRef({});
-  const currentKeyRef = React.useRef(`${timeline.id}_${activeFinancialTab || 'default'}`);
+  // Scroll memory per timeline/tab & Auto-scroll directly to Today
+  const positionOnToday = React.useCallback((behavior = 'instant') => {
+    const todayNode = document.getElementById('timeline-node-today');
+    if (todayNode) {
+      const navbar = document.querySelector('.app-header') || document.querySelector('header');
+      const stickyDock = document.querySelector('.sticky-header-dock');
 
-  React.useEffect(() => {
-    const handleScroll = () => {
-      if (currentKeyRef.current && window.scrollY > 0) {
-        scrollPositionsRef.current[currentKeyRef.current] = window.scrollY;
-      }
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+      const navHeight = navbar ? navbar.offsetHeight : 68;
+      const dockHeight = stickyDock ? stickyDock.offsetHeight : 80;
+      const totalStickyOffset = navHeight + 24 + dockHeight + 14;
+
+      const elementDocTop = todayNode.getBoundingClientRect().top + window.pageYOffset;
+      const targetY = elementDocTop - totalStickyOffset;
+
+      window.scrollTo({ top: Math.max(0, targetY), behavior });
+      return true;
+    }
+    return false;
   }, []);
 
-  React.useLayoutEffect(() => {
-    const viewKey = `${timeline.id}_${activeFinancialTab || 'default'}`;
-    currentKeyRef.current = viewKey;
+  // Ensure scroll goes directly to Today on mount, refresh, or tab switch
+  React.useEffect(() => {
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      const scrolled = positionOnToday('instant');
+      if (scrolled || attempts >= 30) {
+        clearInterval(interval);
+      }
+    }, 40);
 
-    const savedPosition = scrollPositionsRef.current[viewKey];
-    if (savedPosition !== undefined) {
-      // Restaurar exatamente onde o utilizador esteve pela última vez
-      window.scrollTo({ top: savedPosition, behavior: 'instant' });
-    } else {
-      // Apenas na PRIMEIRA VEZ que entra nesta visão: posicionar no mês corrente logo abaixo do painel do topo
-      const timer = setTimeout(() => {
-        const todayNode = document.getElementById('timeline-node-today');
-        if (todayNode) {
-          const navbar = document.querySelector('.app-header') || document.querySelector('header');
-          const stickyDock = document.querySelector('.sticky-header-dock');
-
-          const navHeight = navbar ? navbar.offsetHeight : 68;
-          const dockHeight = stickyDock ? stickyDock.offsetHeight : 80;
-          const totalStickyOffset = navHeight + 24 + dockHeight + 14;
-
-          const elementDocTop = todayNode.getBoundingClientRect().top + window.pageYOffset;
-          const targetY = elementDocTop - totalStickyOffset;
-
-          window.scrollTo({ top: Math.max(0, targetY), behavior: 'instant' });
-        } else {
-          window.scrollTo({ top: 0, behavior: 'instant' });
-        }
-      }, 60);
-      return () => clearTimeout(timer);
-    }
-  }, [timeline.id, activeFinancialTab]);
+    return () => clearInterval(interval);
+  }, [timeline.id, activeFinancialTab, timeline.events?.length, positionOnToday]);
 
   // Default Today reference (2026-08-21)
   const todayDate = new Date('2026-08-21');
@@ -638,7 +626,7 @@ export default function VerticalTimeline({
         const isExpense = (ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan;
         const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
 
-        const initialKey = ev.seriesId || ev.id;
+        const initialKey = ev.eventId || ev.seriesId || ev.id;
         let initialAmt = 0;
         if (isInvestment && ev.initialInvestedAmount && !seenInitialInvestments.has(initialKey)) {
           initialAmt = Number(ev.initialInvestedAmount) || 0;
@@ -1848,3 +1836,5 @@ export default function VerticalTimeline({
     </div>
   );
 }
+
+export default React.memo(VerticalTimeline);

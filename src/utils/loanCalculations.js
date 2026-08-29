@@ -684,7 +684,7 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     const isInvestment = ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento')) || ev.timelineOriginId === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
     if (isInvestment) {
       if (ev.category === 'investimento_patrimonio') {
-        const initialKey = ev.seriesId || ev.id;
+        const initialKey = ev.eventId || ev.seriesId || ev.id;
         if (!seenInitialInvestments.has(initialKey)) {
           const currentVal = Number(ev.amount || ev.initialInvestedAmount || 0);
           const acqVal = Number(ev.initialInvestedAmount !== undefined && ev.initialInvestedAmount !== '' && Number(ev.initialInvestedAmount) > 0 ? ev.initialInvestedAmount : (ev.amount || 0));
@@ -694,7 +694,7 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
           seenInitialInvestments.add(initialKey);
         }
       } else if (Number(ev.initialInvestedAmount || 0) > 0) {
-        const initialKey = ev.seriesId || ev.id;
+        const initialKey = ev.eventId || ev.seriesId || ev.id;
         if (!seenInitialInvestments.has(initialKey)) {
           const initAmt = Number(ev.initialInvestedAmount);
           totalPriorInvestedAll += initAmt;
@@ -708,7 +708,7 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
       }
 
       if (Number(ev.targetAmount || 0) > 0) {
-        const targetKey = ev.seriesId || ev.id;
+        const targetKey = ev.eventId || ev.seriesId || ev.id;
         if (!seenTargets.has(targetKey)) {
           totalTargetSavings += Number(ev.targetAmount);
           seenTargets.add(targetKey);

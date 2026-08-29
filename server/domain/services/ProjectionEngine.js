@@ -29,11 +29,24 @@ export function projectEvents(rawEvents = [], options = {}) {
       if (!overridesMap.has(key) || Number(ev.version || 0) >= Number(overridesMap.get(key).version || 0)) {
         overridesMap.set(key, ev);
       }
-    } else if (!isLoan && (ev.isRecurring || ev.periodicity === EventPeriodicity.RECURRING || ev.seriesId)) {
-      const sId = ev.seriesId || ev.id;
+    } else if (
+      !isLoan &&
+      (
+        ev.isRecurring === true ||
+        ev.periodicity === EventPeriodicity.RECURRING ||
+        ev.periodicity === EventPeriodicity.PERIOD ||
+        ev.periodicity === 'recorrente' ||
+        ev.periodicity === 'periodo'
+      ) &&
+      // Guarantee 'once' events never enter the recurring engine,
+      // even if seriesId is set (e.g. old data migration artefacts)
+      ev.periodicity !== EventPeriodicity.ONCE &&
+      ev.periodicity !== 'unico'
+    ) {
+      const sId = ev.eventId || ev.id;
       const normalizedEv = {
         ...ev,
-        seriesId: sId,
+        eventId: sId,
         version: ev.version !== undefined ? Number(ev.version) : 0
       };
       if (!recurringSeriesMap.has(sId)) {
@@ -156,7 +169,7 @@ export function projectEvents(rawEvents = [], options = {}) {
         projectedInstances.push({
           ...activeVersion,
           id: `${seriesId}_${curDateStr}`,
-          seriesId,
+          eventId: seriesId,
           version: activeVersion.version,
           targetAmount: activeVersion.targetAmount || seriesTargetAmount,
           date: curDateStr,
@@ -176,8 +189,39 @@ export function projectEvents(rawEvents = [], options = {}) {
   }
 
   const allGenerated = [...uniqueEvents, ...projectedInstances];
+  const todayStr = options.today || format(new Date(), 'yyyy-MM-dd');
 
-  return allGenerated.filter((ev) => {
+  const finalEvents = allGenerated.map((ev) => {
+    const isAuto = Boolean(ev.automatic !== undefined ? ev.automatic : ev.isAutomatic);
+    const isCancelled = ev.status === EventStatus.CANCELLED || ev.status === 'Cancelado';
+    const isDeleted = ev.status === EventStatus.DELETED || ev.status === 'Excluido';
+
+    if (isAuto && ev.date && ev.date <= todayStr && !isCancelled && !isDeleted) {
+      const isIncome = ev.financialType === 'income' || ev.financialType === 'entrada' || ev.isIncome || ev.category?.startsWith('entrada');
+      const isInvestment = ev.financialType === 'investment' || ev.financialType === 'investimento' || ev.isInvestment || ev.category?.startsWith('investimento');
+      const isAmortization = ev.financialType === 'amortization' || ev.financialType === 'amortizacao' || ev.category === 'amortizacao';
+
+      let autoStatus = EventStatus.PAID;
+      if (isIncome) autoStatus = EventStatus.RECEIVED;
+      else if (isInvestment) autoStatus = EventStatus.INVESTED;
+      else if (isAmortization) autoStatus = EventStatus.AMORTIZED;
+
+      return {
+        ...ev,
+        automatic: true,
+        isAutomatic: true,
+        status: autoStatus,
+        isCompleted: true
+      };
+    }
+    return {
+      ...ev,
+      automatic: isAuto,
+      isAutomatic: isAuto
+    };
+  });
+
+  return finalEvents.filter((ev) => {
     const isLoan =
       ev.category === 'parcela_emprestimo' ||
       ev.isSystemLoanEvent ||

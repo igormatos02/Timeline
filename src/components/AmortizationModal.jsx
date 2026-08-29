@@ -10,6 +10,7 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
+    if (!isOpen) return;
     if (initialEvent) {
       setAmount(initialEvent.amount || initialEvent.amortizationAmount || '');
       setDate(initialEvent.date || defaultDate || '2026-08-21');

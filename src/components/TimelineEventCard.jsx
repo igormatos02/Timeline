@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../utils/loanCalculations';
 import { generateUUID } from '../utils/uuid';
+import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 export default function TimelineEventCard({
   event,
@@ -59,27 +60,65 @@ export default function TimelineEventCard({
   onOpenEditInstallment,
   onNavigateToTimeline
 }) {
+  const { t, language } = useTranslation();
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   const [newItemText, setNewItemText] = useState('');
+  const [localAuto, setLocalAuto] = React.useState(Boolean(event.automatic || event.isAutomatic));
+  const [localStatus, setLocalStatus] = React.useState(event.status);
+
+  React.useEffect(() => {
+    setLocalAuto(Boolean(event.automatic || event.isAutomatic));
+    setLocalStatus(event.status);
+  }, [event.automatic, event.isAutomatic, event.status]);
+
   const isBalanceView = timelineType === 'Principal' || activeFinancialTab === 'balanco';
   const todayStr = '2026-08-21';
-  const isAmortization = event.category === 'amortizacao';
+  const effectiveStatus = (localStatus || event.status || '').toLowerCase();
+  const isAmortization = event.category === 'amortizacao' || event.financialType === 'amortization';
   const isLoanInstallment = (event.category === 'parcela_emprestimo' || (event.isSystemLoanEvent && !isAmortization) || event.timelineOriginId === 'tl-loan-jeep' || event.timelineOriginId === 'tl-loan-dacia' || event.timelineOriginId === 'tl-loan-casa1' || event.timelineOriginId === 'tl-loan-casa2' || event.timelineOriginId === 'tl-loan-80004197726') && !isAmortization && event.category !== 'investimento_patrimonio';
-  const isIncomeEvent = (event.isIncome || event.financialType === 'entrada' || event.category === 'entrada_recorrente' || event.category === 'entrada_esporadica') && !event.isExpense && !event.isInvestment && !isLoanInstallment && !isAmortization;
-  const isExpenseEvent = (event.isExpense || event.financialType === 'gasto' || (event.category && event.category.startsWith('saida')) || event.category === 'gasto') && !isLoanInstallment && !isAmortization && !event.isInvestment;
-  const isInvestmentEvent = (event.isInvestment || event.financialType === 'investimento' || (event.category && event.category.startsWith('investimento'))) && !isLoanInstallment && !isAmortization;
+  const isIncomeEvent = (event.isIncome || event.financialType === 'income' || event.financialType === 'entrada' || event.category === 'entrada_recorrente' || event.category === 'entrada_esporadica') && !event.isExpense && !event.isInvestment && !isLoanInstallment && !isAmortization;
+  const isExpenseEvent = (event.isExpense || event.financialType === 'expense' || event.financialType === 'gasto' || (event.category && event.category.startsWith('saida')) || event.category === 'gasto') && !isLoanInstallment && !isAmortization && !event.isInvestment;
+  const isInvestmentEvent = (event.isInvestment || event.financialType === 'investment' || event.financialType === 'investimento' || (event.category && event.category.startsWith('investimento'))) && !isLoanInstallment && !isAmortization;
+
+  const isRecurringEvent = Boolean(
+    event.isRecurring ||
+    event.periodicity === 'recurring' ||
+    event.periodicity === 'recorrente' ||
+    event.periodicity === 'period' ||
+    event.periodicity === 'periodo' ||
+    event.eventId || event.seriesId ||
+    isLoanInstallment ||
+    event.category === 'entrada_recorrente' ||
+    event.category === 'saida_recorrente' ||
+    event.category === 'investimento_poupanca' ||
+    event.category === 'parcela_emprestimo'
+  );
 
   const isInertFuture = event.date > '2026-08-31';
 
   const isCompleted =
-    event.status === 'Pago' ||
-    event.status === 'Recebido' ||
-    event.status === 'Investido' ||
-    event.status === 'Liquidado' ||
-    event.status === 'Concluído' ||
+    effectiveStatus === 'paid' ||
+    effectiveStatus === 'pago' ||
+    effectiveStatus === 'received' ||
+    effectiveStatus === 'recebido' ||
+    effectiveStatus === 'invested' ||
+    effectiveStatus === 'investido' ||
+    effectiveStatus === 'liquidado' ||
+    effectiveStatus === 'completed' ||
+    effectiveStatus === 'concluído' ||
+    effectiveStatus === 'amortized' ||
+    effectiveStatus === 'amortizado' ||
     Boolean(event.isCompleted);
 
-  const isOverdue = Boolean(event.date && event.date < todayStr && !isCompleted && event.status !== 'Cancelado' && event.status !== 'Excluido');
+  const isOverdue = Boolean(
+    event.date &&
+    event.date < todayStr &&
+    !isCompleted &&
+    effectiveStatus !== 'cancelled' &&
+    effectiveStatus !== 'cancelado' &&
+    effectiveStatus !== 'deleted' &&
+    effectiveStatus !== 'excluido'
+  );
 
   const isReceivedIncome = isIncomeEvent && isCompleted;
   const isOverdueIncome = isIncomeEvent && isOverdue;
@@ -92,9 +131,9 @@ export default function TimelineEventCard({
   const isCompletedInvestment = isInvestmentEvent && isCompleted;
   const isOverdueInvestment = isInvestmentEvent && isOverdue;
 
-  const isPaidLoan = isLoanInstallment && (event.status === 'Pago' || event.status === 'Liquidado' || event.isCompleted);
-  const isOverdueLoan = isLoanInstallment && (isOverdue || event.status === 'Atrasada');
-  const isAbatida = event.status === 'Abatida' || Boolean(event.isAbatida) || (Array.isArray(event.labels) && event.labels.includes('Abatida'));
+  const isPaidLoan = isLoanInstallment && (effectiveStatus === 'paid' || effectiveStatus === 'pago' || effectiveStatus === 'liquidado' || event.isCompleted);
+  const isOverdueLoan = isLoanInstallment && (isOverdue || effectiveStatus === 'overdue' || effectiveStatus === 'atrasada');
+  const isAbatida = effectiveStatus === 'abatida' || Boolean(event.isAbatida) || (Array.isArray(event.labels) && event.labels.includes('Abatida'));
 
   const abatedBreakdown = React.useMemo(() => {
     if (!isAbatida) return null;
@@ -145,7 +184,7 @@ export default function TimelineEventCard({
   const isRecurring = Boolean(
     event.periodicity === 'recorrente' ||
     event.isRecurring === true ||
-    Boolean(event.seriesId) ||
+    Boolean(event.eventId || event.seriesId) ||
     Boolean(
       event.category &&
       (event.category.includes('recorrente') ||
@@ -546,7 +585,7 @@ export default function TimelineEventCard({
       onUpdateEventDirect({
         ...event,
         isLocked: nextLocked,
-        updateScope: event.seriesId ? 'single' : undefined
+        updateScope: event.eventId || event.seriesId ? 'single' : undefined
       });
     }
   };
@@ -1639,7 +1678,7 @@ export default function TimelineEventCard({
               </div>
             )}
 
-            {event.category !== 'investimento_patrimonio' && Number(event.initialInvestedAmount || 0) > 0 && (event.isFirstOccurrence === true || (!event.isProjected && !event.seriesId) || (event.isFirstOccurrence !== false && !event.isProjected)) && (
+            {event.category !== 'investimento_patrimonio' && Number(event.initialInvestedAmount || 0) > 0 && (event.isFirstOccurrence === true || (!event.isProjected && !event.eventId || event.seriesId) || (event.isFirstOccurrence !== false && !event.isProjected)) && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                   Património Anterior
@@ -1792,7 +1831,7 @@ export default function TimelineEventCard({
 
         {/* 🎯 Barra de Progresso da Meta de Poupança / Investimento */}
         {Number(event.targetAmount || 0) > 0 && (() => {
-          const seriesId = event.seriesId || event.id;
+          const seriesId = event.eventId || event.seriesId || event.id;
           const baseInitial = Number(event.initialInvestedAmount || 0);
           const isInvestmentsView = activeFinancialTab === 'investimentos' || timelineType === 'investimentos' || event.timelineOriginId === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
           const isFuture = event.date > todayStr;
@@ -1805,7 +1844,7 @@ export default function TimelineEventCard({
             const priorPlannedAportes = (allEvents || [])
               .filter((ev) => {
                 if (!ev || !ev.date || ev.date >= event.date) return false;
-                const matchSeries = (ev.seriesId && ev.seriesId === seriesId) || (ev.id === seriesId) || (ev.sobrepositionOver === seriesId) || (ev.category === event.category && ev.financialType === 'investimento');
+                const matchSeries = (ev.eventId || ev.seriesId && ev.eventId || ev.seriesId === seriesId) || (ev.id === seriesId) || (ev.sobrepositionOver === seriesId) || (ev.category === event.category && ev.financialType === 'investimento');
                 const isValid = ev.status !== 'Cancelado' && ev.status !== 'Excluido';
                 return matchSeries && isValid;
               })
@@ -1818,7 +1857,7 @@ export default function TimelineEventCard({
             const priorRealizedAportes = (allEvents || [])
               .filter((ev) => {
                 if (!ev || !ev.date || ev.date >= event.date) return false;
-                const matchSeries = (ev.seriesId && ev.seriesId === seriesId) || (ev.id === seriesId) || (ev.sobrepositionOver === seriesId) || (ev.category === event.category && ev.financialType === 'investimento');
+                const matchSeries = (ev.eventId || ev.seriesId && ev.eventId || ev.seriesId === seriesId) || (ev.id === seriesId) || (ev.sobrepositionOver === seriesId) || (ev.category === event.category && ev.financialType === 'investimento');
                 const isDone = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted;
                 return matchSeries && isDone;
               })
@@ -2772,7 +2811,7 @@ export default function TimelineEventCard({
                 type="button"
                 className="action-icon-btn"
                 onClick={() => setIsNotesExpanded(!isNotesExpanded)}
-                title={hasNotes ? `Ver / Editar Notas (${allNotes.length})` : "Adicionar Nota"}
+                title={hasNotes ? `${t('actionNotes')} (${allNotes.length})` : t('actionAddNote')}
                 style={{
                   color: hasNotes ? '#f59e0b' : 'var(--text-dim)',
                   background: hasNotes ? 'rgba(245, 158, 11, 0.14)' : 'transparent',
@@ -2810,7 +2849,7 @@ export default function TimelineEventCard({
                     openDesmembramento(e);
                   }
                 }}
-                title={hasBreakdown ? `Ver / Editar Desmembramento (${allSubparts.length} subpartes)` : "Desmembrar Valor"}
+                title={hasBreakdown ? t('actionBreakdown', { count: allSubparts.length }) : t('actionSplitValue')}
                 style={{
                   color: hasBreakdown ? 'var(--primary-light)' : 'var(--text-dim)',
                   background: hasBreakdown ? 'rgba(99, 102, 241, 0.14)' : 'transparent',
@@ -2832,13 +2871,82 @@ export default function TimelineEventCard({
             );
           })()}
 
+          {/* Botão / Indicador de Evento Automático (Apenas para Eventos Recorrentes / Parcelamentos) */}
+          {isRecurringEvent && (
+            <button
+              type="button"
+              className="action-icon-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!onUpdateEventDirect) return;
+                const nextAuto = !localAuto;
+                setLocalAuto(nextAuto);
+
+                const targetSeriesKey = event.eventId || event.seriesId || (isLoanInstallment ? event.timelineId || event.timelineOriginId : event.id);
+
+                let newStatus = event.status;
+                let newIsCompleted = Boolean(event.isCompleted);
+
+                if (nextAuto) {
+                  const isPastOrToday = Boolean(event.date && event.date <= todayStr);
+                  if (isPastOrToday && event.status !== 'cancelled' && event.status !== 'deleted' && event.status !== 'Cancelado' && event.status !== 'Excluido') {
+                    if (isIncomeEvent) {
+                      newStatus = 'received';
+                      newIsCompleted = true;
+                    } else if (isInvestmentEvent) {
+                      newStatus = 'invested';
+                      newIsCompleted = true;
+                    } else if (isAmortization) {
+                      newStatus = 'amortized';
+                      newIsCompleted = true;
+                    } else {
+                      newStatus = 'paid';
+                      newIsCompleted = true;
+                    }
+                  }
+                  setLocalStatus(newStatus);
+                }
+
+                onUpdateEventDirect({
+                  ...event,
+                  seriesId: targetSeriesKey,
+                  automatic: nextAuto,
+                  isAutomatic: nextAuto,
+                  status: newStatus,
+                  isCompleted: newIsCompleted,
+                  updateScope: 'all_series'
+                });
+              }}
+              title={localAuto ? t('actionAutoOn') : t('actionAutoOff')}
+              style={{
+                color: localAuto ? '#fbbf24' : 'var(--text-dim)',
+                background: localAuto ? 'rgba(251, 191, 36, 0.16)' : 'transparent',
+                border: localAuto ? '1px solid rgba(251, 191, 36, 0.4)' : '1px solid transparent',
+                borderRadius: '6px',
+                padding: '3px 5px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Zap size={13} fill={localAuto ? '#fbbf24' : 'none'} />
+              {localAuto && (
+                <span style={{ fontSize: '0.65rem', fontWeight: '800', letterSpacing: '0.02em', color: '#fbbf24' }}>
+                  AUTO
+                </span>
+              )}
+            </button>
+          )}
+
           {/* Botão Editar Evento */}
           {onEdit && (
             <button
               type="button"
               className="action-icon-btn"
               onClick={() => onEdit(event)}
-              title="Editar Evento"
+              title={t('actionEdit')}
             >
               <Edit3 size={15} />
             </button>
@@ -2850,7 +2958,7 @@ export default function TimelineEventCard({
               type="button"
               className="action-icon-btn delete"
               onClick={() => onDelete(event)}
-              title="Eliminar Evento"
+              title={t('actionDelete')}
             >
               <Trash2 size={15} />
             </button>
@@ -2862,21 +2970,15 @@ export default function TimelineEventCard({
               type="button"
               className="action-icon-btn"
               onClick={handleToggleLock}
-              title={
-                isLocked
-                  ? "Movimento confirmado e bloqueado (Clique para abrir o cadeado e permitir alterar o status)"
-                  : "Movimento desbloqueado (Clique para bloquear)"
-              }
+              title={isLocked ? t('actionLock') : t('actionUnlock')}
               style={{
-                color: isLocked ? '#f59e0b' : 'var(--text-dim)',
-                background: 'transparent',
-                border: 'none',
-                boxShadow: 'none',
-                padding: '4px',
+                color: isLocked ? '#10b981' : 'var(--text-dim)',
+                background: isLocked ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                border: isLocked ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent',
+                borderRadius: '6px',
+                padding: '4px 6px',
                 display: 'inline-flex',
-                alignItems: 'center',
-                cursor: 'pointer',
-                transition: 'color 0.15s ease'
+                alignItems: 'center'
               }}
             >
               {isLocked ? <Lock size={14} /> : <Unlock size={14} />}

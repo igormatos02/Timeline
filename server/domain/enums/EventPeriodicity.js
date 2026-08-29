@@ -1,5 +1,5 @@
 export const EventPeriodicity = Object.freeze({
-  RECURRING: 'recorrente',
-  ONCE: 'unico',
-  PERIOD: 'periodo'
+  RECURRING: 'recurring',
+  ONCE: 'once',
+  PERIOD: 'period'
 });

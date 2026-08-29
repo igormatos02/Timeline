@@ -33,6 +33,7 @@ import {
   Scale,
   Home,
   RotateCcw,
+  Settings,
   X
 } from 'lucide-react';
 import { format, parseISO, differenceInDays, addMonths } from 'date-fns';
@@ -49,7 +50,7 @@ import {
 import IncomeEvolutionChart from './IncomeEvolutionChart';
 import * as api from '../services/api';
 
-export default function TimelineHeader({
+function TimelineHeader({
   timeline,
   allTimelines = [],
   selectedTimelineIds = null,
@@ -467,18 +468,8 @@ export default function TimelineHeader({
           </div>
         </div>
 
-        {/* Lado Direito da Barra de Título: Botão Nova Timeline e Resumo Compacto */}
+        {/* Lado Direito da Barra de Título: Botão Nova Timeline e Configurações */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Modo Compacto: resumo à direita */}
-          {collapsed && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(99, 102, 241, 0.08)', padding: '3px 10px', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
-              {selectedViewInfo.icon}
-              <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                {selectedViewTitle}
-              </span>
-            </div>
-          )}
-
           {onOpenCreateTimeline && (
             <button
               type="button"
@@ -497,12 +488,35 @@ export default function TimelineHeader({
                 borderRadius: '7px',
                 cursor: 'pointer'
               }}
-              title="Criar nova timeline"
+              title="Criar novo empréstimo"
             >
               <Plus size={13} strokeWidth={2.5} />
-              <span>Nova Timeline</span>
+              <span>Empréstimo</span>
             </button>
           )}
+
+          <button
+            type="button"
+            className="btn btn-outline btn-sm"
+            style={{
+              padding: '5px 8px',
+              fontSize: '0.76rem',
+              fontWeight: '700',
+              borderColor: 'var(--border-glass)',
+              color: 'var(--text-muted)',
+              background: 'rgba(255, 255, 255, 0.04)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '7px',
+              cursor: 'pointer',
+              transition: 'all var(--transition-fast)'
+            }}
+            title="Configurações"
+            aria-label="Configurações"
+          >
+            <Settings size={14} />
+          </button>
         </div>
       </div>
 
@@ -1659,3 +1673,5 @@ export default function TimelineHeader({
     </div>
   );
 }
+
+export default React.memo(TimelineHeader);

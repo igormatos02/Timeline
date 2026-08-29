@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, addMonths } from 'date-fns';
-import { initialTimeboards, initialTimelines } from './data/mockTimelines';
 import Navbar from './components/Navbar';
 import TimelineHeader from './components/TimelineHeader';
 import VerticalTimeline from './components/VerticalTimeline';
@@ -26,14 +25,13 @@ export default function App() {
   // Timeboards State (Top Level Grouping)
   const [timeboards, setTimeboards] = useState(() => {
     try {
-      localStorage.removeItem('chrono_timeboards_v1');
       const saved = localStorage.getItem('chrono_timeboards_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) { }
-    return initialTimeboards;
+    return [];
   });
 
   const [activeTimeboardId, setActiveTimeboardId] = useState(() => {
@@ -41,20 +39,13 @@ export default function App() {
       const saved = localStorage.getItem('chrono_active_timeboard_id');
       if (saved) return saved;
     } catch (e) { }
-    return 'e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b';
+    return '5fcd8a1a-eac7-4405-9c8b-b9607e70b420';
   });
   const [isTimeboardModalOpen, setIsTimeboardModalOpen] = useState(false);
   const [editingTimeboard, setEditingTimeboard] = useState(null);
 
-  // Load timelines from localStorage or mock data (with automatic legacy cleanup)
+  // Timelines State (Loaded directly from Supabase / Backend API)
   const [timelines, setTimelines] = useState(() => {
-    try {
-      // Clear legacy storage keys to free browser quota
-      for (let i = 1; i <= 26; i++) {
-        localStorage.removeItem(`chrono_timelines_data_v${i}`);
-      }
-    } catch (e) { }
-
     try {
       const saved = localStorage.getItem('chrono_timelines_data_v27');
       if (saved) {
@@ -63,18 +54,26 @@ export default function App() {
           return parsed;
         }
       }
-    } catch (e) {
-      console.error('Failed to parse saved timelines:', e);
-    }
-    return initialTimelines;
+    } catch (e) { }
+    return [];
   });
 
   const [activeTimelineId, setActiveTimelineId] = useState(() => {
-    return 'tl-income';
+    try {
+      const saved = localStorage.getItem('chrono_active_timeline_id');
+      if (saved) return saved;
+    } catch (e) { }
+    return 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
   });
 
-  // Financial Sub-Tabs State ('balanco' | 'entradas' | 'gastos' | 'investimentos' | 'emprestimos')
-  const [activeFinancialTab, setActiveFinancialTab] = useState('balanco');
+  // Financial Sub-Tabs State ('balanco' | 'entradas' | 'gastos' | 'investimentos' | 'emprestimos' | 'jeep' | 'dacia' | 'casa1' | 'casa2')
+  const [activeFinancialTab, setActiveFinancialTab] = useState(() => {
+    try {
+      const saved = localStorage.getItem('chrono_active_financial_tab');
+      if (saved) return saved;
+    } catch (e) { }
+    return 'balanco';
+  });
 
   // Load latest data from Backend JSON Database on mount
   useEffect(() => {
@@ -214,13 +213,34 @@ export default function App() {
     } catch { }
   }, [activeTimeboardId]);
 
+  useEffect(() => {
+    try {
+      if (activeTimelineId) {
+        localStorage.setItem('chrono_active_timeline_id', activeTimelineId);
+      }
+    } catch { }
+  }, [activeTimelineId]);
+
+  useEffect(() => {
+    try {
+      if (activeFinancialTab) {
+        localStorage.setItem('chrono_active_financial_tab', activeFinancialTab);
+      }
+    } catch { }
+  }, [activeFinancialTab]);
+
   // Selected Timeboard
   const activeTimeboard = timeboards.find((tb) => tb.id === activeTimeboardId) || timeboards[0];
 
-  // All timelines belonging to active Timeboard
-  const activeTimeboardTimelines = timelines.filter(
-    (tl) => tl.timeboardId === activeTimeboardId || (!tl.timeboardId && (activeTimeboardId === 'e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b' || activeTimeboard?.id === 'e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b'))
-  );
+  // All timelines belonging to active Timeboard (memoized to prevent re-renders when modal opens/closes)
+  const activeTimeboardTimelines = React.useMemo(() => {
+    return timelines.filter(
+      (tl) => {
+        const tbId = tl.timeboardId || tl.timeboard_id;
+        return tbId === activeTimeboardId || (!tbId && (activeTimeboardId === '5fcd8a1a-eac7-4405-9c8b-b9607e70b420' || activeTimeboard?.id === '5fcd8a1a-eac7-4405-9c8b-b9607e70b420'));
+      }
+    );
+  }, [timelines, activeTimeboardId, activeTimeboard?.id]);
 
   // Dynamic consolidated timeline aggregating all financial movements and loan timelines of the active Timeboard
   const activeTimeline = React.useMemo(() => {
@@ -244,18 +264,21 @@ export default function App() {
 
     // 2. Add events from specific real contract timelines (loans)
     activeTimeboardTimelines.forEach((tl) => {
-      (tl.events || []).forEach((ev) => {
-        if (!ev || !ev.id) return;
-        if (!seenEventIds.has(ev.id)) {
-          seenEventIds.add(ev.id);
-          allEvents.push({
-            ...ev,
-            timelineOriginId: ev.timelineId || ev.timelineOriginId || tl.id,
-            timelineOriginName: ev.timelineOriginName || tl.name,
-            timelineOriginColor: ev.timelineOriginColor || tl.color
-          });
-        }
-      });
+      const isTimelineActive = tl.status !== 'Inativo';
+      if (isTimelineActive) {
+        (tl.events || []).forEach((ev) => {
+          if (!ev || !ev.id) return;
+          if (!seenEventIds.has(ev.id)) {
+            seenEventIds.add(ev.id);
+            allEvents.push({
+              ...ev,
+              timelineOriginId: ev.timelineId || ev.timelineOriginId || tl.id,
+              timelineOriginName: ev.timelineOriginName || tl.name,
+              timelineOriginColor: ev.timelineOriginColor || tl.color
+            });
+          }
+        });
+      }
     });
 
     const normalizeLoanKey = (loan) => {
@@ -272,19 +295,22 @@ export default function App() {
     const seenLoanKeys = new Set();
     const carLoans = [];
     activeTimeboardTimelines.forEach((tl) => {
-      if (tl.type === 'emprestimo' || tl.type === 'Empréstimo') {
+      const isTimelineActive = tl.status !== 'Inativo';
+      if (isTimelineActive && (tl.type === 'emprestimo' || tl.type === 'Empréstimo')) {
         const key = normalizeLoanKey(tl);
         if (!seenLoanKeys.has(key)) {
           seenLoanKeys.add(key);
           carLoans.push(tl);
         }
       }
-      if (Array.isArray(tl.carLoans)) {
+      if (isTimelineActive && Array.isArray(tl.carLoans)) {
         tl.carLoans.forEach((loan) => {
-          const key = normalizeLoanKey(loan);
-          if (!seenLoanKeys.has(key)) {
-            seenLoanKeys.add(key);
-            carLoans.push(loan);
+          if (loan.status !== 'Inativo') {
+            const key = normalizeLoanKey(loan);
+            if (!seenLoanKeys.has(key)) {
+              seenLoanKeys.add(key);
+              carLoans.push(loan);
+            }
           }
         });
       }
@@ -294,7 +320,7 @@ export default function App() {
     const monthlySalary = incomeTimeline?.monthlySalary !== undefined ? incomeTimeline.monthlySalary : (activeTimeboard?.id === 'tb-clean-financial-002' ? 0 : 3349.60);
 
     return {
-      id: activeTimeboard?.id || 'e7b8c2d1-9f3a-4a6c-8e5b-1d7f3a9e2c4b',
+      id: activeTimeboard?.id || '5fcd8a1a-eac7-4405-9c8b-b9607e70b420',
       name: activeTimeboard?.name || 'Timeboard Portugal',
       type: 'Financeiro',
       description: activeTimeboard?.description || '',
@@ -305,7 +331,7 @@ export default function App() {
       events: allEvents,
       timelines: activeTimeboardTimelines
     };
-  }, [activeTimeboard, activeTimeboardTimelines, futureHorizonYears]);
+  }, [activeTimeboard, activeTimeboardTimelines, rawEvents, activeTimeboardId, futureHorizonYears]);
 
   // ----------------------------------------------------
   // Timeline Handlers
@@ -323,21 +349,28 @@ export default function App() {
   const handleSaveTimeline = (formData) => {
     if (editingTimeline && editingTimeline.id) {
       // Update existing timeline
+      const updatedData = {
+        ...formData,
+        type: 'emprestimo',
+        status: formData.status === 'Inativo' ? 'Inativo' : 'Ativo'
+      };
       setTimelines((prev) =>
-        prev.map((tl) => (tl.id === editingTimeline.id ? { ...tl, ...formData } : tl))
+        prev.map((tl) => (tl.id === editingTimeline.id ? { ...tl, ...updatedData } : tl))
       );
-      api.updateTimeline(editingTimeline.id, formData).catch(console.error);
+      api.updateTimeline(editingTimeline.id, updatedData).then(() => refreshTimelines()).catch(console.error);
     } else {
-      // Create new timeline
+      // Create new loan timeline
       const newTl = {
         ...formData,
         id: generateUUID(),
+        type: 'emprestimo',
+        status: formData.status === 'Inativo' ? 'Inativo' : 'Ativo',
         timeboardId: activeTimeboardId,
-        events: []
+        events: formData.events || []
       };
       setTimelines((prev) => [newTl, ...prev]);
       setActiveTimelineId(newTl.id);
-      api.createTimeline(newTl).catch(console.error);
+      api.createTimeline(newTl).then(() => refreshTimelines()).catch(console.error);
     }
   };
 
@@ -396,7 +429,7 @@ export default function App() {
             timeboardId: activeTimeboardId,
             timelineId: targetTimelineId,
             timelineOriginId: targetTimelineId,
-            seriesId: editingEvent.seriesId,
+            eventId: editingEvent.eventId || editingEvent.seriesId,
             version: editingEvent.version
           });
         } else {
@@ -407,7 +440,7 @@ export default function App() {
             timeboardId: activeTimeboardId,
             timelineId: targetTimelineId,
             timelineOriginId: targetTimelineId,
-            seriesId: isRecurring ? generateUUID() : null,
+            eventId: isRecurring ? generateUUID() : null,
             version: 0,
             isRecurring: Boolean(isRecurring)
           };
@@ -451,9 +484,81 @@ export default function App() {
   const handleUpdateEventDirect = async (updatedEvent) => {
     if (!updatedEvent || !updatedEvent.id) return;
 
+    const todayStr = '2026-08-21';
+    const targetSeriesKey = updatedEvent.eventId || updatedEvent.seriesId || updatedEvent.timelineId || updatedEvent.id;
+    const isAutoChange = updatedEvent.automatic !== undefined;
+
+    const resolveMatchingEvent = (ev) => {
+      if (ev.id === updatedEvent.id) {
+        return { ...ev, ...updatedEvent };
+      }
+
+      const isSameSeries = targetSeriesKey && (
+        ev.eventId === targetSeriesKey ||
+        ev.seriesId === targetSeriesKey ||
+        ev.id === targetSeriesKey ||
+        (ev.timelineId && ev.timelineId === targetSeriesKey) ||
+        (ev.timelineOriginId && ev.timelineOriginId === targetSeriesKey)
+      );
+
+      if (isSameSeries) {
+        if (isAutoChange) {
+          const nextAuto = Boolean(updatedEvent.automatic);
+          let newStatus = ev.status;
+          let newIsCompleted = Boolean(ev.isCompleted);
+
+          const isNotCancelledOrDeleted = ev.status !== 'cancelled' && ev.status !== 'deleted' && ev.status !== 'Cancelado' && ev.status !== 'Excluido';
+          if (nextAuto && ev.date && ev.date <= todayStr && isNotCancelledOrDeleted) {
+            const isIncome = ev.financialType === 'income' || ev.financialType === 'entrada' || ev.isIncome || ev.category?.startsWith('entrada');
+            const isInvestment = ev.financialType === 'investment' || ev.financialType === 'investimento' || ev.isInvestment || ev.category?.startsWith('investimento');
+            const isAmortization = ev.financialType === 'amortization' || ev.financialType === 'amortizacao' || ev.category === 'amortizacao';
+
+            if (isIncome) {
+              newStatus = 'received';
+              newIsCompleted = true;
+            } else if (isInvestment) {
+              newStatus = 'invested';
+              newIsCompleted = true;
+            } else if (isAmortization) {
+              newStatus = 'amortized';
+              newIsCompleted = true;
+            } else {
+              newStatus = 'paid';
+              newIsCompleted = true;
+            }
+          }
+
+          return {
+            ...ev,
+            automatic: nextAuto,
+            isAutomatic: nextAuto,
+            status: newStatus,
+            isCompleted: newIsCompleted
+          };
+        }
+
+        const { date: _d, id: _i, ...restProps } = updatedEvent;
+        return { ...ev, ...restProps };
+      }
+
+      return ev;
+    };
+
+    // 1. Optimistic update local state preserving specific dates of other monthly instances
+    setRawEvents((prev) => prev.map(resolveMatchingEvent));
+
+    setTimelines((prev) =>
+      prev.map((tl) => ({
+        ...tl,
+        events: (tl.events || []).map(resolveMatchingEvent)
+      }))
+    );
+
     try {
-      await api.updateEvent(updatedEvent.id, updatedEvent);
-      await refreshTimelines();
+      await api.updateEvent(updatedEvent.id, {
+        ...updatedEvent,
+        updateScope: isAutoChange ? 'all_series' : updatedEvent.updateScope
+      });
     } catch (err) {
       console.error('Error updating event directly:', err);
     }
@@ -492,7 +597,7 @@ export default function App() {
         const scope = typeof deleteScope === 'string' ? deleteScope : (deleteScope ? 'subsequent' : 'single');
         await api.deleteEvent(eventId, {
           deleteScope: scope,
-          seriesId: targetEvent.seriesId,
+          eventId: targetEvent.eventId || targetEvent.seriesId,
           date: targetEvent.date
         });
         await refreshTimelines();
@@ -654,9 +759,41 @@ export default function App() {
   const handleToggleLoanPayment = async (installmentId) => {
     if (!installmentId) return;
 
-    setTimelines((prevTimelines) => {
-      const clickTimeStr = format(new Date(), 'HH:mm');
+    const clickTimeStr = format(new Date(), 'HH:mm');
 
+    // 1. Optimistic update in rawEvents
+    setRawEvents((prevEvents) =>
+      prevEvents.map((ev) => {
+        if (ev.id !== installmentId) return ev;
+
+        const isIncome = ev.isIncome || ev.financialType === 'entrada' || (ev.category && ev.category.startsWith('entrada'));
+        const isInvestment = ev.isInvestment || ev.financialType === 'investimento' || (ev.category && ev.category.startsWith('investimento'));
+
+        let nextStatus, nextCompleted;
+        if (isIncome) {
+          nextStatus = ev.status === 'Recebido' ? 'Pendente' : 'Recebido';
+          nextCompleted = nextStatus === 'Recebido';
+        } else if (isInvestment) {
+          nextStatus = (ev.status === 'Investido' || ev.status === 'Pago') ? 'Planeado' : 'Investido';
+          nextCompleted = nextStatus === 'Investido';
+        } else {
+          nextStatus = ev.status === 'Pago' ? 'Pendente' : 'Pago';
+          nextCompleted = nextStatus === 'Pago';
+        }
+
+        return {
+          ...ev,
+          status: nextStatus,
+          isCompleted: nextCompleted,
+          isLocked: nextCompleted,
+          time: nextCompleted ? clickTimeStr : ev.time,
+          completedAtTime: nextCompleted ? clickTimeStr : null
+        };
+      })
+    );
+
+    // 2. Optimistic update in timelines
+    setTimelines((prevTimelines) => {
       return prevTimelines.map((tl) => {
         const hasEvent = (tl.events || []).some((e) => e.id === installmentId);
         if (!hasEvent) return tl;
@@ -668,7 +805,6 @@ export default function App() {
           const isInvestment = ev.isInvestment || ev.financialType === 'investimento' || (ev.category && ev.category.startsWith('investimento'));
 
           let nextStatus, nextCompleted;
-
           if (isIncome) {
             nextStatus = ev.status === 'Recebido' ? 'Pendente' : 'Recebido';
             nextCompleted = nextStatus === 'Recebido';
@@ -676,7 +812,6 @@ export default function App() {
             nextStatus = (ev.status === 'Investido' || ev.status === 'Pago') ? 'Planeado' : 'Investido';
             nextCompleted = nextStatus === 'Investido';
           } else {
-            // Gastos e Parcelas de Empréstimo
             nextStatus = ev.status === 'Pago' ? 'Pendente' : 'Pago';
             nextCompleted = nextStatus === 'Pago';
           }
@@ -691,7 +826,7 @@ export default function App() {
           };
         });
 
-        const finalEvents = tl.type === 'Empréstimo'
+        const finalEvents = (tl.type === 'Empréstimo' || tl.type === 'emprestimo')
           ? recalculateLoanState(tl, updatedEvents)
           : updatedEvents;
 
@@ -701,7 +836,6 @@ export default function App() {
 
     try {
       await api.toggleEventPayment(installmentId);
-      await refreshTimelines();
     } catch (err) {
       console.error('Error toggling payment status:', err);
     }

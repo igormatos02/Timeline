@@ -62,7 +62,8 @@ export default function CreateEventModal({
     priority: 'Normal',
     labelsInput: '',
     linkedLoanTimelineId: '',
-    linkedLoanTimelineName: ''
+    linkedLoanTimelineName: '',
+    isAutomatic: false
   });
 
   // Handle Escape key to close modal or day picker
@@ -82,6 +83,8 @@ export default function CreateEventModal({
   }, [isOpen, isDayPickerOpen, onClose]);
 
   useEffect(() => {
+    if (!isOpen) return;
+
     const todayStr = '2026-08-21';
     const targetDate = initialData?.date || defaultDate || todayStr;
 
@@ -116,8 +119,13 @@ export default function CreateEventModal({
 
       let targetAmtVal = initialData.targetAmount !== undefined && initialData.targetAmount !== null ? initialData.targetAmount : '';
       if ((targetAmtVal === '' || targetAmtVal === undefined) && initialData.seriesId) {
-        const match = (allTimelines || []).flatMap(t => t.events || []).find(ev => ev.seriesId === initialData.seriesId && ev.targetAmount);
-        if (match) targetAmtVal = match.targetAmount;
+        for (const t of (allTimelines || [])) {
+          const match = (t.events || []).find(ev => ev.eventId || ev.seriesId === initialData.seriesId && ev.targetAmount);
+          if (match) {
+            targetAmtVal = match.targetAmount;
+            break;
+          }
+        }
       }
 
       let initPeriodicity = 'recorrente';
@@ -146,7 +154,8 @@ export default function CreateEventModal({
         priority: initialData.priority || 'Normal',
         labelsInput: initialData.labels ? initialData.labels.join(', ') : '',
         linkedLoanTimelineId: initialData.linkedLoanTimelineId || '',
-        linkedLoanTimelineName: initialData.linkedLoanTimelineName || ''
+        linkedLoanTimelineName: initialData.linkedLoanTimelineName || '',
+        isAutomatic: Boolean(initialData.isAutomatic)
       });
       setUpdateScope('subsequent');
       setBreakdownItems(initialData.breakdownItems ? JSON.parse(JSON.stringify(initialData.breakdownItems)) : []);
@@ -182,7 +191,8 @@ export default function CreateEventModal({
         priority: 'Normal',
         labelsInput: '',
         linkedLoanTimelineId: '',
-        linkedLoanTimelineName: ''
+        linkedLoanTimelineName: '',
+        isAutomatic: false
       });
       setBreakdownItems([]);
     }
@@ -331,6 +341,7 @@ export default function CreateEventModal({
 
     onSave({
       ...formData,
+      name: formData.title.trim(),
       title: formData.title.trim(),
       date: finalDateStr,
       category: finalCategory,
@@ -339,6 +350,8 @@ export default function CreateEventModal({
       isExpense,
       isInvestment,
       isRecurring,
+      automatic: Boolean(formData.isAutomatic || formData.automatic),
+      isAutomatic: Boolean(formData.isAutomatic || formData.automatic),
       periodicity: isPatrimonio ? 'unica' : formData.periodicity,
       recurrenceEndDate,
       endDate: recurrenceEndDate,
@@ -1235,6 +1248,19 @@ export default function CreateEventModal({
               )}
             </div>
           )}
+
+          {/* Switch Simples: Automático */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0', marginBottom: '12px' }}>
+            <label style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>Automático</span>
+            </label>
+            <input
+              type="checkbox"
+              style={{ width: '17px', height: '17px', cursor: 'pointer', accentColor: currentTheme.color }}
+              checked={Boolean(formData.isAutomatic)}
+              onChange={(e) => setFormData({ ...formData, isAutomatic: e.target.checked })}
+            />
+          </div>
 
           {/* Etiquetas */}
           <div className="form-group" style={{ marginBottom: 0 }}>

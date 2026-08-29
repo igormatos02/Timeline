@@ -5,4 +5,5 @@ export { EventStatus } from './EventStatus.js';
 export { EventPeriodicity } from './EventPeriodicity.js';
 export { EventPriority } from './EventPriority.js';
 export { TimeboardType } from './TimeboardType.js';
+export { TimelineStatus } from './TimelineStatus.js';
 export { AmortizationStrategy } from './AmortizationStrategy.js';

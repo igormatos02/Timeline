@@ -13,20 +13,26 @@ export class TimelineEvent {
     timelineOriginId = null,
     timelineOriginName = 'Financeiro',
     timelineOriginIcon = '💰',
-    seriesId = null,
+    eventId = null,
     sobrepositionOver = null,
     version = 0,
     isTerminated = false,
     dayOfMonth = null,
     date,
     time = '09:00',
+    name,
     title,
     description = '',
     category = 'saida_recorrente',
     financialType = FinancialType.EXPENSE,
+    financial_type,
     periodicity = EventPeriodicity.RECURRING,
     recurrenceEndDate = null,
     endDate = null,
+    dueDate = null,
+    due_date,
+    paidDate = null,
+    paid_date,
     status = EventStatus.PENDING,
     priority = EventPriority.NORMAL,
     amount = 0,
@@ -34,25 +40,38 @@ export class TimelineEvent {
     initialInvestedAmount = 0,
     targetAmount = 0,
     strategy = AmortizationStrategy.REDUCE_TERM,
+    amortizationStrategy,
+    amortization_strategy,
     notes = '',
     isIncome = false,
     isExpense = false,
     isInvestment = false,
     isAmortization = false,
     isRecurring = false,
+    is_recurring,
+    automatic = false,
+    isAutomatic = false,
     isCompleted = false,
     isLocked = false,
     isSystemLoanEvent = false,
     principalAmount = 0,
+    principal_amount,
     interestPortion = 0,
     interestAmount = 0,
+    interest_amount,
     balanceAfter = 0,
+    remainingDebtAfter = 0,
+    remaining_debt_after,
     installmentNumber = null,
+    installment_number,
     totalInstallments = null,
+    total_installments,
     labels = [],
     breakdownItems = [],
     createdAt = new Date().toISOString(),
-    updatedAt = new Date().toISOString()
+    updatedAt = new Date().toISOString(),
+    created_at,
+    updated_at
   }) {
     this.id = id;
     this.tenantId = tenantId || 'tenant-igor';
@@ -68,46 +87,54 @@ export class TimelineEvent {
 
     this.timelineOriginName = timelineOriginName;
     this.timelineOriginIcon = timelineOriginIcon;
-    this.seriesId = seriesId;
+    this.eventId = eventId || event_id || null;
+    this.seriesId = this.eventId; // backward-compat alias — will be removed
     this.sobrepositionOver = sobrepositionOver;
     this.version = Number(version) || 0;
     this.isTerminated = Boolean(isTerminated);
     this.dayOfMonth = dayOfMonth;
     this.date = date;
     this.time = time;
-    this.title = title;
-    this.description = description;
+    this.name = name || title || 'Evento Financeiro';
+    this.title = this.name;
+    this.description = description || '';
     this.category = category;
-    this.financialType = financialType;
+    this.financialType = financial_type || financialType;
     this.periodicity = periodicity;
     this.recurrenceEndDate = recurrenceEndDate || endDate || null;
     this.endDate = this.recurrenceEndDate;
+    this.dueDate = due_date || dueDate || null;
+    this.paidDate = paid_date || paidDate || null;
     this.status = status;
     this.priority = priority;
     this.amount = Number(amount) || 0;
     this.amortizationAmount = Number(amortizationAmount) || Number(amount) || 0;
     this.initialInvestedAmount = Number(initialInvestedAmount) || 0;
     this.targetAmount = Number(targetAmount) || 0;
-    this.strategy = strategy;
+    this.strategy = amortization_strategy || amortizationStrategy || strategy;
+    this.amortizationStrategy = this.strategy;
     this.notes = notes;
-    this.isIncome = Boolean(isIncome || financialType === FinancialType.INCOME);
-    this.isExpense = Boolean(isExpense || financialType === FinancialType.EXPENSE);
-    this.isInvestment = Boolean(isInvestment || financialType === FinancialType.INVESTMENT);
-    this.isAmortization = Boolean(isAmortization || category === 'amortizacao' || financialType === FinancialType.AMORTIZATION);
-    this.isRecurring = Boolean(isRecurring);
+    this.isIncome = Boolean(isIncome || this.financialType === FinancialType.INCOME || this.financialType === 'entrada');
+    this.isExpense = Boolean(isExpense || this.financialType === FinancialType.EXPENSE || this.financialType === 'gasto');
+    this.isInvestment = Boolean(isInvestment || this.financialType === FinancialType.INVESTMENT || this.financialType === 'investimento');
+    this.isAmortization = Boolean(isAmortization || category === 'amortizacao' || this.financialType === FinancialType.AMORTIZATION || this.financialType === 'amortizacao');
+    this.isRecurring = Boolean(is_recurring !== undefined ? is_recurring : isRecurring);
+    this.automatic = Boolean(automatic || isAutomatic);
+    this.isAutomatic = this.automatic;
     this.isCompleted = Boolean(isCompleted);
     this.isLocked = Boolean(isLocked);
     this.isSystemLoanEvent = Boolean(isSystemLoanEvent);
-    this.principalAmount = Number(principalAmount) || 0;
-    this.interestPortion = Number(interestPortion) || 0;
-    this.interestAmount = Number(interestAmount) || 0;
-    this.balanceAfter = Number(balanceAfter) || 0;
-    this.installmentNumber = installmentNumber;
-    this.totalInstallments = totalInstallments;
+    this.principalAmount = Number(principal_amount !== undefined ? principal_amount : principalAmount) || 0;
+    this.interestAmount = Number(interest_amount !== undefined ? interest_amount : (interestAmount || interestPortion)) || 0;
+    this.interestPortion = this.interestAmount;
+    this.balanceAfter = Number(remaining_debt_after !== undefined ? remaining_debt_after : (remainingDebtAfter || balanceAfter)) || 0;
+    this.remainingDebtAfter = this.balanceAfter;
+    this.installmentNumber = installment_number !== undefined ? installment_number : installmentNumber;
+    this.totalInstallments = total_installments !== undefined ? total_installments : totalInstallments;
     this.labels = Array.isArray(labels) ? labels : [];
     this.breakdownItems = Array.isArray(breakdownItems) ? breakdownItems : [];
-    this.createdAt = createdAt;
-    this.updatedAt = updatedAt;
+    this.createdAt = created_at || createdAt;
+    this.updatedAt = updated_at || updatedAt;
   }
 
   isDynamicTimeline() {

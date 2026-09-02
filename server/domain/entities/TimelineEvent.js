@@ -1,4 +1,4 @@
-import { TimelineAssociationType, FinancialType, EventStatus, EventPeriodicity, EventPriority, AmortizationStrategy } from '../enums/index.js';
+import { TimelineAssociationType, FinancialType, EventStatus, EventPeriodicity, EventPriority, AmortizationStrategy } from '../../../shared/enums/index.js';
 
 /**
  * Entity: TimelineEvent

@@ -43,13 +43,14 @@ import {
 import { formatCurrency } from '../utils/loanCalculations';
 import { generateUUID } from '../utils/uuid';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
+import { TimelineType } from '../enums/index.js';
 
 export default function TimelineEventCard({
   event,
   allEvents = [],
   currentTimelineId,
   timelineType,
-  activeFinancialTab = 'balanco',
+  activeFinancialTab = null,
   onEdit,
   onUpdateEventDirect,
   onDelete,
@@ -71,7 +72,7 @@ export default function TimelineEventCard({
     setLocalStatus(event.status);
   }, [event.automatic, event.isAutomatic, event.status]);
 
-  const isBalanceView = timelineType === 'Principal' || activeFinancialTab === 'balanco';
+  const isBalanceView = timelineType === TimelineType.BALANCE;
   const todayStr = '2026-08-21';
   const effectiveStatus = (localStatus || event.status || '').toLowerCase();
   const isAmortization = event.category === 'amortizacao' || event.financialType === 'amortization';
@@ -1060,8 +1061,8 @@ export default function TimelineEventCard({
       bg: 'rgba(16, 185, 129, 0.12)',
       color: '#10b981',
       border: 'rgba(16, 185, 129, 0.28)',
-      timelineId: event.timelineOriginId || 'tl-income',
-      tab: 'balanco'
+      timelineId: event.timelineOriginId,
+      tab: event.timelineOriginId
     };
   };
 

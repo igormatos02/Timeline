@@ -40,7 +40,7 @@ export default function App() {
       const saved = localStorage.getItem('chrono_active_timeboard_id');
       if (saved) return saved;
     } catch (e) { }
-    return '5fcd8a1a-eac7-4405-9c8b-b9607e70b420';
+    return null;
   });
   const [isTimeboardModalOpen, setIsTimeboardModalOpen] = useState(false);
   const [editingTimeboard, setEditingTimeboard] = useState(null);
@@ -64,23 +64,23 @@ export default function App() {
       const saved = localStorage.getItem('chrono_active_timeline_id');
       if (saved) return saved;
     } catch (e) { }
-    return 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
+    return null;
   });
 
-  // Financial Sub-Tabs State ('balanco' | 'entradas' | 'gastos' | 'investimentos' | 'emprestimos' | 'jeep' | 'dacia' | 'casa1' | 'casa2')
+  // Financial Sub-Tabs State
   const [activeFinancialTab, setActiveFinancialTab] = useState(() => {
     try {
       const saved = localStorage.getItem('chrono_active_financial_tab');
       if (saved) return saved;
     } catch (e) { }
-    return 'balanco';
+    return null;
   });
 
-  // Load latest data from Backend JSON Database on mount
+  // Load latest data from Database on mount - Timeboards only for now
   useEffect(() => {
     let isMounted = true;
 
-    // 1. Load Timeboards
+    // 1. Load Timeboards from Database
     api.fetchTimeboards()
       .then((data) => {
         if (isMounted && Array.isArray(data) && data.length > 0) {
@@ -94,33 +94,42 @@ export default function App() {
         }
       })
       .catch((err) => {
-        console.info('Using local timeboards cache:', err.message);
-      });
-
-    // 2. Load Timelines
-    api.fetchTimelines({ startDate: '2024-01-01', endDate: '2056-12-31' })
-      .then((data) => {
-        if (isMounted && Array.isArray(data) && data.length > 0) {
-          setTimelines(data);
-        }
-      })
-      .catch((err) => {
-        console.info('Backend API connected with fallback cache:', err.message);
-      });
-
-    // 3. Load All Events
-    api.fetchEvents({ startDate: '2024-01-01', endDate: '2056-12-31' })
-      .then((data) => {
-        if (isMounted && Array.isArray(data) && data.length > 0) {
-          setRawEvents(data);
-        }
-      })
-      .catch((err) => {
-        console.info('Error fetching raw events:', err.message);
+        console.error('Error fetching timeboards:', err.message);
       });
 
     return () => { isMounted = false; };
   }, []);
+
+  // Fetch all timelines for the active or default timeboard from the database
+  useEffect(() => {
+    if (!activeTimeboardId) return;
+    let isMounted = true;
+
+    api.fetchTimelines({ timeboardId: activeTimeboardId })
+      .then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setTimelines(data);
+          if (data.length > 0) {
+            const balanceTl = data.find((tl) => tl.type === TimelineType.BALANCE);
+            const defaultTl = balanceTl || data[0];
+
+            setActiveTimelineId((prev) => {
+              const exists = data.some((tl) => tl.id === prev);
+              return exists ? prev : defaultTl.id;
+            });
+            setActiveFinancialTab((prev) => {
+              const exists = data.some((tl) => tl.id === prev);
+              return exists ? prev : defaultTl.id;
+            });
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('Error fetching timelines for timeboard:', err.message);
+      });
+
+    return () => { isMounted = false; };
+  }, [activeTimeboardId]);
 
   const [rawEvents, setRawEvents] = useState([]);
 
@@ -233,106 +242,26 @@ export default function App() {
   // Selected Timeboard
   const activeTimeboard = timeboards.find((tb) => tb.id === activeTimeboardId) || timeboards[0];
 
-  // All timelines belonging to active Timeboard (memoized to prevent re-renders when modal opens/closes)
+  // All timelines belonging to active Timeboard
   const activeTimeboardTimelines = React.useMemo(() => {
-    return timelines.filter(
-      (tl) => {
-        const tbId = tl.timeboardId || tl.timeboard_id;
-        return tbId === activeTimeboardId || (!tbId && (activeTimeboardId === '5fcd8a1a-eac7-4405-9c8b-b9607e70b420' || activeTimeboard?.id === '5fcd8a1a-eac7-4405-9c8b-b9607e70b420'));
-      }
-    );
-  }, [timelines, activeTimeboardId, activeTimeboard?.id]);
+    if (!activeTimeboardId || !Array.isArray(timelines)) return [];
+    return timelines.filter((tl) => (tl.timeboardId || tl.timeboard_id) === activeTimeboardId);
+  }, [timelines, activeTimeboardId]);
 
-  // Dynamic consolidated timeline aggregating all financial movements and loan timelines of the active Timeboard
+  // Dynamic active timeline representation for the selected tab
   const activeTimeline = React.useMemo(() => {
-    const seenEventIds = new Set();
-    const allEvents = [];
+    if (!activeTimeboard || activeTimeboardTimelines.length === 0) return null;
 
-    // 1. Add all direct Timeboard events (dynamically typed: entradas, gastos, investimentos)
-    (rawEvents || []).forEach((ev) => {
-      if (!ev || !ev.id) return;
-      const belongsToTimeboard = ev.timeboardId === activeTimeboardId || (!ev.timeboardId && (!activeTimeboardId || activeTimeboardId === '5fcd8a1a-eac7-4405-9c8b-b9607e70b420'));
-      if (belongsToTimeboard && !seenEventIds.has(ev.id)) {
-        seenEventIds.add(ev.id);
-        allEvents.push({
-          ...ev,
-          timelineOriginId: ev.timelineId || ev.timelineOriginId || null,
-          timelineOriginName: ev.timelineOriginName || (ev.isIncome ? 'Entradas' : ev.isInvestment ? 'Investimentos' : 'Gastos'),
-          timelineOriginColor: ev.timelineOriginColor || (ev.isIncome ? '#10b981' : ev.isInvestment ? '#6366f1' : '#f43f5e')
-        });
-      }
-    });
-
-    // 2. Add events from specific real contract timelines (loans)
-    activeTimeboardTimelines.forEach((tl) => {
-      const isTimelineActive = tl.status !== 'Inativo';
-      if (isTimelineActive) {
-        (tl.events || []).forEach((ev) => {
-          if (!ev || !ev.id) return;
-          if (!seenEventIds.has(ev.id)) {
-            seenEventIds.add(ev.id);
-            allEvents.push({
-              ...ev,
-              timelineOriginId: ev.timelineId || ev.timelineOriginId || tl.id,
-              timelineOriginName: ev.timelineOriginName || tl.name,
-              timelineOriginColor: ev.timelineOriginColor || tl.color
-            });
-          }
-        });
-      }
-    });
-
-    const normalizeLoanKey = (loan) => {
-      const num = loan.contractNumber || '';
-      const id = loan.id || '';
-      const name = (loan.name || '').toLowerCase();
-      if (num === '80004197726' || id.includes('jeep') || name.includes('jeep')) return 'jeep';
-      if (num === 'CRD19605103001' || id.includes('dacia') || name.includes('dacia')) return 'dacia';
-      if (num === '02012642' || id.includes('casa1') || (name.includes('egas moniz') && !name.includes('hipoteca'))) return 'casa1';
-      if (num === '02015122' || id.includes('casa2') || name.includes('hipoteca')) return 'casa2';
-      return id || num || name;
-    };
-
-    const seenLoanKeys = new Set();
-    const carLoans = [];
-    activeTimeboardTimelines.forEach((tl) => {
-      const isTimelineActive = tl.status !== 'Inativo';
-      if (isTimelineActive && (tl.type === TimelineType.LOAN || tl.type === 'emprestimo' || tl.type === 'Empréstimo')) {
-        const key = normalizeLoanKey(tl);
-        if (!seenLoanKeys.has(key)) {
-          seenLoanKeys.add(key);
-          carLoans.push(tl);
-        }
-      }
-      if (isTimelineActive && Array.isArray(tl.carLoans)) {
-        tl.carLoans.forEach((loan) => {
-          if (loan.status !== 'Inativo') {
-            const key = normalizeLoanKey(loan);
-            if (!seenLoanKeys.has(key)) {
-              seenLoanKeys.add(key);
-              carLoans.push(loan);
-            }
-          }
-        });
-      }
-    });
-
-    const incomeTimeline = activeTimeboardTimelines.find((tl) => tl.type === TimelineType.INCOME || tl.type === 'entradas');
-    const monthlySalary = incomeTimeline?.monthlySalary !== undefined ? incomeTimeline.monthlySalary : (activeTimeboard?.id === 'tb-clean-financial-002' ? 0 : 3349.60);
+    const currentSelected = activeTimeboardTimelines.find(
+      (tl) => tl.id === activeFinancialTab || tl.id === activeTimelineId
+    ) || activeTimeboardTimelines[0];
 
     return {
-      id: activeTimeboard?.id || '5fcd8a1a-eac7-4405-9c8b-b9607e70b420',
-      name: activeTimeboard?.name || 'Timeboard Portugal',
-      type: 'Financeiro',
-      description: activeTimeboard?.description || '',
-      startDate: '2025-08-01',
-      endDate: `${2026 + futureHorizonYears}-08-31`,
-      monthlySalary,
-      carLoans,
-      events: allEvents,
-      timelines: activeTimeboardTimelines
+      ...currentSelected,
+      timelines: activeTimeboardTimelines,
+      events: []
     };
-  }, [activeTimeboard, activeTimeboardTimelines, rawEvents, activeTimeboardId, futureHorizonYears]);
+  }, [activeTimeboard, activeTimeboardTimelines, activeFinancialTab, activeTimelineId]);
 
   // ----------------------------------------------------
   // Timeline Handlers
@@ -614,33 +543,10 @@ export default function App() {
   const handleConfirmResetTimeline = async () => {
     let targetTlIds = [];
 
-    if (activeFinancialTab === 'balanco') {
+    if (activeTimeline?.type === TimelineType.BALANCE) {
       targetTlIds = activeTimeboardTimelines.map((t) => t.id);
-    } else if (activeFinancialTab === 'entradas') {
-      const found = activeTimeboardTimelines.find((t) => t.type === 'entradas');
-      if (found) targetTlIds = [found.id];
-    } else if (activeFinancialTab === 'gastos') {
-      const found = activeTimeboardTimelines.find((t) => t.type === 'gastos');
-      if (found) targetTlIds = [found.id];
-    } else if (activeFinancialTab === 'investimentos') {
-      const found = activeTimeboardTimelines.find((t) => t.type === 'investimentos');
-      if (found) targetTlIds = [found.id];
-    } else if (activeFinancialTab === 'emprestimos') {
-      targetTlIds = activeTimeboardTimelines.filter((t) => t.type === 'emprestimo' || t.type === 'Empréstimo').map((t) => t.id);
-    } else if (activeFinancialTab === 'jeep') {
-      const found = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('jeep')) || t.contractNumber === '80004197726');
-      if (found) targetTlIds = [found.id];
-    } else if (activeFinancialTab === 'dacia') {
-      const found = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('dacia')) || t.contractNumber === 'CRD19605103001');
-      if (found) targetTlIds = [found.id];
-    } else if (activeFinancialTab === 'casa1') {
-      const found = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('casa 1')) || (t.name && t.name.includes('02012642')));
-      if (found) targetTlIds = [found.id];
-    } else if (activeFinancialTab === 'casa2') {
-      const found = activeTimeboardTimelines.find((t) => (t.name && t.name.toLowerCase().includes('casa 2')) || (t.name && t.name.includes('02015122')));
-      if (found) targetTlIds = [found.id];
-    } else if (activeTimelineId) {
-      targetTlIds = [activeTimelineId];
+    } else if (activeTimeline?.id) {
+      targetTlIds = [activeTimeline.id];
     }
 
     try {
@@ -1045,11 +951,15 @@ export default function App() {
 
       {/* Main Layout Area */}
       <main className="main-layout">
-        {activeTimeline ? (
+        {timelines.length > 0 && activeTimeline ? (
           <VerticalTimeline
             timeline={activeTimeline}
+            timelines={activeTimeboardTimelines}
             activeFinancialTab={activeFinancialTab}
-            onSelectFinancialTab={setActiveFinancialTab}
+            onSelectFinancialTab={(tabKey) => {
+              setActiveFinancialTab(tabKey);
+              setActiveTimelineId(tabKey);
+            }}
             futureHorizonYears={futureHorizonYears}
             pastHorizonYears={pastHorizonYears}
             onLoadMoreFuture={handleLoadMoreFuture}
@@ -1087,18 +997,11 @@ export default function App() {
             }
           />
         ) : (
-          <div className="empty-timeline-state glass-panel" style={{ marginTop: '40px' }}>
-            <h2>Nenhuma Timeline Encontrada</h2>
+          <div className="empty-timeline-state glass-panel" style={{ marginTop: '40px', textAlign: 'center' }}>
+            <h2>{activeTimeboard ? activeTimeboard.name : 'Carregando Timeboards...'}</h2>
             <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-              Crie a sua primeira linha temporal para começar.
+              Timeboard conectado ao banco de dados.
             </p>
-            <button
-              className="btn btn-primary"
-              style={{ marginTop: '20px' }}
-              onClick={handleOpenCreateTimeline}
-            >
-              Criar Timeline
-            </button>
           </div>
         )}
       </main>
@@ -1184,11 +1087,9 @@ export default function App() {
                     Resetar Timeline
                   </h3>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {activeFinancialTab === 'balanco'
+                    {activeTimeline?.type === TimelineType.BALANCE
                       ? 'Limpar todos os movimentos do Timeboard'
-                      : activeFinancialTab === 'emprestimos'
-                        ? 'Limpar todos os empréstimos e financiamentos'
-                        : `Limpar movimentos de ${activeFinancialTab.toUpperCase()}`}
+                      : `Limpar movimentos de ${activeTimeline?.name || ''}`}
                   </div>
                 </div>
               </div>

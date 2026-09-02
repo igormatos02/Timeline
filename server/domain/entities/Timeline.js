@@ -1,4 +1,4 @@
-import { TimelineType, TimelineStatus } from '../enums/index.js';
+import { TimelineType, TimelineStatus } from '../../../shared/enums/index.js';
 
 /**
  * Aggregate Root: Timeline
@@ -7,16 +7,16 @@ import { TimelineType, TimelineStatus } from '../enums/index.js';
 export class Timeline {
   constructor({
     id,
-    tenantId = 'tenant-igor',
-    timeboardId = '5fcd8a1a-eac7-4405-9c8b-b9607e70b420',
+    tenantId = null,
+    timeboardId = null,
     name,
     type = TimelineType.LOAN,
-    color = '#6366f1',
+    color = null,
     description = '',
     isSystemDefault = false,
     canDelete = true,
-    startDate = '2026-01-01',
-    endDate = '2027-04-30',
+    startDate = null,
+    endDate = null,
     status = TimelineStatus.ACTIVE,
     periodicity = 'mensal',
     monthlySalary = 0,

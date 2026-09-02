@@ -1,6 +1,7 @@
 import { addDays, addWeeks, addMonths, addYears, format, parseISO, isBefore, isAfter, differenceInDays } from 'date-fns';
 import { generateUUID } from './uuid.js';
-import { FinancialType, EventStatus, TimelineType } from '../enums/index.js';
+import { FinancialType, EventStatus } from '../enums/index.js';
+import { TimelineType } from '../../shared/enums/index.js';
 
 /**
  * Format currency in EUR (€)
@@ -355,7 +356,7 @@ export function applyExtraordinaryAmortization({
       return ev;
     });
   }
-return recalculateLoanState(timeline, updatedList);
+  return recalculateLoanState(timeline, updatedList);
 }
 
 /**
@@ -621,8 +622,8 @@ export function getConsolidatedLoanMetricsAtHorizon(timelines, targetHorizonMont
 
       if (ev.category === 'parcela_emprestimo') {
         const totalAmt = Number(ev.amount || 0);
-        const principal = ev.principalAmount !== undefined 
-          ? Number(ev.principalAmount) 
+        const principal = ev.principalAmount !== undefined
+          ? Number(ev.principalAmount)
           : (ev.principalPaid !== undefined ? Number(ev.principalPaid) : Math.round(totalAmt * 0.82));
         amortizedForLoan += principal;
       } else if (ev.category === 'amortizacao') {

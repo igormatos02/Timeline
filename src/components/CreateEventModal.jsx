@@ -20,6 +20,7 @@ import { format, parseISO, getDaysInMonth, addMonths } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../utils/loanCalculations';
 import { generateUUID } from '../utils/uuid';
+import { TimelineType } from '../enums/index.js';
 
 export default function CreateEventModal({
   isOpen,
@@ -30,15 +31,14 @@ export default function CreateEventModal({
   timeline,
   allTimelines = [],
   defaultNature = 'income',
-  activeFinancialTab = 'balanco'
+  activeFinancialTab = null
 }) {
-  const isFinancialTimeline = timeline?.type === 'Entradas' || timeline?.type === 'Financeiro' || timeline?.id === 'tl-income';
-  const isBalancoView = activeFinancialTab === 'balanco';
+  const isBalancoView = timeline?.type === TimelineType.BALANCE;
 
   // Tipo de Movimento: 'entrada' | 'saida' | 'investimento'
   const [movementType, setMovementType] = useState(() => {
-    if (activeFinancialTab === 'gastos' || defaultNature === 'expense') return 'saida';
-    if (activeFinancialTab === 'investimentos' || defaultNature === 'investment') return 'investimento';
+    if (timeline?.type === TimelineType.EXPENSE || defaultNature === 'expense') return 'saida';
+    if (timeline?.type === TimelineType.INVESTMENT || defaultNature === 'investment') return 'investimento';
     return 'entrada';
   });
 

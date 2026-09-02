@@ -1,6 +1,6 @@
 import { loanContractRepository } from '../../infrastructure/database/json/JsonLoanContractRepository.js';
 import { eventRepository } from '../../infrastructure/database/json/JsonEventRepository.js';
-import { FinancialType, EventStatus } from '../../domain/enums/index.js';
+import { FinancialType, EventStatus } from '../../../shared/enums/index.js';
 
 export class LoanService {
   async getLoanContracts() {

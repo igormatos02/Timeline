@@ -1,4 +1,4 @@
-import { EventStatus, FinancialType } from '../../../enums/index.js';
+import { EventStatus, FinancialType } from '../../../../../shared/enums/index.js';
 
 /**
  * Domain Service: InvestmentDomainService

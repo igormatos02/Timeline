@@ -2,7 +2,7 @@ import { timeboardRepository } from '../../infrastructure/database/supabase/Supa
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { loanContractRepository } from '../../infrastructure/database/json/JsonLoanContractRepository.js';
 import { eventRepository } from '../../infrastructure/database/json/JsonEventRepository.js';
-import { TimeboardType } from '../../domain/enums/index.js';
+import { TimeboardType, TimelineType, TimelineStatus, EventAggregation } from '../../../shared/enums/index.js';
 
 export class TimeboardService {
   async getAllTimeboards() {
@@ -36,6 +36,20 @@ export class TimeboardService {
 
     if (isFinancial) {
       const defaultTimelines = [
+        {
+          timeboardId: createdTimeboard.id,
+          name: 'Balanço',
+          type: TimelineType.BALANCE,
+          color: '#0ea5e9',
+          description: 'Visão consolidada do fluxo financeiro',
+          isSystemDefault: true,
+          canDelete: false,
+          status: TimelineStatus.ACTIVE,
+          periodicity: EventAggregation.MONTHLY,
+          startDate: '2026-01-01',
+          endDate: '2027-04-30',
+          tenantId: createdTimeboard.tenantId || null
+        },
         {
           timeboardId: createdTimeboard.id,
           name: 'Entradas e Rendimentos',

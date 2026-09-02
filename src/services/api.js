@@ -81,12 +81,22 @@ export async function deleteTimeboard(id) {
 // Timelines
 export async function fetchTimelines(params = {}) {
   const query = new URLSearchParams(
-    Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+    Object.entries(params).filter(
+      ([_, v]) => v !== undefined && v !== null && v !== ''
+    )
   ).toString();
-  const res = await fetch(`${API_BASE}/timelines${query ? `?${query}` : ''}`, {
-    headers: getHeaders()
-  });
-  if (!res.ok) throw new Error(`Failed to fetch timelines: ${res.statusText}`);
+
+  const res = await fetch(
+    `${API_BASE}/timelines${query ? `?${query}` : ''}`,
+    {
+      headers: getHeaders()
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch timelines: ${res.statusText}`);
+  }
+
   return res.json();
 }
 

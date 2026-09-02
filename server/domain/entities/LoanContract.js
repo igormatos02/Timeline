@@ -1,5 +1,5 @@
-import { EventCategory } from '../enums/EventCategory.js';
-import { TimelineType, EventAggregation, EventStatus } from '../enums/index.js';
+import { EventCategory } from '../../../shared/enums/EventCategory.js';
+import { TimelineType, EventAggregation, EventStatus } from '../../../shared/enums/index.js';
 
 /**
  * Aggregate Root: LoanContract

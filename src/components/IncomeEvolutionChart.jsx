@@ -14,13 +14,13 @@ import {
 import { format, parseISO, addMonths } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../utils/loanCalculations';
-import { FinancialType, EventStatus } from '../enums/index.js';
+import { FinancialType, EventStatus, TimelineType } from '../enums/index.js';
 
 export default function IncomeEvolutionChart({
   timeline = {},
   events = [],
   todayStr = '2026-08-21',
-  activeFinancialTab = 'balanco',
+  activeFinancialTab = null,
   computeStartDate = null
 }) {
   // Chart Mode: 'acumulado_real' (Historical Real Received up to Today), 'acumulativo' (Cumulative with Future Projection), 'variante' (Monthly Variation)
@@ -131,7 +131,7 @@ export default function IncomeEvolutionChart({
               monthInvestment += amt;
               if (activeFinancialTab === 'investimentos') eventCount++;
             }
-            if (activeFinancialTab === 'balanco') {
+            if (timeline?.type === TimelineType.BALANCE) {
               eventCount++;
             }
           }
@@ -139,13 +139,11 @@ export default function IncomeEvolutionChart({
       }
 
       let monthTotal = 0;
-      if (activeFinancialTab === 'entradas') {
+      if (timeline?.type === TimelineType.INCOME) {
         monthTotal = monthIncome;
-      } else if (activeFinancialTab === 'gastos') {
+      } else if (timeline?.type === TimelineType.EXPENSE || timeline?.type === TimelineType.LOAN) {
         monthTotal = monthExpense;
-      } else if (activeFinancialTab === 'emprestimos' || activeFinancialTab === 'jeep' || activeFinancialTab === 'dacia' || activeFinancialTab === 'casa1' || activeFinancialTab === 'casa2') {
-        monthTotal = monthExpense;
-      } else if (activeFinancialTab === 'investimentos') {
+      } else if (timeline?.type === TimelineType.INVESTMENT) {
         monthTotal = monthInvestment;
       } else {
         // Balanço líquido = Entradas - Gastos/Empréstimos - Investimentos
@@ -176,7 +174,7 @@ export default function IncomeEvolutionChart({
   }, [timeline?.startDate, events, horizonYears, todayStr, chartMode, activeFinancialTab]);
 
   // Overall Statistics for the active view
-  const isBalanco = activeFinancialTab === 'balanco';
+  const isBalanco = timeline?.type === TimelineType.BALANCE;
   const isGastos = activeFinancialTab === 'gastos' || activeFinancialTab === 'emprestimos';
   const isInvest = activeFinancialTab === 'investimentos';
   const isEntradas = activeFinancialTab === 'entradas';

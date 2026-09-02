@@ -2,7 +2,7 @@ import { incomeDomainService } from './IncomeDomainService.js';
 import { expenseDomainService } from './ExpenseDomainService.js';
 import { investmentDomainService } from './InvestmentDomainService.js';
 import { loanDomainService } from './LoanDomainService.js';
-import { TimelineStatus } from '../../../enums/index.js';
+import { TimelineStatus } from '../../../../../shared/enums/index.js';
 
 /**
  * Domain Service: BalanceDomainService

@@ -59,7 +59,8 @@ import { FinancialType, EventStatus, TimelineType } from '../enums/index.js';
 
 function VerticalTimeline({
   timeline,
-  activeFinancialTab = 'balanco',
+  timelines = [],
+  activeFinancialTab = '',
   onSelectFinancialTab,
   onEditEvent,
   onUpdateEventDirect,
@@ -257,7 +258,7 @@ function VerticalTimeline({
     (ev) => !(ev.category === 'tarefa' && ev.isCompleted === false)
   );
 
-  const isBalancoView = (isFinancialTimeline && activeFinancialTab === 'balanco') || timeline.type === 'Principal';
+  const isBalancoView = timeline.type === TimelineType.BALANCE;
 
   // Determine earliest date in timeline (12 meses anteriores expansível)
   const startDateObj = isBalancoView ? parseISO('2025-08-01') : subMonths(parseISO('2026-08-01'), Math.max(1, pastHorizonYears) * 12);
@@ -1414,89 +1415,58 @@ function VerticalTimeline({
           <span>Filtros & Navegação</span>
         </div>
 
-        {/* 🌟 0. Timelines do Timeboard */}
-        {isFinancialTimeline && (
+        {/* 🌟 0. Timelines do Timeboard vindas da Base de Dados */}
+        {((timelines && timelines.length > 0) || (timeline?.timelines && timeline.timelines.length > 0)) && (
           <div className="sidebar-section">
             <div className="sidebar-section-title">
               <span>Timelines</span>
             </div>
             <div className="sidebar-btn-group">
-              <button
-                type="button"
-                className={`sidebar-filter-item ${activeFinancialTab === 'balanco' ? 'active' : ''}`}
-                onClick={() => onSelectFinancialTab && onSelectFinancialTab('balanco')}
-                style={activeFinancialTab === 'balanco' ? { borderColor: '#0ea5e9', background: 'rgba(14, 165, 233, 0.16)', color: '#0ea5e9' } : {}}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Scale size={14} />
-                  <span style={{ fontWeight: '800' }}>Balanço (Principal)</span>
-                </div>
-                {activeFinancialTab === 'balanco' && <span style={{ fontSize: '0.75rem', color: '#0ea5e9' }}>✓</span>}
-              </button>
+              {((timelines && timelines.length > 0) ? timelines : (timeline?.timelines || [])).map((tl) => {
+                const isActive = activeFinancialTab === tl.id || timeline?.id === tl.id;
+                const tlColor = tl.color;
+                const getTimelineIcon = (type) => {
+                  switch (type) {
+                    case TimelineType.INCOME:
+                      return <DollarSign size={14} style={{ color: tlColor }} />;
+                    case TimelineType.EXPENSE:
+                      return <ShoppingCart size={14} style={{ color: tlColor }} />;
+                    case TimelineType.INVESTMENT:
+                      return <PiggyBank size={14} style={{ color: tlColor }} />;
+                    case TimelineType.LOAN:
+                      return <CreditCard size={14} style={{ color: tlColor }} />;
+                    case TimelineType.BALANCE:
+                      return <Scale size={14} style={{ color: tlColor }} />;
+                    default:
+                      return <Layers size={14} style={{ color: tlColor }} />;
+                  }
+                };
 
-              <button
-                type="button"
-                className={`sidebar-filter-item ${activeFinancialTab === 'entradas' ? 'active' : ''}`}
-                onClick={() => onSelectFinancialTab && onSelectFinancialTab('entradas')}
-                style={activeFinancialTab === 'entradas' ? { borderColor: '#10b981', background: 'rgba(16, 185, 129, 0.14)', color: '#10b981' } : {}}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <DollarSign size={14} />
-                  <span style={{ fontWeight: '700' }}>Entradas e Rendimentos</span>
-                </div>
-                {activeFinancialTab === 'entradas' && <span style={{ fontSize: '0.75rem', color: '#10b981' }}>✓</span>}
-              </button>
-
-              <button
-                type="button"
-                className={`sidebar-filter-item ${activeFinancialTab === 'gastos' ? 'active' : ''}`}
-                onClick={() => onSelectFinancialTab && onSelectFinancialTab('gastos')}
-                style={activeFinancialTab === 'gastos' ? { borderColor: '#f43f5e', background: 'rgba(244, 63, 94, 0.14)', color: '#f43f5e' } : {}}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <ShoppingCart size={14} />
-                  <span style={{ fontWeight: '700' }}>Gastos e Saídas</span>
-                </div>
-                {activeFinancialTab === 'gastos' && <span style={{ fontSize: '0.75rem', color: '#f43f5e' }}>✓</span>}
-              </button>
-
-              <button
-                type="button"
-                className={`sidebar-filter-item ${activeFinancialTab === 'investimentos' ? 'active' : ''}`}
-                onClick={() => onSelectFinancialTab && onSelectFinancialTab('investimentos')}
-                style={activeFinancialTab === 'investimentos' ? { borderColor: '#6366f1', background: 'rgba(99, 102, 241, 0.14)', color: 'var(--primary-light)' } : {}}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <PiggyBank size={14} />
-                  <span style={{ fontWeight: '700' }}>Investimentos e Poupança</span>
-                </div>
-                {activeFinancialTab === 'investimentos' && <span style={{ fontSize: '0.75rem', color: 'var(--primary-light)' }}>✓</span>}
-              </button>
-
-              {/* Contratos de Empréstimo do Timeboard */}
-              {timeline.carLoans && timeline.carLoans.length > 0 && (
-                timeline.carLoans.map((loan) => {
-                  const tabKey = (loan.contractNumber === '80004197726' || loan.name?.includes('Jeep')) ? 'jeep'
-                    : (loan.contractNumber === 'CRD19605103001' || loan.name?.includes('Dacia')) ? 'dacia'
-                    : (loan.contractNumber === '02015122' || loan.name?.includes('Hipoteca')) ? 'casa2'
-                    : 'casa1';
-                  return (
-                    <button
-                      key={loan.id}
-                      type="button"
-                      className={`sidebar-filter-item ${activeFinancialTab === tabKey ? 'active' : ''}`}
-                      onClick={() => onSelectFinancialTab && onSelectFinancialTab(tabKey)}
-                      style={activeFinancialTab === tabKey ? { borderColor: loan.color || 'var(--primary-light)', background: 'rgba(99, 102, 241, 0.14)', color: loan.color || 'var(--primary-light)' } : {}}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <CreditCard size={14} />
-                        <span style={{ fontWeight: '700' }}>{loan.name}</span>
-                      </div>
-                      {activeFinancialTab === tabKey && <span style={{ fontSize: '0.75rem', color: loan.color || 'var(--primary-light)' }}>✓</span>}
-                    </button>
-                  );
-                })
-              )}
+                return (
+                  <button
+                    key={tl.id}
+                    type="button"
+                    className={`sidebar-filter-item ${isActive ? 'active' : ''}`}
+                    onClick={() => {
+                      if (onSelectFinancialTab) onSelectFinancialTab(tl.id);
+                      if (onNavigateToTimeline) onNavigateToTimeline(tl.id);
+                    }}
+                    style={isActive ? {
+                      borderColor: tlColor,
+                      background: tlColor ? `${tlColor}20` : undefined,
+                      color: tlColor
+                    } : {}}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        {getTimelineIcon(tl.type)}
+                      </span>
+                      <span style={{ fontWeight: '700' }}>{tl.name}</span>
+                    </div>
+                    {isActive && <span style={{ fontSize: '0.75rem', color: tlColor }}>✓</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

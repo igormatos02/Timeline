@@ -1,4 +1,5 @@
 export const TimelineType = Object.freeze({
+  BALANCE: 'balance',
   INCOME: 'income',
   EXPENSE: 'expense',
   INVESTMENT: 'investments',

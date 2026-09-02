@@ -2,7 +2,7 @@ import { financialEventRepository as eventRepository } from '../../infrastructur
 import { loanContractRepository } from '../../infrastructure/database/json/JsonLoanContractRepository.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
-import { FinancialType, EventStatus, EventPeriodicity, AmortizationStrategy, TimelineType } from '../../domain/enums/index.js';
+import { FinancialType, EventStatus, EventPeriodicity, AmortizationStrategy, TimelineType } from '../../../shared/enums/index.js';
 
 export class EventService {
   async getAllEvents(filter = {}) {

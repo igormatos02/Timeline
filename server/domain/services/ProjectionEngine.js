@@ -1,5 +1,5 @@
 import { addMonths, format, parseISO } from 'date-fns';
-import { EventStatus, EventPeriodicity } from '../enums/index.js';
+import { EventStatus, EventPeriodicity } from '../../../shared/enums/index.js';
 
 /**
  * Domain Service: ProjectionEngine
@@ -123,7 +123,7 @@ export function projectEvents(rawEvents = [], options = {}) {
           const m = curDate.getMonth();
           const lastDay = new Date(y, m + 1, 0).getDate();
           curDate = new Date(y, m, Math.min(dayOfMonth, lastDay));
-        } catch {}
+        } catch { }
         continue;
       }
 
@@ -179,7 +179,7 @@ export function projectEvents(rawEvents = [], options = {}) {
         const m = curDate.getMonth();
         const lastDay = new Date(y, m + 1, 0).getDate();
         curDate = new Date(y, m, Math.min(dayOfMonth, lastDay));
-      } catch {}
+      } catch { }
     }
   }
 

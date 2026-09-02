@@ -6,7 +6,13 @@ export const timelinesRouter = Router();
 // GET /api/timelines
 timelinesRouter.get('/', async (req, res) => {
   try {
-    const timelines = await timelineService.getAllTimelines(req.query);
+    const { timeboardId, ...query } = req.query;
+
+    const timelines = await timelineService.getAllTimelines(
+      timeboardId,
+      query
+    );
+
     res.json(timelines);
   } catch (err) {
     console.error('Error fetching timelines:', err);

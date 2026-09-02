@@ -1,4 +1,4 @@
-import { EventStatus, FinancialType, TimelineStatus } from '../../../enums/index.js';
+import { EventStatus, FinancialType, TimelineStatus } from '../../../../../shared/enums/index.js';
 
 /**
  * Domain Service: LoanDomainService

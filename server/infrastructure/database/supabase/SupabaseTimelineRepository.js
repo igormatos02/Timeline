@@ -56,6 +56,19 @@ export class SupabaseTimelineRepository extends IRepository {
     return rows.map(rowToEntity);
   }
 
+  async getAllByTimeboardId(timeboardId) {
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select('*')
+      .eq('timeboard_id', timeboardId);
+
+    if (error) throw new Error(
+      `Supabase getAllByTimeboardId [timelines]: ${error.message}`
+    );
+
+    return data.map(rowToEntity);
+  }
+
   async getById(id) {
     const { data, error } = await supabase.from(TABLE).select('*').eq('id', id).maybeSingle();
     if (error) throw new Error(`Supabase getById [timelines]: ${error.message}`);

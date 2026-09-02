@@ -1,4 +1,4 @@
-import { TimeboardType } from '../enums/index.js';
+import { TimeboardType } from '../../../shared/enums/index.js';
 
 /**
  * Aggregate Root: Timeboard
@@ -7,10 +7,9 @@ import { TimeboardType } from '../enums/index.js';
 export class Timeboard {
   constructor({
     id,
-    name = 'Timeboard Portugal',
+    name = '',
     description = '',
-    tenantId = 'tenant-igor',
-    tenant = 'tenant-igor',
+    tenantId = null,
     userId = null,
     type = TimeboardType.FINANCIAL,
     createdAt = new Date().toISOString(),
@@ -19,8 +18,7 @@ export class Timeboard {
     this.id = id;
     this.name = name;
     this.description = description;
-    this.tenantId = tenantId || tenant || 'tenant-igor';
-    this.tenant = this.tenantId;
+    this.tenantId = tenantId;
     this.userId = userId;
     this.type = type;
     this.createdAt = createdAt;

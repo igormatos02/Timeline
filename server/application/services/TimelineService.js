@@ -19,7 +19,23 @@ export class TimelineService {
 
     const projectedEvents = projectEvents(allRawEvents, query);
 
-    return timelines.map((tl) => {
+    const typePriority = {
+      [TimelineType.BALANCE]: 1,
+      [TimelineType.INCOME]: 2,
+      [TimelineType.EXPENSE]: 3,
+      [TimelineType.INVESTMENT]: 4
+    };
+
+    const sortedTimelines = [...timelines].sort((a, b) => {
+      const pA = typePriority[a.type] ?? 99;
+      const pB = typePriority[b.type] ?? 99;
+      if (pA !== pB) {
+        return pA - pB;
+      }
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    return sortedTimelines.map((tl) => {
       let tlEvents = [];
       let metrics = {};
 

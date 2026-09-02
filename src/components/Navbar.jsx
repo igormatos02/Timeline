@@ -1,6 +1,7 @@
 import React from 'react';
 import { Clock, Plus, LayoutGrid, Sparkles, Sun, Moon, LocateFixed, User, Shield } from 'lucide-react';
 import { getCurrentUser } from '../services/api';
+import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 export default function Navbar({
   timeboards = [],
@@ -12,6 +13,7 @@ export default function Navbar({
   onToggleTheme
 }) {
   const currentUser = getCurrentUser();
+  const { language, setLanguage, t } = useTranslation();
 
   return (
     <header className="app-header">
@@ -25,12 +27,12 @@ export default function Navbar({
             <div className="brand-title">
               Chrono Timeboard <Sparkles size={16} style={{ color: '#818cf8' }} />
             </div>
-            <div className="brand-subtitle">Gestão Financeira & Linhas Temporais</div>
+            <div className="brand-subtitle">{t('header.brandSubtitle')}</div>
           </div>
         </div>
 
         {/* Timeboard Selector Dropdown */}
-        <div className="timeline-selector-wrapper" title="Selecionar Timeboard">
+        <div className="timeline-selector-wrapper" title={t('header.selectTimeboard')}>
           <LayoutGrid size={18} style={{ color: 'var(--primary)' }} />
           <select
             className="timeline-select"
@@ -47,6 +49,67 @@ export default function Navbar({
 
         {/* Actions & User Profile */}
         <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Language Toggle UK / PT */}
+          <div
+            className="language-selector-group"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: 'var(--bg-glass)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: '8px',
+              padding: '2px',
+              gap: '2px'
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setLanguage('en')}
+              className={`lang-btn ${language === 'en' ? 'active' : ''}`}
+              title="English (UK)"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                border: 'none',
+                background: language === 'en' ? 'var(--primary)' : 'transparent',
+                color: language === 'en' ? '#ffffff' : 'var(--text-muted)',
+                cursor: 'pointer',
+                fontSize: '0.78rem',
+                fontWeight: language === 'en' ? '700' : '500',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span style={{ fontSize: '1rem', lineHeight: 1 }}>🇬🇧</span>
+              <span>EN</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage('pt')}
+              className={`lang-btn ${language === 'pt' ? 'active' : ''}`}
+              title="Português (PT)"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                border: 'none',
+                background: language === 'pt' ? 'var(--primary)' : 'transparent',
+                color: language === 'pt' ? '#ffffff' : 'var(--text-muted)',
+                cursor: 'pointer',
+                fontSize: '0.78rem',
+                fontWeight: language === 'pt' ? '700' : '500',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span style={{ fontSize: '1rem', lineHeight: 1 }}>🇵🇹</span>
+              <span>PT</span>
+            </button>
+          </div>
+
           {/* Botão Ir para Hoje / Atual */}
           <button
             type="button"
@@ -58,17 +121,17 @@ export default function Navbar({
               color: 'var(--primary-light)',
               fontWeight: '700'
             }}
-            title="Voltar à data de hoje / período atual"
+            title={t('header.goToTodayTitle')}
           >
             <LocateFixed size={16} />
-            <span>Ir para Hoje</span>
+            <span>{t('header.goToToday')}</span>
           </button>
 
           {/* Theme Toggle */}
           <button
             className="theme-toggle-btn"
             onClick={onToggleTheme}
-            title={theme === 'light' ? 'Mudar para tema escuro' : 'Mudar para tema claro'}
+            title={theme === 'light' ? t('header.toggleThemeDark') : t('header.toggleThemeLight')}
             aria-label="Alternar tema"
           >
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
@@ -78,10 +141,10 @@ export default function Navbar({
           <button
             className="btn btn-primary btn-sm"
             onClick={onOpenCreateTimeboard}
-            title="Criar novo Timeboard"
+            title={t('header.createTimeboardTitle')}
           >
             <Plus size={16} />
-            <span>Novo Timeboard</span>
+            <span>{t('header.newTimeboard')}</span>
           </button>
 
           {/* 👤 Logged In User Pill / Avatar */}

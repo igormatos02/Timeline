@@ -245,7 +245,23 @@ export default function App() {
   // All timelines belonging to active Timeboard
   const activeTimeboardTimelines = React.useMemo(() => {
     if (!activeTimeboardId || !Array.isArray(timelines)) return [];
-    return timelines.filter((tl) => (tl.timeboardId || tl.timeboard_id) === activeTimeboardId);
+    const filtered = timelines.filter((tl) => (tl.timeboardId || tl.timeboard_id) === activeTimeboardId);
+
+    const typePriority = {
+      [TimelineType.BALANCE]: 1,
+      [TimelineType.INCOME]: 2,
+      [TimelineType.EXPENSE]: 3,
+      [TimelineType.INVESTMENT]: 4
+    };
+
+    return [...filtered].sort((a, b) => {
+      const pA = typePriority[a.type] ?? 99;
+      const pB = typePriority[b.type] ?? 99;
+      if (pA !== pB) {
+        return pA - pB;
+      }
+      return (a.name || '').localeCompare(b.name || '');
+    });
   }, [timelines, activeTimeboardId]);
 
   // Dynamic active timeline representation for the selected tab

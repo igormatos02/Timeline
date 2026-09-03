@@ -12,7 +12,9 @@ import {
   getWeek,
   addYears,
   addMonths,
-  subMonths
+  subMonths,
+  startOfMonth,
+  endOfMonth
 } from 'date-fns';
 import { pt, enUS } from 'date-fns/locale';
 import {
@@ -206,7 +208,8 @@ function VerticalTimeline({
   // Scroll memory per timeline/tab & Auto-scroll directly to Today or Specific Month
   const positionOnMonth = React.useCallback((monthKey, behavior = 'instant') => {
     if (!monthKey) return false;
-    const targetNode = document.querySelector(`[data-month-key="${monthKey}"]`) || (monthKey === '2026-08' ? document.getElementById('timeline-node-today') : null);
+    const currentMKey = format(new Date(), 'yyyy-MM');
+    const targetNode = document.querySelector(`[data-month-key="${monthKey}"]`) || (monthKey === currentMKey ? document.getElementById('timeline-node-today') : null);
     if (targetNode) {
       const navbar = document.querySelector('.app-header') || document.querySelector('header');
       const stickyDock = document.querySelector('.sticky-header-dock');
@@ -225,7 +228,8 @@ function VerticalTimeline({
   }, []);
 
   const positionOnToday = React.useCallback((behavior = 'instant') => {
-    return positionOnMonth('2026-08', behavior);
+    const currentMKey = format(new Date(), 'yyyy-MM');
+    return positionOnMonth(currentMKey, behavior);
   }, [positionOnMonth]);
 
   const userInteractedRef = React.useRef(false);
@@ -272,8 +276,8 @@ function VerticalTimeline({
     };
   }, [timeline?.id, activeFinancialTab, positionOnToday]);
 
-  // Default Today reference (2026-08-21)
-  const todayDate = new Date('2026-08-21');
+  // Reference to Today using current system date
+  const todayDate = new Date();
   const todayStr = format(todayDate, 'yyyy-MM-dd');
 
   // Extract pending floating tasks (category === 'tarefa' and !isCompleted)
@@ -289,11 +293,11 @@ function VerticalTimeline({
 
   const isBalancoView = timeline.type === TimelineType.BALANCE;
 
-  // Determine earliest date in timeline (Balanço: exatamente 12 meses até o mês atual. Outros: 12 meses anteriores expansível)
-  const startDateObj = isBalancoView ? parseISO('2025-09-01') : subMonths(parseISO('2026-08-01'), Math.max(1, pastHorizonYears) * 12);
-
-  // Determine latest date in timeline (12 meses futuros expansível)
-  const maxDateObj = isBalancoView ? parseISO('2026-08-31') : addMonths(parseISO('2026-08-31'), Math.max(1, futureHorizonYears) * 12);
+  // Determine earliest and latest dates in timeline dynamically
+  const currentMonthStart = startOfMonth(todayDate);
+  const currentMonthEnd = endOfMonth(todayDate);
+  const startDateObj = isBalancoView ? subMonths(currentMonthStart, 11) : subMonths(currentMonthStart, Math.max(1, pastHorizonYears) * 12);
+  const maxDateObj = isBalancoView ? currentMonthEnd : addMonths(currentMonthEnd, Math.max(1, futureHorizonYears) * 12);
 
   // Generate array of days from startDate up to maxDateObj (Descending: future at top, past at bottom)
   const daysArray = useMemo(() => {
@@ -362,25 +366,25 @@ function VerticalTimeline({
           const isInvestment = ev.eventType === EventType.INVESTMENT || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
           if (!isInvestment) return false;
         } else if (timeline.type === TimelineType.LOAN) {
-          const isThisLoan = ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
+          const isThisLoan = ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || (ev.eventType === EventType.LOAN_INSTALLMENT || ev.eventType === EventType.AMORTIZATION);
           if (!isThisLoan) return false;
         }
         // TimelineType.BALANCE shows all integrated movements
       }
 
-      // No Balanço: mostrar somente até ao fim do mês corrente (2026-08-31)
+      // No Balanço: mostrar somente até ao fim do mês corrente
       if (isBalancoView) {
-        const currentMonthEndStr = '2026-08-31';
+        const currentMonthEndStr = format(currentMonthEnd, 'yyyy-MM-dd');
         if (ev.date > currentMonthEndStr) {
           return false;
         }
       }
 
-      // Entradas / Gastos / Investimentos em Financeiro: respeitar o horizonte máximo projetado
-      const isCarLoanTab = timeline.type === TimelineType.LOAN;
-      if (isFinancialTimeline && !isCarLoanTab && !isBalancoView) {
+      // Respeitar os limites dinâmicos do horizonte de tempo para todas as timelines financeiras
+      if (isFinancialTimeline && !isBalancoView) {
         const maxEndStr = format(maxDateObj, 'yyyy-MM-dd');
-        if (ev.date > maxEndStr) {
+        const minStartStr = format(startDateObj, 'yyyy-MM-dd');
+        if (ev.date > maxEndStr || ev.date < minStartStr) {
           return false;
         }
       }
@@ -1092,25 +1096,6 @@ function VerticalTimeline({
                           {isLoanTimelineOrTab ? t('timeline.noLoanMonth') : t('timeline.noTabRecords')}
                         </span>
                       </div>
-                      {!isLoanTimelineOrTab && (
-                        <span
-                          className="add-event-mini-btn"
-                          style={{
-                            background: 'rgba(16, 185, 129, 0.18)',
-                            color: '#10b981',
-                            border: '1px solid rgba(16, 185, 129, 0.35)',
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            fontWeight: '700',
-                            fontSize: '0.76rem',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <Plus size={13} /> {t('buttons.add')}
-                        </span>
-                      )}
                     </div>
                   )}
                 </div>

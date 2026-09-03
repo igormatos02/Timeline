@@ -64,6 +64,20 @@ export const translations = {
       noTabRecords: "No records in this tab for this month"
     },
 
+    // Loan Card Breakdown
+    loanCard: {
+      dueDay: "Due on day {day}",
+      totalInstallment: "Total Installment",
+      totalPaid: "Total Paid",
+      capitalDebt: "Capital (Debt)",
+      capitalAbated: "Capital Abated",
+      interest: "Interest",
+      interestSaved: "Interest Saved",
+      lateFee: "Late Fee",
+      remainingDebt: "Remaining Debt",
+      abatedInfo: "Installment abated by early extraordinary amortization."
+    },
+
     // Sidebar Filters
     sidebar: {
       filtersNavigation: "Filters & Navigation",
@@ -152,10 +166,10 @@ export const translations = {
       abatida: "Abated",
       toReceive: "To Receive",
       toPay: "To Pay",
-      receivedAt: "Received at {time}",
-      paidAt: "Paid at {time}",
-      investedAt: "Invested at {time}",
-      settledAt: "Settled at {time}"
+      receivedAt: "Recebido",
+      paidAt: "Pago",
+      investedAt: "Investido",
+      settledAt: "Liquidado"
     },
 
     // Periodicities
@@ -270,6 +284,20 @@ export const translations = {
       noTabRecords: "Sem registos nesta aba para este mês"
     },
 
+    // Loan Card Breakdown
+    loanCard: {
+      dueDay: "Vence dia {day}",
+      totalInstallment: "Total da Parcela",
+      totalPaid: "Total Pago",
+      capitalDebt: "Capital (Dívida)",
+      capitalAbated: "Capital Abatido",
+      interest: "Juros",
+      interestSaved: "Juros Poupados",
+      lateFee: "Mora / Atraso",
+      remainingDebt: "Saldo Devedor",
+      abatedInfo: "Parcela abatida por amortização extraordinária antecipada."
+    },
+
     // Sidebar Filters
     sidebar: {
       filtersNavigation: "Filtros & Navegação",
@@ -358,10 +386,10 @@ export const translations = {
       abatida: "Abatida",
       toReceive: "A Receber",
       toPay: "A Pagar",
-      receivedAt: "Recebido às {time}",
-      paidAt: "Pago às {time}",
-      investedAt: "Investido às {time}",
-      settledAt: "Liquidado às {time}"
+      receivedAt: "Recebido",
+      paidAt: "Pago",
+      investedAt: "Investido",
+      settledAt: "Liquidado"
     },
 
     // Periodicities

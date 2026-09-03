@@ -41,6 +41,7 @@ import {
   Target
 } from 'lucide-react';
 import { formatCurrency } from '../utils/loanCalculations';
+import { format, endOfMonth } from 'date-fns';
 import { generateUUID } from '../utils/uuid';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { EventType, TimelineType, EventStatus, EventPeriodicity } from '../enums/index.js';
@@ -73,7 +74,10 @@ export default function TimelineEventCard({
   }, [event.automatic, event.isAutomatic, event.status]);
 
   const isBalanceView = timelineType === TimelineType.BALANCE;
-  const todayStr = '2026-08-21';
+  const now = new Date();
+  const todayStr = format(now, 'yyyy-MM-dd');
+  const currentMonthEndStr = format(endOfMonth(now), 'yyyy-MM-dd');
+
   const effectiveStatus = (localStatus || event.status || '').toLowerCase();
   const isAmortization = event.eventType === EventType.AMORTIZATION;
   const isLoanInstallment = event.eventType === EventType.LOAN_INSTALLMENT || (event.isSystemLoanEvent && !isAmortization);
@@ -93,7 +97,7 @@ export default function TimelineEventCard({
     event.periodicity !== EventPeriodicity.ONCE &&
     event.periodicity !== EventPeriodicity.UNIQUE;
 
-  const isInertFuture = event.date > '2026-08-31';
+  const isInertFuture = event.date > currentMonthEndStr;
 
   const isCompleted =
     effectiveStatus === EventStatus.PAID ||
@@ -114,8 +118,8 @@ export default function TimelineEventCard({
 
   const isReceivedIncome = isIncomeEvent && isCompleted;
   const isOverdueIncome = isIncomeEvent && isOverdue;
-  const isNextIncome = isIncomeEvent && event.date >= todayStr && event.date <= '2026-08-31' && !isReceivedIncome;
-  const isFarFutureIncome = isIncomeEvent && event.date > '2026-08-31' && !isReceivedIncome;
+  const isNextIncome = isIncomeEvent && event.date >= todayStr && event.date <= currentMonthEndStr && !isReceivedIncome;
+  const isFarFutureIncome = isIncomeEvent && event.date > currentMonthEndStr && !isReceivedIncome;
 
   const isPaidExpense = isExpenseEvent && isCompleted;
   const isOverdueExpense = isExpenseEvent && isOverdue;
@@ -707,7 +711,7 @@ export default function TimelineEventCard({
     if (isIncomeEvent) {
       if (isReceivedIncome) {
         return {
-          label: `Recebido às ${getCompletedTimeStr()}`,
+          label: t('status.received'),
           icon: <CheckCircle2 size={11} />,
           bg: 'rgba(16, 185, 129, 0.15)',
           color: '#10b981',
@@ -745,7 +749,7 @@ export default function TimelineEventCard({
     if (isLoanInstallment) {
       if (isPaidLoan) {
         return {
-          label: language === 'en' ? `Settled at ${getCompletedTimeStr()}` : `Liquidado às ${getCompletedTimeStr()}`,
+          label: t('status.settled'),
           icon: <CheckCircle2 size={11} />,
           bg: 'rgba(16, 185, 129, 0.15)',
           color: '#10b981',
@@ -774,7 +778,7 @@ export default function TimelineEventCard({
     if (isExpenseEvent) {
       if (isPaidExpense) {
         return {
-          label: language === 'en' ? `Paid at ${getCompletedTimeStr()}` : `Pago às ${getCompletedTimeStr()}`,
+          label: t('status.paid'),
           icon: <CheckCircle2 size={11} />,
           bg: 'rgba(16, 185, 129, 0.15)',
           color: '#10b981',
@@ -803,7 +807,7 @@ export default function TimelineEventCard({
     if (isInvestmentEvent) {
       if (isCompletedInvestment) {
         return {
-          label: language === 'en' ? `Invested at ${getCompletedTimeStr()}` : `Investido às ${getCompletedTimeStr()}`,
+          label: t('status.invested'),
           icon: <CheckCircle2 size={11} />,
           bg: 'rgba(99, 102, 241, 0.15)',
           color: 'var(--primary-light)',
@@ -1177,6 +1181,29 @@ export default function TimelineEventCard({
                 {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
               </h3>
 
+              {/* Badge com o Dia de Vencimento */}
+              {event.date && (
+                <span
+                  style={{
+                    background: 'rgba(99, 102, 241, 0.12)',
+                    color: 'var(--primary-light)',
+                    border: '1px solid rgba(99, 102, 241, 0.3)',
+                    padding: '2px 7px',
+                    borderRadius: '6px',
+                    fontSize: '0.72rem',
+                    fontWeight: '700',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    flexShrink: 0
+                  }}
+                  title={`Vencimento: ${event.date}`}
+                >
+                  <Calendar size={11} />
+                  <span>Vence dia {parseInt(event.date.substring(8, 10), 10)}</span>
+                </span>
+              )}
+
               {isAbatida && (
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                   <span
@@ -1382,7 +1409,7 @@ export default function TimelineEventCard({
                 {isReceivedIncome ? (
                   <>
                     <CheckCircle2 size={14} style={{ color: '#10b981' }} />
-                    <span>{t('status.receivedAt', { time: getCompletedTimeStr() })}</span>
+                    <span>{t('status.received')}</span>
                     <span
                       role="button"
                       tabIndex={0}
@@ -1534,7 +1561,7 @@ export default function TimelineEventCard({
               {isPaidExpense ? (
                 <>
                   <CheckCircle2 size={14} style={{ color: '#10b981' }} />
-                  <span>{t('status.paidAt', { time: getCompletedTimeStr() })}</span>
+                  <span>{t('status.paid')}</span>
                   <span
                     role="button"
                     tabIndex={0}
@@ -1761,7 +1788,7 @@ export default function TimelineEventCard({
                 ) : isCompletedInvestment ? (
                   <>
                     <CheckCircle2 size={14} style={{ color: '#8b5cf6' }} />
-                    <span>{t('status.investedAt', { time: getCompletedTimeStr() })}</span>
+                    <span>{t('status.invested')}</span>
                     <span
                       role="button"
                       tabIndex={0}
@@ -2025,7 +2052,7 @@ export default function TimelineEventCard({
             {/* Valor Total da Parcela */}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                {isAbatida ? 'Total Pago' : 'Total da Parcela'}
+                {isAbatida ? t('loanCard.totalPaid') : t('loanCard.totalInstallment')}
               </span>
               {isAbatida ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2044,7 +2071,7 @@ export default function TimelineEventCard({
             {/* Decomposição: Capital Amortizado */}
             <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                {isAbatida ? 'Capital Abatido' : 'Capital (Dívida)'}
+                {isAbatida ? t('loanCard.capitalAbated') : t('loanCard.capitalDebt')}
               </span>
               <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAbatida ? 'var(--text-main)' : isInertFuture ? 'var(--text-muted)' : 'var(--text-main)' }}>
                 {isAbatida
@@ -2056,7 +2083,7 @@ export default function TimelineEventCard({
             {/* Juros Embutidos ou Juros Poupados */}
             <div style={{ display: 'flex', flexDirection: 'column', borderLeft: isAbatida ? '1px solid var(--border-glass)' : 'none', paddingLeft: isAbatida ? '14px' : '0' }}>
               <span style={{ fontSize: '0.7rem', color: isAbatida ? '#10b981' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                {isAbatida ? 'Juros Poupados' : 'Juros'}
+                {isAbatida ? t('loanCard.interestSaved') : t('loanCard.interest')}
               </span>
               <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAbatida ? '#10b981' : isInertFuture ? '#94a3b8' : '#f59e0b' }}>
                 {isAbatida
@@ -2069,7 +2096,7 @@ export default function TimelineEventCard({
             {event.interestAmount > 0 && !isInertFuture && !isAbatida && (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.7rem', color: '#f87171', textTransform: 'uppercase', fontWeight: '700' }}>
-                  Mora / Atraso
+                  {t('loanCard.lateFee')}
                 </span>
                 <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#f87171' }}>
                   +{formatCurrency(event.interestAmount)}
@@ -2077,11 +2104,11 @@ export default function TimelineEventCard({
               </div>
             )}
 
-            {/* Saldo Devedor Restante */}
+            {/* Saldo Devedor */}
             {event.balanceAfter !== undefined && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                  Saldo Devedor Restante
+                  {t('loanCard.remainingDebt')}
                 </span>
                 <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAbatida || isInertFuture ? '#94a3b8' : 'var(--primary-light)' }}>
                   {formatCurrency(event.balanceAfter)}
@@ -2185,7 +2212,7 @@ export default function TimelineEventCard({
                 {isPaidLoan ? (
                   <>
                     <CheckCircle2 size={14} style={{ color: '#10b981' }} />
-                    <span>{t('status.settledAt', { time: getCompletedTimeStr() })}</span>
+                    <span>{t('status.settled')}</span>
                     <span
                       role="button"
                       tabIndex={0}

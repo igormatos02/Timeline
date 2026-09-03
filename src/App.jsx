@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format, parseISO, addMonths, subMonths } from 'date-fns';
+import { format, parseISO, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import Navbar from './components/Navbar';
 import TimelineHeader from './components/TimelineHeader';
 import VerticalTimeline from './components/VerticalTimeline';
@@ -115,10 +115,11 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [deletingEvent, setDeletingEvent] = useState(null);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
-  const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState('2026-08-21');
+  const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [eventModalDefaultNature, setEventModalDefaultNature] = useState('income'); // 'income' | 'expense' | 'investment'
   const [futureHorizonYears, setFutureHorizonYears] = useState(1);
   const [pastHorizonYears, setPastHorizonYears] = useState(1);
+  const [isLoadingSystem, setIsLoadingSystem] = useState(true);
   const scrollYBeforeModalRef = React.useRef(0);
 
   const timelinesRef = React.useRef(timelines);
@@ -126,30 +127,16 @@ export default function App() {
     timelinesRef.current = timelines;
   }, [timelines]);
 
-  const fetchEventsForVisiblePeriod = React.useCallback(async (targetTlId, pastYears = 1, futureYears = 1, overrideTimelines = null) => {
+  const fetchEventsForVisiblePeriod = React.useCallback(async (pastYears = pastHorizonYears, futureYears = futureHorizonYears, forceReload = false) => {
     if (!activeTimeboardId) return;
 
-    const currentTlId = targetTlId || activeFinancialTab || activeTimelineId;
-    const timelinesList = overrideTimelines || timelinesRef.current || [];
-    if (!timelinesList || timelinesList.length === 0) return;
-
-    const targetTl = timelinesList.find((t) => t.id === currentTlId || t.type === currentTlId);
-    const isBalance = targetTl?.type === TimelineType.BALANCE;
-
-    let startDate, endDate;
-    if (isBalance) {
-      // Balance only shows last 12 months up to current month (e.g. 2025-09-01 to 2026-08-31)
-      startDate = '2025-09-01';
-      endDate = '2026-08-31';
-    } else {
-      // Other timelines: 1 year past to 1 year future by default, expandable by pastYears/futureYears
-      const pastMonths = Math.max(1, pastYears) * 12;
-      const futureMonths = Math.max(1, futureYears) * 12;
-      const startObj = subMonths(parseISO('2026-08-01'), pastMonths);
-      const endObj = addMonths(parseISO('2026-08-31'), futureMonths);
-      startDate = format(startObj, 'yyyy-MM-01');
-      endDate = format(endObj, 'yyyy-MM-31');
-    }
+    // Calcular o horizonte global dinamicamente a partir da data atual do sistema
+    const now = new Date();
+    const currentMonthStart = startOfMonth(now);
+    const startObj = subMonths(currentMonthStart, Math.max(1, pastYears) * 12);
+    const endObj = addMonths(endOfMonth(now), Math.max(1, futureYears) * 12);
+    const startDate = format(startObj, 'yyyy-MM-01');
+    const endDate = format(endObj, 'yyyy-MM-dd');
 
     try {
       const params = {
@@ -160,17 +147,29 @@ export default function App() {
 
       const evData = await api.fetchEvents(params);
       if (Array.isArray(evData)) {
-        setRawEvents(evData);
+        if (forceReload) {
+          setRawEvents(evData);
+        } else {
+          // Merge sem duplicar eventos existentes na memória
+          setRawEvents((prevEvents) => {
+            const map = new Map(prevEvents.map((e) => [e.id, e]));
+            evData.forEach((e) => map.set(e.id, e));
+            return Array.from(map.values());
+          });
+        }
       }
     } catch (e) {
       console.error('Error fetching events for period:', e);
+    } finally {
+      setIsLoadingSystem(false);
     }
-  }, [activeTimeboardId]);
+  }, [activeTimeboardId, pastHorizonYears, futureHorizonYears]);
 
-  // Fetch all timelines for the active timeboard from the database
+  // Fetch todas as timelines e os eventos de todo o horizonte ao carregar o Timeboard
   useEffect(() => {
     if (!activeTimeboardId) return;
     let isMounted = true;
+    setIsLoadingSystem(true);
 
     api.fetchTimelines({ timeboardId: activeTimeboardId })
       .then((data) => {
@@ -190,36 +189,40 @@ export default function App() {
               setActiveFinancialTab(targetTl.id);
             }
 
-            fetchEventsForVisiblePeriod(targetTl.id, pastHorizonYears, futureHorizonYears, data);
+            // Buscar eventos apenas UMA vez para todo o Timeboard no mount
+            fetchEventsForVisiblePeriod(pastHorizonYears, futureHorizonYears, true);
+          } else {
+            setIsLoadingSystem(false);
           }
         }
       })
       .catch((err) => {
         console.error('Error fetching timelines for timeboard:', err.message);
+        if (isMounted) setIsLoadingSystem(false);
       });
 
     return () => { isMounted = false; };
   }, [activeTimeboardId]);
 
-  const refreshTimelines = async (pastYears = pastHorizonYears, futureYears = futureHorizonYears) => {
+  const refreshTimelines = React.useCallback(async () => {
     try {
       const tlData = await api.fetchTimelines({ timeboardId: activeTimeboardId });
       if (Array.isArray(tlData)) {
         setTimelines(tlData);
       }
-      await fetchEventsForVisiblePeriod(activeFinancialTab || activeTimelineId, pastYears, futureYears, tlData);
+      await fetchEventsForVisiblePeriod(pastHorizonYears, futureHorizonYears, true);
       return tlData;
     } catch (e) {
       console.error('Error refreshing timelines:', e);
     }
-  };
+  }, [activeTimeboardId, fetchEventsForVisiblePeriod, pastHorizonYears, futureHorizonYears]);
 
+  // Expandir horizonte de tempo sem descartar o que já está na memória
   useEffect(() => {
-    const currentTlId = activeFinancialTab || activeTimelineId;
-    if (currentTlId && activeTimeboardId) {
-      fetchEventsForVisiblePeriod(currentTlId, pastHorizonYears, futureHorizonYears);
+    if (activeTimeboardId) {
+      fetchEventsForVisiblePeriod(pastHorizonYears, futureHorizonYears, false);
     }
-  }, [activeFinancialTab, activeTimelineId, activeTimeboardId, pastHorizonYears, futureHorizonYears, fetchEventsForVisiblePeriod]);
+  }, [pastHorizonYears, futureHorizonYears, activeTimeboardId, fetchEventsForVisiblePeriod]);
 
   const handleLoadMoreFuture = async () => {
     const nextYears = futureHorizonYears + 1;
@@ -428,13 +431,16 @@ export default function App() {
     const saveAsync = async () => {
       try {
         if (editingEvent && editingEvent.id) {
-          await api.updateEvent(editingEvent.id, {
+          const updated = {
+            ...editingEvent,
             ...eventData,
             timeboardId: activeTimeboardId,
             timelineId: targetTimelineId,
             timelineOriginId: targetTimelineId,
             eventId: editingEvent.eventId || editingEvent.seriesId
-          });
+          };
+          await api.updateEvent(editingEvent.id, updated);
+          setRawEvents((prev) => prev.map((ev) => (ev.id === editingEvent.id ? updated : ev)));
           showToast(t('toast.eventUpdatedSuccess') || 'Evento atualizado com sucesso na base de dados!', 'success');
         } else {
           const isRecurring = eventData.periodicity === 'recorrente' || eventData.isRecurring || (eventData.category && eventData.category.includes('recorrente'));
@@ -449,10 +455,9 @@ export default function App() {
             isRecurring: Boolean(isRecurring)
           };
           await api.createEvent(newEvent);
+          setRawEvents((prev) => [newEvent, ...prev]);
           showToast(t('toast.eventCreatedSuccess') || 'Evento adicionado com sucesso na base de dados!', 'success');
         }
-
-        await refreshTimelines();
 
         const monthKey = eventData.date ? eventData.date.substring(0, 7) : focusedMonthRef.current;
         const scrollToMonthNode = () => {
@@ -609,9 +614,9 @@ export default function App() {
           eventId: targetEvent.eventId || targetEvent.seriesId,
           date: targetEvent.date
         });
+        setRawEvents((prev) => prev.filter((ev) => String(ev.id) !== String(eventId)));
         const monthKey = targetEvent?.date ? targetEvent.date.substring(0, 7) : focusedMonthRef.current;
         const savedScrollPos = scrollYBeforeModalRef.current || window.scrollY;
-        await refreshTimelines();
         showToast(t('toast.eventDeletedSuccess') || 'Evento eliminado da base de dados!', 'success');
 
         const scrollToMonthNode = () => {
@@ -855,7 +860,6 @@ export default function App() {
 
     try {
       await api.toggleEventPayment(installmentId);
-      await fetchEventsForVisiblePeriod(activeFinancialTab || activeTimelineId, pastHorizonYears, futureHorizonYears);
     } catch (err) {
       console.error('Error toggling payment status:', err);
     }
@@ -1255,6 +1259,50 @@ export default function App() {
                 <span>Sim, Resetar</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* System Loading Overlay */}
+      {isLoadingSystem && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(10, 15, 30, 0.85)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '18px',
+            color: '#fff'
+          }}
+        >
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              border: '3px solid rgba(99, 102, 241, 0.2)',
+              borderTopColor: '#6366f1',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite'
+            }}
+          />
+          <style>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+          <div style={{ textAlign: 'center' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 4px 0', color: '#f8fafc' }}>
+              System Loading...
+            </h3>
+            <p style={{ fontSize: '0.84rem', color: '#94a3b8', margin: 0 }}>
+              Sincronizando eventos e status do mês corrente
+            </p>
           </div>
         </div>
       )}

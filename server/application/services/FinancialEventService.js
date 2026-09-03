@@ -1,3 +1,4 @@
+import { format, parseISO } from 'date-fns';
 import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
 import { financialEventStatusRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventStatusRepository.js';
 import { loanContractRepository } from '../../infrastructure/database/json/JsonLoanContractRepository.js';
@@ -24,9 +25,13 @@ export class FinancialEventService {
 
   async getAllEvents(filter = {}) {
     const rawEvents = await eventRepository.getAll();
-    const projectedEvents = projectEvents(rawEvents);
+    const projectedEvents = projectEvents(rawEvents, filter);
 
     const statusMap = await financialEventStatusRepository.getStatusMap();
+    const now = new Date();
+    const todayStr = format(now, 'yyyy-MM-dd');
+    const currentMonthKey = todayStr.substring(0, 7);
+
     for (const ev of projectedEvents) {
       const dateStr = ev.date ? String(ev.date) : '';
       if (dateStr.length >= 7) {
@@ -35,7 +40,24 @@ export class FinancialEventService {
         const targetId = ev.eventId || ev.id;
         const key = `${year}_${month}_${targetId}`;
         const keyById = `${year}_${month}_${ev.id}`;
-        const matchedStatus = statusMap.get(key) || statusMap.get(keyById);
+        let matchedStatus = statusMap.get(key) || statusMap.get(keyById);
+
+        const isLoanOrSystemAuto = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.eventType === EventType.LOAN_INSTALLMENT;
+        const isAuto = Boolean(ev.automatic !== undefined ? ev.automatic : ev.isAutomatic) || isLoanOrSystemAuto;
+        const isCurrentOrPastMonth = dateStr.substring(0, 7) <= currentMonthKey;
+        const isDateDueOrPassed = dateStr <= todayStr;
+
+        // Se for um evento automático sem registo de status positivo no mês corrente/passado onde a data já chegou (>= hoje)
+        if (isAuto && isNegativeStatus(matchedStatus) && isCurrentOrPastMonth && isDateDueOrPassed) {
+          const positiveState = calcToggledStatus({ ...ev, status: EventStatus.PENDING, isCompleted: false });
+          matchedStatus = positiveState.status;
+
+          // Guardar na base de dados de status
+          await this._syncStatus(dateStr, targetId, matchedStatus);
+          statusMap.set(key, matchedStatus);
+          if (ev.id) statusMap.set(keyById, matchedStatus);
+        }
+
         if (matchedStatus) {
           ev.status = matchedStatus;
           ev.isCompleted = isPositiveStatus(matchedStatus);

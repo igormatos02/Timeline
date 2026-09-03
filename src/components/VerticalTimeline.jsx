@@ -203,10 +203,11 @@ function VerticalTimeline({
     }
   };
 
-  // Scroll memory per timeline/tab & Auto-scroll directly to Today
-  const positionOnToday = React.useCallback((behavior = 'instant') => {
-    const todayNode = document.getElementById('timeline-node-today');
-    if (todayNode) {
+  // Scroll memory per timeline/tab & Auto-scroll directly to Today or Specific Month
+  const positionOnMonth = React.useCallback((monthKey, behavior = 'instant') => {
+    if (!monthKey) return false;
+    const targetNode = document.querySelector(`[data-month-key="${monthKey}"]`) || (monthKey === '2026-08' ? document.getElementById('timeline-node-today') : null);
+    if (targetNode) {
       const navbar = document.querySelector('.app-header') || document.querySelector('header');
       const stickyDock = document.querySelector('.sticky-header-dock');
 
@@ -214,7 +215,7 @@ function VerticalTimeline({
       const dockHeight = stickyDock ? stickyDock.offsetHeight : 80;
       const totalStickyOffset = navHeight + 24 + dockHeight + 14;
 
-      const elementDocTop = todayNode.getBoundingClientRect().top + window.pageYOffset;
+      const elementDocTop = targetNode.getBoundingClientRect().top + window.pageYOffset;
       const targetY = elementDocTop - totalStickyOffset;
 
       window.scrollTo({ top: Math.max(0, targetY), behavior });
@@ -223,18 +224,27 @@ function VerticalTimeline({
     return false;
   }, []);
 
+  const positionOnToday = React.useCallback((behavior = 'instant') => {
+    return positionOnMonth('2026-08', behavior);
+  }, [positionOnMonth]);
+
   const userInteractedRef = React.useRef(false);
 
-  // Track explicit physical user interactions (wheel, touch, key navigation, mousedown)
+  // Track physical or programmatic scroll position to mark user interaction
   React.useEffect(() => {
     const handleUserInteraction = () => {
       userInteractedRef.current = true;
     };
+    if (window.scrollY > 0) {
+      userInteractedRef.current = true;
+    }
+    window.addEventListener('scroll', handleUserInteraction, { passive: true });
     window.addEventListener('wheel', handleUserInteraction, { passive: true });
     window.addEventListener('touchmove', handleUserInteraction, { passive: true });
     window.addEventListener('keydown', handleUserInteraction, { passive: true });
     window.addEventListener('mousedown', handleUserInteraction, { passive: true });
     return () => {
+      window.removeEventListener('scroll', handleUserInteraction);
       window.removeEventListener('wheel', handleUserInteraction);
       window.removeEventListener('touchmove', handleUserInteraction);
       window.removeEventListener('keydown', handleUserInteraction);
@@ -398,14 +408,14 @@ function VerticalTimeline({
     timeline.id,
     isFinancialTimeline,
     activeFinancialTab,
-    isBalancoView,
-    maxDateObj,
-    todayStr
   ]);
 
-
-
-  // Collect all unique labels for filter pills
+  // Re-anchor scroll on Today when events load from backend if user has not manually interacted
+  React.useLayoutEffect(() => {
+    if (!userInteractedRef.current) {
+      positionOnToday('instant');
+    }
+  }, [filteredEvents, timelineEvents, positionOnToday]);
   const availableLabels = useMemo(() => {
     return Array.from(new Set(allEvents.flatMap((ev) => ev.labels || [])));
   }, [allEvents]);

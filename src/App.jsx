@@ -390,7 +390,10 @@ export default function App() {
   // ----------------------------------------------------
   // Event Handlers
   // ----------------------------------------------------
+  const focusedMonthRef = React.useRef(null);
+
   const handleOpenCreateEvent = (dateStr = '2026-08-21', nature = 'income') => {
+    focusedMonthRef.current = dateStr ? dateStr.substring(0, 7) : null;
     scrollYBeforeModalRef.current = window.scrollY;
     setEditingEvent(null);
     setSelectedDateForNewEvent(dateStr);
@@ -399,6 +402,7 @@ export default function App() {
   };
 
   const handleOpenEditEvent = (eventObj) => {
+    focusedMonthRef.current = eventObj?.date ? eventObj.date.substring(0, 7) : null;
     scrollYBeforeModalRef.current = window.scrollY;
     if (eventObj?.category === 'amortizacao' || eventObj?.financialType === 'amortizacao' || eventObj?.isAmortization) {
       handleOpenAmortizationModal(eventObj.date, eventObj);
@@ -450,15 +454,31 @@ export default function App() {
 
         await refreshTimelines();
 
-        // Restore scroll position exactly where the user was before saving
-        const restoreScroll = () => {
+        const monthKey = eventData.date ? eventData.date.substring(0, 7) : focusedMonthRef.current;
+        const scrollToMonthNode = () => {
+          if (monthKey) {
+            const targetNode = document.querySelector(`[data-month-key="${monthKey}"]`) || (monthKey === '2026-08' ? document.getElementById('timeline-node-today') : null);
+            if (targetNode) {
+              const navbar = document.querySelector('.app-header') || document.querySelector('header');
+              const stickyDock = document.querySelector('.sticky-header-dock');
+              const navHeight = navbar ? navbar.offsetHeight : 68;
+              const dockHeight = stickyDock ? stickyDock.offsetHeight : 80;
+              const totalStickyOffset = navHeight + 24 + dockHeight + 14;
+              const elementDocTop = targetNode.getBoundingClientRect().top + window.pageYOffset;
+              const targetY = elementDocTop - totalStickyOffset;
+              window.scrollTo({ top: Math.max(0, targetY), behavior: 'instant' });
+              return;
+            }
+          }
           if (typeof savedScrollPos === 'number' && savedScrollPos >= 0) {
-            window.scrollTo({ top: savedScrollPos, behavior: 'instant' });
+            window.scrollTo({ top: savedScrollPos, left: 0, behavior: 'instant' });
           }
         };
-        requestAnimationFrame(restoreScroll);
-        setTimeout(restoreScroll, 50);
-        setTimeout(restoreScroll, 150);
+
+        requestAnimationFrame(() => {
+          scrollToMonthNode();
+          setTimeout(scrollToMonthNode, 40);
+        });
       } catch (err) {
         console.error('Error saving event:', err);
         showToast(t('toast.eventSaveError') || 'Erro ao guardar evento na base de dados.', 'error');
@@ -553,6 +573,7 @@ export default function App() {
   };
 
   const handleRequestDeleteEvent = (eventOrId) => {
+    scrollYBeforeModalRef.current = window.scrollY;
     if (!eventOrId) return;
     if (typeof eventOrId === 'object' && eventOrId.id) {
       setDeletingEvent(eventOrId);
@@ -588,8 +609,35 @@ export default function App() {
           eventId: targetEvent.eventId || targetEvent.seriesId,
           date: targetEvent.date
         });
+        const monthKey = targetEvent?.date ? targetEvent.date.substring(0, 7) : focusedMonthRef.current;
+        const savedScrollPos = scrollYBeforeModalRef.current || window.scrollY;
         await refreshTimelines();
         showToast(t('toast.eventDeletedSuccess') || 'Evento eliminado da base de dados!', 'success');
+
+        const scrollToMonthNode = () => {
+          if (monthKey) {
+            const targetNode = document.querySelector(`[data-month-key="${monthKey}"]`) || (monthKey === '2026-08' ? document.getElementById('timeline-node-today') : null);
+            if (targetNode) {
+              const navbar = document.querySelector('.app-header') || document.querySelector('header');
+              const stickyDock = document.querySelector('.sticky-header-dock');
+              const navHeight = navbar ? navbar.offsetHeight : 68;
+              const dockHeight = stickyDock ? stickyDock.offsetHeight : 80;
+              const totalStickyOffset = navHeight + 24 + dockHeight + 14;
+              const elementDocTop = targetNode.getBoundingClientRect().top + window.pageYOffset;
+              const targetY = elementDocTop - totalStickyOffset;
+              window.scrollTo({ top: Math.max(0, targetY), behavior: 'instant' });
+              return;
+            }
+          }
+          if (typeof savedScrollPos === 'number' && savedScrollPos >= 0) {
+            window.scrollTo({ top: savedScrollPos, left: 0, behavior: 'instant' });
+          }
+        };
+
+        requestAnimationFrame(() => {
+          scrollToMonthNode();
+          setTimeout(scrollToMonthNode, 40);
+        });
       } catch (err) {
         console.error('Error deleting event:', err);
         showToast(t('toast.eventDeleteError') || 'Erro ao eliminar evento da base de dados.', 'error');

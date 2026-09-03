@@ -331,6 +331,8 @@ export default function App() {
 
     return {
       ...currentSelected,
+      loanHeaderResult: currentSelected?.loanHeaderResult,
+      procedureMetrics: currentSelected?.procedureMetrics || currentSelected?.loanHeaderResult,
       timelines: activeTimeboardTimelines,
       events: rawEvents || []
     };

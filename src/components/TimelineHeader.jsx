@@ -18,7 +18,13 @@ function TimelineHeader(props) {
 
   if (!timeline) return null;
 
-  switch (timeline.type) {
+  const typeLower = (timeline.type || '').toLowerCase();
+
+  if (typeLower === TimelineType.LOAN || typeLower === 'loan' || typeLower === 'empréstimo' || typeLower === 'emprestimo') {
+    return <LoanTimelineHeader {...props} />;
+  }
+
+  switch (typeLower) {
     case TimelineType.BALANCE:
       return <BalanceTimelineHeader {...props} />;
 
@@ -30,9 +36,6 @@ function TimelineHeader(props) {
 
     case TimelineType.INVESTMENT:
       return <InvestmentTimelineHeader {...props} />;
-
-    case TimelineType.LOAN:
-      return <LoanTimelineHeader {...props} />;
 
     default:
       return <DefaultTimelineHeader {...props} />;

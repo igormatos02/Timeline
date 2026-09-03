@@ -689,9 +689,97 @@ export default function TimelineEventCard({
           color: '#6ee7b7',
           border: 'rgba(16, 185, 129, 0.3)'
         };
+      case 'electricity':
+        return {
+          label: 'Eletricidade',
+          icon: <Zap size={12} />,
+          bg: 'rgba(99, 102, 241, 0.15)',
+          color: '#818cf8',
+          border: 'rgba(99, 102, 241, 0.3)'
+        };
+      case 'water':
+        return {
+          label: 'Água',
+          icon: <Tag size={12} />,
+          bg: 'rgba(16, 185, 129, 0.15)',
+          color: '#34d399',
+          border: 'rgba(16, 185, 129, 0.3)'
+        };
+      case 'gas':
+        return {
+          label: 'Gás',
+          icon: <Tag size={12} />,
+          bg: 'rgba(245, 158, 11, 0.15)',
+          color: '#fbbf24',
+          border: 'rgba(245, 158, 11, 0.3)'
+        };
+      case 'communications':
+        return {
+          label: 'Comunicações / TV',
+          icon: <CreditCard size={12} />,
+          bg: 'rgba(6, 182, 212, 0.15)',
+          color: '#22d3ee',
+          border: 'rgba(6, 182, 212, 0.3)'
+        };
+      case 'rent':
+        return {
+          label: 'Renda / Habitação',
+          icon: <Home size={12} />,
+          bg: 'rgba(168, 85, 247, 0.15)',
+          color: '#c084fc',
+          border: 'rgba(168, 85, 247, 0.3)'
+        };
+      case 'health':
+        return {
+          label: 'Saúde',
+          icon: <Tag size={12} />,
+          bg: 'rgba(244, 63, 94, 0.15)',
+          color: '#fb7185',
+          border: 'rgba(244, 63, 94, 0.3)'
+        };
+      case 'food':
+        return {
+          label: 'Alimentação / Supermercado',
+          icon: <ShoppingCart size={12} />,
+          bg: 'rgba(244, 63, 94, 0.15)',
+          color: '#f43f5e',
+          border: 'rgba(244, 63, 94, 0.3)'
+        };
+      case 'transportation':
+        return {
+          label: 'Transporte / Combustível',
+          icon: <Car size={12} />,
+          bg: 'rgba(59, 130, 246, 0.15)',
+          color: '#60a5fa',
+          border: 'rgba(59, 130, 246, 0.3)'
+        };
+      case 'carmaintenance':
+        return {
+          label: 'Manutenção Auto',
+          icon: <Car size={12} />,
+          bg: 'rgba(245, 158, 11, 0.15)',
+          color: '#fbbf24',
+          border: 'rgba(245, 158, 11, 0.3)'
+        };
+      case 'housemaintenance':
+        return {
+          label: 'Manutenção Casa',
+          icon: <Home size={12} />,
+          bg: 'rgba(168, 85, 247, 0.15)',
+          color: '#c084fc',
+          border: 'rgba(168, 85, 247, 0.3)'
+        };
+      case 'ensurance':
+        return {
+          label: 'Seguros',
+          icon: <FileText size={12} />,
+          bg: 'rgba(99, 102, 241, 0.15)',
+          color: '#818cf8',
+          border: 'rgba(99, 102, 241, 0.3)'
+        };
       default:
         return {
-          label: 'Agendamento',
+          label: cat ? cat.charAt(0).toUpperCase() + cat.slice(1) : 'Agendamento',
           icon: <Calendar size={12} />,
           bg: 'rgba(6, 182, 212, 0.15)',
           color: '#67e8f9',
@@ -2076,7 +2164,7 @@ export default function TimelineEventCard({
               <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAbatida ? 'var(--text-main)' : isInertFuture ? 'var(--text-muted)' : 'var(--text-main)' }}>
                 {isAbatida
                   ? formatCurrency(abatedBreakdown?.origCapital || 194.88)
-                  : formatCurrency(event.principalAmount !== undefined ? event.principalAmount : Math.round((Number(event.amount) || 0) * 0.82))}
+                  : formatCurrency(event.principalAmount !== undefined ? event.principalAmount : (event.principal_amount !== undefined ? event.principal_amount : 0))}
               </span>
             </div>
 
@@ -2088,21 +2176,11 @@ export default function TimelineEventCard({
               <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAbatida ? '#10b981' : isInertFuture ? '#94a3b8' : '#f59e0b' }}>
                 {isAbatida
                   ? `+${formatCurrency(abatedBreakdown?.origInterest || 23.59)}`
-                  : formatCurrency(event.interestPortion !== undefined ? event.interestPortion : Math.round((Number(event.amount) || 0) * 0.18))}
+                  : formatCurrency(
+                      Math.max(0, (Number(event.amount) || 0) - Number(event.principalAmount ?? event.principal_amount ?? 0))
+                    )}
               </span>
             </div>
-
-            {/* Juros Extra de Mora se Atrasada */}
-            {event.interestAmount > 0 && !isInertFuture && !isAbatida && (
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '0.7rem', color: '#f87171', textTransform: 'uppercase', fontWeight: '700' }}>
-                  {t('loanCard.lateFee')}
-                </span>
-                <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#f87171' }}>
-                  +{formatCurrency(event.interestAmount)}
-                </span>
-              </div>
-            )}
 
             {/* Saldo Devedor */}
             {event.balanceAfter !== undefined && (
@@ -2763,6 +2841,23 @@ export default function TimelineEventCard({
       {/* Footer Meta & Actions (Always visible and interactive) */}
       <div className="event-card-footer">
         <div className="tag-list">
+          {/* Categoria do Evento */}
+          {event.category && (
+            <span
+              className="event-tag"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+                background: 'rgba(99, 102, 241, 0.12)',
+                color: 'var(--primary-light)',
+                border: '1px solid rgba(99, 102, 241, 0.25)'
+              }}
+            >
+              <Tag size={10} /> {catMeta?.label || event.category}
+            </span>
+          )}
+
           {/* Custom Labels / Etiquetas */}
           {event.labels && event.labels.map((lbl, i) => (
             <span

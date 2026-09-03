@@ -365,8 +365,8 @@ function VerticalTimeline({
         } else if (timeline.type === TimelineType.INVESTMENT) {
           const isInvestment = ev.eventType === EventType.INVESTMENT || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
           if (!isInvestment) return false;
-        } else if (timeline.type === TimelineType.LOAN) {
-          const isThisLoan = ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || (ev.eventType === EventType.LOAN_INSTALLMENT || ev.eventType === EventType.AMORTIZATION);
+        } else if (timeline.type === TimelineType.LOAN || (timeline.type || '').toLowerCase() === 'loan' || (timeline.type || '').toLowerCase() === 'empréstimo') {
+          const isThisLoan = ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
           if (!isThisLoan) return false;
         }
         // TimelineType.BALANCE shows all integrated movements
@@ -611,17 +611,32 @@ function VerticalTimeline({
 
     const monthsList = Array.from(monthMap.values());
 
-    // Pre-calculate total projected expenses per month across all events
+    // Pre-calculate total projected expenses per month across all events (excluding loans)
     const monthExpensesTotalMap = useMemo(() => {
       const map = new Map();
       (timelineEvents || []).forEach((ev) => {
         if (!ev || !ev.date || ev.isDeleted) return;
         if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-        const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT;
-        const isInvestment = ev.eventType === EventType.INVESTMENT;
-        const isExpense = ev.eventType === EventType.EXPENSE || isLoan;
+        const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent || ev.category === 'parcela_emprestimo' || ev.category === 'amortizacao';
+        const isExpense = ev.eventType === EventType.EXPENSE && !isLoan;
 
         if (isExpense) {
+          const mKey = ev.date.substring(0, 7);
+          map.set(mKey, (map.get(mKey) || 0) + Number(ev.amount || 0));
+        }
+      });
+      return map;
+    }, [timelineEvents]);
+
+    // Pre-calculate total projected loan payments per month across all events
+    const monthLoansTotalMap = useMemo(() => {
+      const map = new Map();
+      (timelineEvents || []).forEach((ev) => {
+        if (!ev || !ev.date || ev.isDeleted) return;
+        if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
+        const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent || ev.category === 'parcela_emprestimo' || ev.category === 'amortizacao';
+
+        if (isLoan) {
           const mKey = ev.date.substring(0, 7);
           map.set(mKey, (map.get(mKey) || 0) + Number(ev.amount || 0));
         }
@@ -793,9 +808,10 @@ function VerticalTimeline({
           const mNetProjectedMonth = mMonthIncome - (mMonthExpense + mMonthInvestment);
           const cumData = monthCumulativeMap.get(monthKeyStr) || { income: 0, expense: 0, investment: 0 };
           const mMonthProjectedExpense = monthExpensesTotalMap.get(monthKeyStr) || 0;
+          const mMonthProjectedLoan = monthLoansTotalMap.get(monthKeyStr) || 0;
           const mMonthProjectedIncome = monthIncomeTotalMap.get(monthKeyStr) || 0;
           const mMonthProjectedInvestment = monthInvestmentsTotalMap.get(monthKeyStr) || 0;
-          const mMonthProjectedSaldo = mMonthProjectedIncome - (mMonthProjectedExpense + mMonthProjectedInvestment);
+          const mMonthProjectedSaldo = mMonthProjectedIncome - (mMonthProjectedExpense + mMonthProjectedInvestment + mMonthProjectedLoan);
 
           if (!showEmptyDays && !hasEvents && !isCurrentMonth) return null;
 
@@ -1012,6 +1028,27 @@ function VerticalTimeline({
                         >
                           <PiggyBank size={12} />
                           <span>{formatCurrency(mMonthProjectedInvestment)}</span>
+                        </span>
+
+                        {/* 4. Total em Empréstimos a Pagar */}
+                        <span
+                          className="group-card-badge"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            height: '26px',
+                            boxSizing: 'border-box',
+                            background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthProjectedLoan > 0 ? 'rgba(234, 179, 8, 0.14)' : 'rgba(255, 255, 255, 0.04)'),
+                            color: isFutureMonth ? 'var(--text-dim)' : (mMonthProjectedLoan > 0 ? '#eab308' : 'var(--text-dim)'),
+                            borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthProjectedLoan > 0 ? 'rgba(234, 179, 8, 0.35)' : 'var(--border-glass)'),
+                            fontWeight: '800',
+                            fontSize: '0.76rem'
+                          }}
+                          title={t('timeline.monthLoanTitle') || 'Total em prestações de empréstimos a pagar este mês'}
+                        >
+                          <Landmark size={12} />
+                          <span>{formatCurrency(mMonthProjectedLoan)}</span>
                         </span>
 
                         {/* 4. Saldo Líquido Projetado */}

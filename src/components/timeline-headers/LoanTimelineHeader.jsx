@@ -20,14 +20,15 @@ export default function LoanTimelineHeader({
   events = [],
   onEdit,
   onDelete,
-  onAddEvent
+  onAddEvent,
+  onOpenAmortizationModal
 }) {
   const [collapsed, setIsCollapsed] = useState(false);
 
   if (!timeline) return null;
 
   const headerColor = timeline.color || '#6366f1';
-  const loanMetrics = timeline.metrics || {};
+  const loanMetrics = timeline.loanHeaderResult || timeline.procedureMetrics || timeline.metrics || {};
 
   const formatDateShort = (dateStr) => {
     try {
@@ -47,13 +48,7 @@ export default function LoanTimelineHeader({
     }
   })();
 
-  const progressPercent = (() => {
-    if (loanMetrics.progressPercent !== undefined) return Math.min(100, Math.max(0, loanMetrics.progressPercent));
-    const totalDebt = timeline.totalDebt || 0;
-    const amortized = timeline.amortizedCapital || 0;
-    if (totalDebt <= 0) return 0;
-    return Math.min(100, Math.round((amortized / totalDebt) * 100));
-  })();
+  const progressPercent = loanMetrics.amortized_percent ?? loanMetrics.amortizedPercent ?? 0;
 
   return (
     <div
@@ -150,11 +145,11 @@ export default function LoanTimelineHeader({
 
         {/* Botões de Ação */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {onAddEvent && (
+          {(onAddEvent || onOpenAmortizationModal) && (
             <button
               type="button"
               className="btn btn-primary btn-sm"
-              onClick={onAddEvent}
+              onClick={onOpenAmortizationModal || onAddEvent}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -212,102 +207,41 @@ export default function LoanTimelineHeader({
 
       {/* Conteúdo Expandido com Métricas do Empréstimo */}
       {!collapsed && (
-        <div style={{ paddingTop: '14px' }}>
-          <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '8px', marginBottom: '10px' }}>
-            {/* Saldo Devedor Restante */}
-            <div className="meta-item" style={{ padding: '6px 10px' }}>
-              <div className="meta-icon-box" style={{ color: '#6366f1' }}>
-                <CreditCard size={16} />
+        <div style={{ paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Seção 1: Saldo Devedor & Capital Amortizado */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+            <div>
+              <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                Saldo Devedor
               </div>
-              <div>
-                <div className="meta-label" style={{ fontSize: '0.7rem' }}>Saldo Devedor</div>
-                <div className="meta-value" style={{ color: 'var(--primary-light)', fontSize: '0.92rem', fontWeight: '800' }}>
-                  {formatCurrency(loanMetrics.remainingBalance ?? timeline.remainingDebt ?? 0)}
-                </div>
+              <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--primary-light)' }}>
+                {formatCurrency(loanMetrics.remaining_debt ?? loanMetrics.remainingBalance ?? 0)}
               </div>
-            </div>
-
-            {/* Total Já Pago */}
-            <div className="meta-item" style={{ padding: '6px 10px' }}>
-              <div className="meta-icon-box" style={{ color: '#10b981' }}>
-                <DollarSign size={16} />
-              </div>
-              <div>
-                <div className="meta-label" style={{ fontSize: '0.7rem' }}>Capital Amortizado</div>
-                <div className="meta-value" style={{ color: '#10b981', fontWeight: '700', fontSize: '0.92rem' }}>
-                  {formatCurrency(loanMetrics.totalPrincipalAmortized ?? timeline.amortizedCapital ?? 0)}
-                </div>
-                {loanMetrics.totalSavedInterest > 0 && (
-                  <div style={{ marginTop: '2px' }}>
-                    <span
-                      style={{
-                        background: 'rgba(16, 185, 129, 0.15)',
-                        color: '#10b981',
-                        border: '1px solid rgba(16, 185, 129, 0.35)',
-                        borderRadius: '4px',
-                        padding: '1px 5px',
-                        fontSize: '0.62rem',
-                        fontWeight: '800',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '3px'
-                      }}
-                      title={`Total de juros futuros poupados: ${formatCurrency(loanMetrics.totalSavedInterest)}`}
-                    >
-                      💰 +{formatCurrency(loanMetrics.totalSavedInterest)} poupados
-                    </span>
-                  </div>
-                )}
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                Capital ainda devido
               </div>
             </div>
 
-            {/* Vigência do Contrato */}
-            <div className="meta-item" style={{ padding: '6px 10px' }}>
-              <div className="meta-icon-box" style={{ color: '#06b6d4' }}>
-                <Calendar size={16} />
+            <div>
+              <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                Capital Amortizado
               </div>
-              <div>
-                <div className="meta-label" style={{ fontSize: '0.7rem' }}>Vigência do Contrato</div>
-                <div className="meta-value" style={{ fontSize: '0.8rem' }}>
-                  {formatDateShort(timeline.startDate)} <span style={{ color: 'var(--text-dim)' }}>→</span> {formatDateShort(timeline.endDate)}
-                </div>
-                <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)' }}>
-                  Duração: {totalDays} dias
-                </div>
+              <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#10b981' }}>
+                {formatCurrency(loanMetrics.amortized_capital ?? loanMetrics.paid_capital ?? 0)}
               </div>
-            </div>
-
-            {/* Parcelas Pagas */}
-            <div className="meta-item" style={{ padding: '6px 10px' }}>
-              <div className="meta-icon-box" style={{ color: '#06b6d4' }}>
-                <CheckCircle2 size={16} />
-              </div>
-              <div>
-                <div className="meta-label" style={{ fontSize: '0.7rem' }}>Parcelas Pagas</div>
-                <div className="meta-value" style={{ fontWeight: '800', fontSize: '0.92rem', color: '#06b6d4' }}>
-                  {loanMetrics.paidInstallmentsCount ?? timeline.currentInstallmentNumber ?? 0}
-                  {loanMetrics.totalInstallmentsCount ? (
-                    <span style={{ fontSize: '0.76rem', fontWeight: '600', color: 'var(--text-dim)' }}>
-                      {' '}de {loanMetrics.totalInstallmentsCount}
-                    </span>
-                  ) : null}
-                </div>
-                {loanMetrics.lastInstallmentDate && (
-                  <div style={{ fontSize: '0.66rem', color: 'var(--text-dim)', marginTop: '2px' }}>
-                    Última prestação: {formatDateShort(loanMetrics.lastInstallmentDate)}
-                  </div>
-                )}
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                {progressPercent}% do capital original
               </div>
             </div>
           </div>
 
           {/* Barra de Progresso de Amortização */}
-          <div className="timeline-progress-container" style={{ marginTop: '4px' }}>
+          <div className="timeline-progress-container">
             <div className="progress-header" style={{ fontSize: '0.72rem', marginBottom: '3px' }}>
               <span>Progresso de Amortização do Capital</span>
               <span>{progressPercent}% amortizado</span>
             </div>
-            <div className="progress-track" style={{ height: '5px' }}>
+            <div className="progress-track" style={{ height: '6px' }}>
               <div
                 className="progress-fill"
                 style={{
@@ -315,6 +249,114 @@ export default function LoanTimelineHeader({
                   background: 'linear-gradient(90deg, #6366f1 0%, #10b981 100%)'
                 }}
               />
+            </div>
+          </div>
+
+          {/* Seção 2: Parcelas, Quitação Prevista, Prestação Atual, Próximo Vencimento */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', borderTop: '1px solid var(--border-glass)', paddingTop: '12px' }}>
+            <div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                Parcelas
+              </div>
+              <div style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                {loanMetrics.paid_installments ?? 0} / {loanMetrics.total_installments ?? 0}
+              </div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                {loanMetrics.remaining_installments ?? 0} restantes
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                Quitação Prevista
+              </div>
+              <div style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                {formatDateShort(loanMetrics.estimated_payoff_date) || '-'}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                Prestação Atual
+              </div>
+              <div style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--primary-light)' }}>
+                {formatCurrency(loanMetrics.current_installment_amount ?? 0)}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                Próximo Vencimento
+              </div>
+              <div style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                {formatDateShort(loanMetrics.next_due_date) || '-'}
+              </div>
+            </div>
+          </div>
+
+          {/* Seção 3: 💰 COMPOSIÇÃO DA DÍVIDA & 📊 O QUE JÁ PAGUEI & 📈 CUSTO DO EMPRÉSTIMO */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '14px', borderTop: '1px solid var(--border-glass)', paddingTop: '12px' }}>
+            {/* 💰 COMPOSIÇÃO DA DÍVIDA */}
+            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
+              <div style={{ fontSize: '0.76rem', fontWeight: '800', color: 'var(--primary-light)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>💰 COMPOSIÇÃO DA DÍVIDA</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-dim)' }}>CAPITAL AINDA DEVIDO</span>
+                  <span style={{ fontWeight: '700' }}>{formatCurrency(loanMetrics.future_capital ?? 0)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-dim)' }}>JUROS FUTUROS ESTIMADOS</span>
+                  <span style={{ fontWeight: '700' }}>{formatCurrency(loanMetrics.future_interest ?? 0)}</span>
+                </div>
+                <div style={{ borderTop: '1px dashed var(--border-glass)', pt: '4px', mt: '2px', display: 'flex', justifyContent: 'space-between', fontWeight: '800' }}>
+                  <span>TOTAL FUTURO A PAGAR</span>
+                  <span style={{ color: 'var(--primary-light)' }}>{formatCurrency(loanMetrics.future_total ?? 0)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 📊 O QUE JÁ PAGUEI */}
+            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
+              <div style={{ fontSize: '0.76rem', fontWeight: '800', color: '#10b981', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>📊 O QUE JÁ PAGUEI</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-dim)' }}>CAPITAL AMORTIZADO</span>
+                  <span style={{ fontWeight: '700' }}>{formatCurrency(loanMetrics.paid_capital ?? loanMetrics.amortized_capital ?? 0)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-dim)' }}>JUROS PAGOS</span>
+                  <span style={{ fontWeight: '700' }}>{formatCurrency(loanMetrics.paid_interest ?? 0)}</span>
+                </div>
+                <div style={{ borderTop: '1px dashed var(--border-glass)', pt: '4px', mt: '2px', display: 'flex', justifyContent: 'space-between', fontWeight: '800' }}>
+                  <span>TOTAL JÁ PAGO</span>
+                  <span style={{ color: '#10b981' }}>{formatCurrency(loanMetrics.paid_total ?? 0)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 📈 CUSTO DO EMPRÉSTIMO */}
+            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
+              <div style={{ fontSize: '0.76rem', fontWeight: '800', color: '#f59e0b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>📈 CUSTO DO EMPRÉSTIMO</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-dim)' }}>CAPITAL ORIGINAL</span>
+                  <span style={{ fontWeight: '700' }}>{formatCurrency(loanMetrics.original_capital ?? loanMetrics.total_debt ?? 0)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-dim)' }}>JUROS TOTAIS ESTIMADOS</span>
+                  <span style={{ fontWeight: '700' }}>{formatCurrency(loanMetrics.total_estimated_interest ?? 0)}</span>
+                </div>
+                <div style={{ borderTop: '1px dashed var(--border-glass)', pt: '4px', mt: '2px', display: 'flex', justifyContent: 'space-between', fontWeight: '800' }}>
+                  <span>CUSTO TOTAL DO EMPRÉSTIMO</span>
+                  <span style={{ color: '#f59e0b' }}>{formatCurrency(loanMetrics.total_loan_cost ?? 0)}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

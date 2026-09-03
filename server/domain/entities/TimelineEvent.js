@@ -1,4 +1,4 @@
-import { TimelineAssociationType, FinancialType, EventStatus, EventPeriodicity, EventPriority, AmortizationStrategy } from '../../../shared/enums/index.js';
+import { TimelineAssociationType, EventType, EventStatus, EventPeriodicity, EventPriority, AmortizationStrategy } from '../../../shared/enums/index.js';
 
 /**
  * Entity: TimelineEvent
@@ -24,7 +24,9 @@ export class TimelineEvent {
     title,
     description = '',
     category = 'saida_recorrente',
-    financialType = FinancialType.EXPENSE,
+    eventType = EventType.EXPENSE,
+    event_type,
+    financialType,
     financial_type,
     periodicity = EventPeriodicity.RECURRING,
     recurrenceEndDate = null,
@@ -99,7 +101,7 @@ export class TimelineEvent {
     this.title = this.name;
     this.description = description || '';
     this.category = category;
-    this.financialType = financial_type || financialType;
+    this.eventType = event_type || eventType || financial_type || financialType;
     this.periodicity = periodicity;
     this.recurrenceEndDate = recurrenceEndDate || endDate || null;
     this.endDate = this.recurrenceEndDate;
@@ -114,10 +116,10 @@ export class TimelineEvent {
     this.strategy = amortization_strategy || amortizationStrategy || strategy;
     this.amortizationStrategy = this.strategy;
     this.notes = notes;
-    this.isIncome = Boolean(isIncome || this.financialType === FinancialType.INCOME || this.financialType === 'entrada');
-    this.isExpense = Boolean(isExpense || this.financialType === FinancialType.EXPENSE || this.financialType === 'gasto');
-    this.isInvestment = Boolean(isInvestment || this.financialType === FinancialType.INVESTMENT || this.financialType === 'investimento');
-    this.isAmortization = Boolean(isAmortization || category === 'amortizacao' || this.financialType === FinancialType.AMORTIZATION || this.financialType === 'amortizacao');
+    this.isIncome = this.eventType === EventType.INCOME;
+    this.isExpense = this.eventType === EventType.EXPENSE;
+    this.isInvestment = this.eventType === EventType.INVESTMENT;
+    this.isAmortization = this.eventType === EventType.AMORTIZATION;
     this.isRecurring = Boolean(is_recurring !== undefined ? is_recurring : isRecurring);
     this.automatic = Boolean(automatic || isAutomatic);
     this.isAutomatic = this.automatic;
@@ -147,54 +149,18 @@ export class TimelineEvent {
 
   isLoanEvent() {
     return (
-      this.category === 'parcela_emprestimo' ||
+      this.eventType === EventType.LOAN_INSTALLMENT ||
       this.isSystemLoanEvent ||
       Boolean(this.timelineId && String(this.timelineId).startsWith('tl-loan-'))
     );
   }
 
   isAmortizationEvent() {
-    return (
-      this.category === 'amortizacao' ||
-      this.financialType === FinancialType.AMORTIZATION ||
-      this.isAmortization
-    );
+    return this.eventType === EventType.AMORTIZATION;
   }
 
   getToggledStatus() {
-    if (this.isAmortizationEvent()) {
-      const isCurrentlyAmortized =
-        this.status === EventStatus.AMORTIZED || this.status === EventStatus.COMPLETED || Boolean(this.isCompleted);
-      return {
-        status: isCurrentlyAmortized ? EventStatus.PENDING : EventStatus.AMORTIZED,
-        isCompleted: !isCurrentlyAmortized
-      };
-    }
-
-    const isInvestment = this.isInvestment || this.financialType === FinancialType.INVESTMENT || this.category?.startsWith('investimento');
-    const isIncome = this.isIncome || this.financialType === FinancialType.INCOME || this.category?.startsWith('entrada');
-
-    const willBeCompleted = !(
-      this.status === EventStatus.PAID ||
-      this.status === EventStatus.RECEIVED ||
-      this.status === EventStatus.INVESTED ||
-      this.isCompleted
-    );
-
-    const newStatus = willBeCompleted
-      ? isIncome
-        ? EventStatus.RECEIVED
-        : isInvestment
-          ? EventStatus.INVESTED
-          : EventStatus.PAID
-      : isInvestment
-        ? EventStatus.PLANNED
-        : EventStatus.PENDING;
-
-    return {
-      status: newStatus,
-      isCompleted: willBeCompleted
-    };
+    return calcToggledStatus(this);
   }
 
   static validate(data) {
@@ -206,4 +172,37 @@ export class TimelineEvent {
     }
     return true;
   }
+}
+
+export function calcToggledStatus(event) {
+  const isAmortization = event.eventType === EventType.AMORTIZATION || (typeof event.isAmortizationEvent === 'function' && event.isAmortizationEvent());
+  if (isAmortization) {
+    const isCurrentlyAmortized =
+      event.status === EventStatus.AMORTIZED || event.status === EventStatus.COMPLETED || Boolean(event.isCompleted);
+    return {
+      status: isCurrentlyAmortized ? EventStatus.PENDING : EventStatus.AMORTIZED,
+      isCompleted: !isCurrentlyAmortized
+    };
+  }
+
+  const isInvestment = event.eventType === EventType.INVESTMENT;
+  const isIncome = event.eventType === EventType.INCOME;
+
+  const isCompletedNow =
+    event.status === EventStatus.PAID ||
+    event.status === EventStatus.RECEIVED ||
+    event.status === EventStatus.INVESTED ||
+    event.status === EventStatus.COMPLETED ||
+    Boolean(event.isCompleted);
+
+  const willBeCompleted = !isCompletedNow;
+
+  const newStatus = willBeCompleted
+    ? (isIncome ? EventStatus.RECEIVED : (isInvestment ? EventStatus.INVESTED : EventStatus.PAID))
+    : (isInvestment ? EventStatus.PLANNED : EventStatus.PENDING);
+
+  return {
+    status: newStatus,
+    isCompleted: willBeCompleted
+  };
 }

@@ -14,7 +14,7 @@ import {
 import { format, parseISO, addMonths } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../utils/loanCalculations';
-import { FinancialType, EventStatus, TimelineType } from '../enums/index.js';
+import { EventType, EventStatus, TimelineType } from '../enums/index.js';
 
 export default function IncomeEvolutionChart({
   timeline = {},
@@ -74,7 +74,7 @@ export default function IncomeEvolutionChart({
     if (activeFinancialTab === 'investimentos') {
       const seenInitial = new Set();
       (events || []).forEach((ev) => {
-        const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+        const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment === true;
         if (isInvestment && ev.initialInvestedAmount) {
           const key = ev.eventId || ev.seriesId || ev.id;
           if (!seenInitial.has(key)) {
@@ -112,10 +112,10 @@ export default function IncomeEvolutionChart({
           const amt = Number(ev.amount || 0);
           const isReceived = ev.status === EventStatus.RECEIVED || ev.status === EventStatus.PAID || ev.status === EventStatus.INVESTED || ev.status === 'Recebido' || ev.status === 'Pago' || ev.status === 'Investido' || ev.isCompleted;
 
-          const isLoan = ev.financialType === FinancialType.AMORTIZATION || ev.category === 'parcela_emprestimo' || ev.timelineOriginId === 'tl-loan-80004197726' || ev.isSystemLoanEvent || ev.category === 'amortizacao';
-          const isIncome = (ev.financialType === FinancialType.INCOME || ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
-          const isExpense = ((ev.financialType === FinancialType.EXPENSE || ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan) && !ev.isInvestment && ev.financialType !== FinancialType.INVESTMENT && ev.financialType !== 'investimento';
-          const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+          const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent;
+          const isIncome = (ev.eventType === EventType.INCOME || ev.isIncome === true) && !isLoan;
+          const isExpense = (ev.eventType === EventType.EXPENSE || ev.isExpense === true || isLoan) && !ev.isInvestment;
+          const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment === true;
 
           const isValid = chartMode === 'acumulado_real' ? isReceived : true;
           if (isValid) {
@@ -174,10 +174,10 @@ export default function IncomeEvolutionChart({
   }, [timeline?.startDate, events, horizonYears, todayStr, chartMode, activeFinancialTab]);
 
   // Overall Statistics for the active view
-  const isBalanco = timeline?.type === TimelineType.BALANCE;
-  const isGastos = activeFinancialTab === 'gastos' || activeFinancialTab === 'emprestimos';
-  const isInvest = activeFinancialTab === 'investimentos';
-  const isEntradas = activeFinancialTab === 'entradas';
+  const isBalance = timeline?.type === TimelineType.BALANCE;
+  const isExpense = timeline?.type === TimelineType.EXPENSE || timeline?.type === TimelineType.LOAN;
+  const isInvestment = timeline?.type === TimelineType.INVESTMENT;
+  const isIncome = timeline?.type === TimelineType.INCOME;
 
   const maxCumulative = chartData.length > 0 ? chartData[chartData.length - 1].runningTotal : 0;
   const maxMonthly = Math.max(...chartData.map((d) => Math.abs(d.monthTotal)), 1);
@@ -202,7 +202,7 @@ export default function IncomeEvolutionChart({
   const getX = (idx) => padding.left + (idx / Math.max(1, chartData.length - 1)) * graphWidth;
 
   const getYCumulative = (val) => {
-    if (isBalanco) {
+    if (isBalance) {
       const maxCum = Math.max(1, ...chartData.map((d) => Math.abs(d.runningTotal)));
       return padding.top + graphHeight / 2 - (val / maxCum) * (graphHeight / 2);
     }
@@ -211,14 +211,14 @@ export default function IncomeEvolutionChart({
   };
 
   const getZeroY = () => {
-    if (isBalanco) {
+    if (isBalance) {
       return padding.top + (maxPositiveBalanco / balancoSpan) * graphHeight;
     }
     return padding.top + graphHeight;
   };
 
   const getYMonthly = (val) => {
-    if (isBalanco) {
+    if (isBalance) {
       return padding.top + ((maxPositiveBalanco - val) / balancoSpan) * graphHeight;
     }
     const maxVal = Math.max(1, ...chartData.map((d) => d.monthTotal));
@@ -235,7 +235,7 @@ export default function IncomeEvolutionChart({
         return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
       })
       .join(' ');
-  }, [chartData, graphWidth, graphHeight, isBalanco]);
+  }, [chartData, graphWidth, graphHeight, isBalance]);
 
   const cumulativeAreaPath = useMemo(() => {
     if (!cumulativePath || chartData.length === 0) return '';
@@ -243,15 +243,15 @@ export default function IncomeEvolutionChart({
     const lastX = getX(chartData.length - 1);
     const zeroY = getZeroY();
     return `${cumulativePath} L ${lastX.toFixed(1)} ${zeroY} L ${firstX.toFixed(1)} ${zeroY} Z`;
-  }, [cumulativePath, chartData, graphWidth, graphHeight, isBalanco, maxPositiveBalanco, balancoSpan]);
+  }, [cumulativePath, chartData, graphWidth, graphHeight, isBalance, maxPositiveBalanco, balancoSpan]);
 
   // Find index of Today in dataset
   const todayIndex = chartData.findIndex((d) => d.isCurrent);
   const todayX = todayIndex >= 0 && chartMode !== 'acumulado_real' ? getX(todayIndex) : null;
 
   // Active theme color definitions
-  const activeColor = isGastos ? '#f43f5e' : isInvest ? '#8b5cf6' : '#10b981';
-  const activeGradId = isGastos ? 'roseBarGrad' : isInvest ? 'indigoBarGrad' : 'emeraldBarGrad';
+  const activeColor = isExpense ? '#f43f5e' : isInvestment ? '#8b5cf6' : '#10b981';
+  const activeGradId = isExpense ? 'roseBarGrad' : isInvestment ? 'indigoBarGrad' : 'emeraldBarGrad';
   
   const handleMouseMove = (e) => {
     if (!chartData || chartData.length === 0) return;
@@ -314,7 +314,7 @@ export default function IncomeEvolutionChart({
                 padding: '4px 12px',
                 fontSize: '0.78rem',
                 borderRadius: '6px',
-                background: chartMode === 'variante' ? (isGastos ? 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)' : isInvest ? 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)') : 'transparent',
+                background: chartMode === 'variante' ? (isExpense ? 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)' : isInvestment ? 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)') : 'transparent',
                 color: chartMode === 'variante' ? '#fff' : 'var(--text-muted)',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -370,18 +370,18 @@ export default function IncomeEvolutionChart({
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-              {isBalanco ? 'Balanço Médio / Mês' : isGastos ? 'Gasto Médio / Mês' : isInvest ? 'Aporte Médio / Mês' : 'Entrada Média / Mês'}
+              {isBalance ? 'Balanço Médio / Mês' : isExpense ? 'Gasto Médio / Mês' : isInvestment ? 'Aporte Médio / Mês' : 'Entrada Média / Mês'}
             </span>
             <span
               style={{
                 fontSize: '0.95rem',
                 fontWeight: '800',
-                color: isBalanco
+                color: isBalance
                   ? (averageMonthly >= 0 ? '#10b981' : '#f43f5e')
                   : activeColor
               }}
             >
-              {isBalanco && averageMonthly > 0 ? '+' : isGastos && averageMonthly > 0 ? '-' : ''}
+              {isBalance && averageMonthly > 0 ? '+' : isExpense && averageMonthly > 0 ? '-' : ''}
               {formatCurrency(averageMonthly)}
             </span>
           </div>

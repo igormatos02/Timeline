@@ -1,4 +1,4 @@
-import { EventStatus, FinancialType } from '../../../../../shared/enums/index.js';
+import { EventStatus, EventType } from '../../../../../shared/enums/index.js';
 
 /**
  * Domain Service: IncomeDomainService
@@ -13,7 +13,7 @@ export class IncomeDomainService {
       if (!ev || ev.isDeleted) return false;
       if (timelineId && ev.timelineId === timelineId) return true;
       return (
-        ev.financialType === FinancialType.INCOME
+        ev.eventType === EventType.INCOME
       );
     });
   }

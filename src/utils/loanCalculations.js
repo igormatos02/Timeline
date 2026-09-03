@@ -1,6 +1,6 @@
 import { addDays, addWeeks, addMonths, addYears, format, parseISO, isBefore, isAfter, differenceInDays } from 'date-fns';
 import { generateUUID } from './uuid.js';
-import { FinancialType, EventStatus } from '../enums/index.js';
+import { EventType, EventStatus } from '../enums/index.js';
 import { TimelineType } from '../../shared/enums/index.js';
 
 /**
@@ -95,7 +95,7 @@ export function generateLoanSchedule({
       title: `Prestação #${i} de ${totalInstallments}`,
       description: `Pagamento de prestação contratual (${formatCurrency(principalAmount)} capital + ${formatCurrency(interestPortion)} juros).`,
       category: 'parcela_emprestimo',
-      status: 'Pendente',
+      status: EventStatus.PENDING,
       priority: 'Normal',
       amount: thisTotal,
       principalAmount: principalAmount,
@@ -163,16 +163,16 @@ export function recalculateLoanState(timeline, eventsList) {
         : Math.max(0, Math.round((totalAmount - principal) * 100) / 100);
 
       const lateInterest = Number(ev.interestAmount || 0);
-      const isPaid = ev.status === 'Pago' || ev.isCompleted;
+      const isPaid = ev.status === EventStatus.PAID || ev.status === 'paid' || ev.status === 'Pago' || ev.isCompleted;
 
       // Check if overdue: date is before today and not paid
       let status = ev.status;
       try {
         const evDate = parseISO(ev.date);
         if (!isPaid && isBefore(evDate, today)) {
-          status = 'Atrasada';
+          status = EventStatus.OVERDUE;
         } else if (!isPaid) {
-          status = 'Pendente';
+          status = EventStatus.PENDING;
         }
       } catch (e) { }
 
@@ -189,7 +189,7 @@ export function recalculateLoanState(timeline, eventsList) {
         balanceAfter: runningBalance
       };
     } else if (ev.category === 'amortizacao') {
-      const isAmortized = ev.status === 'Amortizado' || ev.status === 'Concluído' || Boolean(ev.isCompleted);
+      const isAmortized = ev.status === EventStatus.AMORTIZED || ev.status === 'amortized' || ev.status === 'Amortizado' || ev.status === EventStatus.COMPLETED || ev.status === 'Concluído' || Boolean(ev.isCompleted);
       if (isAmortized) {
         const amortAmount = Number(ev.amortizationAmount || ev.amount || 0);
         runningBalance = Math.max(0, Math.round((runningBalance - amortAmount) * 100) / 100);
@@ -197,7 +197,7 @@ export function recalculateLoanState(timeline, eventsList) {
       return {
         ...ev,
         balanceAfter: runningBalance,
-        status: isAmortized ? 'Amortizado' : 'Pendente',
+        status: isAmortized ? EventStatus.AMORTIZED : EventStatus.PENDING,
         isCompleted: isAmortized
       };
     }
@@ -707,7 +707,7 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
 
   (allEvents || []).forEach((ev) => {
     if (!ev) return;
-    const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.financialType === 'investment' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+    const isInvestment = ev.eventType === EventType.INVESTMENT;
     if (isInvestment) {
       if (ev.category === 'investimento_patrimonio') {
         const initialKey = ev.eventId || ev.seriesId || ev.id;
@@ -776,10 +776,10 @@ export function getFinancialMetrics(timeline, events = [], computeStartDate = nu
     if (!ev || !ev.date) return;
     const amt = Number(ev.amount || 0);
     const isPast = ev.date <= todayStr;
-    const isLoan = ev.financialType === FinancialType.AMORTIZATION || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.timelineOriginId === 'tl-loan-jeep' || ev.timelineOriginId === 'tl-loan-dacia' || ev.timelineOriginId === 'tl-loan-casa1' || ev.timelineOriginId === 'tl-loan-casa2' || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
-    const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.financialType === 'investment' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
-    const isIncome = (ev.financialType === FinancialType.INCOME || ev.financialType === 'entrada' || ev.financialType === 'income' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
-    const isExpense = ((ev.financialType === FinancialType.EXPENSE || ev.financialType === 'gasto' || ev.financialType === 'expense' || ev.financialType === 'saida' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan) && !isInvestment && !isIncome;
+    const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent;
+    const isInvestment = ev.eventType === EventType.INVESTMENT;
+    const isIncome = ev.eventType === EventType.INCOME;
+    const isExpense = ev.eventType === EventType.EXPENSE || isLoan;
 
     const evMonth = ev.date ? ev.date.substring(0, 7) : '';
     const isAfterStartBound = !startBound || ev.date >= startBound;
@@ -1028,9 +1028,9 @@ export function getIncomeMetrics(timeline, events = [], computeStartDate = null)
 
   allEvents.forEach((ev) => {
     if (!ev || ev.isDeleted) return;
-    const isLoan = ev.financialType === FinancialType.AMORTIZATION || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
-    const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.financialType === 'investment' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
-    const isIncome = (ev.financialType === FinancialType.INCOME || ev.financialType === 'entrada' || ev.financialType === 'income' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
+    const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent;
+    const isInvestment = ev.eventType === EventType.INVESTMENT;
+    const isIncome = ev.eventType === EventType.INCOME;
 
     if (!isIncome) return;
 
@@ -1123,7 +1123,7 @@ export function generateIncomeSchedule({
       title: `Salário Mensal (${formatCurrency(monthlySalary)})`,
       description: `Transferência de vencimento líquido (${formatCurrency(monthlySalary)}).`,
       category: 'entrada_recorrente',
-      status: isPast ? 'Recebido' : 'Previsto',
+      status: isPast ? EventStatus.RECEIVED : EventStatus.PLANNED,
       priority: 'Normal',
       amount: Number(monthlySalary),
       isIncome: true,

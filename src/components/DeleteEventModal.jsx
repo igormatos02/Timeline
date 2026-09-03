@@ -41,9 +41,9 @@ export default function DeleteEventModal({
     )
   ) && event.periodicity !== 'unico' && event.periodicity !== 'pontual' && event.category !== 'saida_esporadica' && event.category !== 'entrada_esporadica' && event.category !== 'amortizacao' && !event.isAmortization;
 
-  const isIncome = event.isIncome || event.financialType === 'entrada' || (event.category && event.category.includes('entrada'));
-  const isExpense = event.isExpense || event.financialType === 'gasto' || (event.category && event.category.includes('saida')) || event.category === 'gasto';
-  const isInvestment = event.isInvestment || event.financialType === 'investimento' || (event.category && event.category.includes('investimento'));
+  const isIncome = event.eventType === EventType.INCOME;
+  const isExpense = event.eventType === EventType.EXPENSE;
+  const isInvestment = event.eventType === EventType.INVESTMENT;
 
   const formattedDate = event.date
     ? format(parseISO(event.date), "d 'de' MMMM 'de' yyyy", { locale: pt })

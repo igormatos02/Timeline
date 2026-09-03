@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, DollarSign, Calendar, FileText, X, TrendingDown, Clock } from 'lucide-react';
 import { formatCurrency } from '../utils/loanCalculations';
+import { EventStatus } from '../../shared/enums/EventStatus.js';
+import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 export default function AmortizationModal({ isOpen, onClose, onSave, remainingBalance, defaultDate = '2026-08-21', initialEvent = null }) {
+  const { t } = useTranslation();
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(defaultDate || '2026-08-21');
   const [strategy, setStrategy] = useState('reduce_term'); // 'reduce_term' | 'reduce_installment'
-  const [status, setStatus] = useState('Amortizado'); // 'Amortizado' | 'Pendente'
+  const [status, setStatus] = useState(EventStatus.AMORTIZED);
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
@@ -15,13 +18,14 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
       setAmount(initialEvent.amount || initialEvent.amortizationAmount || '');
       setDate(initialEvent.date || defaultDate || '2026-08-21');
       setStrategy(initialEvent.strategy || 'reduce_term');
-      setStatus(initialEvent.status || 'Amortizado');
+      const isAmortized = initialEvent.status === EventStatus.AMORTIZED;
+      setStatus(isAmortized ? EventStatus.AMORTIZED : EventStatus.PENDING);
       setNotes(initialEvent.notes || (initialEvent.description && !initialEvent.description.startsWith('Amortização extraordinária') ? initialEvent.description : ''));
     } else {
       if (defaultDate) setDate(defaultDate);
       setAmount('');
       setStrategy('reduce_term');
-      setStatus('Amortizado');
+      setStatus(EventStatus.AMORTIZED);
       setNotes('');
     }
   }, [defaultDate, isOpen, initialEvent]);
@@ -158,13 +162,13 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
               <button
                 type="button"
-                onClick={() => setStatus('Amortizado')}
+                onClick={() => setStatus(EventStatus.AMORTIZED)}
                 style={{
                   padding: '8px 12px',
                   borderRadius: '8px',
-                  border: status === 'Amortizado' ? '2px solid #10b981' : '1px solid var(--border-glass)',
-                  background: status === 'Amortizado' ? 'rgba(16, 185, 129, 0.16)' : 'var(--bg-glass)',
-                  color: status === 'Amortizado' ? '#10b981' : 'var(--text-dim)',
+                  border: status === EventStatus.AMORTIZED ? '2px solid #10b981' : '1px solid var(--border-glass)',
+                  background: status === EventStatus.AMORTIZED ? 'rgba(16, 185, 129, 0.16)' : 'var(--bg-glass)',
+                  color: status === EventStatus.AMORTIZED ? '#10b981' : 'var(--text-dim)',
                   fontWeight: '700',
                   fontSize: '0.84rem',
                   cursor: 'pointer',
@@ -175,17 +179,17 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
                   transition: 'all 0.15s'
                 }}
               >
-                <span>✓ Amortizado (Efetivado)</span>
+                <span>✓ {t('status.amortized')}</span>
               </button>
               <button
                 type="button"
-                onClick={() => setStatus('Pendente')}
+                onClick={() => setStatus(EventStatus.PENDING)}
                 style={{
                   padding: '8px 12px',
                   borderRadius: '8px',
-                  border: status === 'Pendente' ? '2px solid #f59e0b' : '1px solid var(--border-glass)',
-                  background: status === 'Pendente' ? 'rgba(245, 158, 11, 0.16)' : 'var(--bg-glass)',
-                  color: status === 'Pendente' ? '#f59e0b' : 'var(--text-dim)',
+                  border: status === EventStatus.PENDING ? '2px solid #f59e0b' : '1px solid var(--border-glass)',
+                  background: status === EventStatus.PENDING ? 'rgba(245, 158, 11, 0.16)' : 'var(--bg-glass)',
+                  color: status === EventStatus.PENDING ? '#f59e0b' : 'var(--text-dim)',
                   fontWeight: '700',
                   fontSize: '0.84rem',
                   cursor: 'pointer',
@@ -196,7 +200,7 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
                   transition: 'all 0.15s'
                 }}
               >
-                <span>⏳ Pendente (Agendado)</span>
+                <span>⏳ {t('status.pending')}</span>
               </button>
             </div>
           </div>

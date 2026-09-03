@@ -1,4 +1,4 @@
-export const FinancialType = Object.freeze({
+export const EventType = Object.freeze({
   INCOME: 'income',
   EXPENSE: 'expense',
   INVESTMENT: 'investment',
@@ -6,6 +6,4 @@ export const FinancialType = Object.freeze({
   AMORTIZATION: 'amortization',
   GENERIC: 'generic'
 });
-
-export const EventType = FinancialType;
 

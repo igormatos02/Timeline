@@ -31,3 +31,16 @@ export const EventStatusLabel = Object.freeze({
 });
 
 export const getEventStatusLabel = (status) => EventStatusLabel[status] || status;
+
+export const POSITIVE_EVENT_STATUSES = new Set([
+  EventStatus.RECEIVED,
+  EventStatus.PAID,
+  EventStatus.INVESTED,
+  EventStatus.COMPLETED,
+  EventStatus.AMORTIZED,
+  EventStatus.SETTLED
+]);
+
+export const isPositiveStatus = (status) => POSITIVE_EVENT_STATUSES.has(status);
+export const isNegativeStatus = (status) => !status || !isPositiveStatus(status);
+

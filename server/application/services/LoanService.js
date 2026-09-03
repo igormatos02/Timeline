@@ -1,6 +1,6 @@
 import { loanContractRepository } from '../../infrastructure/database/json/JsonLoanContractRepository.js';
 import { eventRepository } from '../../infrastructure/database/json/JsonEventRepository.js';
-import { FinancialType, EventStatus } from '../../../shared/enums/index.js';
+import { EventType, EventStatus } from '../../../shared/enums/index.js';
 
 export class LoanService {
   async getLoanContracts() {
@@ -29,7 +29,7 @@ export class LoanService {
       time: '12:00',
       title: `Amortização Extraordinária (${loan.name})`,
       description: `Amortização antecipada de ${amortAmount} €. Saldo restante: ${updatedLoanData.remainingDebt} €.`,
-      financialType: FinancialType.AMORTIZATION,
+      eventType: EventType.AMORTIZATION,
       status: EventStatus.PAID,
       amount: amortAmount,
       balanceAfter: updatedLoanData.remainingDebt,

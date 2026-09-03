@@ -80,7 +80,6 @@ export default function LoanEventModal({
       amortizationStrategy: formData.amortizationStrategy,
       status: formData.status,
       eventType: EventType.AMORTIZATION,
-      financialType: 'amortization',
       category: 'amortizacao',
       timelineId: timeline?.id,
       timelineOriginId: timeline?.id,

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Circle, AlertCircle, DollarSign, Calendar, X, ArrowRight, TrendingUp, CreditCard, Percent } from 'lucide-react';
 import { formatCurrency } from '../utils/loanCalculations';
+import { EventStatus } from '../../shared/enums/EventStatus.js';
+import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 export default function EditInstallmentModal({
   isOpen,
@@ -8,7 +10,8 @@ export default function EditInstallmentModal({
   installment,
   onSave
 }) {
-  const [status, setStatus] = useState('Pendente');
+  const { t } = useTranslation();
+  const [status, setStatus] = useState(EventStatus.PENDING);
   const [amount, setAmount] = useState('');
   const [principalAmount, setPrincipalAmount] = useState('');
   const [interestPortion, setInterestPortion] = useState('');
@@ -17,7 +20,8 @@ export default function EditInstallmentModal({
 
   useEffect(() => {
     if (installment) {
-      setStatus(installment.status === 'Pago' ? 'Pago' : 'Pendente');
+      const isPaid = installment.status === EventStatus.PAID || installment.status === 'paid' || installment.status === 'Pago';
+      setStatus(isPaid ? EventStatus.PAID : EventStatus.PENDING);
       const total = installment.amount !== undefined ? installment.amount : 500;
       const principal = installment.principalAmount !== undefined ? installment.principalAmount : Math.round(total * 0.82 * 100) / 100;
       const interest = installment.interestPortion !== undefined ? installment.interestPortion : Math.round((total - principal) * 100) / 100;
@@ -110,7 +114,7 @@ export default function EditInstallmentModal({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <button
                 type="button"
-                onClick={() => setStatus('Pago')}
+                onClick={() => setStatus(EventStatus.PAID)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -118,20 +122,20 @@ export default function EditInstallmentModal({
                   gap: '8px',
                   padding: '10px',
                   borderRadius: '8px',
-                  border: `2px solid ${status === 'Pago' ? '#10b981' : 'var(--border-glass)'}`,
-                  background: status === 'Pago' ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-glass)',
-                  color: status === 'Pago' ? '#10b981' : 'var(--text-muted)',
+                  border: `2px solid ${status === EventStatus.PAID ? '#10b981' : 'var(--border-glass)'}`,
+                  background: status === EventStatus.PAID ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-glass)',
+                  color: status === EventStatus.PAID ? '#10b981' : 'var(--text-muted)',
                   fontWeight: '700',
                   cursor: 'pointer',
                   transition: 'all 0.15s'
                 }}
               >
-                <CheckCircle2 size={16} /> Pago
+                <CheckCircle2 size={16} /> {t('status.paid')}
               </button>
 
               <button
                 type="button"
-                onClick={() => setStatus('Pendente')}
+                onClick={() => setStatus(EventStatus.PENDING)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -139,15 +143,15 @@ export default function EditInstallmentModal({
                   gap: '8px',
                   padding: '10px',
                   borderRadius: '8px',
-                  border: `2px solid ${status === 'Pendente' ? '#f59e0b' : 'var(--border-glass)'}`,
-                  background: status === 'Pendente' ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-glass)',
-                  color: status === 'Pendente' ? '#f59e0b' : 'var(--text-muted)',
+                  border: `2px solid ${status === EventStatus.PENDING ? '#f59e0b' : 'var(--border-glass)'}`,
+                  background: status === EventStatus.PENDING ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-glass)',
+                  color: status === EventStatus.PENDING ? '#f59e0b' : 'var(--text-muted)',
                   fontWeight: '700',
                   cursor: 'pointer',
                   transition: 'all 0.15s'
                 }}
               >
-                <Circle size={16} /> Pendente
+                <Circle size={16} /> {t('status.pending')}
               </button>
             </div>
           </div>

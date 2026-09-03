@@ -145,11 +145,7 @@ export default function BalanceEventModal({
       periodicity: formData.periodicity,
       recurrenceEndDate: formData.periodicity === EventPeriodicity.PERIOD ? formData.recurrenceEndDate : null,
       amount: numAmount,
-      isExpense: isExp,
-      isInvestment: isInv,
-      isIncome: isInc,
       eventType: isExp ? EventType.EXPENSE : isInv ? EventType.INVESTMENT : EventType.INCOME,
-      financialType: isExp ? 'expense' : isInv ? 'investment' : 'income',
       timelineId: targetTimelineId || timeline?.id,
       timelineOriginId: targetTimelineId || timeline?.id,
       labels

@@ -55,7 +55,7 @@ import {
 import TimelineEventCard from './TimelineEventCard';
 import FloatingTaskStack from './FloatingTaskStack';
 import { getGroupingForPeriodicity, formatCurrency } from '../utils/loanCalculations';
-import { FinancialType, EventStatus, EventStatusLabel, TimelineType, EventCategory } from '../enums/index.js';
+import { EventType, EventStatus, EventStatusLabel, TimelineType, EventCategory } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 function VerticalTimeline({
@@ -223,19 +223,44 @@ function VerticalTimeline({
     return false;
   }, []);
 
-  // Ensure scroll goes directly to Today on mount, refresh, or tab switch
-  React.useEffect(() => {
-    let attempts = 0;
-    const interval = setInterval(() => {
-      attempts++;
-      const scrolled = positionOnToday('instant');
-      if (scrolled || attempts >= 30) {
-        clearInterval(interval);
-      }
-    }, 40);
+  const userInteractedRef = React.useRef(false);
 
-    return () => clearInterval(interval);
-  }, [timeline.id, activeFinancialTab, timeline.events?.length, positionOnToday]);
+  // Track explicit physical user interactions (wheel, touch, key navigation, mousedown)
+  React.useEffect(() => {
+    const handleUserInteraction = () => {
+      userInteractedRef.current = true;
+    };
+    window.addEventListener('wheel', handleUserInteraction, { passive: true });
+    window.addEventListener('touchmove', handleUserInteraction, { passive: true });
+    window.addEventListener('keydown', handleUserInteraction, { passive: true });
+    window.addEventListener('mousedown', handleUserInteraction, { passive: true });
+    return () => {
+      window.removeEventListener('wheel', handleUserInteraction);
+      window.removeEventListener('touchmove', handleUserInteraction);
+      window.removeEventListener('keydown', handleUserInteraction);
+      window.removeEventListener('mousedown', handleUserInteraction);
+    };
+  }, []);
+
+  // Auto-scroll directly to Current Month (August 2026) on mount or tab switch
+  React.useEffect(() => {
+    userInteractedRef.current = false;
+    positionOnToday('instant');
+    const t1 = setTimeout(() => {
+      if (!userInteractedRef.current) positionOnToday('instant');
+    }, 50);
+    const t2 = setTimeout(() => {
+      if (!userInteractedRef.current) positionOnToday('instant');
+    }, 200);
+    const t3 = setTimeout(() => {
+      if (!userInteractedRef.current) positionOnToday('instant');
+    }, 500);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [timeline?.id, activeFinancialTab, positionOnToday]);
 
   // Default Today reference (2026-08-21)
   const todayDate = new Date('2026-08-21');
@@ -254,8 +279,8 @@ function VerticalTimeline({
 
   const isBalancoView = timeline.type === TimelineType.BALANCE;
 
-  // Determine earliest date in timeline (12 meses anteriores expansível)
-  const startDateObj = isBalancoView ? parseISO('2025-08-01') : subMonths(parseISO('2026-08-01'), Math.max(1, pastHorizonYears) * 12);
+  // Determine earliest date in timeline (Balanço: exatamente 12 meses até o mês atual. Outros: 12 meses anteriores expansível)
+  const startDateObj = isBalancoView ? parseISO('2025-09-01') : subMonths(parseISO('2026-08-01'), Math.max(1, pastHorizonYears) * 12);
 
   // Determine latest date in timeline (12 meses futuros expansível)
   const maxDateObj = isBalancoView ? parseISO('2026-08-31') : addMonths(parseISO('2026-08-31'), Math.max(1, futureHorizonYears) * 12);
@@ -319,13 +344,13 @@ function VerticalTimeline({
       // Financial Tabs Filter by TimelineType
       if (isFinancialTimeline) {
         if (timeline.type === TimelineType.INCOME) {
-          const isIncome = ev.financialType === FinancialType.INCOME || ev.isIncome || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
+          const isIncome = ev.eventType === EventType.INCOME || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
           if (!isIncome) return false;
         } else if (timeline.type === TimelineType.EXPENSE) {
-          const isExpense = ev.financialType === FinancialType.EXPENSE || ev.isExpense || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
+          const isExpense = ev.eventType === EventType.EXPENSE || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
           if (!isExpense) return false;
         } else if (timeline.type === TimelineType.INVESTMENT) {
-          const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.isInvestment || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
+          const isInvestment = ev.eventType === EventType.INVESTMENT || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
           if (!isInvestment) return false;
         } else if (timeline.type === TimelineType.LOAN) {
           const isThisLoan = ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
@@ -368,11 +393,21 @@ function VerticalTimeline({
     selectedCategoryFilter,
     selectedLabelFilter,
     selectedTimelineIds,
+    timeline.type,
+    timeline.id,
     isFinancialTimeline,
     activeFinancialTab,
     isBalancoView,
-    maxDateObj
+    maxDateObj,
+    todayStr
   ]);
+
+  // Re-anchor scroll on Today when events load from backend if user has not manually interacted
+  React.useLayoutEffect(() => {
+    if (!userInteractedRef.current) {
+      positionOnToday('instant');
+    }
+  }, [filteredEvents, timelineEvents, positionOnToday]);
 
   // Collect all unique labels for filter pills
   const availableLabels = useMemo(() => {
@@ -570,9 +605,9 @@ function VerticalTimeline({
       (timelineEvents || []).forEach((ev) => {
         if (!ev || !ev.date || ev.isDeleted) return;
         if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-        const isLoan = ev.financialType === FinancialType.AMORTIZATION || ev.financialType === FinancialType.LOAN_INSTALLMENT;
-        const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.isInvestment;
-        const isExpense = ((ev.financialType === FinancialType.EXPENSE || ev.isExpense) || isLoan) && !isInvestment;
+        const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT;
+        const isInvestment = ev.eventType === EventType.INVESTMENT;
+        const isExpense = ev.eventType === EventType.EXPENSE || isLoan;
 
         if (isExpense) {
           const mKey = ev.date.substring(0, 7);
@@ -588,9 +623,7 @@ function VerticalTimeline({
       (timelineEvents || []).forEach((ev) => {
         if (!ev || !ev.date || ev.isDeleted) return;
         if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-        const isLoan = ev.financialType === FinancialType.AMORTIZATION || ev.financialType === FinancialType.LOAN_INSTALLMENT;
-        const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.isInvestment;
-        const isIncome = (ev.financialType === FinancialType.INCOME || ev.isIncome) && !ev.isExpense && !ev.isInvestment && !isLoan;
+        const isIncome = ev.eventType === EventType.INCOME;
 
         if (isIncome) {
           const mKey = ev.date.substring(0, 7);
@@ -606,7 +639,7 @@ function VerticalTimeline({
       (timelineEvents || []).forEach((ev) => {
         if (!ev || !ev.date || ev.isDeleted) return;
         if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-        const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.isInvestment;
+        const isInvestment = ev.eventType === EventType.INVESTMENT;
 
         if (isInvestment) {
           const mKey = ev.date.substring(0, 7);
@@ -631,10 +664,10 @@ function VerticalTimeline({
 
       mG.events.forEach((ev) => {
         const amt = Number(ev.amount || 0);
-        const isLoan = ev.financialType === FinancialType.AMORTIZATION || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || (ev.timelineOriginId && String(ev.timelineOriginId).includes('loan'));
-        const isIncome = (ev.financialType === FinancialType.INCOME || ev.financialType === 'entrada' || ev.isIncome || (ev.category && ev.category.startsWith('entrada'))) && !ev.isExpense && !ev.isInvestment && !isLoan;
-        const isExpense = (ev.financialType === FinancialType.EXPENSE || ev.financialType === 'gasto' || ev.isExpense || (ev.category && ev.category.startsWith('saida')) || ev.category === 'gasto') || isLoan;
-        const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || ev.isInvestment || (ev.category && ev.category.startsWith('investimento'));
+        const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent;
+        const isIncome = ev.eventType === EventType.INCOME;
+        const isExpense = ev.eventType === EventType.EXPENSE || isLoan;
+        const isInvestment = ev.eventType === EventType.INVESTMENT;
 
         const initialKey = ev.eventId || ev.seriesId || ev.id;
         let initialAmt = 0;
@@ -717,10 +750,10 @@ function VerticalTimeline({
             if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.isDeleted) return;
 
             const amt = Number(ev.amount || 0);
-            const isLoan = ev.financialType === FinancialType.AMORTIZATION || ev.financialType === FinancialType.LOAN_INSTALLMENT;
-            const isInvestment = ev.financialType === FinancialType.INVESTMENT || ev.isInvestment;
-            const isIncome = (ev.financialType === FinancialType.INCOME || ev.isIncome) && !ev.isExpense && !ev.isInvestment && !isLoan;
-            const isExpense = ((ev.financialType === FinancialType.EXPENSE || ev.isExpense) || isLoan) && !isInvestment;
+            const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT;
+            const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment;
+            const isIncome = (ev.eventType === EventType.INCOME || ev.isIncome) && !ev.isExpense && !ev.isInvestment && !isLoan;
+            const isExpense = ((ev.eventType === EventType.EXPENSE || ev.isExpense) || isLoan) && !isInvestment;
 
             const isIncomeReceived = ev.status === EventStatus.RECEIVED || ev.status === EventStatus.PAID || ev.isCompleted;
             const isExpensePaid = ev.status === EventStatus.PAID || ev.status === EventStatus.SETTLED || ev.isCompleted;

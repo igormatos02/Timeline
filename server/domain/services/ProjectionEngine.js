@@ -1,5 +1,5 @@
 import { addMonths, format, parseISO } from 'date-fns';
-import { EventStatus, EventPeriodicity } from '../../../shared/enums/index.js';
+import { EventStatus, EventPeriodicity, EventType } from '../../../shared/enums/index.js';
 
 /**
  * Domain Service: ProjectionEngine
@@ -192,9 +192,9 @@ export function projectEvents(rawEvents = [], options = {}) {
     const isDeleted = ev.status === EventStatus.DELETED || ev.status === 'Excluido';
 
     if (isAuto && ev.date && ev.date <= todayStr && !isCancelled && !isDeleted) {
-      const isIncome = ev.financialType === 'income' || ev.financialType === 'entrada' || ev.isIncome || ev.category?.startsWith('entrada');
-      const isInvestment = ev.financialType === 'investment' || ev.financialType === 'investimento' || ev.isInvestment || ev.category?.startsWith('investimento');
-      const isAmortization = ev.financialType === 'amortization' || ev.financialType === 'amortizacao' || ev.category === 'amortizacao';
+      const isIncome = ev.eventType === EventType.INCOME;
+      const isInvestment = ev.eventType === EventType.INVESTMENT;
+      const isAmortization = ev.eventType === EventType.AMORTIZATION;
 
       let autoStatus = EventStatus.PAID;
       if (isIncome) autoStatus = EventStatus.RECEIVED;

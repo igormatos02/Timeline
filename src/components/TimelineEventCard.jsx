@@ -43,7 +43,7 @@ import {
 import { formatCurrency } from '../utils/loanCalculations';
 import { generateUUID } from '../utils/uuid';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { TimelineType } from '../enums/index.js';
+import { EventType, TimelineType, EventStatus, EventPeriodicity } from '../enums/index.js';
 
 export default function TimelineEventCard({
   event,
@@ -75,17 +75,18 @@ export default function TimelineEventCard({
   const isBalanceView = timelineType === TimelineType.BALANCE;
   const todayStr = '2026-08-21';
   const effectiveStatus = (localStatus || event.status || '').toLowerCase();
-  const isAmortization = event.category === 'amortizacao' || event.financialType === 'amortization';
-  const isLoanInstallment = (event.category === 'parcela_emprestimo' || (event.isSystemLoanEvent && !isAmortization) || event.timelineOriginId === 'tl-loan-jeep' || event.timelineOriginId === 'tl-loan-dacia' || event.timelineOriginId === 'tl-loan-casa1' || event.timelineOriginId === 'tl-loan-casa2' || event.timelineOriginId === 'tl-loan-80004197726') && !isAmortization && event.category !== 'investimento_patrimonio';
-  const isIncomeEvent = (event.isIncome || event.financialType === 'income' || event.financialType === 'entrada' || event.category === 'entrada_recorrente' || event.category === 'entrada_esporadica') && !event.isExpense && !event.isInvestment && !isLoanInstallment && !isAmortization;
-  const isExpenseEvent = (event.isExpense || event.financialType === 'expense' || event.financialType === 'gasto' || (event.category && event.category.startsWith('saida')) || event.category === 'gasto') && !isLoanInstallment && !isAmortization && !event.isInvestment;
-  const isInvestmentEvent = (event.isInvestment || event.financialType === 'investment' || event.financialType === 'investimento' || (event.category && event.category.startsWith('investimento'))) && !isLoanInstallment && !isAmortization;
+  const isAmortization = event.eventType === EventType.AMORTIZATION;
+  const isLoanInstallment = event.eventType === EventType.LOAN_INSTALLMENT || (event.isSystemLoanEvent && !isAmortization);
+  const isIncomeEvent = event.eventType === EventType.INCOME;
+  const isExpenseEvent = event.eventType === EventType.EXPENSE;
+  const isInvestmentEvent = event.eventType === EventType.INVESTMENT;
 
   const isRecurringEvent = Boolean(
     event.isRecurring ||
-    event.periodicity === 'recurring' ||
+    event.periodicity === EventPeriodicity.RECURRING ||
+    event.periodicity === EventPeriodicity.RECURRENT ||
     event.periodicity === 'recorrente' ||
-    event.periodicity === 'period' ||
+    event.periodicity === EventPeriodicity.PERIOD ||
     event.periodicity === 'periodo' ||
     event.eventId || event.seriesId ||
     isLoanInstallment ||
@@ -98,16 +99,17 @@ export default function TimelineEventCard({
   const isInertFuture = event.date > '2026-08-31';
 
   const isCompleted =
-    effectiveStatus === 'paid' ||
+    effectiveStatus === EventStatus.PAID ||
     effectiveStatus === 'pago' ||
-    effectiveStatus === 'received' ||
+    effectiveStatus === EventStatus.RECEIVED ||
     effectiveStatus === 'recebido' ||
-    effectiveStatus === 'invested' ||
+    effectiveStatus === EventStatus.INVESTED ||
     effectiveStatus === 'investido' ||
+    effectiveStatus === EventStatus.SETTLED ||
     effectiveStatus === 'liquidado' ||
-    effectiveStatus === 'completed' ||
+    effectiveStatus === EventStatus.COMPLETED ||
     effectiveStatus === 'concluído' ||
-    effectiveStatus === 'amortized' ||
+    effectiveStatus === EventStatus.AMORTIZED ||
     effectiveStatus === 'amortizado' ||
     Boolean(event.isCompleted);
 
@@ -115,9 +117,9 @@ export default function TimelineEventCard({
     event.date &&
     event.date < todayStr &&
     !isCompleted &&
-    effectiveStatus !== 'cancelled' &&
+    effectiveStatus !== EventStatus.CANCELLED &&
     effectiveStatus !== 'cancelado' &&
-    effectiveStatus !== 'deleted' &&
+    effectiveStatus !== EventStatus.DELETED &&
     effectiveStatus !== 'excluido'
   );
 
@@ -132,8 +134,8 @@ export default function TimelineEventCard({
   const isCompletedInvestment = isInvestmentEvent && isCompleted;
   const isOverdueInvestment = isInvestmentEvent && isOverdue;
 
-  const isPaidLoan = isLoanInstallment && (effectiveStatus === 'paid' || effectiveStatus === 'pago' || effectiveStatus === 'liquidado' || event.isCompleted);
-  const isOverdueLoan = isLoanInstallment && (isOverdue || effectiveStatus === 'overdue' || effectiveStatus === 'atrasada');
+  const isPaidLoan = isLoanInstallment && (effectiveStatus === EventStatus.PAID || effectiveStatus === EventStatus.SETTLED || event.isCompleted);
+  const isOverdueLoan = isLoanInstallment && (isOverdue || effectiveStatus === EventStatus.OVERDUE);
   const isAbatida = effectiveStatus === 'abatida' || Boolean(event.isAbatida) || (Array.isArray(event.labels) && event.labels.includes('Abatida'));
 
   const abatedBreakdown = React.useMemo(() => {
@@ -183,16 +185,18 @@ export default function TimelineEventCard({
   const canEditAmount = isInertFuture || !isLocked;
 
   const isRecurring = Boolean(
+    event.periodicity === EventPeriodicity.RECURRING ||
+    event.periodicity === EventPeriodicity.RECURRENT ||
     event.periodicity === 'recorrente' ||
     event.isRecurring === true ||
     Boolean(event.eventId || event.seriesId) ||
     Boolean(
       event.category &&
       (event.category.includes('recorrente') ||
-       event.category === 'parcela_emprestimo' ||
-       event.category === 'repetitivo')
+        event.category === 'parcela_emprestimo' ||
+        event.category === 'repetitivo')
     )
-  ) && event.periodicity !== 'unico' && event.periodicity !== 'pontual' && event.category !== 'saida_esporadica' && event.category !== 'entrada_esporadica';
+  ) && event.periodicity !== EventPeriodicity.ONCE && event.periodicity !== EventPeriodicity.UNIQUE && event.periodicity !== 'unico' && event.periodicity !== 'pontual' && event.category !== 'saida_esporadica' && event.category !== 'entrada_esporadica';
 
   const handleSaveAmount = (e) => {
     if (e) {
@@ -756,7 +760,7 @@ export default function TimelineEventCard({
     if (isLoanInstallment) {
       if (isPaidLoan) {
         return {
-          label: `Liquidado às ${getCompletedTimeStr()}`,
+          label: language === 'en' ? `Settled at ${getCompletedTimeStr()}` : `Liquidado às ${getCompletedTimeStr()}`,
           icon: <CheckCircle2 size={11} />,
           bg: 'rgba(16, 185, 129, 0.15)',
           color: '#10b981',
@@ -765,7 +769,7 @@ export default function TimelineEventCard({
       }
       if (isOverdueLoan) {
         return {
-          label: 'Atrasada',
+          label: t('status.overdue'),
           icon: <AlertCircle size={11} />,
           bg: 'rgba(239, 68, 68, 0.18)',
           color: '#f87171',
@@ -774,7 +778,7 @@ export default function TimelineEventCard({
         };
       }
       return {
-        label: 'Pendente',
+        label: t('status.pending'),
         icon: <Circle size={11} />,
         bg: 'rgba(245, 158, 11, 0.15)',
         color: '#f59e0b',
@@ -785,7 +789,7 @@ export default function TimelineEventCard({
     if (isExpenseEvent) {
       if (isPaidExpense) {
         return {
-          label: `Pago às ${getCompletedTimeStr()}`,
+          label: language === 'en' ? `Paid at ${getCompletedTimeStr()}` : `Pago às ${getCompletedTimeStr()}`,
           icon: <CheckCircle2 size={11} />,
           bg: 'rgba(16, 185, 129, 0.15)',
           color: '#10b981',
@@ -794,7 +798,7 @@ export default function TimelineEventCard({
       }
       if (isOverdueExpense) {
         return {
-          label: 'Atrasada',
+          label: t('status.overdue'),
           icon: <AlertCircle size={11} />,
           bg: 'rgba(239, 68, 68, 0.18)',
           color: '#f87171',
@@ -803,7 +807,7 @@ export default function TimelineEventCard({
         };
       }
       return {
-        label: 'Pendente',
+        label: t('status.pending'),
         icon: <Clock size={11} />,
         bg: 'rgba(245, 158, 11, 0.15)',
         color: '#f59e0b',
@@ -814,7 +818,7 @@ export default function TimelineEventCard({
     if (isInvestmentEvent) {
       if (isCompletedInvestment) {
         return {
-          label: `Investido às ${getCompletedTimeStr()}`,
+          label: language === 'en' ? `Invested at ${getCompletedTimeStr()}` : `Investido às ${getCompletedTimeStr()}`,
           icon: <CheckCircle2 size={11} />,
           bg: 'rgba(99, 102, 241, 0.15)',
           color: 'var(--primary-light)',
@@ -823,7 +827,7 @@ export default function TimelineEventCard({
       }
       if (isOverdueInvestment) {
         return {
-          label: 'Atrasado',
+          label: t('status.overdue'),
           icon: <AlertCircle size={11} />,
           bg: 'rgba(239, 68, 68, 0.18)',
           color: '#f87171',
@@ -832,7 +836,7 @@ export default function TimelineEventCard({
         };
       }
       return {
-        label: 'Planeado',
+        label: t('status.planned'),
         icon: <Clock size={11} />,
         bg: 'rgba(99, 102, 241, 0.1)',
         color: 'var(--primary-light)',
@@ -842,7 +846,7 @@ export default function TimelineEventCard({
 
     if (!isCompleted && isOverdue) {
       return {
-        label: 'Atrasado',
+        label: t('status.overdue'),
         icon: <AlertCircle size={11} />,
         bg: 'rgba(239, 68, 68, 0.18)',
         color: '#f87171',
@@ -874,49 +878,36 @@ export default function TimelineEventCard({
 
   // Card specific backgrounds
   let cardStyle = {};
-  if (isOverdueIncome || isOverdueExpense || isOverdueInvestment || isOverdueLoan || (isOverdue && !isCompleted)) {
+  if (isIncomeEvent) {
+    cardStyle = {
+      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-card) 100%)',
+      borderLeft: '4px solid #10b981',
+      borderColor: 'rgba(16, 185, 129, 0.35)'
+    };
+  } else if (isOverdueExpense || isOverdueInvestment || isOverdueLoan || (isOverdue && !isCompleted)) {
     cardStyle = {
       background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, var(--bg-card) 100%)',
       borderLeft: '4px solid #ef4444',
       borderColor: 'rgba(239, 68, 68, 0.32)'
     };
-  } else if (isIncomeEvent) {
-    if (isReceivedIncome || isNextIncome) {
-      cardStyle = {
-        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-card) 100%)',
-        borderLeft: '4px solid #10b981',
-        borderColor: 'rgba(16, 185, 129, 0.28)'
-      };
-    } else {
-      cardStyle = {
-        background: 'rgba(255, 255, 255, 0.02)',
-        borderLeft: '4px solid #64748b',
-        borderColor: 'var(--border-glass)'
-      };
-    }
   } else if (isExpenseEvent) {
     cardStyle = {
-      background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.06) 0%, var(--bg-card) 100%)',
+      background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.08) 0%, var(--bg-card) 100%)',
       borderLeft: '4px solid #f43f5e',
-      borderColor: 'rgba(244, 63, 94, 0.25)'
+      borderColor: 'rgba(244, 63, 94, 0.35)'
     };
   } else if (isInvestmentEvent) {
     cardStyle = {
-      background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, var(--bg-card) 100%)',
+      background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, var(--bg-card) 100%)',
       borderLeft: '4px solid #6366f1',
-      borderColor: 'rgba(99, 102, 241, 0.25)'
+      borderColor: 'rgba(99, 102, 241, 0.35)'
     };
   } else if (isLoanInstallment) {
-    if (isPaidLoan) {
-      cardStyle = {
-        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, var(--bg-card) 100%)',
-        borderLeft: '4px solid #10b981'
-      };
-    } else {
-      cardStyle = {
-        borderLeft: '4px solid var(--primary)'
-      };
-    }
+    cardStyle = {
+      background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.08) 0%, var(--bg-card) 100%)',
+      borderLeft: '4px solid #0ea5e9',
+      borderColor: 'rgba(14, 165, 233, 0.35)'
+    };
   } else if (isAmortization) {
     cardStyle = {
       background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, var(--bg-card) 100%)',
@@ -1342,7 +1333,7 @@ export default function TimelineEventCard({
                 }}
               >
                 <Clock size={13} />
-                <span>Previsto</span>
+                <span>{t('status.planned')}</span>
               </div>
             ) : (
               <button
@@ -1406,7 +1397,7 @@ export default function TimelineEventCard({
                 {isReceivedIncome ? (
                   <>
                     <CheckCircle2 size={14} style={{ color: '#10b981' }} />
-                    <span>Recebido às {getCompletedTimeStr()}</span>
+                    <span>{t('status.receivedAt', { time: getCompletedTimeStr() })}</span>
                     <span
                       role="button"
                       tabIndex={0}
@@ -1435,12 +1426,12 @@ export default function TimelineEventCard({
                 ) : isOverdueIncome ? (
                   <>
                     <AlertCircle size={14} style={{ color: '#f87171' }} />
-                    <span>Em Atraso</span>
+                    <span>{t('status.overdue')}</span>
                   </>
                 ) : (
                   <>
                     <Clock size={14} style={{ color: isNextIncome ? '#f59e0b' : '#94a3b8' }} />
-                    <span>A Receber</span>
+                    <span>{t('status.toReceive')}</span>
                   </>
                 )}
               </button>
@@ -1456,14 +1447,10 @@ export default function TimelineEventCard({
           style={{
             background: isInertFuture
               ? 'rgba(148, 163, 184, 0.04)'
-              : isPaidExpense
-                ? 'rgba(16, 185, 129, 0.08)'
-                : 'rgba(244, 63, 94, 0.08)',
+              : 'rgba(244, 63, 94, 0.08)',
             border: isInertFuture
               ? '1px solid rgba(148, 163, 184, 0.18)'
-              : isPaidExpense
-                ? '1px solid rgba(16, 185, 129, 0.28)'
-                : '1px solid rgba(244, 63, 94, 0.22)',
+              : '1px solid rgba(244, 63, 94, 0.22)',
             borderRadius: '10px',
             padding: '8px 12px',
             margin: '10px 0',
@@ -1480,7 +1467,7 @@ export default function TimelineEventCard({
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                 Valor Pago / Débito
               </span>
-              {renderEditableAmount('-', isInertFuture ? '#94a3b8' : isPaidExpense ? '#10b981' : '#f43f5e')}
+              {renderEditableAmount('-', isInertFuture ? '#94a3b8' : '#f43f5e')}
             </div>
             {event.priority && !isInertFuture && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
@@ -1512,7 +1499,7 @@ export default function TimelineEventCard({
               }}
             >
               <Clock size={13} />
-              <span>Pendente</span>
+              <span>{t('status.pending')}</span>
             </div>
           ) : (
             <button
@@ -1562,7 +1549,7 @@ export default function TimelineEventCard({
               {isPaidExpense ? (
                 <>
                   <CheckCircle2 size={14} style={{ color: '#10b981' }} />
-                  <span>Pago às {getCompletedTimeStr()}</span>
+                  <span>{t('status.paidAt', { time: getCompletedTimeStr() })}</span>
                   <span
                     role="button"
                     tabIndex={0}
@@ -1591,12 +1578,12 @@ export default function TimelineEventCard({
               ) : isOverdueExpense ? (
                 <>
                   <AlertCircle size={14} style={{ color: '#f87171' }} />
-                  <span>Atrasada</span>
+                  <span>{t('status.overdue')}</span>
                 </>
               ) : (
                 <>
                   <Clock size={14} style={{ color: '#f59e0b' }} />
-                  <span>Pendente</span>
+                  <span>{t('status.pending')}</span>
                 </>
               )}
             </button>
@@ -1721,7 +1708,7 @@ export default function TimelineEventCard({
                 }}
               >
                 <Clock size={13} />
-                <span>Planeado</span>
+                <span>{t('status.planned')}</span>
               </div>
             ) : (
               <button
@@ -1789,7 +1776,7 @@ export default function TimelineEventCard({
                 ) : isCompletedInvestment ? (
                   <>
                     <CheckCircle2 size={14} style={{ color: '#8b5cf6' }} />
-                    <span>Investido às {getCompletedTimeStr()}</span>
+                    <span>{t('status.investedAt', { time: getCompletedTimeStr() })}</span>
                     <span
                       role="button"
                       tabIndex={0}
@@ -1813,129 +1800,129 @@ export default function TimelineEventCard({
                       title={isLocked ? 'Cadeado trancado (Clique para destravar)' : 'Cadeado aberto (Clique para trancar)'}
                     >
                       {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                  </span>
-                </>
-              ) : isOverdueInvestment ? (
-                <>
-                  <AlertCircle size={14} style={{ color: '#f87171' }} />
-                  <span>Atrasado</span>
-                </>
-              ) : (
-                <>
-                  <Clock size={14} style={{ color: '#94a3b8' }} />
-                  <span>Planeado</span>
-                </>
-              )}
-            </button>
-          )}
-        </div>
+                    </span>
+                  </>
+                ) : isOverdueInvestment ? (
+                  <>
+                    <AlertCircle size={14} style={{ color: '#f87171' }} />
+                    <span>{t('status.overdue')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Clock size={14} style={{ color: '#94a3b8' }} />
+                    <span>{t('status.planned')}</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
 
-        {/* 🎯 Barra de Progresso da Meta de Poupança / Investimento */}
-        {Number(event.targetAmount || 0) > 0 && (() => {
-          const seriesId = event.eventId || event.seriesId || event.id;
-          const baseInitial = Number(event.initialInvestedAmount || 0);
-          const isInvestmentsView = activeFinancialTab === 'investimentos' || timelineType === 'investimentos' || event.timelineOriginId === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
-          const isFuture = event.date > todayStr;
-          const useForecast = isInvestmentsView && isFuture;
+          {/* 🎯 Barra de Progresso da Meta de Poupança / Investimento */}
+          {Number(event.targetAmount || 0) > 0 && (() => {
+            const seriesId = event.eventId || event.seriesId || event.id;
+            const baseInitial = Number(event.initialInvestedAmount || 0);
+            const isInvestmentsView = activeFinancialTab === 'investimentos' || timelineType === 'investimentos' || event.timelineOriginId === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
+            const isFuture = event.date > todayStr;
+            const useForecast = isInvestmentsView && isFuture;
 
-          let currentSaved = baseInitial;
+            let currentSaved = baseInitial;
 
-          if (useForecast) {
-            // Em visão de Investimentos no futuro: computar a projeção/previsão acumulada
-            const priorPlannedAportes = (allEvents || [])
-              .filter((ev) => {
-                if (!ev || !ev.date || ev.date >= event.date) return false;
-                const matchSeries = (ev.eventId || ev.seriesId && ev.eventId || ev.seriesId === seriesId) || (ev.id === seriesId) || (ev.sobrepositionOver === seriesId) || (ev.category === event.category && ev.financialType === 'investimento');
-                const isValid = ev.status !== 'Cancelado' && ev.status !== 'Excluido';
-                return matchSeries && isValid;
-              })
-              .reduce((sum, ev) => sum + Number(ev.amount || 0), 0);
+            if (useForecast) {
+              // Em visão de Investimentos no futuro: computar a projeção/previsão acumulada
+              const priorPlannedAportes = (allEvents || [])
+                .filter((ev) => {
+                  if (!ev || !ev.date || ev.date >= event.date) return false;
+                  const matchSeries = (ev.eventId || ev.seriesId && ev.eventId || ev.seriesId === seriesId) || (ev.id === seriesId) || (ev.sobrepositionOver === seriesId) || (ev.category === event.category && ev.eventType === EventType.INVESTMENT);
+                  const isValid = ev.status !== 'Cancelado' && ev.status !== 'Excluido';
+                  return matchSeries && isValid;
+                })
+                .reduce((sum, ev) => sum + Number(ev.amount || 0), 0);
 
-            const thisMonthAmount = Number(event.amount || 0);
-            currentSaved = baseInitial + priorPlannedAportes + thisMonthAmount;
-          } else {
-            // Em visão de Balanço ou histórico realizado: computar apenas o património e aportes efetivamente liquidados até à data
-            const priorRealizedAportes = (allEvents || [])
-              .filter((ev) => {
-                if (!ev || !ev.date || ev.date >= event.date) return false;
-                const matchSeries = (ev.eventId || ev.seriesId && ev.eventId || ev.seriesId === seriesId) || (ev.id === seriesId) || (ev.sobrepositionOver === seriesId) || (ev.category === event.category && ev.financialType === 'investimento');
-                const isDone = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted;
-                return matchSeries && isDone;
-              })
-              .reduce((sum, ev) => sum + Number(ev.amount || 0), 0);
+              const thisMonthAmount = Number(event.amount || 0);
+              currentSaved = baseInitial + priorPlannedAportes + thisMonthAmount;
+            } else {
+              // Em visão de Balanço ou histórico realizado: computar apenas o património e aportes efetivamente liquidados até à data
+              const priorRealizedAportes = (allEvents || [])
+                .filter((ev) => {
+                  if (!ev || !ev.date || ev.date >= event.date) return false;
+                  const matchSeries = (ev.eventId || ev.seriesId && ev.eventId || ev.seriesId === seriesId) || (ev.id === seriesId) || (ev.sobrepositionOver === seriesId) || (ev.category === event.category && ev.eventType === EventType.INVESTMENT);
+                  const isDone = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted;
+                  return matchSeries && isDone;
+                })
+                .reduce((sum, ev) => sum + Number(ev.amount || 0), 0);
 
-            currentSaved = baseInitial + priorRealizedAportes;
-          }
+              currentSaved = baseInitial + priorRealizedAportes;
+            }
 
-          const targetVal = Number(event.targetAmount);
-          const progressPct = Math.min(100, Math.max(0, Math.round((currentSaved / targetVal) * 100)));
+            const targetVal = Number(event.targetAmount);
+            const progressPct = Math.min(100, Math.max(0, Math.round((currentSaved / targetVal) * 100)));
 
-          const labelTitle = useForecast
-            ? `Previsão de Progresso da Meta (${formatCurrency(currentSaved)} de ${formatCurrency(targetVal)})`
-            : `Progresso da Meta (${formatCurrency(currentSaved)} de ${formatCurrency(targetVal)})`;
+            const labelTitle = useForecast
+              ? `Previsão de Progresso da Meta (${formatCurrency(currentSaved)} de ${formatCurrency(targetVal)})`
+              : `Progresso da Meta (${formatCurrency(currentSaved)} de ${formatCurrency(targetVal)})`;
 
-          const labelPercent = useForecast
-            ? (progressPct >= 100 ? '🎉 Meta Atingida (Previsão)!' : `${progressPct}% previsto`)
-            : (progressPct >= 100 ? '🎉 Meta Atingida!' : `${progressPct}% alcançado`);
+            const labelPercent = useForecast
+              ? (progressPct >= 100 ? '🎉 Meta Atingida (Previsão)!' : `${progressPct}% previsto`)
+              : (progressPct >= 100 ? '🎉 Meta Atingida!' : `${progressPct}% alcançado`);
 
-          return (
-            <div
-              style={{
-                width: '100%',
-                marginTop: '10px',
-                paddingTop: '8px',
-                borderTop: '1px solid rgba(139, 92, 246, 0.15)'
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  fontSize: '0.73rem',
-                  fontWeight: '700',
-                  color: useForecast ? '#c084fc' : '#a78bfa',
-                  marginBottom: '5px'
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <Target size={12} />
-                  <span>{labelTitle}</span>
-                </span>
-                <span style={{ color: progressPct >= 100 ? '#10b981' : (useForecast ? '#38bdf8' : '#c084fc'), fontWeight: '800' }}>
-                  {labelPercent}
-                </span>
-              </div>
+            return (
               <div
                 style={{
                   width: '100%',
-                  height: '6px',
-                  background: 'rgba(148, 163, 184, 0.15)',
-                  borderRadius: '9999px',
-                  overflow: 'hidden',
-                  position: 'relative'
+                  marginTop: '10px',
+                  paddingTop: '8px',
+                  borderTop: '1px solid rgba(139, 92, 246, 0.15)'
                 }}
               >
                 <div
                   style={{
-                    width: `${progressPct}%`,
-                    height: '100%',
-                    background: progressPct >= 100
-                      ? 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'
-                      : useForecast
-                        ? 'linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #38bdf8 100%)'
-                        : 'linear-gradient(90deg, #8b5cf6 0%, #a855f7 100%)',
-                    borderRadius: '9999px',
-                    transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    boxShadow: useForecast ? '0 0 12px rgba(56, 189, 248, 0.35)' : '0 0 10px rgba(139, 92, 246, 0.4)'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: '0.73rem',
+                    fontWeight: '700',
+                    color: useForecast ? '#c084fc' : '#a78bfa',
+                    marginBottom: '5px'
                   }}
-                />
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <Target size={12} />
+                    <span>{labelTitle}</span>
+                  </span>
+                  <span style={{ color: progressPct >= 100 ? '#10b981' : (useForecast ? '#38bdf8' : '#c084fc'), fontWeight: '800' }}>
+                    {labelPercent}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: '100%',
+                    height: '6px',
+                    background: 'rgba(148, 163, 184, 0.15)',
+                    borderRadius: '9999px',
+                    overflow: 'hidden',
+                    position: 'relative'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${progressPct}%`,
+                      height: '100%',
+                      background: progressPct >= 100
+                        ? 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'
+                        : useForecast
+                          ? 'linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #38bdf8 100%)'
+                          : 'linear-gradient(90deg, #8b5cf6 0%, #a855f7 100%)',
+                      borderRadius: '9999px',
+                      transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: useForecast ? '0 0 12px rgba(56, 189, 248, 0.35)' : '0 0 10px rgba(139, 92, 246, 0.4)'
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          );
-        })()}
-      </div>
-    )}
+            );
+          })()}
+        </div>
+      )}
 
       {/* ⚡ Amortização Extraordinária Strip */}
       {isAmortization && (
@@ -1995,13 +1982,13 @@ export default function TimelineEventCard({
                 }
               }}
               style={{
-                background: (event.status === 'Amortizado' || event.status === 'Concluído' || event.isCompleted)
+                background: (event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted)
                   ? 'rgba(16, 185, 129, 0.16)'
                   : 'rgba(245, 158, 11, 0.16)',
-                color: (event.status === 'Amortizado' || event.status === 'Concluído' || event.isCompleted)
+                color: (event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted)
                   ? '#10b981'
                   : '#f59e0b',
-                border: (event.status === 'Amortizado' || event.status === 'Concluído' || event.isCompleted)
+                border: (event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted)
                   ? '1px solid rgba(16, 185, 129, 0.4)'
                   : '1px solid rgba(245, 158, 11, 0.4)',
                 borderRadius: '9999px',
@@ -2014,17 +2001,17 @@ export default function TimelineEventCard({
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
               }}
-              title="Clique para alternar entre Amortizado (Efetivado) e Pendente (Agendado)"
+              title={language === 'en' ? "Click to toggle between Amortized and Pending" : "Clique para alternar entre Amortizado (Efetivado) e Pendente (Agendado)"}
             >
-              {(event.status === 'Amortizado' || event.status === 'Concluído' || event.isCompleted) ? (
+              {(event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted) ? (
                 <>
                   <CheckCircle2 size={13} style={{ color: '#10b981' }} />
-                  <span>Amortizado</span>
+                  <span>{t('status.amortized')}</span>
                 </>
               ) : (
                 <>
                   <Clock size={13} style={{ color: '#f59e0b' }} />
-                  <span>Pendente</span>
+                  <span>{t('status.pending')}</span>
                 </>
               )}
             </button>
@@ -2139,7 +2126,7 @@ export default function TimelineEventCard({
                 title="Parcela abatida por amortização extraordinária antecipada."
               >
                 <CheckCircle2 size={13} style={{ color: '#94a3b8' }} />
-                <span>Abatida</span>
+                <span>{t('status.abatida')}</span>
               </div>
             ) : isInertFuture ? (
               <div
@@ -2213,7 +2200,7 @@ export default function TimelineEventCard({
                 {isPaidLoan ? (
                   <>
                     <CheckCircle2 size={14} style={{ color: '#10b981' }} />
-                    <span>Liquidado às {getCompletedTimeStr()}</span>
+                    <span>{t('status.settledAt', { time: getCompletedTimeStr() })}</span>
                     <span
                       role="button"
                       tabIndex={0}
@@ -2242,12 +2229,12 @@ export default function TimelineEventCard({
                 ) : isOverdueLoan ? (
                   <>
                     <AlertCircle size={14} style={{ color: '#f87171' }} />
-                    <span>Atrasada</span>
+                    <span>{t('status.overdue')}</span>
                   </>
                 ) : (
                   <>
                     <Clock size={14} style={{ color: '#f59e0b' }} />
-                    <span>Pendente</span>
+                    <span>{t('status.pending')}</span>
                   </>
                 )}
               </button>

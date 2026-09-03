@@ -27,6 +27,16 @@ export const translations = {
       add: "Add"
     },
 
+    // Toast Notifications
+    toast: {
+      eventSavedSuccess: "Event saved successfully to database!",
+      eventCreatedSuccess: "Event created successfully in database!",
+      eventUpdatedSuccess: "Event updated successfully in database!",
+      eventDeletedSuccess: "Event deleted from database!",
+      eventSaveError: "Error saving event to database.",
+      eventDeleteError: "Error deleting event from database."
+    },
+
     // Timeline Rows & Cards
     timeline: {
       eventsCount: "{count} event(s)",
@@ -139,7 +149,13 @@ export const translations = {
       deleted: "Deleted",
       inProgress: "In Progress",
       settled: "Settled",
-      abatida: "Abated"
+      abatida: "Abated",
+      toReceive: "To Receive",
+      toPay: "To Pay",
+      receivedAt: "Received at {time}",
+      paidAt: "Paid at {time}",
+      investedAt: "Invested at {time}",
+      settledAt: "Settled at {time}"
     },
 
     // Periodicities
@@ -212,9 +228,19 @@ export const translations = {
       cancel: "Cancelar",
       delete: "Eliminar",
       edit: "Editar",
-      all: "Todas",
+      all: "Todos",
       deselectAll: "Desmarcar",
       add: "Adicionar"
+    },
+
+    // Toast Notifications
+    toast: {
+      eventSavedSuccess: "Evento guardado com sucesso na base de dados!",
+      eventCreatedSuccess: "Evento adicionado com sucesso na base de dados!",
+      eventUpdatedSuccess: "Evento atualizado com sucesso na base de dados!",
+      eventDeletedSuccess: "Evento eliminado da base de dados!",
+      eventSaveError: "Erro ao guardar evento na base de dados.",
+      eventDeleteError: "Erro ao eliminar evento da base de dados."
     },
 
     // Timeline Rows & Cards
@@ -329,7 +355,13 @@ export const translations = {
       deleted: "Excluído",
       inProgress: "Em Progresso",
       settled: "Liquidado",
-      abatida: "Abatida"
+      abatida: "Abatida",
+      toReceive: "A Receber",
+      toPay: "A Pagar",
+      receivedAt: "Recebido às {time}",
+      paidAt: "Pago às {time}",
+      investedAt: "Investido às {time}",
+      settledAt: "Liquidado às {time}"
     },
 
     // Periodicities

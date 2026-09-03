@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format, parseISO, addMonths } from 'date-fns';
+import { format, parseISO, addMonths, subMonths } from 'date-fns';
 import Navbar from './components/Navbar';
 import TimelineHeader from './components/TimelineHeader';
 import VerticalTimeline from './components/VerticalTimeline';
@@ -18,11 +18,16 @@ import {
 } from './utils/loanCalculations';
 import * as api from './services/api';
 import { generateUUID } from './utils/uuid';
-import { FinancialType, EventStatus, TimelineType, EventPriority, AmortizationStrategy } from './enums/index.js';
+import { EventType, EventStatus, TimelineType, EventPriority, AmortizationStrategy } from './enums/index.js';
+import { useToast } from './context/ToastContext.jsx';
+import { useTranslation } from './i18n/LanguageContext.jsx';
 import { RotateCcw, X } from 'lucide-react';
 import './App.css';
 
 export default function App() {
+  const { showToast } = useToast();
+  const { t } = useTranslation();
+
   // Timeboards State (Top Level Grouping)
   const [timeboards, setTimeboards] = useState(() => {
     try {
@@ -100,37 +105,6 @@ export default function App() {
     return () => { isMounted = false; };
   }, []);
 
-  // Fetch all timelines for the active or default timeboard from the database
-  useEffect(() => {
-    if (!activeTimeboardId) return;
-    let isMounted = true;
-
-    api.fetchTimelines({ timeboardId: activeTimeboardId })
-      .then((data) => {
-        if (isMounted && Array.isArray(data)) {
-          setTimelines(data);
-          if (data.length > 0) {
-            const balanceTl = data.find((tl) => tl.type === TimelineType.BALANCE);
-            const defaultTl = balanceTl || data[0];
-
-            setActiveTimelineId((prev) => {
-              const exists = data.some((tl) => tl.id === prev);
-              return exists ? prev : defaultTl.id;
-            });
-            setActiveFinancialTab((prev) => {
-              const exists = data.some((tl) => tl.id === prev);
-              return exists ? prev : defaultTl.id;
-            });
-          }
-        }
-      })
-      .catch((err) => {
-        console.error('Error fetching timelines for timeboard:', err.message);
-      });
-
-    return () => { isMounted = false; };
-  }, [activeTimeboardId]);
-
   const [rawEvents, setRawEvents] = useState([]);
 
   // Modal states
@@ -147,34 +121,114 @@ export default function App() {
   const [pastHorizonYears, setPastHorizonYears] = useState(1);
   const scrollYBeforeModalRef = React.useRef(0);
 
-  const refreshTimelines = async () => {
+  const timelinesRef = React.useRef(timelines);
+  React.useEffect(() => {
+    timelinesRef.current = timelines;
+  }, [timelines]);
+
+  const fetchEventsForVisiblePeriod = React.useCallback(async (targetTlId, pastYears = 1, futureYears = 1, overrideTimelines = null) => {
+    if (!activeTimeboardId) return;
+
+    const currentTlId = targetTlId || activeFinancialTab || activeTimelineId;
+    const timelinesList = overrideTimelines || timelinesRef.current || [];
+    if (!timelinesList || timelinesList.length === 0) return;
+
+    const targetTl = timelinesList.find((t) => t.id === currentTlId || t.type === currentTlId);
+    const isBalance = targetTl?.type === TimelineType.BALANCE;
+
+    let startDate, endDate;
+    if (isBalance) {
+      // Balance only shows last 12 months up to current month (e.g. 2025-09-01 to 2026-08-31)
+      startDate = '2025-09-01';
+      endDate = '2026-08-31';
+    } else {
+      // Other timelines: 1 year past to 1 year future by default, expandable by pastYears/futureYears
+      const pastMonths = Math.max(1, pastYears) * 12;
+      const futureMonths = Math.max(1, futureYears) * 12;
+      const startObj = subMonths(parseISO('2026-08-01'), pastMonths);
+      const endObj = addMonths(parseISO('2026-08-31'), futureMonths);
+      startDate = format(startObj, 'yyyy-MM-01');
+      endDate = format(endObj, 'yyyy-MM-31');
+    }
+
     try {
-      const [tlData, evData] = await Promise.all([
-        api.fetchTimelines({ startDate: '2024-01-01', endDate: '2056-12-31' }),
-        api.fetchEvents({ startDate: '2024-01-01', endDate: '2056-12-31' })
-      ]);
-      if (Array.isArray(tlData)) {
-        setTimelines(tlData);
-      }
+      const params = {
+        timeboardId: activeTimeboardId,
+        startDate,
+        endDate
+      };
+
+      const evData = await api.fetchEvents(params);
       if (Array.isArray(evData)) {
         setRawEvents(evData);
       }
+    } catch (e) {
+      console.error('Error fetching events for period:', e);
+    }
+  }, [activeTimeboardId]);
+
+  // Fetch all timelines for the active timeboard from the database
+  useEffect(() => {
+    if (!activeTimeboardId) return;
+    let isMounted = true;
+
+    api.fetchTimelines({ timeboardId: activeTimeboardId })
+      .then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setTimelines(data);
+          if (data.length > 0) {
+            const balanceTl = data.find((tl) => tl.type === TimelineType.BALANCE);
+            const defaultTl = balanceTl || data[0];
+
+            const rawTargetId = activeFinancialTab || activeTimelineId;
+            const targetTl = data.find((tl) => tl.id === rawTargetId || tl.type === rawTargetId) || defaultTl;
+
+            if (activeTimelineId !== targetTl.id) {
+              setActiveTimelineId(targetTl.id);
+            }
+            if (activeFinancialTab !== targetTl.id) {
+              setActiveFinancialTab(targetTl.id);
+            }
+
+            fetchEventsForVisiblePeriod(targetTl.id, pastHorizonYears, futureHorizonYears, data);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('Error fetching timelines for timeboard:', err.message);
+      });
+
+    return () => { isMounted = false; };
+  }, [activeTimeboardId]);
+
+  const refreshTimelines = async (pastYears = pastHorizonYears, futureYears = futureHorizonYears) => {
+    try {
+      const tlData = await api.fetchTimelines({ timeboardId: activeTimeboardId });
+      if (Array.isArray(tlData)) {
+        setTimelines(tlData);
+      }
+      await fetchEventsForVisiblePeriod(activeFinancialTab || activeTimelineId, pastYears, futureYears, tlData);
       return tlData;
     } catch (e) {
-      console.error('Error refreshing timelines and events:', e);
+      console.error('Error refreshing timelines:', e);
     }
   };
+
+  useEffect(() => {
+    const currentTlId = activeFinancialTab || activeTimelineId;
+    if (currentTlId && activeTimeboardId) {
+      fetchEventsForVisiblePeriod(currentTlId, pastHorizonYears, futureHorizonYears);
+    }
+  }, [activeFinancialTab, activeTimelineId, activeTimeboardId, pastHorizonYears, futureHorizonYears, fetchEventsForVisiblePeriod]);
 
   const handleLoadMoreFuture = async () => {
     const nextYears = futureHorizonYears + 1;
     setFutureHorizonYears(nextYears);
-    await refreshTimelines(nextYears, pastHorizonYears);
   };
 
   const handleLoadMorePast = async () => {
     const nextPast = pastHorizonYears + 1;
     setPastHorizonYears(nextPast);
-    await refreshTimelines(futureHorizonYears, nextPast);
   };
 
   // Loan Specific Modals
@@ -269,15 +323,15 @@ export default function App() {
     if (!activeTimeboard || activeTimeboardTimelines.length === 0) return null;
 
     const currentSelected = activeTimeboardTimelines.find(
-      (tl) => tl.id === activeFinancialTab || tl.id === activeTimelineId
+      (tl) => tl.id === activeFinancialTab || tl.type === activeFinancialTab || tl.id === activeTimelineId || tl.type === activeTimelineId
     ) || activeTimeboardTimelines[0];
 
     return {
       ...currentSelected,
       timelines: activeTimeboardTimelines,
-      events: []
+      events: rawEvents || []
     };
-  }, [activeTimeboard, activeTimeboardTimelines, activeFinancialTab, activeTimelineId]);
+  }, [activeTimeboard, activeTimeboardTimelines, activeFinancialTab, activeTimelineId, rawEvents]);
 
   // ----------------------------------------------------
   // Timeline Handlers
@@ -378,6 +432,7 @@ export default function App() {
             eventId: editingEvent.eventId || editingEvent.seriesId,
             version: editingEvent.version
           });
+          showToast(t('toast.eventUpdatedSuccess') || 'Evento atualizado com sucesso na base de dados!', 'success');
         } else {
           const isRecurring = eventData.periodicity === 'recorrente' || eventData.isRecurring || (eventData.category && eventData.category.includes('recorrente'));
           const newEvent = {
@@ -391,11 +446,13 @@ export default function App() {
             isRecurring: Boolean(isRecurring)
           };
           await api.createEvent(newEvent);
+          showToast(t('toast.eventCreatedSuccess') || 'Evento adicionado com sucesso na base de dados!', 'success');
         }
 
         await refreshTimelines();
       } catch (err) {
         console.error('Error saving event:', err);
+        showToast(t('toast.eventSaveError') || 'Erro ao guardar evento na base de dados.', 'error');
       }
     };
 
@@ -453,11 +510,11 @@ export default function App() {
           let newStatus = ev.status;
           let newIsCompleted = Boolean(ev.isCompleted);
 
-          const isNotCancelledOrDeleted = ev.status !== 'cancelled' && ev.status !== 'deleted' && ev.status !== 'Cancelado' && ev.status !== 'Excluido';
+          const isNotCancelledOrDeleted = ev.status !== EventStatus.CANCELLED && ev.status !== EventStatus.DELETED;
           if (nextAuto && ev.date && ev.date <= todayStr && isNotCancelledOrDeleted) {
-            const isIncome = ev.financialType === 'income' || ev.financialType === 'entrada' || ev.isIncome || ev.category?.startsWith('entrada');
-            const isInvestment = ev.financialType === 'investment' || ev.financialType === 'investimento' || ev.isInvestment || ev.category?.startsWith('investimento');
-            const isAmortization = ev.financialType === 'amortization' || ev.financialType === 'amortizacao' || ev.category === 'amortizacao';
+            const isIncome = ev.eventType === EventType.INCOME;
+            const isInvestment = ev.eventType === EventType.INVESTMENT;
+            const isAmortization = ev.eventType === EventType.AMORTIZATION;
 
             if (isIncome) {
               newStatus = 'received';
@@ -547,8 +604,10 @@ export default function App() {
           date: targetEvent.date
         });
         await refreshTimelines();
+        showToast(t('toast.eventDeletedSuccess') || 'Evento eliminado da base de dados!', 'success');
       } catch (err) {
         console.error('Error deleting event:', err);
+        showToast(t('toast.eventDeleteError') || 'Erro ao eliminar evento da base de dados.', 'error');
       }
     };
 
@@ -689,19 +748,22 @@ export default function App() {
       prevEvents.map((ev) => {
         if (ev.id !== installmentId) return ev;
 
-        const isIncome = ev.isIncome || ev.financialType === FinancialType.INCOME || ev.financialType === 'entrada' || (ev.category && ev.category.startsWith('entrada'));
-        const isInvestment = ev.isInvestment || ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || (ev.category && ev.category.startsWith('investimento'));
+        const isIncome = ev.eventType === EventType.INCOME;
+        const isInvestment = ev.eventType === EventType.INVESTMENT;
 
         let nextStatus, nextCompleted;
         if (isIncome) {
-          nextStatus = ev.status === 'Recebido' || ev.status === EventStatus.RECEIVED ? 'Pendente' : 'Recebido';
-          nextCompleted = nextStatus === 'Recebido';
+          const isCurrReceived = ev.status === EventStatus.RECEIVED || Boolean(ev.isCompleted);
+          nextStatus = isCurrReceived ? EventStatus.PENDING : EventStatus.RECEIVED;
+          nextCompleted = !isCurrReceived;
         } else if (isInvestment) {
-          nextStatus = (ev.status === 'Investido' || ev.status === 'Pago' || ev.status === EventStatus.INVESTED || ev.status === EventStatus.PAID) ? 'Planeado' : 'Investido';
-          nextCompleted = nextStatus === 'Investido';
+          const isCurrInvested = ev.status === EventStatus.INVESTED || ev.status === EventStatus.PAID || Boolean(ev.isCompleted);
+          nextStatus = isCurrInvested ? EventStatus.PLANNED : EventStatus.INVESTED;
+          nextCompleted = !isCurrInvested;
         } else {
-          nextStatus = ev.status === 'Pago' || ev.status === EventStatus.PAID ? 'Pendente' : 'Pago';
-          nextCompleted = nextStatus === 'Pago';
+          const isCurrPaid = ev.status === EventStatus.PAID || Boolean(ev.isCompleted);
+          nextStatus = isCurrPaid ? EventStatus.PENDING : EventStatus.PAID;
+          nextCompleted = !isCurrPaid;
         }
 
         return {
@@ -724,19 +786,22 @@ export default function App() {
         const updatedEvents = (tl.events || []).map((ev) => {
           if (ev.id !== installmentId) return ev;
 
-          const isIncome = ev.isIncome || ev.financialType === FinancialType.INCOME || ev.financialType === 'entrada' || (ev.category && ev.category.startsWith('entrada'));
-          const isInvestment = ev.isInvestment || ev.financialType === FinancialType.INVESTMENT || ev.financialType === 'investimento' || (ev.category && ev.category.startsWith('investimento'));
+          const isIncome = ev.eventType === EventType.INCOME;
+          const isInvestment = ev.eventType === EventType.INVESTMENT;
 
           let nextStatus, nextCompleted;
           if (isIncome) {
-            nextStatus = ev.status === 'Recebido' || ev.status === EventStatus.RECEIVED ? 'Pendente' : 'Recebido';
-            nextCompleted = nextStatus === 'Recebido';
+            const isCurrReceived = ev.status === EventStatus.RECEIVED || Boolean(ev.isCompleted);
+            nextStatus = isCurrReceived ? EventStatus.PENDING : EventStatus.RECEIVED;
+            nextCompleted = !isCurrReceived;
           } else if (isInvestment) {
-            nextStatus = (ev.status === 'Investido' || ev.status === 'Pago' || ev.status === EventStatus.INVESTED || ev.status === EventStatus.PAID) ? 'Planeado' : 'Investido';
-            nextCompleted = nextStatus === 'Investido';
+            const isCurrInvested = ev.status === EventStatus.INVESTED || ev.status === EventStatus.PAID || Boolean(ev.isCompleted);
+            nextStatus = isCurrInvested ? EventStatus.PLANNED : EventStatus.INVESTED;
+            nextCompleted = !isCurrInvested;
           } else {
-            nextStatus = ev.status === 'Pago' || ev.status === EventStatus.PAID ? 'Pendente' : 'Pago';
-            nextCompleted = nextStatus === 'Pago';
+            const isCurrPaid = ev.status === EventStatus.PAID || Boolean(ev.isCompleted);
+            nextStatus = isCurrPaid ? EventStatus.PENDING : EventStatus.PAID;
+            nextCompleted = !isCurrPaid;
           }
 
           return {
@@ -759,6 +824,7 @@ export default function App() {
 
     try {
       await api.toggleEventPayment(installmentId);
+      await fetchEventsForVisiblePeriod(activeFinancialTab || activeTimelineId, pastHorizonYears, futureHorizonYears);
     } catch (err) {
       console.error('Error toggling payment status:', err);
     }
@@ -776,7 +842,7 @@ export default function App() {
     }
 
     // Update the specific installment's values and status
-    const isPaid = status === 'Pago';
+    const isPaid = status === EventStatus.PAID;
     const updatedList = currentEvents.map((ev) => {
       if (ev.id === installmentId) {
         return {
@@ -800,7 +866,7 @@ export default function App() {
   };
 
   // Save extraordinary amortization event
-  const handleSaveAmortization = async ({ id, amount, date, strategy, status = 'Amortizado', notes }) => {
+  const handleSaveAmortization = async ({ id, amount, date, strategy, status = EventStatus.AMORTIZED, notes }) => {
     const amortVal = Number(amount);
     if (isNaN(amortVal) || amortVal <= 0) return;
 
@@ -825,7 +891,7 @@ export default function App() {
 
     const loanName = targetTimeline.name || 'Empréstimo';
     const targetDate = date || '2026-08-15';
-    const isCompleted = status === EventStatus.AMORTIZED || status === 'Amortizado' || status === EventStatus.PAID || status === 'Pago';
+    const isCompleted = status === EventStatus.AMORTIZED || status === EventStatus.PAID;
 
     const amortEvent = {
       id: generateUUID(),
@@ -841,7 +907,7 @@ export default function App() {
       time: '12:00',
       amount: amortVal,
       amortizationAmount: amortVal,
-      financialType: FinancialType.AMORTIZATION,
+      eventType: EventType.AMORTIZATION,
       isAmortization: true,
       isExpense: true,
       isIncome: false,

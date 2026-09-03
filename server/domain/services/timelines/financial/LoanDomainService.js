@@ -1,4 +1,4 @@
-import { EventStatus, FinancialType, TimelineStatus } from '../../../../../shared/enums/index.js';
+import { EventStatus, EventType, TimelineStatus } from '../../../../../shared/enums/index.js';
 
 /**
  * Domain Service: LoanDomainService
@@ -13,7 +13,7 @@ export class LoanDomainService {
       if (!ev || ev.isDeleted) return false;
       if (timelineId && (ev.timelineId === timelineId || ev.timelineOriginId === timelineId)) return true;
       return (
-        ev.financialType === FinancialType.AMORTIZATION
+        ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT
       );
     });
   }

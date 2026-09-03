@@ -1,5 +1,4 @@
-import { EventCategory } from '../../../shared/enums/EventCategory.js';
-import { TimelineType, EventAggregation, EventStatus } from '../../../shared/enums/index.js';
+import { TimelineType, EventAggregation, EventStatus, LoanEventCategory } from '../../../shared/enums/index.js';
 
 /**
  * Aggregate Root: LoanContract
@@ -14,7 +13,7 @@ export class LoanContract {
     name,
     automatic = false,
     type = TimelineType.LOAN,
-    category = EventCategory.NONE,
+    category = LoanEventCategory.NONE,
     color = '#6366f1',
     description = '',
     totalDebt = 0,

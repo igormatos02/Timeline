@@ -55,7 +55,7 @@ import {
 import TimelineEventCard from './TimelineEventCard';
 import FloatingTaskStack from './FloatingTaskStack';
 import { getGroupingForPeriodicity, formatCurrency } from '../utils/loanCalculations';
-import { EventType, EventStatus, EventStatusLabel, TimelineType, EventCategory } from '../enums/index.js';
+import { EventType, EventStatus, EventStatusLabel, TimelineType, IncomeEventCategory, ExpensesEventCategory, InvestmentEventCategory, LoanEventCategory } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 function VerticalTimeline({
@@ -97,7 +97,7 @@ function VerticalTimeline({
   const isLoanTimelineOrTab = timeline.type === TimelineType.LOAN;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState(EventStatus.ALL);
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(EventCategory.ALL);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
   const [selectedLabelFilter, setSelectedLabelFilter] = useState('Todos');
   const [showEmptyDays, setShowEmptyDays] = useState(true);
 
@@ -322,9 +322,8 @@ function VerticalTimeline({
       }
 
       const matchesCategory =
-        selectedCategoryFilter === EventCategory.ALL ||
-        selectedCategoryFilter === 'Todos' ||
         selectedCategoryFilter === 'all' ||
+        selectedCategoryFilter === 'Todos' ||
         ev.category === selectedCategoryFilter;
 
       const matchesTimelineMultiSelect =
@@ -384,7 +383,9 @@ function VerticalTimeline({
       const timeA = a.time || '00:00';
       const timeB = b.time || '00:00';
       if (timeA !== timeB) return timeB.localeCompare(timeA);
-      return (b.title || '').localeCompare(a.title || '');
+      const titleCmp = (b.title || '').localeCompare(a.title || '');
+      if (titleCmp !== 0) return titleCmp;
+      return String(b.id || '').localeCompare(String(a.id || ''));
     });
   }, [
     timelineEvents,
@@ -402,12 +403,7 @@ function VerticalTimeline({
     todayStr
   ]);
 
-  // Re-anchor scroll on Today when events load from backend if user has not manually interacted
-  React.useLayoutEffect(() => {
-    if (!userInteractedRef.current) {
-      positionOnToday('instant');
-    }
-  }, [filteredEvents, timelineEvents, positionOnToday]);
+
 
   // Collect all unique labels for filter pills
   const availableLabels = useMemo(() => {
@@ -593,7 +589,9 @@ function VerticalTimeline({
         const timeA = a.time || '00:00';
         const timeB = b.time || '00:00';
         if (timeA !== timeB) return timeB.localeCompare(timeA);
-        return (b.title || '').localeCompare(a.title || '');
+        const titleCmp = (b.title || '').localeCompare(a.title || '');
+        if (titleCmp !== 0) return titleCmp;
+        return String(b.id || '').localeCompare(String(a.id || ''));
       });
     });
 
@@ -1585,7 +1583,9 @@ function VerticalTimeline({
               <span>{t('sidebar.categoryType')}</span>
             </div>
             <div className="sidebar-btn-group">
-              {([TimelineType.INCOME, TimelineType.BALANCE, TimelineType.INVESTMENT, TimelineType.EXPENSE].includes(timeline.type)
+              {
+              /* 
+              ([TimelineType.INCOME, TimelineType.BALANCE, TimelineType.INVESTMENT, TimelineType.EXPENSE].includes(timeline.type)
                 ? [
                   { id: EventCategory.ALL, name: t('category.all'), icon: <Layers size={13} /> },
                   { id: EventCategory.RECURRING_INCOME, name: t('category.recurringIncome'), icon: <DollarSign size={13} /> },
@@ -1622,7 +1622,7 @@ function VerticalTimeline({
                   </div>
                   {selectedCategoryFilter === cat.id && <span style={{ fontSize: '0.75rem', color: 'var(--primary-light)' }}>✓</span>}
                 </button>
-              ))}
+              ))*/}
             </div>
           </div>
         )}

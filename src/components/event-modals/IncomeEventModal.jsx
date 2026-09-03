@@ -14,7 +14,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { format, parseISO, addMonths, getDaysInMonth, setMonth, setYear } from 'date-fns';
-import { EventStatus, EventPeriodicity, EventType } from '../../../shared/enums/index.js';
+import { EventStatus, EventPeriodicity, EventType, IncomeEventCategory } from '../../../shared/enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 
 export default function IncomeEventModal({
@@ -44,7 +44,8 @@ export default function IncomeEventModal({
     recurrenceEndDate: '',
     amount: '',
     labelsInput: '',
-    isAutomatic: false
+    isAutomatic: false,
+    category: IncomeEventCategory.NONE
   });
 
   // 1. Foco e seleção automática do título ao abrir
@@ -129,7 +130,8 @@ export default function IncomeEventModal({
         recurrenceEndDate: endRecDate,
         amount: initialData.amount !== undefined ? initialData.amount : '',
         labelsInput: Array.isArray(initialData.labels) ? initialData.labels.join(', ') : '',
-        isAutomatic: Boolean(initialData.isAutomatic)
+        isAutomatic: Boolean(initialData.isAutomatic),
+        category: initialData.category || IncomeEventCategory.NONE
       });
       setUpdateScope('subsequent');
       setBreakdownItems(initialData.breakdownItems ? JSON.parse(JSON.stringify(initialData.breakdownItems)) : []);
@@ -154,7 +156,8 @@ export default function IncomeEventModal({
         recurrenceEndDate: defaultEndMonth,
         amount: '',
         labelsInput: '',
-        isAutomatic: false
+        isAutomatic: false,
+        category: IncomeEventCategory.NONE
       });
       setUpdateScope('single');
       setBreakdownItems([]);
@@ -223,6 +226,7 @@ export default function IncomeEventModal({
       timelineId: timeline?.id,
       timelineOriginId: timeline?.id,
       labels,
+      category: formData.category || IncomeEventCategory.NONE,
       isAutomatic: formData.isAutomatic,
       updateScope: initialData?.seriesId ? updateScope : undefined
     };
@@ -311,6 +315,34 @@ export default function IncomeEventModal({
               className="form-input"
               style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', boxSizing: 'border-box' }}
             />
+          </div>
+
+          {/* Categoria do Rendimento */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
+              {t('sidebar.categoryType') || 'Categoria'}
+            </label>
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="form-input"
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                boxSizing: 'border-box',
+                background: 'var(--bg-glass, rgba(255,255,255,0.03))',
+                color: 'var(--text-main)',
+                border: '1px solid var(--border-glass)',
+                cursor: 'pointer'
+              }}
+            >
+              {Object.entries(IncomeEventCategory).map(([key, val]) => (
+                <option key={key} value={val} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
+                  {val === IncomeEventCategory.NONE ? (t('category.none') || 'Nenhuma') : val}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* 2. Valor (€) e Quebra em Subpartes */}

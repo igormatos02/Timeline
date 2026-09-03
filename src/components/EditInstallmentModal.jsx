@@ -20,12 +20,12 @@ export default function EditInstallmentModal({
 
   useEffect(() => {
     if (installment) {
-      const isPaid = installment.status === EventStatus.PAID || installment.status === 'paid' || installment.status === 'Pago';
+      const isPaid = installment.status === EventStatus.PAID;
       setStatus(isPaid ? EventStatus.PAID : EventStatus.PENDING);
       const total = installment.amount !== undefined ? installment.amount : 500;
       const principal = installment.principalAmount !== undefined ? installment.principalAmount : Math.round(total * 0.82 * 100) / 100;
       const interest = installment.interestPortion !== undefined ? installment.interestPortion : Math.round((total - principal) * 100) / 100;
-      
+
       setAmount(total.toString());
       setPrincipalAmount(principal.toString());
       setInterestPortion(interest.toString());

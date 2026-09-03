@@ -449,6 +449,16 @@ export default function App() {
         }
 
         await refreshTimelines();
+
+        // Restore scroll position exactly where the user was before saving
+        const restoreScroll = () => {
+          if (typeof savedScrollPos === 'number' && savedScrollPos >= 0) {
+            window.scrollTo({ top: savedScrollPos, behavior: 'instant' });
+          }
+        };
+        requestAnimationFrame(restoreScroll);
+        setTimeout(restoreScroll, 50);
+        setTimeout(restoreScroll, 150);
       } catch (err) {
         console.error('Error saving event:', err);
         showToast(t('toast.eventSaveError') || 'Erro ao guardar evento na base de dados.', 'error');
@@ -456,31 +466,6 @@ export default function App() {
     };
 
     saveAsync();
-
-    // Restore and lock scroll position exactly where the user was
-    const targetMonthKey = (eventData.date || selectedDateForNewEvent || '2026-08-01').substring(0, 7);
-    const restoreScroll = () => {
-      const monthNode = document.getElementById(`timeline-month-${targetMonthKey}`) ||
-        (targetMonthKey === '2026-08' ? document.getElementById('timeline-node-today') : null);
-      if (monthNode) {
-        const navbar = document.querySelector('.app-header') || document.querySelector('header');
-        const stickyDock = document.querySelector('.sticky-header-dock');
-        const navHeight = navbar ? navbar.offsetHeight : 68;
-        const dockHeight = stickyDock ? stickyDock.offsetHeight : 80;
-        const totalStickyOffset = navHeight + 24 + dockHeight + 14;
-
-        const elementDocTop = monthNode.getBoundingClientRect().top + window.pageYOffset;
-        const targetY = Math.max(0, elementDocTop - totalStickyOffset);
-        window.scrollTo({ top: targetY, behavior: 'instant' });
-      } else if (savedScrollPos > 0) {
-        window.scrollTo({ top: savedScrollPos, behavior: 'instant' });
-      }
-    };
-
-    requestAnimationFrame(restoreScroll);
-    setTimeout(restoreScroll, 20);
-    setTimeout(restoreScroll, 80);
-    setTimeout(restoreScroll, 200);
   };
 
   const handleUpdateEventDirect = async (updatedEvent) => {
@@ -771,7 +756,6 @@ export default function App() {
           status: nextStatus,
           isCompleted: nextCompleted,
           isLocked: nextCompleted,
-          time: nextCompleted ? clickTimeStr : ev.time,
           completedAtTime: nextCompleted ? clickTimeStr : null
         };
       })
@@ -809,7 +793,6 @@ export default function App() {
             status: nextStatus,
             isCompleted: nextCompleted,
             isLocked: nextCompleted,
-            time: nextCompleted ? clickTimeStr : ev.time,
             completedAtTime: nextCompleted ? clickTimeStr : null
           };
         });

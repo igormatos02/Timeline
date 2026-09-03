@@ -11,7 +11,7 @@ export function projectEvents(rawEvents = [], options = {}) {
   const filterStartDate = options.startDate || null;
   const filterEndDate = options.endDate || horizonEndDate;
 
-  const uniqueEvents = [];
+  const rawUniqueEvents = [];
   const recurringSeriesMap = new Map(); // seriesId -> array of versions
   const overridesMap = new Map(); // `${sobrepositionOver}_${date}` -> override event
 
@@ -49,12 +49,27 @@ export function projectEvents(rawEvents = [], options = {}) {
       }
       recurringSeriesMap.get(sId).push(normalizedEv);
     } else {
-      uniqueEvents.push({
+      rawUniqueEvents.push({
         ...ev,
         isFirstOccurrence: true
       });
     }
   }
+
+  const uniqueEventsMap = new Map();
+  for (const ev of rawUniqueEvents) {
+    const sId = ev.eventId || ev.id;
+    const evVersion = Number(ev.version !== undefined ? ev.version : (ev.eventVersion !== undefined ? ev.eventVersion : (ev.event_version || 0)));
+    if (!uniqueEventsMap.has(sId)) {
+      uniqueEventsMap.set(sId, ev);
+    } else {
+      const curVersion = Number(uniqueEventsMap.get(sId).version !== undefined ? uniqueEventsMap.get(sId).version : (uniqueEventsMap.get(sId).eventVersion !== undefined ? uniqueEventsMap.get(sId).eventVersion : (uniqueEventsMap.get(sId).event_version || 0)));
+      if (evVersion >= curVersion) {
+        uniqueEventsMap.set(sId, ev);
+      }
+    }
+  }
+  const uniqueEvents = Array.from(uniqueEventsMap.values()).filter((ev) => !ev.isDeleted && ev.status !== EventStatus.DELETED);
 
   const projectedInstances = [];
 

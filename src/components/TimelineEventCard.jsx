@@ -82,35 +82,26 @@ export default function TimelineEventCard({
   const isInvestmentEvent = event.eventType === EventType.INVESTMENT;
 
   const isRecurringEvent = Boolean(
-    event.isRecurring ||
+    event.isRecurring === true ||
+    event.is_recurring === true ||
     event.periodicity === EventPeriodicity.RECURRING ||
     event.periodicity === EventPeriodicity.RECURRENT ||
-    event.periodicity === 'recorrente' ||
     event.periodicity === EventPeriodicity.PERIOD ||
-    event.periodicity === 'periodo' ||
-    event.eventId || event.seriesId ||
-    isLoanInstallment ||
-    event.category === 'entrada_recorrente' ||
-    event.category === 'saida_recorrente' ||
-    event.category === 'investimento_poupanca' ||
-    event.category === 'parcela_emprestimo'
-  );
+    Boolean(event.seriesId) ||
+    isLoanInstallment
+  ) &&
+    event.periodicity !== EventPeriodicity.ONCE &&
+    event.periodicity !== EventPeriodicity.UNIQUE;
 
   const isInertFuture = event.date > '2026-08-31';
 
   const isCompleted =
     effectiveStatus === EventStatus.PAID ||
-    effectiveStatus === 'pago' ||
     effectiveStatus === EventStatus.RECEIVED ||
-    effectiveStatus === 'recebido' ||
     effectiveStatus === EventStatus.INVESTED ||
-    effectiveStatus === 'investido' ||
     effectiveStatus === EventStatus.SETTLED ||
-    effectiveStatus === 'liquidado' ||
     effectiveStatus === EventStatus.COMPLETED ||
-    effectiveStatus === 'concluído' ||
     effectiveStatus === EventStatus.AMORTIZED ||
-    effectiveStatus === 'amortizado' ||
     Boolean(event.isCompleted);
 
   const isOverdue = Boolean(
@@ -118,9 +109,7 @@ export default function TimelineEventCard({
     event.date < todayStr &&
     !isCompleted &&
     effectiveStatus !== EventStatus.CANCELLED &&
-    effectiveStatus !== 'cancelado' &&
-    effectiveStatus !== EventStatus.DELETED &&
-    effectiveStatus !== 'excluido'
+    effectiveStatus !== EventStatus.DELETED
   );
 
   const isReceivedIncome = isIncomeEvent && isCompleted;
@@ -187,16 +176,12 @@ export default function TimelineEventCard({
   const isRecurring = Boolean(
     event.periodicity === EventPeriodicity.RECURRING ||
     event.periodicity === EventPeriodicity.RECURRENT ||
-    event.periodicity === 'recorrente' ||
     event.isRecurring === true ||
-    Boolean(event.eventId || event.seriesId) ||
-    Boolean(
-      event.category &&
-      (event.category.includes('recorrente') ||
-        event.category === 'parcela_emprestimo' ||
-        event.category === 'repetitivo')
-    )
-  ) && event.periodicity !== EventPeriodicity.ONCE && event.periodicity !== EventPeriodicity.UNIQUE && event.periodicity !== 'unico' && event.periodicity !== 'pontual' && event.category !== 'saida_esporadica' && event.category !== 'entrada_esporadica';
+    event.is_recurring === true ||
+    Boolean(event.seriesId)
+  ) &&
+    event.periodicity !== EventPeriodicity.ONCE &&
+    event.periodicity !== EventPeriodicity.UNIQUE;
 
   const handleSaveAmount = (e) => {
     if (e) {

@@ -97,16 +97,41 @@ export class FinancialEventService {
     const { updateScope, propagateForward, ...directUpdates } = updates;
 
     const allRawEvents = await eventRepository.getAll();
-    const existing = await eventRepository.getById(id);
+    const existing = (await eventRepository.getById(id)) || allRawEvents.find((e) => e.id === id);
 
     const loanTlId = directUpdates.timelineId || directUpdates.timelineOriginId || existing?.timelineId || existing?.timelineOriginId;
     const isLoan = Boolean(loanTlId && (directUpdates.isLoanEvent?.() || existing?.isLoanEvent?.() || directUpdates.isSystemLoanEvent || existing?.isSystemLoanEvent || directUpdates.eventType === EventType.AMORTIZATION || existing?.eventType === EventType.AMORTIZATION));
 
-    const targetSeriesId = directUpdates.eventId || directUpdates.event_id || updates.eventId || (isLoan ? loanTlId : (existing?.eventId || id));
-    const isAmountOrDateChange =
-      (directUpdates.amount !== undefined && existing && Number(directUpdates.amount) !== Number(existing.amount)) ||
-      (directUpdates.date !== undefined && existing && directUpdates.date !== existing.date) ||
-      (directUpdates.dayOfMonth !== undefined && existing && Number(directUpdates.dayOfMonth) !== Number(existing.dayOfMonth));
+    const targetSeriesId = directUpdates.eventId || directUpdates.event_id || updates.eventId || existing?.eventId || (isLoan ? loanTlId : (existing?.id || id));
+
+    const existingVersion = existing
+      ? Number(existing.version !== undefined ? existing.version : (existing.eventVersion !== undefined ? existing.eventVersion : (existing.event_version || 0)))
+      : 0;
+
+    const seriesVersions = targetSeriesId
+      ? allRawEvents.filter((ev) => ev.eventId === targetSeriesId || ev.sobrepositionOver === targetSeriesId || ev.id === targetSeriesId)
+      : [];
+
+    const currentHighestVersion = seriesVersions.reduce((max, v) => {
+      const vNum = Number(v.version !== undefined ? v.version : (v.eventVersion !== undefined ? v.eventVersion : (v.event_version || 0)));
+      return Math.max(max, vNum);
+    }, existingVersion);
+
+    const nextVersion = currentHighestVersion + 1;
+    const newId = `ev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+    const baseEventData = existing ? { ...existing } : {};
+    delete baseEventData.id;
+
+    const newVersionedPayload = {
+      ...baseEventData,
+      ...directUpdates,
+      id: newId,
+      eventId: targetSeriesId,
+      version: nextVersion,
+      eventVersion: nextVersion,
+      event_version: nextVersion
+    };
 
     if (directUpdates.status) {
       const targetDate = directUpdates.date || existing?.date;
@@ -116,135 +141,27 @@ export class FinancialEventService {
       });
     }
 
-    // Direct Series-Wide Automatic Toggle
-    if (!isAmountOrDateChange && (updateScope === 'all_series' || (directUpdates.automatic !== undefined && directUpdates.amount === undefined && directUpdates.date === undefined))) {
-      const matchKey = targetSeriesId || loanTlId || id;
-      await eventRepository.updateMany(
-        (ev) =>
-          (matchKey && (
-            ev.eventId === matchKey ||
-            ev.id === matchKey ||
-            ev.sobrepositionOver === matchKey ||
-            ev.timelineId === matchKey ||
-            ev.timelineOriginId === matchKey
-          )) ||
-          (loanTlId && (ev.timelineId === loanTlId || ev.timelineOriginId === loanTlId)),
-        {
-          automatic: Boolean(directUpdates.automatic),
-          isAutomatic: Boolean(directUpdates.automatic)
-        }
-      );
-
-      if (existing) {
-        await eventRepository.update(id, {
-          automatic: Boolean(directUpdates.automatic),
-          isAutomatic: Boolean(directUpdates.automatic),
-          isCompleted: directUpdates.isCompleted !== undefined ? directUpdates.isCompleted : existing.isCompleted
-        });
-      }
-      return true;
-    }
-
-    if (isLoan) {
-      const targetDate = directUpdates.date || existing?.date;
-
-      if (updateScope === 'subsequent' || propagateForward) {
-        await eventRepository.updateMany(
-          (ev) =>
-            (loanTlId && (ev.timelineId === loanTlId || ev.timelineOriginId === loanTlId)) &&
-            (!targetDate || ev.date >= targetDate),
-          directUpdates
-        );
-        return existing ? eventRepository.update(id, directUpdates) : true;
-      } else {
-        if (existing) return eventRepository.update(id, directUpdates);
-        else return eventRepository.create({ ...directUpdates, id });
-      }
-    }
-
-    if (updateScope === 'all_series' || updateScope === 'all') {
-      if (targetSeriesId) {
-        await eventRepository.updateMany(
-          (ev) =>
-            ev.eventId === targetSeriesId ||
-            ev.id === targetSeriesId ||
-            ev.sobrepositionOver === targetSeriesId ||
-            (ev.timelineId && ev.timelineId === targetSeriesId),
-          directUpdates
-        );
-      }
-      if (existing) {
-        await eventRepository.update(id, directUpdates);
-      }
-      return true;
-    }
-
     if (updateScope === 'single' && targetSeriesId) {
-      const isAmountOrDateExplicit = directUpdates.amount !== undefined || directUpdates.date !== undefined;
-      if (!isAmountOrDateExplicit && directUpdates.status) {
-        return true;
-      }
-
-      const seriesVersions = allRawEvents.filter(
-        (ev) => ev.eventId === targetSeriesId || ev.sobrepositionOver === targetSeriesId
-      );
-      const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
-      const nextVersion = currentHighestVersion + 1;
-
-      const existingOverride = allRawEvents.find(
-        (ev) => ev.sobrepositionOver === targetSeriesId && ev.date === directUpdates.date
-      );
-      if (existingOverride) {
-        return eventRepository.update(existingOverride.id, {
-          ...directUpdates,
-          version: nextVersion,
-          sobrepositionOver: targetSeriesId,
-          isRecurring: false,
-          periodicity: EventPeriodicity.ONCE
-        });
-      } else if (isAmountOrDateExplicit) {
-        const { id: _oldId, ...cleanOverrideData } = directUpdates;
-        return eventRepository.create({
-          ...cleanOverrideData,
-          sobrepositionOver: targetSeriesId,
-          version: nextVersion,
-          isRecurring: false,
-          periodicity: EventPeriodicity.ONCE
-        });
-      }
-      return true;
+      const overridePayload = {
+        ...newVersionedPayload,
+        sobrepositionOver: targetSeriesId,
+        isRecurring: false,
+        periodicity: EventPeriodicity.ONCE
+      };
+      return eventRepository.create(overridePayload);
     }
 
-    if ((updateScope === 'subsequent' || propagateForward) && targetSeriesId) {
-      const seriesVersions = allRawEvents.filter((ev) => ev.eventId === targetSeriesId && !ev.sobrepositionOver);
-      const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
-      const nextVersion = currentHighestVersion + 1;
-      const targetDate = directUpdates.date;
-
-      await eventRepository.updateMany(
-        (ev) => ev.sobrepositionOver === targetSeriesId && (!targetDate || ev.date >= targetDate),
-        {
-          targetAmount: directUpdates.targetAmount,
-          initialInvestedAmount: directUpdates.initialInvestedAmount,
-          title: directUpdates.title,
-          eventType: directUpdates.eventType
-        }
-      );
-
-      const { id: _oldId, ...cleanVersionData } = directUpdates;
-      return eventRepository.create({
-        ...cleanVersionData,
+    if (updateScope === 'subsequent' || propagateForward) {
+      const subsequentPayload = {
+        ...newVersionedPayload,
         eventId: targetSeriesId,
-        version: nextVersion,
         isRecurring: true,
         periodicity: EventPeriodicity.RECURRING
-      });
+      };
+      return eventRepository.create(subsequentPayload);
     }
 
-    if (existing) return eventRepository.update(id, directUpdates);
-    if (targetSeriesId && (directUpdates.amount !== undefined || directUpdates.date !== undefined))
-      return eventRepository.create({ ...directUpdates, sobrepositionOver: targetSeriesId, isRecurring: false });
-    return true;
+    return eventRepository.create(newVersionedPayload);
   }
 
   async toggleEventPayment(id) {

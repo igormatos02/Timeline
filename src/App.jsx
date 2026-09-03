@@ -429,8 +429,7 @@ export default function App() {
             timeboardId: activeTimeboardId,
             timelineId: targetTimelineId,
             timelineOriginId: targetTimelineId,
-            eventId: editingEvent.eventId || editingEvent.seriesId,
-            version: editingEvent.version
+            eventId: editingEvent.eventId || editingEvent.seriesId
           });
           showToast(t('toast.eventUpdatedSuccess') || 'Evento atualizado com sucesso na base de dados!', 'success');
         } else {
@@ -562,6 +561,7 @@ export default function App() {
         ...updatedEvent,
         updateScope: isAutoChange ? 'all_series' : updatedEvent.updateScope
       });
+      await refreshTimelines();
     } catch (err) {
       console.error('Error updating event directly:', err);
     }

@@ -52,17 +52,20 @@ import {
   ArrowDown,
   FileText,
   Zap,
-  Activity
+  Activity,
+  Bell,
+  FolderKanban
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
 import FloatingTaskStack from './FloatingTaskStack';
 import { getGroupingForPeriodicity, formatCurrency } from '../utils/loanCalculations';
-import { EventType, EventStatus, EventStatusLabel, TimelineType, IncomeEventCategory, ExpensesEventCategory, InvestmentEventCategory, LoanEventCategory } from '../enums/index.js';
+import { EventType, EventStatus, EventStatusLabel, TimelineType, TimeboardType, IncomeEventCategory, ExpensesEventCategory, InvestmentEventCategory, LoanEventCategory } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 function VerticalTimeline({
   timeline,
   timelines = [],
+  activeTimeboard = null,
   activeFinancialTab = '',
   onSelectFinancialTab,
   onEditEvent,
@@ -79,6 +82,7 @@ function VerticalTimeline({
   onOpenEditInstallment,
   onOpenAmortizationModal,
   onNavigateToTimeline,
+  onCreateTimeline,
   headerComponent,
   futureHorizonYears = 1,
   pastHorizonYears = 1,
@@ -102,6 +106,65 @@ function VerticalTimeline({
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
   const [selectedLabelFilter, setSelectedLabelFilter] = useState('Todos');
   const [showEmptyDays, setShowEmptyDays] = useState(true);
+
+  // State & Ref for New Timeline Dropdown
+  const [isTimelineDropdownOpen, setIsTimelineDropdownOpen] = useState(false);
+  const timelineDropdownRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (timelineDropdownRef.current && !timelineDropdownRef.current.contains(event.target)) {
+        setIsTimelineDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const isFinancial = activeTimeboard?.type === TimeboardType.FINANCIAL || activeTimeboard?.type === 'financial' || isFinancialTimeline;
+  const isProjects = activeTimeboard?.type === TimeboardType.PROJECTS || activeTimeboard?.type === 'projects' || timeline?.type === 'project';
+  const isReminders = activeTimeboard?.type === TimeboardType.REMINDERS || activeTimeboard?.type === 'reminders' || timeline?.type === 'reminder';
+
+  const timelineOptions = useMemo(() => {
+    if (isFinancial) {
+      return [
+        {
+          key: 'loan',
+          type: TimelineType.LOAN,
+          label: t('sidebar.loanTimeline'),
+          icon: <CreditCard size={14} style={{ color: '#6366f1' }} />
+        }
+      ];
+    }
+    if (isProjects) {
+      return [
+        {
+          key: 'project',
+          type: TimelineType.PROJECT,
+          label: t('sidebar.projectTimeline'),
+          icon: <FolderKanban size={14} style={{ color: '#a855f7' }} />
+        }
+      ];
+    }
+    if (isReminders) {
+      return [
+        {
+          key: 'reminder',
+          type: TimelineType.REMINDER,
+          label: t('sidebar.reminderTimeline'),
+          icon: <Bell size={14} style={{ color: '#f59e0b' }} />
+        }
+      ];
+    }
+    return [
+      {
+        key: 'loan',
+        type: TimelineType.LOAN,
+        label: t('sidebar.loanTimeline'),
+        icon: <CreditCard size={14} style={{ color: '#6366f1' }} />
+      }
+    ];
+  }, [isFinancial, isProjects, isReminders, t]);
 
   // Multi-selection of timelines for Balance view (derived dynamically from real timelines)
   const availableCreditOptions = useMemo(() => {
@@ -370,6 +433,9 @@ function VerticalTimeline({
           if (!isThisLoan) return false;
         }
         // TimelineType.BALANCE shows all integrated movements
+      } else {
+        const isThisTimeline = ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
+        if (!isThisTimeline) return false;
       }
 
       // No Balanço: mostrar somente até ao fim do mês corrente
@@ -1430,8 +1496,91 @@ function VerticalTimeline({
         {/* 🌟 0. Timelines do Timeboard vindas da Base de Dados */}
         {((timelines && timelines.length > 0) || (timeline?.timelines && timeline.timelines.length > 0)) && (
           <div className="sidebar-section">
-            <div className="sidebar-section-title">
+            <div className="sidebar-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>{t('sidebar.timelines')}</span>
+              {onCreateTimeline && (
+                <div ref={timelineDropdownRef} style={{ position: 'relative', display: 'inline-block' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsTimelineDropdownOpen((prev) => !prev)}
+                    title={t('sidebar.newTimeline')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: 'linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%)',
+                      color: '#ffffff',
+                      fontSize: '0.72rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(99, 102, 241, 0.35)',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <Plus size={13} />
+                    <span>New</span>
+                  </button>
+
+                  {isTimelineDropdownOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        right: 0,
+                        marginTop: '6px',
+                        minWidth: '180px',
+                        backgroundColor: '#1e1b4b',
+                        border: '1px solid rgba(99, 102, 241, 0.3)',
+                        borderRadius: '8px',
+                        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.6)',
+                        padding: '6px',
+                        zIndex: 100
+                      }}
+                    >
+                      {timelineOptions.map((opt) => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => {
+                            setIsTimelineDropdownOpen(false);
+                            if (onCreateTimeline) {
+                              onCreateTimeline(opt.type);
+                            }
+                          }}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#ffffff',
+                            fontSize: '0.8rem',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'background 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(99, 102, 241, 0.25)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                          }}
+                        >
+                          {opt.icon}
+                          <span>{opt.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="sidebar-btn-group">
               {((timelines && timelines.length > 0) ? timelines : (timeline?.timelines || [])).map((tl) => {
@@ -1449,6 +1598,14 @@ function VerticalTimeline({
                       return <CreditCard size={14} style={{ color: tlColor }} />;
                     case TimelineType.BALANCE:
                       return <Scale size={14} style={{ color: tlColor }} />;
+                    case TimelineType.REMINDER:
+                    case 'reminder':
+                    case 'reminders':
+                      return <Bell size={14} style={{ color: tlColor }} />;
+                    case TimelineType.PROJECT:
+                    case 'project':
+                    case 'projects':
+                      return <FolderKanban size={14} style={{ color: tlColor }} />;
                     default:
                       return <Layers size={14} style={{ color: tlColor }} />;
                   }

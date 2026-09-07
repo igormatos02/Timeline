@@ -34,8 +34,9 @@ RETURNS TABLE (
   original_capital NUMERIC,          -- Capital Original
   total_estimated_interest NUMERIC,  -- Juros Totais Estimados
   total_loan_cost NUMERIC            -- Custo Total do Empréstimo
-) AS $$
+) AS $func$
 DECLARE
+  v_ref_date DATE;
   v_orig_capital NUMERIC := 0;
   v_total_inst INT := 0;
   v_paid_inst INT := 0;
@@ -57,17 +58,20 @@ DECLARE
   v_tot_amount NUMERIC := 0;
   v_tot_principal NUMERIC := 0;
 BEGIN
+  -- Data de referência considerada como fim do mês
+  v_ref_date := (DATE_TRUNC('month', COALESCE(p_reference_date, CURRENT_DATE)) + INTERVAL '1 month - 1 day')::DATE;
+
   -- 1. Obter informações de total_installments e datas extremas
   SELECT 
     COALESCE(MAX(e.total_installments), COUNT(*)),
     COALESCE(
       MIN(e.date) FILTER (
-        WHERE e.date >= p_reference_date 
-          AND LOWER(COALESCE(fs.status, 'pending')) NOT IN ('paid', 'received', 'settled', 'amortized', 'completed', 'pago', 'liquidado', 'abatida')
+        WHERE e.date >= v_ref_date 
+          AND LOWER(COALESCE(fs.status, 'pending')) NOT IN ('paid', 'received', 'settled', 'amortized', 'completed')
       ), 
       MAX(e.date)
     ),
-    COALESCE(MAX(e.date), p_reference_date),
+    COALESCE(MAX(e.date), v_ref_date),
     COALESCE(SUM(e.amount), 0),
     COALESCE(SUM(e.principal_amount), 0)
   INTO v_total_inst, v_next_due, v_payoff_date, v_tot_amount, v_tot_principal
@@ -77,7 +81,7 @@ BEGIN
    AND fs.year = EXTRACT(YEAR FROM e.date)::INT 
    AND fs.month = EXTRACT(MONTH FROM e.date)::INT
   WHERE e.timeline_id = p_timeline_id
-    AND (e.event_type IN ('loan_installment', 'amortization') OR e.category IN ('parcela_emprestimo', 'amortizacao'))
+    AND (LOWER(COALESCE(e.event_type, '')) IN ('loan_installment', 'amortization') OR LOWER(COALESCE(e.category, '')) IN ('loan_installment', 'amortization', 'parcela_emprestimo', 'extraordinary_amortization'))
     AND LOWER(COALESCE(fs.status, 'pending')) NOT IN ('cancelled', 'deleted');
 
   IF v_total_inst = 0 THEN
@@ -86,14 +90,44 @@ BEGIN
 
   v_curr_inst := ROUND(v_tot_amount / v_total_inst, 2);
 
-  -- 2. Agregação de valores PAGOS / AMORTIZADOS
+  -- 2. Agregação de valores PAGOS / AMORTIZADOS (Mesmo cálculo alinhado de get_balance_timeline_metrics)
+  -- v_paid_cap = SUM(principal_amount de parcelas pagas) + SUM(amount de amortizações pagas)
+  v_paid_cap := (
+    SELECT COALESCE(
+      SUM(COALESCE(e.principal_amount, 0)),
+      0
+    )
+    FROM financial_events e
+    LEFT JOIN financial_event_status fs
+      ON fs.event_id = e.event_id
+     AND fs.year = EXTRACT(YEAR FROM e.date)::INT
+     AND fs.month = EXTRACT(MONTH FROM e.date)::INT
+    WHERE e.timeline_id = p_timeline_id
+      AND (LOWER(COALESCE(e.event_type, '')) = 'loan_installment' OR LOWER(COALESCE(e.category, '')) IN ('loan_installment', 'parcela_emprestimo'))
+      AND e.date <= v_ref_date
+      AND LOWER(COALESCE(fs.status, 'pending')) IN ('paid', 'settled', 'completed', 'received', 'amortized')
+  )
+  +
+  (
+    SELECT COALESCE(
+      SUM(COALESCE(e.amount, 0)),
+      0
+    )
+    FROM financial_events e
+    LEFT JOIN financial_event_status fs
+      ON fs.event_id = e.event_id
+     AND fs.year = EXTRACT(YEAR FROM e.date)::INT
+     AND fs.month = EXTRACT(MONTH FROM e.date)::INT
+    WHERE e.timeline_id = p_timeline_id
+      AND (LOWER(COALESCE(e.event_type, '')) = 'amortization' OR LOWER(COALESCE(e.category, '')) IN ('amortization', 'amortizacao', 'extraordinary_amortization'))
+      AND e.date <= v_ref_date
+      AND (
+        fs.status IS NULL 
+        OR LOWER(fs.status) NOT IN ('cancelled', 'deleted')
+      )
+  );
+
   SELECT 
-    COALESCE(SUM(
-      CASE 
-        WHEN COALESCE(e.principal_amount, 0) > 0 THEN e.principal_amount 
-        ELSE e.amount * 0.82 
-      END
-    ), 0),
     COALESCE(SUM(
       CASE 
         WHEN COALESCE(e.principal_amount, 0) > 0 THEN GREATEST(0, e.amount - e.principal_amount)
@@ -101,18 +135,18 @@ BEGIN
       END
     ), 0),
     COUNT(*)
-  INTO v_paid_cap, v_paid_int, v_paid_inst
+  INTO v_paid_int, v_paid_inst
   FROM financial_events e
   LEFT JOIN financial_event_status fs 
     ON fs.event_id = e.event_id 
    AND fs.year = EXTRACT(YEAR FROM e.date)::INT 
    AND fs.month = EXTRACT(MONTH FROM e.date)::INT
   WHERE e.timeline_id = p_timeline_id
-    AND (e.event_type IN ('loan_installment', 'amortization') OR e.category IN ('parcela_emprestimo', 'amortizacao'))
-    AND (LOWER(fs.status) IN ('paid', 'received', 'settled', 'amortized', 'completed', 'pago', 'liquidado', 'abatida') OR e.date < p_reference_date)
+    AND (LOWER(COALESCE(e.event_type, '')) IN ('loan_installment', 'amortization') OR LOWER(COALESCE(e.category, '')) IN ('loan_installment', 'amortization', 'parcela_emprestimo', 'extraordinary_amortization'))
+    AND LOWER(fs.status) IN ('paid', 'received', 'settled', 'amortized', 'completed')
     AND LOWER(COALESCE(fs.status, 'pending')) NOT IN ('cancelled', 'deleted');
 
-  -- 3. Agregação de valores FUTUROS / PENDENTES
+  -- 3. Agregação de valores FUTUROS / PENDENTES (Parcelas que não têm status explícito de pago)
   SELECT 
     COALESCE(SUM(
       CASE 
@@ -133,9 +167,8 @@ BEGIN
    AND fs.year = EXTRACT(YEAR FROM e.date)::INT 
    AND fs.month = EXTRACT(MONTH FROM e.date)::INT
   WHERE e.timeline_id = p_timeline_id
-    AND (e.event_type IN ('loan_installment', 'amortization') OR e.category IN ('parcela_emprestimo', 'amortizacao'))
-    AND LOWER(COALESCE(fs.status, 'pending')) NOT IN ('paid', 'received', 'settled', 'amortized', 'completed', 'pago', 'liquidado', 'abatida', 'cancelled', 'deleted')
-    AND e.date >= p_reference_date;
+    AND (e.event_type IN ('loan_installment', 'amortization') OR e.category IN ('loan_installment', 'amortization'))
+    AND LOWER(COALESCE(fs.status, 'pending')) NOT IN ('paid', 'received', 'settled', 'amortized', 'completed', 'cancelled', 'deleted');
 
   -- 4. Cálculos Derivados
   v_orig_capital := v_paid_cap + v_fut_cap;
@@ -192,4 +225,4 @@ BEGIN
     v_tot_int AS total_estimated_interest,
     v_tot_cost AS total_loan_cost;
 END;
-$$ LANGUAGE plpgsql STABLE;
+$func$ LANGUAGE plpgsql STABLE;

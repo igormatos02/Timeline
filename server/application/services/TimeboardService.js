@@ -32,71 +32,110 @@ export class TimeboardService {
       type: data.type || TimeboardType.FINANCIAL
     });
 
-    const isFinancial = createdTimeboard.type === TimeboardType.FINANCIAL;
+    const isFinancial = createdTimeboard.type === TimeboardType.FINANCIAL || createdTimeboard.type === 'financial';
+    const isProjects = createdTimeboard.type === TimeboardType.PROJECTS || createdTimeboard.type === 'projects';
+    const isReminders = createdTimeboard.type === TimeboardType.REMINDERS || createdTimeboard.type === 'reminders';
+    const defaultTenantId = createdTimeboard.tenantId || '9e3c3070-d4db-43be-ab03-3f852a9a81da';
+
+    let defaultTimelines = [];
 
     if (isFinancial) {
-      const defaultTimelines = [
+      defaultTimelines = [
         {
           timeboardId: createdTimeboard.id,
-          name: 'Balanço',
+          name: 'Balance',
           type: TimelineType.BALANCE,
           color: '#0ea5e9',
-          description: 'Visão consolidada do fluxo financeiro',
+          description: 'Consolidated view of financial flow',
           isSystemDefault: true,
           canDelete: false,
           status: TimelineStatus.ACTIVE,
           periodicity: EventAggregation.MONTHLY,
           startDate: '2026-01-01',
           endDate: '2027-04-30',
-          tenantId: createdTimeboard.tenantId || null
+          tenantId: defaultTenantId
         },
         {
           timeboardId: createdTimeboard.id,
-          name: 'Entradas e Rendimentos',
+          name: 'Inflow / Income',
           type: TimelineType.INCOME,
           color: '#10b981',
-          description: 'Gestão de salários, rendimentos e receitas',
-          isSystemDefault: true,
-          canDelete: false,
+          description: 'Management of salaries, earnings, and revenues',
+          isSystemDefault: false,
+          canDelete: true,
           status: TimelineStatus.ACTIVE,
           periodicity: EventAggregation.MONTHLY,
           startDate: '2026-01-01',
           endDate: '2027-04-30',
-          tenantId: createdTimeboard.tenantId || 'd8af4a9a-951b-43f0-b099-44af5eb5e10c'
+          tenantId: defaultTenantId
         },
         {
           timeboardId: createdTimeboard.id,
-          name: 'Gastos e Despesas',
+          name: 'Expenses / Expenditures',
           type: TimelineType.EXPENSE,
           color: '#f43f5e',
-          description: 'Gestão de despesas fixas, recorrentes e variáveis',
-          isSystemDefault: true,
-          canDelete: false,
+          description: 'Management of fixed, recurring, and variable expenses',
+          isSystemDefault: false,
+          canDelete: true,
           status: TimelineStatus.ACTIVE,
           periodicity: EventAggregation.MONTHLY,
           startDate: '2026-01-01',
           endDate: '2027-04-30',
-          tenantId: createdTimeboard.tenantId || 'd8af4a9a-951b-43f0-b099-44af5eb5e10c'
+          tenantId: defaultTenantId
         },
         {
           timeboardId: createdTimeboard.id,
-          name: 'Investimentos e Poupança',
+          name: 'Investments / Savings',
           type: TimelineType.INVESTMENT,
           color: '#6366f1',
-          description: 'Gestão de poupança, património e aportes',
+          description: 'Management of savings, equity, and contributions',
+          isSystemDefault: false,
+          canDelete: true,
+          status: TimelineStatus.ACTIVE,
+          periodicity: EventAggregation.MONTHLY,
+          startDate: '2026-01-01',
+          endDate: '2027-04-30',
+          tenantId: defaultTenantId
+        }
+      ];
+    } else if (isProjects) {
+      defaultTimelines = [
+        {
+          timeboardId: createdTimeboard.id,
+          name: 'My Projects',
+          type: TimelineType.PROJECT || 'project',
+          color: '#8b5cf6',
+          description: 'Project planning, milestones and tasks timeline',
           isSystemDefault: true,
           canDelete: false,
           status: TimelineStatus.ACTIVE,
           periodicity: EventAggregation.MONTHLY,
           startDate: '2026-01-01',
           endDate: '2027-04-30',
-          tenantId: createdTimeboard.tenantId || 'd8af4a9a-951b-43f0-b099-44af5eb5e10c'
+          tenantId: defaultTenantId
         }
       ];
+    } else if (isReminders) {
+      defaultTimelines = [
+        {
+          timeboardId: createdTimeboard.id,
+          name: 'My Reminders',
+          type: TimelineType.REMINDER || 'reminder',
+          color: '#f59e0b',
+          description: 'Schedule reminders, alerts and notes',
+          isSystemDefault: true,
+          canDelete: false,
+          status: TimelineStatus.ACTIVE,
+          periodicity: EventAggregation.MONTHLY,
+          startDate: '2026-01-01',
+          endDate: '2027-04-30',
+          tenantId: defaultTenantId
+        }
+      ];
+    }
 
-      for (const tl of defaultTimelines) {
-        await timelineRepository.create(tl);
-      }
+    for (const tl of defaultTimelines) {
+      await timelineRepository.create(tl);
     }
 
     return this.getTimeboardById(createdTimeboard.id);

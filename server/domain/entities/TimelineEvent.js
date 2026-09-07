@@ -1,4 +1,4 @@
-import { TimelineAssociationType, EventType, EventStatus, EventPeriodicity, EventPriority, AmortizationStrategy } from '../../../shared/enums/index.js';
+import { TimelineAssociationType, EventType, EventStatus, EventPriority, AmortizationStrategy, EventAggregation, LoanEventCategory } from '../../../shared/enums/index.js';
 
 /**
  * Entity: TimelineEvent
@@ -7,28 +7,30 @@ import { TimelineAssociationType, EventType, EventStatus, EventPeriodicity, Even
 export class TimelineEvent {
   constructor({
     id,
-    tenantId = 'tenant-igor',
-    timeboardId = '5fcd8a1a-eac7-4405-9c8b-b9607e70b420',
+    tenantId = null,
+    timeboardId = null,
     timelineId = null,
     timelineOriginId = null,
-    timelineOriginName = 'Financeiro',
+    timelineOriginName = '',
     timelineOriginIcon = '💰',
     eventId = null,
     sobrepositionOver = null,
     version = 0,
+    event_version,
     isTerminated = false,
+    is_terminated,
     dayOfMonth = null,
+    day_of_month,
     date,
-    time = '09:00',
+    time = '',
     name,
     title,
     description = '',
-    category = 'saida_recorrente',
+    category = LoanEventCategory.LOAN_INSTALLMENT,
     eventType = EventType.EXPENSE,
     event_type,
     financialType,
     financial_type,
-    periodicity = EventPeriodicity.RECURRING,
     recurrenceEndDate = null,
     endDate = null,
     dueDate = null,
@@ -37,30 +39,23 @@ export class TimelineEvent {
     paid_date,
     status = EventStatus.PENDING,
     priority = EventPriority.NORMAL,
+    installmentAmount = 0,
+    installment_amount,
+    installmentCapital = 0,
+    installment_capital,
+    installmentInterest = 0,
+    installment_interest,
+    installmentFee = 0,
+    installment_fee,
+    aggregation = EventAggregation.MONTHLY,
     amount = 0,
-    amortizationAmount = 0,
-    initialInvestedAmount = 0,
-    targetAmount = 0,
-    strategy = AmortizationStrategy.REDUCE_TERM,
-    amortizationStrategy,
-    amortization_strategy,
-    notes = '',
-    isIncome = false,
-    isExpense = false,
-    isInvestment = false,
-    isAmortization = false,
-    isRecurring = false,
-    is_recurring,
-    automatic = false,
-    isAutomatic = false,
-    isCompleted = false,
-    isLocked = false,
-    isSystemLoanEvent = false,
     principalAmount = 0,
     principal_amount,
     interestPortion = 0,
     interestAmount = 0,
     interest_amount,
+    taxAmount = 0,
+    tax_amount,
     balanceAfter = 0,
     remainingDebtAfter = 0,
     remaining_debt_after,
@@ -70,13 +65,29 @@ export class TimelineEvent {
     total_installments,
     labels = [],
     breakdownItems = [],
+    breakdown_items,
+    amortizationAmount,
+    initialInvestedAmount,
+    targetAmount,
+    strategy,
+    amortizationStrategy,
+    amortization_strategy,
+    notes,
+    isCompleted,
+    isLocked,
+    isSystemLoanEvent,
+    is_system_loan_event,
+    isRecurring,
+    is_recurring,
+    automatic,
+    isAutomatic,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString(),
     created_at,
     updated_at
   }) {
     this.id = id;
-    this.tenantId = tenantId || 'tenant-igor';
+    this.tenantId = tenantId || null;
     this.timeboardId = timeboardId;
 
     const effectiveTimelineId = timelineId !== undefined ? timelineId : timelineOriginId;
@@ -89,12 +100,13 @@ export class TimelineEvent {
 
     this.timelineOriginName = timelineOriginName;
     this.timelineOriginIcon = timelineOriginIcon;
-    this.eventId = eventId;
+    this.eventId = eventId || id;
+    this.eventVersion = Number(version !== undefined ? version : (event_version !== undefined ? event_version : 0));
+    this.version = this.eventVersion;
 
     this.sobrepositionOver = sobrepositionOver;
-    this.version = Number(version) || 0;
-    this.isTerminated = Boolean(isTerminated);
-    this.dayOfMonth = dayOfMonth;
+    this.isTerminated = Boolean(isTerminated || is_terminated);
+    this.dayOfMonth = dayOfMonth !== undefined ? dayOfMonth : (day_of_month !== undefined ? day_of_month : null);
     this.date = date;
     this.time = time;
     this.name = name || title || 'Evento Financeiro';
@@ -102,20 +114,46 @@ export class TimelineEvent {
     this.description = description || '';
     this.category = category;
     this.eventType = event_type || eventType || financial_type || financialType;
-    this.periodicity = periodicity;
+
+    this.aggregation = aggregation || EventAggregation.MONTHLY;
+
     this.recurrenceEndDate = recurrenceEndDate || endDate || null;
     this.endDate = this.recurrenceEndDate;
     this.dueDate = due_date || dueDate || null;
     this.paidDate = paid_date || paidDate || null;
     this.status = status;
     this.priority = priority;
-    this.amount = Number(amount) || 0;
-    this.amortizationAmount = Number(amortizationAmount) || Number(amount) || 0;
+
+    // Amount mapping: installment_amount is Total Payment, with fallbacks
+    const instAmtVal = installment_amount !== undefined ? Number(installment_amount) : (installmentAmount !== undefined ? Number(installmentAmount) : Number(amount || 0));
+    this.installmentAmount = instAmtVal;
+    this.amount = instAmtVal;
+
+    // Installment Capital / Principal Amount
+    const instCapVal = installment_capital !== undefined ? Number(installment_capital) : (principal_amount !== undefined ? Number(principal_amount) : (principalAmount !== undefined ? Number(principalAmount) : 0));
+    this.installmentCapital = instCapVal;
+    this.principalAmount = instCapVal;
+    this.principal_amount = instCapVal;
+
+    // Installment Interest / Interest Portion
+    const instIntVal = installment_interest !== undefined ? Number(installment_interest) : (interest_amount !== undefined ? Number(interest_amount) : (interestAmount !== undefined ? Number(interestAmount) : (interestPortion !== undefined ? Number(interestPortion) : 0)));
+    this.installmentInterest = instIntVal;
+    this.interestAmount = instIntVal;
+    this.interestPortion = instIntVal;
+    this.interest_amount = instIntVal;
+
+    // Installment Fee / Tax / Stamp Amount
+    const instFeeVal = installment_fee !== undefined ? Number(installment_fee) : (tax_amount !== undefined ? Number(tax_amount) : (taxAmount !== undefined ? Number(taxAmount) : 0));
+    this.installmentFee = instFeeVal;
+    this.taxAmount = instFeeVal;
+    this.tax_amount = instFeeVal;
+
+    this.amortizationAmount = Number(amortizationAmount) || Number(instAmtVal) || 0;
     this.initialInvestedAmount = Number(initialInvestedAmount) || 0;
     this.targetAmount = Number(targetAmount) || 0;
     this.strategy = amortization_strategy || amortizationStrategy || strategy;
     this.amortizationStrategy = this.strategy;
-    this.notes = notes;
+    this.notes = notes || '';
     this.isIncome = this.eventType === EventType.INCOME;
     this.isExpense = this.eventType === EventType.EXPENSE;
     this.isInvestment = this.eventType === EventType.INVESTMENT;
@@ -125,16 +163,13 @@ export class TimelineEvent {
     this.isAutomatic = this.automatic;
     this.isCompleted = Boolean(isCompleted);
     this.isLocked = Boolean(isLocked);
-    this.isSystemLoanEvent = Boolean(isSystemLoanEvent);
-    this.principalAmount = Number(principal_amount !== undefined ? principal_amount : principalAmount) || 0;
-    this.interestAmount = Number(interest_amount !== undefined ? interest_amount : (interestAmount || interestPortion)) || 0;
-    this.interestPortion = this.interestAmount;
+    this.isSystemLoanEvent = Boolean(isSystemLoanEvent || is_system_loan_event);
     this.balanceAfter = Number(remaining_debt_after !== undefined ? remaining_debt_after : (remainingDebtAfter || balanceAfter)) || 0;
     this.remainingDebtAfter = this.balanceAfter;
     this.installmentNumber = installment_number !== undefined ? installment_number : installmentNumber;
     this.totalInstallments = total_installments !== undefined ? total_installments : totalInstallments;
     this.labels = Array.isArray(labels) ? labels : [];
-    this.breakdownItems = Array.isArray(breakdownItems) ? breakdownItems : [];
+    this.breakdownItems = Array.isArray(breakdown_items) ? breakdown_items : (Array.isArray(breakdownItems) ? breakdownItems : []);
     this.createdAt = created_at || createdAt;
     this.updatedAt = updated_at || updatedAt;
   }

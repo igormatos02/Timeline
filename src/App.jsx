@@ -14,11 +14,13 @@ import {
   propagateInstallmentAmountForward,
   applyExtraordinaryAmortization,
   getLoanMetrics,
+  generateLoanInstallments,
   formatCurrency
 } from './utils/loanCalculations';
 import * as api from './services/api';
 import { generateUUID } from './utils/uuid';
-import { EventType, EventStatus, TimelineType, EventPriority, AmortizationStrategy } from './enums/index.js';
+import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, AmortizationStrategy } from './enums/index.js';
+import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
 import { RotateCcw, X } from 'lucide-react';
@@ -49,6 +51,7 @@ export default function App() {
   });
   const [isTimeboardModalOpen, setIsTimeboardModalOpen] = useState(false);
   const [editingTimeboard, setEditingTimeboard] = useState(null);
+  const [isUpdatingInstallments, setIsUpdatingInstallments] = useState(false);
 
   // Timelines State (Loaded directly from Supabase / Backend API)
   const [timelines, setTimelines] = useState(() => {
@@ -179,15 +182,11 @@ export default function App() {
             const balanceTl = data.find((tl) => tl.type === TimelineType.BALANCE);
             const defaultTl = balanceTl || data[0];
 
-            const rawTargetId = activeFinancialTab || activeTimelineId;
-            const targetTl = data.find((tl) => tl.id === rawTargetId || tl.type === rawTargetId) || defaultTl;
+            // Check if current active timeline or financial tab belongs to the loaded dataset
+            const targetTl = data.find((tl) => tl.id === activeFinancialTab || tl.id === activeTimelineId) || defaultTl;
 
-            if (activeTimelineId !== targetTl.id) {
-              setActiveTimelineId(targetTl.id);
-            }
-            if (activeFinancialTab !== targetTl.id) {
-              setActiveFinancialTab(targetTl.id);
-            }
+            setActiveTimelineId(targetTl.id);
+            setActiveFinancialTab(targetTl.id);
 
             // Buscar eventos apenas UMA vez para todo o Timeboard no mount
             fetchEventsForVisiblePeriod(pastHorizonYears, futureHorizonYears, true);
@@ -308,7 +307,11 @@ export default function App() {
       [TimelineType.BALANCE]: 1,
       [TimelineType.INCOME]: 2,
       [TimelineType.EXPENSE]: 3,
-      [TimelineType.INVESTMENT]: 4
+      [TimelineType.INVESTMENT]: 4,
+      [TimelineType.PROJECT]: 5,
+      [TimelineType.REMINDER]: 6,
+      project: 5,
+      reminder: 6
     };
 
     return [...filtered].sort((a, b) => {
@@ -346,36 +349,296 @@ export default function App() {
     setIsTimelineModalOpen(true);
   };
 
-  const handleOpenEditTimeline = () => {
-    setEditingTimeline(activeTimeline);
+  const handleOpenEditTimeline = async () => {
+    if (!activeTimeline) return;
+    let enrichedTimeline = { ...activeTimeline };
+
+    if (activeTimeline.type === TimelineType.LOAN || activeTimeline.type === 'loan') {
+      try {
+        const contract = await api.fetchLoanContract(activeTimeline.id);
+        if (contract) {
+          enrichedTimeline = {
+            ...enrichedTimeline,
+            contractNumber: contract.contractNumber ?? contract.contract_number ?? enrichedTimeline.contractNumber ?? '',
+            bankName: contract.bankName ?? contract.bank_name ?? enrichedTimeline.bankName ?? '',
+            totalDebt: contract.originalCapital ?? contract.original_capital ?? enrichedTimeline.totalDebt ?? '',
+            tanRate: contract.tanRate ?? contract.tan_rate ?? enrichedTimeline.tanRate ?? '',
+            spread: contract.spread ?? enrichedTimeline.spread ?? '',
+            interestStampTaxRate: contract.installmentStampTax ?? contract.installment_stamp_tax ?? enrichedTimeline.interestStampTaxRate ?? '',
+            totalInstallments: contract.totalInstallments ?? contract.total_installments ?? enrichedTimeline.totalInstallments ?? '',
+            dueDay: contract.dueDay ?? contract.due_day ?? enrichedTimeline.dueDay ?? 15,
+            startDate: contract.startDate ?? contract.start_date ?? enrichedTimeline.startDate
+          };
+        }
+      } catch (e) {
+        console.error('Error fetching loan contract for editing:', e);
+      }
+    }
+
+    setEditingTimeline(enrichedTimeline);
     setIsTimelineModalOpen(true);
   };
 
-  const handleSaveTimeline = (formData) => {
+  const handleSaveTimeline = async (formData) => {
+    const isInactive = formData.status === TimelineStatus.INACTIVE;
+    const finalStatus = isInactive ? TimelineStatus.INACTIVE : TimelineStatus.ACTIVE;
+    const timelineType = formData.type || TimelineType.LOAN;
+
     if (editingTimeline && editingTimeline.id) {
       // Update existing timeline
       const updatedData = {
         ...formData,
-        type: 'emprestimo',
-        status: formData.status === 'Inativo' ? 'Inativo' : 'Ativo'
+        type: timelineType,
+        status: finalStatus
       };
       setTimelines((prev) =>
         prev.map((tl) => (tl.id === editingTimeline.id ? { ...tl, ...updatedData } : tl))
       );
-      api.updateTimeline(editingTimeline.id, updatedData).then(() => refreshTimelines()).catch(console.error);
+      try {
+        await api.updateTimeline(editingTimeline.id, updatedData);
+
+        if (timelineType === TimelineType.LOAN || timelineType === 'loan') {
+          const parsedTotalDebt = Number(formData.totalDebt) || 0;
+          const parsedTotalInstallments = Number(formData.totalInstallments) || 120;
+          const parsedStampTax = Number(
+            formData.interestStampTaxRate !== undefined && formData.interestStampTaxRate !== ''
+              ? formData.interestStampTaxRate
+              : (formData.installmentStampTax !== undefined && formData.installmentStampTax !== ''
+                  ? formData.installmentStampTax
+                  : (formData.taxaImpostoSeloJuros !== undefined ? formData.taxaImpostoSeloJuros : 0))
+          ) || 0;
+          
+          // 1. Obter contrato existente e atualizar
+          let existingContract = null;
+          try {
+            existingContract = await api.fetchLoanContract(editingTimeline.id);
+          } catch (e) { }
+
+          const contractPayload = {
+            timelineId: editingTimeline.id,
+            timeboardId: activeTimeboardId,
+            contractName: formData.name,
+            contractNumber: formData.contractNumber || '',
+            bankName: formData.bankName || '',
+            originalCapital: parsedTotalDebt,
+            totalInstallments: parsedTotalInstallments,
+            dueDay: Number(formData.dueDay) || 15,
+            tanRate: Number(formData.tanRate) || 0,
+            spread: Number(formData.spread) || 0,
+            installmentStampTax: parsedStampTax,
+            startDate: formData.startDate || new Date().toISOString().substring(0, 10)
+          };
+
+          if (existingContract && existingContract.id) {
+            await api.updateLoanContract(existingContract.id, contractPayload);
+          } else {
+            await api.createLoanContract(contractPayload);
+          }
+
+          // 2. Recalcular sempre os eventos de prestações com os novos valores do contrato
+          const dueDayNum = Number(formData.dueDay) || 15;
+          const dueDayStr = dueDayNum.toString().padStart(2, '0');
+          const fullStartDateStr = formData.startDate
+            ? (formData.startDate.length === 7 ? `${formData.startDate}-${dueDayStr}` : formData.startDate)
+            : new Date().toISOString().substring(0, 10);
+
+          const newScheduleEvents = generateLoanInstallments({
+            totalDebt: parsedTotalDebt,
+            totalAmountFinanced: parsedTotalDebt,
+            monthlyInstallment: 0,
+            totalInstallments: parsedTotalInstallments,
+            numberOfInstallments: parsedTotalInstallments,
+            tanRate: Number(formData.tanRate) || 0,
+            spread: Number(formData.spread) || 0,
+            taxaImpostoSeloJuros: parsedStampTax,
+            interestStampTaxRate: parsedStampTax,
+            startDate: fullStartDateStr,
+            debtStartDate: fullStartDateStr,
+            dueDay: dueDayNum,
+            periodicity: formData.periodicity || formData.aggregation || EventAggregation.MONTHLY
+          });
+
+          // Obter eventos existentes desta timeline (garantindo que vêm da API se rawEvents estiver desatualizado)
+          let existingEvents = rawEvents.filter(ev => ev.timelineId === editingTimeline.id || ev.timelineOriginId === editingTimeline.id || ev.timeline_id === editingTimeline.id);
+          try {
+            const freshEvents = await api.fetchEvents({ timelineId: editingTimeline.id });
+            if (freshEvents && freshEvents.length > 0) {
+              existingEvents = freshEvents;
+            }
+          } catch (e) { }
+          
+          if (newScheduleEvents.length > 0) {
+            const payloadsToSave = [];
+            for (let i = 0; i < newScheduleEvents.length; i++) {
+              const newEv = newScheduleEvents[i];
+              const matchExisting = existingEvents.find(e => Number(e.installmentNumber || e.installment_number) === Number(newEv.installmentNumber || newEv.installment_number)) || existingEvents[i];
+
+              if (matchExisting && matchExisting.id) {
+                payloadsToSave.push({
+                  isUpdate: true,
+                  id: matchExisting.id,
+                  payload: {
+                    ...matchExisting,
+                    amount: newEv.amount,
+                    installmentAmount: newEv.amount,
+                    installment_amount: newEv.amount,
+                    principalAmount: newEv.principalAmount,
+                    principal_amount: newEv.principalAmount,
+                    installmentCapital: newEv.principalAmount,
+                    installment_capital: newEv.principalAmount,
+                    interestPortion: newEv.interestPortion,
+                    interest_portion: newEv.interestPortion,
+                    installmentInterest: newEv.interestPortion,
+                    installment_interest: newEv.interestPortion,
+                    taxAmount: newEv.taxAmount,
+                    tax_amount: newEv.taxAmount,
+                    installmentFee: newEv.taxAmount,
+                    installment_fee: newEv.taxAmount,
+                    balanceAfter: newEv.balanceAfter,
+                    balance_after: newEv.balanceAfter,
+                    remainingDebtAfter: newEv.balanceAfter,
+                    remaining_debt_after: newEv.balanceAfter,
+                    description: newEv.description,
+                    date: newEv.date,
+                    installmentNumber: newEv.installmentNumber,
+                    installment_number: newEv.installmentNumber,
+                    totalInstallments: newEv.totalInstallments,
+                    total_installments: newEv.totalInstallments,
+                    id: matchExisting.id,
+                    timelineId: editingTimeline.id,
+                    timelineOriginId: editingTimeline.id
+                  }
+                });
+              } else {
+                payloadsToSave.push({
+                  isUpdate: false,
+                  payload: {
+                    ...newEv,
+                    timelineId: editingTimeline.id,
+                    timelineOriginId: editingTimeline.id,
+                    timeboardId: activeTimeboardId
+                  }
+                });
+              }
+            }
+
+            // 1. Atualizar UI otimisticamente de imediato (preservando a ordenação por número de prestação / data)
+            const optimisticEvList = payloadsToSave.map(p => p.payload);
+            setRawEvents((prev) => {
+              const updatedIds = new Set(optimisticEvList.filter(e => e.id).map(e => e.id));
+              const filteredPrev = prev.filter(e => !updatedIds.has(e.id));
+              const merged = [...filteredPrev, ...optimisticEvList];
+              return merged.sort((a, b) => {
+                const instA = Number(a.installmentNumber || a.installment_number || 0);
+                const instB = Number(b.installmentNumber || b.installment_number || 0);
+                if (instA !== instB && instA > 0 && instB > 0) return instA - instB;
+                return (a.date || '').localeCompare(b.date || '');
+              });
+            });
+
+            // 2. Mostrar overlay e processar requisições em lotes paralelos (batching) em segundo plano
+            setIsUpdatingInstallments(true);
+            try {
+              const BATCH_SIZE = 10;
+              for (let i = 0; i < payloadsToSave.length; i += BATCH_SIZE) {
+                const batch = payloadsToSave.slice(i, i + BATCH_SIZE);
+                await Promise.all(
+                  batch.map(item =>
+                    item.isUpdate
+                      ? api.updateEvent(item.id, item.payload)
+                      : api.createEvent(item.payload)
+                  )
+                );
+              }
+            } finally {
+              setIsUpdatingInstallments(false);
+            }
+          }
+        }
+
+        refreshTimelines();
+      } catch (err) {
+        console.error('Error updating timeline and loan contract:', err);
+      }
     } else {
-      // Create new loan timeline
+      // Create new timeline
+      const newTimelineId = generateUUID();
       const newTl = {
         ...formData,
-        id: generateUUID(),
-        type: 'emprestimo',
-        status: formData.status === 'Inativo' ? 'Inativo' : 'Ativo',
+        id: newTimelineId,
+        type: timelineType,
+        status: finalStatus,
         timeboardId: activeTimeboardId,
         events: formData.events || []
       };
+
       setTimelines((prev) => [newTl, ...prev]);
       setActiveTimelineId(newTl.id);
-      api.createTimeline(newTl).then(() => refreshTimelines()).catch(console.error);
+
+      try {
+        // 1. Create Timeline
+        await api.createTimeline(newTl);
+
+        // 2. If it's a Loan Timeline, create the Loan Contract first, then generate Installments
+        const parsedTotalDebt = Number(formData.totalDebt) || 0;
+        const parsedTotalInstallments = Number(formData.totalInstallments) || 120;
+        const calculatedInstallmentAmount = Number(formData.installmentAmount) || (parsedTotalInstallments > 0 ? Math.round((parsedTotalDebt / parsedTotalInstallments) * 100) / 100 : 0);
+
+        if (timelineType === TimelineType.LOAN) {
+          // Create LoanContract record in DB
+          await api.createLoanContract({
+            timelineId: newTimelineId,
+            timeboardId: activeTimeboardId,
+            contractName: formData.name,
+            contractNumber: formData.contractNumber || '',
+            bankName: formData.bankName || '',
+            originalCapital: parsedTotalDebt,
+            totalInstallments: parsedTotalInstallments,
+            dueDay: Number(formData.dueDay) || 15,
+            tanRate: Number(formData.tanRate) || 0,
+            spread: Number(formData.spread) || 0,
+            installmentStampTax: Number(formData.interestStampTaxRate || formData.installmentStampTax) || 0,
+            startDate: formData.startDate || new Date().toISOString().substring(0, 10)
+          });
+
+          // 3. Create financial events for installments directly from simulated/generated events payload
+          const installmentEvents = (Array.isArray(formData.events) && formData.events.length > 0)
+            ? formData.events
+            : (parsedTotalDebt > 0 ? generateLoanInstallments({
+                totalDebt: parsedTotalDebt,
+                totalAmountFinanced: parsedTotalDebt,
+                monthlyInstallment: 0, // PMT formula
+                totalInstallments: parsedTotalInstallments,
+                numberOfInstallments: parsedTotalInstallments,
+                tanRate: Number(formData.tanRate) || 0,
+                spread: Number(formData.spread) || 0,
+                taxaImpostoSeloJuros: Number(formData.interestStampTaxRate || formData.installmentStampTax) || 0,
+                interestStampTaxRate: Number(formData.interestStampTaxRate || formData.installmentStampTax) || 0,
+                startDate: formData.startDate || new Date().toISOString().substring(0, 10),
+                debtStartDate: formData.startDate || new Date().toISOString().substring(0, 10),
+                dueDay: Number(formData.dueDay) || 15,
+                periodicity: formData.periodicity || formData.aggregation || EventAggregation.MONTHLY
+              }) : []);
+
+          if (installmentEvents.length > 0) {
+            // Save each calculated installment event into backend DB
+            await Promise.all(
+              installmentEvents.map((ev) =>
+                api.createEvent({
+                  ...ev,
+                  timelineId: newTimelineId,
+                  timelineOriginId: newTimelineId,
+                  timeboardId: activeTimeboardId
+                })
+              )
+            );
+          }
+        }
+
+        await refreshTimelines();
+      } catch (err) {
+        console.error('Error creating timeline, contract or generating loan installments:', err);
+      }
     }
   };
 
@@ -498,8 +761,7 @@ export default function App() {
   const handleUpdateEventDirect = async (updatedEvent) => {
     if (!updatedEvent || !updatedEvent.id) return;
 
-    const todayStr = '2026-08-21';
-    const targetSeriesKey = updatedEvent.eventId || updatedEvent.seriesId || updatedEvent.timelineId || updatedEvent.id;
+    const targetSeriesId = updatedEvent.seriesId || updatedEvent.eventId;
     const isAutoChange = updatedEvent.automatic !== undefined;
 
     const resolveMatchingEvent = (ev) => {
@@ -507,12 +769,10 @@ export default function App() {
         return { ...ev, ...updatedEvent };
       }
 
-      const isSameSeries = targetSeriesKey && (
-        ev.eventId === targetSeriesKey ||
-        ev.seriesId === targetSeriesKey ||
-        ev.id === targetSeriesKey ||
-        (ev.timelineId && ev.timelineId === targetSeriesKey) ||
-        (ev.timelineOriginId && ev.timelineOriginId === targetSeriesKey)
+      // Exigir estritamente que pertencem à mesma timeline e partilham seriesId/eventId
+      const isSameSeries = targetSeriesId && ev.timelineId === updatedEvent.timelineId && (
+        ev.seriesId === targetSeriesId ||
+        ev.eventId === targetSeriesId
       );
 
       if (isSameSeries) {
@@ -862,13 +1122,14 @@ export default function App() {
 
     try {
       await api.toggleEventPayment(installmentId);
+      await refreshTimelines();
     } catch (err) {
       console.error('Error toggling payment status:', err);
     }
   };
 
   // Save changes from EditInstallmentModal (amount, principalAmount, interestPortion, interestAmount, propagateForward)
-  const handleSaveEditInstallment = (installmentId, { status, amount, principalAmount, interestPortion, interestAmount, propagateForward }) => {
+  const handleSaveEditInstallment = async (installmentId, { status, amount, principalAmount, interestPortion, interestAmount, propagateForward }) => {
     if (!activeTimeline) return;
 
     let currentEvents = activeTimeline.events || [];
@@ -900,6 +1161,16 @@ export default function App() {
     setTimelines((prev) =>
       prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: finalEvents } : tl))
     );
+
+    const targetEv = updatedList.find((e) => e.id === installmentId);
+    if (targetEv) {
+      try {
+        await api.updateEvent(installmentId, targetEv);
+        await refreshTimelines();
+      } catch (err) {
+        console.error('Error updating installment:', err);
+      }
+    }
   };
 
   // Save extraordinary amortization event
@@ -1031,20 +1302,41 @@ export default function App() {
     }
   };
 
-  const handleSaveTimeboard = (formData) => {
+  const handleSaveTimeboard = async (formData) => {
     if (editingTimeboard && editingTimeboard.id) {
+      const updated = {
+        ...formData,
+        tenantId: editingTimeboard.tenantId || DEFAULT_TENANT.id
+      };
       setTimeboards((prev) =>
-        prev.map((tb) => (tb.id === editingTimeboard.id ? { ...tb, ...formData } : tb))
+        prev.map((tb) => (tb.id === editingTimeboard.id ? { ...tb, ...updated } : tb))
       );
-      api.updateTimeboard(editingTimeboard.id, formData).catch(console.error);
+      api.updateTimeboard(editingTimeboard.id, updated).catch(console.error);
     } else {
       const newTb = {
         ...formData,
-        id: generateUUID()
+        id: generateUUID(),
+        tenantId: DEFAULT_TENANT.id
       };
+
+      // Optimistic update of timeboard list
       setTimeboards((prev) => [...prev, newTb]);
       setActiveTimeboardId(newTb.id);
-      api.createTimeboard(newTb).catch(console.error);
+
+      try {
+        const createdTb = await api.createTimeboard(newTb);
+        // Refresh timelines from backend to load newly created default timelines (Balance, Income, Expense, Investments)
+        const updatedTimelines = await api.fetchTimelines({ timeboardId: newTb.id });
+        if (Array.isArray(updatedTimelines) && updatedTimelines.length > 0) {
+          setTimelines((prev) => [...prev.filter((tl) => tl.timeboardId !== newTb.id), ...updatedTimelines]);
+          const balanceTl = updatedTimelines.find((tl) => tl.type === TimelineType.BALANCE);
+          const initialTabId = balanceTl ? balanceTl.id : updatedTimelines[0].id;
+          setActiveTimelineId(initialTabId);
+          setActiveFinancialTab(initialTabId);
+        }
+      } catch (err) {
+        console.error('Error creating timeboard or default timelines:', err);
+      }
     }
   };
 
@@ -1056,8 +1348,8 @@ export default function App() {
         activeTimeboardId={activeTimeboardId}
         onSelectTimeboard={(id) => {
           setActiveTimeboardId(id);
-          const foundTl = timelines.find((tl) => tl.timeboardId === id);
-          if (foundTl) setActiveTimelineId(foundTl.id);
+          setActiveTimelineId(null);
+          setActiveFinancialTab(null);
         }}
         onOpenCreateTimeboard={() => {
           setEditingTimeboard(null);
@@ -1074,11 +1366,13 @@ export default function App() {
           <VerticalTimeline
             timeline={activeTimeline}
             timelines={activeTimeboardTimelines}
+            activeTimeboard={activeTimeboard}
             activeFinancialTab={activeFinancialTab}
             onSelectFinancialTab={(tabKey) => {
               setActiveFinancialTab(tabKey);
               setActiveTimelineId(tabKey);
             }}
+            onCreateTimeline={handleOpenCreateTimeline}
             futureHorizonYears={futureHorizonYears}
             pastHorizonYears={pastHorizonYears}
             onLoadMoreFuture={handleLoadMoreFuture}
@@ -1304,6 +1598,44 @@ export default function App() {
             </h3>
             <p style={{ fontSize: '0.84rem', color: '#94a3b8', margin: 0 }}>
               Sincronizando eventos e status do mês corrente
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Installments Updating Overlay */}
+      {isUpdatingInstallments && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '16px',
+            color: '#fff'
+          }}
+        >
+          <div
+            style={{
+              width: '52px',
+              height: '52px',
+              border: '4px solid rgba(99, 102, 241, 0.25)',
+              borderTopColor: '#6366f1',
+              borderRadius: '50%',
+              animation: 'spin 0.75s linear infinite'
+            }}
+          />
+          <div style={{ textAlign: 'center' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: '700', margin: '0 0 6px 0', color: '#f8fafc' }}>
+              Atualizando Prestações...
+            </h3>
+            <p style={{ fontSize: '0.88rem', color: '#cbd5e1', margin: 0 }}>
+              Por favor aguarde, a sincronizar o novo plano de amortização e impostos.
             </p>
           </div>
         </div>

@@ -82,6 +82,7 @@ export const translations = {
     // Sidebar Filters
     sidebar: {
       filtersNavigation: "Filters & Navigation",
+      newTimeline: "New Timeline",
       timelines: "Timelines",
       search: "Search",
       searchPlaceholder: "Search by title, desc or label...",
@@ -101,7 +102,11 @@ export const translations = {
       hideEmpty: "Hide empty",
       showEmpty: "Show empty",
       visible: "Visible",
-      hidden: "Hidden"
+      hidden: "Hidden",
+      loanTimeline: "Loan Timeline",
+      projectTimeline: "Project Timeline",
+      reminderTimeline: "Reminder Timeline",
+      customTimeline: "Custom Timeline"
     },
 
     // Action Hints / Tooltips
@@ -217,6 +222,75 @@ export const translations = {
       saveChanges: "Save Changes",
       addIncome: "Add Income",
       changeSubsequent: "Change subsequent events"
+    },
+
+    // Timeboard Modal
+    timeboardModal: {
+      newTitle: "Create Timeboard",
+      editTitle: "Edit Timeboard",
+      createButton: "Create Timeboard",
+      saveButton: "Save Changes",
+      newSubtitle: "Create a new Timeboard to group your timelines",
+      editSubtitle: "Update Timeboard information",
+      nameLabel: "Timeboard Name *",
+      namePlaceholder: "e.g., Main Timeboard, Personal Finances, Projects...",
+      descriptionLabel: "Description",
+      descriptionPlaceholder: "Brief description of objectives or scope...",
+      typeLabel: "Timeboard Type *",
+      typeFinancial: "Financial",
+      typeProjects: "Projects",
+      typeReminders: "Reminders"
+    },
+
+    // Loan Timeline Modal
+    loanModal: {
+      newTitle: "New Loan",
+      editTitle: "Edit Loan",
+      nameLabel: "Loan / Financing Name *",
+      namePlaceholder: "e.g., Jeep Credit, Egas Moniz Housing, Personal Loan...",
+      descriptionLabel: "Description / Notes",
+      descriptionPlaceholder: "e.g., Contract No. 80004197726 at Santander Bank...",
+      statusLabel: "Loan Status",
+      statusActive: "Active",
+      statusInactive: "Inactive",
+      statusActiveHint: "Included in Accounts & Balance",
+      statusInactiveHint: "Deactivated (Outside Accounts)",
+      statusInactiveWarning: "⚠️ When deactivated, this loan and all its installments will no longer be part of Global Balance and accounts.",
+      contractSectionTitle: "Contract Details & Financial Parameters",
+      contractNumberLabel: "Contract Number",
+      contractNumberPlaceholder: "e.g., 80004197726",
+      bankNameLabel: "Financial Institution / Bank",
+      bankNamePlaceholder: "e.g., RCI Santander Bank",
+      totalDebtLabel: "Total Amount Financed (€) *",
+      totalDebtPlaceholder: "e.g., 12000.00",
+      installmentAmountLabel: "Monthly Installment (€) *",
+      installmentAmountPlaceholder: "e.g., 250.00",
+      tanRateLabel: "TAN Rate (%)",
+      spreadLabel: "Spread (%)",
+      interestStampTaxRateLabel: "Interest Stamp Tax Rate (€)",
+      periodicityLabel: "Periodicity",
+      periodicityMonthly: "Monthly (Default)",
+      periodicityBiweekly: "Biweekly",
+      periodicityDaily: "Daily",
+      periodicityBimonthly: "Bimonthly",
+      periodicitySemiannual: "Semiannual",
+      periodicityYearly: "Yearly",
+      dueDayLabel: "Due Day *",
+      startDateLabel: "Debt Start Date *",
+      totalInstallmentsLabel: "Number of Installments *",
+      totalInstallmentsPlaceholder: "e.g., 48, 60, 120...",
+      colorLabel: "Accent Color",
+      simulateButton: "Simulate",
+      simulationTitle: "Installment Schedule Simulation",
+      colNumber: "#",
+      colDate: "Date",
+      colTotalAmount: "Total Payment (€)",
+      colCapital: "Capital (€)",
+      colTax: "Tax / Stamp (€)",
+      colInterest: "Interest (€)",
+      colRemaining: "Remaining (€)",
+      createButton: "Create Loan",
+      saveButton: "Save Changes"
     }
   },
 
@@ -303,6 +377,7 @@ export const translations = {
     // Sidebar Filters
     sidebar: {
       filtersNavigation: "Filtros & Navegação",
+      newTimeline: "Nova Timeline",
       timelines: "Timelines",
       search: "Pesquisa",
       searchPlaceholder: "Procurar por título, desc ou etiqueta...",
@@ -322,7 +397,11 @@ export const translations = {
       hideEmpty: "Ocultar vazios",
       showEmpty: "Mostrar vazios",
       visible: "Visível",
-      hidden: "Oculto"
+      hidden: "Oculto",
+      loanTimeline: "Linha de Empréstimo",
+      projectTimeline: "Timeline de Projeto",
+      reminderTimeline: "Timeline de Lembretes",
+      customTimeline: "Timeline Personalizada"
     },
 
     // Action Hints / Tooltips
@@ -436,9 +515,77 @@ export const translations = {
       automatic: "Automático",
       cancel: "Cancelar",
       saveChanges: "Salvar Alterações",
-      addIncome: "Adicionar Entrada",
-      changeSubsequent: "Mudar subsequentes"
+      addIncome: "Adicionar Rendimento",
+      changeSubsequent: "Alterar eventos subsequentes"
+    },
+
+    // Timeboard Modal
+    timeboardModal: {
+      newTitle: "Criar Timeboard",
+      editTitle: "Editar Timeboard",
+      createButton: "Criar Timeboard",
+      saveButton: "Guardar Alterações",
+      newSubtitle: "Crie um novo Timeboard para agrupar as suas linhas temporais",
+      editSubtitle: "Atualize as informações do Timeboard",
+      nameLabel: "Nome do Timeboard *",
+      namePlaceholder: "Ex: Timeboard Principal, Finanças Pessoais...",
+      descriptionLabel: "Descrição",
+      descriptionPlaceholder: "Breve descrição dos objetivos ou escopo...",
+      typeLabel: "Tipo de Timeboard *",
+      typeFinancial: "Financeiro (Financial)",
+      typeProjects: "Projetos (Projects)",
+      typeReminders: "Lembretes (Reminders)"
+    },
+
+    // Loan Timeline Modal
+    loanModal: {
+      newTitle: "Novo Empréstimo",
+      editTitle: "Editar Empréstimo",
+      nameLabel: "Nome do Empréstimo / Financiamento *",
+      namePlaceholder: "Ex: Crédito Jeep, Habitação Egas Moniz, Crédito Pessoal...",
+      descriptionLabel: "Descrição / Notas",
+      descriptionPlaceholder: "Ex: Contrato nº 80004197726 no Banco Santander...",
+      statusLabel: "Status do Empréstimo",
+      statusActive: "Ativo",
+      statusInactive: "Inativo",
+      statusActiveHint: "● Incluído nas Contas e Balanço",
+      statusInactiveHint: "○ Desativado (Fora das Contas)",
+      statusInactiveWarning: "⚠️ Ao desativar, este empréstimo e todas as suas parcelas deixarão de fazer parte do Balanço Global e das contas.",
+      contractSectionTitle: "Dados do Contrato & Parâmetros Financeiros",
+      contractNumberLabel: "Número do Contrato",
+      contractNumberPlaceholder: "Ex: 80004197726",
+      bankNameLabel: "Instituição Financeira / Banco",
+      bankNamePlaceholder: "Ex: Banco RCI Santander",
+      totalDebtLabel: "Valor Total Financiado (€) *",
+      totalDebtPlaceholder: "Ex: 12000.00",
+      installmentAmountLabel: "Prestação Mensal (€) *",
+      installmentAmountPlaceholder: "Ex: 250.00",
+      tanRateLabel: "Taxa TAN (%)",
+      spreadLabel: "Spread (%)",
+      interestStampTaxRateLabel: "Imposto de Selo sobre Juros (€)",
+      periodicityLabel: "Periodicidade",
+      periodicityMonthly: "Mensal (Padrão)",
+      periodicityBiweekly: "Quinzenal",
+      periodicityDaily: "Diária",
+      periodicityBimonthly: "Bimestral",
+      periodicitySemiannual: "Semestral",
+      periodicityYearly: "Anual",
+      dueDayLabel: "Dia do Vencimento *",
+      startDateLabel: "Data de Início da Dívida *",
+      totalInstallmentsLabel: "Número de Prestações *",
+      totalInstallmentsPlaceholder: "Ex: 48, 60, 120...",
+      colorLabel: "Cor de Destaque",
+      simulateButton: "Simular",
+      simulationTitle: "Simulação do Plano de Prestações",
+      colNumber: "#",
+      colDate: "Data",
+      colTotalAmount: "Prestação Total (€)",
+      colCapital: "Capital (€)",
+      colTax: "Imposto Selo (€)",
+      colInterest: "Juros (€)",
+      colRemaining: "Saldo Restante (€)",
+      createButton: "Criar Empréstimo",
+      saveButton: "Salvar Alterações"
     }
   }
 };
-

@@ -28,7 +28,16 @@ export class SupabaseFinancialEventRepository extends IRepository {
       eventType: eventType,
       event_type: eventType,
       category: row.category,
-      amount: row.amount,
+      amount: row.installment_amount !== undefined && row.installment_amount !== null ? Number(row.installment_amount) : Number(row.amount || 0),
+      installmentAmount: row.installment_amount,
+      installment_amount: row.installment_amount,
+      installmentCapital: row.installment_capital,
+      installment_capital: row.installment_capital,
+      installmentInterest: row.installment_interest,
+      installment_interest: row.installment_interest,
+      installmentFee: row.installment_fee,
+      installment_fee: row.installment_fee,
+      aggregation: row.aggregation || 'monthly',
       date: row.date,
       dueDate: row.due_date,
       due_date: row.due_date,
@@ -39,12 +48,10 @@ export class SupabaseFinancialEventRepository extends IRepository {
       isAutomatic: row.automatic,
       isRecurring: row.is_recurring,
       is_recurring: row.is_recurring,
-      periodicity: row.is_recurring ? 'recorrente' : 'unica',
-      eventId: (row.is_recurring || (row.periodicity && row.periodicity !== 'once' && row.periodicity !== 'unico'))
-        ? (row.event_id || null)
-        : null,
+      periodicity: row.aggregation || (row.is_recurring ? 'recorrente' : 'unica'),
+      eventId: row.event_id || null,
       event_id: row.event_id || null,
-      version: row.event_version !== undefined ? Number(row.event_version) : (row.version !== undefined ? Number(row.version) : 0),
+      version: row.event_version !== undefined ? Number(row.event_version) : 0,
       eventVersion: row.event_version !== undefined ? Number(row.event_version) : 0,
       event_version: row.event_version !== undefined ? Number(row.event_version) : 0,
       dayOfMonth: row.day_of_month !== undefined ? row.day_of_month : null,
@@ -53,19 +60,16 @@ export class SupabaseFinancialEventRepository extends IRepository {
       breakdownItems: Array.isArray(row.breakdown_items) ? row.breakdown_items : [],
       notes: row.notes || '',
       priority: row.priority || 'Normal',
-      time: row.time || '09:00',
       installmentNumber: row.installment_number,
       installment_number: row.installment_number,
       totalInstallments: row.total_installments,
       total_installments: row.total_installments,
-      amortizationStrategy: row.amortization_strategy,
-      amortization_strategy: row.amortization_strategy,
-      interestAmount: row.interest_amount,
-      interest_amount: row.interest_amount,
-      principalAmount: row.principal_amount,
-      principal_amount: row.principal_amount,
-      remainingDebtAfter: row.remaining_debt_after,
-      remaining_debt_after: row.remaining_debt_after,
+      principalAmount: row.installment_capital !== undefined ? Number(row.installment_capital) : Number(row.principal_amount || 0),
+      principal_amount: row.installment_capital !== undefined ? Number(row.installment_capital) : Number(row.principal_amount || 0),
+      interestAmount: row.installment_interest !== undefined ? Number(row.installment_interest) : Number(row.interest_amount || 0),
+      interest_amount: row.installment_interest !== undefined ? Number(row.installment_interest) : Number(row.interest_amount || 0),
+      taxAmount: row.installment_fee !== undefined ? Number(row.installment_fee) : Number(row.tax_amount || 0),
+      tax_amount: row.installment_fee !== undefined ? Number(row.installment_fee) : Number(row.tax_amount || 0),
       createdAt: row.created_at,
       updatedAt: row.updated_at
     });
@@ -75,27 +79,38 @@ export class SupabaseFinancialEventRepository extends IRepository {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const validId = data.id && uuidRegex.test(data.id) ? data.id : undefined;
     const effectiveEventId = data.eventId || data.event_id || data.id || 'evt-default';
-    const effectiveTenantId = (data.tenantId && uuidRegex.test(data.tenantId)) ? data.tenantId : ((data.tenant_id && uuidRegex.test(data.tenant_id)) ? data.tenant_id : '9e3c3070-d4db-43be-ab03-3f852a9a81da');
-    const effectiveTimeboardId = (data.timeboardId && uuidRegex.test(data.timeboardId)) ? data.timeboardId : ((data.timeboard_id && uuidRegex.test(data.timeboard_id)) ? data.timeboard_id : '5fcd8a1a-eac7-4405-9c8b-b9607e70b420');
+    const effectiveTenantId = (data.tenantId && uuidRegex.test(data.tenantId)) ? data.tenantId : ((data.tenant_id && uuidRegex.test(data.tenant_id)) ? data.tenant_id : null);
+    const effectiveTimeboardId = (data.timeboardId && uuidRegex.test(data.timeboardId)) ? data.timeboardId : ((data.timeboard_id && uuidRegex.test(data.timeboard_id)) ? data.timeboard_id : null);
     const effectiveTimelineId = (data.timelineId && uuidRegex.test(data.timelineId)) ? data.timelineId : ((data.timeline_id && uuidRegex.test(data.timeline_id)) ? data.timeline_id : null);
 
-      const fType = data.eventType || data.event_type || EventType.EXPENSE;
-      const defaultCategory = (fType === EventType.INCOME) ? 'entrada_recorrente' : (fType === EventType.INVESTMENT) ? 'investimento_poupanca' : 'saida_recorrente';
+    const fType = data.eventType || data.event_type || EventType.EXPENSE;
+    const defaultCategory = (fType === EventType.INCOME) ? 'entrada_recorrente' : (fType === EventType.INVESTMENT) ? 'investimento_poupanca' : 'saida_recorrente';
 
-      const row = {
-        event_id: effectiveEventId,
-        event_version: data.eventVersion !== undefined ? Number(data.eventVersion) : (data.version !== undefined ? Number(data.version) : 0),
-        day_of_month: data.dayOfMonth !== undefined ? data.dayOfMonth : (data.day_of_month !== undefined ? data.day_of_month : null),
-        is_terminated: Boolean(data.isTerminated || data.is_terminated),
+    const instTotal = Number(data.installmentAmount !== undefined ? data.installmentAmount : (data.installment_amount !== undefined ? data.installment_amount : data.amount)) || 0;
+    const instCap = Number(data.installmentCapital !== undefined ? data.installmentCapital : (data.installment_capital !== undefined ? data.installment_capital : (data.principalAmount || data.principal_amount))) || 0;
+    const instInt = Number(data.installmentInterest !== undefined ? data.installmentInterest : (data.installment_interest !== undefined ? data.installment_interest : (data.interestAmount || data.interest_amount || data.interestPortion))) || 0;
+    const instFee = Number(data.installmentFee !== undefined ? data.installmentFee : (data.installment_fee !== undefined ? data.installment_fee : (data.taxAmount || data.tax_amount))) || 0;
 
-        tenant_id: effectiveTenantId,
-        timeboard_id: effectiveTimeboardId,
-        timeline_id: effectiveTimelineId,
-        name: data.name || data.title || 'Evento Financeiro',
-        description: data.description || '',
-        event_type: fType,
-        category: data.category || defaultCategory,
-      amount: Number(data.amount) || 0,
+    const row = {
+      event_id: effectiveEventId,
+      event_version: data.eventVersion !== undefined ? Number(data.eventVersion) : (data.version !== undefined ? Number(data.version) : 0),
+      is_terminated: Boolean(data.isTerminated || data.is_terminated),
+      day_of_month: data.dayOfMonth !== undefined ? data.dayOfMonth : (data.day_of_month !== undefined ? data.day_of_month : null),
+
+      tenant_id: effectiveTenantId,
+      timeboard_id: effectiveTimeboardId,
+      timeline_id: effectiveTimelineId,
+      name: data.name || data.title || 'Evento Financeiro',
+      description: data.description || '',
+      event_type: fType,
+      category: data.category || defaultCategory,
+
+      installment_amount: instTotal,
+      installment_capital: instCap,
+      installment_interest: instInt,
+      installment_fee: instFee,
+      aggregation: data.aggregation || data.periodicity || 'monthly',
+
       date: data.date,
       due_date: data.dueDate || data.due_date || null,
       paid_date: data.paidDate || data.paid_date || null,
@@ -104,10 +119,6 @@ export class SupabaseFinancialEventRepository extends IRepository {
 
       installment_number: data.installmentNumber !== undefined ? data.installmentNumber : data.installment_number || null,
       total_installments: data.totalInstallments !== undefined ? data.totalInstallments : data.total_installments || null,
-      amortization_strategy: data.amortizationStrategy || data.amortization_strategy || data.strategy || null,
-      interest_amount: Number(data.interestAmount !== undefined ? data.interestAmount : data.interest_amount) || 0,
-      principal_amount: Number(data.principalAmount !== undefined ? data.principalAmount : data.principal_amount) || 0,
-      remaining_debt_after: Number(data.remainingDebtAfter !== undefined ? data.remainingDebtAfter : (data.remaining_debt_after || data.balanceAfter)) || null,
 
       labels: Array.isArray(data.labels) ? data.labels : [],
       breakdown_items: Array.isArray(data.breakdownItems) ? data.breakdownItems : (Array.isArray(data.breakdown_items) ? data.breakdown_items : []),
@@ -159,7 +170,9 @@ export class SupabaseFinancialEventRepository extends IRepository {
       row.event_type = data.eventType || data.event_type;
     }
     if (data.category !== undefined) row.category = data.category;
-    if (data.amount !== undefined) row.amount = Number(data.amount) || 0;
+    if (data.amount !== undefined || data.installmentAmount !== undefined || data.installment_amount !== undefined) {
+      row.installment_amount = Number(data.installmentAmount !== undefined ? data.installmentAmount : (data.installment_amount !== undefined ? data.installment_amount : data.amount)) || 0;
+    }
     if (data.date !== undefined) row.date = data.date;
     if (data.dueDate !== undefined || data.due_date !== undefined) row.due_date = data.dueDate || data.due_date;
     if (data.paidDate !== undefined || data.paid_date !== undefined) row.paid_date = data.paidDate || data.paid_date;
@@ -168,15 +181,62 @@ export class SupabaseFinancialEventRepository extends IRepository {
     if (data.installmentNumber !== undefined || data.installment_number !== undefined) row.installment_number = data.installmentNumber !== undefined ? data.installmentNumber : data.installment_number;
     if (data.totalInstallments !== undefined || data.total_installments !== undefined) row.total_installments = data.totalInstallments !== undefined ? data.totalInstallments : data.total_installments;
     if (data.amortizationStrategy !== undefined || data.amortization_strategy !== undefined) row.amortization_strategy = data.amortizationStrategy || data.amortization_strategy;
-    if (data.interestAmount !== undefined || data.interest_amount !== undefined) row.interest_amount = Number(data.interestAmount !== undefined ? data.interestAmount : data.interest_amount) || 0;
-    if (data.principalAmount !== undefined || data.principal_amount !== undefined) row.principal_amount = Number(data.principalAmount !== undefined ? data.principalAmount : data.principal_amount) || 0;
-    if (data.remainingDebtAfter !== undefined || data.remaining_debt_after !== undefined) row.remaining_debt_after = Number(data.remainingDebtAfter !== undefined ? data.remainingDebtAfter : data.remaining_debt_after);
+
+    if (data.interestAmount !== undefined || data.interest_amount !== undefined || data.interestPortion !== undefined || data.interest_portion !== undefined) {
+      const val = Number(data.interestPortion !== undefined ? data.interestPortion : (data.interest_portion !== undefined ? data.interest_portion : (data.interestAmount !== undefined ? data.interestAmount : data.interest_amount))) || 0;
+      row.interest_amount = val;
+      row.installment_interest = val;
+    }
+    if (data.principalAmount !== undefined || data.principal_amount !== undefined || data.installmentCapital !== undefined || data.installment_capital !== undefined) {
+      const val = Number(data.principalAmount !== undefined ? data.principalAmount : (data.principal_amount !== undefined ? data.principal_amount : (data.installmentCapital !== undefined ? data.installmentCapital : data.installment_capital))) || 0;
+      row.principal_amount = val;
+      row.installment_capital = val;
+    }
+    if (data.taxAmount !== undefined || data.tax_amount !== undefined || data.installmentFee !== undefined || data.installment_fee !== undefined) {
+      const val = Number(data.taxAmount !== undefined ? data.taxAmount : (data.tax_amount !== undefined ? data.tax_amount : (data.installmentFee !== undefined ? data.installmentFee : data.installment_fee))) || 0;
+      row.installment_fee = val;
+    }
+
+    if (data.remainingDebtAfter !== undefined || data.remaining_debt_after !== undefined || data.balanceAfter !== undefined || data.balance_after !== undefined) {
+      row.remaining_debt_after = Number(data.balanceAfter !== undefined ? data.balanceAfter : (data.balance_after !== undefined ? data.balance_after : (data.remainingDebtAfter !== undefined ? data.remainingDebtAfter : data.remaining_debt_after)));
+    }
     if (data.labels !== undefined) row.labels = Array.isArray(data.labels) ? data.labels : [];
     if (data.breakdownItems !== undefined || data.breakdown_items !== undefined) row.breakdown_items = Array.isArray(data.breakdownItems) ? data.breakdownItems : (Array.isArray(data.breakdown_items) ? data.breakdown_items : []);
     if (data.notes !== undefined) row.notes = data.notes;
     if (data.priority !== undefined) row.priority = data.priority;
 
     return row;
+  }
+
+  async getAllWithStatuses(filter = null) {
+    // Buscar todos os eventos e fazer um LEFT JOIN simples com a tabela de status mensais
+    let query = supabase
+      .from(this.tableName)
+      .select('*, financial_event_status(*)')
+      .order('date', { ascending: true });
+
+    if (filter && typeof filter === 'object') {
+      if (filter.startDate) query = query.gte('date', filter.startDate);
+      if (filter.endDate) query = query.lte('date', filter.endDate);
+      if (filter.timeboardId) query = query.eq('timeboard_id', filter.timeboardId);
+      if (filter.timelineId) query = query.eq('timeline_id', filter.timelineId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.warn('Fallback to separate getAll due to join error:', error.message);
+      return this.getAll(filter);
+    }
+
+    const entities = (data || []).map((row) => {
+      const entity = this._toEntity(row);
+      const statuses = Array.isArray(row.financial_event_status) ? row.financial_event_status : [];
+      entity.statusesList = statuses;
+      return entity;
+    });
+
+    return typeof filter === 'function' ? entities.filter(filter) : entities;
   }
 
   async getAll(filter = null) {
@@ -259,6 +319,20 @@ export class SupabaseFinancialEventRepository extends IRepository {
 
     if (error) {
       console.error(`Error deleting financial event ${id} from Supabase:`, error);
+      return false;
+    }
+    return true;
+  }
+
+  async deleteByTimelineId(timelineId) {
+    if (!timelineId) return true;
+    const { error } = await supabase
+      .from(this.tableName)
+      .delete()
+      .eq('timeline_id', timelineId);
+
+    if (error) {
+      console.error(`Error deleting financial events for timeline ${timelineId} from Supabase:`, error);
       return false;
     }
     return true;

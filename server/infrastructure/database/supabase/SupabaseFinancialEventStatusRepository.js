@@ -90,6 +90,20 @@ export class SupabaseFinancialEventStatusRepository {
     }
     return true;
   }
+
+  async deleteByTimelineId(timelineId) {
+    if (!timelineId) return false;
+    const { error } = await supabase
+      .from(this.tableName)
+      .delete()
+      .eq('timeline_id', String(timelineId));
+
+    if (error) {
+      console.error(`Error deleting financial_event_status for timeline ${timelineId}:`, error.message);
+      return false;
+    }
+    return true;
+  }
 }
 
 export const financialEventStatusRepository = new SupabaseFinancialEventStatusRepository();

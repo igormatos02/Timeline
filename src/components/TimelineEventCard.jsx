@@ -79,8 +79,17 @@ export default function TimelineEventCard({
   const currentMonthEndStr = format(endOfMonth(now), 'yyyy-MM-dd');
 
   const effectiveStatus = (localStatus || event.status || '').toLowerCase();
-  const isAmortization = event.eventType === EventType.AMORTIZATION;
-  const isLoanInstallment = event.eventType === EventType.LOAN_INSTALLMENT || (event.isSystemLoanEvent && !isAmortization);
+  const isAmortization = event.eventType === EventType.AMORTIZATION || event.category === 'amortizacao';
+  const isLoanInstallment =
+    event.eventType === EventType.LOAN_INSTALLMENT ||
+    event.category === 'parcela_emprestimo' ||
+    event.category === 'auto_loan' ||
+    event.category === 'personal_loan' ||
+    event.category === 'mortgage' ||
+    Boolean(event.isSystemLoanEvent && !isAmortization) ||
+    Boolean(event.installmentNumber || event.installment_number) ||
+    Boolean(currentTimelineId && String(currentTimelineId).includes('loan')) ||
+    Boolean(event.timelineId && String(event.timelineId).includes('loan'));
   const isIncomeEvent = event.eventType === EventType.INCOME;
   const isExpenseEvent = event.eventType === EventType.EXPENSE;
   const isInvestmentEvent = event.eventType === EventType.INVESTMENT;
@@ -105,8 +114,7 @@ export default function TimelineEventCard({
     effectiveStatus === EventStatus.INVESTED ||
     effectiveStatus === EventStatus.SETTLED ||
     effectiveStatus === EventStatus.COMPLETED ||
-    effectiveStatus === EventStatus.AMORTIZED ||
-    Boolean(event.isCompleted);
+    effectiveStatus === EventStatus.AMORTIZED;
 
   const isOverdue = Boolean(
     event.date &&
@@ -127,7 +135,7 @@ export default function TimelineEventCard({
   const isCompletedInvestment = isInvestmentEvent && isCompleted;
   const isOverdueInvestment = isInvestmentEvent && isOverdue;
 
-  const isPaidLoan = isLoanInstallment && (effectiveStatus === EventStatus.PAID || effectiveStatus === EventStatus.SETTLED || event.isCompleted);
+  const isPaidLoan = isLoanInstallment && (effectiveStatus === EventStatus.PAID || effectiveStatus === EventStatus.SETTLED || effectiveStatus === EventStatus.COMPLETED || effectiveStatus === EventStatus.AMORTIZED);
   const isOverdueLoan = isLoanInstallment && (isOverdue || effectiveStatus === EventStatus.OVERDUE);
   const isAbatida = effectiveStatus === 'abatida' || Boolean(event.isAbatida) || (Array.isArray(event.labels) && event.labels.includes('Abatida'));
 
@@ -2168,8 +2176,8 @@ export default function TimelineEventCard({
               </span>
             </div>
 
-            {/* Juros Embutidos ou Juros Poupados */}
-            <div style={{ display: 'flex', flexDirection: 'column', borderLeft: isAbatida ? '1px solid var(--border-glass)' : 'none', paddingLeft: isAbatida ? '14px' : '0' }}>
+            {/* Juros Contratuais */}
+            <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
               <span style={{ fontSize: '0.7rem', color: isAbatida ? '#10b981' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                 {isAbatida ? t('loanCard.interestSaved') : t('loanCard.interest')}
               </span>
@@ -2177,19 +2185,31 @@ export default function TimelineEventCard({
                 {isAbatida
                   ? `+${formatCurrency(abatedBreakdown?.origInterest || 23.59)}`
                   : formatCurrency(
-                      Math.max(0, (Number(event.amount) || 0) - Number(event.principalAmount ?? event.principal_amount ?? 0))
+                      event.interestPortion !== undefined ? event.interestPortion : (event.interest_portion !== undefined ? event.interest_portion : 0)
                     )}
               </span>
             </div>
 
+            {/* Imposto de Selo (se > 0) */}
+            {!isAbatida && (event.taxAmount !== undefined ? event.taxAmount : event.tax_amount) > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                  Imposto de Selo
+                </span>
+                <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#a855f7' }}>
+                  {formatCurrency(event.taxAmount !== undefined ? event.taxAmount : event.tax_amount)}
+                </span>
+              </div>
+            )}
+
             {/* Saldo Devedor */}
-            {event.balanceAfter !== undefined && (
+            {(event.balanceAfter !== undefined || event.remainingDebtAfter !== undefined || event.remaining_debt_after !== undefined) && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                   {t('loanCard.remainingDebt')}
                 </span>
                 <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAbatida || isInertFuture ? '#94a3b8' : 'var(--primary-light)' }}>
-                  {formatCurrency(event.balanceAfter)}
+                  {formatCurrency(event.balanceAfter !== undefined ? event.balanceAfter : (event.remainingDebtAfter !== undefined ? event.remainingDebtAfter : (event.remaining_debt_after || 0)))}
                 </span>
               </div>
             )}
@@ -2977,7 +2997,7 @@ export default function TimelineEventCard({
                 const nextAuto = !localAuto;
                 setLocalAuto(nextAuto);
 
-                const targetSeriesKey = event.eventId || event.seriesId || (isLoanInstallment ? event.timelineId || event.timelineOriginId : event.id);
+                const targetSeriesKey = event.seriesId || event.eventId;
 
                 let newStatus = event.status;
                 let newIsCompleted = Boolean(event.isCompleted);

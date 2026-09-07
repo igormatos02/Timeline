@@ -1,5 +1,8 @@
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
+import { financialEventStatusRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventStatusRepository.js';
+import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
+import { financialEventService } from './FinancialEventService.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
 import {
   incomeDomainService,
@@ -12,52 +15,70 @@ import { TimelineType } from '../../../shared/enums/index.js';
 
 export class TimelineService {
   /**
-   * Auxiliar privado para enriquecer timelines com os dados das Stored Procedures SQL (Loan / Expense)
+   * Auxiliar privado para enriquecer timelines com métricas calculadas em memória via JS
    */
-  async _enrichTimelineMetrics(timeline, referenceDate = null) {
+  async _enrichTimelineMetrics(timeline, referenceDate = null, preloadedEvents = null) {
     if (!timeline) return timeline;
     const typeLower = (timeline.type || '').toLowerCase();
     
+    // Obter todos os eventos em memória projetados
+    const allEvents = preloadedEvents || (await financialEventService.getAllEvents({ timeboardId: timeline.timeboardId }));
+
     if (typeLower === TimelineType.LOAN || typeLower === 'loan' || typeLower === 'empréstimo' || typeLower === 'emprestimo') {
-      const loanHeaderResult = await timelineRepository.fetchLoanMetrics(timeline.id, referenceDate);
-      if (loanHeaderResult) {
-        return {
-          ...timeline,
-          loanHeaderResult,
-          procedureMetrics: loanHeaderResult,
-          metrics: loanHeaderResult
-        };
-      }
+      const loanEvents = allEvents.filter((ev) => ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id);
+      let loanContract = null;
+      try {
+        loanContract = await loanContractRepository.getByTimelineId(timeline.id);
+      } catch (e) { }
+
+      const metrics = loanDomainService.calculateMetrics(timeline, loanEvents, referenceDate, loanContract);
+      return {
+        ...timeline,
+        loanContract,
+        loanHeaderResult: metrics,
+        procedureMetrics: metrics,
+        metrics
+      };
     } else if (typeLower === TimelineType.EXPENSE || typeLower === 'expense' || typeLower === 'despesa' || typeLower === 'gastos') {
-      const expenseHeaderResult = await timelineRepository.fetchExpenseMetrics(timeline.id, referenceDate);
-      if (expenseHeaderResult) {
-        return {
-          ...timeline,
-          expenseHeaderResult,
-          procedureMetrics: expenseHeaderResult,
-          metrics: expenseHeaderResult
-        };
-      }
+      const expenseEvents = allEvents.filter((ev) => ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id);
+      const metrics = expenseDomainService.calculateMetrics(expenseEvents);
+      return {
+        ...timeline,
+        expenseHeaderResult: metrics,
+        procedureMetrics: metrics,
+        metrics
+      };
     } else if (typeLower === TimelineType.INCOME || typeLower === 'income' || typeLower === 'entradas' || typeLower === 'rendimentos') {
-      const incomeHeaderResult = await timelineRepository.fetchIncomeMetrics(timeline.id, referenceDate);
-      if (incomeHeaderResult) {
-        return {
-          ...timeline,
-          incomeHeaderResult,
-          procedureMetrics: incomeHeaderResult,
-          metrics: incomeHeaderResult
-        };
-      }
+      const incomeEvents = allEvents.filter((ev) => ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id);
+      const metrics = incomeDomainService.calculateMetrics(incomeEvents);
+      return {
+        ...timeline,
+        incomeHeaderResult: metrics,
+        procedureMetrics: metrics,
+        metrics
+      };
     } else if (typeLower === TimelineType.INVESTMENT || typeLower === 'investment' || typeLower === 'investimento' || typeLower === 'poupança' || typeLower === 'poupanca') {
-      const investmentHeaderResult = await timelineRepository.fetchInvestmentMetrics(timeline.id, referenceDate);
-      if (investmentHeaderResult) {
-        return {
-          ...timeline,
-          investmentHeaderResult,
-          procedureMetrics: investmentHeaderResult,
-          metrics: investmentHeaderResult
-        };
-      }
+      const investmentEvents = allEvents.filter((ev) => ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id);
+      const metrics = investmentDomainService.calculateMetrics(investmentEvents);
+      return {
+        ...timeline,
+        investmentHeaderResult: metrics,
+        procedureMetrics: metrics,
+        metrics
+      };
+    } else if (typeLower === TimelineType.BALANCE || typeLower === 'balance' || typeLower === 'balanço' || typeLower === 'balanco') {
+      const loanTimelines = await timelineRepository.getAll((tl) => (!timeline.timeboardId || tl.timeboardId === timeline.timeboardId) && (tl.type === TimelineType.LOAN || tl.type === 'loan'));
+      const balanceMetrics = balanceDomainService.calculateBalance({
+        allEvents,
+        loanTimelines,
+        referenceDate
+      });
+      return {
+        ...timeline,
+        balanceHeaderResult: balanceMetrics,
+        procedureMetrics: balanceMetrics,
+        metrics: balanceMetrics
+      };
     }
     return timeline;
   }
@@ -81,9 +102,11 @@ export class TimelineService {
       return (a.name || '').localeCompare(b.name || '');
     });
 
+    const allEvents = await financialEventService.getAllEvents({ timeboardId });
+
     const enrichedTimelines = await Promise.all(
       sortedTimelines.map(async (tl) => {
-        const enriched = await this._enrichTimelineMetrics(tl, query.currentDate);
+        const enriched = await this._enrichTimelineMetrics(tl, query.currentDate, allEvents);
         return {
           ...enriched,
           events: []
@@ -159,6 +182,17 @@ export class TimelineService {
     if (!timeline.canDelete) {
       throw new Error('Timeline do sistema não pode ser eliminada');
     }
+
+    // 1. Excluir todos os status associados à timeline
+    await financialEventStatusRepository.deleteByTimelineId(id);
+
+    // 2. Excluir todos os eventos financeiros associados à timeline
+    await eventRepository.deleteByTimelineId(id);
+
+    // 3. Excluir contrato de empréstimo associado à timeline (se existir)
+    await loanContractRepository.deleteByTimelineId(id);
+
+    // 4. Excluir a timeline
     return timelineRepository.delete(id);
   }
 

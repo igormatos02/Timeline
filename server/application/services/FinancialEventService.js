@@ -1,7 +1,6 @@
-import { format, parseISO } from 'date-fns';
 import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
 import { financialEventStatusRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventStatusRepository.js';
-import { loanContractRepository } from '../../infrastructure/database/json/JsonLoanContractRepository.js';
+import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
 import { calcToggledStatus } from '../../domain/entities/TimelineEvent.js';
@@ -24,13 +23,23 @@ export class FinancialEventService {
   }
 
   async getAllEvents(filter = {}) {
-    const rawEvents = await eventRepository.getAll();
+    const rawEvents = await eventRepository.getAllWithStatuses();
     const projectedEvents = projectEvents(rawEvents, filter);
 
     const statusMap = await financialEventStatusRepository.getStatusMap();
-    const now = new Date();
-    const todayStr = format(now, 'yyyy-MM-dd');
-    const currentMonthKey = todayStr.substring(0, 7);
+
+    // Mapear também os status dinâmicos que vieram no join dos rawEvents
+    const joinedStatusMap = new Map();
+    for (const rawEv of rawEvents) {
+      if (Array.isArray(rawEv.statusesList)) {
+        for (const st of rawEv.statusesList) {
+          if (st && st.year && st.month) {
+            const keyByEvId = `${st.year}_${st.month}_${st.event_id}`;
+            joinedStatusMap.set(keyByEvId, st.status);
+          }
+        }
+      }
+    }
 
     for (const ev of projectedEvents) {
       const dateStr = ev.date ? String(ev.date) : '';
@@ -40,27 +49,15 @@ export class FinancialEventService {
         const targetId = ev.eventId || ev.id;
         const key = `${year}_${month}_${targetId}`;
         const keyById = `${year}_${month}_${ev.id}`;
-        let matchedStatus = statusMap.get(key) || statusMap.get(keyById);
-
-        const isLoanOrSystemAuto = ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent || ev.eventType === EventType.LOAN_INSTALLMENT;
-        const isAuto = Boolean(ev.automatic !== undefined ? ev.automatic : ev.isAutomatic) || isLoanOrSystemAuto;
-        const isCurrentOrPastMonth = dateStr.substring(0, 7) <= currentMonthKey;
-        const isDateDueOrPassed = dateStr <= todayStr;
-
-        // Se for um evento automático sem registo de status positivo no mês corrente/passado onde a data já chegou (>= hoje)
-        if (isAuto && isNegativeStatus(matchedStatus) && isCurrentOrPastMonth && isDateDueOrPassed) {
-          const positiveState = calcToggledStatus({ ...ev, status: EventStatus.PENDING, isCompleted: false });
-          matchedStatus = positiveState.status;
-
-          // Guardar na base de dados de status
-          await this._syncStatus(dateStr, targetId, matchedStatus);
-          statusMap.set(key, matchedStatus);
-          if (ev.id) statusMap.set(keyById, matchedStatus);
-        }
+        let matchedStatus = statusMap.get(key) || statusMap.get(keyById) || joinedStatusMap.get(key) || joinedStatusMap.get(keyById);
 
         if (matchedStatus) {
           ev.status = matchedStatus;
           ev.isCompleted = isPositiveStatus(matchedStatus);
+        } else if (ev.eventType === EventType.AMORTIZATION || ev.category === 'amortizacao' || ev.category === 'amortization') {
+          // Eventos de amortização extraordinária pendentes contam como amortizados por padrão
+          ev.status = EventStatus.AMORTIZED;
+          ev.isCompleted = true;
         } else {
           ev.status = EventStatus.PENDING;
           ev.isCompleted = false;
@@ -68,6 +65,70 @@ export class FinancialEventService {
       } else {
         ev.status = EventStatus.PENDING;
         ev.isCompleted = false;
+      }
+    }
+
+    // Calcular/recalcular dinamicamente remainingDebtAfter e balanceAfter para parcelas de empréstimos
+    const eventsByTimeline = new Map();
+    for (const ev of projectedEvents) {
+      const tlId = ev.timelineId || ev.timelineOriginId;
+      if (tlId && (ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent)) {
+        if (!eventsByTimeline.has(tlId)) {
+          eventsByTimeline.set(tlId, []);
+        }
+        eventsByTimeline.get(tlId).push(ev);
+      }
+    }
+
+    for (const [tlId, loanEvs] of eventsByTimeline.entries()) {
+      const sortedLoanEvs = loanEvs.sort((a, b) => {
+        const numA = Number(a.installmentNumber || 0);
+        const numB = Number(b.installmentNumber || 0);
+        if (numA && numB) return numA - numB;
+        return (a.date || '').localeCompare(b.date || '');
+      });
+
+      // Tentar obter o contrato de empréstimo associado à timeline para saber o capital inicial
+      let initialCapital = 0;
+      try {
+        const contract = await loanContractRepository.getByTimelineId(tlId);
+        if (contract) {
+          initialCapital = Number(contract.originalCapital || contract.original_capital || 0);
+        }
+      } catch (e) { }
+
+      // Se não houver contrato ou originalCapital for 0, somamos o capital de todas as prestações da série
+      if (!initialCapital || initialCapital <= 0) {
+        initialCapital = sortedLoanEvs.reduce((sum, e) => {
+          const cap = Number(e.installmentCapital !== undefined ? e.installmentCapital : (e.principalAmount || 0));
+          return sum + cap;
+        }, 0);
+      }
+
+      // Se ainda for 0, tentar encontrar pelo primeiro evento com balanceAfter
+      if (!initialCapital || initialCapital <= 0) {
+        const firstWithBalance = sortedLoanEvs.find(e => e.balanceAfter !== undefined && e.balanceAfter !== null && Number(e.balanceAfter) > 0);
+        if (firstWithBalance) {
+          initialCapital = Number(firstWithBalance.balanceAfter) + Number(firstWithBalance.installmentCapital || firstWithBalance.principalAmount || 0);
+        }
+      }
+
+      let runningBalance = initialCapital;
+
+      for (let i = 0; i < sortedLoanEvs.length; i++) {
+        const ev = sortedLoanEvs[i];
+        const capitalPortion = Number(ev.installmentCapital !== undefined ? ev.installmentCapital : (ev.principalAmount || 0));
+
+        if (runningBalance > 0) {
+          runningBalance = Math.max(0, runningBalance - capitalPortion);
+          ev.remainingDebtAfter = runningBalance;
+          ev.balanceAfter = runningBalance;
+        } else if (ev.remainingDebtAfter !== undefined && ev.remainingDebtAfter !== null) {
+          ev.balanceAfter = Number(ev.remainingDebtAfter);
+        } else {
+          ev.balanceAfter = 0;
+          ev.remainingDebtAfter = 0;
+        }
       }
     }
 

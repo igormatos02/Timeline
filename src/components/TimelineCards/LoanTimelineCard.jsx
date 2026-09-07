@@ -1,0 +1,6 @@
+import React from 'react';
+import TimelineEventCard from '../TimelineEventCard.jsx';
+
+export default function LoanTimelineCard(props) {
+  return <TimelineEventCard {...props} />;
+}

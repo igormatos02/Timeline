@@ -1,5 +1,5 @@
-import { loanContractRepository } from '../../infrastructure/database/json/JsonLoanContractRepository.js';
-import { eventRepository } from '../../infrastructure/database/json/JsonEventRepository.js';
+import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
+import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
 import { EventType, EventStatus } from '../../../shared/enums/index.js';
 
 export class LoanService {
@@ -9,6 +9,18 @@ export class LoanService {
 
   async getLoanById(id) {
     return loanContractRepository.getById(id);
+  }
+
+  async getContractByTimelineId(timelineId) {
+    return loanContractRepository.getByTimelineId(timelineId);
+  }
+
+  async createContract(contractData) {
+    return loanContractRepository.create(contractData);
+  }
+
+  async updateContract(id, updates) {
+    return loanContractRepository.update(id, updates);
   }
 
   async amortizeLoan({ loanId, amount, date, recalculateMode = 'prazo' }) {

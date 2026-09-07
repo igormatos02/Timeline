@@ -4,6 +4,7 @@ import { LoanHeaderResultDTO } from '../../../../shared/dtos/LoanHeaderResultDTO
 import { ExpenseHeaderResultDTO } from '../../../../shared/dtos/ExpenseHeaderResultDTO.js';
 import { IncomeHeaderResultDTO } from '../../../../shared/dtos/IncomeHeaderResultDTO.js';
 import { InvestmentHeaderResultDTO } from '../../../../shared/dtos/InvestmentHeaderResultDTO.js';
+import { BalanceHeaderResultDTO } from '../../../../shared/dtos/BalanceHeaderResultDTO.js';
 import { IRepository } from '../../../domain/repositories/IRepository.js';
 
 const TABLE = 'timelines';
@@ -23,7 +24,8 @@ function rowToEntity(row) {
     startDate: row.start_date,
     endDate: row.end_date,
     status: row.status,
-    periodicity: row.periodicity,
+    aggregation: row.aggregation || row.periodicity,
+    periodicity: row.periodicity || row.aggregation,
     tenantId: row.tenant_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -33,6 +35,7 @@ function rowToEntity(row) {
 // Maps Domain Entity (camelCase) to database columns (snake_case)
 function entityToRow(data) {
   const row = {};
+  if (data.id !== undefined) row.id = data.id;
   if (data.timeboardId !== undefined) row.timeboard_id = data.timeboardId;
   if (data.timeboard_id !== undefined) row.timeboard_id = data.timeboard_id;
   if (data.name !== undefined) row.name = data.name;
@@ -46,9 +49,10 @@ function entityToRow(data) {
   if (data.endDate !== undefined) row.end_date = data.endDate;
   if (data.end_date !== undefined) row.end_date = data.end_date;
   if (data.status !== undefined) row.status = data.status;
-  if (data.periodicity !== undefined) row.periodicity = data.periodicity;
-  if (data.tenantId !== undefined) row.tenant_id = data.tenantId;
-  if (data.tenant_id !== undefined) row.tenant_id = data.tenant_id;
+  if (data.aggregation !== undefined || data.periodicity !== undefined) {
+    row.aggregation = data.aggregation || data.periodicity;
+  }
+  row.tenant_id = data.tenantId || data.tenant_id || '9e3c3070-d4db-43be-ab03-3f852a9a81da';
   return row;
 }
 
@@ -57,88 +61,28 @@ export class SupabaseTimelineRepository extends IRepository {
    * Método de Infraestrutura: Executa a RPC Stored Procedure get_loan_timeline_metrics no Supabase
    */
   async fetchLoanMetrics(timelineId, referenceDate = null) {
-    if (!timelineId) return null;
-    const refDate = referenceDate || new Date().toISOString().substring(0, 10);
-    try {
-      const { data, error } = await supabase.rpc('get_loan_timeline_metrics', {
-        p_timeline_id: timelineId,
-        p_reference_date: refDate
-      });
-      if (error) {
-        console.warn(`Error executing RPC get_loan_timeline_metrics for timeline ${timelineId}:`, error.message);
-        return null;
-      }
-      return data && data.length > 0 ? LoanHeaderResultDTO.fromProcedureOutput(data[0]) : null;
-    } catch (err) {
-      console.warn(`Exception executing RPC get_loan_timeline_metrics:`, err.message);
-      return null;
-    }
+    // Disabled procedure / RPC calls
+    return null;
   }
 
-  /**
-   * Método de Infraestrutura: Executa a RPC Stored Procedure get_expense_timeline_metrics no Supabase
-   */
   async fetchExpenseMetrics(timelineId, referenceDate = null) {
-    if (!timelineId) return null;
-    const refDate = referenceDate || new Date().toISOString().substring(0, 10);
-    try {
-      const { data, error } = await supabase.rpc('get_expense_timeline_metrics', {
-        p_timeline_id: timelineId,
-        p_reference_date: refDate
-      });
-      if (error) {
-        console.warn(`Error executing RPC get_expense_timeline_metrics for timeline ${timelineId}:`, error.message);
-        return null;
-      }
-      return data && data.length > 0 ? ExpenseHeaderResultDTO.fromProcedureOutput(data[0]) : null;
-    } catch (err) {
-      console.warn(`Exception executing RPC get_expense_timeline_metrics:`, err.message);
-      return null;
-    }
+    // Disabled procedure / RPC calls
+    return null;
   }
 
-  /**
-   * Método de Infraestrutura: Executa a RPC Stored Procedure get_income_timeline_metrics no Supabase
-   */
   async fetchIncomeMetrics(timelineId, referenceDate = null) {
-    if (!timelineId) return null;
-    const refDate = referenceDate || new Date().toISOString().substring(0, 10);
-    try {
-      const { data, error } = await supabase.rpc('get_income_timeline_metrics', {
-        p_timeline_id: timelineId,
-        p_reference_date: refDate
-      });
-      if (error) {
-        console.warn(`Error executing RPC get_income_timeline_metrics for timeline ${timelineId}:`, error.message);
-        return null;
-      }
-      return data && data.length > 0 ? IncomeHeaderResultDTO.fromProcedureOutput(data[0]) : null;
-    } catch (err) {
-      console.warn(`Exception executing RPC get_income_timeline_metrics:`, err.message);
-      return null;
-    }
+    // Disabled procedure / RPC calls
+    return null;
   }
 
-  /**
-   * Método de Infraestrutura: Executa a RPC Stored Procedure get_investment_timeline_metrics no Supabase
-   */
   async fetchInvestmentMetrics(timelineId, referenceDate = null) {
-    if (!timelineId) return null;
-    const refDate = referenceDate || new Date().toISOString().substring(0, 10);
-    try {
-      const { data, error } = await supabase.rpc('get_investment_timeline_metrics', {
-        p_timeline_id: timelineId,
-        p_reference_date: refDate
-      });
-      if (error) {
-        console.warn(`Error executing RPC get_investment_timeline_metrics for timeline ${timelineId}:`, error.message);
-        return null;
-      }
-      return data && data.length > 0 ? InvestmentHeaderResultDTO.fromProcedureOutput(data[0]) : null;
-    } catch (err) {
-      console.warn(`Exception executing RPC get_investment_timeline_metrics:`, err.message);
-      return null;
-    }
+    // Disabled procedure / RPC calls
+    return null;
+  }
+
+  async fetchBalanceMetrics(timeboardId, timelineId = null, startDate = '1900-01-01', referenceDate = null) {
+    // Disabled procedure / RPC calls
+    return null;
   }
 
   async getAll(filterFn = null) {

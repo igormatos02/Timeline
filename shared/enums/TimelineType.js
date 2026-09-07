@@ -4,5 +4,8 @@ export const TimelineType = Object.freeze({
   EXPENSE: 'expense',
   INVESTMENT: 'investments',
   LOAN: 'loan',
-  CUSTOM: 'custom'
+  CUSTOM: 'custom',
+  REMINDER: 'reminder',
+  PROJECT: 'project',
+  NOTE: 'note'
 });

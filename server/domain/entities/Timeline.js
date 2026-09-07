@@ -1,4 +1,4 @@
-import { TimelineType, TimelineStatus } from '../../../shared/enums/index.js';
+import { TimelineType, TimelineStatus, EventAggregation } from '../../../shared/enums/index.js';
 
 /**
  * Aggregate Root: Timeline
@@ -18,7 +18,8 @@ export class Timeline {
     startDate = null,
     endDate = null,
     status = TimelineStatus.ACTIVE,
-    periodicity = 'mensal',
+    aggregation = EventAggregation.MONTHLY,
+    periodicity = null,
     monthlySalary = 0,
     contractNumber = '',
     totalDebt = 0,
@@ -45,7 +46,8 @@ export class Timeline {
     this.startDate = startDate;
     this.endDate = endDate;
     this.status = status;
-    this.periodicity = periodicity;
+    this.aggregation = aggregation || periodicity || EventAggregation.MONTHLY;
+    this.periodicity = this.aggregation;
     this.monthlySalary = Number(monthlySalary) || 0;
     this.contractNumber = contractNumber;
     this.totalDebt = Number(totalDebt) || 0;

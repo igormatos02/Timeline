@@ -78,8 +78,20 @@ export default function BalanceTimelineHeader({
     setIsDatePickerOpen(false);
   };
 
-  // Extrair métricas consolidadas seguras
-  const finMetrics = timeline.metrics || {};
+  // Extrair métricas consolidadas seguras da Stored Procedure ou fallback
+  const dto = timeline.balanceHeaderResult || timeline.procedureMetrics;
+  const rawMetrics = dto || timeline.metrics || {};
+  const finMetrics = {
+    ...rawMetrics,
+    netRealized: rawMetrics.net_realized ?? rawMetrics.netRealized ?? 0,
+    totalReceived: rawMetrics.total_received ?? rawMetrics.totalReceived ?? 0,
+    totalPaidExpenses: rawMetrics.total_paid_expenses ?? rawMetrics.totalPaidExpenses ?? 0,
+    totalInvested: rawMetrics.total_invested ?? rawMetrics.totalInvested ?? 0,
+    totalRemainingDebt: rawMetrics.total_remaining_debt ?? rawMetrics.total_remaining_debt ?? rawMetrics.totalRemainingDebt ?? 0,
+    totalAmortized: rawMetrics.total_amortized ?? rawMetrics.totalAmortized ?? 0,
+    totalLoanDebt: rawMetrics.total_loan_debt ?? rawMetrics.totalLoanDebt ?? 0,
+    investmentsTotalAccumulated: rawMetrics.investments_total_accumulated ?? rawMetrics.investmentsTotalAccumulated ?? 0
+  };
 
   return (
     <div
@@ -314,258 +326,494 @@ export default function BalanceTimelineHeader({
             )}
           </div>
 
-          {/* 🟢 LINHA 1: REALIZADOS (Consolidado / Liquidado) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                  Realizados (Valores Consolidados)
-                </span>
+          {/* Grid Principal 2x2 padronizado com Donut SVGs */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+            {/* Quadrante 1: BALANÇO ATUAL (Donut SVG de Entradas vs Saídas/Investido/Devido) */}
+            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                BALANÇO ATUAL
               </div>
+              {(() => {
+                const totalReceived = finMetrics.totalReceived ?? 0;
+                const totalPaidExpenses = finMetrics.totalPaidExpenses ?? 0;
+                const totalInvested = finMetrics.totalInvested ?? 0;
+                const totalRemainingDebt = finMetrics.totalRemainingDebt ?? 0;
+                const netRealized = finMetrics.netRealized ?? (totalReceived - totalPaidExpenses - totalInvested);
 
-              <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
-                {/* Saldo Líquido Realizado */}
-                <div className="meta-item" style={{ padding: '8px 12px' }}>
-                  <div className="meta-icon-box" style={{ color: (finMetrics.netRealized ?? 0) >= 0 ? '#10b981' : '#f43f5e' }}>
-                    <Scale size={16} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                      <span className="meta-label" style={{ fontSize: '0.7rem' }}>Saldo Líquido Acumulado</span>
-                      <span style={{ color: (finMetrics.netRealized ?? 0) >= 0 ? '#10b981' : '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
-                        {(finMetrics.netRealized ?? 0) >= 0 ? '+' : ''}{formatCurrency(finMetrics.netRealized ?? 0)}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Entradas Recebidas:</span>
-                        <span style={{ color: '#10b981', fontSize: '0.78rem', fontWeight: '700' }}>
-                          +{formatCurrency(finMetrics.totalReceived ?? 0)}
-                        </span>
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                    {/* Detalhes Verticais em Lista */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: '600' }}>
+                        Saldo Líquido Acumulado:
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Saídas Pagas:</span>
-                        <span style={{ color: '#f43f5e', fontSize: '0.78rem', fontWeight: '700' }}>
-                          -{formatCurrency(finMetrics.totalPaidExpenses ?? 0)}
-                        </span>
+                      <div style={{ fontSize: '0.92rem', fontWeight: '800', color: netRealized >= 0 ? '#10b981' : '#f43f5e', marginBottom: '2px' }}>
+                        {netRealized >= 0 ? '+' : ''}{formatCurrency(netRealized)}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Investido:</span>
-                        <span style={{ color: 'var(--primary-light, #818cf8)', fontSize: '0.78rem', fontWeight: '700' }}>
-                          -{formatCurrency(finMetrics.totalInvested ?? 0)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Valor em Investimentos */}
-                <div className="meta-item" style={{ padding: '8px 12px' }}>
-                  <div className="meta-icon-box" style={{ color: '#6366f1' }}>
-                    <PiggyBank size={16} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
-                      <span className="meta-label" style={{ fontSize: '0.7rem' }}>Valor em Investimentos</span>
-                      <span style={{ color: 'var(--primary-light)', fontSize: '0.96rem', fontWeight: '800' }}>
-                        {formatCurrency(finMetrics.totalInvestedMarket ?? ((finMetrics.totalInvested ?? 0) + (finMetrics.totalPatrimonioGain || 0)))}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Poupança:</span>
-                        <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: '800' }}>
-                          {formatCurrency(finMetrics.totalPoupanca ?? 0)}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                        <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Património:</span>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: '1.2' }}>
-                          <span style={{ color: 'var(--primary-light)', fontSize: '0.8rem', fontWeight: '800' }}>
-                            {formatCurrency(finMetrics.totalPatrimonioAcquisition ?? 0)}
-                          </span>
-                          {(finMetrics.totalPatrimonioGain ?? 0) !== 0 && (
-                            <span style={{ color: '#c084fc', fontSize: '0.64rem', fontWeight: '700' }}>
-                              ({(finMetrics.totalPatrimonioGain ?? 0) >= 0 ? '+' : ''}{formatCurrency(finMetrics.totalPatrimonioGain ?? 0)})
-                            </span>
-                          )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+                          <span style={{ color: 'var(--text-dim)' }}>Entradas:</span>
+                          <strong style={{ color: '#10b981' }}>+{formatCurrency(totalReceived).replace(',00', '')}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+                          <span style={{ color: 'var(--text-dim)' }}>Saídas:</span>
+                          <strong style={{ color: '#f43f5e' }}>-{formatCurrency(totalPaidExpenses).replace(',00', '')}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+                          <span style={{ color: 'var(--text-dim)' }}>Investido:</span>
+                          <strong style={{ color: '#6366f1' }}>-{formatCurrency(totalInvested).replace(',00', '')}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+                          <span style={{ color: 'var(--text-dim)' }}>Devido:</span>
+                          <strong style={{ color: '#f59e0b' }}>{formatCurrency(totalRemainingDebt).replace(',00', '')}</strong>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Outros:</span>
-                        <span style={{ color: '#38bdf8', fontSize: '0.8rem', fontWeight: '800' }}>
-                          {formatCurrency(finMetrics.totalOutros ?? 0)}
-                        </span>
-                      </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Empréstimos e Financiamentos */}
-                <div className="meta-item" style={{ padding: '8px 12px' }}>
-                  <div className="meta-icon-box" style={{ color: '#10b981' }}>
-                    <CreditCard size={16} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
-                      <span className="meta-label" style={{ fontSize: '0.7rem' }}>Empréstimos e Financiamentos</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '2px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Capital Amortizado:</span>
-                        <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: '800' }}>
-                          {formatCurrency(finMetrics.totalAmortized ?? 0)}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Capital Devido:</span>
-                        <span style={{ color: '#f43f5e', fontSize: '0.8rem', fontWeight: '800' }}>
-                          {formatCurrency(finMetrics.totalRemainingDebt ?? 0)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
             </div>
 
-            {/* 🔵 LINHA 2: PREVISTOS & PROJEÇÃO */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#38bdf8', display: 'inline-block' }} />
-                  Previstos (Planeamento & Projeção)
-                </span>
+            {/* Quadrante 2: INVESTIMENTOS (Pie/Donut por Categoria e Total Acumulado) */}
+            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                INVESTIMENTOS
               </div>
+              {(() => {
+                const categoryColorMap = {
+                  savings: '#10b981',
+                  assets: '#6366f1',
+                  stocks: '#38bdf8',
+                  funds: '#f59e0b',
+                  crypto: '#ec4899',
+                  real_estate: '#8b5cf6',
+                  other: '#64748b'
+                };
 
-              {/* Slider de Horizonte */}
-              <div
-                style={{
-                  background: '#ffffff',
-                  color: '#1e293b',
-                  border: '1px solid rgba(226, 232, 240, 0.95)',
-                  borderRadius: '12px',
-                  padding: '10px 14px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.06)'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ background: 'rgba(2, 132, 199, 0.12)', color: '#0284c7', padding: '5px', borderRadius: '7px', display: 'flex' }}>
-                      <Clock size={15} />
-                    </div>
-                    <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#1e293b' }}>
-                      Horizonte dos Previstos:
-                    </span>
-                    <span
-                      style={{
-                        background: 'rgba(2, 132, 199, 0.1)',
-                        color: '#0284c7',
-                        border: '1px solid rgba(2, 132, 199, 0.3)',
-                        padding: '2px 9px',
-                        borderRadius: '6px',
-                        fontSize: '0.76rem',
-                        fontWeight: '800',
-                        textTransform: 'capitalize'
-                      }}
-                    >
-                      {projectedHorizonLabel} {projectionMonthsAhead === 0 ? '(Mês Atual)' : `(+${projectionMonthsAhead}m)`}
-                    </span>
-                  </div>
+                let invItems = (finMetrics.investments_breakdown || []).map((b) => ({
+                  name: b.category_label || b.category,
+                  amount: Number(b.total_amount || b.amount || 0),
+                  percent: Number(b.percentage || b.percent || 0),
+                  color: categoryColorMap[b.category] || '#6366f1'
+                })).filter((i) => i.amount > 0 || i.percent > 0);
 
-                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    {[
-                      { label: 'Mês Atual', months: 0 },
-                      { label: '+6 Meses', months: 6 },
-                      { label: '+1 Ano', months: 12 },
-                      { label: '+2 Anos', months: 24 },
-                      { label: '+5 Anos', months: 60 }
-                    ].map((preset) => {
-                      const isSelected = projectionMonthsAhead === preset.months;
-                      return (
-                        <button
-                          key={preset.label}
-                          type="button"
-                          onClick={() => setProjectionMonthsAhead(preset.months)}
+                if (invItems.length === 0) {
+                  const poupanca = finMetrics.totalPoupanca ?? 0;
+                  const patrimonio = finMetrics.totalPatrimonioAcquisition ?? 0;
+                  const outros = finMetrics.totalOutros ?? 0;
+                  invItems = [
+                    { name: 'Poupança', amount: poupanca, color: '#10b981' },
+                    { name: 'Ativos / Património', amount: patrimonio, color: '#6366f1' },
+                    { name: 'Outros', amount: outros, color: '#38bdf8' }
+                  ].filter((i) => i.amount > 0);
+                }
+
+                const defaultItems = invItems.length > 0 ? invItems : [
+                  { name: 'Poupança', amount: 1, percent: 50, color: '#10b981' },
+                  { name: 'Ativos', amount: 1, percent: 50, color: '#6366f1' }
+                ];
+
+                const totalSum = defaultItems.reduce((acc, i) => acc + (i.amount || 0), 0);
+                const itemsWithPct = defaultItems.map((i) => ({
+                  ...i,
+                  percent: i.percent ?? (totalSum > 0 ? Math.round((i.amount / totalSum) * 100) : 0)
+                }));
+
+                let cumulativePercent = 0;
+                const getCoordinatesForPercent = (percent) => {
+                  const x = Math.cos(2 * Math.PI * percent);
+                  const y = Math.sin(2 * Math.PI * percent);
+                  return [x, y];
+                };
+
+                const slices = itemsWithPct.map((slice) => {
+                  const startPercent = cumulativePercent;
+                  cumulativePercent += slice.percent / 100;
+                  const endPercent = cumulativePercent;
+
+                  const [startX, startY] = getCoordinatesForPercent(startPercent);
+                  const [endX, endY] = getCoordinatesForPercent(endPercent);
+                  const largeArcFlag = slice.percent / 100 > 0.5 ? 1 : 0;
+
+                  const pathData = [
+                    `M ${startX} ${startY}`,
+                    `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+                    `L 0 0`
+                  ].join(' ');
+
+                  return { ...slice, pathData };
+                });
+
+                const totalInvested = finMetrics.investmentsTotalAccumulated || finMetrics.totalInvested || 0;
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                      <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
+                        <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
+                          {slices.map((s, idx) => (
+                            <path
+                              key={idx}
+                              d={s.pathData}
+                              fill={s.color}
+                            />
+                          ))}
+                        </svg>
+                        <div
                           style={{
-                            padding: '3px 9px',
-                            borderRadius: '6px',
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: '46px',
+                            height: '46px',
+                            borderRadius: '50%',
+                            background: 'var(--bg-card, #0f172a)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             fontSize: '0.72rem',
-                            fontWeight: isSelected ? '800' : '600',
-                            cursor: 'pointer',
-                            border: isSelected ? '1px solid #0284c7' : '1px solid #cbd5e1',
-                            background: isSelected ? '#0284c7' : '#f8fafc',
-                            color: isSelected ? '#ffffff' : '#334155',
-                            transition: 'all 0.15s ease'
+                            fontWeight: '800',
+                            color: '#6366f1'
                           }}
                         >
-                          {preset.label}
-                        </button>
-                      );
-                    })}
+                          100%
+                        </div>
+                      </div>
+
+                      {/* Lista de % por Categoria */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                        {itemsWithPct.map((item, idx) => (
+                          <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color }} />
+                              <span style={{ color: 'var(--text-dim)' }}>{item.name}</span>
+                            </div>
+                            <strong style={{ color: 'var(--text-main)', fontSize: '0.7rem' }}>{item.percent}%</strong>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '600' }}>Total Acumulado</span>
+                      <strong style={{ color: '#6366f1', fontSize: '0.86rem', fontWeight: '800' }}>
+                        {formatCurrency(totalInvested)}
+                      </strong>
+                    </div>
                   </div>
+                );
+              })()}
+            </div>
+
+            {/* Quadrante 3: EMPRÉSTIMOS E FINANCIAMENTOS (Donut SVG por Financiamento) */}
+            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                EMPRÉSTIMOS E FINANCIAMENTOS
+              </div>
+              {(() => {
+                const loanColors = ['#8b5cf6', '#0ea5e9', '#14b8a6', '#6366f1', '#f59e0b', '#ec4899'];
+
+                let loanItems = (finMetrics.loans_breakdown || []).map((l, idx) => ({
+                  id: l.timeline_id,
+                  name: l.name,
+                  amount: Number(l.amount || l.remaining_principal || 0),
+                  percent: Number(l.percentage || l.percent || 0),
+                  color: loanColors[idx % loanColors.length]
+                })).filter((item) => item.amount > 0 || item.percent > 0);
+
+                if (loanItems.length === 0) {
+                  // Extrair linhas do tempo de empréstimos enviadas em allTimelines
+                  const loanTimelines = (allTimelines || []).filter((t) => {
+                    const typeLower = (t.type || '').toLowerCase();
+                    return typeLower.includes('loan') || typeLower.includes('empr');
+                  });
+
+                  loanItems = loanTimelines.map((t, idx) => {
+                    const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
+                    const debt = Number(m.remaining_debt ?? m.total_debt ?? 0);
+                    return {
+                      id: t.id,
+                      name: t.name,
+                      amount: debt,
+                      color: t.color || loanColors[idx % loanColors.length]
+                    };
+                  }).filter((item) => item.amount > 0);
+                }
+
+                const totalDebtSum = loanItems.reduce((acc, i) => acc + (i.amount || 0), 0);
+                const itemsWithPct = loanItems.map((i) => ({
+                  ...i,
+                  percent: i.percent ?? (totalDebtSum > 0 ? Math.round((i.amount / totalDebtSum) * 100) : 0)
+                }));
+
+                let cumulativePercent = 0;
+                const getCoordinatesForPercent = (percent) => {
+                  const x = Math.cos(2 * Math.PI * percent);
+                  const y = Math.sin(2 * Math.PI * percent);
+                  return [x, y];
+                };
+
+                const slices = itemsWithPct.map((slice) => {
+                  const startPercent = cumulativePercent;
+                  cumulativePercent += slice.percent / 100;
+                  const endPercent = cumulativePercent;
+
+                  const [startX, startY] = getCoordinatesForPercent(startPercent);
+                  const [endX, endY] = getCoordinatesForPercent(endPercent);
+                  const largeArcFlag = slice.percent / 100 > 0.5 ? 1 : 0;
+
+                  const pathData = [
+                    `M ${startX} ${startY}`,
+                    `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+                    `L 0 0`
+                  ].join(' ');
+
+                  return { ...slice, pathData };
+                });
+
+                const totalAmortizedVal = finMetrics.totalAmortized ?? 0;
+                const totalRemainingDebtVal = finMetrics.totalRemainingDebt ?? 0;
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                      <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
+                        <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
+                          {slices.map((s, idx) => (
+                            <path
+                              key={idx}
+                              d={s.pathData}
+                              fill={s.color}
+                              style={{ transition: 'all 0.2s ease', cursor: 'pointer' }}
+                            >
+                              <title>{`${s.name}: ${s.percent}% (${formatCurrency(s.amount)})`}</title>
+                            </path>
+                          ))}
+                        </svg>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: '46px',
+                            height: '46px',
+                            borderRadius: '50%',
+                            background: 'var(--bg-card, #0f172a)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '1px solid var(--border-glass)',
+                            fontSize: '0.64rem',
+                            fontWeight: '800',
+                            color: '#0ea5e9'
+                          }}
+                        >
+                          100%
+                        </div>
+                      </div>
+
+                      {/* Lista com percentagem de cada financiamento */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, maxHeight: '90px', overflowY: 'auto' }}>
+                        {itemsWithPct.map((item, idx) => (
+                          <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color, flexShrink: 0 }} />
+                              <span style={{ color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {item.name}
+                              </span>
+                            </div>
+                            <span style={{ color: 'var(--text-muted)', fontWeight: '800', marginLeft: '6px' }}>
+                              {item.percent}%
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Resumo de Totais: Capital Amortizado vs Capital Devido */}
+                    <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '600' }}>Capital Amortizado</span>
+                        <strong style={{ color: '#10b981', fontSize: '0.86rem', fontWeight: '800' }}>
+                          {formatCurrency(totalAmortizedVal)}
+                        </strong>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '600' }}>Capital Devido</span>
+                        <strong style={{ color: '#f43f5e', fontSize: '0.86rem', fontWeight: '800' }}>
+                          {formatCurrency(totalRemainingDebtVal)}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* 🔵 LINHA 2: PREVISTOS & PROJEÇÃO */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#38bdf8', display: 'inline-block' }} />
+                Projeção Futura
+              </span>
+            </div>
+
+            {/* Slider de Horizonte */}
+            <div
+              style={{
+                background: '#ffffff',
+                color: '#1e293b',
+                border: '1px solid rgba(226, 232, 240, 0.95)',
+                borderRadius: '12px',
+                padding: '10px 14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.06)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ background: 'rgba(2, 132, 199, 0.12)', color: '#0284c7', padding: '5px', borderRadius: '7px', display: 'flex' }}>
+                    <Clock size={15} />
+                  </div>
+                  <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#1e293b' }}>
+                    Horizonte dos Previstos:
+                  </span>
+                  <span
+                    style={{
+                      background: 'rgba(2, 132, 199, 0.1)',
+                      color: '#0284c7',
+                      border: '1px solid rgba(2, 132, 199, 0.3)',
+                      padding: '2px 9px',
+                      borderRadius: '6px',
+                      fontSize: '0.76rem',
+                      fontWeight: '800',
+                      textTransform: 'capitalize'
+                    }}
+                  >
+                    {projectedHorizonLabel} {projectionMonthsAhead === 0 ? '(Mês Atual)' : `(+${projectionMonthsAhead}m)`}
+                  </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: '700', whiteSpace: 'nowrap' }}>
-                    Hoje (Ago 2026)
-                  </span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="120"
-                    step="1"
-                    value={projectionMonthsAhead}
-                    onChange={(e) => setProjectionMonthsAhead(Number(e.target.value))}
-                    style={{
-                      flex: 1,
-                      accentColor: '#0284c7',
-                      cursor: 'pointer',
-                      height: '6px'
-                    }}
-                    title={`Projetar até ${projectedHorizonLabel}`}
-                  />
-                  <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: '700', whiteSpace: 'nowrap' }}>
-                    +10 Anos
-                  </span>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {[
+                    { label: 'Mês Atual', months: 0 },
+                    { label: '+6 Meses', months: 6 },
+                    { label: '+1 Ano', months: 12 },
+                    { label: '+2 Anos', months: 24 },
+                    { label: '+5 Anos', months: 60 }
+                  ].map((preset) => {
+                    const isSelected = projectionMonthsAhead === preset.months;
+                    return (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setProjectionMonthsAhead(preset.months)}
+                        style={{
+                          padding: '3px 9px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: isSelected ? '800' : '600',
+                          cursor: 'pointer',
+                          border: isSelected ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                          background: isSelected ? '#0284c7' : '#f8fafc',
+                          color: isSelected ? '#ffffff' : '#334155',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Cards Projetados */}
-              <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
-                <div className="meta-item" style={{ padding: '8px 12px' }}>
-                  <div className="meta-icon-box" style={{ color: '#38bdf8' }}>
-                    <TrendingUp size={16} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                      <span className="meta-label" style={{ fontSize: '0.7rem' }}>Saldo Líquido Projetado</span>
-                      <span style={{ color: (finMetrics.netProjectedHorizon ?? 0) >= 0 ? '#38bdf8' : '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
-                        {(finMetrics.netProjectedHorizon ?? 0) >= 0 ? '+' : ''}{formatCurrency(finMetrics.netProjectedHorizon ?? 0)}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Entradas Previstas:</span>
-                        <span style={{ color: '#38bdf8', fontSize: '0.78rem', fontWeight: '700' }}>
-                          +{formatCurrency(finMetrics.totalForecastIncomeHorizon ?? 0)}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Saídas Previstas:</span>
-                        <span style={{ color: '#fb7185', fontSize: '0.78rem', fontWeight: '700' }}>
-                          -{formatCurrency(finMetrics.totalPlannedExpensesHorizon ?? 0)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                  Hoje (Ago 2026)
+                </span>
+                <input
+                  type="range"
+                  min="0"
+                  max="120"
+                  step="1"
+                  value={projectionMonthsAhead}
+                  onChange={(e) => setProjectionMonthsAhead(Number(e.target.value))}
+                  style={{
+                    flex: 1,
+                    accentColor: '#0284c7',
+                    cursor: 'pointer',
+                    height: '6px'
+                  }}
+                  title={`Projetar até ${projectedHorizonLabel}`}
+                />
+                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                  +10 Anos
+                </span>
               </div>
             </div>
+
+            {/* Cards Projetados vindos da Stored Procedure em memória */}
+            {(() => {
+              const projectedItem = (dto?.projected_list && dto.projected_list.length > 0)
+                ? (dto.projected_list.find((p) => p.monthsOffset === projectionMonthsAhead) || dto.projected_list[Math.min(projectionMonthsAhead, dto.projected_list.length - 1)])
+                : null;
+
+              const netProj = projectedItem ? projectedItem.netProjected : (finMetrics.netProjectedHorizon ?? 0);
+              const forecastInc = projectedItem ? projectedItem.forecastIncome : (finMetrics.totalForecastIncomeHorizon ?? 0);
+              const plannedExp = projectedItem ? projectedItem.plannedExpenses : (finMetrics.totalPlannedExpensesHorizon ?? 0);
+              const plannedInv = projectedItem ? projectedItem.plannedInvestments : (finMetrics.totalInvestmentsHorizon ?? finMetrics.totalInvested ?? 0);
+              const plannedAmort = projectedItem ? projectedItem.plannedAmortization : (finMetrics.totalAmortizedHorizon ?? finMetrics.totalAmortized ?? 0);
+
+              return (
+                <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                  <div className="meta-item" style={{ padding: '8px 12px' }}>
+                    <div className="meta-icon-box" style={{ color: '#38bdf8' }}>
+                      <TrendingUp size={16} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                        <span className="meta-label" style={{ fontSize: '0.7rem' }}>Balanço Projetado</span>
+                        <span style={{ color: netProj >= 0 ? '#38bdf8' : '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
+                          {netProj >= 0 ? '+' : ''}{formatCurrency(netProj)}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Entradas Previstas:</span>
+                          <span style={{ color: '#38bdf8', fontSize: '0.78rem', fontWeight: '700' }}>
+                            +{formatCurrency(forecastInc)}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Saídas Previstas:</span>
+                          <span style={{ color: '#fb7185', fontSize: '0.78rem', fontWeight: '700' }}>
+                            -{formatCurrency(plannedExp)}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Investimentos:</span>
+                          <span style={{ color: '#6366f1', fontSize: '0.78rem', fontWeight: '700' }}>
+                            -{formatCurrency(plannedInv)}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Capital Amortizado:</span>
+                          <span style={{ color: '#10b981', fontSize: '0.78rem', fontWeight: '700' }}>
+                            +{formatCurrency(plannedAmort)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

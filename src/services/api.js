@@ -3,6 +3,8 @@
  * Communicates with /api endpoints with seamless multi-tenant header
  */
 
+import { DEFAULT_TENANT } from '../constants/tenant.js';
+
 const API_BASE = '/api';
 
 export const DEFAULT_USER = {
@@ -11,12 +13,12 @@ export const DEFAULT_USER = {
   email: 'igor.matos@timeline.app',
   avatarInitials: 'IM',
   role: 'Administrador',
-  tenantId: 'tenant-igor',
-  tenantName: 'Workspace Principal'
+  tenantId: DEFAULT_TENANT.id,
+  tenantName: DEFAULT_TENANT.name
 };
 
 export function getActiveTenantId() {
-  return localStorage.getItem('chrono_active_tenant_id') || DEFAULT_USER.tenantId;
+  return localStorage.getItem('chrono_active_tenant_id') || DEFAULT_TENANT.id;
 }
 
 export function getCurrentUser() {
@@ -207,6 +209,37 @@ export async function deleteEvent(id, options = {}) {
 }
 
 // Loans
+export async function fetchLoanContract(timelineId) {
+  const res = await fetch(`${API_BASE}/loans/timeline/${timelineId}`, {
+    headers: getHeaders()
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function createLoanContract(contractData) {
+  const res = await fetch(`${API_BASE}/loans`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      tenantId: getActiveTenantId(),
+      ...contractData
+    })
+  });
+  if (!res.ok) throw new Error('Failed to create loan contract');
+  return res.json();
+}
+
+export async function updateLoanContract(id, updates) {
+  const res = await fetch(`${API_BASE}/loans/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) throw new Error('Failed to update loan contract');
+  return res.json();
+}
+
 export async function amortizeLoan(payload) {
   const res = await fetch(`${API_BASE}/loans/amortize`, {
     method: 'POST',

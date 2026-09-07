@@ -150,6 +150,7 @@ export default function LoanTimelineHeader({
               type="button"
               className="btn btn-primary btn-sm"
               onClick={onOpenAmortizationModal || onAddEvent}
+              title="Registar uma amortização extraordinária antecipada no contrato"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -170,6 +171,7 @@ export default function LoanTimelineHeader({
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={onEdit}
+              title="Editar os parâmetros do contrato (TAN, Spread, Montante Financiado, Imposto de Selo, etc.)"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -189,6 +191,7 @@ export default function LoanTimelineHeader({
               type="button"
               className="btn btn-outline-danger btn-sm"
               onClick={onDelete}
+              title="Eliminar este contrato de empréstimo e todas as suas prestações associadas"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',

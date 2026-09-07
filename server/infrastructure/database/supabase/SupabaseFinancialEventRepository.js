@@ -182,14 +182,12 @@ export class SupabaseFinancialEventRepository extends IRepository {
     if (data.totalInstallments !== undefined || data.total_installments !== undefined) row.total_installments = data.totalInstallments !== undefined ? data.totalInstallments : data.total_installments;
     if (data.amortizationStrategy !== undefined || data.amortization_strategy !== undefined) row.amortization_strategy = data.amortizationStrategy || data.amortization_strategy;
 
-    if (data.interestAmount !== undefined || data.interest_amount !== undefined || data.interestPortion !== undefined || data.interest_portion !== undefined) {
-      const val = Number(data.interestPortion !== undefined ? data.interestPortion : (data.interest_portion !== undefined ? data.interest_portion : (data.interestAmount !== undefined ? data.interestAmount : data.interest_amount))) || 0;
-      row.interest_amount = val;
+    if (data.interestAmount !== undefined || data.interest_amount !== undefined || data.interestPortion !== undefined || data.interest_portion !== undefined || data.installmentInterest !== undefined || data.installment_interest !== undefined) {
+      const val = Number(data.interestPortion !== undefined ? data.interestPortion : (data.interest_portion !== undefined ? data.interest_portion : (data.installmentInterest !== undefined ? data.installmentInterest : (data.installment_interest !== undefined ? data.installment_interest : (data.interestAmount !== undefined ? data.interestAmount : data.interest_amount))))) || 0;
       row.installment_interest = val;
     }
     if (data.principalAmount !== undefined || data.principal_amount !== undefined || data.installmentCapital !== undefined || data.installment_capital !== undefined) {
       const val = Number(data.principalAmount !== undefined ? data.principalAmount : (data.principal_amount !== undefined ? data.principal_amount : (data.installmentCapital !== undefined ? data.installmentCapital : data.installment_capital))) || 0;
-      row.principal_amount = val;
       row.installment_capital = val;
     }
     if (data.taxAmount !== undefined || data.tax_amount !== undefined || data.installmentFee !== undefined || data.installment_fee !== undefined) {

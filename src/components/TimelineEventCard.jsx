@@ -59,6 +59,7 @@ export default function TimelineEventCard({
   onAddChecklistItem,
   onDeleteChecklistItem,
   onToggleLoanPayment,
+  onPayUpToHere,
   onOpenEditInstallment,
   onNavigateToTimeline
 }) {
@@ -2901,6 +2902,31 @@ export default function TimelineEventCard({
         </div>
 
         <div className="event-card-actions">
+          {/* Botão Pagar até aqui para parcelas de empréstimo / dívida em aberto */}
+          {isLoanInstallment && !isPaidLoan && onPayUpToHere && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPayUpToHere(event);
+              }}
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.76rem',
+                gap: '4px',
+                background: 'rgba(16, 185, 129, 0.14)',
+                color: '#10b981',
+                border: '1px solid rgba(16, 185, 129, 0.35)',
+                fontWeight: '700'
+              }}
+              title="Marcar como pagas todas as prestações deste empréstimo anteriores a esta parcela (inclusive)"
+            >
+              <CheckCircle2 size={13} style={{ color: '#10b981' }} />
+              <span>Pagar até aqui</span>
+            </button>
+          )}
+
           {/* Ajustar / Juros exibido em parcelas em aberto de empréstimo */}
           {isLoanInstallment && event.status !== 'Pago' && (
             <button
@@ -3032,7 +3058,7 @@ export default function TimelineEventCard({
                   updateScope: 'all_series'
                 });
               }}
-              title={localAuto ? t('actionAutoOn') : t('actionAutoOff')}
+              title={localAuto ? "⚡ Movimento Automático Ativo: Liquida automaticamente na data de vencimento (Clique para desligar em toda a série)" : "⚙️ Movimento Manual: Clique para ativar a liquidação automática em toda a série"}
               style={{
                 color: localAuto ? '#fbbf24' : 'var(--text-dim)',
                 background: localAuto ? 'rgba(251, 191, 36, 0.16)' : 'transparent',
@@ -3061,7 +3087,7 @@ export default function TimelineEventCard({
               type="button"
               className="action-icon-btn"
               onClick={() => onEdit(event)}
-              title={t('actionEdit')}
+              title="Editar detalhes do evento (Nome, Data, Valor, Categoria, Notas)"
             >
               <Edit3 size={15} />
             </button>
@@ -3073,7 +3099,7 @@ export default function TimelineEventCard({
               type="button"
               className="action-icon-btn delete"
               onClick={() => onDelete(event)}
-              title={t('actionDelete')}
+              title="Eliminar este evento permanentemente"
             >
               <Trash2 size={15} />
             </button>

@@ -1128,6 +1128,72 @@ export default function App() {
     }
   };
 
+  // Pay all prior loan installments up to (and including) target event
+  const handlePayUpToHere = async (targetEv) => {
+    if (!targetEv || !activeTimeline) return;
+    const targetInstNum = Number(targetEv.installmentNumber || targetEv.installment_number || 0);
+    const targetDate = targetEv.date || '';
+
+    const tlEvents = rawEvents.filter(
+      (ev) => ev.timelineId === activeTimeline.id || ev.timelineOriginId === activeTimeline.id || ev.timeline_id === activeTimeline.id
+    );
+
+    const eventsToPay = tlEvents.filter((ev) => {
+      const instNum = Number(ev.installmentNumber || ev.installment_number || 0);
+      const isPaid = ev.status === EventStatus.PAID || Boolean(ev.isCompleted);
+      if (isPaid) return false;
+      if (targetInstNum > 0 && instNum > 0) {
+        return instNum <= targetInstNum;
+      }
+      return ev.date && ev.date <= targetDate;
+    });
+
+    if (eventsToPay.length === 0) {
+      showToast('Todas as prestações anteriores já estão pagas.', 'info');
+      return;
+    }
+
+    // 1. Optimistic update in rawEvents
+    const payIds = new Set(eventsToPay.map((e) => e.id));
+    setRawEvents((prev) =>
+      prev.map((ev) => {
+        if (!payIds.has(ev.id)) return ev;
+        return {
+          ...ev,
+          status: EventStatus.PAID,
+          isCompleted: true,
+          isLocked: true
+        };
+      })
+    );
+
+    // 2. Batch update on backend
+    setIsUpdatingInstallments(true);
+    try {
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < eventsToPay.length; i += BATCH_SIZE) {
+        const batch = eventsToPay.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map((item) =>
+            api.updateEvent(item.id, {
+              ...item,
+              status: EventStatus.PAID,
+              isCompleted: true,
+              isLocked: true
+            })
+          )
+        );
+      }
+      showToast(`${eventsToPay.length} prestações marcadas como pagas com sucesso!`, 'success');
+      await refreshTimelines();
+    } catch (err) {
+      console.error('Error paying up to here:', err);
+      showToast('Erro ao atualizar prestações na base de dados.', 'error');
+    } finally {
+      setIsUpdatingInstallments(false);
+    }
+  };
+
   // Save changes from EditInstallmentModal (amount, principalAmount, interestPortion, interestAmount, propagateForward)
   const handleSaveEditInstallment = async (installmentId, { status, amount, principalAmount, interestPortion, interestAmount, propagateForward }) => {
     if (!activeTimeline) return;
@@ -1388,6 +1454,7 @@ export default function App() {
             onAddChecklistItem={handleAddChecklistItem}
             onDeleteChecklistItem={handleDeleteChecklistItem}
             onToggleLoanPayment={handleToggleLoanPayment}
+            onPayUpToHere={handlePayUpToHere}
             onOpenEditInstallment={(inst) => setEditingInstallment(inst)}
             onOpenAmortizationModal={handleOpenAmortizationModal}
             onNavigateToTimeline={(timelineId, tab) => {

@@ -79,6 +79,7 @@ function VerticalTimeline({
   onAddChecklistItem,
   onDeleteChecklistItem,
   onToggleLoanPayment,
+  onPayUpToHere,
   onOpenEditInstallment,
   onOpenAmortizationModal,
   onNavigateToTimeline,
@@ -607,6 +608,7 @@ function VerticalTimeline({
                           onDelete={onDeleteEvent}
                           onToggleTask={onToggleTask}
                           onToggleLoanPayment={onToggleLoanPayment}
+                          onPayUpToHere={onPayUpToHere}
                           onOpenEditInstallment={onOpenEditInstallment}
                           onNavigateToTimeline={onNavigateToTimeline}
                         />
@@ -1171,6 +1173,7 @@ function VerticalTimeline({
                           onAddChecklistItem={onAddChecklistItem}
                           onDeleteChecklistItem={onDeleteChecklistItem}
                           onToggleLoanPayment={onToggleLoanPayment}
+                          onPayUpToHere={onPayUpToHere}
                           onOpenEditInstallment={onOpenEditInstallment}
                           onNavigateToTimeline={onNavigateToTimeline}
                         />
@@ -1360,6 +1363,7 @@ function VerticalTimeline({
                               onDelete={onDeleteEvent}
                               onToggleTask={onToggleTask}
                               onToggleLoanPayment={onToggleLoanPayment}
+                              onPayUpToHere={onPayUpToHere}
                               onOpenEditInstallment={onOpenEditInstallment}
                               onNavigateToTimeline={onNavigateToTimeline}
                             />
@@ -1459,6 +1463,7 @@ function VerticalTimeline({
                         onDelete={onDeleteEvent}
                         onToggleTask={onToggleTask}
                         onToggleLoanPayment={onToggleLoanPayment}
+                        onPayUpToHere={onPayUpToHere}
                         onOpenEditInstallment={onOpenEditInstallment}
                         onNavigateToTimeline={onNavigateToTimeline}
                       />

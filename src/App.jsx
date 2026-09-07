@@ -1134,11 +1134,19 @@ export default function App() {
     const targetInstNum = Number(targetEv.installmentNumber || targetEv.installment_number || 0);
     const targetDate = targetEv.date || '';
 
-    const tlEvents = rawEvents.filter(
+    let allTlEvents = rawEvents.filter(
       (ev) => ev.timelineId === activeTimeline.id || ev.timelineOriginId === activeTimeline.id || ev.timeline_id === activeTimeline.id
     );
 
-    const eventsToPay = tlEvents.filter((ev) => {
+    // Garantir que obtemos a totalidade das prestações da timeline vindas da API (mesmo as não visíveis no ecrã)
+    try {
+      const freshEvents = await api.fetchEvents({ timelineId: activeTimeline.id });
+      if (freshEvents && freshEvents.length > 0) {
+        allTlEvents = freshEvents;
+      }
+    } catch (e) { }
+
+    const eventsToPay = allTlEvents.filter((ev) => {
       const instNum = Number(ev.installmentNumber || ev.installment_number || 0);
       const isPaid = ev.status === EventStatus.PAID || Boolean(ev.isCompleted);
       if (isPaid) return false;
@@ -1167,21 +1175,14 @@ export default function App() {
       })
     );
 
-    // 2. Batch update on backend
+    // 2. Batch update on backend via status synchronization (api.toggleEventPayment)
     setIsUpdatingInstallments(true);
     try {
       const BATCH_SIZE = 10;
       for (let i = 0; i < eventsToPay.length; i += BATCH_SIZE) {
         const batch = eventsToPay.slice(i, i + BATCH_SIZE);
         await Promise.all(
-          batch.map((item) =>
-            api.updateEvent(item.id, {
-              ...item,
-              status: EventStatus.PAID,
-              isCompleted: true,
-              isLocked: true
-            })
-          )
+          batch.map((item) => api.toggleEventPayment(item.id))
         );
       }
       showToast(`${eventsToPay.length} prestações marcadas como pagas com sucesso!`, 'success');

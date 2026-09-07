@@ -2907,7 +2907,7 @@ export default function TimelineEventCard({
               className="btn btn-secondary btn-sm"
               onClick={() => onOpenEditInstallment && onOpenEditInstallment(event)}
               style={{ padding: '4px 10px', fontSize: '0.76rem', gap: '4px' }}
-              title="Ajustar valor da parcela, juros ou propagar para a frente"
+              title="Ajustar valor da parcela, recalculando os juros ou propagando alterações para os meses seguintes"
             >
               <Sliders size={13} />
               <span>Ajustar / Juros</span>

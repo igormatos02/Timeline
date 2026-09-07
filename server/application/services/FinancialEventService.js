@@ -200,6 +200,16 @@ export class FinancialEventService {
       return Math.max(max, vNum);
     }, existingVersion);
 
+    // Prestações de empréstimo e eventos individuais com id existente são alterados diretamente sem criar versões duplicadas
+    if (existing && existing.id) {
+      const updatePayload = {
+        ...directUpdates,
+        is_recurring: false,
+        isRecurring: false
+      };
+      return eventRepository.update(id, updatePayload);
+    }
+
     const nextVersion = currentHighestVersion + 1;
     const newId = `ev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
@@ -211,6 +221,8 @@ export class FinancialEventService {
       ...directUpdates,
       id: newId,
       eventId: targetSeriesId,
+      is_recurring: false,
+      isRecurring: false,
       version: nextVersion,
       eventVersion: nextVersion,
       event_version: nextVersion
@@ -222,26 +234,6 @@ export class FinancialEventService {
         timelineId: directUpdates.timelineId || directUpdates.timeline_id || existing?.timelineId || existing?.timeline_id,
         timeboardId: directUpdates.timeboardId || directUpdates.timeboard_id || existing?.timeboardId || existing?.timeboard_id
       });
-    }
-
-    if (updateScope === 'single' && targetSeriesId) {
-      const overridePayload = {
-        ...newVersionedPayload,
-        sobrepositionOver: targetSeriesId,
-        isRecurring: false,
-        periodicity: EventPeriodicity.ONCE
-      };
-      return eventRepository.create(overridePayload);
-    }
-
-    if (updateScope === 'subsequent' || propagateForward) {
-      const subsequentPayload = {
-        ...newVersionedPayload,
-        eventId: targetSeriesId,
-        isRecurring: true,
-        periodicity: EventPeriodicity.RECURRING
-      };
-      return eventRepository.create(subsequentPayload);
     }
 
     return eventRepository.create(newVersionedPayload);

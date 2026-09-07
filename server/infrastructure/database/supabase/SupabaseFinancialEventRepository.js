@@ -195,9 +195,6 @@ export class SupabaseFinancialEventRepository extends IRepository {
       row.installment_fee = val;
     }
 
-    if (data.remainingDebtAfter !== undefined || data.remaining_debt_after !== undefined || data.balanceAfter !== undefined || data.balance_after !== undefined) {
-      row.remaining_debt_after = Number(data.balanceAfter !== undefined ? data.balanceAfter : (data.balance_after !== undefined ? data.balance_after : (data.remainingDebtAfter !== undefined ? data.remainingDebtAfter : data.remaining_debt_after)));
-    }
     if (data.labels !== undefined) row.labels = Array.isArray(data.labels) ? data.labels : [];
     if (data.breakdownItems !== undefined || data.breakdown_items !== undefined) row.breakdown_items = Array.isArray(data.breakdownItems) ? data.breakdownItems : (Array.isArray(data.breakdown_items) ? data.breakdown_items : []);
     if (data.notes !== undefined) row.notes = data.notes;

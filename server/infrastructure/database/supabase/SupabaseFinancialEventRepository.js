@@ -113,22 +113,42 @@ export class SupabaseFinancialEventRepository extends IRepository {
 
       isTerminated: Boolean(row.is_terminated),
 
-      labels: Array.isArray(row.labels)
-        ? row.labels.filter(l => typeof l !== 'string' || (!l.startsWith('meta:initial:') && !l.startsWith('meta:target:')))
-        : [],
+      labels: (() => {
+        let rawLabels = row.labels;
+        if (typeof rawLabels === 'string') {
+          try { rawLabels = JSON.parse(rawLabels); } catch {}
+        }
+        return Array.isArray(rawLabels)
+          ? rawLabels.filter(l => typeof l !== 'string' || (!l.startsWith('meta:initial:') && !l.startsWith('meta:target:')))
+          : [];
+      })(),
 
-      breakdownItems: Array.isArray(row.breakdown_items)
-        ? row.breakdown_items.filter(it => !it?._isFinancialMeta)
-        : [],
+      breakdownItems: (() => {
+        let rawItems = row.breakdown_items;
+        if (typeof rawItems === 'string') {
+          try { rawItems = JSON.parse(rawItems); } catch {}
+        }
+        return Array.isArray(rawItems)
+          ? rawItems.filter(it => !it?._isFinancialMeta)
+          : [];
+      })(),
 
       initialInvestedAmount: (() => {
         let val = 0;
-        if (Array.isArray(row.breakdown_items)) {
-          const meta = row.breakdown_items.find(it => it && it._isFinancialMeta);
+        let rawItems = row.breakdown_items;
+        if (typeof rawItems === 'string') {
+          try { rawItems = JSON.parse(rawItems); } catch {}
+        }
+        if (Array.isArray(rawItems)) {
+          const meta = rawItems.find(it => it && it._isFinancialMeta);
           if (meta && meta.initialInvestedAmount != null) val = Number(meta.initialInvestedAmount);
         }
-        if (!val && Array.isArray(row.labels)) {
-          const l = row.labels.find(lbl => typeof lbl === 'string' && lbl.startsWith('meta:initial:'));
+        let rawLabels = row.labels;
+        if (typeof rawLabels === 'string') {
+          try { rawLabels = JSON.parse(rawLabels); } catch {}
+        }
+        if (!val && Array.isArray(rawLabels)) {
+          const l = rawLabels.find(lbl => typeof lbl === 'string' && lbl.startsWith('meta:initial:'));
           if (l) val = Number(l.replace('meta:initial:', '')) || 0;
         }
         if (!val && row.initial_invested_amount != null) {
@@ -139,12 +159,20 @@ export class SupabaseFinancialEventRepository extends IRepository {
 
       targetAmount: (() => {
         let val = 0;
-        if (Array.isArray(row.breakdown_items)) {
-          const meta = row.breakdown_items.find(it => it && it._isFinancialMeta);
+        let rawItems = row.breakdown_items;
+        if (typeof rawItems === 'string') {
+          try { rawItems = JSON.parse(rawItems); } catch {}
+        }
+        if (Array.isArray(rawItems)) {
+          const meta = rawItems.find(it => it && it._isFinancialMeta);
           if (meta && meta.targetAmount != null) val = Number(meta.targetAmount);
         }
-        if (!val && Array.isArray(row.labels)) {
-          const l = row.labels.find(lbl => typeof lbl === 'string' && lbl.startsWith('meta:target:'));
+        let rawLabels = row.labels;
+        if (typeof rawLabels === 'string') {
+          try { rawLabels = JSON.parse(rawLabels); } catch {}
+        }
+        if (!val && Array.isArray(rawLabels)) {
+          const l = rawLabels.find(lbl => typeof lbl === 'string' && lbl.startsWith('meta:target:'));
           if (l) val = Number(l.replace('meta:target:', '')) || 0;
         }
         if (!val && row.target_amount != null) {

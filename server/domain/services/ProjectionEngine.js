@@ -74,7 +74,13 @@ export function projectEvents(rawEvents = [], options = {}) {
       }
     }
   }
-  const uniqueEvents = Array.from(uniqueEventsMap.values()).filter((ev) => !ev.isDeleted && ev.status !== EventStatus.DELETED && !ev.isTerminated);
+  const uniqueEvents = Array.from(uniqueEventsMap.values())
+    .filter((ev) => !ev.isDeleted && ev.status !== EventStatus.DELETED && !ev.isTerminated)
+    .map((ev) => ({
+      ...ev,
+      isFirstOccurrence: true,
+      isProjected: false
+    }));
 
   const projectedInstances = [];
 
@@ -174,7 +180,7 @@ export function projectEvents(rawEvents = [], options = {}) {
             initialInvestedAmount:
               override.initialInvestedAmount !== undefined && override.initialInvestedAmount !== null
                 ? override.initialInvestedAmount
-                : activeVersion.initialInvestedAmount,
+                : (isFirstOccurrence ? (activeVersion.initialInvestedAmount || 0) : 0),
             isOverridden: true,
             sobrepositionOver: seriesId,
             isFirstOccurrence
@@ -187,6 +193,7 @@ export function projectEvents(rawEvents = [], options = {}) {
           eventId: seriesId,
           version: activeVersion.version,
           targetAmount: activeVersion.targetAmount || seriesTargetAmount,
+          initialInvestedAmount: isFirstOccurrence ? (activeVersion.initialInvestedAmount || 0) : 0,
           date: curDateStr,
           isProjected: !isFirstOccurrence,
           isFirstOccurrence

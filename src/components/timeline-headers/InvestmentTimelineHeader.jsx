@@ -135,8 +135,8 @@ export default function InvestmentTimelineHeader({
         totalInstallmentsReceived += Number(ev.amount || 0);
         totalReceivedCount += 1;
       }
-      if (Number(ev.initialInvestedAmount || 0) > 0 && initialContribution === 0) {
-        initialContribution = Number(ev.initialInvestedAmount);
+      if (Number(ev.initialInvestedAmount || 0) > 0 && (ev.isFirstOccurrence || !ev.isProjected)) {
+        initialContribution += Number(ev.initialInvestedAmount);
       }
       if (Number(ev.targetAmount || 0) > 0) {
         customTarget = Math.max(customTarget, Number(ev.targetAmount));

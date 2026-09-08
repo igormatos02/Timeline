@@ -126,7 +126,8 @@ export default function IncomeTimelineHeader({
   const annualAchievementPercent = annualTarget > 0 ? Math.min(100, Math.round((annualTotalIncome / annualTarget) * 100)) : 0;
 
   // 3. ATUAL: TOTAL RECEBIDO & TARGET
-  let totalReceived = 0;
+  let totalInstallmentsReceived = 0;
+  let initialContribution = 0;
   let totalReceivedCount = 0;
   let customTarget = 0;
 
@@ -136,14 +137,19 @@ export default function IncomeTimelineHeader({
     if (isIncome) {
       const isReceived = ev.status === 'paid' || ev.status === 'received' || ev.status === 'completed' || ev.status === 'settled' || ev.isCompleted;
       if (isReceived) {
-        totalReceived += Number(ev.amount || 0);
+        totalInstallmentsReceived += Number(ev.amount || 0);
         totalReceivedCount += 1;
+      }
+      if (Number(ev.initialInvestedAmount || 0) > 0 && (ev.isFirstOccurrence || !ev.isProjected)) {
+        initialContribution += Number(ev.initialInvestedAmount);
       }
       if (Number(ev.targetAmount || 0) > 0) {
         customTarget = Math.max(customTarget, Number(ev.targetAmount));
       }
     }
   });
+
+  const totalReceived = totalInstallmentsReceived + initialContribution;
 
   const targetAmount = customTarget > 0
     ? customTarget

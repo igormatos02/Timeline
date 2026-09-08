@@ -212,8 +212,8 @@ export default function InvestmentEventModal({
     const finalDate = `${baseYearStr}-${baseMonthStr}-${safeDayStr}`;
 
     const finalAmount = parseFloat(formData.amount) || 0;
-    const finalInitialAmount = formData.initialInvestedAmount !== '' ? (parseFloat(formData.initialInvestedAmount) || 0) : undefined;
-    const finalTargetAmount = formData.targetAmount !== '' ? (parseFloat(formData.targetAmount) || 0) : undefined;
+    const finalInitialAmount = formData.initialInvestedAmount !== '' ? (parseFloat(formData.initialInvestedAmount) || 0) : 0;
+    const finalTargetAmount = formData.targetAmount !== '' ? (parseFloat(formData.targetAmount) || 0) : 0;
 
     const labels = formData.labelsInput
       ? formData.labelsInput.split(',').map((l) => l.trim()).filter(Boolean)

@@ -162,7 +162,7 @@ export default function CreateTimelineModal({
       finalData.events = generatedEvents;
       if (generatedEvents.length > 0) {
         // Contractual PMT base
-        finalData.installmentAmount = generatedEvents[0].principalAmount + generatedEvents[0].interestPortion;
+        finalData.installmentAmount = generatedEvents[0].installmentAmount ?? ((generatedEvents[0].installmentCapital ?? generatedEvents[0].principalAmount ?? 0) + (generatedEvents[0].installmentInterest ?? generatedEvents[0].interestPortion ?? 0));
       }
     }
 
@@ -619,10 +619,10 @@ export default function CreateTimelineModal({
                   </thead>
                   <tbody>
                     {simulationEvents.map((ev) => {
-                      const capitalVal = Number(ev.principalAmount || 0);
-                      const interestVal = Number(ev.interestPortion || 0);
-                      const taxVal = Number(ev.taxAmount || 0);
-                      const totalPayable = Number(ev.amount || 0);
+                      const capitalVal = Number(ev.installmentCapital ?? ev.principalAmount ?? 0);
+                      const interestVal = Number(ev.installmentInterest ?? ev.interestPortion ?? 0);
+                      const taxVal = Number(ev.installmentFee ?? ev.taxAmount ?? 0);
+                      const totalPayable = Number(ev.installmentAmount ?? ev.amount ?? (capitalVal + interestVal + taxVal));
 
                       return (
                         <tr key={ev.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>

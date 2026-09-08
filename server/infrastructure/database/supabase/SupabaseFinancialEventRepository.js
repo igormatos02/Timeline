@@ -81,7 +81,9 @@ export class SupabaseFinancialEventRepository extends IRepository {
       // Prefer the status stored directly on the row (e.g. amortization events).
       // FinancialEventService.getAllEvents will override this with the value from
       // the financial_event_status join for regular installments.
-      status: row.status || EventStatus.PENDING,
+      status: row.is_terminated ? EventStatus.DELETED : (row.status || EventStatus.PENDING),
+      isDeleted: Boolean(row.is_terminated || row.status === EventStatus.DELETED || row.status === 'Excluido'),
+      sobrepositionOver: row.sobreposition_over || null,
 
       automatic: row.automatic,
       isAutomatic: row.automatic,

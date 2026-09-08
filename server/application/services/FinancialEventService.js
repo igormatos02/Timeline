@@ -482,11 +482,7 @@ export class FinancialEventService {
         const year = parseInt(targetDate.substring(0, 4), 10);
         const month = parseInt(targetDate.substring(5, 7), 10);
         const aliases = Array.from(new Set([effectiveSeriesId, rootEvent?.id, directEvent?.id, id, savedRow?.id].filter(Boolean)));
-        await financialEventStatusRepository.upsertStatus(year, month, effectiveSeriesId, EventStatus.DELETED, {
-          timelineId: rootEvent?.timelineId || rootEvent?.timeline_id,
-          timeboardId: rootEvent?.timeboardId || rootEvent?.timeboard_id,
-          aliases
-        });
+        await financialEventStatusRepository.deleteStatus(year, month, aliases);
       }
       return true;
     }

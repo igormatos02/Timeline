@@ -24,20 +24,25 @@ export function projectEvents(rawEvents = [], options = {}) {
       (ev.timelineId && String(ev.timelineId).startsWith('tl-loan-')) ||
       (ev.timelineOriginId && String(ev.timelineOriginId).startsWith('tl-loan-'));
 
-    if (ev.sobrepositionOver) {
-      const key = `${ev.sobrepositionOver}_${ev.date}`;
-      if (!overridesMap.has(key) || Number(ev.version || 0) >= Number(overridesMap.get(key).version || 0)) {
-        overridesMap.set(key, ev);
-      }
-    } else if (
+    const isRecurringEvent =
       !isLoan &&
       (
         ev.isRecurring === true ||
         ev.periodicity === EventPeriodicity.RECURRING ||
         ev.periodicity === EventPeriodicity.PERIOD
       ) &&
-      ev.periodicity !== EventPeriodicity.ONCE
-    ) {
+      ev.periodicity !== EventPeriodicity.ONCE;
+
+    const seriesTargetId = ev.sobrepositionOver || (
+      !isRecurringEvent && ev.eventId && rawEvents.some(r => (r.isRecurring || r.periodicity === EventPeriodicity.RECURRING || r.periodicity === EventPeriodicity.PERIOD) && (r.eventId === ev.eventId || r.id === ev.eventId)) ? ev.eventId : null
+    );
+
+    if (seriesTargetId) {
+      const key = `${seriesTargetId}_${ev.date}`;
+      if (!overridesMap.has(key) || Number(ev.version || 0) >= Number(overridesMap.get(key).version || 0)) {
+        overridesMap.set(key, { ...ev, sobrepositionOver: seriesTargetId });
+      }
+    } else if (isRecurringEvent) {
       const sId = ev.eventId || ev.id;
       const normalizedEv = {
         ...ev,
@@ -69,7 +74,7 @@ export function projectEvents(rawEvents = [], options = {}) {
       }
     }
   }
-  const uniqueEvents = Array.from(uniqueEventsMap.values()).filter((ev) => !ev.isDeleted && ev.status !== EventStatus.DELETED);
+  const uniqueEvents = Array.from(uniqueEventsMap.values()).filter((ev) => !ev.isDeleted && ev.status !== EventStatus.DELETED && !ev.isTerminated);
 
   const projectedInstances = [];
 

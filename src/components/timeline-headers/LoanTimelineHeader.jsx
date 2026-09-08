@@ -130,6 +130,59 @@ export default function LoanTimelineHeader({
   const progressPercent =
     loanMetrics.progressPercent ?? 0;
 
+  // Annual Commitment — monthly installment × 12 vs projected annual income
+  const annualLoanCost = (() => {
+    // 1. Try loanMetrics (computed by getLoanMetrics)
+    const fromMetrics = Number(
+      loanMetrics.currentInstallmentAmount ??
+      loanMetrics.nextInstallment?.installmentAmount ??
+      loanMetrics.installmentAmount ?? 0
+    );
+    if (fromMetrics > 0) return fromMetrics * 12;
+
+    // 2. Try loanContract stored on timeline
+    const fromContract = Number(
+      timeline.loanContract?.installmentAmount ??
+      timeline.installmentAmount ?? 0
+    );
+    if (fromContract > 0) return fromContract * 12;
+
+    // 3. Scan timeline.events for any loan installment
+    const evList = timeline.events || [];
+    const sample = evList.find(
+      (ev) => ev && (ev.eventType === 'loan_installment' || ev.isSystemLoanEvent) &&
+              ev.eventType !== 'amortization'
+    );
+    const fromEvent = Number(sample?.installmentAmount || sample?.amount || 0);
+    return fromEvent > 0 ? fromEvent * 12 : 0;
+  })();
+
+  const annualIncomeProjected = (() => {
+    // timeline.events contains ALL computed events (income, expense, loan installments etc.)
+    // set by App.jsx: { ...currentSelected, events: computedEvents }
+    const evList = timeline.events || [];
+    const now = new Date();
+    const sy = now.getFullYear();
+    const sm = now.getMonth();
+    const startMK = `${sy}-${String(sm + 1).padStart(2, '0')}`;
+    const etm = sm + 12;
+    const ey = sy + Math.floor(etm / 12);
+    const em = etm % 12;
+    const endMK = `${ey}-${String(em + 1).padStart(2, '0')}`;
+    let total = 0;
+    evList.forEach((ev) => {
+      if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
+      const mk = ev.date.substring(0, 7);
+      if (mk < startMK || mk >= endMK) return;
+      if (ev.eventType === 'income' || ev.isIncome) total += Number(ev.amount || 0);
+    });
+    return total;
+  })();
+
+  const annualCommitmentPct = annualIncomeProjected > 0
+    ? Math.round((annualLoanCost / annualIncomeProjected) * 100)
+    : 0;
+
   // Visual text colors
   const textColorMain = isInactive
     ? '#94a3b8'
@@ -700,7 +753,69 @@ export default function LoanTimelineHeader({
                 )}
               </div>
             </div>
+
+            {/* ANNUAL COMMITMENT card */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ fontSize: '0.74rem', color: textColorDim, textTransform: 'uppercase', fontWeight: '700' }}>
+                ANNUAL COMMITMENT
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ position: 'relative', width: '64px', height: '64px', flexShrink: 0 }}>
+                  <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
+                    <circle cx="0" cy="0" r="0.82" fill="none"
+                      stroke={isInactive ? 'rgba(148,163,184,0.15)' : 'rgba(245,158,11,0.15)'}
+                      strokeWidth="0.32" />
+                    {annualCommitmentPct > 0 && annualCommitmentPct < 100 && (
+                      <path
+                        d={(() => {
+                          const pct = Math.min(annualCommitmentPct, 100) / 100;
+                          const ex = Math.cos(2 * Math.PI * pct - Math.PI / 2);
+                          const ey2 = Math.sin(2 * Math.PI * pct - Math.PI / 2);
+                          const large = pct > 0.5 ? 1 : 0;
+                          return `M 0 -0.82 A 0.82 0.82 0 ${large} 1 ${(0.82 * ex).toFixed(4)} ${(0.82 * ey2).toFixed(4)}`;
+                        })()}
+                        fill="none"
+                        stroke={isInactive ? '#94a3b8' : annualCommitmentPct >= 80 ? '#f43f5e' : '#f59e0b'}
+                        strokeWidth="0.32"
+                        strokeLinecap="round"
+                      />
+                    )}
+                    {annualCommitmentPct >= 100 && (
+                      <circle cx="0" cy="0" r="0.82" fill="none"
+                        stroke={isInactive ? '#94a3b8' : '#f43f5e'}
+                        strokeWidth="0.32" />
+                    )}
+                  </svg>
+                  <div style={{
+                    position: 'absolute', top: '50%', left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: '0.78rem', fontWeight: '800',
+                    color: annualCommitmentPct >= 80
+                      ? (isInactive ? '#64748b' : '#f43f5e')
+                      : (isInactive ? '#94a3b8' : '#f59e0b')
+                  }}>
+                    {annualCommitmentPct}%
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <div style={{ fontSize: '1.05rem', fontWeight: '800', color: isInactive ? '#64748b' : '#f59e0b' }}>
+                    {formatCurrency(annualLoanCost)}
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: textColorMuted }}>
+                    Annual Commitment
+                  </div>
+                  {annualIncomeProjected > 0 && (
+                    <div style={{ fontSize: '0.68rem', color: textColorMuted }}>
+                      of {formatCurrency(annualIncomeProjected)} annual total
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
+
 
           {/* Progress */}
           <div className="timeline-progress-container">

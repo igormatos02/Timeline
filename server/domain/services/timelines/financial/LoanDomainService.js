@@ -4,6 +4,7 @@ import {
   TimelineStatus,
   LoanEventCategory,
   AmortizationEventCategory,
+  AmortizationStrategy,
   isPositiveStatus
 } from '../../../../../shared/enums/index.js';
 
@@ -204,13 +205,14 @@ export class LoanDomainService {
         : 0;
 
     /**
-     * Interest / payment aggregations.
+     * Interest / fee / payment aggregations.
      */
-    let totalEstimatedInterest = 0;
     let paidCapital = 0;
     let paidInterest = 0;
+    let paidFee = 0;
     let futureCapital = 0;
     let futureInterest = 0;
+    let futureFee = 0;
     let paidInstallmentsCount = 0;
     let nextDueDate = null;
 
@@ -218,7 +220,116 @@ export class LoanDomainService {
       sortedEvents.length ||
       Number(loanContract?.totalInstallments || 0);
 
-    for (const ev of sortedEvents) {
+    // Apply extraordinary amortizations in-memory to calculate exact future schedule based on strategy
+    let processedEvents = sortedEvents.map((ev) => ({ ...ev }));
+    if (amortizationEvents.length > 0) {
+      for (const amortEv of amortizationEvents) {
+        const isPaid = isPositiveStatus(amortEv.status) || amortEv.isCompleted;
+        if (!isPaid) continue;
+
+        const amortVal = Number(
+          amortEv.amortizationAmount ??
+          amortEv.installmentAmount ??
+          amortEv.amount ??
+          0
+        );
+        if (isNaN(amortVal) || amortVal <= 0) continue;
+
+        const strategy =
+          amortEv.strategy ||
+          amortEv.amortizationStrategy ||
+          amortEv.category ||
+          AmortizationStrategy.REDUCE_TERM;
+
+        const isReduceInstallment =
+          strategy === AmortizationStrategy.REDUCE_INSTALLMENT ||
+          strategy === AmortizationEventCategory.REDUCE_INSTALLMENT ||
+          strategy === 'reduce_installment';
+
+        const openList = processedEvents.filter(
+          (ev) => !isPositiveStatus(ev.status) && !ev.isCompleted && !ev.isAbated
+        );
+
+        if (openList.length === 0) continue;
+
+        if (isReduceInstallment) {
+          // REDUCE_INSTALLMENT: scale open installments down proportionally
+          const totalOpenCapital = openList.reduce(
+            (sum, ev) => sum + Number(ev.installmentCapital || 0),
+            0
+          );
+          if (totalOpenCapital <= 0) continue;
+
+          const ratio = Math.max(0, totalOpenCapital - amortVal) / totalOpenCapital;
+          const openIds = new Set(openList.map((ev) => ev.id));
+
+          processedEvents = processedEvents.map((ev) => {
+            if (!openIds.has(ev.id)) return ev;
+            const cap = Math.round(Number(ev.installmentCapital || 0) * ratio * 100) / 100;
+            const int = Math.round(Number(ev.installmentInterest || 0) * ratio * 100) / 100;
+            const fee = Math.round(Number(ev.installmentFee || 0) * ratio * 100) / 100;
+            const amt = Math.round((cap + int + fee) * 100) / 100;
+            const isZero = ratio === 0 || (cap === 0 && int === 0 && amt === 0);
+
+            return {
+              ...ev,
+              installmentCapital: cap,
+              installmentInterest: int,
+              installmentFee: fee,
+              installmentAmount: amt,
+              status: isZero ? EventStatus.ABATED : ev.status,
+              isAbated: isZero ? true : Boolean(ev.isAbated),
+              isCompleted: isZero ? true : Boolean(ev.isCompleted)
+            };
+          });
+        } else {
+          // REDUCE_TERM: abate open installments from end backwards
+          const sortedOpen = [...openList].sort((a, b) => {
+            const numA = Number(a.installmentNumber || 0);
+            const numB = Number(b.installmentNumber || 0);
+            if (numA && numB) return numB - numA;
+            return (b.date || '').localeCompare(a.date || '');
+          });
+
+          let remaining = amortVal;
+          const patch = new Map();
+
+          for (const inst of sortedOpen) {
+            if (remaining <= 0) break;
+            const cap = Number(inst.installmentCapital || 0);
+            if (cap <= 0) continue;
+
+            if (remaining >= cap) {
+              patch.set(inst.id, {
+                installmentCapital: 0,
+                installmentInterest: 0,
+                installmentFee: 0,
+                installmentAmount: 0,
+                status: EventStatus.ABATED,
+                isAbated: true,
+                isCompleted: true
+              });
+              remaining -= cap;
+            } else {
+              const newCap = Math.max(0, Math.round((cap - remaining) * 100) / 100);
+              const int = Number(inst.installmentInterest || 0);
+              const fee = Number(inst.installmentFee || 0);
+              patch.set(inst.id, {
+                installmentCapital: newCap,
+                installmentAmount: Math.round((newCap + int + fee) * 100) / 100
+              });
+              remaining = 0;
+            }
+          }
+
+          processedEvents = processedEvents.map((ev) =>
+            patch.has(ev.id) ? { ...ev, ...patch.get(ev.id) } : ev
+          );
+        }
+      }
+    }
+
+    for (const ev of processedEvents) {
       /**
        * Domain entity fields ONLY.
        */
@@ -235,23 +346,19 @@ export class LoanDomainService {
         isPositiveStatus(ev.status) ||
         ev.isCompleted;
 
-      /**
-       * Estimated total interest includes:
-       *
-       * installmentInterest
-       *
-       * and installmentFee only if the fee is considered
-       * part of the loan's estimated cost.
-       */
-      totalEstimatedInterest += interest + fee;
+      const isAbat =
+        ev.status === EventStatus.ABATED ||
+        ev.isAbated;
 
-      if (isPaid) {
+      if (isPaid && !isAbat) {
         paidCapital += capital;
-        paidInterest += interest + fee;
+        paidInterest += interest;
+        paidFee += fee;
         paidInstallmentsCount++;
-      } else {
+      } else if (!isPaid && !isAbat) {
         futureCapital += capital;
-        futureInterest += interest + fee;
+        futureInterest += interest;
+        futureFee += fee;
 
         if (!nextDueDate && ev.date) {
           nextDueDate = ev.date;
@@ -259,26 +366,44 @@ export class LoanDomainService {
       }
     }
 
+    const futureInterestAdjusted = Math.max(
+      0,
+      Math.round(futureInterest * 100) / 100
+    );
+
+    const futureFeeAdjusted = Math.max(
+      0,
+      Math.round(futureFee * 100) / 100
+    );
+
+    const totalEstimatedInterestAdjusted = Math.max(
+      0,
+      Math.round((paidInterest + futureInterestAdjusted) * 100) / 100
+    );
+    const totalEstimatedFeeAdjusted = Math.max(
+      0,
+      Math.round((paidFee + futureFeeAdjusted) * 100) / 100
+    );
+
     /**
      * Total cost of the loan.
      *
-     * Original capital + estimated interest/fees.
+     * Original capital + estimated interest + estimated fees.
      */
     const totalLoanCost =
-      totalDebt + totalEstimatedInterest;
+      totalDebt + totalEstimatedInterestAdjusted + totalEstimatedFeeAdjusted;
 
     const paidTotal =
-      paidCapital + paidInterest;
+      amortizedCapital + paidInterest + paidFee;
 
     /**
-     * Future capital should match the calculated
-     * remaining debt.
+     * Future capital matches calculated remaining debt.
      */
     const normalizedFutureCapital =
       remainingDebt;
 
     const futureTotal =
-      normalizedFutureCapital + futureInterest;
+      normalizedFutureCapital + futureInterestAdjusted + futureFeeAdjusted;
 
     const remainingInstallmentsCount =
       Math.max(
@@ -288,12 +413,12 @@ export class LoanDomainService {
       );
 
     const lastActiveInstallment =
-      sortedEvents
+      processedEvents
         .filter(
-          (ev) => !isPositiveStatus(ev.status)
+          (ev) => !isPositiveStatus(ev.status) && !ev.isCompleted && !ev.isAbated
         )
         .pop() ||
-      sortedEvents[sortedEvents.length - 1];
+      processedEvents[processedEvents.length - 1];
 
     const estimatedPayoffDate =
       lastActiveInstallment?.date ||
@@ -355,13 +480,25 @@ export class LoanDomainService {
         Math.round(monthlyInstallment * 100) / 100,
 
       totalEstimatedInterest:
-        Math.round(totalEstimatedInterest * 100) / 100,
+        Math.round(totalEstimatedInterestAdjusted * 100) / 100,
+
+      totalEstimatedFee:
+        Math.round(totalEstimatedFeeAdjusted * 100) / 100,
 
       totalLoanCost:
         Math.round(totalLoanCost * 100) / 100,
 
       paidInterest:
         Math.round(paidInterest * 100) / 100,
+
+      totalInterestPaid:
+        Math.round(paidInterest * 100) / 100,
+
+      paidFee:
+        Math.round(paidFee * 100) / 100,
+
+      totalFeePaid:
+        Math.round(paidFee * 100) / 100,
 
       paidTotal:
         Math.round(paidTotal * 100) / 100,
@@ -370,7 +507,10 @@ export class LoanDomainService {
         Math.round(normalizedFutureCapital * 100) / 100,
 
       futureInterest:
-        Math.round(futureInterest * 100) / 100,
+        Math.round(futureInterestAdjusted * 100) / 100,
+
+      futureFee:
+        Math.round(futureFeeAdjusted * 100) / 100,
 
       futureTotal:
         Math.round(futureTotal * 100) / 100,

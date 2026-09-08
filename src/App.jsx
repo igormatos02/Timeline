@@ -16,7 +16,8 @@ import {
   applyExtraordinaryAmortization,
   getLoanMetrics,
   generateLoanInstallments,
-  formatCurrency
+  formatCurrency,
+  isLoanInstallment
 } from './utils/loanCalculations';
 import * as api from './services/api';
 import { generateUUID } from './utils/uuid';
@@ -873,13 +874,16 @@ export default function App() {
   const handleRequestDeleteEvent = (eventOrId) => {
     scrollYBeforeModalRef.current = window.scrollY;
     if (!eventOrId) return;
-    if (typeof eventOrId === 'object' && eventOrId.id) {
-      setDeletingEvent(eventOrId);
+    let targetObj = eventOrId;
+    if (typeof eventOrId !== 'object' || !eventOrId.id) {
+      targetObj = (activeTimeline?.events || []).find((ev) => ev.id === eventOrId);
+    }
+    if (targetObj && isLoanInstallment(targetObj)) {
+      showToast('As parcelas de empréstimo não podem ser eliminadas individualmente. Edite ou elimine o contrato.', 'warning');
       return;
     }
-    const found = (activeTimeline?.events || []).find((ev) => ev.id === eventOrId);
-    if (found) {
-      setDeletingEvent(found);
+    if (targetObj && targetObj.id) {
+      setDeletingEvent(targetObj);
     }
   };
 

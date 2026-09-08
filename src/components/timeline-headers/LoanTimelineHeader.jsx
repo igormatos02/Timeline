@@ -920,6 +920,37 @@ export default function LoanTimelineHeader({
 
                 <div
                   style={{
+                    display: 'flex',
+                    justifyContent:
+                      'space-between'
+                  }}
+                >
+                  <span
+                    style={{
+                      color: textColorDim
+                    }}
+                  >
+                    {t(
+                      'loanHeader.estimatedFutureFees'
+                    ) ||
+                      'IMPOSTOS / TAXAS FUTURAS'}
+                  </span>
+
+                  <span
+                    style={{
+                      fontWeight: '700',
+                      color: textColorMain
+                    }}
+                  >
+                    {formatCurrency(
+                      loanMetrics.futureFee ??
+                      0
+                    )}
+                  </span>
+                </div>
+
+                <div
+                  style={{
                     borderTop:
                       '1px dashed var(--border-glass)',
                     paddingTop: '4px',
@@ -1067,6 +1098,37 @@ export default function LoanTimelineHeader({
 
                 <div
                   style={{
+                    display: 'flex',
+                    justifyContent:
+                      'space-between'
+                  }}
+                >
+                  <span
+                    style={{
+                      color: textColorDim
+                    }}
+                  >
+                    {t(
+                      'loanHeader.feesPaid'
+                    ) ||
+                      'IMPOSTOS / TAXAS PAGAS'}
+                  </span>
+
+                  <span
+                    style={{
+                      fontWeight: '700',
+                      color: textColorMain
+                    }}
+                  >
+                    {formatCurrency(
+                      loanMetrics.totalFeePaid ??
+                      0
+                    )}
+                  </span>
+                </div>
+
+                <div
+                  style={{
                     borderTop:
                       '1px dashed var(--border-glass)',
                     paddingTop: '4px',
@@ -1206,7 +1268,39 @@ export default function LoanTimelineHeader({
                     }}
                   >
                     {formatCurrency(
+                      loanMetrics.totalEstimatedInterest ??
                       loanMetrics.futureInterest ??
+                      0
+                    )}
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent:
+                      'space-between'
+                  }}
+                >
+                  <span
+                    style={{
+                      color: textColorDim
+                    }}
+                  >
+                    {t(
+                      'loanHeader.totalEstimatedFees'
+                    ) ||
+                      'IMPOSTOS / TAXAS TOTAIS'}
+                  </span>
+
+                  <span
+                    style={{
+                      fontWeight: '700',
+                      color: textColorMain
+                    }}
+                  >
+                    {formatCurrency(
+                      loanMetrics.totalEstimatedFee ??
                       0
                     )}
                   </span>

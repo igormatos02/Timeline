@@ -199,6 +199,43 @@ export default function TimelineEventCard({
     event.description
   ]);
 
+  const reducedBreakdown = React.useMemo(() => {
+    if (isAmortized) return null;
+    const currentTotal = Number(event.installmentAmount ?? event.amount ?? 0);
+    const origTotal = Number(event.originalInstallmentAmount ?? event.originalAmount ?? 0);
+    const origCap = Number(event.originalInstallmentCapital ?? event.originalCapital ?? 0);
+    const currentCap = Number(event.installmentCapital ?? event.principalAmount ?? event.principal_amount ?? 0);
+
+    const isReduced =
+      origTotal > 0 &&
+      currentTotal > 0 &&
+      origTotal > currentTotal + 0.01;
+
+    if (!isReduced) return null;
+
+    const amortizedAmount = Math.max(0, Math.round((origTotal - currentTotal) * 100) / 100);
+    const amortizedCapital = origCap > currentCap ? Math.max(0, Math.round((origCap - currentCap) * 100) / 100) : amortizedAmount;
+
+    return {
+      isReduced: true,
+      origTotal,
+      currentTotal,
+      amortizedAmount,
+      amortizedCapital
+    };
+  }, [
+    isAmortized,
+    event.installmentAmount,
+    event.amount,
+    event.originalInstallmentAmount,
+    event.originalAmount,
+    event.originalInstallmentCapital,
+    event.originalCapital,
+    event.installmentCapital,
+    event.principalAmount,
+    event.principal_amount
+  ]);
+
   const isLocked = event.isLocked !== undefined ? !!event.isLocked : (isCompleted || isAmortized);
 
   const [isEditingAmount, setIsEditingAmount] = useState(false);
@@ -2203,10 +2240,31 @@ export default function TimelineEventCard({
                     {formatCurrency(abatedBreakdown?.origCapital || event.originalInstallmentCapital || 0)}
                   </span>
                 </div>
+              ) : reducedBreakdown ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)', textDecoration: 'line-through' }} title="Valor original antes da amortização extraordinária">
+                    {formatCurrency(reducedBreakdown.origTotal)}
+                  </span>
+                  <span style={{ fontSize: '0.95rem', fontWeight: '800', color: isInertFuture ? '#94a3b8' : 'var(--primary-light)' }} title="Novo valor reduzido da parcela">
+                    {formatCurrency(reducedBreakdown.currentTotal)}
+                  </span>
+                </div>
               ) : (
                 renderEditableAmount('', isInertFuture ? '#94a3b8' : 'var(--primary-light)')
               )}
             </div>
+
+            {/* Total Amortizado (se a parcela foi reduzida por amortização extraordinária) */}
+            {reducedBreakdown && (
+              <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
+                <span style={{ fontSize: '0.7rem', color: '#10b981', textTransform: 'uppercase', fontWeight: '700' }}>
+                  {t('loanCard.totalAmortized')}
+                </span>
+                <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#10b981' }} title="Valor abatido/poupado nesta prestação">
+                  +{formatCurrency(reducedBreakdown.amortizedAmount)}
+                </span>
+              </div>
+            )}
 
             {/* Decomposição: Capital Amortizado */}
             <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
@@ -3134,8 +3192,8 @@ export default function TimelineEventCard({
             </button>
           )}
 
-          {/* Botão Eliminar Evento - Sempre visível e ativo para TODOS os eventos */}
-          {onDelete && (
+          {/* Botão Eliminar Evento - Não permitido para parcelas de empréstimo */}
+          {onDelete && !isLoanInstallment && (
             <button
               type="button"
               className="action-icon-btn delete"

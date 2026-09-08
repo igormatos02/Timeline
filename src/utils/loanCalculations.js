@@ -18,7 +18,8 @@ import {
   EventAggregation,
   TimelineType,
   isPositiveStatus,
-  AmortizationEventCategory
+  AmortizationEventCategory,
+  AmortizationStrategy
 } from '../enums/index.js';
 
 // ---------------------------------------------------------------------------
@@ -452,17 +453,16 @@ function applyAmortizationsInMemory(
       }
 
       const isAmort =
-        ev.category ===
-        AmortizationEventCategory.REDUCE_TERM ||
-        ev.category ===
-        AmortizationEventCategory.REDUCE_INSTALLMENT ||
+        ev.category === AmortizationEventCategory.REDUCE_TERM ||
+        ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
+        ev.strategy === AmortizationStrategy.REDUCE_TERM ||
+        ev.strategy === AmortizationStrategy.REDUCE_INSTALLMENT ||
+        ev.amortizationStrategy === AmortizationStrategy.REDUCE_TERM ||
+        ev.amortizationStrategy === AmortizationStrategy.REDUCE_INSTALLMENT ||
         ev.eventType === EventType.AMORTIZATION ||
-        ev.isAmortization;
+        Boolean(ev.isAmortization);
 
-      return (
-        isAmort &&
-        isPositiveStatus(ev.status)
-      );
+      return isAmort;
     })
     .sort((a, b) =>
       (a.date || '').localeCompare(
@@ -494,13 +494,16 @@ function applyAmortizationsInMemory(
     const amortDate =
       amortEv.date || '1900-01-01';
 
-    const category =
-      amortEv.category ??
-      AmortizationEventCategory.REDUCE_TERM;
+    const strategy =
+      amortEv.strategy ||
+      amortEv.amortizationStrategy ||
+      amortEv.category ||
+      AmortizationStrategy.REDUCE_TERM;
 
     const isReduceInstallment =
-      category ===
-      AmortizationEventCategory.REDUCE_INSTALLMENT;
+      strategy === AmortizationStrategy.REDUCE_INSTALLMENT ||
+      strategy === AmortizationEventCategory.REDUCE_INSTALLMENT ||
+      strategy === 'reduce_installment';
 
     const isOpenInstallment = (ev) =>
       isLoanInstallment(ev) &&
@@ -510,14 +513,11 @@ function applyAmortizationsInMemory(
 
     if (isReduceInstallment) {
       // ---------------------------------------------------------
-      // REDUCE_INSTALLMENT
+      // REDUCE_INSTALLMENT (Diminuir Parcela)
+      // Mantém o prazo e reduz o valor das parcelas abertas proporcionalmente
       // ---------------------------------------------------------
 
-      const future = currentEvents.filter(
-        (ev) =>
-          isOpenInstallment(ev) &&
-          ev.date >= amortDate
-      );
+      const future = currentEvents.filter(isOpenInstallment);
 
       if (future.length === 0) {
         continue;
@@ -534,6 +534,7 @@ function applyAmortizationsInMemory(
         continue;
       }
 
+      const futureIds = new Set(future.map((f) => f.id));
       const ratio =
         Math.max(
           0,
@@ -543,10 +544,7 @@ function applyAmortizationsInMemory(
 
       currentEvents = currentEvents.map(
         (ev) => {
-          if (
-            !isOpenInstallment(ev) ||
-            ev.date < amortDate
-          ) {
+          if (!futureIds.has(ev.id)) {
             return ev;
           }
 
@@ -567,7 +565,7 @@ function applyAmortizationsInMemory(
           const fee =
             Math.round(
               getInstallmentFee(ev) *
-              (ratio === 0 ? 0 : 1) *
+              ratio *
               100
             ) / 100;
 
@@ -609,28 +607,29 @@ function applyAmortizationsInMemory(
       );
     } else {
       // ---------------------------------------------------------
-      // REDUCE_TERM
+      // REDUCE_TERM (Diminuir Prazo)
+      // Abate as parcelas do fim para trás a 0, mantendo as iniciais abertas intactas
       // ---------------------------------------------------------
 
-      const future = currentEvents
-        .filter(isOpenInstallment)
-        .sort((a, b) => {
-          const na =
-            Number(
-              a.installmentNumber || 0
-            );
+      const futureCandidates = currentEvents.filter(isOpenInstallment);
 
-          const nb =
-            Number(
-              b.installmentNumber || 0
-            );
+      const future = futureCandidates.sort((a, b) => {
+        const na =
+          Number(
+            a.installmentNumber || 0
+          );
 
-          return (na && nb)
-            ? nb - na
-            : (b.date || '').localeCompare(
-              a.date || ''
-            );
-        });
+        const nb =
+          Number(
+            b.installmentNumber || 0
+          );
+
+        return (na && nb)
+          ? nb - na
+          : (b.date || '').localeCompare(
+            a.date || ''
+          );
+      });
 
       let remaining = amortVal;
 
@@ -1026,6 +1025,7 @@ export function getLoanMetrics(
   let regularPrincipalPaid = 0;
   let extraordinaryAmortized = 0;
   let interestPaid = 0;
+  let feePaid = 0;
   let paidCount = 0;
   let overdueCount = 0;
   let totalCount = 0;
@@ -1076,6 +1076,7 @@ export function getLoanMetrics(
     } else if (paid) {
       regularPrincipalPaid += principal;
       interestPaid += interest;
+      feePaid += getInstallmentFee(ev);
       paidCount++;
     } else {
       if (
@@ -1133,7 +1134,7 @@ export function getLoanMetrics(
         );
 
   // ---------------------------------------------------------
-  // Future interest
+  // Future interest & Fees
   // ---------------------------------------------------------
 
   const futureInterest =
@@ -1160,54 +1161,44 @@ export function getLoanMetrics(
       ) / 100
     );
 
-  // ---------------------------------------------------------
-  // Total loan cost
-  // ---------------------------------------------------------
-
-  const totalLoanCost =
-    Math.round(
-      eventsList.reduce(
-        (acc, ev) => {
-          // Extraordinary amortization
-          if (isAmortizationEvent(ev)) {
+  const futureFee =
+    Math.max(
+      0,
+      Math.round(
+        eventsList.reduce(
+          (acc, ev) => {
             if (
-              isPositiveStatus(ev.status) ||
-              ev.isCompleted
+              !isLoanInstallment(ev) ||
+              isAbated(ev) ||
+              isPositiveStatus(ev.status)
             ) {
-              return (
-                acc +
-                Number(
-                  ev.amortizationAmount ??
-                  ev.installmentAmount ??
-                  ev.amount ??
-                  0
-                )
-              );
+              return acc;
             }
 
-            return acc;
-          }
+            return (
+              acc +
+              getInstallmentFee(ev)
+            );
+          },
+          0
+        ) * 100
+      ) / 100
+    );
 
-          if (!isLoanInstallment(ev)) {
-            return acc;
-          }
+  const totalEstimatedInterest =
+    Math.round((interestPaid + futureInterest) * 100) / 100;
 
-          // Abated installment is not paid.
-          if (isAbated(ev)) {
-            return acc;
-          }
+  const totalEstimatedFee =
+    Math.round((feePaid + futureFee) * 100) / 100;
 
-          return (
-            acc +
-            getInstallmentAmount(ev)
-          );
-        },
-        0
-      ) * 100
-    ) / 100;
+  const futureTotal =
+    Math.round((remainingDebt + futureInterest + futureFee) * 100) / 100;
 
   const totalPaid =
-    Math.round((amortizedCapital + interestPaid) * 100) / 100;
+    Math.round((amortizedCapital + interestPaid + feePaid) * 100) / 100;
+
+  const totalLoanCost =
+    Math.round((originalCapital + totalEstimatedInterest + totalEstimatedFee) * 100) / 100;
 
   const progressPercent =
     originalCapital > 0
@@ -1310,16 +1301,21 @@ export function getLoanMetrics(
     totalPaid,
     interestPaid,
     totalInterestPaid: interestPaid,
+    paidInterest: interestPaid,
+    feePaid,
+    paidFee: feePaid,
+    totalFeePaid: feePaid,
 
     // Loan cost
     totalLoanCost,
+    totalEstimatedInterest,
+    totalEstimatedFee,
 
     // Future
     futureCapital: remainingDebt,
     futureInterest,
-    futureTotal:
-      remainingDebt +
-      futureInterest,
+    futureFee,
+    futureTotal,
 
     // Installment counts
     paidInstallments: paidCount,

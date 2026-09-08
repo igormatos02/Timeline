@@ -11,11 +11,68 @@ import {
   Clock,
   CheckCircle2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Utensils,
+  Home,
+  Droplets,
+  Flame,
+  Wifi,
+  Bus,
+  Car,
+  HeartPulse,
+  GraduationCap,
+  Film,
+  ShoppingBag,
+  Shirt,
+  Wrench,
+  Hammer,
+  ShieldCheck,
+  Dog,
+  Plane,
+  Sparkles,
+  Pin,
+  TrendingUp,
+  Tag,
+  Search,
+  Check
 } from 'lucide-react';
 import { format, parseISO, addMonths, getDaysInMonth, setMonth, setYear } from 'date-fns';
 import { EventStatus, EventPeriodicity, EventType, ExpenseEventCategory } from '../../../shared/enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
+
+const EXPENSE_CATEGORY_META = {
+  [ExpenseEventCategory.FOOD]: { icon: Utensils, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
+  [ExpenseEventCategory.RENT]: { icon: Home, color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' },
+  [ExpenseEventCategory.ELECTRICITY]: { icon: Zap, color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)' },
+  [ExpenseEventCategory.WATER]: { icon: Droplets, color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)' },
+  [ExpenseEventCategory.GAS]: { icon: Flame, color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)' },
+  [ExpenseEventCategory.COMMUNICATIONS]: { icon: Wifi, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' },
+  [ExpenseEventCategory.TRANSPORTATION]: { icon: Bus, color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
+  [ExpenseEventCategory.AUTO]: { icon: Car, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)' },
+  [ExpenseEventCategory.HEALTH]: { icon: HeartPulse, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)' },
+  [ExpenseEventCategory.EDUCATION]: { icon: GraduationCap, color: '#6366f1', bg: 'rgba(99, 102, 241, 0.15)' },
+  [ExpenseEventCategory.ENTERTAINMENT]: { icon: Film, color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)' },
+  [ExpenseEventCategory.SHOPPING]: { icon: ShoppingBag, color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.15)' },
+  [ExpenseEventCategory.CLOTHING]: { icon: Shirt, color: '#14b8a6', bg: 'rgba(20, 184, 166, 0.15)' },
+  [ExpenseEventCategory.CARMAINTENANCE]: { icon: Wrench, color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)' },
+  [ExpenseEventCategory.HOUSEMAINTENANCE]: { icon: Hammer, color: '#84cc16', bg: 'rgba(132, 204, 22, 0.15)' },
+  [ExpenseEventCategory.ENSURANCE]: { icon: ShieldCheck, color: '#0ea5e9', bg: 'rgba(14, 165, 233, 0.15)' },
+  [ExpenseEventCategory.PETS]: { icon: Dog, color: '#d97706', bg: 'rgba(217, 119, 6, 0.15)' },
+  [ExpenseEventCategory.TRAVEL]: { icon: Plane, color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)' },
+  [ExpenseEventCategory.PERSONAL_CARE]: { icon: Sparkles, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)' },
+  [ExpenseEventCategory.FIXED_EXPENSE]: { icon: Pin, color: '#64748b', bg: 'rgba(100, 116, 139, 0.15)' },
+  [ExpenseEventCategory.VARIABLE_EXPENSE]: { icon: TrendingUp, color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)' },
+  [ExpenseEventCategory.OTHER]: { icon: Tag, color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' }
+};
+
+const POPULAR_EXPENSE_CATEGORIES = [
+  ExpenseEventCategory.RENT,
+  ExpenseEventCategory.FOOD,
+  ExpenseEventCategory.ELECTRICITY,
+  ExpenseEventCategory.AUTO,
+  ExpenseEventCategory.COMMUNICATIONS,
+  ExpenseEventCategory.SHOPPING
+];
 
 export default function ExpenseEventModal({
   isOpen,
@@ -31,6 +88,8 @@ export default function ExpenseEventModal({
   const [isDayPickerOpen, setIsDayPickerOpen] = useState(false);
   const [isEndMonthPickerOpen, setIsEndMonthPickerOpen] = useState(false);
   const [endMonthPickerYear, setEndMonthPickerYear] = useState(2026);
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
   const [updateScope, setUpdateScope] = useState('single');
   const [breakdownItems, setBreakdownItems] = useState([]);
 
@@ -279,10 +338,10 @@ export default function ExpenseEventModal({
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                {initialData ? (t('modal.editExpense') || 'Editar Gastos') : (t('modal.newExpense') || 'Nova Despesa / Gasto')}
+                {initialData ? (t('modal.editExpense') || 'Editar Despesa') : (t('modal.newExpense') || 'Nova Despesa')}
               </h3>
               <div style={{ fontSize: '0.76rem', color: '#f43f5e', fontWeight: '700' }}>
-                {timeline?.name || 'Gastos'} • {format(parseISO(`${baseYearStr}-${baseMonthStr}-01`), 'MMMM yyyy', { locale: dateLocale })}
+                {timeline?.name || t('timeline.expenses')} • {format(parseISO(`${baseYearStr}-${baseMonthStr}-01`), 'MMMM yyyy', { locale: dateLocale })}
               </div>
             </div>
           </div>
@@ -301,14 +360,14 @@ export default function ExpenseEventModal({
           {/* 1. Título da Despesa (Foco e seleção automática ao abrir) */}
           <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-              {t('modal.titleLabel') || 'Descrição da Despesa *'}
+              {t('modal.expenseTitleLabel') || 'Descrição da Despesa *'}
             </label>
             <input
               ref={titleInputRef}
               type="text"
               required
               autoFocus
-              placeholder={t('modal.expenseTitlePlaceholder') || 'Ex: Renda / Aluguel, Supermercado, Energia Elétrica...'}
+              placeholder={t('modal.expenseTitlePlaceholder') || 'Ex: Renda / Aluguel, Supermercado, Eletricidade, Carro...'}
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="form-input"
@@ -316,39 +375,226 @@ export default function ExpenseEventModal({
             />
           </div>
 
-          {/* Categoria da Despesa */}
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-              {t('sidebar.categoryType') || 'Categoria'}
+          {/* Categoria da Despesa Elegante */}
+          <div style={{ marginBottom: '14px', position: 'relative' }}>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+              {t('modal.categoryLabel') || t('sidebar.categoryType') || 'Categoria'}
             </label>
-            <select
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="form-input"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                borderRadius: '8px',
-                boxSizing: 'border-box',
-                background: 'var(--bg-glass, rgba(255,255,255,0.03))',
-                color: 'var(--text-main)',
-                border: '1px solid var(--border-glass)',
-                cursor: 'pointer'
-              }}
-            >
-              {Object.entries(ExpenseEventCategory).map(([key, val]) => (
-                <option key={key} value={val} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
-                  {val === ExpenseEventCategory.OTHER ? (t('category.other') || 'Outros') : val}
-                </option>
-              ))}
-            </select>
+
+            {/* Botão Seletor Principal */}
+            {(() => {
+              const currentMeta = EXPENSE_CATEGORY_META[formData.category] || EXPENSE_CATEGORY_META[ExpenseEventCategory.OTHER];
+              const CurrentIcon = currentMeta.icon;
+              return (
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    borderRadius: '10px',
+                    background: 'var(--bg-glass, rgba(255,255,255,0.03))',
+                    border: isCategoryDropdownOpen ? '1px solid #f43f5e' : '1px solid var(--border-glass)',
+                    boxShadow: isCategoryDropdownOpen ? '0 0 12px rgba(244, 63, 94, 0.2)' : 'none',
+                    color: 'var(--text-main)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '8px',
+                        background: currentMeta.bg,
+                        color: currentMeta.color,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                    >
+                      <CurrentIcon size={16} />
+                    </div>
+                    <span style={{ fontSize: '0.86rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                      {t(`expenseCategories.${formData.category}`) || formData.category}
+                    </span>
+                  </div>
+                  <ChevronDown
+                    size={16}
+                    style={{
+                      color: 'var(--text-muted)',
+                      transform: isCategoryDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease'
+                    }}
+                  />
+                </button>
+              );
+            })()}
+
+            {/* Atalhos rápidos / Categorias Populares */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+              {POPULAR_EXPENSE_CATEGORIES.map((catKey) => {
+                const meta = EXPENSE_CATEGORY_META[catKey];
+                const IconComp = meta.icon;
+                const isSelected = formData.category === catKey;
+                return (
+                  <button
+                    key={catKey}
+                    type="button"
+                    onClick={() => {
+                      setFormData({ ...formData, category: catKey });
+                      setIsCategoryDropdownOpen(false);
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      fontSize: '0.72rem',
+                      fontWeight: isSelected ? '800' : '600',
+                      border: isSelected ? `1px solid ${meta.color}` : '1px solid var(--border-glass)',
+                      background: isSelected ? meta.bg : 'rgba(255, 255, 255, 0.02)',
+                      color: isSelected ? meta.color : 'var(--text-dim)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <IconComp size={12} style={{ color: meta.color }} />
+                    <span>{t(`expenseCategories.${catKey}`)}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Menu Popover de Todas as Categorias */}
+            {isCategoryDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  marginTop: '6px',
+                  background: 'var(--bg-card, #131722)',
+                  border: '1px solid rgba(244, 63, 94, 0.35)',
+                  borderRadius: '12px',
+                  boxShadow: '0 16px 36px rgba(0, 0, 0, 0.85)',
+                  padding: '12px',
+                  zIndex: 100,
+                  backdropFilter: 'blur(16px)',
+                  maxHeight: '260px',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                {/* Campo de Busca Rápida */}
+                <div style={{ position: 'relative', marginBottom: '8px' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+                  <input
+                    type="text"
+                    value={categorySearch}
+                    onChange={(e) => setCategorySearch(e.target.value)}
+                    placeholder={t('sidebar.search') || 'Buscar categoria...'}
+                    style={{
+                      width: '100%',
+                      padding: '6px 10px 6px 30px',
+                      fontSize: '0.78rem',
+                      borderRadius: '6px',
+                      background: 'var(--bg-glass, rgba(255,255,255,0.05))',
+                      border: '1px solid var(--border-glass)',
+                      color: 'var(--text-main)',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                {/* Lista de Categorias com Scroll */}
+                <div
+                  style={{
+                    overflowY: 'auto',
+                    flex: 1,
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '6px',
+                    paddingRight: '4px'
+                  }}
+                >
+                  {Object.entries(ExpenseEventCategory)
+                    .filter(([_, catVal]) => {
+                      if (!categorySearch.trim()) return true;
+                      const label = t(`expenseCategories.${catVal}`) || catVal;
+                      return label.toLowerCase().includes(categorySearch.toLowerCase());
+                    })
+                    .map(([_, catVal]) => {
+                      const meta = EXPENSE_CATEGORY_META[catVal] || EXPENSE_CATEGORY_META[ExpenseEventCategory.OTHER];
+                      const IconComp = meta.icon;
+                      const isSelected = formData.category === catVal;
+                      return (
+                        <button
+                          key={catVal}
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, category: catVal });
+                            setIsCategoryDropdownOpen(false);
+                            setCategorySearch('');
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '8px',
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            border: isSelected ? `1px solid ${meta.color}` : '1px solid transparent',
+                            background: isSelected ? meta.bg : 'rgba(255, 255, 255, 0.02)',
+                            color: isSelected ? meta.color : 'var(--text-main)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                            <div
+                              style={{
+                                width: '22px',
+                                height: '22px',
+                                borderRadius: '6px',
+                                background: meta.bg,
+                                color: meta.color,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                              }}
+                            >
+                              <IconComp size={12} />
+                            </div>
+                            <span style={{ fontSize: '0.76rem', fontWeight: isSelected ? '700' : '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {t(`expenseCategories.${catVal}`) || catVal}
+                            </span>
+                          </div>
+                          {isSelected && <Check size={14} style={{ color: meta.color, flexShrink: 0 }} />}
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 2. Valor (€) e Quebra em Subpartes */}
           <div style={{ marginBottom: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
               <label style={{ fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                {t('modal.amountLabel') || 'Valor Total'}
+                {t('modal.expenseAmountLabel') || 'Valor da Despesa (€) *'}
               </label>
               {breakdownItems.length > 0 && (
                 <span style={{ fontSize: '0.72rem', color: '#f43f5e', fontWeight: '800' }}>

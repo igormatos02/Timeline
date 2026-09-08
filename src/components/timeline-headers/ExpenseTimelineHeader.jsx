@@ -18,6 +18,7 @@ import {
 import { formatCurrency } from '../../utils/loanCalculations';
 import { ExpenseEventCategory } from '../../../shared/enums/ExpensesEventCategory.js';
 import { EventType } from '../../enums/index.js';
+import { useTranslation } from '../../i18n/LanguageContext.jsx';
 
 export default function ExpenseTimelineHeader({
   timeline,
@@ -30,6 +31,7 @@ export default function ExpenseTimelineHeader({
   activeViewMode = 'summary',
   setActiveViewMode
 }) {
+  const { t, language } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
 
   if (!timeline) return null;
@@ -65,8 +67,8 @@ export default function ExpenseTimelineHeader({
           <button
             type="button"
             onClick={() => setIsCollapsed(!collapsed)}
-            aria-label={collapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
-            title={collapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
+            aria-label={collapsed ? (language === 'pt' ? 'Expandir cabeçalho' : 'Expand header') : (language === 'pt' ? 'Recolher cabeçalho' : 'Collapse header')}
+            title={collapsed ? (language === 'pt' ? 'Expandir cabeçalho' : 'Expand header') : (language === 'pt' ? 'Recolher cabeçalho' : 'Collapse header')}
             style={{
               width: '30px',
               height: '30px',
@@ -119,7 +121,7 @@ export default function ExpenseTimelineHeader({
                   textTransform: 'uppercase'
                 }}
               >
-                Gastos e Despesas
+                {t('expenseHeader.badge')}
               </span>
             </div>
             {timeline.description && (
@@ -148,7 +150,7 @@ export default function ExpenseTimelineHeader({
               }}
             >
               <Plus size={14} />
-              <span>Novo Gasto</span>
+              <span>{t('expenseHeader.addExpense')}</span>
             </button>
           )}
 
@@ -157,7 +159,7 @@ export default function ExpenseTimelineHeader({
               type="button"
               className="btn btn-outline-danger btn-sm"
               onClick={onReset}
-              title="Limpar todos os movimentos desta timeline"
+              title={t('expenseHeader.resetTitle')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -168,7 +170,7 @@ export default function ExpenseTimelineHeader({
               }}
             >
               <RotateCcw size={13} />
-              <span>Reset</span>
+              <span>{t('buttons.reset') || 'Reset'}</span>
             </button>
           )}
 
@@ -176,7 +178,7 @@ export default function ExpenseTimelineHeader({
             <button
               type="button"
               onClick={onEdit}
-              title="Timeline Settings"
+              title={t('expenseHeader.settingsTitle')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -199,6 +201,7 @@ export default function ExpenseTimelineHeader({
               type="button"
               className="btn btn-outline-danger btn-sm"
               onClick={onDelete}
+              title={t('expenseHeader.deleteTitle')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -209,7 +212,7 @@ export default function ExpenseTimelineHeader({
               }}
             >
               <Trash2 size={13} />
-              <span>Excluir</span>
+              <span>{t('buttons.delete') || (language === 'pt' ? 'Excluir' : 'Delete')}</span>
             </button>
           )}
         </div>
@@ -314,10 +317,10 @@ export default function ExpenseTimelineHeader({
           }
         });
 
-        // Se não houver entradas cadastradas para os próximos 12 meses, usar a estimativa mensal * 12
+        // Se não houver entradas cadastradas para os próximos 12 meses, usar a estimativa mensal da timeline se configurada
         if (annualTotalIncome === 0) {
-          const monthlyBudget = timeline.monthlyBudget || metrics.monthlyBudget || 1500;
-          const monthlyIncomeTarget = monthTotalIncome > 0 ? monthTotalIncome : (dto?.monthly_budget || monthlyBudget);
+          const monthlyBudget = timeline.monthlyBudget || metrics.monthlyBudget || 0;
+          const monthlyIncomeTarget = monthTotalIncome > 0 ? monthTotalIncome : (dto?.monthly_budget || monthlyBudget || 0);
           annualTotalIncome = monthlyIncomeTarget * 12;
         }
 
@@ -372,7 +375,7 @@ export default function ExpenseTimelineHeader({
               <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {/* 1. GASTOS POR CATEGORIA (PieChart SVG & Legenda) */}
                 <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  GASTOS POR CATEGORIA
+                  {t('expenseHeader.categoriesTitle')}
                 </div>
                 {(() => {
                   const categoryColors = [
@@ -380,16 +383,51 @@ export default function ExpenseTimelineHeader({
                     '#a855f7', '#ec4899', '#3b82f6', '#84cc16', '#14b8a6'
                   ];
 
-                  const items = categoryList.length > 0
-                    ? categoryList.map((c, i) => ({
-                      ...c,
-                      color: categoryColors[i % categoryColors.length]
-                    }))
-                    : [
-                      { name: ExpenseEventCategory.ELECTRICITY, percent: 40, color: '#6366f1' },
-                      { name: ExpenseEventCategory.WATER, percent: 30, color: '#10b981' },
-                      { name: ExpenseEventCategory.OTHER, percent: 30, color: '#f59e0b' }
-                    ];
+                  if (!categoryList || categoryList.length === 0) {
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
+                        <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
+                          <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                            <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                          </svg>
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: '50%',
+                              left: '50%',
+                              transform: 'translate(-50%, -50%)',
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '50%',
+                              background: 'var(--bg-card, #0f172a)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              border: '1px solid var(--border-glass)',
+                              fontSize: '0.7rem',
+                              fontWeight: '700',
+                              color: 'var(--text-dim)'
+                            }}
+                          >
+                            0%
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                            {t('expenseHeader.noExpenses')}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
+                            {t('expenseHeader.noExpensesHint')}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const items = categoryList.map((c, i) => ({
+                    ...c,
+                    color: categoryColors[i % categoryColors.length]
+                  }));
 
                   // Construção SVG do PieChart (Donut)
                   let cumulativePercent = 0;
@@ -429,7 +467,7 @@ export default function ExpenseTimelineHeader({
                               fill={s.color}
                               style={{ transition: 'all 0.2s ease', cursor: 'pointer' }}
                             >
-                              <title>{`${s.name}: ${s.percent}%`}</title>
+                              <title>{`${t(`expenseCategories.${s.name}`) || s.name}: ${s.percent}%`}</title>
                             </path>
                           ))}
                         </svg>
@@ -464,7 +502,7 @@ export default function ExpenseTimelineHeader({
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
                               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color, flexShrink: 0 }} />
                               <span style={{ color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {item.name}
+                                {t(`expenseCategories.${item.name}`) || item.name}
                               </span>
                             </div>
                             <span style={{ color: 'var(--text-muted)', fontWeight: '700', marginLeft: '6px' }}>
@@ -481,9 +519,50 @@ export default function ExpenseTimelineHeader({
               {/* Quadrante 2: COMPROMETIMENTO ANUAL (PieChart Donut SVG Anual) */}
               <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  COMPROMETIMENTO ANUAL
+                  {t('expenseHeader.annualCommitmentTitle')}
                 </div>
                 {(() => {
+                  if (annualTotalExpense === 0 && annualTotalIncome === 0) {
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
+                        <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
+                          <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                            <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                          </svg>
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: '50%',
+                              left: '50%',
+                              transform: 'translate(-50%, -50%)',
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '50%',
+                              background: 'var(--bg-card, #0f172a)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              border: '1px solid var(--border-glass)',
+                              fontSize: '0.7rem',
+                              fontWeight: '700',
+                              color: 'var(--text-dim)'
+                            }}
+                          >
+                            0%
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                            {t('expenseHeader.noAnnualCommitment')}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
+                            {t('expenseHeader.noAnnualCommitmentHint')}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   const usedFraction = Math.min(1, Math.max(0, annualCommitmentPercent / 100));
                   const sliceX = Math.cos(2 * Math.PI * usedFraction);
                   const sliceY = Math.sin(2 * Math.PI * usedFraction);
@@ -506,7 +585,7 @@ export default function ExpenseTimelineHeader({
                           {/* Fatia Comprometida */}
                           {usedFraction > 0 && (
                             <path d={pathData} fill={sliceColor} style={{ transition: 'all 0.3s ease' }}>
-                              <title>{`Comprometido Anual: ${annualCommitmentPercent}%`}</title>
+                              <title>{`${t('expenseHeader.annualCommitmentLabel')} ${annualCommitmentPercent}%`}</title>
                             </path>
                           )}
                         </svg>
@@ -537,14 +616,20 @@ export default function ExpenseTimelineHeader({
                       {/* Informações Numéricas de Gastos vs Entradas Anuais */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                         <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
-                          Comprometido Anual:
+                          {t('expenseHeader.annualCommitmentLabel')}
                         </div>
                         <div style={{ fontSize: '0.94rem', fontWeight: '800', color: 'var(--text-main)' }}>
                           {formatCurrency(annualTotalExpense)}
                         </div>
-                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                          de {formatCurrency(annualTotalIncome)} totais anuais
-                        </div>
+                        {annualTotalIncome > 0 ? (
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                            {t('expenseHeader.ofAnnualTotal', { amount: formatCurrency(annualTotalIncome) })}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                            {t('expenseHeader.projectedNext12Months')}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -554,9 +639,50 @@ export default function ExpenseTimelineHeader({
               {/* Quadrante 3: PRÓXIMOS 30 DIAS (PieChart Donut SVG de Pagamentos) */}
               <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  PRÓXIMOS 30 DIAS
+                  {t('expenseHeader.next30DaysTitle')}
                 </div>
                 {(() => {
+                  if (committedAmount30 === 0 && paidAmountMonth === 0) {
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
+                        <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
+                          <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                            <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                          </svg>
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: '50%',
+                              left: '50%',
+                              transform: 'translate(-50%, -50%)',
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '50%',
+                              background: 'var(--bg-card, #0f172a)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              border: '1px solid var(--border-glass)',
+                              fontSize: '0.7rem',
+                              fontWeight: '700',
+                              color: 'var(--text-dim)'
+                            }}
+                          >
+                            0%
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                            {t('expenseHeader.noPendingPayments')}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
+                            {t('expenseHeader.noPendingPaymentsHint')}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   const totalPrevistoOuComprometido = monthTotalExpense > 0 ? monthTotalExpense : committedAmount30;
                   const paidPercent = totalPrevistoOuComprometido > 0 ? Math.min(100, Math.round((paidAmountMonth / totalPrevistoOuComprometido) * 100)) : 0;
                   const paidFraction = Math.min(1, Math.max(0, paidPercent / 100));
@@ -582,7 +708,7 @@ export default function ExpenseTimelineHeader({
                           {/* Fatia Já Paga */}
                           {paidFraction > 0 && (
                             <path d={pathData} fill={sliceColor} style={{ transition: 'all 0.3s ease' }}>
-                              <title>{`Pago: ${paidPercent}% do total previsto`}</title>
+                              <title>{`${t('expenseHeader.paidLabel')} ${paidPercent}%`}</title>
                             </path>
                           )}
                         </svg>
@@ -613,15 +739,15 @@ export default function ExpenseTimelineHeader({
                       {/* Informações Numéricas de Comprometido vs Pagos */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
                         <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between' }}>
-                          <span>Comprometido:</span>
+                          <span>{t('expenseHeader.committedLabel')}</span>
                           <strong style={{ color: '#f43f5e' }}>{formatCurrency(committedAmount30)}</strong>
                         </div>
                         <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between' }}>
-                          <span>Pagos:</span>
+                          <span>{t('expenseHeader.paidLabel')}</span>
                           <strong style={{ color: '#10b981' }}>{formatCurrency(paidAmountMonth)}</strong>
                         </div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                          {committedCount30} previstos ({paidCountMonth} já pagos)
+                          {t('expenseHeader.committedVsPaidCount', { committed: committedCount30, paid: paidCountMonth })}
                         </div>
                       </div>
                     </div>
@@ -635,6 +761,7 @@ export default function ExpenseTimelineHeader({
               // Gerar estrutura dos últimos 6 meses + mês atual (total 7 meses)
               const currentDateObj = new Date();
               const last7Months = [];
+              const localeStr = language === 'pt' ? 'pt-PT' : 'en-US';
               for (let i = 6; i >= 0; i--) {
                 const year = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - i, 1).getFullYear();
                 const month = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - i, 1).getMonth() + 1;
@@ -642,7 +769,7 @@ export default function ExpenseTimelineHeader({
                 const key = `${year}-${monthStr}`;
 
                 const d = new Date(year, month - 1, 1);
-                const label = d.toLocaleDateString('pt-PT', { month: 'short' }).replace('.', '').toUpperCase();
+                const label = d.toLocaleDateString(localeStr, { month: 'short' }).replace('.', '').toUpperCase();
                 last7Months.push({ key, label, total: 0 });
               }
 
@@ -685,14 +812,14 @@ export default function ExpenseTimelineHeader({
                   <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px', fontSize: '0.82rem', fontWeight: '700' }}>
                     <div style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <TrendingUp size={15} style={{ color: isDiffNegative ? '#10b981' : '#f43f5e' }} />
-                      <span>Este mês vs mês anterior:</span>
+                      <span>{t('expenseHeader.monthVsPrevMonth')}</span>
                       <span style={{ color: isDiffNegative ? '#10b981' : '#f43f5e', background: isDiffNegative ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)', padding: '2px 6px', borderRadius: '6px' }}>
                         {diffPercentStr}
                       </span>
                     </div>
                     <div style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <Sparkles size={15} style={{ color: '#f59e0b' }} />
-                      <span>Projeção anual:</span>
+                      <span>{t('expenseHeader.annualProjection')}</span>
                       <span style={{ color: '#f59e0b' }}>{formatCurrency(annualProj)}</span>
                     </div>
                   </div>
@@ -700,7 +827,7 @@ export default function ExpenseTimelineHeader({
                   {/* Gráfico de Colunas: Volume de Gastos (Últimos 6 Meses + Mês Atual) */}
                   <div style={{ background: 'rgba(255, 255, 255, 0.015)', border: '1px solid var(--border-glass)', borderRadius: '8px', padding: '12px 14px 10px 14px' }}>
                     <div style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.5px' }}>
-                      EVOLUÇÃO DO VOLUME DE GASTOS (ÚLTIMOS 6 MESES + MÊS ATUAL)
+                      {t('expenseHeader.chartTitle')}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', height: '90px' }}>
                       {last7Months.map((m, idx) => {

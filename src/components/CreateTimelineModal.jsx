@@ -16,6 +16,7 @@ export default function CreateTimelineModal({
   const getTodayMonthStr = () => new Date().toISOString().substring(0, 7);
 
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+  const [isDueDayPickerOpen, setIsDueDayPickerOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear());
   const [showSimulation, setShowSimulation] = useState(false);
   const [simulationEvents, setSimulationEvents] = useState([]);
@@ -31,7 +32,7 @@ export default function CreateTimelineModal({
     totalDebt: '',
     installmentAmount: '',
     periodicity: EventAggregation.MONTHLY,
-    dueDay: '',
+    dueDay: '10',
     contractNumber: '',
     bankName: '',
     tanRate: '',
@@ -42,6 +43,7 @@ export default function CreateTimelineModal({
   useEffect(() => {
     if (!isOpen) return;
     setIsMonthPickerOpen(false);
+    setIsDueDayPickerOpen(false);
     setShowSimulation(false);
 
     if (initialData) {
@@ -73,7 +75,7 @@ export default function CreateTimelineModal({
         totalDebt: getVal('totalDebt', 'originalCapital', 'original_capital'),
         installmentAmount: getVal('installmentAmount', 'installment_amount'),
         periodicity: initialData.periodicity || initialData.aggregation || EventAggregation.MONTHLY,
-        dueDay: getVal('dueDay', 'due_day'),
+        dueDay: getVal('dueDay', 'due_day') || '10',
         contractNumber: getVal('contractNumber', 'contract_number'),
         bankName: getVal('bankName', 'bank_name'),
         tanRate: getVal('tanRate', 'tan_rate'),
@@ -94,7 +96,7 @@ export default function CreateTimelineModal({
         totalDebt: '',
         installmentAmount: '',
         periodicity: EventAggregation.MONTHLY,
-        dueDay: '',
+        dueDay: '10',
         contractNumber: '',
         bankName: '',
         tanRate: '',
@@ -108,13 +110,14 @@ export default function CreateTimelineModal({
     if (!isOpen) return;
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        if (isMonthPickerOpen) setIsMonthPickerOpen(false);
+        if (isDueDayPickerOpen) setIsDueDayPickerOpen(false);
+        else if (isMonthPickerOpen) setIsMonthPickerOpen(false);
         else onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isMonthPickerOpen, onClose]);
+  }, [isOpen, isMonthPickerOpen, isDueDayPickerOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -415,19 +418,103 @@ export default function CreateTimelineModal({
                 />
               </div>
 
-              {/* Dia Vencimento */}
-              <div className="form-group">
-                <label className="form-label">{t('loanModal.dueDayLabel')}</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="31"
-                  className="form-input"
-                  placeholder="Ex: 10"
-                  value={formData.dueDay}
-                  onChange={(e) => setFormData({ ...formData, dueDay: e.target.value })}
-                  required={isLoanType}
-                />
+              {/* Dia Vencimento Bonitinho */}
+              <div className="form-group" style={{ position: 'relative' }}>
+                <label className="form-label">{t('loanModal.dueDayLabel') || 'Dia do Vencimento *'}</label>
+
+                {/* Botão Seletor de Dia */}
+                <div
+                  onClick={() => {
+                    setIsDueDayPickerOpen(!isDueDayPickerOpen);
+                    setIsMonthPickerOpen(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'var(--bg-glass, rgba(255,255,255,0.03))',
+                    border: isDueDayPickerOpen ? `2px solid ${formData.color || 'var(--primary)'}` : '1px solid var(--border-glass)',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    cursor: 'pointer',
+                    minHeight: '42px',
+                    boxSizing: 'border-box',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Calendar size={16} style={{ color: formData.color || '#6366f1' }} />
+                    <span style={{ fontSize: '0.92rem', fontWeight: '700', color: formData.dueDay ? 'var(--text-main)' : 'var(--text-muted)' }}>
+                      {formData.dueDay ? `${t('sidebar.day') || 'Dia'} ${formData.dueDay}` : (t('modal.selectDueDay') || 'Selecionar Dia')}
+                    </span>
+                  </div>
+                  <ChevronDown
+                    size={16}
+                    style={{
+                      color: 'var(--text-muted)',
+                      transform: isDueDayPickerOpen ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.2s'
+                    }}
+                  />
+                </div>
+
+                {/* Popover Grade de Dias (1..31) */}
+                {isDueDayPickerOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      zIndex: 120,
+                      marginTop: '6px',
+                      background: 'var(--bg-card, #131722)',
+                      border: '1px solid var(--border-glass)',
+                      borderRadius: '12px',
+                      padding: '12px',
+                      boxShadow: '0 16px 36px rgba(0, 0, 0, 0.85)',
+                      backdropFilter: 'blur(16px)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.74rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                        {t('modal.selectDueDay') || 'Selecionar Dia'}
+                      </span>
+                      <span style={{ fontSize: '0.74rem', color: formData.color || '#6366f1', fontWeight: '800' }}>
+                        1..31 {(t('sidebar.day') || 'dia').toLowerCase()}s
+                      </span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => {
+                        const isSelected = Number(formData.dueDay) === d;
+                        const themeColor = formData.color || '#6366f1';
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => {
+                              setFormData({ ...formData, dueDay: d });
+                              setIsDueDayPickerOpen(false);
+                            }}
+                            style={{
+                              padding: '7px 0',
+                              fontSize: '0.82rem',
+                              fontWeight: isSelected ? '800' : '600',
+                              borderRadius: '6px',
+                              border: isSelected ? `2px solid ${themeColor}` : '1px solid var(--border-glass)',
+                              background: isSelected ? 'rgba(99, 102, 241, 0.28)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
+                              color: isSelected ? '#ffffff' : 'var(--text-main)',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {d}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Start Date (Mês/Ano) & Total Installments */}

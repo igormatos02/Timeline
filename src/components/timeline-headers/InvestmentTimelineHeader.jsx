@@ -15,6 +15,7 @@ import {
 import { formatCurrency } from '../../utils/loanCalculations';
 import { InvestmentEventCategory } from '../../../shared/enums/InvestmentEventCategory.js';
 import { EventType } from '../../enums/index.js';
+import { useTranslation } from '../../i18n/LanguageContext.jsx';
 
 export default function InvestmentTimelineHeader({
   timeline,
@@ -27,6 +28,7 @@ export default function InvestmentTimelineHeader({
   activeViewMode = 'summary',
   setActiveViewMode
 }) {
+  const { t } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
 
   if (!timeline) return null;
@@ -405,10 +407,10 @@ export default function InvestmentTimelineHeader({
 
           {/* Grid Principal 2x2 */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-            {/* Quadrante 1: APORTES POR CATEGORIA (PieChart SVG & Legenda) */}
+            {/* Quadrante 1: INVESTIMENTOS POR CATEGORIA (PieChart SVG & Legenda) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                APORTES POR CATEGORIA
+                INVESTIMENTOS POR CATEGORIA
               </div>
               {(() => {
                 const categoryColors = [
@@ -416,15 +418,51 @@ export default function InvestmentTimelineHeader({
                   '#ec4899', '#3b82f6', '#84cc16', '#14b8a6', '#f43f5e'
                 ];
 
-                const items = categoryList.length > 0
-                  ? categoryList.map((c, i) => ({
-                    ...c,
-                    color: categoryColors[i % categoryColors.length]
-                  }))
-                  : [
-                    { name: 'Poupança / Reserva', percent: 60, color: '#6366f1' },
-                    { name: 'Ativos / Fundos', percent: 40, color: '#a855f7' }
-                  ];
+                if (!categoryList || categoryList.length === 0) {
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
+                      <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
+                        <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                          <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                        </svg>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: '42px',
+                            height: '42px',
+                            borderRadius: '50%',
+                            background: 'var(--bg-card, #0f172a)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '1px solid var(--border-glass)',
+                            fontSize: '0.7rem',
+                            fontWeight: '700',
+                            color: 'var(--text-dim)'
+                          }}
+                        >
+                          0%
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                          Sem investimentos registados
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
+                          Adicione aportes para visualizar o gráfico por categoria.
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const items = categoryList.map((c, i) => ({
+                  ...c,
+                  color: categoryColors[i % categoryColors.length]
+                }));
 
                 let cumulativePercent = 0;
                 const getCoordinatesForPercent = (percent) => {
@@ -482,16 +520,16 @@ export default function InvestmentTimelineHeader({
                           border: '1px solid var(--border-glass)',
                           fontSize: '0.74rem',
                           fontWeight: '800',
-                          color: '#6366f1'
+                          color: 'var(--text-main)'
                         }}
                       >
                         100%
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, maxHeight: '84px', overflowY: 'auto' }}>
-                      {items.slice(0, 4).map((item, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflowY: 'auto', maxHeight: '110px' }}>
+                      {items.map((item, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color, flexShrink: 0 }} />
                             <span style={{ color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

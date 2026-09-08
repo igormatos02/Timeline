@@ -4,7 +4,7 @@ import { loanContractRepository } from '../../infrastructure/database/supabase/S
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
 import { calcToggledStatus } from '../../domain/entities/TimelineEvent.js';
-import { EventType, EventStatus, EventPeriodicity, AmortizationStrategy, isPositiveStatus, isNegativeStatus } from '../../../shared/enums/index.js';
+import { EventType, EventStatus, EventPeriodicity, AmortizationStrategy, LoanEventCategory, AmortizationEventCategory, isPositiveStatus, isNegativeStatus } from '../../../shared/enums/index.js';
 
 export class FinancialEventService {
   async _syncStatus(date, eventId, status, options = {}) {
@@ -144,14 +144,22 @@ export class FinancialEventService {
     const isRecurring = eventData.periodicity === EventPeriodicity.RECURRING || eventData.isRecurring;
     const eventId = eventData.eventId || eventData.event_id || (isRecurring ? `series-${Date.now()}` : null);
 
+    const isLoanInstallment = (
+      eventData.eventType === EventType.LOAN_INSTALLMENT ||
+      eventData.category === LoanEventCategory.LOAN_INSTALLMENT ||
+      eventData.isSystemLoanEvent
+    );
+
     const payload = {
       ...eventData,
       timelineId: eventData.timelineId || eventData.timelineOriginId || null,
       timelineOriginId: eventData.timelineId || eventData.timelineOriginId || null,
       timeboardId: eventData.timeboardId || null,
       eventId,
-      version: eventData.version !== undefined ? Number(eventData.version) : 0,
-      isRecurring: Boolean(isRecurring)
+      version: isLoanInstallment ? 0 : (eventData.version !== undefined ? Number(eventData.version) : 0),
+      eventVersion: isLoanInstallment ? 0 : (eventData.eventVersion !== undefined ? Number(eventData.eventVersion) : 0),
+      event_version: isLoanInstallment ? 0 : (eventData.event_version !== undefined ? Number(eventData.event_version) : 0),
+      isRecurring: isLoanInstallment ? false : Boolean(isRecurring)
     };
 
     const created = await eventRepository.create(payload);
@@ -191,13 +199,27 @@ export class FinancialEventService {
       return Math.max(max, vNum);
     }, existingVersion);
 
-    // Prestações de empréstimo e eventos individuais com id existente são alterados diretamente sem criar versões duplicadas
-    if (existing && existing.id) {
+    const isLoanInstallment = (
+      directUpdates.eventType === EventType.LOAN_INSTALLMENT ||
+      existing?.eventType === EventType.LOAN_INSTALLMENT ||
+      directUpdates.category === LoanEventCategory.LOAN_INSTALLMENT ||
+      existing?.category === LoanEventCategory.LOAN_INSTALLMENT ||
+      existing?.isSystemLoanEvent ||
+      directUpdates.isSystemLoanEvent
+    );
+
+    // Prestações de empréstimo (loan_installment) e eventos individuais com id existente são alterados diretamente sem criar versões duplicadas e mantendo versão 0
+    if ((existing && existing.id) || isLoanInstallment) {
       const updatePayload = {
         ...directUpdates,
         is_recurring: false,
         isRecurring: false
       };
+      if (isLoanInstallment) {
+        updatePayload.version = 0;
+        updatePayload.eventVersion = 0;
+        updatePayload.event_version = 0;
+      }
       return eventRepository.update(id, updatePayload);
     }
 

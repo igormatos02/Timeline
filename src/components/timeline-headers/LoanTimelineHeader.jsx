@@ -216,11 +216,23 @@ export default function LoanTimelineHeader({
                 </div>
               )}
             </div>
-            {timeline.description && (
-              <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: textColorMuted }}>
-                {timeline.description}
-              </p>
-            )}
+            <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: textColorMuted, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {timeline.description && <span>{timeline.description}</span>}
+              {timeline.id && (
+                <span style={{
+                  fontSize: '0.68rem',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid var(--border-glass)',
+                  color: textColorDim,
+                  fontFamily: 'monospace',
+                  userSelect: 'all'
+                }}>
+                  ID: {timeline.id}
+                </span>
+              )}
+            </p>
           </div>
         </div>
 

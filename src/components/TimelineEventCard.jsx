@@ -2159,7 +2159,7 @@ export default function TimelineEventCard({
                     {formatCurrency(abatedBreakdown?.origTotal || event.originalAmount || 218.47)}
                   </span>
                   <span style={{ fontSize: '0.94rem', fontWeight: '800', color: '#10b981' }}>
-                    0,00 €
+                    {formatCurrency(abatedBreakdown?.origCapital || 194.88)}
                   </span>
                 </div>
               ) : (

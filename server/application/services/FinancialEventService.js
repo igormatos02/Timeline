@@ -392,9 +392,11 @@ export class FinancialEventService {
     const now = new Date().toISOString();
 
     function extractInstallmentPrincipal(inst) {
-      if (inst.principalAmount !== undefined && Number(inst.principalAmount) > 0) return Number(inst.principalAmount);
-      const total = Number(inst.amount || 0);
-      const interest = Number(inst.interestPortion || inst.interestAmount || 0);
+      // Use canonical field names; fall back to legacy names for backward compat
+      const cap = inst.installmentCapital ?? inst.principalAmount;
+      if (cap != null && Number(cap) > 0) return Number(cap);
+      const total = Number(inst.installmentAmount || inst.amount || 0);
+      const interest = Number(inst.installmentInterest ?? inst.interestPortion ?? inst.interestAmount ?? 0);
       if (interest > 0 && interest < total) return Math.round((total - interest) * 100) / 100;
       return Math.max(1, Math.round(total * 0.82 * 100) / 100);
     }
@@ -416,14 +418,13 @@ export class FinancialEventService {
           updates.push({
             id: inst.id,
             data: {
-              status: 'Abatida',
+              status: EventStatus.AMORTIZED,
               isAbatida: true,
               isCompleted: true,
-              originalAmount: inst.amount || instPrincipal,
-              amount: 0,
-              principalAmount: 0,
-              interestPortion: 0,
-              interestAmount: 0,
+              installmentAmount: 0,
+              installmentCapital: 0,
+              installmentInterest: 0,
+              installmentFee: 0,
               labels: Array.from(new Set([...(inst.labels || []), 'Abatida'])),
               updatedAt: now
             }
@@ -431,12 +432,13 @@ export class FinancialEventService {
           remainingToDeduct -= instPrincipal;
         } else {
           const newPrincipal = Math.max(0, Math.round((instPrincipal - remainingToDeduct) * 100) / 100);
-          const interestPortion = Number(inst.interestPortion || inst.interestAmount || 0);
+          const interestPortion = Number(inst.installmentInterest ?? inst.interestPortion ?? inst.interestAmount ?? 0);
+          const fee = Number(inst.installmentFee ?? inst.taxAmount ?? 0);
           updates.push({
             id: inst.id,
             data: {
-              amount: Math.round((newPrincipal + interestPortion) * 100) / 100,
-              principalAmount: newPrincipal,
+              installmentAmount: Math.round((newPrincipal + interestPortion + fee) * 100) / 100,
+              installmentCapital: newPrincipal,
               labels: Array.from(new Set([...(inst.labels || []), 'Abatida Parcial'])),
               updatedAt: now
             }
@@ -456,25 +458,27 @@ export class FinancialEventService {
       );
       if (futureUnpaid.length > 0) {
         let currentRemainingDebt = futureUnpaid.reduce((acc, ev) => acc + extractInstallmentPrincipal(ev), 0);
-        if (currentRemainingDebt <= 0) currentRemainingDebt = 13259.93;
+        if (currentRemainingDebt <= 0) return;
 
-        const originalInstallment = Number(futureUnpaid[0].originalAmount || futureUnpaid[0].amount || 218.47);
+        const firstEv = futureUnpaid[0];
+        const originalInstallment = Number(firstEv.installmentAmount || firstEv.amount || 0);
         const newFuturePrincipal = Math.max(0, currentRemainingDebt - amortVal);
         const reductionRatio = currentRemainingDebt > 0 ? newFuturePrincipal / currentRemainingDebt : 1;
-        const newTotal = Math.max(1, Math.round(originalInstallment * reductionRatio * 100) / 100);
 
         const updates = futureUnpaid.map((ev) => {
-          const origAmt = Number(ev.originalAmount || ev.amount || originalInstallment);
-          const origCap = Number(ev.principalAmount || Math.round(origAmt * 0.82 * 100) / 100);
-          const origJur = Number(ev.interestPortion || ev.interestAmount || Math.round(origAmt * 0.18 * 100) / 100);
+          const origCap = Number(ev.installmentCapital ?? ev.principalAmount ?? Math.round((ev.installmentAmount || ev.amount || originalInstallment) * 0.82 * 100) / 100);
+          const origJur = Number(ev.installmentInterest ?? ev.interestPortion ?? ev.interestAmount ?? Math.round((ev.installmentAmount || ev.amount || originalInstallment) * 0.18 * 100) / 100);
+          const origFee = Number(ev.installmentFee ?? ev.taxAmount ?? 0);
+          const newCap = Math.round(origCap * reductionRatio * 100) / 100;
+          const newJur = Math.round(origJur * reductionRatio * 100) / 100;
+          const newTotal = Math.round((newCap + newJur + origFee) * 100) / 100;
           return {
             id: ev.id,
             data: {
-              originalAmount: origAmt,
-              amount: newTotal,
-              principalAmount: Math.round(origCap * reductionRatio * 100) / 100,
-              interestPortion: Math.round(origJur * reductionRatio * 100) / 100,
-              interestAmount: Math.round(origJur * reductionRatio * 100) / 100,
+              installmentAmount: newTotal,
+              installmentCapital: newCap,
+              installmentInterest: newJur,
+              installmentFee: origFee,
               updatedAt: now
             }
           };
@@ -507,7 +511,6 @@ export class FinancialEventService {
     );
 
     const updates = loanInstallments.map((ev) => {
-      const origAmt = Number(ev.originalAmount || ev.amount || 218.47);
       const filteredLabels = (ev.labels || []).filter((l) => l !== 'Abatida' && l !== 'Abatida Parcial');
       return {
         id: ev.id,
@@ -515,10 +518,6 @@ export class FinancialEventService {
           status: EventStatus.PENDING,
           isAbatida: false,
           isCompleted: false,
-          amount: origAmt,
-          principalAmount: Math.round(origAmt * 0.82 * 100) / 100,
-          interestPortion: Math.round(origAmt * 0.18 * 100) / 100,
-          interestAmount: Math.round(origAmt * 0.18 * 100) / 100,
           labels: filteredLabels,
           updatedAt: now
         }

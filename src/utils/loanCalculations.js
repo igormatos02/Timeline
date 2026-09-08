@@ -130,6 +130,7 @@ function isLoanInstallment(ev) {
 function isAbated(ev) {
   return (
     ev.status === EventStatus.AMORTIZED ||
+    ev.status === EventStatus.ABATED || // legacy value stored before refactoring
     Boolean(ev.isAbatida)
   );
 }
@@ -454,7 +455,10 @@ function applyAmortizationsInMemory(
 
   for (const amortEv of amortEvents) {
     const amortVal = Number(
-      amortEv.installmentAmount || 0
+      amortEv.amortizationAmount ||
+      amortEv.installmentAmount ||
+      amortEv.amount ||
+      0
     );
 
     if (
@@ -480,6 +484,7 @@ function applyAmortizationsInMemory(
       isEventForTimeline(ev, timeline) &&
       !isPositiveStatus(ev.status) &&
       ev.status !== EventStatus.AMORTIZED &&
+      ev.status !== EventStatus.ABATED && // legacy value
       !ev.isAbatida;
 
     if (isReduceInstallment) {

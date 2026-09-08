@@ -133,6 +133,35 @@ export class SupabaseFinancialEventRepository extends IRepository {
           ? row.total_installments
           : null,
 
+      /*isCompleted: Boolean(
+        row.is_completed ||
+        row.status === 'paid' ||
+        row.status === 'received' ||
+        row.status === 'invested' ||
+        row.status === 'amortized' ||
+        row.status === 'completed' ||
+        row.status === 'settled'
+      ),*/
+
+      isLocked: Boolean(row.is_locked),
+
+      isSystemLoanEvent: Boolean(row.is_system_loan_event),
+
+      amortizationAmount:
+        row.amortization_amount != null
+          ? Number(row.amortization_amount)
+          : null,
+
+      remainingDebtAfter:
+        row.remaining_debt_after != null
+          ? Number(row.remaining_debt_after)
+          : null,
+
+      balanceAfter:
+        row.balance_after != null
+          ? Number(row.balance_after)
+          : null,
+
       createdAt: row.created_at,
       updatedAt: row.updated_at
     });
@@ -192,31 +221,29 @@ export class SupabaseFinancialEventRepository extends IRepository {
 
     const installmentAmount =
       Number(
-        data.installmentAmount !== undefined
+        data.installmentAmount !== undefined && data.installmentAmount !== null
           ? data.installmentAmount
-          : 0
+          : data.amortizationAmount !== undefined && data.amortizationAmount !== null
+            ? data.amortizationAmount
+            : data.amount !== undefined && data.amount !== null
+              ? data.amount
+              : 0
       ) || 0;
 
     const installmentCapital =
-      Number(
-        data.installmentCapital !== undefined
-          ? data.installmentCapital
-          : 0
-      ) || 0;
+      data.installmentCapital !== undefined && data.installmentCapital !== null
+        ? Number(data.installmentCapital)
+        : null;
 
     const installmentInterest =
-      Number(
-        data.installmentInterest !== undefined
-          ? data.installmentInterest
-          : 0
-      ) || 0;
+      data.installmentInterest !== undefined && data.installmentInterest !== null
+        ? Number(data.installmentInterest)
+        : null;
 
     const installmentFee =
-      Number(
-        data.installmentFee !== undefined
-          ? data.installmentFee
-          : 0
-      ) || 0;
+      data.installmentFee !== undefined && data.installmentFee !== null
+        ? Number(data.installmentFee)
+        : null;
 
     const row = {
       event_id: effectiveEventId,
@@ -260,6 +287,14 @@ export class SupabaseFinancialEventRepository extends IRepository {
       installment_capital: installmentCapital,
       installment_interest: installmentInterest,
       installment_fee: installmentFee,
+
+      // Amortization event amount (how much capital is being amortized)
+      amortization_amount:
+        data.amortizationAmount != null
+          ? Number(data.amortizationAmount)
+          : null,
+
+      //status: data.status || EventStatus.PENDING,
 
       aggregation:
         data.aggregation ||
@@ -433,17 +468,23 @@ export class SupabaseFinancialEventRepository extends IRepository {
 
     if (data.installmentCapital !== undefined) {
       row.installment_capital =
-        Number(data.installmentCapital) || 0;
+        data.installmentCapital !== null
+          ? Number(data.installmentCapital)
+          : null;
     }
 
     if (data.installmentInterest !== undefined) {
       row.installment_interest =
-        Number(data.installmentInterest) || 0;
+        data.installmentInterest !== null
+          ? Number(data.installmentInterest)
+          : null;
     }
 
     if (data.installmentFee !== undefined) {
       row.installment_fee =
-        Number(data.installmentFee) || 0;
+        data.installmentFee !== null
+          ? Number(data.installmentFee)
+          : null;
     }
 
     if (data.aggregation !== undefined) {
@@ -504,6 +545,17 @@ export class SupabaseFinancialEventRepository extends IRepository {
 
     if (data.priority !== undefined) {
       row.priority = data.priority;
+    }
+
+    if (data.status !== undefined) {
+      row.status = data.status;
+    }
+
+    if (data.amortizationAmount !== undefined) {
+      row.amortization_amount =
+        data.amortizationAmount != null
+          ? Number(data.amortizationAmount)
+          : null;
     }
 
     return row;

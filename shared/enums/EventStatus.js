@@ -12,6 +12,7 @@ export const EventStatus = Object.freeze({
   DELETED: 'deleted',
   IN_PROGRESS: 'in_progress',
   SETTLED: 'settled',
+  ABATED: 'abated'
 });
 
 export const EventStatusLabel = Object.freeze({
@@ -28,6 +29,7 @@ export const EventStatusLabel = Object.freeze({
   [EventStatus.DELETED]: 'Deleted',
   [EventStatus.IN_PROGRESS]: 'In Progress',
   [EventStatus.SETTLED]: 'Settled',
+  [EventStatus.ABATED]: 'Abated'
 });
 
 export const getEventStatusLabel = (status) => EventStatusLabel[status] || status;
@@ -38,7 +40,8 @@ export const POSITIVE_EVENT_STATUSES = new Set([
   EventStatus.INVESTED,
   EventStatus.COMPLETED,
   EventStatus.AMORTIZED,
-  EventStatus.SETTLED
+  EventStatus.SETTLED,
+  EventStatus.ABATED
 ]);
 
 export const isPositiveStatus = (status) => POSITIVE_EVENT_STATUSES.has(status);

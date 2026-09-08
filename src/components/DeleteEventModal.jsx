@@ -5,6 +5,7 @@ import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../utils/loanCalculations';
 import { EventPeriodicity } from '../../shared/enums/EventPeriodicity';
 import { EventType } from '../../shared/enums/EventType';
+import { EventDeletionMode } from '../../shared/enums/EventDeletionMode';
 
 export default function DeleteEventModal({
   isOpen,
@@ -12,11 +13,11 @@ export default function DeleteEventModal({
   event,
   onConfirmDelete
 }) {
-  const [deleteScope, setDeleteScope] = useState('subsequent'); // 'single' | 'subsequent' | 'all'
+  const [deletionMode, setDeletionMode] = useState(EventDeletionMode.FROM_NOW_ON);
 
   useEffect(() => {
     if (isOpen) {
-      setDeleteScope('subsequent');
+      setDeletionMode(EventDeletionMode.FROM_NOW_ON);
     }
   }, [isOpen, event]);
 
@@ -30,6 +31,11 @@ export default function DeleteEventModal({
   }, [isOpen, onClose]);
 
   if (!isOpen || !event) return null;
+
+  const isIncome = event.eventType === EventType.INCOME;
+  const isExpense = event.eventType === EventType.EXPENSE;
+  const isInvestment = event.eventType === EventType.INVESTMENT;
+  const isFinancial = isIncome || isExpense || isInvestment;
 
   const isRecurring = Boolean(
     event.periodicity === EventPeriodicity.RECURRING ||
@@ -58,9 +64,7 @@ export default function DeleteEventModal({
     event.category !== 'amortizacao' &&
     !event.isAmortization;
 
-  const isIncome = event.eventType === EventType.INCOME;
-  const isExpense = event.eventType === EventType.EXPENSE;
-  const isInvestment = event.eventType === EventType.INVESTMENT;
+  const showScopeOptions = isFinancial || isRecurring;
 
   const formattedDate = event.date
     ? format(parseISO(event.date), "d 'de' MMMM 'de' yyyy", { locale: pt })
@@ -68,7 +72,7 @@ export default function DeleteEventModal({
 
   const handleDelete = () => {
     if (onConfirmDelete) {
-      onConfirmDelete(event.id, isRecurring ? deleteScope : 'single');
+      onConfirmDelete(event.id, deletionMode, { event, deletionMode });
     }
     onClose();
   };
@@ -170,15 +174,15 @@ export default function DeleteEventModal({
           </div>
         </div>
 
-        {/* 3 Scope Selector Options for Recurring Series */}
-        {isRecurring ? (
+        {/* 3 Scope Selector Options with EventDeletionMode */}
+        {showScopeOptions ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
-            {/* Opção 1: Apenas este mês */}
+            {/* Opção 1: Apenas este mês (EventDeletionMode.ONLY_THIS) */}
             <div
-              onClick={() => setDeleteScope('single')}
+              onClick={() => setDeletionMode(EventDeletionMode.ONLY_THIS)}
               style={{
-                background: deleteScope === 'single' ? 'rgba(6, 182, 212, 0.12)' : 'var(--bg-app)',
-                border: deleteScope === 'single' ? '2px solid #06b6d4' : '1px solid var(--border-glass)',
+                background: deletionMode === EventDeletionMode.ONLY_THIS ? 'rgba(6, 182, 212, 0.12)' : 'var(--bg-app)',
+                border: deletionMode === EventDeletionMode.ONLY_THIS ? '2px solid #06b6d4' : '1px solid var(--border-glass)',
                 borderRadius: '10px',
                 padding: '10px 14px',
                 cursor: 'pointer',
@@ -190,14 +194,14 @@ export default function DeleteEventModal({
             >
               <input
                 type="radio"
-                name="deleteScope"
-                checked={deleteScope === 'single'}
-                onChange={() => setDeleteScope('single')}
+                name="deletionMode"
+                checked={deletionMode === EventDeletionMode.ONLY_THIS}
+                onChange={() => setDeletionMode(EventDeletionMode.ONLY_THIS)}
                 style={{ accentColor: '#06b6d4', cursor: 'pointer' }}
               />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: deleteScope === 'single' ? '#06b6d4' : 'var(--text-main)' }}>
-                  Apenas este mês ({formattedDate})
+                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: deletionMode === EventDeletionMode.ONLY_THIS ? '#06b6d4' : 'var(--text-main)' }}>
+                  Apenas este mês ({formattedDate || 'Ocorrência selecionada'})
                 </span>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                   Oculta este mês com flag de exclusão. Os meses anteriores e futuros continuam normais.
@@ -205,12 +209,12 @@ export default function DeleteEventModal({
               </div>
             </div>
 
-            {/* Opção 2: Deste mês em diante (Subsequentes) */}
+            {/* Opção 2: Deste mês em diante (EventDeletionMode.FROM_NOW_ON) */}
             <div
-              onClick={() => setDeleteScope('subsequent')}
+              onClick={() => setDeletionMode(EventDeletionMode.FROM_NOW_ON)}
               style={{
-                background: deleteScope === 'subsequent' ? 'rgba(244, 63, 94, 0.12)' : 'var(--bg-app)',
-                border: deleteScope === 'subsequent' ? '2px solid #f43f5e' : '1px solid var(--border-glass)',
+                background: deletionMode === EventDeletionMode.FROM_NOW_ON ? 'rgba(244, 63, 94, 0.12)' : 'var(--bg-app)',
+                border: deletionMode === EventDeletionMode.FROM_NOW_ON ? '2px solid #f43f5e' : '1px solid var(--border-glass)',
                 borderRadius: '10px',
                 padding: '10px 14px',
                 cursor: 'pointer',
@@ -222,13 +226,13 @@ export default function DeleteEventModal({
             >
               <input
                 type="radio"
-                name="deleteScope"
-                checked={deleteScope === 'subsequent'}
-                onChange={() => setDeleteScope('subsequent')}
+                name="deletionMode"
+                checked={deletionMode === EventDeletionMode.FROM_NOW_ON}
+                onChange={() => setDeletionMode(EventDeletionMode.FROM_NOW_ON)}
                 style={{ accentColor: '#f43f5e', cursor: 'pointer' }}
               />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: deleteScope === 'subsequent' ? '#f43f5e' : 'var(--text-main)' }}>
+                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: deletionMode === EventDeletionMode.FROM_NOW_ON ? '#f43f5e' : 'var(--text-main)' }}>
                   Deste mês em diante (Subsequentes)
                 </span>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
@@ -237,12 +241,12 @@ export default function DeleteEventModal({
               </div>
             </div>
 
-            {/* Opção 3: Apagar toda a série (Histórico + Futuro) */}
+            {/* Opção 3: Apagar tudo / toda a série (EventDeletionMode.EVERYTHING) */}
             <div
-              onClick={() => setDeleteScope('all')}
+              onClick={() => setDeletionMode(EventDeletionMode.EVERYTHING)}
               style={{
-                background: deleteScope === 'all' ? 'rgba(220, 38, 38, 0.16)' : 'var(--bg-app)',
-                border: deleteScope === 'all' ? '2px solid #dc2626' : '1px solid var(--border-glass)',
+                background: deletionMode === EventDeletionMode.EVERYTHING ? 'rgba(220, 38, 38, 0.16)' : 'var(--bg-app)',
+                border: deletionMode === EventDeletionMode.EVERYTHING ? '2px solid #dc2626' : '1px solid var(--border-glass)',
                 borderRadius: '10px',
                 padding: '10px 14px',
                 cursor: 'pointer',
@@ -254,17 +258,17 @@ export default function DeleteEventModal({
             >
               <input
                 type="radio"
-                name="deleteScope"
-                checked={deleteScope === 'all'}
-                onChange={() => setDeleteScope('all')}
+                name="deletionMode"
+                checked={deletionMode === EventDeletionMode.EVERYTHING}
+                onChange={() => setDeletionMode(EventDeletionMode.EVERYTHING)}
                 style={{ accentColor: '#dc2626', cursor: 'pointer' }}
               />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.84rem', fontWeight: '800', color: deleteScope === 'all' ? '#ef4444' : 'var(--text-main)' }}>
+                <span style={{ fontSize: '0.84rem', fontWeight: '800', color: deletionMode === EventDeletionMode.EVERYTHING ? '#ef4444' : 'var(--text-main)' }}>
                   Apagar toda a série (Histórico + Futuro)
                 </span>
                 <span style={{ fontSize: '0.72rem', color: '#f87171' }}>
-                  ⚠️ Remove completamente do JSON todos os registos e versões desta série.
+                  ⚠️ Remove completamente todos os registos e versões deste evento/série.
                 </span>
               </div>
             </div>

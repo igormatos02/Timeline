@@ -12,4 +12,6 @@ export { ExpensesEventCategory, ExpenseEventCategory } from './ExpensesEventCate
 export { InvestmentEventCategory, InvestimentEventCategory } from './InvestmentEventCategory.js';
 export { LoanEventCategory } from './LoanEventCategory.js';
 export { AmortizationEventCategory, AmortizationStrategy } from './AmortizationEventCategory.js';
+export { EventDeletionMode } from './EventDeletionMode.js';
+
 

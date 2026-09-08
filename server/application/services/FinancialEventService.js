@@ -4,7 +4,7 @@ import { loanContractRepository } from '../../infrastructure/database/supabase/S
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
 import { calcToggledStatus } from '../../domain/entities/TimelineEvent.js';
-import { EventType, EventStatus, EventPeriodicity, AmortizationStrategy, LoanEventCategory, AmortizationEventCategory, isPositiveStatus, isNegativeStatus } from '../../../shared/enums/index.js';
+import { EventType, EventStatus, EventPeriodicity, EventDeletionMode, AmortizationStrategy, LoanEventCategory, AmortizationEventCategory, isPositiveStatus, isNegativeStatus } from '../../../shared/enums/index.js';
 
 export class FinancialEventService {
   async _syncStatus(date, eventId, status, options = {}) {
@@ -303,14 +303,12 @@ export class FinancialEventService {
   }
 
   async deleteEvent(id, options = {}) {
-    const { deleteScope = 'single' } = options;
-    console.log('[deleteEvent] id:', id, 'deleteScope:', deleteScope, 'options:', options);
+    const deletionMode = options.deletionMode || options.deleteScope || EventDeletionMode.ONLY_THIS;
     const allRawEvents = await eventRepository.getAll();
     const directEvent = await eventRepository.getById(id);
-    console.log('[deleteEvent] directEvent found:', !!directEvent);
 
-    if (directEvent?.isAmortizationEvent?.() || directEvent?.eventType === EventType.AMORTIZATION || directEvent?.category === LoanEventCategory.AMORTIZATION) {
-      if (directEvent?.date) {
+    if (directEvent && (directEvent.isAmortizationEvent?.() || directEvent.eventType === EventType.AMORTIZATION || directEvent.category === 'amortizacao' || directEvent.category === 'amortization')) {
+      if (directEvent.date) {
         const year = parseInt(directEvent.date.substring(0, 4), 10);
         const month = parseInt(directEvent.date.substring(5, 7), 10);
         await financialEventStatusRepository.deleteStatus(year, month, id);
@@ -318,12 +316,14 @@ export class FinancialEventService {
       return eventRepository.delete(id);
     }
 
-    const isLoan =
-      directEvent?.isLoanEvent?.() ||
-      directEvent?.isSystemLoanEvent ||
-      directEvent?.eventType === EventType.AMORTIZATION;
+    const isLoan = directEvent && (
+      directEvent.isLoanEvent?.() ||
+      directEvent.isSystemLoanEvent ||
+      directEvent.eventType === EventType.LOAN_INSTALLMENT ||
+      directEvent.category === LoanEventCategory.LOAN_INSTALLMENT
+    );
     if (isLoan) {
-      if (directEvent?.date) {
+      if (directEvent.date) {
         const year = parseInt(directEvent.date.substring(0, 4), 10);
         const month = parseInt(directEvent.date.substring(5, 7), 10);
         await financialEventStatusRepository.deleteStatus(year, month, id);
@@ -333,10 +333,8 @@ export class FinancialEventService {
 
     const targetSeriesId = directEvent?.eventId || directEvent?.event_id || directEvent?.sobrepositionOver || options.eventId || (id && id.includes('_') ? id.split('_')[0] : id);
     const targetDate = options.date || directEvent?.date || (id && id.includes('_') ? id.split('_')[1] : null);
-    console.log('[deleteEvent] targetSeriesId:', targetSeriesId, 'targetDate:', targetDate);
 
     const rootEvent = directEvent || allRawEvents.find((ev) => (ev.eventId && ev.eventId === targetSeriesId) || ev.id === targetSeriesId || ev.id === id) || {};
-    console.log('[deleteEvent] rootEvent:', rootEvent?.name, rootEvent?.id);
 
     const isRecurringSeries =
       rootEvent.isRecurring === true ||
@@ -350,25 +348,41 @@ export class FinancialEventService {
       Boolean(id && String(id).includes('_')) ||
       allRawEvents.some((ev) => ((ev.eventId && ev.eventId === targetSeriesId) || ev.id === targetSeriesId) && (ev.isRecurring || ev.aggregation === 'recurring'));
 
-    console.log('[deleteEvent] isRecurringSeries:', isRecurringSeries, 'targetSeriesId:', targetSeriesId, 'rootEvent.id:', rootEvent?.id);
+    const isAll = deletionMode === EventDeletionMode.EVERYTHING || deletionMode === 'all' || options.deleteSeries;
+    const isSubsequent = deletionMode === EventDeletionMode.FROM_NOW_ON || deletionMode === 'subsequent';
+    const isOnlyThis = deletionMode === EventDeletionMode.ONLY_THIS || deletionMode === 'single';
 
-    if (deleteScope === 'all' || options.deleteSeries) {
-      if (targetSeriesId) {
-        await eventRepository.deleteMany(
-          (ev) => (ev.eventId && ev.eventId === targetSeriesId) || ev.sobrepositionOver === targetSeriesId || ev.id === targetSeriesId || ev.id === id
-        );
-        if (targetDate) {
-          const year = parseInt(targetDate.substring(0, 4), 10);
-          const month = parseInt(targetDate.substring(5, 7), 10);
-          await financialEventStatusRepository.deleteStatus(year, month, targetSeriesId);
-          await financialEventStatusRepository.deleteStatus(year, month, id);
-        }
-        return true;
+    if (isAll) {
+      const effectiveSeriesId = targetSeriesId || rootEvent.id;
+      const allRelatedEvents = allRawEvents.filter(
+        (ev) => (effectiveSeriesId && (ev.eventId === effectiveSeriesId || ev.id === effectiveSeriesId || ev.sobrepositionOver === effectiveSeriesId)) ||
+                (id && (ev.id === id || ev.eventId === id)) ||
+                (directEvent && (ev.id === directEvent.id || ev.eventId === directEvent.eventId))
+      );
+
+      const targetIds = Array.from(new Set([
+        effectiveSeriesId,
+        rootEvent?.id,
+        directEvent?.id,
+        id,
+        ...(allRelatedEvents.map(e => e.id)),
+        ...(allRelatedEvents.map(e => e.eventId))
+      ].filter(Boolean)));
+
+      // 1. Delete all records from financial_event_status table
+      await financialEventStatusRepository.deleteAllStatusForEvent(targetIds);
+
+      // 2. Delete all records from financial_events table
+      await eventRepository.deleteByEventId(targetIds);
+
+      for (const singleId of targetIds) {
+        await eventRepository.delete(singleId);
       }
-      return eventRepository.delete(id);
+
+      return true;
     }
 
-    if (deleteScope === 'subsequent' && (targetSeriesId || rootEvent.id)) {
+    if (isSubsequent && (targetSeriesId || rootEvent.id)) {
       const effectiveSeriesId = targetSeriesId || rootEvent.id;
       const seriesVersions = allRawEvents.filter(
         (ev) => (ev.eventId && ev.eventId === effectiveSeriesId) || ev.id === effectiveSeriesId || ev.sobrepositionOver === effectiveSeriesId
@@ -415,7 +429,7 @@ export class FinancialEventService {
       return true;
     }
 
-    if (isRecurringSeries && (targetSeriesId || rootEvent.id)) {
+    if ((isOnlyThis || isRecurringSeries) && (targetSeriesId || rootEvent.id)) {
       const effectiveSeriesId = targetSeriesId || rootEvent.id;
       const seriesVersions = allRawEvents.filter(
         (ev) => (ev.eventId && ev.eventId === effectiveSeriesId) || ev.id === effectiveSeriesId || ev.sobrepositionOver === effectiveSeriesId

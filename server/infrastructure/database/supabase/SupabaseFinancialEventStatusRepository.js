@@ -77,15 +77,46 @@ export class SupabaseFinancialEventStatusRepository {
   async deleteStatus(year, month, eventId) {
     if (!year || !month || !eventId) return false;
 
-    const { error } = await supabase
+    let query = supabase
       .from(this.tableName)
       .delete()
       .eq('year', Number(year))
-      .eq('month', Number(month))
-      .eq('event_id', String(eventId));
+      .eq('month', Number(month));
 
+    if (Array.isArray(eventId)) {
+      const cleanIds = eventId.filter(Boolean).map(String);
+      if (cleanIds.length === 0) return true;
+      query = query.in('event_id', cleanIds);
+    } else {
+      query = query.eq('event_id', String(eventId));
+    }
+
+    const { error } = await query;
     if (error) {
       console.error('Error deleting financial_event_status:', error.message);
+      return false;
+    }
+    return true;
+  }
+
+  async deleteAllStatusForEvent(eventId) {
+    if (!eventId) return false;
+
+    let query = supabase
+      .from(this.tableName)
+      .delete();
+
+    if (Array.isArray(eventId)) {
+      const cleanIds = eventId.filter(Boolean).map(String);
+      if (cleanIds.length === 0) return true;
+      query = query.in('event_id', cleanIds);
+    } else {
+      query = query.eq('event_id', String(eventId));
+    }
+
+    const { error } = await query;
+    if (error) {
+      console.error('Error deleting all financial_event_status rows for event:', error.message);
       return false;
     }
     return true;

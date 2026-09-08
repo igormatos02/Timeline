@@ -22,7 +22,7 @@ import {
 } from './utils/loanCalculations';
 import * as api from './services/api';
 import { generateUUID } from './utils/uuid';
-import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, AmortizationStrategy, AmortizationEventCategory, isPositiveStatus } from './enums/index.js';
+import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
@@ -943,9 +943,10 @@ export default function App() {
 
     const deleteAsync = async () => {
       try {
-        const scope = typeof deleteScope === 'string' ? deleteScope : (deleteScope ? 'subsequent' : 'single');
+        const mode = typeof deleteScope === 'string' ? deleteScope : (deleteScope ? EventDeletionMode.FROM_NOW_ON : EventDeletionMode.ONLY_THIS);
         await api.deleteEvent(eventId, {
-          deleteScope: scope,
+          deletionMode: mode,
+          deleteScope: mode,
           eventId: targetEvent.eventId || targetEvent.seriesId,
           date: targetEvent.date
         });

@@ -712,6 +712,10 @@ export class SupabaseFinancialEventRepository extends IRepository {
   }
 
   async getById(id) {
+    if (!id || typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return null;
+    }
+
     const { data, error } = await supabase
       .from(this.tableName)
       .select('*')
@@ -753,6 +757,11 @@ export class SupabaseFinancialEventRepository extends IRepository {
   }
 
   async update(id, updates) {
+    if (!id || typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      console.warn(`Cannot update financial event: invalid UUID ${id}`);
+      return null;
+    }
+
     const rowUpdates = this._partialToRow(updates);
 
     delete rowUpdates.id;
@@ -779,6 +788,10 @@ export class SupabaseFinancialEventRepository extends IRepository {
   }
 
   async delete(id) {
+    if (!id || typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return false;
+    }
+
     const { error } = await supabase
       .from(this.tableName)
       .delete()
@@ -793,6 +806,21 @@ export class SupabaseFinancialEventRepository extends IRepository {
       return false;
     }
 
+    return true;
+  }
+
+  async deleteByEventId(eventId) {
+    if (!eventId) return true;
+    const ids = Array.isArray(eventId) ? eventId.filter(Boolean).map(String) : [String(eventId)];
+    if (ids.length === 0) return true;
+
+    for (const singleId of ids) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(singleId);
+      if (isUuid) {
+        await supabase.from(this.tableName).delete().eq('id', singleId);
+      }
+      await supabase.from(this.tableName).delete().eq('event_id', singleId);
+    }
     return true;
   }
 

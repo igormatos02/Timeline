@@ -468,10 +468,35 @@ export default function BalanceTimelineHeader({
                 const em = etm % 12;
                 const endMK = `${ey}-${String(em + 1).padStart(2, '0')}`;
 
+                // Use the same active loan filter as Quadrant 3 (which already works)
+                const activeLoanTimelines = (allTimelines || []).filter((t) => {
+                  const typeLower = (t.type || '').toLowerCase();
+                  const isLoanType = typeLower.includes('loan') || typeLower.includes('empr');
+                  const isActive = (t.status || '').toLowerCase() === 'active';
+                  return isLoanType && isActive;
+                });
+
+                // Build active loan ID set for event-based fallback
+                const activeLoanIds = new Set(activeLoanTimelines.map((t) => String(t.id)));
+
                 let annualIncome = 0;
                 let annualExpense = 0;
                 let annualInvestment = 0;
                 let annualLoan = 0;
+
+                // Calculate annual loan cost from active loan timeline metrics (monthly installment × 12)
+                // This is reliable because it comes from stored metrics, not event timelineId
+                activeLoanTimelines.forEach((t) => {
+                  const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
+                  const monthly = Number(
+                    m.monthly_installment ?? m.monthlyInstallment ??
+                    m.monthly_payment ?? m.monthlyPayment ??
+                    m.installment ?? 0
+                  );
+                  if (monthly > 0) {
+                    annualLoan += monthly * 12;
+                  }
+                });
 
                 eventsList.forEach((ev) => {
                   if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
@@ -481,17 +506,21 @@ export default function BalanceTimelineHeader({
                   const isIncome = ev.eventType === 'income' || ev.isIncome;
                   const isExpense = ev.eventType === 'expense' || ev.isExpense;
                   const isInvestment = ev.eventType === 'investment' || ev.isInvestment;
-                  // loan_installment = regular monthly installments (recalculated after amortizations)
-                  // Exclude amortization events (extra payments, not regular installments)
-                  const isLoan = (ev.eventType === 'loan_installment' || ev.isSystemLoanEvent)
-                    && ev.eventType !== 'amortization'
-                    && ev.category !== 'amortizacao';
                   const amt = Number(ev.amount || 0);
 
                   if (isIncome) annualIncome += amt;
                   else if (isExpense) annualExpense += amt;
                   else if (isInvestment && !ev.isFirstOccurrence) annualInvestment += amt;
-                  else if (isLoan) annualLoan += amt;
+                  // Loan: only use event-based if no metrics were found on active timelines
+                  else if (
+                    annualLoan === 0 &&
+                    (ev.eventType === 'loan_installment' || ev.isSystemLoanEvent) &&
+                    ev.eventType !== 'amortization' &&
+                    ev.category !== 'amortizacao' &&
+                    activeLoanIds.has(String(ev.timelineId || ev.timeline_id || ''))
+                  ) {
+                    annualLoan += amt;
+                  }
                 });
 
                 const expPct = annualIncome > 0 ? Math.round((annualExpense / annualIncome) * 100) : 0;

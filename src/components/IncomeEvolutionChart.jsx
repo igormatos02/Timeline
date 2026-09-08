@@ -12,9 +12,9 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import { format, parseISO, addMonths } from 'date-fns';
-import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../utils/loanCalculations';
 import { EventType, EventStatus, TimelineType } from '../enums/index.js';
+import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 export default function IncomeEvolutionChart({
   timeline = {},
@@ -23,6 +23,8 @@ export default function IncomeEvolutionChart({
   activeFinancialTab = null,
   computeStartDate = null
 }) {
+  const { t, dateLocale } = useTranslation();
+
   // Chart Mode: 'acumulado_real' (Historical Real Received up to Today), 'acumulativo' (Cumulative with Future Projection), 'variante' (Monthly Variation)
   const [chartMode, setChartMode] = useState('variante');
 
@@ -98,7 +100,7 @@ export default function IncomeEvolutionChart({
     let curDate = start;
     for (let i = 0; i < totalMonths; i++) {
       const monthKey = format(curDate, 'yyyy-MM');
-      const labelShort = format(curDate, 'MMM yy', { locale: pt });
+      const labelShort = format(curDate, 'MMM yy', { locale: dateLocale });
       const isPast = monthKey < currentMonthKey;
       const isCurrent = monthKey === currentMonthKey;
 
@@ -320,10 +322,10 @@ export default function IncomeEvolutionChart({
                 alignItems: 'center',
                 gap: '6px'
               }}
-              title="Variante Mensal: valores mês a mês específicos da visão ativa"
+              title={t('evolutionChart.monthlyVariation') || 'Monthly Variation'}
             >
               <BarChart2 size={13} />
-              <span>Variante Mensal</span>
+              <span>{t('evolutionChart.monthlyVariation') || 'Monthly Variation'}</span>
             </button>
             <button
               type="button"
@@ -339,10 +341,10 @@ export default function IncomeEvolutionChart({
                 alignItems: 'center',
                 gap: '6px'
               }}
-              title="Acumulado Real: apenas valores efetivamente liquidados/recebidos até hoje"
+              title={t('evolutionChart.historicalReal') || 'Historical Received'}
             >
               <Sparkles size={13} />
-              <span>Acumulado Real</span>
+              <span>{t('evolutionChart.historicalReal') || 'Historical Received'}</span>
             </button>
             <button
               type="button"
@@ -358,10 +360,10 @@ export default function IncomeEvolutionChart({
                 alignItems: 'center',
                 gap: '6px'
               }}
-              title="Projeção Acumulativa: histórico + projeção futura de 1 a 10 anos"
+              title={t('evolutionChart.cumulativeProjection') || 'Cumulative Projection'}
             >
               <TrendingUp size={13} />
-              <span>Projeção Acumulativa</span>
+              <span>{t('evolutionChart.cumulativeProjection') || 'Cumulative Projection'}</span>
             </button>
           </div>
         </div>
@@ -370,7 +372,7 @@ export default function IncomeEvolutionChart({
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-              {isBalance ? 'Balanço Médio / Mês' : isExpense ? 'Gasto Médio / Mês' : isInvestment ? 'Aporte Médio / Mês' : 'Entrada Média / Mês'}
+              {isBalance ? (t('evolutionChart.avgMonthlyBalance') || 'Average Balance / Month') : isExpense ? (t('evolutionChart.avgMonthlyExpense') || 'Average Expense / Month') : isInvestment ? (t('evolutionChart.avgMonthlyInvestment') || 'Average Contribution / Month') : (t('evolutionChart.avgMonthlyIncome') || 'Average Income / Month')}
             </span>
             <span
               style={{
@@ -388,7 +390,7 @@ export default function IncomeEvolutionChart({
 
           <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '12px' }}>
             <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-              {chartMode === 'variante' ? 'Pico Mensal' : 'Total no Período'}
+              {chartMode === 'variante' ? (t('evolutionChart.monthlyPeak') || 'Monthly Peak') : (t('evolutionChart.totalInPeriod') || 'Total in Period')}
             </span>
             <span
               style={{
@@ -418,10 +420,10 @@ export default function IncomeEvolutionChart({
             <Calendar size={14} style={{ color: '#10b981' }} />
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '0.68rem', fontWeight: '700', color: '#10b981', textTransform: 'uppercase' }}>
-                Histórico Realizado
+                {t('evolutionChart.realizedHistory') || 'Realized History'}
               </span>
               <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                {chartData.length > 0 ? `${chartData[0].label} — ${chartData[chartData.length - 1].label}` : ''} ({chartData.length} meses)
+                {chartData.length > 0 ? `${chartData[0].label} — ${chartData[chartData.length - 1].label}` : ''} ({chartData.length} {t('evolutionChart.months') || 'months'})
               </span>
             </div>
           </div>
@@ -431,10 +433,10 @@ export default function IncomeEvolutionChart({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                  Horizonte:
+                  {t('evolutionChart.horizon') || 'Horizon:'}
                 </span>
                 <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--primary-light)' }}>
-                  {horizonYears} {horizonYears === 1 ? 'Ano' : 'Anos'} ({chartData.length}m)
+                  {horizonYears} {horizonYears === 1 ? (t('evolutionChart.year') || 'Year') : (t('evolutionChart.years') || 'Years')} ({chartData.length}m)
                 </span>
               </div>
               <input
@@ -450,7 +452,6 @@ export default function IncomeEvolutionChart({
                   cursor: 'pointer',
                   height: '4px'
                 }}
-                title="Arraste para ajustar o horizonte de projeção"
               />
             </div>
           </div>

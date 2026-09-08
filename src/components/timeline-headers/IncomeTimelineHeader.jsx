@@ -13,6 +13,7 @@ import {
   Settings,
   RotateCcw
 } from 'lucide-react';
+import { format } from 'date-fns';
 import { formatCurrency } from '../../utils/loanCalculations';
 import { IncomeEventCategory } from '../../../shared/enums/IncomeEventCategory.js';
 import { EventType } from '../../enums/index.js';
@@ -29,7 +30,7 @@ export default function IncomeTimelineHeader({
   activeViewMode = 'summary',
   setActiveViewMode
 }) {
-  const { t } = useTranslation();
+  const { t, language, dateLocale } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
 
   if (!timeline) return null;
@@ -43,14 +44,8 @@ export default function IncomeTimelineHeader({
 
   // 1. RENDIMENTOS POR ORIGEM / CATEGORIA & TOTAL DO MÊS
   const validEnumValues = Object.values(IncomeEventCategory);
-  const incomeCategoryLabelsMap = {
-    [IncomeEventCategory.SALARY]: 'Salário / Vencimento',
-    [IncomeEventCategory.MEAL_ALLOWANCE]: 'Subsídio Alimentação',
-    [IncomeEventCategory.BONUS]: 'Bónus / Prémio',
-    [IncomeEventCategory.FREELANCE]: 'Freelance / Serviços',
-    [IncomeEventCategory.INVESTMENT_RETURN]: 'Rendimento de Investimento',
-    [IncomeEventCategory.RECURRING_INCOME]: 'Entrada Recorrente',
-    [IncomeEventCategory.OTHER]: 'Outras Entradas'
+  const getCategoryLabel = (cat) => {
+    return t(`incomeCategories.${cat}`) || cat;
   };
 
   let monthTotalIncome = dto?.current_month_income ?? 0;
@@ -72,7 +67,7 @@ export default function IncomeTimelineHeader({
   let categoryList = (dto?.categories_breakdown && dto.categories_breakdown.length > 0)
     ? dto.categories_breakdown.map((item) => ({
         rawCat: item.category,
-        name: incomeCategoryLabelsMap[item.category] || item.category,
+        name: getCategoryLabel(item.category),
         amount: Number(item.amount || 0),
         percent: Number(item.percent || 0)
       }))
@@ -98,7 +93,7 @@ export default function IncomeTimelineHeader({
       .filter(([cat]) => validEnumValues.includes(cat))
       .map(([cat, amt]) => ({
         rawCat: cat,
-        name: incomeCategoryLabelsMap[cat] || cat,
+        name: getCategoryLabel(cat),
         amount: amt,
         percent: monthTotalIncome > 0 ? Math.round((amt / monthTotalIncome) * 100) : 0
       }))
@@ -185,8 +180,8 @@ export default function IncomeTimelineHeader({
           <button
             type="button"
             onClick={() => setIsCollapsed(!collapsed)}
-            aria-label={collapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
-            title={collapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
+            aria-label={collapsed ? (language === 'pt' ? 'Expandir cabeçalho' : 'Expand header') : (language === 'pt' ? 'Recolher cabeçalho' : 'Collapse header')}
+            title={collapsed ? (language === 'pt' ? 'Expandir cabeçalho' : 'Expand header') : (language === 'pt' ? 'Recolher cabeçalho' : 'Collapse header')}
             style={{
               width: '30px',
               height: '30px',
@@ -239,7 +234,7 @@ export default function IncomeTimelineHeader({
                   textTransform: 'uppercase'
                 }}
               >
-                Entradas e Rendimentos
+                {t('incomeHeader.badge') || 'Inflows & Income'}
               </span>
             </div>
             <p
@@ -296,7 +291,7 @@ export default function IncomeTimelineHeader({
               }}
             >
               <Plus size={14} />
-              <span>Nova Entrada</span>
+              <span>{t('incomeHeader.addIncome') || 'New Income'}</span>
             </button>
           )}
 
@@ -305,7 +300,7 @@ export default function IncomeTimelineHeader({
               type="button"
               className="btn btn-outline-danger btn-sm"
               onClick={onReset}
-              title="Limpar todos os movimentos desta timeline"
+              title={t('incomeHeader.resetTitle') || 'Clear all movements in this timeline'}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -316,7 +311,7 @@ export default function IncomeTimelineHeader({
               }}
             >
               <RotateCcw size={13} />
-              <span>Reset</span>
+              <span>{t('common.reset') || 'Reset'}</span>
             </button>
           )}
 
@@ -324,7 +319,7 @@ export default function IncomeTimelineHeader({
             <button
               type="button"
               onClick={onEdit}
-              title="Timeline Settings"
+              title={t('incomeHeader.settingsTitle') || 'Timeline Settings'}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -347,6 +342,7 @@ export default function IncomeTimelineHeader({
               type="button"
               className="btn btn-outline-danger btn-sm"
               onClick={onDelete}
+              title={t('incomeHeader.deleteTitle') || 'Delete this timeline'}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -357,7 +353,7 @@ export default function IncomeTimelineHeader({
               }}
             >
               <Trash2 size={13} />
-              <span>Excluir</span>
+              <span>{t('common.delete') || 'Delete'}</span>
             </button>
           )}
         </div>
@@ -400,7 +396,7 @@ export default function IncomeTimelineHeader({
                   }}
                 >
                   <Layers size={13} />
-                  <span>Resumo</span>
+                  <span>{t('incomeHeader.summaryView') || 'Summary'}</span>
                 </button>
                 <button
                   type="button"
@@ -421,7 +417,7 @@ export default function IncomeTimelineHeader({
                   }}
                 >
                   <Sparkles size={13} />
-                  <span>Evolução</span>
+                  <span>{t('incomeHeader.evolutionView') || 'Evolution'}</span>
                 </button>
               </div>
             </div>
@@ -432,7 +428,7 @@ export default function IncomeTimelineHeader({
             {/* Quadrante 1: RENDIMENTOS POR ORIGEM (PieChart SVG & Legenda) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                RENDIMENTOS POR ORIGEM
+                {t('incomeHeader.sourcesTitle') || 'INCOME BY SOURCE'}
               </div>
               {(() => {
                 const categoryColors = [
@@ -471,10 +467,10 @@ export default function IncomeTimelineHeader({
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                          {t('timeline.noEventsMonth') || 'Sem rendimentos registados'}
+                          {t('incomeHeader.noIncome') || 'No income recorded'}
                         </span>
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
-                          Adicione entradas para visualizar o gráfico por origem.
+                          {t('incomeHeader.noIncomeHint') || 'Add income events to view the breakdown by source.'}
                         </span>
                       </div>
                     </div>
@@ -572,7 +568,7 @@ export default function IncomeTimelineHeader({
             {/* Quadrante 2: PROJEÇÃO ANUAL (PieChart Donut SVG Anual) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                PROJEÇÃO ANUAL
+                {t('incomeHeader.annualProjectionTitle') || 'ANNUAL PROJECTION'}
               </div>
               {(() => {
                 const usedFraction = Math.min(1, Math.max(0, annualAchievementPercent / 100));
@@ -594,7 +590,7 @@ export default function IncomeTimelineHeader({
                         <circle cx="0" cy="0" r="1" fill={remainingColor} />
                         {usedFraction > 0 && (
                           <path d={pathData} fill={sliceColor} style={{ transition: 'all 0.3s ease' }}>
-                            <title>{`Projeção Anual: ${annualAchievementPercent}%`}</title>
+                            <title>{`${t('incomeHeader.annualProjectionTitle') || 'Annual Projection'}: ${annualAchievementPercent}%`}</title>
                           </path>
                         )}
                       </svg>
@@ -623,13 +619,13 @@ export default function IncomeTimelineHeader({
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                       <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
-                        Projeção (Próximos 12 meses):
+                        {t('incomeHeader.projectionNext12Months') || 'Projection (Next 12 months):'}
                       </div>
                       <div style={{ fontSize: '0.94rem', fontWeight: '800', color: '#10b981' }}>
                         {formatCurrency(annualTotalIncome)}
                       </div>
                       <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                        alvo anual {formatCurrency(annualTarget)}
+                        {t('incomeHeader.annualTarget', { amount: formatCurrency(annualTarget) }) || `annual target ${formatCurrency(annualTarget)}`}
                       </div>
                     </div>
                   </div>
@@ -640,7 +636,7 @@ export default function IncomeTimelineHeader({
             {/* Quadrante 3: PRÓXIMOS 30 DIAS (PieChart Donut SVG de Recebimentos) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                PRÓXIMOS 30 DIAS
+                {t('incomeHeader.next30DaysTitle') || 'NEXT 30 DAYS'}
               </div>
               {(() => {
                 const totalPrevisto = monthTotalIncome > 0 ? monthTotalIncome : projectedAmount30;
@@ -665,7 +661,7 @@ export default function IncomeTimelineHeader({
                         <circle cx="0" cy="0" r="1" fill={remainingColor} />
                         {receivedFraction > 0 && (
                           <path d={pathData} fill={sliceColor} style={{ transition: 'all 0.3s ease' }}>
-                            <title>{`Recebido: ${receivedPercent}%`}</title>
+                            <title>{`${t('incomeHeader.receivedLabel') || 'Received'}: ${receivedPercent}%`}</title>
                           </path>
                         )}
                       </svg>
@@ -694,15 +690,15 @@ export default function IncomeTimelineHeader({
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
                       <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Previstos 30d:</span>
+                        <span>{t('incomeHeader.projected30dLabel') || 'Projected 30d:'}</span>
                         <strong style={{ color: '#06b6d4' }}>{formatCurrency(projectedAmount30)}</strong>
                       </div>
                       <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Recebidos:</span>
+                        <span>{t('incomeHeader.receivedLabel') || 'Received:'}</span>
                         <strong style={{ color: '#10b981' }}>{formatCurrency(receivedAmountMonth)}</strong>
                       </div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        {projectedCount30} previstos ({receivedCountMonth} já recebidos)
+                        {t('incomeHeader.projectedVsReceivedCount', { projected: projectedCount30, received: receivedCountMonth }) || `${projectedCount30} projected (${receivedCountMonth} received)`}
                       </div>
                     </div>
                   </div>
@@ -722,7 +718,7 @@ export default function IncomeTimelineHeader({
               const key = `${year}-${monthStr}`;
 
               const d = new Date(year, month - 1, 1);
-              const label = d.toLocaleDateString('pt-PT', { month: 'short' }).replace('.', '').toUpperCase();
+              const label = format(d, 'MMM', { locale: dateLocale }).replace('.', '').toUpperCase();
               last7Months.push({ key, label, total: 0 });
             }
 
@@ -759,14 +755,14 @@ export default function IncomeTimelineHeader({
                 <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px', fontSize: '0.82rem', fontWeight: '700' }}>
                   <div style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <TrendingUp size={15} style={{ color: isDiffPositive ? '#10b981' : '#f43f5e' }} />
-                    <span>Este mês vs mês anterior:</span>
+                    <span>{t('incomeHeader.monthVsPrevMonth') || 'This month vs previous month:'}</span>
                     <span style={{ color: isDiffPositive ? '#10b981' : '#f43f5e', background: isDiffPositive ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)', padding: '2px 6px', borderRadius: '6px' }}>
                       {diffPercentStr}
                     </span>
                   </div>
                   <div style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Sparkles size={15} style={{ color: '#10b981' }} />
-                    <span>Projeção anual:</span>
+                    <span>{t('incomeHeader.annualProjectionLabel') || 'Annual projection:'}</span>
                     <span style={{ color: '#10b981' }}>{formatCurrency(annualProj)}</span>
                   </div>
                 </div>
@@ -774,7 +770,7 @@ export default function IncomeTimelineHeader({
                 {/* Gráfico de Colunas: Volume de Entradas */}
                 <div style={{ background: 'rgba(255, 255, 255, 0.015)', border: '1px solid var(--border-glass)', borderRadius: '8px', padding: '12px 14px 10px 14px' }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.5px' }}>
-                    EVOLUÇÃO DO VOLUME DE ENTRADAS (ÚLTIMOS 6 MESES + MÊS ATUAL)
+                    {t('incomeHeader.chartTitle') || 'INCOME VOLUME EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)'}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', height: '90px' }}>
                     {last7Months.map((m, idx) => {

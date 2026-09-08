@@ -26,7 +26,7 @@ import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, Am
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
-import { RotateCcw, X } from 'lucide-react';
+import { RotateCcw, X, Plus } from 'lucide-react';
 import './App.css';
 
 export default function App() {
@@ -167,8 +167,6 @@ export default function App() {
       }
     } catch (e) {
       console.error('Error fetching events for period:', e);
-    } finally {
-      setIsLoadingSystem(false);
     }
   }, [activeTimeboardId, pastHorizonYears, futureHorizonYears]);
 
@@ -178,9 +176,12 @@ export default function App() {
     let isMounted = true;
     setIsLoadingSystem(true);
 
-    api.fetchTimelines({ timeboardId: activeTimeboardId })
-      .then((data) => {
-        if (isMounted && Array.isArray(data)) {
+    (async () => {
+      try {
+        const data = await api.fetchTimelines({ timeboardId: activeTimeboardId });
+        if (!isMounted) return;
+
+        if (Array.isArray(data)) {
           setTimelines(data);
           if (data.length > 0) {
             const balanceTl = data.find((tl) => tl.type === TimelineType.BALANCE);
@@ -193,16 +194,17 @@ export default function App() {
             setActiveFinancialTab(targetTl.id);
 
             // Buscar eventos apenas UMA vez para todo o Timeboard no mount
-            fetchEventsForVisiblePeriod(pastHorizonYears, futureHorizonYears, true);
-          } else {
-            setIsLoadingSystem(false);
+            await fetchEventsForVisiblePeriod(pastHorizonYears, futureHorizonYears, true);
           }
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error('Error fetching timelines for timeboard:', err.message);
-        if (isMounted) setIsLoadingSystem(false);
-      });
+      } finally {
+        if (isMounted) {
+          setIsLoadingSystem(false);
+        }
+      }
+    })();
 
     return () => { isMounted = false; };
   }, [activeTimeboardId]);
@@ -221,11 +223,16 @@ export default function App() {
   }, [activeTimeboardId, fetchEventsForVisiblePeriod, pastHorizonYears, futureHorizonYears]);
 
   // Expandir horizonte de tempo sem descartar o que já está na memória
+  const isInitialHorizonMountRef = React.useRef(true);
   useEffect(() => {
+    if (isInitialHorizonMountRef.current) {
+      isInitialHorizonMountRef.current = false;
+      return;
+    }
     if (activeTimeboardId) {
       fetchEventsForVisiblePeriod(pastHorizonYears, futureHorizonYears, false);
     }
-  }, [pastHorizonYears, futureHorizonYears, activeTimeboardId, fetchEventsForVisiblePeriod]);
+  }, [pastHorizonYears, futureHorizonYears]);
 
   const handleLoadMoreFuture = async () => {
     const nextYears = futureHorizonYears + 1;
@@ -1590,12 +1597,23 @@ export default function App() {
               />
             }
           />
-        ) : (
+        ) : isLoadingSystem ? null : (
           <div className="empty-timeline-state glass-panel" style={{ marginTop: '40px', textAlign: 'center' }}>
-            <h2>{activeTimeboard ? activeTimeboard.name : 'Carregando Timeboards...'}</h2>
+            <h2>{activeTimeboard ? activeTimeboard.name : (t('timeboard.noTimeboards') || 'Sem Timeboards')}</h2>
             <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-              Timeboard conectado ao banco de dados.
+              {t('timeline.noTimelines') || 'Nenhuma timeline criada neste timeboard.'}
             </p>
+            {activeTimeboard && (
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                style={{ marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                onClick={handleOpenCreateTimeline}
+              >
+                <Plus size={16} />
+                <span>{t('timeline.createTimeline') || 'Criar Timeline'}</span>
+              </button>
+            )}
           </div>
         )}
       </main>

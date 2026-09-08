@@ -30,6 +30,16 @@ export const translations = {
       payUpToHereTitle: "Mark all previous installments of this loan up to this one as paid"
     },
 
+    // Common
+    common: {
+      save: "Save",
+      cancel: "Cancel",
+      delete: "Delete",
+      edit: "Edit",
+      reset: "Reset",
+      close: "Close"
+    },
+
     // Toast Notifications
     toast: {
       eventSavedSuccess: "Event saved successfully to database!",
@@ -67,7 +77,9 @@ export const translations = {
       monthBalanceTitle: "Projected monthly balance = Income - (Expenses + Investments)",
       balance: "Balance",
       noLoanMonth: "No installment or amortization this month",
-      noTabRecords: "No records in this tab for this month"
+      noTabRecords: "No records in this tab for this month",
+      noTimelines: "No timelines created in this timeboard yet.",
+      createTimeline: "Create Timeline"
     },
 
     // Loan Card Breakdown
@@ -436,6 +448,48 @@ export const translations = {
       monthVsPrevMonth: "This month vs previous month:",
       annualProjection: "Annual projection:",
       chartTitle: "EXPENSE VOLUME EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)"
+    },
+
+    // Income Timeline Header
+    incomeHeader: {
+      badge: "Inflows & Income",
+      addIncome: "New Income",
+      resetTitle: "Clear all movements in this timeline",
+      settingsTitle: "Timeline Settings",
+      deleteTitle: "Delete this timeline",
+      sourcesTitle: "INCOME BY SOURCE",
+      noIncome: "No income recorded",
+      noIncomeHint: "Add income events to view the breakdown by source.",
+      annualProjectionTitle: "ANNUAL PROJECTION",
+      projectionNext12Months: "Projection (Next 12 months):",
+      annualTarget: "annual target {amount}",
+      next30DaysTitle: "NEXT 30 DAYS",
+      projected30dLabel: "Projected 30d:",
+      receivedLabel: "Received:",
+      projectedVsReceivedCount: "{projected} projected ({received} already received)",
+      monthVsPrevMonth: "This month vs previous month:",
+      annualProjectionLabel: "Annual projection:",
+      chartTitle: "INCOME VOLUME EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)",
+      summaryView: "Summary",
+      evolutionView: "Evolution"
+    },
+
+    // Evolution Chart
+    evolutionChart: {
+      monthlyVariation: "Monthly Variation",
+      historicalReal: "Historical Received",
+      cumulativeProjection: "Cumulative Projection",
+      avgMonthlyIncome: "Average Income / Month",
+      avgMonthlyExpense: "Average Expense / Month",
+      avgMonthlyInvestment: "Average Contribution / Month",
+      avgMonthlyBalance: "Average Balance / Month",
+      monthlyPeak: "Monthly Peak",
+      totalInPeriod: "Total in Period",
+      realizedHistory: "Realized History",
+      months: "months",
+      horizon: "Horizon:",
+      year: "Year",
+      years: "Years"
     }
   },
 
@@ -468,6 +522,16 @@ export const translations = {
       reset: "Reset",
       payUpToHere: "Pagar até aqui",
       payUpToHereTitle: "Marcar como pagas todas as prestações deste empréstimo anteriores a esta parcela (inclusive)"
+    },
+
+    // Common
+    common: {
+      save: "Guardar",
+      cancel: "Cancelar",
+      delete: "Excluir",
+      edit: "Editar",
+      reset: "Reset",
+      close: "Fechar"
     },
 
     // Toast Notifications
@@ -507,7 +571,9 @@ export const translations = {
       monthBalanceTitle: "Saldo Projetado do mês = Entradas - (Gastos + Investimentos)",
       balance: "Saldo",
       noLoanMonth: "Nenhuma parcela ou amortização neste mês",
-      noTabRecords: "Sem registos nesta aba para este mês"
+      noTabRecords: "Sem registos nesta aba para este mês",
+      noTimelines: "Nenhuma timeline criada neste timeboard ainda.",
+      createTimeline: "Criar Timeline"
     },
 
     // Loan Card Breakdown
@@ -876,6 +942,48 @@ export const translations = {
       monthVsPrevMonth: "Este mês vs mês anterior:",
       annualProjection: "Projeção anual:",
       chartTitle: "EVOLUÇÃO DO VOLUME DE GASTOS (ÚLTIMOS 6 MESES + MÊS ATUAL)"
+    },
+
+    // Income Timeline Header
+    incomeHeader: {
+      badge: "Entradas e Rendimentos",
+      addIncome: "Nova Entrada",
+      resetTitle: "Limpar todos os movimentos desta timeline",
+      settingsTitle: "Definições da Timeline",
+      deleteTitle: "Excluir esta timeline",
+      sourcesTitle: "RENDIMENTOS POR ORIGEM",
+      noIncome: "Sem rendimentos registados",
+      noIncomeHint: "Adicione entradas para visualizar o gráfico por origem.",
+      annualProjectionTitle: "PROJEÇÃO ANUAL",
+      projectionNext12Months: "Projeção (Próximos 12 meses):",
+      annualTarget: "alvo anual {amount}",
+      next30DaysTitle: "PRÓXIMOS 30 DIAS",
+      projected30dLabel: "Previstos 30d:",
+      receivedLabel: "Recebidos:",
+      projectedVsReceivedCount: "{projected} previstos ({received} já recebidos)",
+      monthVsPrevMonth: "Este mês vs mês anterior:",
+      annualProjectionLabel: "Projeção anual:",
+      chartTitle: "EVOLUÇÃO DO VOLUME DE ENTRADAS (ÚLTIMOS 6 MESES + MÊS ATUAL)",
+      summaryView: "Resumo",
+      evolutionView: "Evolução"
+    },
+
+    // Evolution Chart
+    evolutionChart: {
+      monthlyVariation: "Variação Mensal",
+      historicalReal: "Acumulado Real",
+      cumulativeProjection: "Projeção Acumulativa",
+      avgMonthlyIncome: "Entrada Média / Mês",
+      avgMonthlyExpense: "Gasto Médio / Mês",
+      avgMonthlyInvestment: "Aporte Médio / Mês",
+      avgMonthlyBalance: "Balanço Médio / Mês",
+      monthlyPeak: "Pico Mensal",
+      totalInPeriod: "Total no Período",
+      realizedHistory: "Histórico Realizado",
+      months: "meses",
+      horizon: "Horizonte:",
+      year: "Ano",
+      years: "Anos"
     }
   }
 };

@@ -220,10 +220,9 @@ export default function CreateTimelineModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div
         className="modal-card"
-        onClick={(e) => e.stopPropagation()}
         style={{
           maxWidth: showSimulation ? '900px' : '580px',
           width: '100%',

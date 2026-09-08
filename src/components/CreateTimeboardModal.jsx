@@ -69,7 +69,6 @@ export default function CreateTimeboardModal({
   return (
     <div
       className="modal-overlay"
-      onClick={onClose}
       style={{
         position: 'fixed',
         top: 0,

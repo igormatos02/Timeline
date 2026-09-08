@@ -895,7 +895,6 @@ export default function BalanceTimelineHeader({
       {isDatePickerOpen && typeof document !== 'undefined' && createPortal(
         <div
           className="modal-overlay"
-          onClick={() => setIsDatePickerOpen(false)}
           style={{
             position: 'fixed',
             top: 0,

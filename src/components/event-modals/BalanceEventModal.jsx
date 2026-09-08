@@ -160,7 +160,6 @@ export default function BalanceEventModal({
   return (
     <div
       className="modal-overlay"
-      onClick={onClose}
       style={{
         position: 'fixed',
         top: 0,

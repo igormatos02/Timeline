@@ -94,8 +94,8 @@ export default function EditInstallmentModal({
   const totalThisInstallmentWithLate = (parseFloat(amount) || 0) + (parseFloat(interestAmount) || 0);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+    <div className="modal-overlay">
+      <div className="modal-card" style={{ maxWidth: '520px' }}>
         <div className="modal-header">
           <div>
             <h2 className="modal-title" style={{ fontSize: '1.2rem' }}>

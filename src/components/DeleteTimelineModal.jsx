@@ -32,10 +32,9 @@ export default function DeleteTimelineModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div
         className="modal-card"
-        onClick={(e) => e.stopPropagation()}
         style={{ maxWidth: '500px' }}
       >
         {/* Header */}

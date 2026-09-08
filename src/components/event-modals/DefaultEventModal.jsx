@@ -74,7 +74,6 @@ export default function DefaultEventModal({
   return (
     <div
       className="modal-overlay"
-      onClick={onClose}
       style={{
         position: 'fixed',
         top: 0,

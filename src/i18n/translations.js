@@ -290,6 +290,17 @@ export const translations = {
       other: "Other Expenses"
     },
 
+    // Income Categories
+    incomeCategories: {
+      salary: "Salary / Wages",
+      meal_allowance: "Meal Allowance",
+      bonus: "Bonus & Commissions",
+      freelance: "Freelance & Services",
+      investment_return: "Investment Returns / Dividends",
+      recurring_income: "Recurring Inflow",
+      other: "Other Income"
+    },
+
     // Timeboard Modal
     timeboardModal: {
       newTitle: "Create Timeboard",
@@ -717,6 +728,17 @@ export const translations = {
       fixed_expense: "Despesa Fixa",
       variable_expense: "Despesa Variável",
       other: "Outras Despesas"
+    },
+
+    // Income Categories
+    incomeCategories: {
+      salary: "Salário / Vencimento",
+      meal_allowance: "Subsídio de Alimentação",
+      bonus: "Bónus / Comissões",
+      freelance: "Freelance / Serviços",
+      investment_return: "Rendimentos / Dividendos",
+      recurring_income: "Entrada Recorrente",
+      other: "Outras Entradas"
     },
 
     // Timeboard Modal

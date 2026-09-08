@@ -1674,8 +1674,8 @@ export default function App() {
 
       {/* Reset Timeline Confirmation Modal */}
       {isResetConfirmOpen && (
-        <div className="modal-overlay" onClick={() => setIsResetConfirmOpen(false)} style={{ zIndex: 1100 }}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '460px' }}>
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-card" style={{ maxWidth: '460px' }}>
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div

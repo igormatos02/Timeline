@@ -296,7 +296,6 @@ export default function ExpenseEventModal({
   return (
     <div
       className="modal-overlay"
-      onClick={onClose}
       style={{
         position: 'fixed',
         top: 0,

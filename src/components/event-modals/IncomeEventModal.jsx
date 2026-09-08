@@ -11,11 +11,36 @@ import {
   Clock,
   CheckCircle2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Utensils,
+  Sparkles,
+  TrendingUp,
+  Tag,
+  Search,
+  Check
 } from 'lucide-react';
 import { format, parseISO, addMonths, getDaysInMonth, setMonth, setYear } from 'date-fns';
 import { EventStatus, EventPeriodicity, EventType, IncomeEventCategory } from '../../../shared/enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
+
+const INCOME_CATEGORY_META = {
+  [IncomeEventCategory.SALARY]: { icon: DollarSign, color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
+  [IncomeEventCategory.MEAL_ALLOWANCE]: { icon: Utensils, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
+  [IncomeEventCategory.BONUS]: { icon: Sparkles, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' },
+  [IncomeEventCategory.FREELANCE]: { icon: Zap, color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)' },
+  [IncomeEventCategory.INVESTMENT_RETURN]: { icon: TrendingUp, color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' },
+  [IncomeEventCategory.RECURRING_INCOME]: { icon: Repeat, color: '#14b8a6', bg: 'rgba(20, 184, 166, 0.15)' },
+  [IncomeEventCategory.OTHER]: { icon: Tag, color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' }
+};
+
+const POPULAR_INCOME_CATEGORIES = [
+  IncomeEventCategory.SALARY,
+  IncomeEventCategory.MEAL_ALLOWANCE,
+  IncomeEventCategory.BONUS,
+  IncomeEventCategory.FREELANCE,
+  IncomeEventCategory.INVESTMENT_RETURN,
+  IncomeEventCategory.RECURRING_INCOME
+];
 
 export default function IncomeEventModal({
   isOpen,
@@ -31,6 +56,8 @@ export default function IncomeEventModal({
   const [isDayPickerOpen, setIsDayPickerOpen] = useState(false);
   const [isEndMonthPickerOpen, setIsEndMonthPickerOpen] = useState(false);
   const [endMonthPickerYear, setEndMonthPickerYear] = useState(2026);
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
   const [updateScope, setUpdateScope] = useState('single');
   const [breakdownItems, setBreakdownItems] = useState([]);
 
@@ -45,7 +72,7 @@ export default function IncomeEventModal({
     amount: '',
     labelsInput: '',
     isAutomatic: false,
-    category: IncomeEventCategory.NONE
+    category: IncomeEventCategory.SALARY
   });
 
   // 1. Foco e seleção automática do título ao abrir
@@ -131,7 +158,7 @@ export default function IncomeEventModal({
         amount: initialData.amount !== undefined ? initialData.amount : '',
         labelsInput: Array.isArray(initialData.labels) ? initialData.labels.join(', ') : '',
         isAutomatic: Boolean(initialData.isAutomatic),
-        category: initialData.category || IncomeEventCategory.NONE
+        category: initialData.category || IncomeEventCategory.SALARY
       });
       setUpdateScope('subsequent');
       setBreakdownItems(initialData.breakdownItems ? JSON.parse(JSON.stringify(initialData.breakdownItems)) : []);
@@ -145,7 +172,6 @@ export default function IncomeEventModal({
         setEndMonthPickerYear(initialYear);
       }
 
-      // Inicia estritamente com RECURRING
       setFormData({
         title: '',
         date: targetDate,
@@ -157,7 +183,7 @@ export default function IncomeEventModal({
         amount: '',
         labelsInput: '',
         isAutomatic: false,
-        category: IncomeEventCategory.NONE
+        category: IncomeEventCategory.SALARY
       });
       setUpdateScope('single');
       setBreakdownItems([]);
@@ -166,7 +192,6 @@ export default function IncomeEventModal({
 
   if (!isOpen) return null;
 
-  // Informações de data base do botão que abriu o modal
   let baseYearStr = '2026';
   let baseMonthStr = '08';
   let totalDays = 31;
@@ -210,10 +235,6 @@ export default function IncomeEventModal({
       ? formData.recurrenceEndDate
       : null;
 
-    const cleanBreakdown = breakdownItems.length > 0
-      ? breakdownItems.map((it) => ({ ...it, amount: parseFloat(it.amount) || 0 }))
-      : undefined;
-
     const eventPayload = {
       ...(initialData || {}),
       title: formData.title.trim(),
@@ -225,12 +246,12 @@ export default function IncomeEventModal({
       recurrenceEndDate,
       endDate: recurrenceEndDate,
       amount: finalAmount,
-      breakdownItems: cleanBreakdown,
+      breakdownItems: breakdownItems.length > 0 ? breakdownItems : undefined,
       eventType: EventType.INCOME,
       timelineId: timeline?.id,
       timelineOriginId: timeline?.id,
       labels,
-      category: formData.category || IncomeEventCategory.NONE,
+      category: formData.category || IncomeEventCategory.SALARY,
       isAutomatic: formData.isAutomatic,
       updateScope: initialData?.seriesId ? updateScope : undefined
     };
@@ -242,7 +263,6 @@ export default function IncomeEventModal({
   return (
     <div
       className="modal-overlay"
-      onClick={onClose}
       style={{
         position: 'fixed',
         top: 0,
@@ -284,10 +304,10 @@ export default function IncomeEventModal({
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                {initialData ? t('modal.editIncome') : t('modal.newIncome')}
+                {initialData ? (t('modal.editIncome') || 'Editar Entrada') : (t('modal.newIncome') || 'Nova Entrada')}
               </h3>
               <div style={{ fontSize: '0.76rem', color: '#10b981', fontWeight: '700' }}>
-                {timeline?.name || 'Entradas'} • {format(parseISO(`${baseYearStr}-${baseMonthStr}-01`), 'MMMM yyyy', { locale: dateLocale })}
+                {timeline?.name || t('timeline.incomes') || 'Entradas'} • {format(parseISO(`${baseYearStr}-${baseMonthStr}-01`), 'MMMM yyyy', { locale: dateLocale })}
               </div>
             </div>
           </div>
@@ -303,17 +323,17 @@ export default function IncomeEventModal({
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* 1. Título do Rendimento (Foco e seleção automática ao abrir) */}
+          {/* 1. Título da Entrada */}
           <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-              {t('modal.titleLabel')}
+              {t('modal.incomeTitleLabel') || t('modal.titleLabel') || 'Título / Descrição *'}
             </label>
             <input
               ref={titleInputRef}
               type="text"
               required
               autoFocus
-              placeholder={t('modal.titlePlaceholder')}
+              placeholder={t('modal.incomeTitlePlaceholder') || 'Ex: Salário Mensal, Freelance, Bónus, Dividendos...'}
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="form-input"
@@ -321,43 +341,230 @@ export default function IncomeEventModal({
             />
           </div>
 
-          {/* Categoria do Rendimento */}
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-              {t('sidebar.categoryType') || 'Categoria'}
+          {/* Categoria da Entrada Elegante */}
+          <div style={{ marginBottom: '14px', position: 'relative' }}>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+              {t('modal.categoryLabel') || t('sidebar.categoryType') || 'Categoria'}
             </label>
-            <select
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="form-input"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                borderRadius: '8px',
-                boxSizing: 'border-box',
-                background: 'var(--bg-glass, rgba(255,255,255,0.03))',
-                color: 'var(--text-main)',
-                border: '1px solid var(--border-glass)',
-                cursor: 'pointer'
-              }}
-            >
-              {Object.entries(IncomeEventCategory).map(([key, val]) => (
-                <option key={key} value={val} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
-                  {val === IncomeEventCategory.NONE ? (t('category.none') || 'Nenhuma') : val}
-                </option>
-              ))}
-            </select>
+
+            {/* Botão Seletor Principal */}
+            {(() => {
+              const currentMeta = INCOME_CATEGORY_META[formData.category] || INCOME_CATEGORY_META[IncomeEventCategory.OTHER];
+              const CurrentIcon = currentMeta.icon;
+              return (
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    borderRadius: '10px',
+                    background: 'var(--bg-glass, rgba(255,255,255,0.03))',
+                    border: isCategoryDropdownOpen ? '1px solid #10b981' : '1px solid var(--border-glass)',
+                    boxShadow: isCategoryDropdownOpen ? '0 0 12px rgba(16, 185, 129, 0.2)' : 'none',
+                    color: 'var(--text-main)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '8px',
+                        background: currentMeta.bg,
+                        color: currentMeta.color,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                    >
+                      <CurrentIcon size={16} />
+                    </div>
+                    <span style={{ fontSize: '0.86rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                      {t(`incomeCategories.${formData.category}`) || formData.category}
+                    </span>
+                  </div>
+                  <ChevronDown
+                    size={16}
+                    style={{
+                      color: 'var(--text-muted)',
+                      transform: isCategoryDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease'
+                    }}
+                  />
+                </button>
+              );
+            })()}
+
+            {/* Atalhos rápidos / Categorias Populares */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+              {POPULAR_INCOME_CATEGORIES.map((catKey) => {
+                const meta = INCOME_CATEGORY_META[catKey];
+                const IconComp = meta.icon;
+                const isSelected = formData.category === catKey;
+                return (
+                  <button
+                    key={catKey}
+                    type="button"
+                    onClick={() => {
+                      setFormData({ ...formData, category: catKey });
+                      setIsCategoryDropdownOpen(false);
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      fontSize: '0.72rem',
+                      fontWeight: isSelected ? '800' : '600',
+                      border: isSelected ? `1px solid ${meta.color}` : '1px solid var(--border-glass)',
+                      background: isSelected ? meta.bg : 'rgba(255, 255, 255, 0.02)',
+                      color: isSelected ? meta.color : 'var(--text-dim)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <IconComp size={12} style={{ color: meta.color }} />
+                    <span>{t(`incomeCategories.${catKey}`)}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Menu Popover de Todas as Categorias */}
+            {isCategoryDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  marginTop: '6px',
+                  background: 'var(--bg-card, #131722)',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  borderRadius: '12px',
+                  boxShadow: '0 16px 36px rgba(0, 0, 0, 0.85)',
+                  padding: '12px',
+                  zIndex: 100,
+                  backdropFilter: 'blur(16px)',
+                  maxHeight: '260px',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                {/* Campo de Busca Rápida */}
+                <div style={{ position: 'relative', marginBottom: '8px' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+                  <input
+                    type="text"
+                    value={categorySearch}
+                    onChange={(e) => setCategorySearch(e.target.value)}
+                    placeholder={t('sidebar.search') || 'Buscar categoria...'}
+                    style={{
+                      width: '100%',
+                      padding: '6px 10px 6px 30px',
+                      fontSize: '0.78rem',
+                      borderRadius: '6px',
+                      background: 'var(--bg-glass, rgba(255,255,255,0.05))',
+                      border: '1px solid var(--border-glass)',
+                      color: 'var(--text-main)',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                {/* Lista de Categorias com Scroll */}
+                <div
+                  style={{
+                    overflowY: 'auto',
+                    flex: 1,
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '6px',
+                    paddingRight: '4px'
+                  }}
+                >
+                  {Object.entries(IncomeEventCategory)
+                    .filter(([_, catVal]) => {
+                      if (!categorySearch.trim()) return true;
+                      const label = t(`incomeCategories.${catVal}`) || catVal;
+                      return label.toLowerCase().includes(categorySearch.toLowerCase());
+                    })
+                    .map(([_, catVal]) => {
+                      const meta = INCOME_CATEGORY_META[catVal] || INCOME_CATEGORY_META[IncomeEventCategory.OTHER];
+                      const IconComp = meta.icon;
+                      const isSelected = formData.category === catVal;
+                      return (
+                        <button
+                          key={catVal}
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, category: catVal });
+                            setIsCategoryDropdownOpen(false);
+                            setCategorySearch('');
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '8px',
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            border: isSelected ? `1px solid ${meta.color}` : '1px solid transparent',
+                            background: isSelected ? meta.bg : 'rgba(255, 255, 255, 0.02)',
+                            color: isSelected ? meta.color : 'var(--text-main)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                            <div
+                              style={{
+                                width: '22px',
+                                height: '22px',
+                                borderRadius: '6px',
+                                background: meta.bg,
+                                color: meta.color,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                              }}
+                            >
+                              <IconComp size={12} />
+                            </div>
+                            <span style={{ fontSize: '0.76rem', fontWeight: isSelected ? '700' : '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {t(`incomeCategories.${catVal}`) || catVal}
+                            </span>
+                          </div>
+                          {isSelected && <Check size={14} style={{ color: meta.color, flexShrink: 0 }} />}
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* 2. Valor (€) e Quebra em Subpartes */}
+          {/* Valor da Entrada */}
           <div style={{ marginBottom: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
               <label style={{ fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                {t('modal.amountLabel')}
+                {t('modal.incomeAmountLabel') || 'Valor a Receber (€) *'}
               </label>
               {breakdownItems.length > 0 && (
                 <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: '800' }}>
-                  ({breakdownItems.length} {t('modal.subparts').toLowerCase()})
+                  ({breakdownItems.length} {(t('modal.subparts') || 'Subpartes').toLowerCase()})
                 </span>
               )}
             </div>
@@ -393,11 +600,11 @@ export default function IncomeEventModal({
             </div>
           </div>
 
-          {/* 3. Desmembramento em Subpartes */}
+          {/* Subpartes / Divisão de Entrada */}
           <div style={{ padding: '12px', borderRadius: '10px', background: 'var(--bg-glass, rgba(255,255,255,0.03))', border: '1px solid var(--border-glass)', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: breakdownItems.length > 0 ? '10px' : '0' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                {t('modal.subparts')} {breakdownItems.length > 0 && `(${breakdownItems.length})`}
+                {t('modal.subparts') || 'Subpartes'} {breakdownItems.length > 0 && `(${breakdownItems.length})`}
               </span>
               <button
                 type="button"
@@ -428,7 +635,7 @@ export default function IncomeEventModal({
                   gap: '4px'
                 }}
               >
-                <Plus size={12} /> {breakdownItems.length === 0 ? t('modal.splitIntoSubparts') : t('modal.addSubpart')}
+                <Plus size={12} /> {breakdownItems.length === 0 ? (t('modal.splitIntoSubparts') || 'Dividir em Subpartes') : (t('modal.addSubpart') || 'Adicionar Parte')}
               </button>
             </div>
 
@@ -440,7 +647,7 @@ export default function IncomeEventModal({
                       type="text"
                       className="form-input"
                       style={{ padding: '6px 10px', fontSize: '0.85rem' }}
-                      placeholder={t('modal.partNamePlaceholder', { index: idx + 1 })}
+                      placeholder={t('modal.partNamePlaceholder', { index: idx + 1 }) || `Nome da parte ${idx + 1}`}
                       value={item.name}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -479,7 +686,7 @@ export default function IncomeEventModal({
                         justifyContent: 'center',
                         padding: '4px'
                       }}
-                      title={t('modal.removeSubpart')}
+                      title={t('modal.removeSubpart') || 'Remover parte'}
                     >
                       <Trash2 size={15} />
                     </button>
@@ -489,16 +696,16 @@ export default function IncomeEventModal({
             )}
           </div>
 
-          {/* 4. Periodicidade: Recorrente, Pontual, Período (Seleção Estritamente Exclusiva) */}
+          {/* Periodicidade: Recorrente, Pontual, Período */}
           <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-              {t('modal.periodicity')}
+              {t('modal.periodicity') || 'Periodicidade'}
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
               {[
-                { id: EventPeriodicity.RECURRING, label: t('modal.recurrent'), icon: <Repeat size={14} /> },
-                { id: EventPeriodicity.ONCE, label: t('modal.unique'), icon: <Zap size={14} /> },
-                { id: EventPeriodicity.PERIOD, label: t('modal.period'), icon: <Calendar size={14} /> }
+                { id: EventPeriodicity.RECURRING, label: t('modal.recurrent') || 'Recorrente', icon: <Repeat size={14} /> },
+                { id: EventPeriodicity.ONCE, label: t('modal.unique') || 'Única', icon: <Zap size={14} /> },
+                { id: EventPeriodicity.PERIOD, label: t('modal.period') || 'Período', icon: <Calendar size={14} /> }
               ].map((p) => {
                 const isSelected = formData.periodicity === p.id;
                 return (
@@ -537,7 +744,7 @@ export default function IncomeEventModal({
               })}
             </div>
 
-            {/* Se for Período: Seletor de Mês Final Elegante */}
+            {/* Se for Período: Seletor de Mês Final */}
             {formData.periodicity === EventPeriodicity.PERIOD && (
               <div
                 style={{
@@ -550,7 +757,7 @@ export default function IncomeEventModal({
               >
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px' }}>
                   <Calendar size={13} />
-                  <span>{t('modal.endMonth')}</span>
+                  <span>{t('modal.endMonth') || 'Mês Final'}</span>
                 </label>
 
                 {/* Botão Bonito que abre o Seletor de Mês */}
@@ -570,7 +777,7 @@ export default function IncomeEventModal({
                   <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-main)' }}>
                     {formData.recurrenceEndDate
                       ? format(parseISO(`${formData.recurrenceEndDate}-01`), 'MMMM yyyy', { locale: dateLocale })
-                      : t('modal.endMonth')}
+                      : (t('modal.endMonth') || 'Mês Final')}
                   </span>
                   <ChevronDown
                     size={15}
@@ -623,7 +830,6 @@ export default function IncomeEventModal({
                         const isSelectedMonth = formData.recurrenceEndDate === curMonthKey;
                         const isPastThanStart = curMonthKey < `${baseYearStr}-${baseMonthStr}`;
 
-                        // Nome curto do mês
                         const sampleDate = setMonth(setYear(new Date(), endMonthPickerYear), mIdx);
                         const monthLabel = format(sampleDate, 'MMM', { locale: dateLocale });
 
@@ -671,16 +877,16 @@ export default function IncomeEventModal({
                     end: formData.recurrenceEndDate
                       ? format(parseISO(`${formData.recurrenceEndDate}-01`), 'MMMM yyyy', { locale: dateLocale })
                       : '...'
-                  })}
+                  }) || `Projeção mensal de ${format(parseISO(`${baseYearStr}-${baseMonthStr}-01`), 'MMMM yyyy', { locale: dateLocale })} até ao mês selecionado.`}
                 </div>
               </div>
             )}
           </div>
 
-          {/* 5. Dia do Mês (Sem o campo de Start Month, usando o mês de lançamento) */}
+          {/* Dia do Mês */}
           <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-              {t('modal.dayOfMonth')}
+              {t('modal.dayOfMonth') || 'Dia de Recebimento'}
             </label>
             <div
               style={{
@@ -699,7 +905,7 @@ export default function IncomeEventModal({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Calendar size={16} style={{ color: '#10b981' }} />
                 <span style={{ fontSize: '0.92rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                  {t('sidebar.day')} {formData.dayOfMonth}
+                  {t('sidebar.day') || 'Dia'} {formData.dayOfMonth}
                 </span>
               </div>
               <ChevronDown
@@ -718,10 +924,10 @@ export default function IncomeEventModal({
             <div style={{ background: 'var(--bg-card, #131722)', border: '1px solid var(--border-glass)', borderRadius: '10px', padding: '12px', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <span style={{ fontSize: '0.74rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                  {t('modal.selectDueDay')}
+                  {t('modal.selectDueDay') || 'Selecionar Dia'}
                 </span>
                 <span style={{ fontSize: '0.74rem', color: '#10b981', fontWeight: '800' }}>
-                  {format(parseISO(`${baseYearStr}-${baseMonthStr}-01`), 'MMMM yyyy', { locale: dateLocale })} ({totalDays} {t('sidebar.day').toLowerCase()}s)
+                  {format(parseISO(`${baseYearStr}-${baseMonthStr}-01`), 'MMMM yyyy', { locale: dateLocale })} ({totalDays} {(t('sidebar.day') || 'dia').toLowerCase()}s)
                 </span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
@@ -755,10 +961,10 @@ export default function IncomeEventModal({
             </div>
           )}
 
-          {/* 6. Status Elegante em Cards / Pills */}
+          {/* Status Elegante em Cards / Pills */}
           <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-              {t('modal.status')}
+              {t('modal.status') || 'Estado'}
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <button
@@ -781,7 +987,7 @@ export default function IncomeEventModal({
                 }}
               >
                 <Clock size={15} />
-                <span>{t('modal.statusPending')}</span>
+                <span>{t('modal.statusPending') || 'Previsto'}</span>
               </button>
 
               <button
@@ -794,22 +1000,22 @@ export default function IncomeEventModal({
                   gap: '8px',
                   padding: '10px 12px',
                   borderRadius: '8px',
-                  border: formData.status === EventStatus.RECEIVED ? '2px solid #10b981' : '1px solid var(--border-glass)',
-                  background: formData.status === EventStatus.RECEIVED ? 'rgba(16, 185, 129, 0.16)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                  color: formData.status === EventStatus.RECEIVED ? '#10b981' : 'var(--text-muted)',
+                  border: (formData.status === EventStatus.RECEIVED || formData.status === EventStatus.PAID) ? '2px solid #10b981' : '1px solid var(--border-glass)',
+                  background: (formData.status === EventStatus.RECEIVED || formData.status === EventStatus.PAID) ? 'rgba(16, 185, 129, 0.16)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
+                  color: (formData.status === EventStatus.RECEIVED || formData.status === EventStatus.PAID) ? '#10b981' : 'var(--text-muted)',
                   cursor: 'pointer',
-                  fontWeight: formData.status === EventStatus.RECEIVED ? '800' : '600',
+                  fontWeight: (formData.status === EventStatus.RECEIVED || formData.status === EventStatus.PAID) ? '800' : '600',
                   fontSize: '0.82rem',
                   transition: 'all 0.15s ease'
                 }}
               >
                 <CheckCircle2 size={15} />
-                <span>{t('modal.statusReceived')}</span>
+                <span>{t('modal.statusReceived') || 'Recebido'}</span>
               </button>
             </div>
           </div>
 
-          {/* 7. Switch Automático Moderno (iOS Toggle Style) */}
+          {/* Switch Recebimento Automático Moderno */}
           <div
             style={{
               display: 'flex',
@@ -825,7 +1031,7 @@ export default function IncomeEventModal({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Zap size={16} style={{ color: formData.isAutomatic ? '#10b981' : 'var(--text-dim)' }} />
               <span style={{ fontSize: '0.84rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                {t('modal.automatic')}
+                {t('modal.automatic') || 'Recebimento Automático'}
               </span>
             </div>
             <button
@@ -862,7 +1068,7 @@ export default function IncomeEventModal({
             </button>
           </div>
 
-          {/* Switch Mudar Subsequentes (Apenas ao Editar Evento Recorrente) */}
+          {/* Switch Mudar Subsequentes */}
           {initialData && (initialData.seriesId || initialData.isRecurring || formData.periodicity === EventPeriodicity.RECURRING || formData.periodicity === EventPeriodicity.PERIOD) && (
             <div style={{ margin: '8px 0 14px 0' }}>
               <label
@@ -887,7 +1093,7 @@ export default function IncomeEventModal({
                   onChange={(e) => setUpdateScope(e.target.checked ? 'subsequent' : 'single')}
                   style={{ accentColor: '#10b981' }}
                 />
-                <span>{t('modal.changeSubsequent')}</span>
+                <span>{t('modal.changeSubsequent') || 'Aplicar alterações aos meses futuros'}</span>
               </label>
             </div>
           )}
@@ -900,20 +1106,22 @@ export default function IncomeEventModal({
               onClick={onClose}
               style={{ padding: '8px 16px', borderRadius: '8px' }}
             >
-              {t('modal.cancel')}
+              {t('modal.cancel') || 'Cancelar'}
             </button>
             <button
               type="submit"
               className="btn btn-primary btn-sm"
               style={{
-                background: '#10b981',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 borderColor: '#10b981',
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
                 padding: '8px 20px',
                 borderRadius: '8px',
-                fontWeight: '800'
+                fontWeight: '800',
+                color: '#ffffff'
               }}
             >
-              {initialData ? t('modal.saveChanges') : t('modal.addIncome')}
+              {initialData ? (t('modal.saveChanges') || 'Salvar Alterações') : (t('modal.addIncome') || 'Adicionar Entrada')}
             </button>
           </div>
         </form>

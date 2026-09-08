@@ -3026,19 +3026,6 @@ export default function TimelineEventCard({
             </button>
           )}
 
-          {/* Ajustar / Juros exibido em parcelas em aberto de empréstimo */}
-          {isLoanInstallment && event.status !== 'Pago' && (
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => onOpenEditInstallment && onOpenEditInstallment(event)}
-              style={{ padding: '4px 10px', fontSize: '0.76rem', gap: '4px' }}
-              title="Ajustar valor da parcela, recalculando os juros ou propagando alterações para os meses seguintes"
-            >
-              <Sliders size={13} />
-              <span>Ajustar / Juros</span>
-            </button>
-          )}
-
           {/* Botão de Notas */}
           {onEdit && (() => {
             const allNotes = Array.isArray(event.notes)

@@ -569,6 +569,16 @@ export default function BalanceTimelineHeader({
                   return sum + Number(m.remaining_debt ?? m.remainingDebt ?? m.total_debt ?? m.totalDebt ?? 0);
                 }, 0);
 
+                const computedActiveTotalLoanCost = activeLoanTimelines.reduce((sum, t) => {
+                  const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
+                  const totalCost = Number(m.total_loan_cost ?? m.totalLoanCost ?? m.totalCost ?? 0);
+                  if (totalCost > 0) return sum + totalCost;
+                  const originalCap = Number(m.original_capital ?? m.originalCapital ?? m.total_debt ?? m.totalDebt ?? t.totalDebt ?? 0);
+                  const estInt = Number(m.total_estimated_interest ?? m.totalEstimatedInterest ?? m.future_interest ?? m.futureInterest ?? 0);
+                  const estFee = Number(m.total_estimated_fee ?? m.totalEstimatedFee ?? m.future_fee ?? m.futureFee ?? 0);
+                  return sum + (originalCap + estInt + estFee);
+                }, 0);
+
                 const totalDebtSum = loanItems.reduce((acc, i) => acc + (i.amount || 0), 0);
                 const itemsWithPct = loanItems.map((i) => ({
                   ...i,
@@ -602,6 +612,9 @@ export default function BalanceTimelineHeader({
 
                 const totalAmortizedVal = activeLoanTimelines.length > 0 ? computedActiveAmortized : (finMetrics.totalAmortized ?? 0);
                 const totalRemainingDebtVal = activeLoanTimelines.length > 0 ? computedActiveRemainingDebt : (finMetrics.totalRemainingDebt ?? 0);
+                const totalRealCostVal = activeLoanTimelines.length > 0
+                  ? computedActiveTotalLoanCost
+                  : Number(finMetrics.totalLoanCost ?? finMetrics.total_loan_cost ?? (totalRemainingDebtVal + totalAmortizedVal));
 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -660,18 +673,24 @@ export default function BalanceTimelineHeader({
                       </div>
                     </div>
 
-                    {/* Resumo de Totais: Capital Amortizado vs Capital Devido */}
-                    <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                    {/* Resumo de Totais: Capital Amortizado vs Capital Devido vs Custo Real do Capital */}
+                    <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', alignItems: 'flex-start' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '600' }}>Capital Amortizado</span>
-                        <strong style={{ color: '#10b981', fontSize: '0.86rem', fontWeight: '800' }}>
+                        <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }}>Capital Amortizado</span>
+                        <strong style={{ color: '#10b981', fontSize: '0.84rem', fontWeight: '800' }}>
                           {formatCurrency(totalAmortizedVal)}
                         </strong>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                        <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '600' }}>Capital Devido</span>
-                        <strong style={{ color: '#f43f5e', fontSize: '0.86rem', fontWeight: '800' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                        <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }}>Capital Devido</span>
+                        <strong style={{ color: '#f43f5e', fontSize: '0.84rem', fontWeight: '800' }}>
                           {formatCurrency(totalRemainingDebtVal)}
+                        </strong>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                        <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }} title="Custo total real estimado (Capital Financiado + Juros + Impostos)">Custo Real Capital</span>
+                        <strong style={{ color: 'var(--primary-light)', fontSize: '0.84rem', fontWeight: '800' }}>
+                          {formatCurrency(totalRealCostVal)}
                         </strong>
                       </div>
                     </div>

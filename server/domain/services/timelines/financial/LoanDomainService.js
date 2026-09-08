@@ -2,6 +2,8 @@ import {
   EventStatus,
   EventType,
   TimelineStatus,
+  LoanEventCategory,
+  AmortizationEventCategory,
   isPositiveStatus
 } from '../../../../../shared/enums/index.js';
 
@@ -32,7 +34,11 @@ export class LoanDomainService {
 
       return (
         ev.eventType === EventType.AMORTIZATION ||
-        ev.eventType === EventType.LOAN_INSTALLMENT
+        ev.eventType === EventType.LOAN_INSTALLMENT ||
+        ev.category === LoanEventCategory.LOAN_INSTALLMENT ||
+        ev.category === LoanEventCategory.INSTALLMENTS ||
+        Boolean(ev.isSystemLoanEvent) ||
+        Boolean(ev.isAmortization)
       );
     });
   }
@@ -59,8 +65,7 @@ export class LoanDomainService {
       new Date().toISOString().substring(0, 7);
 
     /**
-     * Only loan installments are used for loan calculations.
-     * Extraordinary amortization events are handled separately.
+     * Loan installments for schedule calculations.
      */
     const sortedEvents = [...loanEvents]
       .filter(
@@ -69,7 +74,9 @@ export class LoanDomainService {
           !ev.isDeleted &&
           (
             ev.eventType === EventType.LOAN_INSTALLMENT ||
-            ev.category === 'LOAN_INSTALLMENT'
+            ev.category === LoanEventCategory.LOAN_INSTALLMENT ||
+            ev.category === LoanEventCategory.INSTALLMENTS ||
+            Boolean(ev.isSystemLoanEvent)
           )
       )
       .sort((a, b) => {
@@ -84,21 +91,50 @@ export class LoanDomainService {
       });
 
     /**
+     * Extraordinary amortizations.
+     */
+    const amortizationEvents = [...loanEvents].filter(
+      (ev) =>
+        ev &&
+        !ev.isDeleted &&
+        (
+          ev.eventType === EventType.AMORTIZATION ||
+          ev.category === AmortizationEventCategory.REDUCE_TERM ||
+          ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
+          Boolean(ev.isAmortization)
+        )
+    );
+
+    const totalExtraordinaryAmortized = amortizationEvents.reduce((sum, ev) => {
+      const isPaid =
+        isPositiveStatus(ev.status) ||
+        ev.isCompleted;
+
+      if (!isPaid) {
+        return sum;
+      }
+
+      const val = Number(
+        ev.amortizationAmount ??
+        ev.installmentAmount ??
+        ev.amount ??
+        0
+      );
+
+      return sum + val;
+    }, 0);
+
+    /**
      * Total capital represented by all installments.
-     *
-     * IMPORTANT:
-     * Do not use principalAmount anymore.
      */
     const sumCapitalFromAllEvents = sortedEvents.reduce(
       (sum, ev) =>
-        sum + Number(ev.installmentCapital || 0),
+        sum + Number(ev.installmentCapital ?? ev.principalAmount ?? 0),
       0
     );
 
     /**
      * Original financed capital.
-     *
-     * Prefer the domain entity property originalCapital.
      */
     const contractCapital =
       Number(loanContract?.originalCapital || 0);
@@ -114,7 +150,7 @@ export class LoanDomainService {
           : sumCapitalFromAllEvents;
 
     /**
-     * Capital already paid.
+     * Capital already paid from regular installments.
      */
     const totalCapitalPaidFromEvents =
       sortedEvents.reduce((sum, ev) => {
@@ -128,15 +164,21 @@ export class LoanDomainService {
 
         return (
           sum +
-          Number(ev.installmentCapital || 0)
+          Number(ev.installmentCapital ?? ev.principalAmount ?? 0)
         );
       }, 0);
 
     /**
+     * Total amortized capital includes paid regular installments and extraordinary amortizations.
+     */
+    const amortizedCapital = Math.max(
+      0,
+      totalCapitalPaidFromEvents + totalExtraordinaryAmortized
+    );
+
+    /**
      * Use remainingDebtAfter when it is available.
-     * Otherwise calculate:
-     *
-     * original capital - paid capital
+     * Otherwise calculate: original capital - amortized capital
      */
     const paidEventsWithRemaining =
       sortedEvents.filter(
@@ -155,11 +197,12 @@ export class LoanDomainService {
       ];
 
     let calculatedRemainingDebt =
-      totalDebt - totalCapitalPaidFromEvents;
+      totalDebt - amortizedCapital;
 
     if (
       lastPaidEvent &&
-      lastPaidEvent.remainingDebtAfter !== undefined
+      lastPaidEvent.remainingDebtAfter !== undefined &&
+      lastPaidEvent.remainingDebtAfter !== null
     ) {
       calculatedRemainingDebt =
         Number(lastPaidEvent.remainingDebtAfter);
@@ -168,11 +211,6 @@ export class LoanDomainService {
     const remainingDebt = Math.max(
       0,
       Math.min(totalDebt, calculatedRemainingDebt)
-    );
-
-    const amortizedCapital = Math.max(
-      0,
-      totalCapitalPaidFromEvents
     );
 
     /**

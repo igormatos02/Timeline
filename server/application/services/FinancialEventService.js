@@ -403,7 +403,7 @@ export class FinancialEventService {
 
     if (strategy === AmortizationStrategy.REDUCE_TERM || strategy === 'reduce_term') {
       const futureUnpaid = loanInstallments
-        .filter((ev) => ev.status !== EventStatus.PAID && ev.status !== EventStatus.COMPLETED && !ev.isCompleted && ev.status !== 'Abatida' && !ev.isAbatida && ev.date >= amortDate)
+        .filter((ev) => ev.status !== EventStatus.PAID && ev.status !== EventStatus.COMPLETED && !ev.isCompleted && ev.status !== EventStatus.ABATED && !ev.isAbatida && ev.date >= amortDate)
         .sort((a, b) => (a.date > b.date ? 1 : -1));
 
       let remainingToDeduct = amortVal;

@@ -119,18 +119,33 @@ function isEventForTimeline(ev, timeline) {
 }
 
 /** Returns true if the event is a loan installment. */
-function isLoanInstallment(ev) {
+export function isLoanInstallment(ev) {
+  if (!ev) return false;
   return (
+    ev.eventType === EventType.LOAN_INSTALLMENT ||
     ev.category === LoanEventCategory.LOAN_INSTALLMENT ||
-    ev.eventType === EventType.LOAN_INSTALLMENT
+    ev.category === LoanEventCategory.INSTALLMENTS ||
+    Boolean(ev.isSystemLoanEvent)
+  );
+}
+
+/** Returns true if the event is an extraordinary amortization. */
+export function isAmortizationEvent(ev) {
+  if (!ev) return false;
+  return (
+    ev.eventType === EventType.AMORTIZATION ||
+    ev.category === AmortizationEventCategory.REDUCE_TERM ||
+    ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
+    Boolean(ev.isAmortization)
   );
 }
 
 /** Returns true if the event is abated/amortized. */
-function isAbated(ev) {
+export function isAbated(ev) {
+  if (!ev) return false;
   return (
+    ev.status === EventStatus.ABATED ||
     ev.status === EventStatus.AMORTIZED ||
-    ev.status === EventStatus.ABATED || // legacy value stored before refactoring
     Boolean(ev.isAbatida)
   );
 }
@@ -139,17 +154,17 @@ function isAbated(ev) {
  * Returns the capital (principal) portion of an installment.
  *
  * Priority:
- *   1. ev.installmentCapital — if stored and > 0
+ *   1. ev.installmentCapital / ev.principalAmount — if stored and > 0
  *   2. ev.installmentAmount - ev.installmentInterest - ev.installmentFee — if interest is known
  *   3. 82% of installmentAmount — last resort (French amortization approximation)
  *
- * Returns null when passed null, so callers treating 0 as "not set" get the fallback.
+ * Returns 0 when passed null or abated.
  */
-function getPrincipal(ev) {
-  const cap = ev?.installmentCapital;
+export function getPrincipal(ev) {
+  if (!ev) return 0;
+  const cap = ev.installmentCapital ?? ev.principalAmount ?? ev.principal_amount;
 
   // Trust a stored positive number.
-  // null means "not stored in DB"; 0 on a non-abated installment is also suspicious.
   if (cap != null && Number(cap) > 0) {
     return Number(cap);
   }
@@ -157,9 +172,9 @@ function getPrincipal(ev) {
   const total = getInstallmentAmount(ev);
   if (total <= 0) return 0; // abated or unknown
 
-  const interest = ev?.installmentInterest;
+  const interest = ev.installmentInterest ?? ev.interestAmount ?? ev.interestPortion ?? ev.interest_amount;
   if (interest != null) {
-    const fee = ev?.installmentFee != null ? Number(ev.installmentFee) : 0;
+    const fee = getInstallmentFee(ev);
     return Math.max(0, Math.round((total - Number(interest) - fee) * 100) / 100);
   }
 
@@ -170,42 +185,45 @@ function getPrincipal(ev) {
 /**
  * Returns the total installment amount (capital + interest + fee).
  */
-function getInstallmentAmount(ev) {
-  return Number(ev?.installmentAmount || 0);
+export function getInstallmentAmount(ev) {
+  if (!ev) return 0;
+  return Number(ev.installmentAmount ?? ev.installment_amount ?? ev.amount ?? 0);
 }
 
 /**
  * Returns the contractual interest portion of an installment.
  *
  * Priority:
- *   1. ev.installmentInterest — if stored
+ *   1. ev.installmentInterest / ev.interestAmount — if stored
  *   2. installmentAmount - installmentCapital - installmentFee — if capital is known
  *   3. 18% of installmentAmount — last resort (complement of 82% capital share)
  */
-function getInstallmentInterest(ev) {
-  const interest = ev?.installmentInterest;
+export function getInstallmentInterest(ev) {
+  if (!ev) return 0;
+  const interest = ev.installmentInterest ?? ev.interestAmount ?? ev.interestPortion ?? ev.interest_amount;
   if (interest != null) return Number(interest);
 
   const total = getInstallmentAmount(ev);
   if (total <= 0) return 0;
 
   // Derive from total - capital - fee if capital is stored
-  const cap = ev?.installmentCapital;
+  const cap = ev.installmentCapital ?? ev.principalAmount ?? ev.principal_amount;
   if (cap != null) {
-    const fee = ev?.installmentFee != null ? Number(ev.installmentFee) : 0;
+    const fee = getInstallmentFee(ev);
     return Math.max(0, Math.round((total - Number(cap) - fee) * 100) / 100);
   }
 
   // Last resort: 18% of total (complement of 82% used by getPrincipal)
-  const fee = ev?.installmentFee != null ? Number(ev.installmentFee) : 0;
+  const fee = getInstallmentFee(ev);
   return Math.max(0, Math.round((total * 0.18 - fee) * 100) / 100);
 }
 
 /**
  * Returns the stamp tax / fee portion of an installment.
  */
-function getInstallmentFee(ev) {
-  const fee = ev?.installmentFee;
+export function getInstallmentFee(ev) {
+  if (!ev) return 0;
+  const fee = ev.installmentFee ?? ev.installment_fee ?? ev.taxAmount ?? ev.tax_amount;
   return fee != null ? Number(fee) : 0;
 }
 
@@ -483,9 +501,7 @@ function applyAmortizationsInMemory(
       isLoanInstallment(ev) &&
       isEventForTimeline(ev, timeline) &&
       !isPositiveStatus(ev.status) &&
-      ev.status !== EventStatus.AMORTIZED &&
-      ev.status !== EventStatus.ABATED && // legacy value
-      !ev.isAbatida;
+      !isAbated(ev);
 
     if (isReduceInstallment) {
       // ---------------------------------------------------------
@@ -608,7 +624,7 @@ function applyAmortizationsInMemory(
 
         if (remaining >= principal) {
           patch.set(inst.id, {
-            status: EventStatus.AMORTIZED,
+            status: EventStatus.ABATED,
             isAbatida: true,
             isCompleted: true,
 
@@ -961,10 +977,11 @@ export function getLoanMetrics(
     );
 
   // ---------------------------------------------------------
-  // Per-installment aggregations
+  // Per-installment and amortization aggregations
   // ---------------------------------------------------------
 
-  let principalPaid = 0;
+  let regularPrincipalPaid = 0;
+  let extraordinaryAmortized = 0;
   let interestPaid = 0;
   let paidCount = 0;
   let overdueCount = 0;
@@ -973,6 +990,23 @@ export function getLoanMetrics(
   let nextInstallment = null;
 
   for (const ev of eventsList) {
+    // Extraordinary amortization events
+    if (isAmortizationEvent(ev)) {
+      if (isPositiveStatus(ev.status) || ev.isCompleted) {
+        const amortVal = Number(
+          ev.amortizationAmount ??
+          ev.installmentAmount ??
+          ev.amount ??
+          0
+        );
+        if (amortVal > 0) {
+          extraordinaryAmortized += amortVal;
+          paidCount++;
+        }
+      }
+      continue;
+    }
+
     if (!isLoanInstallment(ev)) {
       continue;
     }
@@ -995,17 +1029,9 @@ export function getLoanMetrics(
       isPositiveStatus(ev.status);
 
     if (abated) {
-      /**
-       * The installment itself is cancelled by
-       * extraordinary amortization.
-       *
-       * Its capital was covered by the amortization,
-       * but its interest is not paid.
-       */
-      principalPaid += principal;
       paidCount++;
     } else if (paid) {
-      principalPaid += principal;
+      regularPrincipalPaid += principal;
       interestPaid += interest;
       paidCount++;
     } else {
@@ -1036,24 +1062,30 @@ export function getLoanMetrics(
   const remainingDebt =
     Math.max(
       0,
-      eventsList.reduce(
-        (acc, ev) => {
-          if (
-            !isLoanInstallment(ev) ||
-            isAbated(ev) ||
-            isPositiveStatus(ev.status)
-          ) {
-            return acc;
-          }
+      Math.round(
+        eventsList.reduce(
+          (acc, ev) => {
+            if (
+              !isLoanInstallment(ev) ||
+              isAbated(ev) ||
+              isPositiveStatus(ev.status)
+            ) {
+              return acc;
+            }
 
-          return (
-            acc +
-            getPrincipal(ev)
-          );
-        },
-        0
-      )
+            return (
+              acc +
+              getPrincipal(ev)
+            );
+          },
+          0
+        ) * 100
+      ) / 100
     );
+
+  // Total amortized capital includes paid regular installment principal plus extraordinary amortizations
+  const amortizedCapital = Math.round((regularPrincipalPaid + extraordinaryAmortized) * 100) / 100;
+  const principalPaid = amortizedCapital;
 
   // ---------------------------------------------------------
   // Future interest
@@ -1062,23 +1094,25 @@ export function getLoanMetrics(
   const futureInterest =
     Math.max(
       0,
-      eventsList.reduce(
-        (acc, ev) => {
-          if (
-            !isLoanInstallment(ev) ||
-            isAbated(ev) ||
-            isPositiveStatus(ev.status)
-          ) {
-            return acc;
-          }
+      Math.round(
+        eventsList.reduce(
+          (acc, ev) => {
+            if (
+              !isLoanInstallment(ev) ||
+              isAbated(ev) ||
+              isPositiveStatus(ev.status)
+            ) {
+              return acc;
+            }
 
-          return (
-            acc +
-            getInstallmentInterest(ev)
-          );
-        },
-        0
-      )
+            return (
+              acc +
+              getInstallmentInterest(ev)
+            );
+          },
+          0
+        ) * 100
+      ) / 100
     );
 
   // ---------------------------------------------------------
@@ -1090,12 +1124,7 @@ export function getLoanMetrics(
       eventsList.reduce(
         (acc, ev) => {
           // Extraordinary amortization
-          if (
-            ev.eventType ===
-            EventType.AMORTIZATION ||
-            ev.category ===
-            LoanEventCategory.AMORTIZATION
-          ) {
+          if (isAmortizationEvent(ev)) {
             if (
               isPositiveStatus(ev.status) ||
               ev.isCompleted
@@ -1103,7 +1132,10 @@ export function getLoanMetrics(
               return (
                 acc +
                 Number(
-                  ev.installmentAmount || 0
+                  ev.amortizationAmount ??
+                  ev.installmentAmount ??
+                  ev.amount ??
+                  0
                 )
               );
             }
@@ -1130,8 +1162,7 @@ export function getLoanMetrics(
     ) / 100;
 
   const totalPaid =
-    principalPaid +
-    interestPaid;
+    Math.round((amortizedCapital + interestPaid) * 100) / 100;
 
   const progressPercent =
     originalCapital > 0
@@ -1139,7 +1170,7 @@ export function getLoanMetrics(
         100,
         Math.round(
           (
-            principalPaid /
+            amortizedCapital /
             originalCapital
           ) * 100
         )
@@ -1228,7 +1259,7 @@ export function getLoanMetrics(
 
     // Paid / amortized
     principalPaid,
-    amortizedCapital: principalPaid,
+    amortizedCapital,
 
     // Paid totals
     totalPaid,

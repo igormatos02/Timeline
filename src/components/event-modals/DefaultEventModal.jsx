@@ -60,7 +60,7 @@ export default function DefaultEventModal({
       title: formData.title.trim(),
       date: formData.date,
       amount: parseFloat(formData.amount) || 0,
-      status: formData.status,
+      status: initialData ? (initialData.status || EventStatus.PENDING) : EventStatus.PENDING,
       eventType: EventType.GENERIC,
       timelineId: timeline?.id,
       timelineOriginId: timeline?.id,

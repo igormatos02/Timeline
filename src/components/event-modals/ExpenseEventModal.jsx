@@ -266,7 +266,7 @@ export default function ExpenseEventModal({
       title: formData.title.trim(),
       date: finalDate,
       time: formData.time,
-      status: formData.status,
+      status: initialData ? (initialData.status || EventStatus.PENDING) : EventStatus.PENDING,
       periodicity: formData.periodicity,
       isRecurring,
       recurrenceEndDate,
@@ -367,11 +367,12 @@ export default function ExpenseEventModal({
             />
           </div>
 
-          {/* Categoria da Despesa Elegante */}
-          <div style={{ marginBottom: '14px', position: 'relative' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-              {t('modal.categoryLabel') || t('sidebar.categoryType') || 'Categoria'}
-            </label>
+          {/* Categoria da Despesa Elegante (Apenas na criação) */}
+          {!initialData && (
+            <div style={{ marginBottom: '14px', position: 'relative' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+                {t('modal.categoryLabel') || t('sidebar.categoryType') || 'Categoria'}
+              </label>
 
             {/* Botão Seletor Principal */}
             {(() => {
@@ -545,6 +546,7 @@ export default function ExpenseEventModal({
               </div>
             )}
           </div>
+          )}
 
           <div style={{ marginBottom: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
@@ -684,11 +686,12 @@ export default function ExpenseEventModal({
             )}
           </div>
 
-          {/* 4. Periodicidade: Recorrente, Pontual, Período */}
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-              {t('modal.periodicity') || 'Periodicidade'}
-            </label>
+          {/* 4. Periodicidade: Recorrente, Pontual, Período (Apenas na criação) */}
+          {!initialData && (
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+                {t('modal.periodicity') || 'Periodicidade'}
+              </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
               {[
                 { id: EventPeriodicity.RECURRING, label: t('modal.recurrent') || 'Recorrente', icon: <Repeat size={14} /> },
@@ -870,6 +873,7 @@ export default function ExpenseEventModal({
               </div>
             )}
           </div>
+          )}
 
           {/* 5. Dia do Mês */}
           <div style={{ marginBottom: '14px' }}>
@@ -949,60 +953,6 @@ export default function ExpenseEventModal({
             </div>
           )}
 
-          {/* 6. Status Elegante em Cards / Pills */}
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-              {t('modal.status') || 'Estado'}
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, status: EventStatus.PENDING })}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  border: formData.status === EventStatus.PENDING ? '2px solid #eab308' : '1px solid var(--border-glass)',
-                  background: formData.status === EventStatus.PENDING ? 'rgba(234, 179, 8, 0.14)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                  color: formData.status === EventStatus.PENDING ? '#facc15' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontWeight: formData.status === EventStatus.PENDING ? '800' : '600',
-                  fontSize: '0.82rem',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <Clock size={15} />
-                <span>{t('modal.statusPending') || 'Pendente'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, status: EventStatus.PAID })}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  border: formData.status === EventStatus.PAID ? '2px solid #f43f5e' : '1px solid var(--border-glass)',
-                  background: formData.status === EventStatus.PAID ? 'rgba(244, 63, 94, 0.16)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                  color: formData.status === EventStatus.PAID ? '#f43f5e' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontWeight: formData.status === EventStatus.PAID ? '800' : '600',
-                  fontSize: '0.82rem',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <CheckCircle2 size={15} />
-                <span>{t('modal.statusPaid') || 'Pago'}</span>
-              </button>
-            </div>
-          </div>
-
           {/* 7. Switch Automático Moderno */}
           <div
             style={{
@@ -1056,33 +1006,58 @@ export default function ExpenseEventModal({
             </button>
           </div>
 
-          {/* Switch Mudar Subsequentes */}
+          {/* Switch Mudar Subsequentes com o mesmo estilo do Pagamento Automático */}
           {initialData && (initialData.seriesId || initialData.eventId || initialData.isRecurring || formData.periodicity === EventPeriodicity.RECURRING || formData.periodicity === EventPeriodicity.PERIOD) && (
-            <div style={{ margin: '8px 0 14px 0' }}>
-              <label
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                borderRadius: '10px',
+                background: 'var(--bg-glass, rgba(255,255,255,0.03))',
+                border: '1px solid var(--border-glass)',
+                marginBottom: '16px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Repeat size={16} style={{ color: updateScope === EventUpdateMode.SUBSEQUENT ? '#f43f5e' : 'var(--text-dim)' }} />
+                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                  {t('modal.changeSubsequent') || 'Aplicar alterações aos meses futuros'}
+                </span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={updateScope === EventUpdateMode.SUBSEQUENT}
+                onClick={() => setUpdateScope(updateScope === EventUpdateMode.SUBSEQUENT ? EventUpdateMode.SINGLE : EventUpdateMode.SUBSEQUENT)}
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '0.8rem',
-                  fontWeight: '700',
-                  color: updateScope === EventUpdateMode.SUBSEQUENT ? '#f43f5e' : 'var(--text-dim)',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  background: updateScope === EventUpdateMode.SUBSEQUENT ? 'rgba(244, 63, 94, 0.14)' : 'rgba(255, 255, 255, 0.04)',
-                  border: updateScope === EventUpdateMode.SUBSEQUENT ? '1px solid rgba(244, 63, 94, 0.35)' : '1px solid var(--border-glass)',
+                  width: '44px',
+                  height: '24px',
                   borderRadius: '9999px',
-                  padding: '5px 12px'
+                  background: updateScope === EventUpdateMode.SUBSEQUENT ? '#f43f5e' : 'rgba(148, 163, 184, 0.25)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  transition: 'background 0.2s ease',
+                  padding: 0
                 }}
               >
-                <input
-                  type="checkbox"
-                  checked={updateScope === EventUpdateMode.SUBSEQUENT}
-                  onChange={(e) => setUpdateScope(e.target.checked ? EventUpdateMode.SUBSEQUENT : EventUpdateMode.SINGLE)}
-                  style={{ accentColor: '#f43f5e' }}
+                <span
+                  style={{
+                    display: 'block',
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    background: '#ffffff',
+                    position: 'absolute',
+                    top: '3px',
+                    left: updateScope === EventUpdateMode.SUBSEQUENT ? '22px' : '4px',
+                    transition: 'left 0.2s ease',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
+                  }}
                 />
-                <span>{t('modal.changeSubsequent') || 'Aplicar alterações aos meses futuros'}</span>
-              </label>
+              </button>
             </div>
           )}
 

@@ -13,11 +13,11 @@ export default function DeleteEventModal({
   event,
   onConfirmDelete
 }) {
-  const [deletionMode, setDeletionMode] = useState(EventDeletionMode.FROM_NOW_ON);
+  const [deletionMode, setDeletionMode] = useState(EventDeletionMode.EVERYTHING);
 
   useEffect(() => {
     if (isOpen) {
-      setDeletionMode(EventDeletionMode.FROM_NOW_ON);
+      setDeletionMode(EventDeletionMode.EVERYTHING);
     }
   }, [isOpen, event]);
 

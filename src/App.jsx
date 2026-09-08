@@ -932,7 +932,7 @@ export default function App() {
     }
   };
 
-  const handleConfirmDeleteEvent = (eventId, deleteScope = 'single') => {
+  const handleConfirmDeleteEvent = (eventId, deleteScope = EventDeletionMode.EVERYTHING) => {
     let targetEvent = deletingEvent && (deletingEvent.id === eventId || String(deletingEvent.id) === String(eventId)) ? deletingEvent : null;
     if (!targetEvent) {
       timelines.forEach((tl) => {
@@ -950,7 +950,7 @@ export default function App() {
 
     const deleteAsync = async () => {
       try {
-        const mode = typeof deleteScope === 'string' ? deleteScope : (deleteScope ? EventDeletionMode.FROM_NOW_ON : EventDeletionMode.ONLY_THIS);
+        const mode = typeof deleteScope === 'string' ? deleteScope : (deleteScope ? EventDeletionMode.EVERYTHING : EventDeletionMode.ONLY_THIS);
         await api.deleteEvent(eventId, {
           deletionMode: mode,
           deleteScope: mode,

@@ -136,12 +136,13 @@ export default function BalanceEventModal({
     const isInv = movementType === 'investimento';
     const isInc = movementType === 'entrada';
 
+    const defaultInitialStatus = isInv ? EventStatus.PLANNED : EventStatus.PENDING;
     const eventPayload = {
       ...(initialData || {}),
       title: formData.title.trim(),
       date: finalDate,
       time: formData.time,
-      status: formData.status,
+      status: initialData ? (initialData.status || defaultInitialStatus) : defaultInitialStatus,
       periodicity: formData.periodicity,
       recurrenceEndDate: formData.periodicity === EventPeriodicity.PERIOD ? formData.recurrenceEndDate : null,
       amount: numAmount,
@@ -322,77 +323,62 @@ export default function BalanceEventModal({
             </div>
           </div>
 
-          {/* Periodicidade */}
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-              Periodicidade
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-              {[
-                { id: EventPeriodicity.RECURRENT, label: 'Recorrente', icon: <Repeat size={13} /> },
-                { id: EventPeriodicity.UNIQUE, label: 'Pontual', icon: <Zap size={13} /> },
-                { id: EventPeriodicity.PERIOD, label: 'Período', icon: <Calendar size={13} /> }
-              ].map((p) => {
-                const isSelected = formData.periodicity === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, periodicity: p.id })}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '5px',
-                      padding: '8px',
-                      borderRadius: '8px',
-                      border: isSelected ? `1px solid ${accentColor}` : '1px solid var(--border-glass)',
-                      background: isSelected ? `${accentColor}22` : 'var(--bg-app)',
-                      color: isSelected ? accentColor : 'var(--text-muted)',
-                      fontSize: '0.78rem',
-                      fontWeight: isSelected ? '800' : '600',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {p.icon}
-                    <span>{p.label}</span>
-                  </button>
-                );
-              })}
+          {/* Periodicidade (Apenas na criação) */}
+          {!initialData && (
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+                Periodicidade
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                {[
+                  { id: EventPeriodicity.RECURRENT, label: 'Recorrente', icon: <Repeat size={13} /> },
+                  { id: EventPeriodicity.UNIQUE, label: 'Pontual', icon: <Zap size={13} /> },
+                  { id: EventPeriodicity.PERIOD, label: 'Período', icon: <Calendar size={13} /> }
+                ].map((p) => {
+                  const isSelected = formData.periodicity === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, periodicity: p.id })}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px',
+                        padding: '8px',
+                        borderRadius: '8px',
+                        border: isSelected ? `1px solid ${accentColor}` : '1px solid var(--border-glass)',
+                        background: isSelected ? `${accentColor}22` : 'var(--bg-app)',
+                        color: isSelected ? accentColor : 'var(--text-muted)',
+                        fontSize: '0.78rem',
+                        fontWeight: isSelected ? '800' : '600',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {p.icon}
+                      <span>{p.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Dia e Data */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-                Dia do Mês
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="31"
-                value={formData.dayOfMonth}
-                onChange={(e) => setFormData({ ...formData, dayOfMonth: Number(e.target.value) })}
-                className="form-input"
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', boxSizing: 'border-box' }}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-                Status
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="form-select"
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', boxSizing: 'border-box' }}
-              >
-                <option value={EventStatus.PENDING}>Pendente / Previsto</option>
-                <option value={EventStatus.RECEIVED}>Recebido</option>
-                <option value={EventStatus.PAID}>Pago</option>
-              </select>
-            </div>
+          {/* Dia */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
+              Dia do Mês
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="31"
+              value={formData.dayOfMonth}
+              onChange={(e) => setFormData({ ...formData, dayOfMonth: Number(e.target.value) })}
+              className="form-input"
+              style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', boxSizing: 'border-box' }}
+            />
           </div>
 
           {/* Botões do Rodapé */}

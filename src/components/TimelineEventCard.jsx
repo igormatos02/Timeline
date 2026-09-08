@@ -1885,38 +1885,68 @@ export default function TimelineEventCard({
           {/* 🎯 Barra de Progresso da Meta de Poupança / Investimento */}
           {Number(event.targetAmount || 0) > 0 && (() => {
             const seriesId = event.eventId || event.seriesId || event.id;
-            const baseInitial = Number(event.initialInvestedAmount || 0);
+
+            // 1. Obter o aporte inicial desta série/investimento (mesmo nas ocorrências subsequentes)
+            let baseInitial = Number(event.initialInvestedAmount || 0);
+            if (!baseInitial) {
+              const sourceEv = (allEvents || []).find((ev) => {
+                if (!ev || !Number(ev.initialInvestedAmount || 0)) return false;
+                const isMatching = Boolean(
+                  (ev.eventType === EventType.INVESTMENT || ev.eventType === 'investimento' || ev.isInvestment) &&
+                  (
+                    (ev.eventId && (ev.eventId === seriesId || ev.eventId === event.eventId || ev.eventId === event.seriesId)) ||
+                    (ev.seriesId && (ev.seriesId === seriesId || ev.seriesId === event.seriesId || ev.seriesId === event.eventId)) ||
+                    (ev.id && (ev.id === seriesId || ev.id === event.eventId || ev.id === event.seriesId)) ||
+                    (ev.sobrepositionOver && (ev.sobrepositionOver === seriesId || ev.sobrepositionOver === event.eventId || ev.sobrepositionOver === event.seriesId)) ||
+                    (event.title && ev.title && ev.title.trim().toLowerCase() === event.title.trim().toLowerCase())
+                  )
+                );
+                return isMatching;
+              });
+              if (sourceEv) {
+                baseInitial = Number(sourceEv.initialInvestedAmount || 0);
+              }
+            }
+
             const isInvestmentsView = activeFinancialTab === 'investimentos' || timelineType === 'investimentos' || event.timelineOriginId === 'b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e';
             const isFuture = event.date > todayStr;
             const useForecast = isInvestmentsView && isFuture;
 
+            const isMatchingSeriesEvent = (ev) => {
+              if (!ev || !ev.date) return false;
+              if (ev.status === 'Cancelado' || ev.status === 'cancelled' || ev.status === 'Excluido' || ev.status === 'deleted' || ev.isDeleted) return false;
+              const isInv = ev.eventType === EventType.INVESTMENT || ev.eventType === 'investimento' || ev.isInvestment;
+              if (!isInv) return false;
+              return Boolean(
+                (ev.eventId && (ev.eventId === seriesId || ev.eventId === event.eventId || ev.eventId === event.seriesId)) ||
+                (ev.seriesId && (ev.seriesId === seriesId || ev.seriesId === event.seriesId || ev.seriesId === event.eventId)) ||
+                (ev.id && (ev.id === seriesId || ev.id === event.eventId || ev.id === event.seriesId)) ||
+                (ev.sobrepositionOver && (ev.sobrepositionOver === seriesId || ev.sobrepositionOver === event.eventId || ev.sobrepositionOver === event.seriesId)) ||
+                (event.title && ev.title && ev.title.trim().toLowerCase() === event.title.trim().toLowerCase())
+              );
+            };
+
             let currentSaved = baseInitial;
 
             if (useForecast) {
-              // Em visão de Investimentos no futuro: computar a projeção/previsão acumulada
+              // Em visão de Investimentos no futuro: computar a projeção/previsão acumulada até a data deste evento (inclusive)
               const priorPlannedAportes = (allEvents || [])
-                .filter((ev) => {
-                  if (!ev || !ev.date || ev.date >= event.date) return false;
-                  const matchSeries = (ev.eventId || ev.seriesId && ev.eventId || ev.seriesId === seriesId) || (ev.id === seriesId) || (ev.sobrepositionOver === seriesId) || (ev.category === event.category && ev.eventType === EventType.INVESTMENT);
-                  const isValid = ev.status !== 'Cancelado' && ev.status !== 'Excluido';
-                  return matchSeries && isValid;
-                })
+                .filter((ev) => isMatchingSeriesEvent(ev) && ev.date < event.date)
                 .reduce((sum, ev) => sum + Number(ev.amount || 0), 0);
 
               const thisMonthAmount = Number(event.amount || 0);
               currentSaved = baseInitial + priorPlannedAportes + thisMonthAmount;
             } else {
-              // Em visão de Balanço ou histórico realizado: computar apenas o património e aportes efetivamente liquidados até à data
+              // Em visão de Balanço ou histórico realizado: computar o aporte inicial + aportes efetivamente liquidados até à data (inclusive)
               const priorRealizedAportes = (allEvents || [])
                 .filter((ev) => {
-                  if (!ev || !ev.date || ev.date >= event.date) return false;
-                  const matchSeries = (ev.eventId || ev.seriesId && ev.eventId || ev.seriesId === seriesId) || (ev.id === seriesId) || (ev.sobrepositionOver === seriesId) || (ev.category === event.category && ev.eventType === EventType.INVESTMENT);
-                  const isDone = ev.status === 'Investido' || ev.status === 'Pago' || ev.isCompleted;
-                  return matchSeries && isDone;
+                  if (!isMatchingSeriesEvent(ev) || ev.date >= event.date) return false;
+                  return ev.status === 'Investido' || ev.status === 'invested' || ev.status === 'Pago' || ev.status === 'paid' || ev.isCompleted;
                 })
                 .reduce((sum, ev) => sum + Number(ev.amount || 0), 0);
 
-              currentSaved = baseInitial + priorRealizedAportes;
+              const thisMonthRealized = isCompletedInvestment ? Number(event.amount || 0) : 0;
+              currentSaved = baseInitial + priorRealizedAportes + thisMonthRealized;
             }
 
             const targetVal = Number(event.targetAmount);

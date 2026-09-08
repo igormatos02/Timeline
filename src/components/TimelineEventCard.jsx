@@ -2902,8 +2902,8 @@ export default function TimelineEventCard({
         </div>
 
         <div className="event-card-actions">
-          {/* Botão Pagar até aqui para parcelas de empréstimo / dívida em aberto */}
-          {isLoanInstallment && !isPaidLoan && onPayUpToHere && (
+          {/* Botão Pagar até aqui para parcelas de empréstimo / dívida em aberto (apenas até ao mês atual) */}
+          {isLoanInstallment && !isPaidLoan && onPayUpToHere && (event.date <= currentMonthEndStr) && (
             <button
               type="button"
               className="btn btn-secondary btn-sm"

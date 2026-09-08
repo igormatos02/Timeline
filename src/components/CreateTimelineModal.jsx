@@ -174,6 +174,7 @@ export default function CreateTimelineModal({
   };
 
   const isEditing = Boolean(initialData && initialData.id);
+  const isLoanType = (formData.type || initialData?.type || '').toLowerCase() === TimelineType.LOAN || (formData.type || initialData?.type || '').toLowerCase() === 'loan' || (formData.type || initialData?.type || '').toLowerCase() === 'empréstimo' || (formData.type || initialData?.type || '').toLowerCase() === 'emprestimo';
   const isStatusActive = formData.status === TimelineStatus.ACTIVE;
   const isStatusInactive = formData.status === TimelineStatus.INACTIVE;
 
@@ -240,7 +241,7 @@ export default function CreateTimelineModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <CreditCard size={22} className="text-primary" />
             <h2 className="modal-title">
-              {isEditing ? t('loanModal.editTitle') : t('loanModal.newTitle')}
+              {isEditing ? (isLoanType ? t('loanModal.editTitle') : 'Timeline Settings') : t('loanModal.newTitle')}
             </h2>
           </div>
           <button className="modal-close-btn" onClick={onClose}>
@@ -334,241 +335,243 @@ export default function CreateTimelineModal({
             )}
           </div>
 
-          {/* Loan Contract Specific Parameters */}
-          <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.07)', border: '1px solid var(--border-glass-glow)', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', fontWeight: '700', color: 'var(--primary-light)', marginBottom: '12px' }}>
-              <CreditCard size={16} /> {t('loanModal.contractSectionTitle')}
-            </div>
-
-            {/* Identificação do Contrato */}
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">{t('loanModal.contractNumberLabel')}</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder={t('loanModal.contractNumberPlaceholder')}
-                  value={formData.contractNumber || ''}
-                  onChange={(e) => setFormData({ ...formData, contractNumber: e.target.value })}
-                />
+          {/* Loan Contract Specific Parameters (Renderizado Apenas para Timeline de Empréstimo) */}
+          {isLoanType && (
+            <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.07)', border: '1px solid var(--border-glass-glow)', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', fontWeight: '700', color: 'var(--primary-light)', marginBottom: '12px' }}>
+                <CreditCard size={16} /> {t('loanModal.contractSectionTitle')}
               </div>
-              <div className="form-group">
-                <label className="form-label">{t('loanModal.bankNameLabel')}</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder={t('loanModal.bankNamePlaceholder')}
-                  value={formData.bankName || ''}
-                  onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                />
+
+              {/* Identificação do Contrato */}
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">{t('loanModal.contractNumberLabel')}</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder={t('loanModal.contractNumberPlaceholder')}
+                    value={formData.contractNumber || ''}
+                    onChange={(e) => setFormData({ ...formData, contractNumber: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{t('loanModal.bankNameLabel')}</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder={t('loanModal.bankNamePlaceholder')}
+                    value={formData.bankName || ''}
+                    onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Valores Principais */}
-            <div className="form-group">
-              <label className="form-label">{t('loanModal.totalDebtLabel')}</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                className="form-input"
-                placeholder={t('loanModal.totalDebtPlaceholder')}
-                value={formData.totalDebt}
-                onChange={(e) => setFormData({ ...formData, totalDebt: e.target.value })}
-                required
-              />
-            </div>
-
-            {/* Taxas & Condições */}
-            <div className="form-row">
+              {/* Valores Principais */}
               <div className="form-group">
-                <label className="form-label">{t('loanModal.tanRateLabel')}</label>
+                <label className="form-label">{t('loanModal.totalDebtLabel')}</label>
                 <input
                   type="number"
-                  step="0.0001"
                   min="0"
+                  step="0.01"
                   className="form-input"
-                  placeholder="Ex: 11.1830"
-                  value={formData.tanRate}
-                  onChange={(e) => setFormData({ ...formData, tanRate: e.target.value })}
+                  placeholder={t('loanModal.totalDebtPlaceholder')}
+                  value={formData.totalDebt}
+                  onChange={(e) => setFormData({ ...formData, totalDebt: e.target.value })}
+                  required={isLoanType}
                 />
               </div>
+
+              {/* Taxas & Condições */}
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">{t('loanModal.tanRateLabel')}</label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    className="form-input"
+                    placeholder="Ex: 11.1830"
+                    value={formData.tanRate}
+                    onChange={(e) => setFormData({ ...formData, tanRate: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{t('loanModal.spreadLabel')}</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="form-input"
+                    placeholder="Ex: 0.00"
+                    value={formData.spread}
+                    onChange={(e) => setFormData({ ...formData, spread: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Imposto de Selo sobre Juros */}
               <div className="form-group">
-                <label className="form-label">{t('loanModal.spreadLabel')}</label>
+                <label className="form-label">{t('loanModal.interestStampTaxRateLabel')}</label>
                 <input
                   type="number"
                   step="0.01"
                   min="0"
                   className="form-input"
-                  placeholder="Ex: 0.00"
-                  value={formData.spread}
-                  onChange={(e) => setFormData({ ...formData, spread: e.target.value })}
+                  placeholder="Ex: 4.00"
+                  value={formData.interestStampTaxRate}
+                  onChange={(e) => setFormData({ ...formData, interestStampTaxRate: e.target.value })}
                 />
               </div>
-            </div>
 
-            {/* Imposto de Selo sobre Juros */}
-            <div className="form-group">
-              <label className="form-label">{t('loanModal.interestStampTaxRateLabel')}</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                className="form-input"
-                placeholder="Ex: 4.00"
-                value={formData.interestStampTaxRate}
-                onChange={(e) => setFormData({ ...formData, interestStampTaxRate: e.target.value })}
-              />
-            </div>
-
-            {/* Dia Vencimento */}
-            <div className="form-group">
-              <label className="form-label">{t('loanModal.dueDayLabel')}</label>
-              <input
-                type="number"
-                min="1"
-                max="31"
-                className="form-input"
-                placeholder="Ex: 10"
-                value={formData.dueDay}
-                onChange={(e) => setFormData({ ...formData, dueDay: e.target.value })}
-                required
-              />
-            </div>
-
-            {/* Start Date (Mês/Ano) & Total Installments */}
-            <div className="form-row">
-              <div className="form-group" style={{ position: 'relative' }}>
-                <label className="form-label">{t('loanModal.startDateLabel')}</label>
-
-                {/* Botão Seletor Mês/Ano */}
-                <div
-                  onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    background: 'var(--bg-glass, rgba(255,255,255,0.03))',
-                    border: isMonthPickerOpen ? '2px solid var(--primary)' : '1px solid var(--border-glass)',
-                    borderRadius: '8px',
-                    padding: '10px 12px',
-                    cursor: 'pointer',
-                    minHeight: '42px',
-                    boxSizing: 'border-box'
-                  }}
-                >
-                  <span style={{ fontSize: '0.9rem', fontWeight: '700', color: formData.startDate ? 'var(--text-main)' : 'var(--text-muted)' }}>
-                    {formData.startDate
-                      ? format(parseISO(`${formData.startDate}-01`), 'MMMM yyyy', { locale: dateLocale })
-                      : t('modal.startMonth') || 'Selecionar Mês'}
-                  </span>
-                  <ChevronDown
-                    size={16}
-                    style={{
-                      color: 'var(--text-muted)',
-                      transform: isMonthPickerOpen ? 'rotate(180deg)' : 'none',
-                      transition: 'transform 0.2s'
-                    }}
-                  />
-                </div>
-
-                {/* Popover Seletor Grade de 12 Meses + Navegação de Ano */}
-                {isMonthPickerOpen && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      zIndex: 100,
-                      marginTop: '6px',
-                      width: '260px',
-                      background: 'var(--bg-card, #131722)',
-                      border: '1px solid var(--border-glass-glow, rgba(99, 102, 241, 0.3))',
-                      borderRadius: '12px',
-                      padding: '12px',
-                      boxShadow: '0 12px 30px rgba(0,0,0,0.7)'
-                    }}
-                  >
-                    {/* Controlo de Ano */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <button
-                        type="button"
-                        onClick={() => setPickerYear((prev) => prev - 1)}
-                        style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: '4px' }}
-                      >
-                        <ChevronLeft size={16} />
-                      </button>
-                      <span style={{ fontWeight: '800', fontSize: '0.9rem', color: 'var(--primary-light)' }}>
-                        {pickerYear}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setPickerYear((prev) => prev + 1)}
-                        style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: '4px' }}
-                      >
-                        <ChevronRight size={16} />
-                      </button>
-                    </div>
-
-                    {/* Grade de 12 Meses */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
-                      {monthNames.map((name, idx) => {
-                        const mStr = (idx + 1).toString().padStart(2, '0');
-                        const keyVal = `${pickerYear}-${mStr}`;
-                        const isSelected = formData.startDate === keyVal;
-
-                        return (
-                          <button
-                            key={keyVal}
-                            type="button"
-                            onClick={() => {
-                              setFormData({ ...formData, startDate: keyVal });
-                              setIsMonthPickerOpen(false);
-                            }}
-                            style={{
-                              padding: '8px 4px',
-                              borderRadius: '6px',
-                              border: isSelected ? '1px solid var(--primary)' : '1px solid transparent',
-                              background: isSelected ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255,255,255,0.03)',
-                              color: isSelected ? 'var(--primary-light)' : 'var(--text-main)',
-                              fontWeight: isSelected ? '800' : '600',
-                              fontSize: '0.8rem',
-                              cursor: 'pointer',
-                              textAlign: 'center',
-                              textTransform: 'capitalize'
-                            }}
-                          >
-                            {name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
+              {/* Dia Vencimento */}
               <div className="form-group">
-                <label className="form-label">{t('loanModal.totalInstallmentsLabel')}</label>
+                <label className="form-label">{t('loanModal.dueDayLabel')}</label>
                 <input
                   type="number"
-                  min="0"
-                  max="600"
+                  min="1"
+                  max="31"
                   className="form-input"
-                  placeholder={t('loanModal.totalInstallmentsPlaceholder')}
-                  value={formData.totalInstallments}
-                  onChange={(e) => setFormData({ ...formData, totalInstallments: e.target.value })}
-                  disabled={isEditing}
-                  style={isEditing ? { opacity: 0.65, cursor: 'not-allowed', background: 'rgba(255,255,255,0.03)' } : {}}
-                  required
+                  placeholder="Ex: 10"
+                  value={formData.dueDay}
+                  onChange={(e) => setFormData({ ...formData, dueDay: e.target.value })}
+                  required={isLoanType}
                 />
-                {isEditing && (
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
-                    O número de prestações não pode ser alterado após a criação.
-                  </span>
-                )}
+              </div>
+
+              {/* Start Date (Mês/Ano) & Total Installments */}
+              <div className="form-row">
+                <div className="form-group" style={{ position: 'relative' }}>
+                  <label className="form-label">{t('loanModal.startDateLabel')}</label>
+
+                  {/* Botão Seletor Mês/Ano */}
+                  <div
+                    onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: 'var(--bg-glass, rgba(255,255,255,0.03))',
+                      border: isMonthPickerOpen ? '2px solid var(--primary)' : '1px solid var(--border-glass)',
+                      borderRadius: '8px',
+                      padding: '10px 12px',
+                      cursor: 'pointer',
+                      minHeight: '42px',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <span style={{ fontSize: '0.9rem', fontWeight: '700', color: formData.startDate ? 'var(--text-main)' : 'var(--text-muted)' }}>
+                      {formData.startDate
+                        ? format(parseISO(`${formData.startDate}-01`), 'MMMM yyyy', { locale: dateLocale })
+                        : t('modal.startMonth') || 'Selecionar Mês'}
+                    </span>
+                    <ChevronDown
+                      size={16}
+                      style={{
+                        color: 'var(--text-muted)',
+                        transform: isMonthPickerOpen ? 'rotate(180deg)' : 'none',
+                        transition: 'transform 0.2s'
+                      }}
+                    />
+                  </div>
+
+                  {/* Popover Seletor Grade de 12 Meses + Navegação de Ano */}
+                  {isMonthPickerOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        zIndex: 100,
+                        marginTop: '6px',
+                        width: '260px',
+                        background: 'var(--bg-card, #131722)',
+                        border: '1px solid var(--border-glass-glow, rgba(99, 102, 241, 0.3))',
+                        borderRadius: '12px',
+                        padding: '12px',
+                        boxShadow: '0 12px 30px rgba(0,0,0,0.7)'
+                      }}
+                    >
+                      {/* Controlo de Ano */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setPickerYear((prev) => prev - 1)}
+                          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: '4px' }}
+                        >
+                          <ChevronLeft size={16} />
+                        </button>
+                        <span style={{ fontWeight: '800', fontSize: '0.9rem', color: 'var(--primary-light)' }}>
+                          {pickerYear}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setPickerYear((prev) => prev + 1)}
+                          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: '4px' }}
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+
+                      {/* Grade de 12 Meses */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                        {monthNames.map((name, idx) => {
+                          const mStr = (idx + 1).toString().padStart(2, '0');
+                          const keyVal = `${pickerYear}-${mStr}`;
+                          const isSelected = formData.startDate === keyVal;
+
+                          return (
+                            <button
+                              key={keyVal}
+                              type="button"
+                              onClick={() => {
+                                setFormData({ ...formData, startDate: keyVal });
+                                setIsMonthPickerOpen(false);
+                              }}
+                              style={{
+                                padding: '8px 4px',
+                                borderRadius: '6px',
+                                border: isSelected ? '1px solid var(--primary)' : '1px solid transparent',
+                                background: isSelected ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255,255,255,0.03)',
+                                color: isSelected ? 'var(--primary-light)' : 'var(--text-main)',
+                                fontWeight: isSelected ? '800' : '600',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                textAlign: 'center',
+                                textTransform: 'capitalize'
+                              }}
+                            >
+                              {name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">{t('loanModal.totalInstallmentsLabel')}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="600"
+                    className="form-input"
+                    placeholder={t('loanModal.totalInstallmentsPlaceholder')}
+                    value={formData.totalInstallments}
+                    onChange={(e) => setFormData({ ...formData, totalInstallments: e.target.value })}
+                    disabled={isEditing}
+                    style={isEditing ? { opacity: 0.65, cursor: 'not-allowed', background: 'rgba(255,255,255,0.03)' } : {}}
+                    required={isLoanType}
+                  />
+                  {isEditing && (
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                      O número de prestações não pode ser alterado após a criação.
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Color Accent */}
           <div className="form-group">
@@ -667,22 +670,24 @@ export default function CreateTimelineModal({
               {t('buttons.cancel')}
             </button>
 
-            {/* Botão Simular */}
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleRunSimulation}
-              style={{
-                borderColor: 'var(--primary)',
-                color: 'var(--primary-light)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <Sparkles size={16} />
-              {t('loanModal.simulateButton')}
-            </button>
+            {/* Botão Simular (Apenas para Empréstimo) */}
+            {isLoanType && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleRunSimulation}
+                style={{
+                  borderColor: 'var(--primary)',
+                  color: 'var(--primary-light)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Sparkles size={16} />
+                {t('loanModal.simulateButton')}
+              </button>
+            )}
 
             <button type="submit" className="btn btn-primary">
               {isEditing ? t('loanModal.saveButton') : t('loanModal.createButton')}

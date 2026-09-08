@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, LayoutGrid, ChevronDown, Trash2 } from 'lucide-react';
-import { TimeboardType } from '../../shared/enums/TimeboardType.js';
+import { X, Sparkles, Settings, Trash2 } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
+import { TimelineStatus } from '../enums/index.js';
 
-export default function CreateTimeboardModal({
+export default function EditTimelineSettingsModal({
   isOpen,
   onClose,
   onSave,
@@ -15,7 +15,8 @@ export default function CreateTimeboardModal({
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    type: TimeboardType.FINANCIAL
+    color: '#6366f1',
+    status: TimelineStatus.ACTIVE
   });
 
   useEffect(() => {
@@ -24,13 +25,8 @@ export default function CreateTimeboardModal({
       setFormData({
         name: initialData.name || '',
         description: initialData.description || '',
-        type: initialData.type || TimeboardType.FINANCIAL
-      });
-    } else {
-      setFormData({
-        name: '',
-        description: '',
-        type: TimeboardType.FINANCIAL
+        color: initialData.color || '#6366f1',
+        status: initialData.status === TimelineStatus.INACTIVE ? TimelineStatus.INACTIVE : TimelineStatus.ACTIVE
       });
     }
   }, [initialData, isOpen]);
@@ -51,10 +47,10 @@ export default function CreateTimeboardModal({
     if (!formData.name.trim()) return;
 
     onSave({
+      ...initialData,
       ...formData,
       name: formData.name.trim(),
-      description: formData.description.trim(),
-      type: formData.type || TimeboardType.FINANCIAL
+      description: formData.description.trim()
     });
     onClose();
   };
@@ -65,6 +61,16 @@ export default function CreateTimeboardModal({
       onClose();
     }
   };
+
+  const colors = [
+    '#6366f1', // Indigo
+    '#0ea5e9', // Sky Blue
+    '#10b981', // Emerald
+    '#f43f5e', // Rose
+    '#f59e0b', // Amber
+    '#a855f7', // Purple
+    '#06b6d4'  // Cyan
+  ];
 
   return (
     <div
@@ -91,7 +97,7 @@ export default function CreateTimeboardModal({
         className="modal-card"
         onClick={(e) => e.stopPropagation()}
         style={{
-          maxWidth: '520px',
+          maxWidth: '500px',
           width: '100%',
           maxHeight: '90vh',
           overflowY: 'auto',
@@ -107,14 +113,14 @@ export default function CreateTimeboardModal({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#6366f1', padding: '8px', borderRadius: '10px', display: 'flex' }}>
-              <LayoutGrid size={20} />
+              <Settings size={20} />
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                {initialData ? 'Timeboard Settings' : t('timeboardModal.newTitle')}
+                Timeline Settings
               </h3>
               <div style={{ fontSize: '0.76rem', color: '#6366f1', fontWeight: '700' }}>
-                {initialData ? t('timeboardModal.editSubtitle') : t('timeboardModal.newSubtitle')}
+                Editar nome e descrição da timeline
               </div>
             </div>
           </div>
@@ -130,10 +136,10 @@ export default function CreateTimeboardModal({
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Timeboard Name */}
+          {/* Timeline Name */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
-              {t('timeboardModal.nameLabel')}
+              Nome da Timeline
             </label>
             <input
               type="text"
@@ -149,7 +155,7 @@ export default function CreateTimeboardModal({
                 outline: 'none',
                 boxSizing: 'border-box'
               }}
-              placeholder={t('timeboardModal.namePlaceholder')}
+              placeholder="Ex: Entradas e Rendimentos"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -160,7 +166,7 @@ export default function CreateTimeboardModal({
           {/* Description */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
-              {t('timeboardModal.descriptionLabel')}
+              Descrição
             </label>
             <textarea
               rows={3}
@@ -176,68 +182,40 @@ export default function CreateTimeboardModal({
                 boxSizing: 'border-box',
                 resize: 'none'
               }}
-              placeholder={t('timeboardModal.descriptionPlaceholder')}
+              placeholder="Descreva o propósito desta timeline..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
 
-          {/* Timeboard Type */}
+          {/* Color Accent */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
-              {t('timeboardModal.typeLabel')}
+              Cor de Destaque
             </label>
-            <div style={{ position: 'relative' }}>
-              <select
-                className="form-input"
-                disabled={Boolean(initialData)}
-                style={{
-                  width: '100%',
-                  padding: '10px 36px 10px 12px',
-                  borderRadius: '8px',
-                  boxSizing: 'border-box',
-                  background: initialData ? 'rgba(148, 163, 184, 0.1)' : 'var(--bg-glass, rgba(255, 255, 255, 0.03))',
-                  color: initialData ? 'var(--text-dim)' : 'var(--text-main)',
-                  border: '1px solid var(--border-glass)',
-                  cursor: initialData ? 'not-allowed' : 'pointer',
-                  fontSize: '0.9rem',
-                  fontWeight: '600',
-                  appearance: 'none',
-                  WebkitAppearance: 'none'
-                }}
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                required
-              >
-                <option value={TimeboardType.FINANCIAL} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
-                  {t('timeboardModal.typeFinancial')}
-                </option>
-                <option value={TimeboardType.PROJECTS} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
-                  {t('timeboardModal.typeProjects')}
-                </option>
-                <option value={TimeboardType.REMINDERS} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
-                  {t('timeboardModal.typeReminders')}
-                </option>
-              </select>
-              <div
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  pointerEvents: 'none',
-                  color: 'var(--text-dim)',
-                  display: 'flex'
-                }}
-              >
-                <ChevronDown size={16} />
-              </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+              {colors.map((c) => (
+                <div
+                  key={c}
+                  onClick={() => setFormData({ ...formData, color: c })}
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    backgroundColor: c,
+                    cursor: 'pointer',
+                    border: formData.color === c ? '3px solid #fff' : '2px solid transparent',
+                    boxShadow: formData.color === c ? '0 0 12px ' + c : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                />
+              ))}
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
-            {initialData && onDelete && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '14px' }}>
+            {initialData && !initialData.isSystemDefault && onDelete && (
               <button
                 type="button"
                 onClick={handleDelete}
@@ -254,7 +232,7 @@ export default function CreateTimeboardModal({
                   alignItems: 'center',
                   gap: '6px'
                 }}
-                title="Eliminar este Timeboard"
+                title="Eliminar esta Timeline"
               >
                 <Trash2 size={15} />
                 <span>{t('buttons.delete') || 'Excluir'}</span>
@@ -277,6 +255,7 @@ export default function CreateTimeboardModal({
             >
               {t('buttons.cancel')}
             </button>
+
             <button
               type="submit"
               style={{
@@ -296,7 +275,7 @@ export default function CreateTimeboardModal({
               }}
             >
               <Sparkles size={16} />
-              <span>{initialData ? t('timeboardModal.saveButton') : t('timeboardModal.createButton')}</span>
+              <span>{t('buttons.save') || 'Salvar'}</span>
             </button>
           </div>
         </form>

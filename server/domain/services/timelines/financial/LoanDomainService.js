@@ -22,17 +22,7 @@ export class LoanDomainService {
    * Calculate metrics for a single loan timeline or consolidated active loans
    */
   calculateMetrics(loanTimeline, loanEvents = [], currentMonthKey = null, loanContract = null) {
-    const isInactive = loanTimeline && loanTimeline.status === TimelineStatus.INACTIVE;
-    if (isInactive) {
-      return {
-        isActive: false,
-        totalDebt: 0,
-        remainingDebt: 0,
-        amortizedCapital: 0,
-        monthlyInstallment: 0,
-        progressPercent: 0
-      };
-    }
+    const isInactive = loanTimeline && (loanTimeline.status === TimelineStatus.INACTIVE || loanTimeline.status === 'inactive');
 
     const activeMonth = currentMonthKey || new Date().toISOString().substring(0, 7);
 
@@ -89,34 +79,49 @@ export class LoanDomainService {
     let paidInstallmentsCount = 0;
     let nextDueDate = null;
 
-    const totalInstallmentsCount = sortedEvents.length || Number(loanContract?.totalInstallments || loanContract?.total_installments || 0);
+    // Contagem e agregação estrita de parcelas de empréstimo (excluindo amortizações extraordinárias da contagem de parcelas)
+    const loanInstallmentEvents = sortedEvents.filter(
+      (ev) => ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'LOAN_INSTALLMENT' || (ev.eventType !== EventType.AMORTIZATION && ev.category !== 'AMORTIZATION')
+    );
+
+    const totalInstallmentsCount = loanInstallmentEvents.length || Number(loanContract?.totalInstallments || loanContract?.total_installments || 0);
 
     for (const ev of sortedEvents) {
+      const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'LOAN_INSTALLMENT' || (ev.eventType !== EventType.AMORTIZATION && ev.category !== 'AMORTIZATION');
       const cap = Number(ev.installmentCapital !== undefined ? ev.installmentCapital : (ev.principalAmount || 0));
       const intVal = Number(ev.interestPortion !== undefined ? ev.interestPortion : (ev.interestAmount || ev.interest_amount || 0));
       const feeVal = Number(ev.taxAmount !== undefined ? ev.taxAmount : (ev.installmentFee || ev.tax_amount || 0));
-      const isPaid = isPositiveStatus(ev.status) || ev.isCompleted;
+      const isPaidOrAbatida = isPositiveStatus(ev.status) || ev.isCompleted || ev.status === EventStatus.AMORTIZED || Boolean(ev.isAbatida);
 
-      totalEstimatedInterest += (intVal + feeVal);
+      if (isLoanInstallment) {
+        totalEstimatedInterest += (intVal + feeVal);
+      }
 
-      if (isPaid) {
+      if (isPaidOrAbatida) {
         paidCapital += cap;
-        paidInterest += (intVal + feeVal);
-        paidInstallmentsCount++;
+        if (isLoanInstallment) {
+          paidInterest += (intVal + feeVal);
+          paidInstallmentsCount++;
+        }
       } else {
-        futureCapital += cap;
-        futureInterest += (intVal + feeVal);
-        if (!nextDueDate && ev.date) {
-          nextDueDate = ev.date;
+        if (isLoanInstallment) {
+          futureCapital += cap;
+          futureInterest += (intVal + feeVal);
+          if (!nextDueDate && ev.date) {
+            nextDueDate = ev.date;
+          }
         }
       }
     }
 
     const totalLoanCost = totalDebt + totalEstimatedInterest;
     const paidTotal = paidCapital + paidInterest;
-    const futureTotal = futureCapital + futureInterest;
+    // Garantir que a soma do capital futuro a pagar coincide exatamente com o Saldo Devedor / Capital ainda devido
+    const normalizedFutureCapital = remainingDebt;
+    const futureTotal = normalizedFutureCapital + futureInterest;
     const remainingInstallmentsCount = Math.max(0, totalInstallmentsCount - paidInstallmentsCount);
-    const estimatedPayoffDate = sortedEvents[sortedEvents.length - 1]?.date || loanContract?.endDate || loanContract?.end_date || null;
+    const lastActiveInstallment = loanInstallmentEvents.filter(ev => !ev.isAbatida && ev.status !== EventStatus.AMORTIZED).pop() || loanInstallmentEvents[loanInstallmentEvents.length - 1];
+    const estimatedPayoffDate = lastActiveInstallment?.date || loanContract?.endDate || loanContract?.end_date || null;
 
     const monthlyInstallmentsPaid = sortedEvents
       .filter(
@@ -129,7 +134,7 @@ export class LoanDomainService {
       .reduce((sum, ev) => sum + (Number(ev.amount || ev.installmentAmount) || 0), 0);
 
     return {
-      isActive: true,
+      isActive: !isInactive,
       totalDebt: Math.round(totalDebt * 100) / 100,
       original_capital: Math.round(totalDebt * 100) / 100,
       originalCapital: Math.round(totalDebt * 100) / 100,
@@ -155,7 +160,7 @@ export class LoanDomainService {
       paid_interest: Math.round(paidInterest * 100) / 100,
       paid_total: Math.round(paidTotal * 100) / 100,
 
-      future_capital: Math.round(futureCapital * 100) / 100,
+      future_capital: Math.round(remainingDebt * 100) / 100,
       future_interest: Math.round(futureInterest * 100) / 100,
       future_total: Math.round(futureTotal * 100) / 100,
 

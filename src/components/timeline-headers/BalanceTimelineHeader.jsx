@@ -13,7 +13,8 @@ import {
   Plus,
   ChevronDown,
   ChevronUp,
-  X
+  X,
+  Settings
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -81,13 +82,27 @@ export default function BalanceTimelineHeader({
   // Extrair métricas consolidadas seguras da Stored Procedure ou fallback
   const dto = timeline.balanceHeaderResult || timeline.procedureMetrics;
   const rawMetrics = dto || timeline.metrics || {};
+  // Calcular saldo devedor vindo de todas as timelines de empréstimos ATIVAS
+  const activeLoanTimelinesSum = (allTimelines || []).filter((t) => {
+    const typeLower = (t.type || '').toLowerCase();
+    const isLoan = typeLower.includes('loan') || typeLower.includes('empr');
+    const isActive = t.status === 'active' || t.status === 'ACTIVE' || !t.status;
+    return isLoan && isActive;
+  }).reduce((sum, t) => {
+    const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
+    return sum + Number(m.remaining_debt ?? m.remainingDebt ?? m.total_debt ?? m.totalDebt ?? 0);
+  }, 0);
+
+  const rawRemainingDebt = rawMetrics.total_remaining_debt ?? rawMetrics.totalRemainingDebt ?? 0;
+  const computedRemainingDebt = activeLoanTimelinesSum > 0 ? activeLoanTimelinesSum : rawRemainingDebt;
+
   const finMetrics = {
     ...rawMetrics,
     netRealized: rawMetrics.net_realized ?? rawMetrics.netRealized ?? 0,
     totalReceived: rawMetrics.total_received ?? rawMetrics.totalReceived ?? 0,
     totalPaidExpenses: rawMetrics.total_paid_expenses ?? rawMetrics.totalPaidExpenses ?? 0,
     totalInvested: rawMetrics.total_invested ?? rawMetrics.totalInvested ?? 0,
-    totalRemainingDebt: rawMetrics.total_remaining_debt ?? rawMetrics.total_remaining_debt ?? rawMetrics.totalRemainingDebt ?? 0,
+    totalRemainingDebt: computedRemainingDebt,
     totalAmortized: rawMetrics.total_amortized ?? rawMetrics.totalAmortized ?? 0,
     totalLoanDebt: rawMetrics.total_loan_debt ?? rawMetrics.totalLoanDebt ?? 0,
     investmentsTotalAccumulated: rawMetrics.investments_total_accumulated ?? rawMetrics.investmentsTotalAccumulated ?? 0
@@ -208,23 +223,25 @@ export default function BalanceTimelineHeader({
             </button>
           )}
 
-          {onReset && (
+          {onEdit && (
             <button
               type="button"
-              className="btn btn-outline-danger btn-sm"
-              onClick={onReset}
-              title="Limpar todos os dados consolidados"
+              onClick={onEdit}
+              title="Timeline Settings"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px',
-                padding: '6px 10px',
+                justifyContent: 'center',
+                background: 'rgba(99, 102, 241, 0.1)',
+                border: '1px solid rgba(99, 102, 241, 0.2)',
+                color: 'var(--primary-light)',
+                cursor: 'pointer',
+                padding: '6px 8px',
                 borderRadius: '8px',
-                fontSize: '0.74rem'
+                transition: 'all 0.15s ease'
               }}
             >
-              <RotateCcw size={13} />
-              <span>Reset</span>
+              <Settings size={15} />
             </button>
           )}
         </div>
@@ -522,16 +539,17 @@ export default function BalanceTimelineHeader({
                   color: loanColors[idx % loanColors.length]
                 })).filter((item) => item.amount > 0 || item.percent > 0);
 
-                if (loanItems.length === 0) {
-                  // Extrair linhas do tempo de empréstimos enviadas em allTimelines
-                  const loanTimelines = (allTimelines || []).filter((t) => {
-                    const typeLower = (t.type || '').toLowerCase();
-                    return typeLower.includes('loan') || typeLower.includes('empr');
-                  });
+                const activeLoanTimelines = (allTimelines || []).filter((t) => {
+                  const typeLower = (t.type || '').toLowerCase();
+                  const isLoan = typeLower.includes('loan') || typeLower.includes('empr');
+                  const isActive = t.status === 'active' || t.status === 'ACTIVE' || !t.status;
+                  return isLoan && isActive;
+                });
 
-                  loanItems = loanTimelines.map((t, idx) => {
+                if (loanItems.length === 0) {
+                  loanItems = activeLoanTimelines.map((t, idx) => {
                     const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
-                    const debt = Number(m.remaining_debt ?? m.total_debt ?? 0);
+                    const debt = Number(m.remaining_debt ?? m.remainingDebt ?? m.total_debt ?? m.totalDebt ?? 0);
                     return {
                       id: t.id,
                       name: t.name,
@@ -540,6 +558,16 @@ export default function BalanceTimelineHeader({
                     };
                   }).filter((item) => item.amount > 0);
                 }
+
+                const computedActiveAmortized = activeLoanTimelines.reduce((sum, t) => {
+                  const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
+                  return sum + Number(m.amortized_capital ?? m.amortizedCapital ?? m.paid_capital ?? 0);
+                }, 0);
+
+                const computedActiveRemainingDebt = activeLoanTimelines.reduce((sum, t) => {
+                  const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
+                  return sum + Number(m.remaining_debt ?? m.remainingDebt ?? m.total_debt ?? m.totalDebt ?? 0);
+                }, 0);
 
                 const totalDebtSum = loanItems.reduce((acc, i) => acc + (i.amount || 0), 0);
                 const itemsWithPct = loanItems.map((i) => ({
@@ -572,8 +600,8 @@ export default function BalanceTimelineHeader({
                   return { ...slice, pathData };
                 });
 
-                const totalAmortizedVal = finMetrics.totalAmortized ?? 0;
-                const totalRemainingDebtVal = finMetrics.totalRemainingDebt ?? 0;
+                const totalAmortizedVal = activeLoanTimelines.length > 0 ? computedActiveAmortized : (finMetrics.totalAmortized ?? 0);
+                const totalRemainingDebtVal = activeLoanTimelines.length > 0 ? computedActiveRemainingDebt : (finMetrics.totalRemainingDebt ?? 0);
 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

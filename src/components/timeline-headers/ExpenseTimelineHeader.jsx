@@ -11,7 +11,9 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  Layers
+  Layers,
+  Settings,
+  RotateCcw
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/loanCalculations';
 import { ExpenseEventCategory } from '../../../shared/enums/ExpensesEventCategory.js';
@@ -24,6 +26,7 @@ export default function ExpenseTimelineHeader({
   onEdit,
   onDelete,
   onAddEvent,
+  onReset,
   activeViewMode = 'summary',
   setActiveViewMode
 }) {
@@ -149,11 +152,12 @@ export default function ExpenseTimelineHeader({
             </button>
           )}
 
-          {onEdit && (
+          {onReset && (
             <button
               type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={onEdit}
+              className="btn btn-outline-danger btn-sm"
+              onClick={onReset}
+              title="Limpar todos os movimentos desta timeline"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -163,8 +167,30 @@ export default function ExpenseTimelineHeader({
                 fontSize: '0.74rem'
               }}
             >
-              <Edit3 size={13} />
-              <span>Editar</span>
+              <RotateCcw size={13} />
+              <span>Reset</span>
+            </button>
+          )}
+
+          {onEdit && (
+            <button
+              type="button"
+              onClick={onEdit}
+              title="Timeline Settings"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(99, 102, 241, 0.1)',
+                border: '1px solid rgba(99, 102, 241, 0.2)',
+                color: 'var(--primary-light)',
+                cursor: 'pointer',
+                padding: '6px 8px',
+                borderRadius: '8px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Settings size={15} />
             </button>
           )}
 

@@ -8,7 +8,8 @@ import {
   ChevronUp,
   CheckCircle2,
   Clock,
-  Sparkles
+  Sparkles,
+  Settings
 } from 'lucide-react';
 
 export default function ProjectTimelineHeader({
@@ -145,19 +146,22 @@ export default function ProjectTimelineHeader({
           {onEdit && (
             <button
               type="button"
-              className="btn btn-secondary btn-sm"
               onClick={onEdit}
+              title="Timeline Settings"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px',
-                padding: '6px 10px',
+                justifyContent: 'center',
+                background: 'rgba(99, 102, 241, 0.1)',
+                border: '1px solid rgba(99, 102, 241, 0.2)',
+                color: 'var(--primary-light)',
+                cursor: 'pointer',
+                padding: '6px 8px',
                 borderRadius: '8px',
-                fontSize: '0.74rem'
+                transition: 'all 0.15s ease'
               }}
             >
-              <Edit3 size={13} />
-              <span>Edit</span>
+              <Settings size={15} />
             </button>
           )}
 

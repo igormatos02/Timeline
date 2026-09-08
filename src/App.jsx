@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import TimelineHeader from './components/TimelineHeader';
 import VerticalTimeline from './components/VerticalTimeline';
 import CreateTimelineModal from './components/CreateTimelineModal';
+import EditTimelineSettingsModal from './components/EditTimelineSettingsModal';
 import CreateTimeboardModal from './components/CreateTimeboardModal';
 import CreateEventModal from './components/CreateEventModal';
 import DeleteEventModal from './components/DeleteEventModal';
@@ -19,7 +20,7 @@ import {
 } from './utils/loanCalculations';
 import * as api from './services/api';
 import { generateUUID } from './utils/uuid';
-import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, AmortizationStrategy } from './enums/index.js';
+import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, AmortizationStrategy, isPositiveStatus } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
@@ -112,6 +113,7 @@ export default function App() {
 
   // Modal states
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
+  const [isTimelineSettingsModalOpen, setIsTimelineSettingsModalOpen] = useState(false);
   const [editingTimeline, setEditingTimeline] = useState(null);
 
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -353,7 +355,9 @@ export default function App() {
     if (!activeTimeline) return;
     let enrichedTimeline = { ...activeTimeline };
 
-    if (activeTimeline.type === TimelineType.LOAN || activeTimeline.type === 'loan') {
+    const isLoanType = activeTimeline.type === TimelineType.LOAN || activeTimeline.type === 'loan' || activeTimeline.type === 'empréstimo' || activeTimeline.type === 'emprestimo';
+
+    if (isLoanType) {
       try {
         const contract = await api.fetchLoanContract(activeTimeline.id);
         if (contract) {
@@ -373,10 +377,12 @@ export default function App() {
       } catch (e) {
         console.error('Error fetching loan contract for editing:', e);
       }
+      setEditingTimeline(enrichedTimeline);
+      setIsTimelineModalOpen(true);
+    } else {
+      setEditingTimeline(enrichedTimeline);
+      setIsTimelineSettingsModalOpen(true);
     }
-
-    setEditingTimeline(enrichedTimeline);
-    setIsTimelineModalOpen(true);
   };
 
   const handleSaveTimeline = async (formData) => {
@@ -642,6 +648,22 @@ export default function App() {
     }
   };
 
+  const handleToggleTimelineStatus = async (targetTimeline, newStatus) => {
+    if (!targetTimeline || !targetTimeline.id) return;
+    setTimelines((prev) =>
+      prev.map((tl) => (tl.id === targetTimeline.id ? { ...tl, status: newStatus } : tl))
+    );
+    try {
+      await api.updateTimeline(targetTimeline.id, {
+        ...targetTimeline,
+        status: newStatus
+      });
+      await refreshTimelines();
+    } catch (err) {
+      console.error('Error toggling timeline status:', err);
+    }
+  };
+
   const handleDeleteTimeline = () => {
     if (!activeTimeline) return;
     if (window.confirm(`Tem a certeza que deseja eliminar a timeline "${activeTimeline.name}"?`)) {
@@ -880,6 +902,7 @@ export default function App() {
         const monthKey = targetEvent?.date ? targetEvent.date.substring(0, 7) : focusedMonthRef.current;
         const savedScrollPos = scrollYBeforeModalRef.current || window.scrollY;
         showToast(t('toast.eventDeletedSuccess') || 'Evento eliminado da base de dados!', 'success');
+        await refreshTimelines();
 
         const scrollToMonthNode = () => {
           if (monthKey) {
@@ -1270,7 +1293,8 @@ export default function App() {
 
     const amortEvent = {
       id: generateUUID(),
-      tenantId: 'tenant-igor',
+      tenantId: DEFAULT_TENANT.id,
+      timeboardId: activeTimeboardId,
       timelineId: targetTimeline.id,
       timelineOriginId: targetTimeline.id,
       timelineOriginName: loanName,
@@ -1407,6 +1431,37 @@ export default function App() {
     }
   };
 
+  const handleDeleteTimeboard = async (timeboardId) => {
+    if (!timeboardId) return;
+    const targetTb = timeboards.find((t) => t.id === timeboardId);
+    const nameStr = targetTb ? ` "${targetTb.name}"` : '';
+    if (window.confirm(`Tem a certeza que deseja eliminar o Timeboard${nameStr}?`)) {
+      const remaining = timeboards.filter((tb) => tb.id !== timeboardId);
+      setTimeboards(remaining);
+
+      // Limpar o estado local de timelines e eventos pertencentes ao timeboard excluído
+      const deletedTimelineIds = new Set(
+        timelines.filter((tl) => tl.timeboardId === timeboardId || tl.timeboard_id === timeboardId).map((tl) => tl.id)
+      );
+      setTimelines((prev) => prev.filter((tl) => tl.timeboardId !== timeboardId && tl.timeboard_id !== timeboardId));
+      setRawEvents((prev) => prev.filter((ev) => ev.timeboardId !== timeboardId && !deletedTimelineIds.has(ev.timelineId)));
+
+      if (remaining.length > 0) {
+        setActiveTimeboardId(remaining[0].id);
+      } else {
+        setActiveTimeboardId(null);
+        setActiveTimelineId(null);
+        setActiveFinancialTab(null);
+      }
+
+      try {
+        await api.deleteTimeboard(timeboardId);
+      } catch (e) {
+        console.error('Error deleting timeboard:', e);
+      }
+    }
+  };
+
   return (
     <div className="app-container">
       {/* Navbar */}
@@ -1420,6 +1475,10 @@ export default function App() {
         }}
         onOpenCreateTimeboard={() => {
           setEditingTimeboard(null);
+          setIsTimeboardModalOpen(true);
+        }}
+        onOpenEditTimeboard={(tb) => {
+          setEditingTimeboard(tb);
           setIsTimeboardModalOpen(true);
         }}
         onScrollToToday={handleScrollToToday}
@@ -1469,6 +1528,7 @@ export default function App() {
                 activeFinancialTab={activeFinancialTab}
                 onSelectFinancialTab={setActiveFinancialTab}
                 onEdit={handleOpenEditTimeline}
+                onToggleStatus={handleToggleTimelineStatus}
                 onDelete={handleDeleteTimeline}
                 onReset={() => setIsResetConfirmOpen(true)}
                 onOpenCreateTimeline={handleOpenCreateTimeline}
@@ -1492,6 +1552,7 @@ export default function App() {
         isOpen={isTimeboardModalOpen}
         onClose={() => setIsTimeboardModalOpen(false)}
         onSave={handleSaveTimeboard}
+        onDelete={handleDeleteTimeboard}
         initialData={editingTimeboard}
       />
 
@@ -1499,6 +1560,14 @@ export default function App() {
         isOpen={isTimelineModalOpen}
         onClose={() => setIsTimelineModalOpen(false)}
         onSave={handleSaveTimeline}
+        initialData={editingTimeline}
+      />
+
+      <EditTimelineSettingsModal
+        isOpen={isTimelineSettingsModalOpen}
+        onClose={() => setIsTimelineSettingsModalOpen(false)}
+        onSave={handleSaveTimeline}
+        onDelete={handleDeleteTimeline}
         initialData={editingTimeline}
       />
 

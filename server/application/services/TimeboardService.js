@@ -1,7 +1,8 @@
 import { timeboardRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardRepository.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
-import { loanContractRepository } from '../../infrastructure/database/json/JsonLoanContractRepository.js';
-import { eventRepository } from '../../infrastructure/database/json/JsonEventRepository.js';
+import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
+import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
+import { financialEventStatusRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventStatusRepository.js';
 import { TimeboardType, TimelineType, TimelineStatus, EventAggregation } from '../../../shared/enums/index.js';
 
 export class TimeboardService {
@@ -146,12 +147,16 @@ export class TimeboardService {
   }
 
   async deleteTimeboard(id) {
-    const timelines = await timelineRepository.getAll((tl) => tl.timeboardId === id);
+    const timelines = await timelineRepository.findByTimeboardId(id);
     for (const tl of timelines) {
-      await eventRepository.deleteMany((ev) => ev.timelineId === tl.id || ev.timelineOriginId === tl.id || ev.sobrepositionOver);
-      await loanContractRepository.deleteMany((loan) => loan.timelineId === tl.id);
+      if (financialEventStatusRepository.deleteByTimelineId) {
+        await financialEventStatusRepository.deleteByTimelineId(tl.id);
+      }
+      await eventRepository.deleteByTimelineId(tl.id);
+      await loanContractRepository.deleteByTimelineId(tl.id);
       await timelineRepository.delete(tl.id);
     }
+    // Garante que qualquer evento registado diretamente no timeboard também seja removido
     await eventRepository.deleteMany((ev) => ev.timeboardId === id);
     return timeboardRepository.delete(id);
   }

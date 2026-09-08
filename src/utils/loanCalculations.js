@@ -632,24 +632,58 @@ export function getLoanMetrics(timeline, eventsList = []) {
   }
   totalSavedInterest = Math.round(totalSavedInterest * 100) / 100;
 
+  const estimatedPayoffDate = lastActiveInstallment ? lastActiveInstallment.date : (timeline.endDate || null);
+  const nextDueDate = nextInstallment ? nextInstallment.date : null;
+  const currentInstallmentAmount = Number(timeline.installmentAmount || 0) || (nextInstallment ? Number(nextInstallment.amount || 0) : (eventsList.find((e) => e.category === LoanEventCategory.LOAN_INSTALLMENT || e.eventType === EventType.LOAN_INSTALLMENT)?.amount || 0));
+  const estimatedFutureInterest = Math.max(0, (eventsList || []).filter(e => (e.category === LoanEventCategory.LOAN_INSTALLMENT || e.eventType === EventType.LOAN_INSTALLMENT) && !isPositiveStatus(e.status) && e.status !== EventStatus.AMORTIZED && !e.isAbatida).reduce((acc, ev) => acc + Number(ev.interestPortion || 0), 0));
+  const futureCapital = remainingBalance;
+  const futureTotal = futureCapital + estimatedFutureInterest;
+  const totalEstimatedInterest = totalInterestPaid + estimatedFutureInterest;
+  const totalLoanCost = totalDebt + totalEstimatedInterest;
+
   return {
     totalDebt,
+    original_capital: totalDebt,
+    originalCapital: totalDebt,
     remainingBalance,
+    remaining_debt: remainingBalance,
+    remainingDebt: remainingBalance,
+    amortized_capital: totalPrincipalAmortized,
+    amortizedCapital: totalPrincipalAmortized,
+    paid_capital: totalPrincipalAmortized,
     totalPaid,
     totalPrincipalAmortized,
     totalContractInterestPaid,
     totalLateInterestPaid,
     totalInterestPaid,
+    paid_interest: totalInterestPaid,
+    paid_total: totalPaid,
     totalSavedInterest,
     paidInstallmentsCount,
+    paid_installments: paidInstallmentsCount,
     remainingInstallmentsCount: Math.max(0, totalInstallmentsCount - paidInstallmentsCount),
+    remaining_installments: Math.max(0, totalInstallmentsCount - paidInstallmentsCount),
     overdueInstallmentsCount,
     totalInstallmentsCount,
-    monthlyPayment: Number(timeline.installmentAmount || 0) || (nextInstallment ? Number(nextInstallment.amount || 0) : (eventsList.find((e) => e.category === LoanEventCategory.LOAN_INSTALLMENT)?.amount || 0)),
+    total_installments: totalInstallmentsCount,
+    monthlyPayment: currentInstallmentAmount,
+    current_installment_amount: currentInstallmentAmount,
+    monthlyInstallment: currentInstallmentAmount,
+    future_capital: futureCapital,
+    future_interest: estimatedFutureInterest,
+    future_total: futureTotal,
+    total_estimated_interest: totalEstimatedInterest,
+    totalEstimatedInterest: totalEstimatedInterest,
+    total_loan_cost: totalLoanCost,
+    totalLoanCost: totalLoanCost,
     progressPercent,
+    amortized_percent: progressPercent,
+    amortizedPercent: progressPercent,
     nextInstallment,
+    next_due_date: nextDueDate,
+    estimated_payoff_date: estimatedPayoffDate,
     lastActiveInstallment,
-    lastInstallmentDate: lastActiveInstallment ? lastActiveInstallment.date : (timeline.endDate || null),
+    lastInstallmentDate: estimatedPayoffDate,
     abatedInstallmentsCount,
     advancedMonths,
     advancedLabel,

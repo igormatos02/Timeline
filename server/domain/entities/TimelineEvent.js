@@ -41,20 +41,20 @@ export class TimelineEvent {
     priority = EventPriority.NORMAL,
     installmentAmount = 0,
     installment_amount,
-    installmentCapital = 0,
+    installmentCapital,
     installment_capital,
-    installmentInterest = 0,
+    installmentInterest,
     installment_interest,
-    installmentFee = 0,
+    installmentFee,
     installment_fee,
     aggregation = EventAggregation.MONTHLY,
     amount = 0,
-    principalAmount = 0,
+    principalAmount,
     principal_amount,
-    interestPortion = 0,
-    interestAmount = 0,
+    interestPortion,
+    interestAmount,
     interest_amount,
-    taxAmount = 0,
+    taxAmount,
     tax_amount,
     balanceAfter = 0,
     remainingDebtAfter = 0,
@@ -124,29 +124,52 @@ export class TimelineEvent {
     this.status = status;
     this.priority = priority;
 
-    // Amount mapping: installment_amount is Total Payment, with fallbacks
-    const instAmtVal = installment_amount !== undefined ? Number(installment_amount) : (installmentAmount !== undefined ? Number(installmentAmount) : Number(amount || 0));
+    // Amount mapping: installmentAmount is the total installment payment.
+    // Use != null (loose equality) to treat both null and undefined as "not set".
+    const instAmtVal =
+      installment_amount != null ? Number(installment_amount) :
+      installmentAmount != null  ? Number(installmentAmount)  :
+      Number(amount || 0);
     this.installmentAmount = instAmtVal;
     this.amount = instAmtVal;
 
-    // Installment Capital / Principal Amount
-    const instCapVal = installment_capital !== undefined ? Number(installment_capital) : (principal_amount !== undefined ? Number(principal_amount) : (principalAmount !== undefined ? Number(principalAmount) : 0));
-    this.installmentCapital = instCapVal;
-    this.principalAmount = instCapVal;
-    this.principal_amount = instCapVal;
+    // Installment Capital / Principal Amount.
+    // Returns null when not stored so getPrincipal() can apply a derivation fallback.
+    const instCapRaw =
+      installment_capital != null ? Number(installment_capital) :
+      installmentCapital != null  ? Number(installmentCapital)  :
+      principal_amount   != null  ? Number(principal_amount)    :
+      principalAmount    != null  ? Number(principalAmount)     :
+      null;
+    this.installmentCapital = instCapRaw;
+    this.principalAmount    = instCapRaw;
+    this.principal_amount   = instCapRaw;
 
-    // Installment Interest / Interest Portion
-    const instIntVal = installment_interest !== undefined ? Number(installment_interest) : (interest_amount !== undefined ? Number(interest_amount) : (interestAmount !== undefined ? Number(interestAmount) : (interestPortion !== undefined ? Number(interestPortion) : 0)));
-    this.installmentInterest = instIntVal;
-    this.interestAmount = instIntVal;
-    this.interestPortion = instIntVal;
-    this.interest_amount = instIntVal;
+    // Installment Interest.
+    // Returns null when not stored so getInstallmentInterest() can derive a fallback.
+    const instIntRaw =
+      installment_interest != null ? Number(installment_interest) :
+      installmentInterest  != null ? Number(installmentInterest)  :
+      interest_amount      != null ? Number(interest_amount)      :
+      interestAmount       != null ? Number(interestAmount)       :
+      interestPortion      != null ? Number(interestPortion)      :
+      null;
+    this.installmentInterest = instIntRaw;
+    this.interestAmount  = instIntRaw;
+    this.interestPortion = instIntRaw;
+    this.interest_amount = instIntRaw;
 
-    // Installment Fee / Tax / Stamp Amount
-    const instFeeVal = installment_fee !== undefined ? Number(installment_fee) : (tax_amount !== undefined ? Number(tax_amount) : (taxAmount !== undefined ? Number(taxAmount) : 0));
-    this.installmentFee = instFeeVal;
-    this.taxAmount = instFeeVal;
-    this.tax_amount = instFeeVal;
+    // Installment Fee / Stamp Tax.
+    // Returns null when not stored — getInstallmentFee() defaults to 0.
+    const instFeeRaw =
+      installment_fee != null ? Number(installment_fee) :
+      installmentFee  != null ? Number(installmentFee)  :
+      tax_amount      != null ? Number(tax_amount)      :
+      taxAmount       != null ? Number(taxAmount)       :
+      null;
+    this.installmentFee = instFeeRaw;
+    this.taxAmount   = instFeeRaw;
+    this.tax_amount  = instFeeRaw;
 
     this.amortizationAmount = Number(amortizationAmount) || Number(instAmtVal) || 0;
     this.initialInvestedAmount = Number(initialInvestedAmount) || 0;

@@ -2175,7 +2175,7 @@ export default function TimelineEventCard({
               <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAmortized ? 'var(--text-main)' : isInertFuture ? 'var(--text-muted)' : 'var(--text-main)' }}>
                 {isAmortized
                   ? formatCurrency(abatedBreakdown?.origCapital || 194.88)
-                  : formatCurrency(event.principalAmount !== undefined ? event.principalAmount : (event.principal_amount !== undefined ? event.principal_amount : 0))}
+                  : formatCurrency(event.installmentCapital ?? event.principalAmount ?? event.principal_amount ?? 0)}
               </span>
             </div>
 
@@ -2187,20 +2187,18 @@ export default function TimelineEventCard({
               <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAmortized ? '#10b981' : isInertFuture ? '#94a3b8' : '#f59e0b' }}>
                 {isAmortized
                   ? `+${formatCurrency(abatedBreakdown?.origInterest || 23.59)}`
-                  : formatCurrency(
-                    event.interestPortion !== undefined ? event.interestPortion : (event.interest_portion !== undefined ? event.interest_portion : 0)
-                  )}
+                  : formatCurrency(event.installmentInterest ?? event.interestPortion ?? event.interest_portion ?? 0)}
               </span>
             </div>
 
             {/* Imposto de Selo (se > 0) */}
-            {!isAmortized && (event.taxAmount !== undefined ? event.taxAmount : event.tax_amount) > 0 && (
+            {!isAmortized && ((event.installmentFee ?? event.taxAmount ?? event.tax_amount ?? 0) > 0) && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                   Imposto de Selo
                 </span>
                 <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#a855f7' }}>
-                  {formatCurrency(event.taxAmount !== undefined ? event.taxAmount : event.tax_amount)}
+                  {formatCurrency(event.installmentFee ?? event.taxAmount ?? event.tax_amount ?? 0)}
                 </span>
               </div>
             )}

@@ -53,7 +53,7 @@ export default function LoanTimelineHeader({
     }
   })();
 
-  const progressPercent = loanMetrics.amortized_percent ?? loanMetrics.amortizedPercent ?? 0;
+  const progressPercent = loanMetrics.progressPercent ?? 0;
 
   // Visual text color tokens (grayed out when inactive)
   const textColorMain = isInactive ? '#94a3b8' : 'var(--text-main)';
@@ -293,7 +293,7 @@ export default function LoanTimelineHeader({
                 {t('loanHeader.remainingDebt') || 'Saldo Devedor'}
               </div>
               <div style={{ fontSize: '1.4rem', fontWeight: '800', color: textColorLight }}>
-                {formatCurrency(loanMetrics.remaining_debt ?? loanMetrics.remainingBalance ?? 0)}
+                {formatCurrency(loanMetrics.remainingDebt ?? loanMetrics.remainingBalance ?? 0)}
               </div>
               <div style={{ fontSize: '0.72rem', color: textColorMuted }}>
                 {t('loanHeader.capitalStillDue') || 'Capital ainda devido'}
@@ -305,7 +305,7 @@ export default function LoanTimelineHeader({
                 {t('loanHeader.amortizedCapital') || 'Capital Amortizado'}
               </div>
               <div style={{ fontSize: '1.4rem', fontWeight: '800', color: textColorGreen }}>
-                {formatCurrency(loanMetrics.amortized_capital ?? loanMetrics.paid_capital ?? 0)}
+                {formatCurrency(loanMetrics.amortizedCapital ?? 0)}
               </div>
               <div style={{ fontSize: '0.72rem', color: textColorMuted }}>
                 {(t('loanHeader.ofOriginalCapital') || '{percent}% do capital original').replace('{percent}', progressPercent)}
@@ -337,10 +337,10 @@ export default function LoanTimelineHeader({
                 {t('loanHeader.installments') || 'Parcelas'}
               </div>
               <div style={{ fontSize: '1.05rem', fontWeight: '800', color: textColorMain }}>
-                {loanMetrics.paid_installments ?? 0} / {loanMetrics.total_installments ?? 0}
+                {loanMetrics.paidInstallments ?? 0} / {loanMetrics.totalInstallments ?? 0}
               </div>
               <div style={{ fontSize: '0.7rem', color: textColorMuted }}>
-                {(t('loanHeader.installmentsRemaining') || '{count} restantes').replace('{count}', loanMetrics.remaining_installments ?? 0)}
+                {(t('loanHeader.installmentsRemaining') || '{count} restantes').replace('{count}', loanMetrics.remainingInstallments ?? 0)}
               </div>
             </div>
 
@@ -349,7 +349,7 @@ export default function LoanTimelineHeader({
                 {t('loanHeader.estimatedPayoff') || 'Quitação Prevista'}
               </div>
               <div style={{ fontSize: '1.05rem', fontWeight: '800', color: textColorMain }}>
-                {formatDateShort(loanMetrics.estimated_payoff_date) || '-'}
+                {formatDateShort(loanMetrics.estimatedPayoffDate) || '-'}
               </div>
             </div>
 
@@ -358,7 +358,7 @@ export default function LoanTimelineHeader({
                 {t('loanHeader.currentInstallment') || 'Prestação Atual'}
               </div>
               <div style={{ fontSize: '1.05rem', fontWeight: '800', color: textColorLight }}>
-                {formatCurrency(loanMetrics.current_installment_amount ?? 0)}
+                {formatCurrency(loanMetrics.currentInstallmentAmount ?? 0)}
               </div>
             </div>
 
@@ -367,7 +367,7 @@ export default function LoanTimelineHeader({
                 {t('loanHeader.nextDueDate') || 'Próximo Vencimento'}
               </div>
               <div style={{ fontSize: '1.05rem', fontWeight: '800', color: textColorMain }}>
-                {formatDateShort(loanMetrics.next_due_date) || '-'}
+                {formatDateShort(loanMetrics.nextDueDate) || '-'}
               </div>
             </div>
           </div>
@@ -383,15 +383,15 @@ export default function LoanTimelineHeader({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: textColorDim }}>{t('loanHeader.capitalStillDueLabel') || 'CAPITAL AINDA DEVIDO'}</span>
-                  <span style={{ fontWeight: '700', color: textColorMain }}>{formatCurrency(loanMetrics.future_capital ?? 0)}</span>
+                  <span style={{ fontWeight: '700', color: textColorMain }}>{formatCurrency(loanMetrics.futureCapital ?? 0)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: textColorDim }}>{t('loanHeader.estimatedFutureInterest') || 'JUROS FUTUROS ESTIMADOS'}</span>
-                  <span style={{ fontWeight: '700', color: textColorMain }}>{formatCurrency(loanMetrics.future_interest ?? 0)}</span>
+                  <span style={{ fontWeight: '700', color: textColorMain }}>{formatCurrency(loanMetrics.futureInterest ?? 0)}</span>
                 </div>
                 <div style={{ borderTop: '1px dashed var(--border-glass)', pt: '4px', mt: '2px', display: 'flex', justifyContent: 'space-between', fontWeight: '800' }}>
                   <span style={{ color: textColorMain }}>{t('loanHeader.totalFutureToPay') || 'TOTAL FUTURO A PAGAR'}</span>
-                  <span style={{ color: textColorLight }}>{formatCurrency(loanMetrics.future_total ?? 0)}</span>
+                  <span style={{ color: textColorLight }}>{formatCurrency(loanMetrics.futureTotal ?? 0)}</span>
                 </div>
               </div>
             </div>
@@ -405,15 +405,15 @@ export default function LoanTimelineHeader({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: textColorDim }}>{t('loanHeader.amortizedCapitalLabel') || 'CAPITAL AMORTIZADO'}</span>
-                  <span style={{ fontWeight: '700', color: textColorMain }}>{formatCurrency(loanMetrics.paid_capital ?? loanMetrics.amortized_capital ?? 0)}</span>
+                  <span style={{ fontWeight: '700', color: textColorMain }}>{formatCurrency(loanMetrics.amortizedCapital ?? 0)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: textColorDim }}>{t('loanHeader.interestPaid') || 'JUROS PAGOS'}</span>
-                  <span style={{ fontWeight: '700', color: textColorMain }}>{formatCurrency(loanMetrics.paid_interest ?? 0)}</span>
+                  <span style={{ fontWeight: '700', color: textColorMain }}>{formatCurrency(loanMetrics.totalInterestPaid ?? 0)}</span>
                 </div>
                 <div style={{ borderTop: '1px dashed var(--border-glass)', pt: '4px', mt: '2px', display: 'flex', justifyContent: 'space-between', fontWeight: '800' }}>
                   <span style={{ color: textColorMain }}>{t('loanHeader.totalAlreadyPaid') || 'TOTAL JÁ PAGO'}</span>
-                  <span style={{ color: textColorGreen }}>{formatCurrency(loanMetrics.paid_total ?? 0)}</span>
+                  <span style={{ color: textColorGreen }}>{formatCurrency(loanMetrics.totalPaid ?? 0)}</span>
                 </div>
               </div>
             </div>
@@ -427,15 +427,15 @@ export default function LoanTimelineHeader({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: textColorDim }}>{t('loanHeader.originalCapital') || 'CAPITAL ORIGINAL'}</span>
-                  <span style={{ fontWeight: '700', color: textColorMain }}>{formatCurrency(loanMetrics.original_capital ?? loanMetrics.total_debt ?? 0)}</span>
+                  <span style={{ fontWeight: '700', color: textColorMain }}>{formatCurrency(loanMetrics.originalCapital ?? 0)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: textColorDim }}>{t('loanHeader.totalEstimatedInterest') || 'JUROS TOTAIS ESTIMADOS'}</span>
-                  <span style={{ fontWeight: '700', color: textColorMain }}>{formatCurrency(loanMetrics.total_estimated_interest ?? 0)}</span>
+                  <span style={{ fontWeight: '700', color: textColorMain }}>{formatCurrency(loanMetrics.futureInterest ?? 0)}</span>
                 </div>
                 <div style={{ borderTop: '1px dashed var(--border-glass)', pt: '4px', mt: '2px', display: 'flex', justifyContent: 'space-between', fontWeight: '800' }}>
                   <span style={{ color: textColorMain }}>{t('loanHeader.totalLoanCost') || 'CUSTO TOTAL DO EMPRÉSTIMO'}</span>
-                  <span style={{ color: textColorOrange }}>{formatCurrency(loanMetrics.total_loan_cost ?? 0)}</span>
+                  <span style={{ color: textColorOrange }}>{formatCurrency(loanMetrics.totalLoanCost ?? 0)}</span>
                 </div>
               </div>
             </div>

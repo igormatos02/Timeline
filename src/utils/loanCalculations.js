@@ -1,1270 +1,742 @@
-import { addDays, addWeeks, addMonths, addYears, format, parseISO, isBefore, isAfter, differenceInDays } from 'date-fns';
+import { addDays, addWeeks, addMonths, addYears, format, parseISO, isBefore } from 'date-fns';
 import { generateUUID } from './uuid.js';
 import {
   EventType,
   EventStatus,
   LoanEventCategory,
-  IncomeEventCategory,
-  InvestmentEventCategory,
-  TimelineType,
   EventPriority,
   EventAggregation,
+  TimelineType,
   isPositiveStatus,
   AmortizationEventCategory
 } from '../enums/index.js';
 
-/**
- * Format currency in EUR (€)
- */
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Format a number as EUR currency (pt-PT locale). */
 export function formatCurrency(amount) {
   if (amount === undefined || amount === null || isNaN(amount)) return '0,00 €';
-  return new Intl.NumberFormat('pt-PT', {
-    style: 'currency',
-    currency: 'EUR'
-  }).format(amount);
+  return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(amount);
 }
 
-/**
- * Helper to get default timeline grouping based on loan periodicity
- */
-export function getGroupingForPeriodicity(periodicity) {
-  const p = (periodicity || EventAggregation.MONTHLY).toLowerCase();
-  if (p === EventAggregation.DAILY || p === 'diaria') return 'dia';
-  if (p === EventAggregation.BIWEEKLY || p === 'quinzenal') return 'semana';
-  if (p === EventAggregation.ANNUAL || p === 'yearly' || p === 'anual') return 'ano';
-  return 'mes';
+/** ISO date string for today (runtime, not hardcoded). */
+function todayISO() {
+  return new Date().toISOString().substring(0, 10);
 }
 
-/**
- * Helper to get human label for periodicity using EventAggregation
- */
-export function getPeriodicityLabel(periodicity) {
-  const p = (periodicity || EventAggregation.MONTHLY).toLowerCase();
-  switch (p) {
-    case EventAggregation.DAILY:
-    case 'diaria': return 'Daily';
-    case EventAggregation.BIWEEKLY:
-    case 'quinzenal': return 'Biweekly';
-    case EventAggregation.MONTHLY:
-    case 'mensal': return 'Monthly';
-    case EventAggregation.BIMONTHLY:
-    case 'bimestral': return 'Bimonthly';
-    case EventAggregation.SEMIANNUAL:
-    case 'semestral': return 'Semiannual';
-    case EventAggregation.ANNUAL:
-    case 'yearly':
-    case 'anual': return 'Yearly';
-    default: return 'Monthly';
+/** Returns the number of periods per year for a given EventAggregation periodicity. */
+function periodsPerYear(periodicity) {
+  switch ((periodicity || EventAggregation.MONTHLY).toLowerCase()) {
+    case EventAggregation.DAILY:    return 365;
+    case EventAggregation.BIWEEKLY: return 26;
+    case EventAggregation.BIMONTHLY: return 6;
+    case EventAggregation.SEMIANNUAL: return 2;
+    case EventAggregation.ANNUAL:   return 1;
+    default:                        return 12; // MONTHLY
   }
 }
 
+/** Returns the timeline grouping key ('dia' | 'semana' | 'mes' | 'ano') for a given periodicity. */
+export function getGroupingForPeriodicity(periodicity) {
+  switch ((periodicity || EventAggregation.MONTHLY).toLowerCase()) {
+    case EventAggregation.DAILY:    return 'dia';
+    case EventAggregation.BIWEEKLY: return 'semana';
+    case EventAggregation.ANNUAL:   return 'ano';
+    default:                        return 'mes';
+  }
+}
+
+/** Returns a human-readable label for a given periodicity. */
+export function getPeriodicityLabel(periodicity) {
+  switch ((periodicity || EventAggregation.MONTHLY).toLowerCase()) {
+    case EventAggregation.DAILY:      return 'Daily';
+    case EventAggregation.BIWEEKLY:   return 'Biweekly';
+    case EventAggregation.MONTHLY:    return 'Monthly';
+    case EventAggregation.BIMONTHLY:  return 'Bimonthly';
+    case EventAggregation.SEMIANNUAL: return 'Semiannual';
+    case EventAggregation.ANNUAL:     return 'Yearly';
+    default:                          return 'Monthly';
+  }
+}
+
+/** Returns true if the event belongs to this loan timeline. */
+function isEventForTimeline(ev, timeline) {
+  if (!timeline?.id) return true;
+  return ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
+}
+
+/** Returns true if the event is a LOAN_INSTALLMENT. */
+function isLoanInstallment(ev) {
+  return ev.category === LoanEventCategory.LOAN_INSTALLMENT ||
+    ev.eventType === EventType.LOAN_INSTALLMENT;
+}
+
+/** Returns true if the event is an abated (amortized) installment. */
+function isAbated(ev) {
+  return ev.status === EventStatus.AMORTIZED || Boolean(ev.isAbatida);
+}
+
+/** Returns the principal portion of an installment event. */
+function getPrincipal(ev) {
+  if (ev.principalAmount !== undefined) return Number(ev.principalAmount);
+  const amt = Number(ev.amount || 0);
+  if (ev.interestPortion !== undefined) return Math.max(0, amt - Number(ev.interestPortion));
+  return Math.round(amt * 0.82 * 100) / 100;
+}
+
+/** Computes the due date for installment k (1-indexed) given the base date and periodicity. */
+function computeDueDate(baseDate, k, periodicity, preferredDueDay) {
+  switch (periodicity.toLowerCase()) {
+    case EventAggregation.DAILY:
+      return addDays(baseDate, k - 1);
+    case EventAggregation.BIWEEKLY:
+      return addWeeks(baseDate, (k - 1) * 2);
+    case EventAggregation.ANNUAL:
+      return addYears(baseDate, k - 1);
+    default: {
+      const d = addMonths(baseDate, k - 1);
+      const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      return new Date(d.getFullYear(), d.getMonth(), Math.min(preferredDueDay, daysInMonth));
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Schedule Generation
+// ---------------------------------------------------------------------------
+
 /**
- * Calculate loan amortization schedule (constant installment payments)
+ * Generate the full amortization schedule (constant installment — French system).
+ *
+ * @param {object} params
+ * @param {number} params.totalAmountFinanced  - Capital financed (PV)
+ * @param {number} [params.totalDebt]          - Alias for totalAmountFinanced
+ * @param {number} [params.monthlyInstallment] - Override PMT (0 = auto-calculate)
+ * @param {number} params.numberOfInstallments - Number of installments (n)
+ * @param {number} [params.totalInstallments]  - Alias for numberOfInstallments
+ * @param {number} [params.tanRate=0]          - Annual nominal rate (%)
+ * @param {number} [params.spread=0]           - Spread to add to TAN (%)
+ * @param {number} [params.interestStampTaxRate=0] - Fixed stamp tax per installment (€)
+ * @param {string} params.startDate            - ISO start date
+ * @param {string} [params.debtStartDate]      - Alias for startDate
+ * @param {number} [params.dueDay]             - Preferred day of month for due date
+ * @param {string} [params.periodicity]        - EventAggregation value
+ * @returns {Array} Installment event objects
  */
 export function generateLoanInstallments({
-  totalDebt,
   totalAmountFinanced,
+  totalDebt,
   monthlyInstallment,
-  totalInstallments,
   numberOfInstallments,
+  totalInstallments,
   tanRate = 0,
   spread = 0,
-  taxaImpostoSeloJuros = 4,
-  interestStampTaxRate,
-  taxaImpostoSeloIsPercentage = false,
+  interestStampTaxRate = 0,
   startDate,
   debtStartDate,
   dueDay,
   periodicity = EventAggregation.MONTHLY
 }) {
-  const events = [];
-
-  // 1. Inputs initialization & fallbacks
-  const initialCapital = Number(totalAmountFinanced !== undefined ? totalAmountFinanced : (totalDebt || 0));
-  const n = parseInt(numberOfInstallments !== undefined ? numberOfInstallments : totalInstallments, 10) || 1;
-
-  // Applicable TAN: TaxaAplicavel = TANRate + Spread (se spread for fornecido separadamente)
-  const baseTan = Number(tanRate || 0);
-  const spreadVal = Number(spread || 0);
-  const applicableTan = baseTan + spreadVal;
-
-  // Stamp tax rate on interest (e.g. 4%)
-  const stampTaxRate = Number(interestStampTaxRate !== undefined ? interestStampTaxRate : (taxaImpostoSeloJuros || 0));
-
-  // 2. Date calculation: debtStartDate & dueDay
-  const startIso = debtStartDate || startDate;
-  const baseDate = parseISO(startIso);
-  const preferredDueDay = dueDay !== undefined && dueDay !== null && !isNaN(dueDay) ? parseInt(dueDay, 10) : baseDate.getDate();
-
-  // 3. Periodic interest rate: i = TAN / 12 / 100
+  const pv = Number(totalAmountFinanced ?? totalDebt ?? 0);
+  const n  = parseInt(numberOfInstallments ?? totalInstallments ?? 1, 10) || 1;
   const pLower = (periodicity || EventAggregation.MONTHLY).toLowerCase();
-  let periodsPerYear = 12;
-  if (pLower === EventAggregation.DAILY || pLower === 'diaria') periodsPerYear = 365;
-  else if (pLower === EventAggregation.BIWEEKLY || pLower === 'quinzenal') periodsPerYear = 26;
-  else if (pLower === EventAggregation.BIMONTHLY || pLower === 'bimestral') periodsPerYear = 6;
-  else if (pLower === EventAggregation.SEMIANNUAL || pLower === 'semestral') periodsPerYear = 2;
-  else if (pLower === EventAggregation.ANNUAL || pLower === 'yearly' || pLower === 'anual') periodsPerYear = 1;
 
-  const i = (applicableTan / 100) / periodsPerYear;
+  const tan = Number(tanRate || 0) + Number(spread || 0);
+  const i   = (tan / 100) / periodsPerYear(pLower);
 
-  // 4. Calculate monthly constant installment PMT (if not explicitly passed or <= 0)
+  // PMT — French constant installment formula
   let pmt = Number(monthlyInstallment || 0);
-  if (pmt <= 0 && initialCapital > 0 && n > 0) {
-    if (i > 0) {
-      pmt = (initialCapital * (i * Math.pow(1 + i, n))) / (Math.pow(1 + i, n) - 1);
-    } else {
-      pmt = initialCapital / n;
-    }
+  if (pmt <= 0 && pv > 0 && n > 0) {
+    pmt = i > 0
+      ? (pv * (i * Math.pow(1 + i, n))) / (Math.pow(1 + i, n) - 1)
+      : pv / n;
   }
   pmt = Math.round(pmt * 100) / 100;
 
-  // Initial validation: check if first month's interest exceeds monthly installment (Negative Amortization guard)
-  const firstPeriodInterest = Math.round(initialCapital * i * 100) / 100;
-  if (pmt > 0 && pmt <= firstPeriodInterest) {
+  const stampTax = Number(interestStampTaxRate || 0);
+  const baseDate = parseISO(debtStartDate || startDate);
+  const preferredDueDay = (dueDay != null && !isNaN(dueDay))
+    ? parseInt(dueDay, 10)
+    : baseDate.getDate();
+
+  // Negative amortization guard
+  const firstInterest = Math.round(pv * i * 100) / 100;
+  if (pmt > 0 && pmt <= firstInterest) {
     throw new Error(
-      'Os parâmetros fornecidos não permitem amortizar o capital com uma prestação normal. Verifique a TAN, prazo, periodicidade ou regra de cálculo.'
+      'Os parâmetros fornecidos não permitem amortizar o capital. Verifique a TAN, prazo ou periodicidade.'
     );
   }
 
-  // 5. Sequential calculation loop
-  let currentBalance = initialCapital;
+  const events = [];
+  let balance = pv;
 
   for (let k = 1; k <= n; k++) {
-    // Determine installment date
-    let dueDate;
-    switch (pLower) {
-      case EventAggregation.DAILY:
-      case 'diaria': dueDate = addDays(baseDate, k - 1); break;
-      case EventAggregation.BIWEEKLY:
-      case 'quinzenal': dueDate = addWeeks(baseDate, (k - 1) * 2); break;
-      case EventAggregation.ANNUAL:
-      case 'yearly':
-      case 'anual': dueDate = addYears(baseDate, k - 1); break;
-      default: {
-        const nextMonthDate = addMonths(baseDate, k - 1);
-        const daysInMonth = new Date(nextMonthDate.getFullYear(), nextMonthDate.getMonth() + 1, 0).getDate();
-        const targetDay = Math.min(preferredDueDay, daysInMonth);
-        dueDate = new Date(nextMonthDate.getFullYear(), nextMonthDate.getMonth(), targetDay);
-        break;
-      }
-    }
+    const interest  = Math.round(balance * i * 100) / 100;
+    let   capital   = Math.round((pmt - interest) * 100) / 100;
 
-    const dueDateStr = format(dueDate, 'yyyy-MM-dd');
+    // Last installment: pay remaining balance
+    if (k === n || balance <= capital) capital = balance;
 
-    // Juros = SaldoInicial * TaxaMensal (rounded to 2 decimal places)
-    let interest = Math.round(currentBalance * i * 100) / 100;
+    const totalPayment = Math.round((capital + interest + stampTax) * 100) / 100;
+    balance = Math.max(0, Math.round((balance - capital) * 100) / 100);
 
-    // Imposto de Selo: valor fixo em Euros por prestação (ex: 4.00 ou 4.94)
-    const taxStamp = Number(stampTaxRate) || 0;
-
-    // CapitalAmortizado = Prestacao - Juros
-    let capital = Math.round((pmt - interest) * 100) / 100;
-
-    // Last installment or adjustment if capital exceeds current balance
-    if (k === n || currentBalance <= capital) {
-      capital = currentBalance;
-    }
-
-    // TotalPago = Prestacao (Capital + Juros) + ImpostoSelo
-    const totalPayment = Math.round((capital + interest + taxStamp) * 100) / 100;
-
-    // SaldoFinal = SaldoInicial - CapitalAmortizado
-    const remaining = Math.max(0, Math.round((currentBalance - capital) * 100) / 100);
-    currentBalance = remaining;
+    const dueDate = computeDueDate(baseDate, k, pLower, preferredDueDay);
 
     events.push({
       id: generateUUID(),
-      date: dueDateStr,
+      date: format(dueDate, 'yyyy-MM-dd'),
       time: '09:00',
       title: `Installment #${k} of ${n}`,
-      description: `Contractual installment payment (${formatCurrency(capital)} principal + ${formatCurrency(interest)} interest + ${formatCurrency(taxStamp)} stamp tax).`,
+      description: `${formatCurrency(capital)} capital + ${formatCurrency(interest)} interest + ${formatCurrency(stampTax)} stamp tax`,
       category: LoanEventCategory.LOAN_INSTALLMENT,
       eventType: EventType.LOAN_INSTALLMENT,
       status: EventStatus.PENDING,
       priority: EventPriority.NORMAL,
       amount: totalPayment,
-      installmentAmount: totalPayment,
-      installment_amount: totalPayment,
       principalAmount: capital,
-      principal_amount: capital,
-      installmentCapital: capital,
-      installment_capital: capital,
       interestPortion: interest,
-      interest_portion: interest,
-      installmentInterest: interest,
-      installment_interest: interest,
-      taxAmount: taxStamp,
-      tax_amount: taxStamp,
-      installmentFee: taxStamp,
-      installment_fee: taxStamp,
-      interestAmount: 0,
-      balanceAfter: currentBalance,
-      balance_after: currentBalance,
-      remainingDebtAfter: currentBalance,
-      remaining_debt_after: currentBalance,
+      taxAmount: stampTax,
+      balanceAfter: balance,
       installmentNumber: k,
       totalInstallments: n,
       isSystemLoanEvent: true,
-      isCompleted: false,
-      labels: ['Loan', 'Installment']
+      isCompleted: false
     });
 
-    if (currentBalance <= 0) break;
+    if (balance <= 0) break;
   }
 
   return events;
 }
 
-/**
- * Alias for generateLoanInstallments for backward compatibility
- */
-export function generateLoanSchedule(params) {
-  return generateLoanInstallments({
-    totalDebt: params.totalDebt,
-    totalAmountFinanced: params.totalAmountFinanced !== undefined ? params.totalAmountFinanced : params.totalDebt,
-    monthlyInstallment: params.monthlyInstallment !== undefined ? params.monthlyInstallment : params.installmentAmount,
-    totalInstallments: params.totalInstallments || 120,
-    numberOfInstallments: params.numberOfInstallments || params.totalInstallments || 120,
-    tanRate: params.tanRate !== undefined ? params.tanRate : (params.tan || 0),
-    spread: params.spread || 0,
-    taxaImpostoSeloJuros: params.taxaImpostoSeloJuros !== undefined ? params.taxaImpostoSeloJuros : (params.interestStampTaxRate || 4),
-    interestStampTaxRate: params.interestStampTaxRate !== undefined ? params.interestStampTaxRate : (params.taxaImpostoSeloJuros || 4),
-    startDate: params.startDateStr || params.startDate,
-    debtStartDate: params.debtStartDate || params.startDateStr || params.startDate,
-    dueDay: params.dueDay,
-    periodicity: params.periodicity
-  });
-}
+// ---------------------------------------------------------------------------
+// In-memory Amortization Application
+// ---------------------------------------------------------------------------
 
 /**
- * Helper to recalculate installments in-memory based on extraordinary amortizations
+ * Apply all extraordinary amortization events in memory, adjusting future installments.
+ * REDUCE_TERM:        abates installments from the last one backward.
+ * REDUCE_INSTALLMENT: proportionally reduces all future installment amounts.
+ *
+ * @private
  */
 function applyAmortizationsInMemory(timeline, eventsList) {
-  // Extrair todos os eventos de amortização ativos desta timeline
-  const amortEvents = eventsList.filter((ev) => {
-    if (!ev || ev.isDeleted || ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return false;
-    if (timeline && timeline.id && ev.timelineId && ev.timelineId !== timeline.id && ev.timelineOriginId !== timeline.id) return false;
-    const isAmort = ev.category === AmortizationEventCategory.REDUCE_TERM || ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT || ev.eventType === EventType.AMORTIZATION || ev.isAmortization;
-    return isAmort && isPositiveStatus(ev.status);
-  }).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const amortEvents = eventsList
+    .filter((ev) => {
+      if (!ev || ev.isDeleted) return false;
+      if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return false;
+      if (timeline?.id && ev.timelineId && !isEventForTimeline(ev, timeline)) return false;
+      const isAmort =
+        ev.category === AmortizationEventCategory.REDUCE_TERM ||
+        ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
+        ev.eventType === EventType.AMORTIZATION ||
+        ev.isAmortization;
+      return isAmort && isPositiveStatus(ev.status);
+    })
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
   if (amortEvents.length === 0) return eventsList;
 
   let currentEvents = [...eventsList];
 
   for (const amortEv of amortEvents) {
-    const amortVal = Number(amortEv.amount || amortEv.amortizationAmount || 0);
+    const amortVal  = Number(amortEv.amount || amortEv.amortizationAmount || 0);
     if (isNaN(amortVal) || amortVal <= 0) continue;
 
-    const category = amortEv.category || amortEv.strategy || AmortizationEventCategory.REDUCE_TERM;
     const amortDate = amortEv.date || '1900-01-01';
+    const category  = amortEv.category || amortEv.strategy || AmortizationEventCategory.REDUCE_TERM;
+    const isReduceInstallment = category === AmortizationEventCategory.REDUCE_INSTALLMENT;
 
-    const isReduceInstallment = category === AmortizationEventCategory.REDUCE_INSTALLMENT || category === 'reduce_installment' || amortEv.strategy === 'reduce_installment';
+    const isOpenInstallment = (ev) =>
+      isLoanInstallment(ev) &&
+      isEventForTimeline(ev, timeline) &&
+      !isPositiveStatus(ev.status) &&
+      ev.status !== EventStatus.AMORTIZED &&
+      !ev.isAbatida;
 
     if (isReduceInstallment) {
-      // Redução no Valor da Parcela (REDUCE_INSTALLMENT)
-      const futureUnpaid = currentEvents.filter((ev) => {
-        if (timeline && timeline.id && ev.timelineId && ev.timelineId !== timeline.id && ev.timelineOriginId !== timeline.id) return false;
-        const isLoanInst = ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT;
-        return isLoanInst && !isPositiveStatus(ev.status) && ev.status !== EventStatus.AMORTIZED && !ev.isAbatida && ev.date >= amortDate;
+      // --- REDUCE_INSTALLMENT: proportionally scale down future installments ---
+      const future = currentEvents.filter((ev) => isOpenInstallment(ev) && ev.date >= amortDate);
+      if (future.length === 0) continue;
+
+      const totalPrincipalBefore = future.reduce((sum, ev) => sum + getPrincipal(ev), 0);
+      if (totalPrincipalBefore <= 0) continue;
+
+      const ratio = Math.max(0, (totalPrincipalBefore - amortVal)) / totalPrincipalBefore;
+
+      currentEvents = currentEvents.map((ev) => {
+        if (!isOpenInstallment(ev) || ev.date < amortDate) return ev;
+        const cap = Math.round(getPrincipal(ev) * ratio * 100) / 100;
+        const jur = Math.round(Number(ev.interestPortion || 0) * ratio * 100) / 100;
+        return {
+          ...ev,
+          originalAmount: ev.originalAmount ?? ev.amount,
+          amount: Math.round((cap + jur) * 100) / 100,
+          principalAmount: cap,
+          interestPortion: jur
+        };
       });
-
-      if (futureUnpaid.length > 0) {
-        const remainingDebtBefore = futureUnpaid.reduce((acc, ev) => acc + Number(ev.principalAmount || Math.round(Number(ev.amount || 0) * 0.82 * 100) / 100), 0);
-        const newFuturePrincipalTotal = Math.max(0, remainingDebtBefore - amortVal);
-        const ratio = remainingDebtBefore > 0 ? (newFuturePrincipalTotal / remainingDebtBefore) : 1;
-
-        currentEvents = currentEvents.map((ev) => {
-          if (timeline && timeline.id && ev.timelineId && ev.timelineId !== timeline.id && ev.timelineOriginId !== timeline.id) return ev;
-          const isLoanInst = ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT;
-          if (isLoanInst && !isPositiveStatus(ev.status) && ev.status !== EventStatus.AMORTIZED && !ev.isAbatida && ev.date >= amortDate) {
-            const origCap = Number(ev.principalAmount || Math.round(Number(ev.amount || 0) * 0.82 * 100) / 100);
-            const origJur = Number(ev.interestPortion || Math.round(Number(ev.amount || 0) * 0.18 * 100) / 100);
-            const newCap = Math.round(origCap * ratio * 100) / 100;
-            const newJur = Math.round(origJur * ratio * 100) / 100;
-            const newAmount = Math.round((newCap + newJur) * 100) / 100;
-            return {
-              ...ev,
-              originalAmount: ev.originalAmount || ev.amount,
-              amount: newAmount,
-              principalAmount: newCap,
-              interestPortion: newJur,
-              labels: Array.from(new Set([...(ev.labels || []), 'Reduced Installment']))
-            };
-          }
-          return ev;
-        });
-      }
     } else {
-      // Redução de Prazo (REDUCE_TERM - Abater parcelas a partir da última parcela da timeline inteira)
-      const futureUnpaid = currentEvents
-        .filter((ev) => {
-          if (timeline && timeline.id && ev.timelineId && ev.timelineId !== timeline.id && ev.timelineOriginId !== timeline.id) return false;
-          const isLoanInst = ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT;
-          return isLoanInst && !isPositiveStatus(ev.status) && ev.status !== EventStatus.AMORTIZED && !ev.isAbatida;
-        })
+      // --- REDUCE_TERM: abate installments from last to first ---
+      const future = currentEvents
+        .filter(isOpenInstallment)
         .sort((a, b) => {
-          const numA = Number(a.installmentNumber || 0);
-          const numB = Number(b.installmentNumber || 0);
-          if (numA && numB) return numB - numA;
-          return (b.date || '').localeCompare(a.date || '');
-        }); // Ordenar do maior número de parcela / última data para o menor número de parcela (decrescente)
+          const na = Number(a.installmentNumber || 0);
+          const nb = Number(b.installmentNumber || 0);
+          return (na && nb) ? nb - na : (b.date || '').localeCompare(a.date || '');
+        });
 
-      let remainingToDeduct = amortVal;
-      const updatesMap = new Map();
+      let remaining = amortVal;
+      const patch = new Map();
 
-      for (let i = 0; i < futureUnpaid.length; i++) {
-        if (remainingToDeduct <= 0) break;
-        const inst = futureUnpaid[i];
-        const instPrincipal = Number(inst.principalAmount !== undefined ? inst.principalAmount : Math.round(Number(inst.amount || 0) * 0.82 * 100) / 100);
+      for (const inst of future) {
+        if (remaining <= 0) break;
+        const principal = getPrincipal(inst);
+        if (principal <= 0) continue;
 
-        if (remainingToDeduct >= instPrincipal && instPrincipal > 0) {
-          updatesMap.set(inst.id, {
+        if (remaining >= principal) {
+          patch.set(inst.id, {
             status: EventStatus.AMORTIZED,
             isAbatida: true,
             isCompleted: true,
-            originalAmount: inst.originalAmount || inst.amount || instPrincipal,
-            originalPrincipal: inst.originalPrincipal || instPrincipal,
+            originalAmount: inst.originalAmount ?? inst.amount,
+            originalPrincipal: inst.originalPrincipal ?? principal,
             amount: 0,
             principalAmount: 0,
-            interestPortion: 0,
-            labels: Array.from(new Set([...(inst.labels || []), 'Amortized']))
+            interestPortion: 0
           });
-          remainingToDeduct -= instPrincipal;
-        } else if (remainingToDeduct > 0 && instPrincipal > 0) {
-          const newCap = Math.max(0, Math.round((instPrincipal - remainingToDeduct) * 100) / 100);
-          const origJur = Number(inst.interestPortion || Math.round(Number(inst.amount || 0) * 0.18 * 100) / 100);
-          updatesMap.set(inst.id, {
+          remaining -= principal;
+        } else {
+          const newCap = Math.max(0, Math.round((principal - remaining) * 100) / 100);
+          const origJur = Number(inst.interestPortion || 0);
+          patch.set(inst.id, {
             amount: Math.round((newCap + origJur) * 100) / 100,
-            principalAmount: newCap,
-            labels: Array.from(new Set([...(inst.labels || []), 'Partial Amortization']))
+            principalAmount: newCap
           });
-          remainingToDeduct = 0;
+          remaining = 0;
         }
       }
 
-      currentEvents = currentEvents.map((ev) => {
-        if (updatesMap.has(ev.id)) {
-          return { ...ev, ...updatesMap.get(ev.id) };
-        }
-        return ev;
-      });
+      currentEvents = currentEvents.map((ev) =>
+        patch.has(ev.id) ? { ...ev, ...patch.get(ev.id) } : ev
+      );
     }
   }
 
   return currentEvents;
 }
 
+// ---------------------------------------------------------------------------
+// Loan State Recalculation
+// ---------------------------------------------------------------------------
+
 /**
- * Recalculate remaining balances and installment numbers across all loan events
+ * Applies in-memory amortizations and recalculates balances + statuses for
+ * every installment in the timeline.
+ *
+ * @param {object} timeline   - The loan timeline object
+ * @param {Array}  eventsList - All events (may include other timelines)
+ * @returns {Array} Updated event list
  */
 export function recalculateLoanState(timeline, eventsList) {
-  const initialDebt = Number(timeline.totalDebt || 0);
-  let runningBalance = initialDebt;
-  const todayStr = '2026-08-21';
-  const today = parseISO(todayStr);
+  const today = parseISO(todayISO());
+  const prepared = applyAmortizationsInMemory(timeline, eventsList);
 
-  // Aplicar amortizações dinamicamente em memória
-  const preparedList = applyAmortizationsInMemory(timeline, eventsList);
-
-  const sorted = [...preparedList].sort((a, b) => {
-    if (a.date === b.date) {
-      return (a.installmentNumber || 0) - (b.installmentNumber || 0);
-    }
+  const sorted = [...prepared].sort((a, b) => {
+    if (a.date === b.date) return (a.installmentNumber || 0) - (b.installmentNumber || 0);
     return a.date.localeCompare(b.date);
   });
 
-  const updatedEvents = sorted.map((ev) => {
-    const isLoanInst = ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT;
+  let runningBalance = Number(
+    timeline?.loanContract?.originalCapital ||
+    timeline?.originalCapital ||
+    timeline?.totalDebt ||
+    0
+  );
 
-    if (isLoanInst) {
-      const isAbatida = ev.status === EventStatus.AMORTIZED || Boolean(ev.isAbatida);
-      if (isAbatida) {
-        return {
-          ...ev,
-          status: EventStatus.AMORTIZED,
-          isAbatida: true,
-          isCompleted: true,
-          amount: 0,
-          principalAmount: 0,
-          interestPortion: 0,
-          interestAmount: 0,
-          balanceAfter: runningBalance
-        };
-      }
+  return sorted.map((ev) => {
+    if (!isLoanInstallment(ev)) return ev;
 
-      const totalAmount = Number(ev.amount || 0);
-      let principal = ev.principalAmount !== undefined
-        ? Number(ev.principalAmount)
-        : (ev.interestPortion !== undefined ? Math.max(0, totalAmount - Number(ev.interestPortion)) : Math.round(totalAmount * 0.82 * 100) / 100);
-
-      let interestPortion = ev.interestPortion !== undefined
-        ? Number(ev.interestPortion)
-        : Math.max(0, Math.round((totalAmount - principal) * 100) / 100);
-
-      const lateInterest = Number(ev.interestAmount || 0);
-      const isPaid = isPositiveStatus(ev.status);
-      let status = isPaid ? ev.status : EventStatus.PENDING;
-      try {
-        const evDate = parseISO(ev.date);
-        if (!isPaid && isBefore(evDate, today)) {
-          status = EventStatus.OVERDUE;
-        }
-      } catch (e) { }
-
-      runningBalance = Math.max(0, Math.round((runningBalance - principal) * 100) / 100);
-
+    if (isAbated(ev)) {
       return {
         ...ev,
-        amount: totalAmount,
-        principalAmount: principal,
-        interestPortion: interestPortion,
-        interestAmount: lateInterest,
-        status: status,
-        isCompleted: isPaid,
+        status: EventStatus.AMORTIZED,
+        isAbatida: true,
+        isCompleted: true,
+        amount: 0,
+        principalAmount: 0,
+        interestPortion: 0,
         balanceAfter: runningBalance
       };
     }
-    return ev;
-  });
 
-  return updatedEvents;
+    const principal      = getPrincipal(ev);
+    const totalAmount    = Number(ev.amount || 0);
+    const interestPortion = ev.interestPortion !== undefined
+      ? Number(ev.interestPortion)
+      : Math.max(0, totalAmount - principal);
+
+    const isPaid = isPositiveStatus(ev.status);
+    let status = isPaid ? ev.status : EventStatus.PENDING;
+    try {
+      if (!isPaid && isBefore(parseISO(ev.date), today)) status = EventStatus.OVERDUE;
+    } catch (_) { /* invalid date — skip */ }
+
+    runningBalance = Math.max(0, Math.round((runningBalance - principal) * 100) / 100);
+
+    return {
+      ...ev,
+      amount: totalAmount,
+      principalAmount: principal,
+      interestPortion,
+      status,
+      isCompleted: isPaid,
+      balanceAfter: runningBalance
+    };
+  });
 }
 
+// ---------------------------------------------------------------------------
+// Installment Propagation
+// ---------------------------------------------------------------------------
+
 /**
- * Propagate a new installment amount from a specific installment to all subsequent future installments
+ * Updates a target installment and propagates the same amount to all subsequent
+ * open installments.
+ *
+ * @param {Array}  eventsList    - Current event list
+ * @param {string} targetEventId - ID of the installment to update
+ * @param {number} newTotalAmount
+ * @param {number|null} newPrincipal - If null, computed from newTotalAmount (82%)
+ * @param {number|null} newInterest  - If null, computed as remainder
+ * @returns {Array}
  */
 export function propagateInstallmentAmountForward(eventsList, targetEventId, newTotalAmount, newPrincipal = null, newInterest = null) {
+  const total = Number(newTotalAmount);
+  const computePrincipal = () => newPrincipal !== null ? Number(newPrincipal) : Math.round(total * 0.82 * 100) / 100;
+  const computeInterest  = (p) => newInterest !== null ? Number(newInterest) : Math.round((total - p) * 100) / 100;
+
   let targetFound = false;
-  const numTotal = Number(newTotalAmount);
 
   return eventsList.map((ev) => {
-    const isLoanInst = ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT;
     if (ev.id === targetEventId) {
       targetFound = true;
-      const principal = newPrincipal !== null ? Number(newPrincipal) : Math.round(numTotal * 0.82 * 100) / 100;
-      const interest = newInterest !== null ? Number(newInterest) : Math.round((numTotal - principal) * 100) / 100;
-      return {
-        ...ev,
-        amount: numTotal,
-        principalAmount: principal,
-        interestPortion: interest
-      };
+      const p = computePrincipal();
+      return { ...ev, amount: total, principalAmount: p, interestPortion: computeInterest(p) };
     }
-
-    if (targetFound && isLoanInst && !isPositiveStatus(ev.status)) {
-      const principal = newPrincipal !== null ? Number(newPrincipal) : Math.round(numTotal * 0.82 * 100) / 100;
-      const interest = newInterest !== null ? Number(newInterest) : Math.round((numTotal - principal) * 100) / 100;
-      return {
-        ...ev,
-        amount: numTotal,
-        principalAmount: principal,
-        interestPortion: interest
-      };
+    if (targetFound && isLoanInstallment(ev) && !isPositiveStatus(ev.status)) {
+      const p = computePrincipal();
+      return { ...ev, amount: total, principalAmount: p, interestPortion: computeInterest(p) };
     }
     return ev;
   });
 }
 
+// ---------------------------------------------------------------------------
+// Extraordinary Amortization Event Builder
+// ---------------------------------------------------------------------------
+
 /**
- * Apply an extraordinary amortization event (No-op on installment calculations)
+ * Builds and appends an extraordinary amortization event to the list.
+ * No-op if existingAmortEvent is provided (already recorded).
  */
 export function applyExtraordinaryAmortization({ eventsList, existingAmortEvent, amortizationAmount, amortizationDateStr, strategy, notes }) {
   if (existingAmortEvent) return eventsList;
-  const amortVal = Number(amortizationAmount || 0);
-  const amortEvent = {
+  const amount = Number(amortizationAmount || 0);
+  const ev = {
     id: generateUUID(),
     date: amortizationDateStr,
     time: '12:00',
-    title: `Extraordinary Amortization: ${formatCurrency(amortVal)}`,
-    description: notes || `Extraordinary amortization record`,
+    title: `Extraordinary Amortization: ${formatCurrency(amount)}`,
+    description: notes || 'Extraordinary amortization record',
     category: LoanEventCategory.AMORTIZATION,
     eventType: EventType.AMORTIZATION,
     status: EventStatus.AMORTIZED,
     priority: EventPriority.HIGH,
-    amount: amortVal,
-    amortizationAmount: amortVal,
-    strategy: strategy,
-    isCompleted: true,
-    labels: ['Amortization']
+    amount,
+    amortizationAmount: amount,
+    strategy,
+    isCompleted: true
   };
-  return eventsList.some((e) => e.id === amortEvent.id) ? eventsList : [...eventsList, amortEvent];
+  return eventsList.some((e) => e.id === ev.id) ? eventsList : [...eventsList, ev];
 }
 
+// ---------------------------------------------------------------------------
+// Loan Metrics
+// ---------------------------------------------------------------------------
+
 /**
- * Calculate Summary Metrics for the Loan Timeline Header
+ * Calculate summary metrics for a single loan timeline header.
+ *
+ * originalCapital priority:
+ *   timeline.loanContract.originalCapital  (contract row — Total Amount Financed)
+ *   > timeline.originalCapital
+ *   > timeline.totalDebt
+ *   > sum of installment principal amounts
+ *
+ * remaining_debt = sum of amounts of all open (non-paid, non-abated) installments.
+ *
+ * @param {object} timeline   - Loan timeline (may include a .loanContract sub-object)
+ * @param {Array}  eventsList - All events already processed by recalculateLoanState
+ * @returns {object} Metrics object consumed by LoanTimelineHeader
  */
 export function getLoanMetrics(timeline, eventsList = []) {
-  // 1. Original capital: priority = loanContract.originalCapital > timeline.originalCapital > timeline.totalDebt > sum of installment principals
-  const contractOriginalCapital = Number(
+  const today = todayISO();
+
+  // --- Original capital ---
+  const originalCapital = Number(
     timeline?.loanContract?.originalCapital ||
     timeline?.loanContract?.original_capital ||
     timeline?.originalCapital ||
     timeline?.original_capital ||
+    timeline?.totalDebt ||
     0
-  );
+  ) || (eventsList || []).reduce((acc, ev) => {
+    if (!isLoanInstallment(ev)) return acc;
+    return acc + getPrincipal(ev);
+  }, 0);
 
-  let calculatedTotalDebt = contractOriginalCapital || Number(timeline?.totalDebt || timeline?.totalLoanAmount || timeline?.initialDebt || 0);
-  if (!calculatedTotalDebt || calculatedTotalDebt === 0) {
-    calculatedTotalDebt = (eventsList || []).reduce((acc, ev) => {
-      const isLoanInst = ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT;
-      if (isLoanInst) {
-        const totalAmt = Number(ev.amount || 0);
-        const principal = ev.principalAmount !== undefined ? Number(ev.principalAmount) : Math.round(totalAmt * 0.82 * 100) / 100;
-        return acc + principal;
-      }
-      return acc;
-    }, 0);
-  }
-  const totalDebt = calculatedTotalDebt;
-  let totalPaid = 0;
-  let totalContractInterestPaid = 0;
-  let totalLateInterestPaid = 0;
-  let totalPrincipalAmortized = 0;
-  let paidInstallmentsCount = 0;
-  let overdueInstallmentsCount = 0;
-  let totalInstallmentsCount = 0;
-  let nextInstallment = null;
+  // --- Per-installment aggregations ---
+  let principalPaid      = 0;
+  let interestPaid       = 0;
+  let lateInterestPaid   = 0;
+  let paidCount          = 0;
+  let overdueCount       = 0;
+  let totalCount         = 0;
+  let nextInstallment    = null;
 
-  const todayStr = '2026-08-21';
+  for (const ev of eventsList) {
+    if (!isLoanInstallment(ev)) continue;
+    totalCount++;
 
-  eventsList.forEach((ev) => {
-    const isLoanInst = ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT;
-    if (!isLoanInst) return;
-
-    totalInstallmentsCount++;
-    const totalAmt = Number(ev.amount || 0);
-    const principal = ev.principalAmount !== undefined ? Number(ev.principalAmount) : Math.round(totalAmt * 0.82);
-    const interestPortion = ev.interestPortion !== undefined ? Number(ev.interestPortion) : totalAmt - principal;
+    const principal   = getPrincipal(ev);
+    const interest    = Number(ev.interestPortion || 0);
     const lateInterest = Number(ev.interestAmount || 0);
+    const amount      = Number(ev.amount || 0);
+    const abated      = isAbated(ev);
+    const paid        = isPositiveStatus(ev.status);
 
-    const isAbatida = ev.status === EventStatus.AMORTIZED || Boolean(ev.isAbatida);
-    const isPaid = isPositiveStatus(ev.status);
-
-    if (isAbatida) {
-      const origAmt = Number(ev.originalAmount || totalAmt || 0);
-      const abatedCap = Number(ev.originalPrincipal !== undefined ? ev.originalPrincipal : (ev.principalAmount > 0 ? ev.principalAmount : Math.round(origAmt * 0.82 * 100) / 100));
-      totalPrincipalAmortized += abatedCap;
-      totalPaid += abatedCap;
-      paidInstallmentsCount++;
-    } else if (isPaid) {
-      totalPaid += totalAmt + lateInterest;
-      totalContractInterestPaid += interestPortion;
-      totalLateInterestPaid += lateInterest;
-      totalPrincipalAmortized += principal;
-      paidInstallmentsCount++;
-    } else if (ev.status === EventStatus.OVERDUE || (ev.date < todayStr && !isPaid)) {
-      overdueInstallmentsCount++;
-      if (!nextInstallment || ev.date < nextInstallment.date) {
-        nextInstallment = ev;
-      }
+    if (abated) {
+      // Abated installments: use stored original principal (paid via amortization)
+      const abatedPrincipal = Number(ev.originalPrincipal ?? (ev.principalAmount > 0 ? ev.principalAmount : getPrincipal({ ...ev, amount: Number(ev.originalAmount || amount) })));
+      principalPaid += abatedPrincipal;
+      paidCount++;
+    } else if (paid) {
+      principalPaid    += principal;
+      interestPaid     += interest;
+      lateInterestPaid += lateInterest;
+      paidCount++;
     } else {
-      if (!nextInstallment || ev.date < nextInstallment.date) {
-        nextInstallment = ev;
-      }
+      // Open installment
+      if (ev.status === EventStatus.OVERDUE || ev.date < today) overdueCount++;
+      if (!nextInstallment || ev.date < nextInstallment.date) nextInstallment = ev;
     }
-  });
+  }
 
-  // remaining_debt = sum of amounts of all open (non-paid, non-abated) installments
-  const remainingBalance = Math.max(0, (eventsList || []).reduce((acc, ev) => {
-    const isLoanInst = ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT;
-    if (!isLoanInst) return acc;
-    const isAbatida = ev.status === EventStatus.AMORTIZED || Boolean(ev.isAbatida);
-    const isPaid = isPositiveStatus(ev.status);
-    if (!isAbatida && !isPaid) {
-      return acc + Number(ev.amount || 0);
-    }
-    return acc;
+  // --- Remaining debt = sum of principal only of open (non-paid, non-abated) installments ---
+  // Does NOT include interest or stamp tax — pure outstanding capital
+  const remainingDebt = Math.max(0, eventsList.reduce((acc, ev) => {
+    if (!isLoanInstallment(ev) || isAbated(ev) || isPositiveStatus(ev.status)) return acc;
+    return acc + getPrincipal(ev);
   }, 0));
-  const progressPercent = totalDebt > 0 ? Math.min(100, Math.round((totalPrincipalAmortized / totalDebt) * 100)) : 0;
-  const totalInterestPaid = totalContractInterestPaid + totalLateInterestPaid;
+
+  // --- Future interest = sum of interestPortion of open installments ---
+  const futureInterest = Math.max(0, eventsList.reduce((acc, ev) => {
+    if (!isLoanInstallment(ev) || isAbated(ev) || isPositiveStatus(ev.status)) return acc;
+    return acc + Number(ev.interestPortion || 0);
+  }, 0));
+
+  // --- Total loan cost = what the user actually pays in total ---
+  //
+  //   PAID installments  → ev.amount (capital + interest + tax effectively paid)
+  //   ABATED installments → 0  (those installments were eliminated; the principal
+  //                             was covered by the extraordinary amortization event,
+  //                             and the interest of those installments is SAVED)
+  //   AMORTIZATION events → ev.amount  (the lump sum the user paid upfront)
+  //   OPEN installments   → ev.amount  (scheduled, already adjusted post-amortization)
+  //
+  // Result: abating installments reduces the total cost by the interest component
+  // of those cancelled installments (the "interest saved").
+  const totalLoanCost = Math.round(eventsList.reduce((acc, ev) => {
+    // Extraordinary amortization payments count at face value
+    if (ev.eventType === EventType.AMORTIZATION || ev.category === LoanEventCategory.AMORTIZATION) {
+      if (isPositiveStatus(ev.status) || ev.isCompleted) return acc + Number(ev.amount || 0);
+      return acc;
+    }
+    if (!isLoanInstallment(ev)) return acc;
+    if (isAbated(ev)) return acc; // interest saved — not counted
+    if (isPositiveStatus(ev.status)) return acc + Number(ev.amount || 0) + Number(ev.interestAmount || 0);
+    return acc + Number(ev.amount || 0); // open: already reduced by amortization
+  }, 0) * 100) / 100;
+
+  const totalInterestPaid = interestPaid + lateInterestPaid;
+  const progressPercent = originalCapital > 0
+    ? Math.min(100, Math.round((principalPaid / originalCapital) * 100))
+    : 0;
+
   let loanStatus = EventStatus.PLANNED;
-  if (remainingBalance <= 0 || (totalInstallmentsCount > 0 && paidInstallmentsCount >= totalInstallmentsCount)) {
+  if (remainingDebt <= 0 || (totalCount > 0 && paidCount >= totalCount)) {
     loanStatus = EventStatus.SETTLED;
-  } else if (overdueInstallmentsCount > 0) {
+  } else if (overdueCount > 0) {
     loanStatus = EventStatus.OVERDUE;
   }
 
-  let lastActiveInstallment = null;
-  const activeInstallments = eventsList
-    .filter((ev) => {
-      const isLoanInst = ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT;
-      return isLoanInst && !isPositiveStatus(ev.status);
-    })
+  // --- Last active installment (for payoff date) ---
+  const openInstallments = eventsList
+    .filter((ev) => isLoanInstallment(ev) && !isPositiveStatus(ev.status))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  if (activeInstallments.length > 0) {
-    lastActiveInstallment = activeInstallments[activeInstallments.length - 1];
-  } else {
-    const allLoanInst = eventsList
-      .filter((ev) => ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT)
-      .sort((a, b) => a.date.localeCompare(b.date));
-    lastActiveInstallment = allLoanInst.length > 0 ? allLoanInst[allLoanInst.length - 1] : null;
-  }
+  const lastActiveInstallment = openInstallments.length > 0
+    ? openInstallments[openInstallments.length - 1]
+    : (eventsList
+        .filter(isLoanInstallment)
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .at(-1) ?? null);
 
-  const estimatedPayoffDate = lastActiveInstallment ? lastActiveInstallment.date : (timeline.endDate || null);
-  const nextDueDate = nextInstallment ? nextInstallment.date : null;
-  const currentInstallmentAmount = Number(timeline.installmentAmount || 0) || (nextInstallment ? Number(nextInstallment.amount || 0) : (eventsList.find((e) => e.category === LoanEventCategory.LOAN_INSTALLMENT || e.eventType === EventType.LOAN_INSTALLMENT)?.amount || 0));
-  const estimatedFutureInterest = Math.max(0, (eventsList || []).filter(e => (e.category === LoanEventCategory.LOAN_INSTALLMENT || e.eventType === EventType.LOAN_INSTALLMENT) && !isPositiveStatus(e.status)).reduce((acc, ev) => acc + Number(ev.interestPortion || 0), 0));
-  const futureCapital = remainingBalance;
-  const futureTotal = futureCapital + estimatedFutureInterest;
-  // total_loan_cost = sum of all installments:
-  //   - paid: their actual paid amount (ev.amount + late interest)
-  //   - abated: their ORIGINAL amount before abatement (what was "paid" via amortization)
-  //   - pending: their scheduled amount
-  let totalInstallmentsCostSum = 0;
-  eventsList.forEach((ev) => {
-    const isLoanInst = ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT;
-    if (!isLoanInst) return;
-    const isAbatida = ev.status === EventStatus.AMORTIZED || Boolean(ev.isAbatida);
-    const isPaid = isPositiveStatus(ev.status);
+  const estimatedPayoffDate = lastActiveInstallment?.date ?? timeline?.endDate ?? null;
+  const nextDueDate = nextInstallment?.date ?? null;
 
-    if (isAbatida) {
-      // Use the original installment amount before it was abated
-      const origAmt = Number(ev.originalAmount || ev.amount || 0);
-      totalInstallmentsCostSum += origAmt;
-    } else if (isPaid) {
-      totalInstallmentsCostSum += Number(ev.amount || 0) + Number(ev.interestAmount || 0);
-    } else {
-      totalInstallmentsCostSum += Number(ev.amount || 0);
-    }
-  });
-
-  const totalEstimatedInterest = totalInterestPaid + estimatedFutureInterest;
-  const totalLoanCost = Math.round(totalInstallmentsCostSum * 100) / 100;
+  const currentInstallmentAmount =
+    Number(timeline?.installmentAmount || 0) ||
+    Number(nextInstallment?.amount || 0) ||
+    Number(eventsList.find(isLoanInstallment)?.amount || 0);
 
   return {
-    totalDebt,
-    // originalCapital comes from the loan contract (Total Amount Financed), not totalDebt computed from events
-    original_capital: contractOriginalCapital || totalDebt,
-    originalCapital: contractOriginalCapital || totalDebt,
+    // Capital
+    originalCapital,
 
-    remainingBalance,
-    remaining_debt: remainingBalance,
+    // Debt
+    remainingDebt,
+    remainingBalance: remainingDebt,
 
-    amortized_capital: totalPrincipalAmortized,
-    paid_capital: totalPrincipalAmortized,
+    // Amortized
+    principalPaid,
+    amortizedCapital: principalPaid,
 
-    totalPaid,
-    totalPrincipalAmortized,
-    totalContractInterestPaid,
-    totalLateInterestPaid,
+    // Paid totals
+    totalPaid: principalPaid + totalInterestPaid,
+    interestPaid,
+    lateInterestPaid,
     totalInterestPaid,
-    paid_interest: totalInterestPaid,
-    paid_total: totalPaid,
-    totalSavedInterest: 0,
 
-    paid_installments: paidInstallmentsCount,
-    remaining_installments: Math.max(0, totalInstallmentsCount - paidInstallmentsCount),
-    overdueInstallmentsCount,
-    total_installments: totalInstallmentsCount,
+    // Loan cost
+    totalLoanCost,
 
-    current_installment_amount: currentInstallmentAmount,
-    monthlyPayment: currentInstallmentAmount,
+    // Future
+    futureCapital: remainingDebt,
+    futureInterest,
+    futureTotal: remainingDebt + futureInterest,
 
-    future_capital: futureCapital,
-    future_interest: estimatedFutureInterest,
-    future_total: futureTotal,
+    // Installment counts
+    paidInstallments: paidCount,
+    overdueInstallments: overdueCount,
+    totalInstallments: totalCount,
+    remainingInstallments: Math.max(0, totalCount - paidCount),
 
-    total_estimated_interest: totalEstimatedInterest,
-    total_loan_cost: totalLoanCost,
-
-    progressPercent,
-    amortized_percent: progressPercent,
-
+    // Dates & amounts
+    currentInstallmentAmount,
     nextInstallment,
-    next_due_date: nextDueDate,
-    estimated_payoff_date: estimatedPayoffDate,
+    nextDueDate,
+    estimatedPayoffDate,
     lastActiveInstallment,
-    abatedInstallmentsCount: 0,
-    advancedMonths: 0,
-    advancedLabel: '',
+
+    // Progress
+    progressPercent,
     loanStatus
   };
 }
 
+// ---------------------------------------------------------------------------
+// Consolidated Metrics (across multiple loan timelines)
+// ---------------------------------------------------------------------------
+
 /**
- * Calculate combined / consolidated metrics across multiple loan timelines
+ * Aggregate metrics across all (or a subset of) loan timelines.
+ *
+ * @param {Array}      timelines   - All timelines
+ * @param {Array|null} selectedIds - Restrict to these timeline IDs (null = all loans)
+ * @returns {object}
  */
 export function getConsolidatedLoanMetrics(timelines, selectedIds = null) {
-  const loanTimelines = (timelines || []).filter(
-    (tl) => (tl.type === TimelineType.LOAN || (tl.type || '').toLowerCase().includes('loan')) && (!selectedIds || selectedIds.includes(tl.id))
+  const loans = (timelines || []).filter(
+    (tl) => (tl.type === TimelineType.LOAN || (tl.type || '').toLowerCase().includes('loan')) &&
+            (!selectedIds || selectedIds.includes(tl.id))
   );
 
-  let totalContractedDebt = 0;
-  let totalRemainingBalance = 0;
-  let totalPaid = 0;
-  let totalPrincipalAmortized = 0;
-  let totalInterestPaid = 0;
-  let totalInstallments = 0;
-  let paidInstallments = 0;
-  let overdueInstallments = 0;
+  let totalContractedDebt  = 0;
+  let totalRemainingDebt   = 0;
+  let totalPaid            = 0;
+  let totalPrincipalPaid   = 0;
+  let totalInterestPaid    = 0;
+  let totalInstallments    = 0;
+  let paidInstallments     = 0;
+  let overdueInstallments  = 0;
 
-  loanTimelines.forEach((tl) => {
-    const metrics = getLoanMetrics(tl, tl.events || []);
-    totalContractedDebt += Number(metrics.totalDebt || tl.totalDebt || 0);
-    totalRemainingBalance += Number(metrics.remainingBalance || 0);
-    totalPaid += Number(metrics.totalPaid || 0);
-    totalPrincipalAmortized += Number(metrics.totalPrincipalAmortized || 0);
-    totalInterestPaid += Number(metrics.totalInterestPaid || 0);
-    totalInstallments += metrics.totalInstallmentsCount;
-    paidInstallments += metrics.paidInstallmentsCount;
-    overdueInstallments += metrics.overdueInstallmentsCount;
-  });
+  for (const tl of loans) {
+    const m = getLoanMetrics(tl, tl.events || []);
+    totalContractedDebt  += m.originalCapital;
+    totalRemainingDebt   += m.remainingDebt;
+    totalPaid            += m.totalPaid;
+    totalPrincipalPaid   += m.principalPaid;
+    totalInterestPaid    += m.totalInterestPaid;
+    totalInstallments    += m.totalInstallments;
+    paidInstallments     += m.paidInstallments;
+    overdueInstallments  += m.overdueInstallments;
+  }
 
   return {
-    activeCreditsCount: loanTimelines.length,
+    activeCreditsCount: loans.length,
     totalContractedDebt,
-    totalRemainingBalance,
+    totalRemainingDebt,
     totalPaid,
-    totalPrincipalAmortized,
+    totalPrincipalPaid,
     totalInterestPaid,
     totalInstallments,
     paidInstallments,
     overdueInstallments,
-    progressPercent: totalContractedDebt > 0 ? Math.min(100, Math.round((totalPrincipalAmortized / totalContractedDebt) * 100)) : 0
+    progressPercent: totalContractedDebt > 0
+      ? Math.min(100, Math.round((totalPrincipalPaid / totalContractedDebt) * 100))
+      : 0
   };
 }
 
 /**
- * Calculate Consolidated Loan Metrics at a specific future or past Horizon Month
+ * Consolidated loan metrics at a specific horizon month (e.g. for balance projections).
+ *
+ * @param {Array}       timelines          - All timelines
+ * @param {string|null} targetHorizonMonth - 'yyyy-MM' cutoff (null = no cutoff)
+ * @param {Array|null}  selectedIds        - Restrict to these IDs
+ * @returns {{ totalContractedDebt, totalPrincipalPaid, totalRemainingDebt }}
  */
 export function getConsolidatedLoanMetricsAtHorizon(timelines, targetHorizonMonth = null, selectedIds = null) {
-  const loanTimelines = (timelines || []).filter(
-    (tl) => (tl.type === TimelineType.LOAN || (tl.type || '').toLowerCase().includes('loan')) && (!selectedIds || selectedIds.includes(tl.id))
+  const loans = (timelines || []).filter(
+    (tl) => (tl.type === TimelineType.LOAN || (tl.type || '').toLowerCase().includes('loan')) &&
+            (!selectedIds || selectedIds.includes(tl.id))
   );
 
   let totalContractedDebt = 0;
-  let totalPrincipalAmortized = 0;
-  let totalRemainingBalance = 0;
+  let totalPrincipalPaid  = 0;
+  let totalRemainingDebt  = 0;
 
-  loanTimelines.forEach((tl) => {
-    const metrics = getLoanMetrics(tl, tl.events || []);
-    const totalDebt = Number(metrics.totalDebt || tl.totalDebt || 0);
-    totalContractedDebt += totalDebt;
+  for (const tl of loans) {
+    const { originalCapital } = getLoanMetrics(tl, tl.events || []);
+    totalContractedDebt += originalCapital;
 
-    const allEvts = tl.events || [];
-    let amortizedForLoan = 0;
-
-    allEvts.forEach((ev) => {
-      if (!ev || !ev.date) return;
-      if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-      const evMonth = ev.date.substring(0, 7);
-      if (targetHorizonMonth && evMonth > targetHorizonMonth) return;
-
-      const isLoanInst = ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT;
-      const isAmort = ev.category === LoanEventCategory.AMORTIZATION || ev.eventType === EventType.AMORTIZATION;
-
-      if (isLoanInst) {
-        const totalAmt = Number(ev.amount || 0);
-        const principal = ev.principalAmount !== undefined ? Number(ev.principalAmount) : (ev.principalPaid !== undefined ? Number(ev.principalPaid) : Math.round(totalAmt * 0.82));
-        amortizedForLoan += principal;
-      }
-    });
-
-    const cappedAmortized = Math.min(totalDebt, amortizedForLoan);
-    totalPrincipalAmortized += cappedAmortized;
-    totalRemainingBalance += Math.max(0, totalDebt - cappedAmortized);
-  });
-
-  return { totalContractedDebt, totalPrincipalAmortized, totalRemainingBalance };
-}
-
-/**
- * Calculate metrics for Financial (Entradas, Gastos, Investimentos, Balanço) timelines
- */
-export function getFinancialMetrics(timeline, events = [], computeStartDate = null, targetHorizonMonth = null) {
-  const allEvents = events.length > 0 ? events : (timeline.events || []);
-  const todayStr = '2026-08-21';
-  const currentMonthKey = todayStr.substring(0, 7); // '2026-08'
-  const currentYearKey = todayStr.substring(0, 4); // '2026'
-  const currentMonthDate = parseISO(`${currentMonthKey}-01`);
-  const oneYearAheadDate = addMonths(currentMonthDate, 12);
-  const oneYearAheadKey = format(oneYearAheadDate, 'yyyy-MM');
-  const horizonMonthKey = targetHorizonMonth || currentMonthKey;
-
-  let totalReceived = 0;
-  let totalForecastIncome = 0;
-  let totalForecastIncomeUpToCurrent = 0;
-  let totalForecastIncomeHorizon = 0;
-  let annualProjectedIncome = 0;
-  let currentMonthIncome = 0;
-  let currentMonthIncomeReceived = 0;
-  let totalPaidExpenses = 0;
-  let totalPaidExpensesOnly = 0;
-  let totalPaidLoans = 0;
-  let totalPlannedExpenses = 0;
-  let totalPlannedExpensesUpToCurrent = 0;
-  let totalPlannedExpensesOnlyUpToCurrent = 0;
-  let totalPlannedLoansUpToCurrent = 0;
-  let totalPlannedExpensesHorizon = 0;
-  let currentMonthExpenses = 0;
-  let currentMonthExpensesPaid = 0;
-  let currentMonthExpensesOnly = 0;
-  let currentMonthExpensesOnlyPaid = 0;
-  let currentMonthLoans = 0;
-  let currentMonthLoansPaid = 0;
-  let currentYearExpenses = 0;
-  let currentYearExpensesPaid = 0;
-  let currentYearExpensesOnly = 0;
-  let currentYearExpensesOnlyPaid = 0;
-  let currentYearLoans = 0;
-  let currentYearLoansPaid = 0;
-  const expenseMonthsSet = new Set();
-  let monthlyExpensesSum = 0;
-
-  let nextIncome = null;
-  let nextExpense = null;
-
-  const seenInitialInvestments = new Set();
-  const seenTargets = new Set();
-  let totalPriorInvestedAll = 0;
-  let totalPriorPoupanca = 0;
-  let totalPriorPatrimonio = 0;
-  let totalPriorPatrimonioAcquisition = 0;
-  let totalPriorOutros = 0;
-  let totalTargetSavings = 0;
-
-  const startBound = computeStartDate && computeStartDate !== '1900-01' ? `${computeStartDate}-01` : null;
-
-  (allEvents || []).forEach((ev) => {
-    if (!ev) return;
-    const isInvestment = ev.eventType === EventType.INVESTMENT;
-    if (isInvestment) {
-      if (ev.category === InvestmentEventCategory.ASSETS || ev.category === 'assets') {
-        const initialKey = ev.eventId || ev.seriesId || ev.id;
-        if (!seenInitialInvestments.has(initialKey)) {
-          const currentVal = Number(ev.amount || ev.initialInvestedAmount || 0);
-          const acqVal = Number(ev.initialInvestedAmount !== undefined && ev.initialInvestedAmount !== '' && Number(ev.initialInvestedAmount) > 0 ? ev.initialInvestedAmount : (ev.amount || 0));
-          totalPriorInvestedAll += acqVal;
-          totalPriorPatrimonio += currentVal;
-          totalPriorPatrimonioAcquisition += acqVal;
-          seenInitialInvestments.add(initialKey);
-        }
-      } else if (Number(ev.initialInvestedAmount || 0) > 0) {
-        const initialKey = ev.eventId || ev.seriesId || ev.id;
-        if (!seenInitialInvestments.has(initialKey)) {
-          const initAmt = Number(ev.initialInvestedAmount);
-          totalPriorInvestedAll += initAmt;
-          if (ev.category === InvestmentEventCategory.OTHER || ev.category === InvestmentEventCategory.STOCKS || ev.category?.includes('etf') || ev.category?.includes('acoes')) {
-            totalPriorOutros += initAmt;
-          } else {
-            totalPriorPoupanca += initAmt;
-          }
-          seenInitialInvestments.add(initialKey);
-        }
-      }
-
-      if (Number(ev.targetAmount || 0) > 0) {
-        const targetKey = ev.eventId || ev.seriesId || ev.id;
-        if (!seenTargets.has(targetKey)) {
-          totalTargetSavings += Number(ev.targetAmount);
-          seenTargets.add(targetKey);
-        }
-      }
-
-      if (startBound && ev.date < startBound && ev.category !== InvestmentEventCategory.ASSETS) {
-        const isDone = isPositiveStatus(ev.status) || ev.isCompleted;
-        if (isDone) {
-          const amt = Number(ev.amount || 0);
-          totalPriorInvestedAll += amt;
-          if (ev.category === InvestmentEventCategory.OTHER || ev.category === InvestmentEventCategory.STOCKS || ev.category?.includes('etf') || ev.category?.includes('acoes')) {
-            totalPriorOutros += amt;
-          } else {
-            totalPriorPoupanca += amt;
-          }
-        }
-      }
-    }
-  });
-
-  let totalAportesPoupanca = 0;
-  let totalAportesPatrimonio = 0;
-  let totalAportesOutros = 0;
-  let totalAportesPoupancaHorizon = 0;
-  let totalAportesPatrimonioHorizon = 0;
-  let totalAportesOutrosHorizon = 0;
-
-  let totalInvested = totalPriorInvestedAll;
-  let totalPlannedInvestments = totalPriorInvestedAll;
-  let totalPlannedInvestmentsUpToCurrent = totalPriorInvestedAll;
-  let totalPlannedInvestmentsHorizon = totalPriorInvestedAll;
-  let totalAmortized = 0;
-  let totalLoanDebt = 0;
-
-  allEvents.forEach((ev) => {
-    if (!ev || !ev.date) return;
-    const amt = Number(ev.amount || 0);
-    const isPast = ev.date <= todayStr;
-    const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent;
-    const isInvestment = ev.eventType === EventType.INVESTMENT;
-    const isIncome = ev.eventType === EventType.INCOME;
-    const isExpense = ev.eventType === EventType.EXPENSE || isLoan;
-
-    const evMonth = ev.date ? ev.date.substring(0, 7) : '';
-    const isAfterStartBound = !startBound || ev.date >= startBound;
-    const isUpToCurrent = (ev.date <= todayStr || evMonth <= currentMonthKey) && isAfterStartBound;
-    const isUpToHorizon = (!horizonMonthKey || evMonth <= horizonMonthKey) && isAfterStartBound;
-
-    if (isLoan) {
-      const isPaidOrAmortized = isPositiveStatus(ev.status);
-      const isAmort = ev.eventType === EventType.AMORTIZATION;
-      const amortVal = isAmort ? amt : Number(ev.principalAmount || 0);
-
-      if (isPaidOrAmortized) {
-        totalAmortized += amortVal;
-      } else if (ev.status !== EventStatus.CANCELLED && ev.status !== EventStatus.DELETED) {
-        totalLoanDebt += amortVal;
-      }
+    let paidForLoan = 0;
+    for (const ev of tl.events || []) {
+      if (!ev?.date) continue;
+      if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) continue;
+      if (targetHorizonMonth && ev.date.substring(0, 7) > targetHorizonMonth) continue;
+      if (!isLoanInstallment(ev)) continue;
+      paidForLoan += getPrincipal(ev);
     }
 
-    if (isIncome) {
-      const isReceived = isPositiveStatus(ev.status) || ev.isCompleted;
-      if (isUpToCurrent && isReceived) {
-        totalReceived += amt;
-      }
-      if (isUpToCurrent && ev.status !== EventStatus.CANCELLED && ev.status !== EventStatus.DELETED) {
-        totalForecastIncomeUpToCurrent += amt;
-      }
-      if (isUpToHorizon && ev.status !== EventStatus.CANCELLED && ev.status !== EventStatus.DELETED) {
-        totalForecastIncomeHorizon += amt;
-      }
-      totalForecastIncome += amt;
-      if (evMonth === currentMonthKey) {
-        currentMonthIncome += amt;
-        if (isReceived) {
-          currentMonthIncomeReceived += amt;
-        }
-      }
-      if (evMonth >= currentMonthKey && evMonth < oneYearAheadKey) {
-        annualProjectedIncome += amt;
-      }
-      if (!isPast && (!nextIncome || ev.date < nextIncome.date)) nextIncome = ev;
-    } else if (isExpense) {
-      const isPaidOrNoPending = isPositiveStatus(ev.status);
-      const isPlanned = ev.status !== EventStatus.CANCELLED && ev.status !== EventStatus.DELETED;
-
-      if (isUpToCurrent && isPaidOrNoPending) {
-        totalPaidExpenses += amt;
-        if (isLoan) {
-          totalPaidLoans += amt;
-        } else {
-          totalPaidExpensesOnly += amt;
-        }
-      }
-      if (isUpToCurrent && isPlanned) {
-        totalPlannedExpensesUpToCurrent += amt;
-        if (isLoan) {
-          totalPlannedLoansUpToCurrent += amt;
-        } else {
-          totalPlannedExpensesOnlyUpToCurrent += amt;
-        }
-      }
-      if (isUpToHorizon && isPlanned) {
-        totalPlannedExpensesHorizon += amt;
-      }
-      totalPlannedExpenses += amt;
-      if (!isPast && (!nextExpense || ev.date < nextExpense.date)) nextExpense = ev;
-
-      const evYear = ev.date ? ev.date.substring(0, 4) : '';
-      if (evMonth === currentMonthKey && isPlanned) {
-        currentMonthExpenses += amt;
-        if (isLoan) {
-          currentMonthLoans += amt;
-        } else {
-          currentMonthExpensesOnly += amt;
-        }
-        if (isPaidOrNoPending) {
-          currentMonthExpensesPaid += amt;
-          if (isLoan) {
-            currentMonthLoansPaid += amt;
-          } else {
-            currentMonthExpensesOnlyPaid += amt;
-          }
-        }
-      }
-      if (evYear === currentYearKey && isPlanned) {
-        currentYearExpenses += amt;
-        if (isLoan) {
-          currentYearLoans += amt;
-        } else {
-          currentYearExpensesOnly += amt;
-        }
-        if (isPaidOrNoPending) {
-          currentYearExpensesPaid += amt;
-          if (isLoan) {
-            currentYearLoansPaid += amt;
-          } else {
-            currentYearExpensesOnlyPaid += amt;
-          }
-        }
-      }
-      if (evMonth && isPlanned) {
-        expenseMonthsSet.add(evMonth);
-        monthlyExpensesSum += amt;
-      }
-    } else if (isInvestment) {
-      if (ev.category !== InvestmentEventCategory.ASSETS) {
-        const isInvestedDone = isPositiveStatus(ev.status) || ev.isCompleted;
-        if (isUpToCurrent && isInvestedDone) {
-          totalInvested += amt;
-          totalMonthlyAportesRealized += amt;
-          if (ev.category === InvestmentEventCategory.OTHER || ev.category === InvestmentEventCategory.STOCKS || ev.category?.includes('etf') || ev.category?.includes('acoes') || ev.category?.includes('extra')) {
-            totalAportesOutros += amt;
-          } else {
-            totalAportesPoupanca += amt;
-          }
-        }
-
-        if (isUpToCurrent && ev.status !== EventStatus.CANCELLED && ev.status !== EventStatus.DELETED) {
-          totalPlannedInvestmentsUpToCurrent += amt;
-          totalMonthlyAportesPlannedCurrent += amt;
-        }
-        if (isUpToHorizon && ev.status !== EventStatus.CANCELLED && ev.status !== EventStatus.DELETED) {
-          totalPlannedInvestmentsHorizon += amt;
-          totalMonthlyAportesPlannedHorizon += amt;
-          if (ev.category === InvestmentEventCategory.OTHER || ev.category === InvestmentEventCategory.STOCKS || ev.category?.includes('etf') || ev.category?.includes('acoes') || ev.category?.includes('extra')) {
-            totalAportesOutrosHorizon += amt;
-          } else {
-            totalAportesPoupancaHorizon += amt;
-          }
-        }
-        totalPlannedInvestments += amt;
-      }
-    }
-  });
-
-  const totalPoupanca = totalPriorPoupanca + totalAportesPoupanca;
-  const totalPatrimonio = totalPriorPatrimonio + totalAportesPatrimonio;
-  const totalOutros = totalPriorOutros + totalAportesOutros;
-
-  const totalPoupancaHorizon = totalPriorPoupanca + totalAportesPoupancaHorizon;
-  const totalPatrimonioHorizon = totalPriorPatrimonio + totalAportesPatrimonioHorizon;
-  const totalOutrosHorizon = totalPriorOutros + totalAportesOutrosHorizon;
-
-  const totalPatrimonioGain = totalPatrimonio - totalPriorPatrimonioAcquisition;
-  const totalPatrimonioGainPercent = totalPriorPatrimonioAcquisition > 0
-    ? ((totalPatrimonio - totalPriorPatrimonioAcquisition) / totalPriorPatrimonioAcquisition) * 100
-    : 0;
-
-  const totalPatrimonioGainHorizon = totalPatrimonioHorizon - totalPriorPatrimonioAcquisition;
-  const totalPatrimonioGainPercentHorizon = totalPriorPatrimonioAcquisition > 0
-    ? ((totalPatrimonioHorizon - totalPriorPatrimonioAcquisition) / totalPriorPatrimonioAcquisition) * 100
-    : 0;
-
-  const monthlyAverageExpenses = expenseMonthsSet.size > 0 ? (monthlyExpensesSum / expenseMonthsSet.size) : (currentMonthExpenses || 0);
-  const projectedAnnualExpenses = currentYearExpenses > 0 ? currentYearExpenses : (monthlyAverageExpenses * 12);
-  const monthlyAverageIncome = annualProjectedIncome > 0
-    ? (annualProjectedIncome / 12)
-    : (currentMonthIncome || 0);
-
-  const netRealized = totalReceived - totalPaidExpenses - totalMonthlyAportesRealized;
-  const netProjectedCurrent = totalForecastIncomeUpToCurrent - totalPlannedExpensesUpToCurrent - totalMonthlyAportesPlannedCurrent;
-  const netProjectedHorizon = totalForecastIncomeHorizon - totalPlannedExpensesHorizon - totalMonthlyAportesPlannedHorizon;
-  const netProjected = totalForecastIncome - totalPlannedExpenses - totalPlannedInvestments;
-  const savingsRate = totalReceived > 0 ? Math.round(((totalInvested + Math.max(0, netRealized)) / totalReceived) * 100) : 0;
-
-  return {
-    totalReceived,
-    totalForecastIncome,
-    totalForecastIncomeUpToCurrent,
-    totalForecastIncomeHorizon,
-    annualProjectedIncome,
-    currentMonthIncome,
-    currentMonthIncomeReceived,
-    monthlyAverageIncome,
-    totalPaidExpenses,
-    totalPlannedExpenses,
-    totalPlannedExpensesUpToCurrent,
-    totalPlannedExpensesHorizon,
-    totalInvested,
-    totalInvestedMarket: totalPoupanca + totalPatrimonio + totalOutros,
-    totalPoupanca,
-    totalPatrimonio,
-    totalPatrimonioAcquisition: totalPriorPatrimonioAcquisition,
-    totalPatrimonioGain,
-    totalPatrimonioGainPercent,
-    totalOutros,
-    totalPoupancaHorizon,
-    totalPatrimonioHorizon,
-    totalPatrimonioGainHorizon,
-    totalPatrimonioGainPercentHorizon,
-    totalOutrosHorizon,
-    totalTargetSavings,
-    totalPlannedInvestments,
-    totalPlannedInvestmentsUpToCurrent,
-    totalPlannedInvestmentsHorizon,
-    totalPlannedInvestmentsMarketHorizon: totalPoupancaHorizon + totalPatrimonioHorizon + totalOutrosHorizon,
-    totalMonthlyAportesRealized,
-    totalMonthlyAportesPlannedHorizon,
-    currentMonthExpenses,
-    currentMonthExpensesPaid,
-    currentMonthExpensesOnly,
-    currentMonthExpensesOnlyPaid,
-    currentMonthLoans,
-    currentMonthLoansPaid,
-    currentYearExpenses,
-    currentYearExpensesPaid,
-    currentYearExpensesOnly,
-    currentYearExpensesOnlyPaid,
-    currentYearLoans,
-    currentYearLoansPaid,
-    annualProjectedExpenses: currentYearExpenses > 0 ? currentYearExpenses : projectedAnnualExpenses,
-    annualProjectedExpensesOnly: currentYearExpensesOnly,
-    annualProjectedLoans: currentYearLoans,
-    totalPaidExpensesYear: currentYearExpensesPaid,
-    totalPaidExpensesOnly,
-    totalPaidLoans,
-    totalAmortized,
-    totalLoanDebt,
-    totalPlannedExpensesOnlyUpToCurrent,
-    totalPlannedLoansUpToCurrent,
-    monthlyAverageExpenses,
-    projectedAnnualExpenses,
-    netRealized,
-    netProjectedCurrent,
-    netProjectedHorizon,
-    netProjected,
-    savingsRate,
-    nextIncome,
-    nextExpense,
-    totalEventsCount: allEvents.length
-  };
-}
-
-/**
- * Calculate metrics for Income (Entradas & Rendimentos) timelines
- */
-export function getIncomeMetrics(timeline, events = [], computeStartDate = null) {
-  const allEvents = events.length > 0 ? events : (timeline.events || []);
-  const todayStr = '2026-08-21';
-  const currentMonthKey = todayStr.substring(0, 7);
-  const currentYearKey = todayStr.substring(0, 4);
-
-  const rawComputeStartDate = computeStartDate || timeline?.computeStartDate || timeline?.computeFromMonth;
-  const startBound = rawComputeStartDate && rawComputeStartDate !== '1900-01'
-    ? (rawComputeStartDate.length === 7 ? `${rawComputeStartDate}-01` : rawComputeStartDate)
-    : null;
-
-  let totalReceivedAllTime = 0;
-  let totalProjectedUpToCurrent = 0;
-  let totalForecast = 0;
-  let receivedCount = 0;
-  let plannedCount = 0;
-  let monthlyRecurring = Number(timeline.monthlySalary || 3349.00);
-  let nextIncome = null;
-  let currentMonthReceived = 0;
-  let totalReceivedYear = 0;
-  let annualProjected = 0;
-
-  allEvents.forEach((ev) => {
-    if (!ev || ev.isDeleted) return;
-    const isIncome = ev.eventType === EventType.INCOME;
-
-    if (!isIncome) return;
-
-    const amt = Number(ev.amount || 0);
-    const isPast = ev.date <= todayStr;
-    const isReceived = isPositiveStatus(ev.status) || ev.isCompleted;
-    const evMonth = ev.date ? ev.date.substring(0, 7) : '';
-    const evYear = ev.date ? ev.date.substring(0, 4) : '';
-    const isAfterStartBound = !startBound || ev.date >= startBound;
-    const isUpToCurrent = (ev.date <= todayStr || evMonth <= currentMonthKey) && isAfterStartBound;
-
-    if (isUpToCurrent) {
-      if (ev.status !== EventStatus.CANCELLED && ev.status !== EventStatus.DELETED) {
-        totalProjectedUpToCurrent += amt;
-      }
-      if (isReceived) {
-        totalReceivedAllTime += amt;
-      }
-    }
-
-    if (evYear === currentYearKey) {
-      annualProjected += amt;
-      if (isReceived) {
-        totalReceivedYear += amt;
-      }
-    }
-
-    if (evMonth === currentMonthKey && isReceived) {
-      currentMonthReceived += amt;
-    }
-
-    if (isPast) {
-      if (isReceived) {
-        receivedCount++;
-        totalForecast += amt;
-      }
-    } else {
-      totalForecast += amt;
-      plannedCount++;
-      if (!nextIncome || ev.date < nextIncome.date) {
-        nextIncome = ev;
-      }
-    }
-  });
-
-  return {
-    totalReceived: totalReceivedYear,
-    totalReceivedYear,
-    totalReceivedAllTime,
-    totalProjectedUpToCurrent,
-    annualProjected: annualProjected || (monthlyRecurring * 12),
-    currentMonthReceived,
-    monthlyBaseSalary: monthlyRecurring,
-    receivedCount,
-    plannedCount,
-    totalEventsCount: allEvents.length,
-    monthlyRecurring,
-    nextIncome
-  };
-}
-
-/**
- * Generate regular income schedule events (e.g. salary)
- */
-export function generateIncomeSchedule({
-  monthlySalary = 3300.00,
-  startDateStr = '2024-01-01',
-  endDateStr = '2027-12-31',
-  dueDay = 28
-}) {
-  const events = [];
-  const start = parseISO(startDateStr);
-  const end = parseISO(endDateStr);
-  const todayStr = '2026-08-21';
-  let cur = start;
-  let counter = 1;
-
-  while (cur <= end) {
-    const year = cur.getFullYear();
-    const month = cur.getMonth() + 1;
-    const monthStr = month.toString().padStart(2, '0');
-    const dayStr = Number(dueDay).toString().padStart(2, '0');
-    const dateStr = `${year}-${monthStr}-${dayStr}`;
-
-    const isPast = dateStr <= todayStr;
-    events.push({
-      id: generateUUID(),
-      date: dateStr,
-      time: '10:00',
-      title: `Monthly Salary (${formatCurrency(monthlySalary)})`,
-      description: `Net salary transfer (${formatCurrency(monthlySalary)}).`,
-      category: IncomeEventCategory.RECURRING_INCOME,
-      eventType: EventType.INCOME,
-      status: isPast ? EventStatus.RECEIVED : EventStatus.PLANNED,
-      priority: EventPriority.NORMAL,
-      amount: Number(monthlySalary),
-      isIncome: true,
-      isCompleted: isPast,
-      labels: ['Salary', 'Recurring', isPast ? 'Received' : 'Forecast']
-    });
-
-    cur = addMonths(cur, 1);
-    counter++;
+    const capped = Math.min(originalCapital, paidForLoan);
+    totalPrincipalPaid += capped;
+    totalRemainingDebt += Math.max(0, originalCapital - capped);
   }
 
-  return events;
+  return { totalContractedDebt, totalPrincipalPaid, totalRemainingDebt };
 }
-

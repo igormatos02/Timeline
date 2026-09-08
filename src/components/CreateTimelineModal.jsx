@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, FolderPlus, Edit2, CreditCard, DollarSign, Calendar, ShieldCheck, ShieldAlert, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, parseISO, setMonth, setYear } from 'date-fns';
-import { generateLoanSchedule } from '../utils/loanCalculations';
+import { generateLoanInstallments } from '../utils/loanCalculations';
 import { TimelineType, TimelineStatus, EventPeriodicity, EventAggregation } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
@@ -150,15 +150,12 @@ export default function CreateTimelineModal({
 
     // Automatically generate loan installments schedule via PMT formula
     if (!initialData) {
-      const generatedEvents = generateLoanSchedule({
-        totalDebt: finalData.totalDebt,
+      const generatedEvents = generateLoanInstallments({
         totalAmountFinanced: finalData.totalDebt,
-        installmentAmount: 0, // PMT formula
-        totalInstallments: finalData.totalInstallments,
         numberOfInstallments: finalData.totalInstallments,
         tanRate: finalData.tanRate,
-        taxaImpostoSeloJuros: finalData.interestStampTaxRate,
-        startDateStr: fullStartDate,
+        interestStampTaxRate: finalData.interestStampTaxRate,
+        startDate: fullStartDate,
         dueDay: dueDayNum,
         periodicity: EventAggregation.MONTHLY
       });
@@ -201,17 +198,12 @@ export default function CreateTimelineModal({
       const dueDayStr = dueDayNum.toString().padStart(2, '0');
       const fullStartDate = formData.startDate ? `${formData.startDate}-${dueDayStr}` : getTodayStr();
 
-      const events = generateLoanSchedule({
-        totalDebt: parsedTotalDebt,
+      const events = generateLoanInstallments({
         totalAmountFinanced: parsedTotalDebt,
-        installmentAmount: 0, // 0 triggers standard PMT formula calculation
-        totalInstallments: parsedTotalInstallments || 12,
         numberOfInstallments: parsedTotalInstallments || 12,
         tanRate: parseFloat(formData.tanRate) || 0,
         spread: parseFloat(formData.spread) || 0,
         interestStampTaxRate: parseFloat(formData.interestStampTaxRate || formData.taxaImpostoSeloJuros || formData.installmentStampTax) || 0,
-        taxaImpostoSeloJuros: parseFloat(formData.interestStampTaxRate || formData.taxaImpostoSeloJuros || formData.installmentStampTax) || 0,
-        startDateStr: fullStartDate,
         startDate: fullStartDate,
         dueDay: dueDayNum,
         periodicity: EventAggregation.MONTHLY

@@ -15,7 +15,9 @@ export class FinancialEventService {
     const month = parseInt(dateStr.substring(5, 7), 10);
     if (isNaN(year) || isNaN(month)) return;
 
-    if (isPositiveStatus(status)) {
+    if (status === EventStatus.DELETED || status === 'deleted') {
+      await financialEventStatusRepository.upsertStatus(year, month, eventId, EventStatus.DELETED, options);
+    } else if (isPositiveStatus(status)) {
       await financialEventStatusRepository.upsertStatus(year, month, eventId, status, options);
     } else if (isNegativeStatus(status)) {
       await financialEventStatusRepository.deleteStatus(year, month, eventId);
@@ -24,8 +26,6 @@ export class FinancialEventService {
 
   async getAllEvents(filter = {}) {
     const rawEvents = await eventRepository.getAllWithStatuses();
-    const projectedEvents = projectEvents(rawEvents, filter);
-
     const statusMap = await financialEventStatusRepository.getStatusMap();
 
     // Mapear também os status dinâmicos que vieram no join dos rawEvents
@@ -40,6 +40,29 @@ export class FinancialEventService {
         }
       }
     }
+
+    // Attach status to non-recurring rawEvents/overrides before projection so ProjectionEngine knows tombstone overrides
+    for (const rawEv of rawEvents) {
+      if (rawEv.isRecurring) continue; // Monthly status in financial_event_status applies to projected occurrences, not recurring root templates
+      const dateStr = rawEv.date ? String(rawEv.date) : '';
+      if (dateStr.length >= 7) {
+        const year = parseInt(dateStr.substring(0, 4), 10);
+        const month = parseInt(dateStr.substring(5, 7), 10);
+        const targetId = rawEv.eventId || rawEv.id;
+        const key = `${year}_${month}_${targetId}`;
+        const keyById = `${year}_${month}_${rawEv.id}`;
+        let matchedStatus = statusMap.get(key) || statusMap.get(keyById) || joinedStatusMap.get(key) || joinedStatusMap.get(keyById);
+        if (matchedStatus) {
+          rawEv.status = matchedStatus;
+          rawEv.isCompleted = isPositiveStatus(matchedStatus);
+          if (matchedStatus === EventStatus.DELETED) {
+            rawEv.isDeleted = true;
+          }
+        }
+      }
+    }
+
+    const projectedEvents = projectEvents(rawEvents, filter);
 
     for (const ev of projectedEvents) {
       const dateStr = ev.date ? String(ev.date) : '';
@@ -281,8 +304,10 @@ export class FinancialEventService {
 
   async deleteEvent(id, options = {}) {
     const { deleteScope = 'single' } = options;
+    console.log('[deleteEvent] id:', id, 'deleteScope:', deleteScope, 'options:', options);
     const allRawEvents = await eventRepository.getAll();
     const directEvent = await eventRepository.getById(id);
+    console.log('[deleteEvent] directEvent found:', !!directEvent);
 
     if (directEvent?.isAmortizationEvent?.() || directEvent?.eventType === EventType.AMORTIZATION || directEvent?.category === LoanEventCategory.AMORTIZATION) {
       if (directEvent?.date) {
@@ -306,71 +331,163 @@ export class FinancialEventService {
       return eventRepository.delete(id);
     }
 
-    const targetSeriesId = directEvent?.eventId || directEvent?.event_id || directEvent?.sobrepositionOver || options.eventId;
+    const targetSeriesId = directEvent?.eventId || directEvent?.event_id || directEvent?.sobrepositionOver || options.eventId || (id && id.includes('_') ? id.split('_')[0] : id);
+    const targetDate = options.date || directEvent?.date || (id && id.includes('_') ? id.split('_')[1] : null);
+    console.log('[deleteEvent] targetSeriesId:', targetSeriesId, 'targetDate:', targetDate);
+
+    const rootEvent = directEvent || allRawEvents.find((ev) => (ev.eventId && ev.eventId === targetSeriesId) || ev.id === targetSeriesId || ev.id === id) || {};
+    console.log('[deleteEvent] rootEvent:', rootEvent?.name, rootEvent?.id);
+
+    const isRecurringSeries =
+      rootEvent.isRecurring === true ||
+      rootEvent.periodicity === EventPeriodicity.RECURRING ||
+      rootEvent.periodicity === EventPeriodicity.PERIOD ||
+      rootEvent.periodicity === 'recorrente' ||
+      rootEvent.periodicity === 'recurring' ||
+      rootEvent.aggregation === 'recurring' ||
+      rootEvent.aggregation === 'monthly' ||
+      rootEvent.aggregation === 'mensal' ||
+      Boolean(id && String(id).includes('_')) ||
+      allRawEvents.some((ev) => ((ev.eventId && ev.eventId === targetSeriesId) || ev.id === targetSeriesId) && (ev.isRecurring || ev.aggregation === 'recurring'));
+
+    console.log('[deleteEvent] isRecurringSeries:', isRecurringSeries, 'targetSeriesId:', targetSeriesId, 'rootEvent.id:', rootEvent?.id);
 
     if (deleteScope === 'all' || options.deleteSeries) {
       if (targetSeriesId) {
         await eventRepository.deleteMany(
-          (ev) => ev.eventId === targetSeriesId || ev.sobrepositionOver === targetSeriesId || ev.id === id
+          (ev) => (ev.eventId && ev.eventId === targetSeriesId) || ev.sobrepositionOver === targetSeriesId || ev.id === targetSeriesId || ev.id === id
         );
+        if (targetDate) {
+          const year = parseInt(targetDate.substring(0, 4), 10);
+          const month = parseInt(targetDate.substring(5, 7), 10);
+          await financialEventStatusRepository.deleteStatus(year, month, targetSeriesId);
+          await financialEventStatusRepository.deleteStatus(year, month, id);
+        }
         return true;
       }
       return eventRepository.delete(id);
     }
 
-    if (deleteScope === 'subsequent' && targetSeriesId) {
+    if (deleteScope === 'subsequent' && (targetSeriesId || rootEvent.id)) {
+      const effectiveSeriesId = targetSeriesId || rootEvent.id;
       const seriesVersions = allRawEvents.filter(
-        (ev) => ev.eventId === targetSeriesId || ev.sobrepositionOver === targetSeriesId
+        (ev) => (ev.eventId && ev.eventId === effectiveSeriesId) || ev.id === effectiveSeriesId || ev.sobrepositionOver === effectiveSeriesId
       );
-      const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
-      const targetDate = options.date || directEvent?.date;
+      const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version !== undefined ? v.version : (v.eventVersion !== undefined ? v.eventVersion : (v.event_version || 0)))), 0);
+      const nextVersion = currentHighestVersion + 1;
 
-      await eventRepository.create({
-        ...(directEvent || {}),
-        eventId: targetSeriesId,
-        version: currentHighestVersion + 1,
+      const newVersionPayload = {
+        tenantId: rootEvent?.tenantId || rootEvent?.tenant_id,
+        timeboardId: rootEvent?.timeboardId || rootEvent?.timeboard_id,
+        timelineId: rootEvent?.timelineId || rootEvent?.timeline_id,
+        timelineOriginId: rootEvent?.timelineOriginId || rootEvent?.timelineId || rootEvent?.timeline_id,
+        name: rootEvent?.name || rootEvent?.title ? `${rootEvent?.name || rootEvent?.title} (Encerrada)` : 'Série Encerrada',
+        title: rootEvent?.title || rootEvent?.name ? `${rootEvent?.title || rootEvent?.name} (Encerrada)` : 'Série Encerrada',
+        description: rootEvent?.description || '',
+        eventType: rootEvent?.eventType || rootEvent?.event_type || EventType.EXPENSE,
+        category: rootEvent?.category,
+        amount: rootEvent?.amount || rootEvent?.installmentAmount || 0,
+        installmentAmount: rootEvent?.installmentAmount || rootEvent?.amount || 0,
+        eventId: effectiveSeriesId,
+        event_id: effectiveSeriesId,
+        version: nextVersion,
+        eventVersion: nextVersion,
         date: targetDate,
         isTerminated: true,
         isDeleted: true,
         isRecurring: true,
         periodicity: EventPeriodicity.RECURRING,
-        title: directEvent?.title ? `${directEvent.title} (Encerrada)` : 'Série Encerrada'
-      });
+        status: EventStatus.DELETED
+      };
+
+      const newVersionRow = await eventRepository.create(newVersionPayload);
+
+      if (targetDate) {
+        const year = parseInt(targetDate.substring(0, 4), 10);
+        const month = parseInt(targetDate.substring(5, 7), 10);
+        const aliases = Array.from(new Set([effectiveSeriesId, rootEvent?.id, directEvent?.id, id].filter(Boolean)));
+        await financialEventStatusRepository.upsertStatus(year, month, effectiveSeriesId, EventStatus.DELETED, {
+          timelineId: rootEvent?.timelineId || rootEvent?.timeline_id,
+          timeboardId: rootEvent?.timeboardId || rootEvent?.timeboard_id,
+          aliases
+        });
+      }
       return true;
     }
 
-    if (targetSeriesId) {
-      const targetDate = options.date || directEvent?.date;
+    if (isRecurringSeries && (targetSeriesId || rootEvent.id)) {
+      const effectiveSeriesId = targetSeriesId || rootEvent.id;
       const seriesVersions = allRawEvents.filter(
-        (ev) => ev.eventId === targetSeriesId || ev.sobrepositionOver === targetSeriesId
+        (ev) => (ev.eventId && ev.eventId === effectiveSeriesId) || ev.id === effectiveSeriesId || ev.sobrepositionOver === effectiveSeriesId
       );
-      const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version || 0)), 0);
+      const currentHighestVersion = seriesVersions.reduce((max, v) => Math.max(max, Number(v.version !== undefined ? v.version : (v.eventVersion !== undefined ? v.eventVersion : (v.event_version || 0)))), 0);
       const nextVersion = currentHighestVersion + 1;
 
       const existingOverride = allRawEvents.find(
-        (ev) => ev.sobrepositionOver === targetSeriesId && ev.date === targetDate
+        (ev) => ((ev.eventId && ev.eventId === effectiveSeriesId) || ev.id === effectiveSeriesId || ev.sobrepositionOver === effectiveSeriesId) &&
+          ev.date === targetDate &&
+          !ev.isRecurring
       );
+
+      let savedRow;
       if (existingOverride) {
-        return eventRepository.update(existingOverride.id, { isDeleted: true, status: EventStatus.DELETED, version: nextVersion });
+        savedRow = await eventRepository.update(existingOverride.id, {
+          isDeleted: true,
+          isTerminated: true,
+          status: EventStatus.DELETED,
+          version: nextVersion,
+          eventVersion: nextVersion,
+          isRecurring: false
+        });
+      } else {
+        const tombstonePayload = {
+          tenantId: rootEvent?.tenantId || rootEvent?.tenant_id,
+          timeboardId: rootEvent?.timeboardId || rootEvent?.timeboard_id,
+          timelineId: rootEvent?.timelineId || rootEvent?.timeline_id,
+          timelineOriginId: rootEvent?.timelineOriginId || rootEvent?.timelineId || rootEvent?.timeline_id,
+          name: rootEvent?.name || rootEvent?.title ? `${rootEvent?.name || rootEvent?.title} (Excluído)` : 'Ocorrência Excluída',
+          title: rootEvent?.title || rootEvent?.name ? `${rootEvent?.title || rootEvent?.name} (Excluído)` : 'Ocorrência Excluída',
+          description: rootEvent?.description || '',
+          eventType: rootEvent?.eventType || rootEvent?.event_type || EventType.EXPENSE,
+          category: rootEvent?.category,
+          amount: rootEvent?.amount || rootEvent?.installmentAmount || 0,
+          installmentAmount: rootEvent?.installmentAmount || rootEvent?.amount || 0,
+          eventId: effectiveSeriesId,
+          event_id: effectiveSeriesId,
+          sobrepositionOver: effectiveSeriesId,
+          date: targetDate,
+          version: nextVersion,
+          eventVersion: nextVersion,
+          isDeleted: true,
+          isTerminated: true,
+          status: EventStatus.DELETED,
+          isRecurring: false,
+          periodicity: EventPeriodicity.ONCE
+        };
+        savedRow = await eventRepository.create(tombstonePayload);
       }
-      await eventRepository.create({
-        eventId: targetSeriesId,
-        sobrepositionOver: targetSeriesId,
-        date: targetDate,
-        version: nextVersion,
-        isDeleted: true,
-        status: EventStatus.DELETED,
-        title: directEvent?.title ? `${directEvent.title} (Excluído)` : 'Ocorrência Excluída',
-        isRecurring: false,
-        periodicity: EventPeriodicity.ONCE
-      });
+
+      if (targetDate) {
+        const year = parseInt(targetDate.substring(0, 4), 10);
+        const month = parseInt(targetDate.substring(5, 7), 10);
+        const aliases = Array.from(new Set([effectiveSeriesId, rootEvent?.id, directEvent?.id, id, savedRow?.id].filter(Boolean)));
+        await financialEventStatusRepository.upsertStatus(year, month, effectiveSeriesId, EventStatus.DELETED, {
+          timelineId: rootEvent?.timelineId || rootEvent?.timeline_id,
+          timeboardId: rootEvent?.timeboardId || rootEvent?.timeboard_id,
+          aliases
+        });
+      }
       return true;
     }
 
-    if (directEvent?.date) {
-      const year = parseInt(directEvent.date.substring(0, 4), 10);
-      const month = parseInt(directEvent.date.substring(5, 7), 10);
+    if (directEvent?.date || targetDate) {
+      const d = directEvent?.date || targetDate;
+      const year = parseInt(d.substring(0, 4), 10);
+      const month = parseInt(d.substring(5, 7), 10);
       await financialEventStatusRepository.deleteStatus(year, month, id);
+      if (targetSeriesId) {
+        await financialEventStatusRepository.deleteStatus(year, month, targetSeriesId);
+      }
     }
 
     return eventRepository.delete(id);

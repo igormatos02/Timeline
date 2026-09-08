@@ -20,7 +20,7 @@ import {
   Check
 } from 'lucide-react';
 import { format, parseISO, addMonths, getDaysInMonth, setMonth, setYear } from 'date-fns';
-import { EventStatus, EventPeriodicity, EventType, IncomeEventCategory } from '../../../shared/enums/index.js';
+import { EventStatus, EventPeriodicity, EventType, IncomeEventCategory, EventUpdateMode } from '../../../shared/enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 
 const INCOME_CATEGORY_META = {
@@ -49,7 +49,7 @@ export default function IncomeEventModal({
   const [endMonthPickerYear, setEndMonthPickerYear] = useState(2026);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [categorySearch, setCategorySearch] = useState('');
-  const [updateScope, setUpdateScope] = useState('single');
+  const [updateScope, setUpdateScope] = useState(EventUpdateMode.SINGLE);
   const [breakdownItems, setBreakdownItems] = useState([]);
 
   const [formData, setFormData] = useState({
@@ -152,7 +152,7 @@ export default function IncomeEventModal({
         isAutomatic: Boolean(initialData.isAutomatic),
         category: initialData.category || IncomeEventCategory.SALARY
       });
-      setUpdateScope('subsequent');
+      setUpdateScope(EventUpdateMode.SUBSEQUENT);
       setBreakdownItems(initialData.breakdownItems ? JSON.parse(JSON.stringify(initialData.breakdownItems)) : []);
     } else {
       let defaultEndMonth = '2026-12';
@@ -177,7 +177,7 @@ export default function IncomeEventModal({
         isAutomatic: false,
         category: IncomeEventCategory.SALARY
       });
-      setUpdateScope('single');
+      setUpdateScope(EventUpdateMode.SINGLE);
       setBreakdownItems([]);
     }
   }, [initialData, defaultDate, isOpen]);
@@ -229,6 +229,7 @@ export default function IncomeEventModal({
 
     const eventPayload = {
       ...(initialData || {}),
+      name: formData.title.trim(),
       title: formData.title.trim(),
       date: finalDate,
       time: formData.time,
@@ -245,7 +246,7 @@ export default function IncomeEventModal({
       labels,
       category: formData.category || IncomeEventCategory.SALARY,
       isAutomatic: formData.isAutomatic,
-      updateScope: initialData?.seriesId ? updateScope : undefined
+      updateScope: (initialData?.seriesId || initialData?.eventId || initialData?.isRecurring || isRecurring) ? updateScope : undefined
     };
 
     onSave(eventPayload);
@@ -1025,7 +1026,7 @@ export default function IncomeEventModal({
           </div>
 
           {/* Switch Mudar Subsequentes */}
-          {initialData && (initialData.seriesId || initialData.isRecurring || formData.periodicity === EventPeriodicity.RECURRING || formData.periodicity === EventPeriodicity.PERIOD) && (
+          {initialData && (initialData.seriesId || initialData.eventId || initialData.isRecurring || formData.periodicity === EventPeriodicity.RECURRING || formData.periodicity === EventPeriodicity.PERIOD) && (
             <div style={{ margin: '8px 0 14px 0' }}>
               <label
                 style={{
@@ -1034,19 +1035,19 @@ export default function IncomeEventModal({
                   gap: '8px',
                   fontSize: '0.8rem',
                   fontWeight: '700',
-                  color: updateScope === 'subsequent' ? '#10b981' : 'var(--text-dim)',
+                  color: updateScope === EventUpdateMode.SUBSEQUENT ? '#10b981' : 'var(--text-dim)',
                   cursor: 'pointer',
                   userSelect: 'none',
-                  background: updateScope === 'subsequent' ? 'rgba(16, 185, 129, 0.14)' : 'rgba(255, 255, 255, 0.04)',
-                  border: updateScope === 'subsequent' ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--border-glass)',
+                  background: updateScope === EventUpdateMode.SUBSEQUENT ? 'rgba(16, 185, 129, 0.14)' : 'rgba(255, 255, 255, 0.04)',
+                  border: updateScope === EventUpdateMode.SUBSEQUENT ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--border-glass)',
                   borderRadius: '9999px',
                   padding: '5px 12px'
                 }}
               >
                 <input
                   type="checkbox"
-                  checked={updateScope === 'subsequent'}
-                  onChange={(e) => setUpdateScope(e.target.checked ? 'subsequent' : 'single')}
+                  checked={updateScope === EventUpdateMode.SUBSEQUENT}
+                  onChange={(e) => setUpdateScope(e.target.checked ? EventUpdateMode.SUBSEQUENT : EventUpdateMode.SINGLE)}
                   style={{ accentColor: '#10b981' }}
                 />
                 <span>{t('modal.changeSubsequent') || 'Aplicar alterações aos meses futuros'}</span>

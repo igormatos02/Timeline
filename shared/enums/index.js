@@ -13,5 +13,6 @@ export { InvestmentEventCategory, InvestimentEventCategory } from './InvestmentE
 export { LoanEventCategory } from './LoanEventCategory.js';
 export { AmortizationEventCategory, AmortizationStrategy } from './AmortizationEventCategory.js';
 export { EventDeletionMode } from './EventDeletionMode.js';
+export { EventUpdateMode } from './EventUpdateMode.js';
 
 

@@ -148,7 +148,7 @@ export default function InvestmentTimelineHeader({
 
   const targetAmount = customTarget > 0
     ? customTarget
-    : (timeline.targetAmount || timeline.target || metrics?.targetAmount || metrics?.target || dto?.target || dto?.annual_target || 30000);
+    : (timeline.targetAmount || timeline.target || metrics?.targetAmount || metrics?.target || dto?.target || dto?.annual_target || 0);
 
   const targetPercent = targetAmount > 0
     ? Math.min(100, Math.round((totalReceived / targetAmount) * 100))

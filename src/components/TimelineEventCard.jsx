@@ -18,7 +18,6 @@ import {
   Circle,
   Sliders,
   DollarSign,
-  Lock,
   ArrowUpRight,
   ExternalLink,
   Sparkles,
@@ -35,7 +34,6 @@ import {
   ShoppingCart,
   PiggyBank,
   Landmark,
-  Unlock,
   Check,
   X,
   Target
@@ -236,8 +234,6 @@ export default function TimelineEventCard({
     event.principal_amount
   ]);
 
-  const isLocked = event.isLocked !== undefined ? !!event.isLocked : (isCompleted || isAmortized);
-
   const [isEditingAmount, setIsEditingAmount] = useState(false);
   const [tempAmount, setTempAmount] = useState(event.amount !== undefined ? event.amount : '');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -259,8 +255,7 @@ export default function TimelineEventCard({
     setTempTitle(event.title || '');
   }, [event.title]);
 
-  // Lock rule: locked events cannot be edited (unless in future months where lock doesn't apply)
-  const canEditAmount = isInertFuture || !isLocked;
+  const canEditAmount = true;
 
   const isRecurring = Boolean(
     event.periodicity === EventPeriodicity.RECURRING ||
@@ -305,9 +300,11 @@ export default function TimelineEventCard({
       onUpdateEventDirect({
         ...event,
         previousTitle: event.title,
+        name: trimmed,
         title: trimmed,
         propagateForward: isRecurring,
-        updateAllRecurring: isRecurring
+        updateAllRecurring: isRecurring,
+        updateScope: isRecurring ? 'subsequent' : 'single'
       });
     }
     setIsEditingTitle(false);
@@ -628,23 +625,19 @@ export default function TimelineEventCard({
       <span
         onClick={(e) => {
           e.stopPropagation();
-          if (canEditAmount) {
-            setPropagateSubsequent(true);
-            setIsEditingAmount(true);
-          }
+          setPropagateSubsequent(true);
+          setIsEditingAmount(true);
         }}
         title={
-          !canEditAmount
-            ? 'Valor bloqueado. Abra o cadeado para editar.'
-            : isRecurring
-              ? 'Clique para editar o valor (propaga para todos os meses seguintes)'
-              : 'Clique para editar o valor'
+          isRecurring
+            ? 'Clique para editar o valor (propaga para todos os meses seguintes)'
+            : 'Clique para editar o valor'
         }
         style={{
           fontSize: '1.05rem',
           fontWeight: '800',
           color: defaultColor,
-          cursor: canEditAmount ? 'pointer' : 'default',
+          cursor: 'pointer',
           display: 'inline-flex',
           alignItems: 'center',
           gap: '5px',
@@ -654,22 +647,6 @@ export default function TimelineEventCard({
         {prefix}{formatCurrency(event.amount)}
       </span>
     );
-  };
-
-
-  const handleToggleLock = (e) => {
-    if (e) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
-    const nextLocked = !isLocked;
-    if (onUpdateEventDirect) {
-      onUpdateEventDirect({
-        ...event,
-        isLocked: nextLocked,
-        updateScope: event.eventId || event.seriesId ? 'single' : undefined
-      });
-    }
   };
 
   const isMemoryCard = event.category === 'memoria';
@@ -1530,20 +1507,12 @@ export default function TimelineEventCard({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (isLocked) {
-                    handleToggleLock(e);
-                    return;
-                  }
                   if (onToggleLoanPayment) {
                     onToggleLoanPayment(event.id);
                   }
                 }}
                 className="btn btn-sm"
-                title={
-                  isLocked
-                    ? 'Entrada confirmada e bloqueada. Clique para destrancar.'
-                    : 'Clique para alternar o status'
-                }
+                title="Clique para alternar o status"
                 style={{
                   background: isReceivedIncome
                     ? 'rgba(16, 185, 129, 0.16)'
@@ -1560,9 +1529,7 @@ export default function TimelineEventCard({
                         ? '#f59e0b'
                         : '#94a3b8',
                   border: isReceivedIncome
-                    ? isLocked
-                      ? '1px solid rgba(16, 185, 129, 0.35)'
-                      : '1.5px dashed rgba(16, 185, 129, 0.65)'
+                    ? '1px solid rgba(16, 185, 129, 0.35)'
                     : isOverdueIncome
                       ? '1px solid rgba(239, 68, 68, 0.4)'
                       : isNextIncome
@@ -1588,30 +1555,6 @@ export default function TimelineEventCard({
                   <>
                     <CheckCircle2 size={14} style={{ color: '#10b981' }} />
                     <span>{t('status.received')}</span>
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        handleToggleLock(e);
-                      }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '2px 4px',
-                        marginLeft: '4px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        background: isLocked ? 'rgba(245, 158, 11, 0.25)' : 'rgba(148, 163, 184, 0.15)',
-                        color: isLocked ? '#f59e0b' : 'var(--text-dim)',
-                        transition: 'all 0.15s ease'
-                      }}
-                      title={isLocked ? 'Cadeado trancado (Clique para destravar)' : 'Cadeado aberto (Clique para trancar)'}
-                    >
-                      {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                    </span>
                   </>
                 ) : isOverdueIncome ? (
                   <>
@@ -1696,18 +1639,10 @@ export default function TimelineEventCard({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                if (isLocked) {
-                  handleToggleLock(e);
-                  return;
-                }
                 if (onToggleLoanPayment) onToggleLoanPayment(event.id);
               }}
               className="btn btn-sm"
-              title={
-                isLocked
-                  ? 'Gasto pago e bloqueado. Clique para destrancar.'
-                  : 'Clique para alternar o status'
-              }
+              title="Clique para alternar o status"
               style={{
                 background: isPaidExpense
                   ? 'rgba(16, 185, 129, 0.16)'
@@ -1720,9 +1655,7 @@ export default function TimelineEventCard({
                     ? '#f87171'
                     : '#f59e0b',
                 border: isPaidExpense
-                  ? isLocked
-                    ? '1px solid rgba(16, 185, 129, 0.35)'
-                    : '1.5px dashed rgba(16, 185, 129, 0.65)'
+                  ? '1px solid rgba(16, 185, 129, 0.35)'
                   : isOverdueExpense
                     ? '1px solid rgba(239, 68, 68, 0.4)'
                     : '1px solid rgba(245, 158, 11, 0.35)',
@@ -1740,30 +1673,6 @@ export default function TimelineEventCard({
                 <>
                   <CheckCircle2 size={14} style={{ color: '#10b981' }} />
                   <span>{t('status.paid')}</span>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      handleToggleLock(e);
-                    }}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '2px 4px',
-                      marginLeft: '4px',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      background: isLocked ? 'rgba(245, 158, 11, 0.25)' : 'rgba(148, 163, 184, 0.15)',
-                      color: isLocked ? '#f59e0b' : 'var(--text-dim)',
-                      transition: 'all 0.15s ease'
-                    }}
-                    title={isLocked ? 'Cadeado trancado (Clique para destravar)' : 'Cadeado aberto (Clique para trancar)'}
-                  >
-                    {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                  </span>
                 </>
               ) : isOverdueExpense ? (
                 <>
@@ -1905,18 +1814,10 @@ export default function TimelineEventCard({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (isLocked) {
-                    handleToggleLock(e);
-                    return;
-                  }
                   if (onToggleLoanPayment) onToggleLoanPayment(event.id);
                 }}
                 className="btn btn-sm"
-                title={
-                  isLocked
-                    ? 'Investimento confirmado e bloqueado. Clique para destrancar.'
-                    : 'Clique para alternar o status'
-                }
+                title="Clique para alternar o status"
                 style={{
                   background: event.category === 'investimento_patrimonio'
                     ? (event.status === 'Financiado' ? 'rgba(2, 132, 199, 0.16)' : 'rgba(16, 185, 129, 0.16)')
@@ -1935,9 +1836,7 @@ export default function TimelineEventCard({
                   border: event.category === 'investimento_patrimonio'
                     ? (event.status === 'Financiado' ? '1px solid rgba(2, 132, 199, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)')
                     : isCompletedInvestment
-                      ? isLocked
-                        ? '1px solid rgba(139, 92, 246, 0.35)'
-                        : '1.5px dashed rgba(139, 92, 246, 0.65)'
+                      ? '1px solid rgba(139, 92, 246, 0.35)'
                       : isOverdueInvestment
                         ? '1px solid rgba(239, 68, 68, 0.4)'
                         : '1px solid rgba(148, 163, 184, 0.3)',
@@ -1967,30 +1866,6 @@ export default function TimelineEventCard({
                   <>
                     <CheckCircle2 size={14} style={{ color: '#8b5cf6' }} />
                     <span>{t('status.invested')}</span>
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        handleToggleLock(e);
-                      }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '2px 4px',
-                        marginLeft: '4px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        background: isLocked ? 'rgba(245, 158, 11, 0.25)' : 'rgba(148, 163, 184, 0.15)',
-                        color: isLocked ? '#f59e0b' : 'var(--text-dim)',
-                        transition: 'all 0.15s ease'
-                      }}
-                      title={isLocked ? 'Cadeado trancado (Clique para destravar)' : 'Cadeado aberto (Clique para trancar)'}
-                    >
-                      {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                    </span>
                   </>
                 ) : isOverdueInvestment ? (
                   <>
@@ -2366,18 +2241,10 @@ export default function TimelineEventCard({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (isLocked) {
-                    handleToggleLock(e);
-                    return;
-                  }
                   if (onToggleLoanPayment) onToggleLoanPayment(event.id);
                 }}
                 className="btn btn-sm"
-                title={
-                  isLocked
-                    ? 'Prestação liquidada e bloqueada. Clique para destrancar.'
-                    : 'Clique para alternar o status'
-                }
+                title="Clique para alternar o status"
                 style={{
                   background: isPaidLoan
                     ? 'rgba(16, 185, 129, 0.16)'
@@ -2390,9 +2257,7 @@ export default function TimelineEventCard({
                       ? '#f87171'
                       : '#f59e0b',
                   border: isPaidLoan
-                    ? isLocked
-                      ? '1px solid rgba(16, 185, 129, 0.35)'
-                      : '1.5px dashed rgba(16, 185, 129, 0.65)'
+                    ? '1px solid rgba(16, 185, 129, 0.35)'
                     : isOverdueLoan
                       ? '1px solid rgba(239, 68, 68, 0.4)'
                       : '1px solid rgba(245, 158, 11, 0.35)',
@@ -2414,30 +2279,6 @@ export default function TimelineEventCard({
                   <>
                     <CheckCircle2 size={14} style={{ color: '#10b981' }} />
                     <span>{t('status.settled')}</span>
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        handleToggleLock(e);
-                      }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '2px 4px',
-                        marginLeft: '4px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        background: isLocked ? 'rgba(245, 158, 11, 0.25)' : 'rgba(148, 163, 184, 0.15)',
-                        color: isLocked ? '#f59e0b' : 'var(--text-dim)',
-                        transition: 'all 0.15s ease'
-                      }}
-                      title={isLocked ? 'Cadeado trancado (Clique para destravar)' : 'Cadeado aberto (Clique para trancar)'}
-                    >
-                      {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                    </span>
                   </>
                 ) : isOverdueLoan ? (
                   <>
@@ -3171,8 +3012,8 @@ export default function TimelineEventCard({
             </button>
           )}
 
-          {/* Botão Editar Evento */}
-          {onEdit && (
+          {/* Botão Editar Evento - Não permitido para parcelas de empréstimo */}
+          {onEdit && !isLoanInstallment && (
             <button
               type="button"
               className="action-icon-btn"
@@ -3192,27 +3033,6 @@ export default function TimelineEventCard({
               title="Eliminar este evento permanentemente"
             >
               <Trash2 size={15} />
-            </button>
-          )}
-
-          {/* Botão Bloquear / Desbloquear */}
-          {isCompleted && (
-            <button
-              type="button"
-              className="action-icon-btn"
-              onClick={handleToggleLock}
-              title={isLocked ? t('actionLock') : t('actionUnlock')}
-              style={{
-                color: isLocked ? '#10b981' : 'var(--text-dim)',
-                background: isLocked ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
-                border: isLocked ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent',
-                borderRadius: '6px',
-                padding: '4px 6px',
-                display: 'inline-flex',
-                alignItems: 'center'
-              }}
-            >
-              {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
             </button>
           )}
         </div>

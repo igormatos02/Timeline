@@ -4,7 +4,7 @@ import { loanContractRepository } from '../../infrastructure/database/supabase/S
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
 import { calcToggledStatus } from '../../domain/entities/TimelineEvent.js';
-import { EventType, EventStatus, EventPeriodicity, EventDeletionMode, AmortizationStrategy, LoanEventCategory, AmortizationEventCategory, isPositiveStatus, isNegativeStatus } from '../../../shared/enums/index.js';
+import { EventType, EventStatus, EventPeriodicity, EventDeletionMode, EventUpdateMode, AmortizationStrategy, LoanEventCategory, AmortizationEventCategory, isPositiveStatus, isNegativeStatus } from '../../../shared/enums/index.js';
 
 export class FinancialEventService {
   async _syncStatus(date, eventId, status, options = {}) {
@@ -202,12 +202,15 @@ export class FinancialEventService {
     const { updateScope, propagateForward, ...directUpdates } = updates;
 
     const allRawEvents = await eventRepository.getAll();
-    const existing = (await eventRepository.getById(id)) || allRawEvents.find((e) => e.id === id);
+    const existingDirect = (await eventRepository.getById(id)) || allRawEvents.find((e) => e.id === id);
 
-    const loanTlId = directUpdates.timelineId || directUpdates.timelineOriginId || existing?.timelineId || existing?.timelineOriginId;
-    const isLoan = Boolean(loanTlId && (directUpdates.isLoanEvent?.() || existing?.isLoanEvent?.() || directUpdates.isSystemLoanEvent || existing?.isSystemLoanEvent || directUpdates.eventType === EventType.AMORTIZATION || existing?.eventType === EventType.AMORTIZATION));
+    const loanTlId = directUpdates.timelineId || directUpdates.timelineOriginId || existingDirect?.timelineId || existingDirect?.timelineOriginId;
+    const isLoan = Boolean(loanTlId && (directUpdates.isLoanEvent?.() || existingDirect?.isLoanEvent?.() || directUpdates.isSystemLoanEvent || existingDirect?.isSystemLoanEvent || directUpdates.eventType === EventType.AMORTIZATION || existingDirect?.eventType === EventType.AMORTIZATION));
 
-    const targetSeriesId = directUpdates.eventId || directUpdates.event_id || updates.eventId || existing?.eventId || (isLoan ? loanTlId : (existing?.id || id));
+    const targetSeriesId = directUpdates.eventId || directUpdates.event_id || updates.eventId || existingDirect?.eventId || (id && id.includes('_') ? id.split('_')[0] : (isLoan ? loanTlId : (existingDirect?.id || id)));
+
+    const seriesRootEvent = allRawEvents.find((e) => (e.eventId && e.eventId === targetSeriesId) || e.id === targetSeriesId);
+    const existing = existingDirect || seriesRootEvent;
 
     const existingVersion = existing
       ? Number(existing.version !== undefined ? existing.version : (existing.eventVersion !== undefined ? existing.eventVersion : (existing.event_version || 0)))
@@ -231,18 +234,31 @@ export class FinancialEventService {
       directUpdates.isSystemLoanEvent
     );
 
-    // Prestações de empréstimo (loan_installment) e eventos individuais com id existente são alterados diretamente sem criar versões duplicadas e mantendo versão 0
-    if ((existing && existing.id) || isLoanInstallment) {
+    const isRecurring = Boolean(
+      directUpdates.isRecurring !== undefined ? directUpdates.isRecurring :
+      (existing?.isRecurring !== undefined ? existing.isRecurring : (directUpdates.periodicity === EventPeriodicity.RECURRING || directUpdates.periodicity === EventPeriodicity.PERIOD))
+    );
+
+    const isSubsequentUpdate = (
+      updateScope === EventUpdateMode.SUBSEQUENT ||
+      propagateForward === true ||
+      directUpdates.propagateForward === true
+    );
+
+    const isSingleUpdate = (
+      updateScope === EventUpdateMode.SINGLE
+    );
+
+    // 1. Prestações de empréstimo (loan_installment) são alteradas diretamente mantendo versão 0
+    if (isLoanInstallment) {
       const updatePayload = {
         ...directUpdates,
+        version: 0,
+        eventVersion: 0,
+        event_version: 0,
         is_recurring: false,
         isRecurring: false
       };
-      if (isLoanInstallment) {
-        updatePayload.version = 0;
-        updatePayload.eventVersion = 0;
-        updatePayload.event_version = 0;
-      }
       if (directUpdates.status) {
         const targetDate = directUpdates.date || existing?.date;
         await this._syncStatus(targetDate, targetSeriesId, directUpdates.status, {
@@ -253,33 +269,110 @@ export class FinancialEventService {
       return eventRepository.update(id, updatePayload);
     }
 
-    const nextVersion = currentHighestVersion + 1;
-    const newId = `ev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    // 2. Eventos não-recorrentes ou edição global de toda a série ou edição direta do registo da mesma data
+    const isDirectRecordInPlace = (
+      existingDirect &&
+      existingDirect.id &&
+      !id.includes('_') &&
+      (!directUpdates.date || directUpdates.date === existingDirect.date) &&
+      (!isSubsequentUpdate || existingDirect.version > 0)
+    );
 
+    if (isDirectRecordInPlace || (!isRecurring && existingDirect && existingDirect.id)) {
+      const updatePayload = {
+        ...directUpdates,
+        is_recurring: isRecurring,
+        isRecurring: isRecurring
+      };
+      if (directUpdates.status) {
+        const targetDate = directUpdates.date || existingDirect?.date;
+        await this._syncStatus(targetDate, targetSeriesId, directUpdates.status, {
+          timelineId: directUpdates.timelineId || directUpdates.timeline_id || existingDirect?.timelineId || existingDirect?.timeline_id,
+          timeboardId: directUpdates.timeboardId || directUpdates.timeboard_id || existingDirect?.timeboardId || existingDirect?.timeboard_id
+        });
+      }
+      return eventRepository.update(existingDirect.id || id, updatePayload);
+    }
+
+    // 3. Edição com propagação ("A partir deste mês" / subsequentes): Cria nova versão incremental na série
+    if (isSubsequentUpdate || (isRecurring && !isSingleUpdate)) {
+      const nextVersion = currentHighestVersion + 1;
+      const baseEventData = existing ? { ...existing } : {};
+      delete baseEventData.id;
+
+      const targetDate = directUpdates.date || existing?.date;
+
+      // Clean up any stale future versions of the same series at or after targetDate
+      const staleFutureVersions = seriesVersions.filter((ev) =>
+        ev.id &&
+        ev.id !== existingDirect?.id &&
+        ev.date >= targetDate &&
+        !ev.sobrepositionOver
+      );
+      for (const stale of staleFutureVersions) {
+        await eventRepository.delete(stale.id);
+      }
+
+      const newVersionedPayload = {
+        ...baseEventData,
+        ...directUpdates,
+        tenantId: directUpdates.tenantId || existing?.tenantId || seriesRootEvent?.tenantId,
+        timeboardId: directUpdates.timeboardId || existing?.timeboardId || seriesRootEvent?.timeboardId,
+        timelineId: directUpdates.timelineId || directUpdates.timelineOriginId || existing?.timelineId || existing?.timelineOriginId || seriesRootEvent?.timelineId,
+        timelineOriginId: directUpdates.timelineId || directUpdates.timelineOriginId || existing?.timelineId || existing?.timelineOriginId || seriesRootEvent?.timelineId,
+        eventId: targetSeriesId,
+        date: targetDate,
+        is_recurring: true,
+        isRecurring: true,
+        version: nextVersion,
+        eventVersion: nextVersion,
+        event_version: nextVersion
+      };
+      delete newVersionedPayload.id;
+
+      if (directUpdates.status) {
+        await this._syncStatus(targetDate, targetSeriesId, directUpdates.status, {
+          timelineId: newVersionedPayload.timelineId,
+          timeboardId: newVersionedPayload.timeboardId
+        });
+      }
+
+      return eventRepository.create(newVersionedPayload);
+    }
+
+    // 4. Edição pontual ("Apenas este mês"): Cria override pontual (sobrepositionOver)
+    const nextVersion = currentHighestVersion + 1;
     const baseEventData = existing ? { ...existing } : {};
     delete baseEventData.id;
 
-    const newVersionedPayload = {
+    const targetDate = directUpdates.date || existing?.date;
+
+    const singleOverridePayload = {
       ...baseEventData,
       ...directUpdates,
-      id: newId,
+      tenantId: directUpdates.tenantId || existing?.tenantId || seriesRootEvent?.tenantId,
+      timeboardId: directUpdates.timeboardId || existing?.timeboardId || seriesRootEvent?.timeboardId,
+      timelineId: directUpdates.timelineId || directUpdates.timelineOriginId || existing?.timelineId || existing?.timelineOriginId || seriesRootEvent?.timelineId,
+      timelineOriginId: directUpdates.timelineId || directUpdates.timelineOriginId || existing?.timelineId || existing?.timelineOriginId || seriesRootEvent?.timelineId,
       eventId: targetSeriesId,
+      sobrepositionOver: targetSeriesId,
+      date: targetDate,
       is_recurring: false,
       isRecurring: false,
       version: nextVersion,
       eventVersion: nextVersion,
       event_version: nextVersion
     };
+    delete singleOverridePayload.id;
 
     if (directUpdates.status) {
-      const targetDate = directUpdates.date || existing?.date;
       await this._syncStatus(targetDate, targetSeriesId, directUpdates.status, {
-        timelineId: directUpdates.timelineId || directUpdates.timeline_id || existing?.timelineId || existing?.timeline_id,
-        timeboardId: directUpdates.timeboardId || directUpdates.timeboard_id || existing?.timeboardId || existing?.timeboard_id
+        timelineId: singleOverridePayload.timelineId,
+        timeboardId: singleOverridePayload.timeboardId
       });
     }
 
-    return eventRepository.create(newVersionedPayload);
+    return eventRepository.create(singleOverridePayload);
   }
 
   async toggleEventPayment(id) {

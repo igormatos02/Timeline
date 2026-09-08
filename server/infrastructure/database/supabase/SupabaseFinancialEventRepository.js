@@ -297,12 +297,12 @@ export class SupabaseFinancialEventRepository extends IRepository {
 
     const installmentAmount =
       Number(
-        data.installmentAmount !== undefined && data.installmentAmount !== null
-          ? data.installmentAmount
-          : data.amortizationAmount !== undefined && data.amortizationAmount !== null
-            ? data.amortizationAmount
-            : data.amount !== undefined && data.amount !== null
-              ? data.amount
+        data.amount !== undefined && data.amount !== null
+          ? data.amount
+          : data.installmentAmount !== undefined && data.installmentAmount !== null
+            ? data.installmentAmount
+            : data.amortizationAmount !== undefined && data.amortizationAmount !== null
+              ? data.amortizationAmount
               : 0
       ) || 0;
 
@@ -343,8 +343,8 @@ export class SupabaseFinancialEventRepository extends IRepository {
       timeline_id: effectiveTimelineId,
 
       name:
-        data.name ||
         data.title ||
+        data.name ||
         'Evento Financeiro',
 
       description: data.description || '',
@@ -557,14 +557,12 @@ export class SupabaseFinancialEventRepository extends IRepository {
         data.event_type;
     }
 
-    if (data.installmentAmount !== undefined) {
-      row.installment_amount =
-        Number(data.installmentAmount) || 0;
-    }
-
-    if (data.amount !== undefined && row.installment_amount === undefined) {
+    if (data.amount !== undefined && data.amount !== null) {
       row.installment_amount =
         Number(data.amount) || 0;
+    } else if (data.installmentAmount !== undefined && data.installmentAmount !== null) {
+      row.installment_amount =
+        Number(data.installmentAmount) || 0;
     }
 
     if (data.installmentCapital !== undefined) {

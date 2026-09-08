@@ -1152,7 +1152,6 @@ export default function App() {
           ...ev,
           status: nextStatus,
           isCompleted: nextCompleted,
-          isLocked: nextCompleted,
           completedAtTime: nextCompleted ? clickTimeStr : null
         };
       })
@@ -1189,7 +1188,6 @@ export default function App() {
             ...ev,
             status: nextStatus,
             isCompleted: nextCompleted,
-            isLocked: nextCompleted,
             completedAtTime: nextCompleted ? clickTimeStr : null
           };
         });
@@ -1251,8 +1249,7 @@ export default function App() {
         return {
           ...ev,
           status: EventStatus.PAID,
-          isCompleted: true,
-          isLocked: true
+          isCompleted: true
         };
       })
     );

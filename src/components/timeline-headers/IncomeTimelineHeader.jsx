@@ -153,7 +153,7 @@ export default function IncomeTimelineHeader({
 
   const targetAmount = customTarget > 0
     ? customTarget
-    : (timeline.targetAmount || timeline.target || metrics?.targetAmount || metrics?.annualTarget || dto?.target || dto?.annual_target || 30000);
+    : (timeline.targetAmount || timeline.target || metrics?.targetAmount || metrics?.annualTarget || dto?.target || dto?.annual_target || 0);
 
   const targetPercent = targetAmount > 0
     ? Math.min(100, Math.round((totalReceived / targetAmount) * 100))

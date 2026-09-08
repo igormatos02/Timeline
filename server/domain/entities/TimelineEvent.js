@@ -109,7 +109,7 @@ export class TimelineEvent {
     this.dayOfMonth = dayOfMonth !== undefined ? dayOfMonth : (day_of_month !== undefined ? day_of_month : null);
     this.date = date;
     this.time = time;
-    this.name = name || title || 'Evento Financeiro';
+    this.name = title || name || 'Evento Financeiro';
     this.title = this.name;
     this.description = description || '';
     this.category = category;

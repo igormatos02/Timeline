@@ -19,7 +19,7 @@ import {
   Check
 } from 'lucide-react';
 import { format, parseISO, addMonths, getDaysInMonth, setMonth, setYear } from 'date-fns';
-import { EventStatus, EventPeriodicity, EventType, InvestmentEventCategory } from '../../../shared/enums/index.js';
+import { EventStatus, EventPeriodicity, EventType, InvestmentEventCategory, EventUpdateMode } from '../../../shared/enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 
 const INVESTMENT_CATEGORY_META = {
@@ -48,7 +48,7 @@ export default function InvestmentEventModal({
   const [endMonthPickerYear, setEndMonthPickerYear] = useState(2026);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [categorySearch, setCategorySearch] = useState('');
-  const [updateScope, setUpdateScope] = useState('single');
+  const [updateScope, setUpdateScope] = useState(EventUpdateMode.SINGLE);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -159,7 +159,7 @@ export default function InvestmentEventModal({
         isAutomatic: Boolean(initialData.isAutomatic),
         category: cat
       });
-      setUpdateScope('subsequent');
+      setUpdateScope(EventUpdateMode.SUBSEQUENT);
     } else {
       let defaultEndMonth = '2026-12';
       try {
@@ -185,7 +185,7 @@ export default function InvestmentEventModal({
         isAutomatic: false,
         category: InvestmentEventCategory.SAVINGS
       });
-      setUpdateScope('single');
+      setUpdateScope(EventUpdateMode.SINGLE);
     }
   }, [initialData, defaultDate, isOpen]);
 
@@ -226,6 +226,7 @@ export default function InvestmentEventModal({
 
     const eventPayload = {
       ...(initialData || {}),
+      name: formData.title.trim(),
       title: formData.title.trim(),
       date: finalDate,
       time: formData.time,
@@ -243,7 +244,7 @@ export default function InvestmentEventModal({
       labels,
       category: formData.category || InvestmentEventCategory.SAVINGS,
       isAutomatic: formData.isAutomatic,
-      updateScope: initialData?.seriesId ? updateScope : undefined
+      updateScope: (initialData?.seriesId || initialData?.eventId || initialData?.isRecurring || isRecurring) ? updateScope : undefined
     };
 
     onSave(eventPayload);
@@ -959,7 +960,7 @@ export default function InvestmentEventModal({
           </div>
 
           {/* Switch Mudar Subsequentes */}
-          {initialData && (initialData.seriesId || initialData.isRecurring || formData.periodicity === EventPeriodicity.RECURRING || formData.periodicity === EventPeriodicity.PERIOD) && (
+          {initialData && (initialData.seriesId || initialData.eventId || initialData.isRecurring || formData.periodicity === EventPeriodicity.RECURRING || formData.periodicity === EventPeriodicity.PERIOD) && (
             <div style={{ margin: '8px 0 14px 0' }}>
               <label
                 style={{
@@ -968,19 +969,19 @@ export default function InvestmentEventModal({
                   gap: '8px',
                   fontSize: '0.8rem',
                   fontWeight: '700',
-                  color: updateScope === 'subsequent' ? '#8b5cf6' : 'var(--text-dim)',
+                  color: updateScope === EventUpdateMode.SUBSEQUENT ? '#8b5cf6' : 'var(--text-dim)',
                   cursor: 'pointer',
                   userSelect: 'none',
-                  background: updateScope === 'subsequent' ? 'rgba(139, 92, 246, 0.14)' : 'rgba(255, 255, 255, 0.04)',
-                  border: updateScope === 'subsequent' ? '1px solid rgba(139, 92, 246, 0.35)' : '1px solid var(--border-glass)',
+                  background: updateScope === EventUpdateMode.SUBSEQUENT ? 'rgba(139, 92, 246, 0.14)' : 'rgba(255, 255, 255, 0.04)',
+                  border: updateScope === EventUpdateMode.SUBSEQUENT ? '1px solid rgba(139, 92, 246, 0.35)' : '1px solid var(--border-glass)',
                   borderRadius: '9999px',
                   padding: '5px 12px'
                 }}
               >
                 <input
                   type="checkbox"
-                  checked={updateScope === 'subsequent'}
-                  onChange={(e) => setUpdateScope(e.target.checked ? 'subsequent' : 'single')}
+                  checked={updateScope === EventUpdateMode.SUBSEQUENT}
+                  onChange={(e) => setUpdateScope(e.target.checked ? EventUpdateMode.SUBSEQUENT : EventUpdateMode.SINGLE)}
                   style={{ accentColor: '#8b5cf6' }}
                 />
                 <span>{t('modal.changeSubsequent') || 'Aplicar alterações aos meses futuros'}</span>

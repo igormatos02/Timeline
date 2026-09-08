@@ -1114,15 +1114,17 @@ function VerticalTimeline({
                       </div>
                     </div>
 
-                    <MonthProjectionBadges
-                      income={mMonthProjectedIncome}
-                      expense={mMonthProjectedExpense}
-                      investment={mMonthProjectedInvestment}
-                      loan={mMonthProjectedLoan}
-                      saldo={mMonthProjectedSaldo}
-                      isFutureMonth={isFutureMonth}
-                      t={t}
-                    />
+                    {!isLoanTimelineOrTab && (
+                      <MonthProjectionBadges
+                        income={mMonthProjectedIncome}
+                        expense={mMonthProjectedExpense}
+                        investment={mMonthProjectedInvestment}
+                        loan={mMonthProjectedLoan}
+                        saldo={mMonthProjectedSaldo}
+                        isFutureMonth={isFutureMonth}
+                        t={t}
+                      />
+                    )}
                   </div>
 
                   {hasEvents ? (

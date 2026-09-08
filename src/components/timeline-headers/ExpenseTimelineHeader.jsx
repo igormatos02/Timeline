@@ -393,10 +393,17 @@ export default function ExpenseTimelineHeader({
 
         // Cálculo da Projeção Anual: do mês atual até +12 meses (janela de 1 ano a partir de hoje)
         const startDateObj = new Date();
-        const startMonthKey = startDateObj.toISOString().substring(0, 7); // ex: '2026-09'
+        // Use local year/month to avoid timezone shifts from toISOString() (UTC) vs local time
+        const startYear = startDateObj.getFullYear();
+        const startMonth = startDateObj.getMonth(); // 0-indexed
+        const startMonthKey = `${startYear}-${String(startMonth + 1).padStart(2, '0')}`;
 
-        const endDateObj = new Date(startDateObj.getFullYear(), startDateObj.getMonth() + 12, 1);
-        const endMonthKey = endDateObj.toISOString().substring(0, 7); // ex: '2027-09'
+        // End = exactly 12 months later (exclusive upper bound)
+        const endTotalMonths = startMonth + 12;
+        const endYear = startYear + Math.floor(endTotalMonths / 12);
+        const endMonthNum = endTotalMonths % 12; // 0-indexed
+        const endMonthKey = `${endYear}-${String(endMonthNum + 1).padStart(2, '0')}`;
+
 
         let annualTotalExpense = 0;
         let annualTotalIncome = 0;

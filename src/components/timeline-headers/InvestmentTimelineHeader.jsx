@@ -108,30 +108,50 @@ export default function InvestmentTimelineHeader({
       .sort((a, b) => b.amount - a.amount);
   }
 
-  // 2. PROJEÇÃO E TAXA DE POUPANÇA ANUAL (Janela de 12 meses a partir de hoje)
+  // 2. COMPROMETIMENTO ANUAL — Aportes projetados nos próximos 12 meses vs Renda Anual
   const startDateObj = new Date();
-  const startMonthKey = startDateObj.toISOString().substring(0, 7);
-  const endDateObj = new Date(startDateObj.getFullYear(), startDateObj.getMonth() + 12, 1);
-  const endMonthKey = endDateObj.toISOString().substring(0, 7);
+  // Use local year/month to avoid timezone shifts from toISOString() (UTC) vs local time
+  const startYear = startDateObj.getFullYear();
+  const startMonth = startDateObj.getMonth(); // 0-indexed
+  const startMonthKey = `${startYear}-${String(startMonth + 1).padStart(2, '0')}`;
+
+  // End = exactly 12 months later (exclusive upper bound)
+  const endTotalMonths = startMonth + 12;
+  const endYear = startYear + Math.floor(endTotalMonths / 12);
+  const endMonthNum = endTotalMonths % 12; // 0-indexed
+  const endMonthKey = `${endYear}-${String(endMonthNum + 1).padStart(2, '0')}`;
+
 
   let annualTotalInvested = 0;
+  let annualTotalIncome = 0;
+
+  // eventsList already contains rawEvents from all timelines (set by App.jsx activeTimeline memo)
+  // So we scan it once for both income and investment events in the 12-month window
   eventsList.forEach((ev) => {
     if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
     const evMonthKey = ev.date.substring(0, 7);
     if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
+      const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME || ev.isIncome;
       const isInvestment = ev.eventType === 'investment' || ev.eventType === EventType.INVESTMENT || ev.isInvestment;
-      if (isInvestment) {
-        annualTotalInvested += Number(ev.amount || 0);
-      }
+      if (isIncome) annualTotalIncome += Number(ev.amount || 0);
+      // Exclude initial contribution (first occurrence) from the commitment calculation
+      if (isInvestment && !ev.isFirstOccurrence) annualTotalInvested += Number(ev.amount || 0);
     }
   });
+
+  // Fallback: use timeline monthly salary/budget setting if no income events found
+  if (annualTotalIncome === 0) {
+    const monthlyFallback = timeline.monthlySalary || timeline.monthlyBudget || timeline.monthlyIncome || 0;
+    annualTotalIncome = monthlyFallback * 12;
+  }
 
   if (annualTotalInvested === 0) {
     annualTotalInvested = monthTotalInvested * 12;
   }
 
-  const annualTarget = dto?.monthly_target ? dto.monthly_target * 12 : 6000;
-  const annualAchievementPercent = annualTarget > 0 ? Math.min(100, Math.round((annualTotalInvested / annualTarget) * 100)) : 0;
+  const annualCommitmentPercent = annualTotalIncome > 0
+    ? Math.min(100, Math.round((annualTotalInvested / annualTotalIncome) * 100))
+    : 0;
 
   // 3. ATUAL: TOTAL RECEBIDO / APORTADO (INCLUINDO APORTE INICIAL) & TARGET
   let totalInstallmentsReceived = 0;
@@ -603,18 +623,50 @@ export default function InvestmentTimelineHeader({
               })()}
             </div>
 
-            {/* Quadrante 2: PROJEÇÃO DE APORTES ANUAIS (PieChart Donut SVG Anual) */}
+            {/* Quadrante 2: COMPROMETIMENTO ANUAL (Aportes vs Renda — Donut Chart) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                PROJEÇÃO ANUAL DE APORTES
+                ANNUAL COMMITMENT
               </div>
               {(() => {
-                const usedFraction = Math.min(1, Math.max(0, annualAchievementPercent / 100));
+                if (annualTotalInvested === 0 && annualTotalIncome === 0) {
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
+                      <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
+                        <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                          <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                        </svg>
+                        <div
+                          style={{
+                            position: 'absolute', top: '50%', left: '50%',
+                            transform: 'translate(-50%, -50%)', width: '42px', height: '42px',
+                            borderRadius: '50%', background: 'var(--bg-card, #0f172a)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            border: '1px solid var(--border-glass)', fontSize: '0.7rem',
+                            fontWeight: '700', color: 'var(--text-dim)'
+                          }}
+                        >
+                          0%
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                          Sem dados disponíveis
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
+                          Adicione aportes e rendimentos para calcular o comprometimento anual.
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const usedFraction = Math.min(1, Math.max(0, annualCommitmentPercent / 100));
                 const sliceX = Math.cos(2 * Math.PI * usedFraction);
                 const sliceY = Math.sin(2 * Math.PI * usedFraction);
                 const largeArcFlag = usedFraction > 0.5 ? 1 : 0;
 
-                const sliceColor = '#6366f1';
+                const sliceColor = annualCommitmentPercent > 60 ? '#f59e0b' : '#6366f1';
                 const remainingColor = 'rgba(255, 255, 255, 0.08)';
 
                 const pathData = usedFraction >= 0.999
@@ -628,43 +680,40 @@ export default function InvestmentTimelineHeader({
                         <circle cx="0" cy="0" r="1" fill={remainingColor} />
                         {usedFraction > 0 && (
                           <path d={pathData} fill={sliceColor} style={{ transition: 'all 0.3s ease' }}>
-                            <title>{`Atingimento da Meta: ${annualAchievementPercent}%`}</title>
+                            <title>{`Annual Commitment: ${annualCommitmentPercent}%`}</title>
                           </path>
                         )}
                       </svg>
                       <div
                         style={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          width: '46px',
-                          height: '46px',
-                          borderRadius: '50%',
-                          background: 'var(--bg-card, #0f172a)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: '1px solid var(--border-glass)',
-                          fontSize: '0.74rem',
-                          fontWeight: '800',
-                          color: sliceColor
+                          position: 'absolute', top: '50%', left: '50%',
+                          transform: 'translate(-50%, -50%)', width: '46px', height: '46px',
+                          borderRadius: '50%', background: 'var(--bg-card, #0f172a)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          border: '1px solid var(--border-glass)', fontSize: '0.74rem',
+                          fontWeight: '800', color: sliceColor
                         }}
                       >
-                        {annualAchievementPercent}%
+                        {annualCommitmentPercent}%
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                       <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
-                        Aportes Projetados (12m):
+                        Annual Commitment:
                       </div>
-                      <div style={{ fontSize: '0.94rem', fontWeight: '800', color: '#6366f1' }}>
+                      <div style={{ fontSize: '0.94rem', fontWeight: '800', color: 'var(--text-main)' }}>
                         {formatCurrency(annualTotalInvested)}
                       </div>
-                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                        alvo estimado {formatCurrency(annualTarget)}
-                      </div>
+                      {annualTotalIncome > 0 ? (
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                          of {formatCurrency(annualTotalIncome)} annual total
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                          projected next 12 months
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

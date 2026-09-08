@@ -220,6 +220,13 @@ export class FinancialEventService {
         updatePayload.eventVersion = 0;
         updatePayload.event_version = 0;
       }
+      if (directUpdates.status) {
+        const targetDate = directUpdates.date || existing?.date;
+        await this._syncStatus(targetDate, targetSeriesId, directUpdates.status, {
+          timelineId: directUpdates.timelineId || directUpdates.timeline_id || existing?.timelineId || existing?.timeline_id,
+          timeboardId: directUpdates.timeboardId || directUpdates.timeboard_id || existing?.timeboardId || existing?.timeboard_id
+        });
+      }
       return eventRepository.update(id, updatePayload);
     }
 

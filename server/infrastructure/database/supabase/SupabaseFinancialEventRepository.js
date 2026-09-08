@@ -547,10 +547,6 @@ export class SupabaseFinancialEventRepository extends IRepository {
       row.priority = data.priority;
     }
 
-    if (data.status !== undefined) {
-      row.status = data.status;
-    }
-
     if (data.amortizationAmount !== undefined) {
       row.amortization_amount =
         data.amortizationAmount != null

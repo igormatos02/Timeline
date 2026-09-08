@@ -8,6 +8,7 @@ import EditTimelineSettingsModal from './components/EditTimelineSettingsModal';
 import CreateTimeboardModal from './components/CreateTimeboardModal';
 import CreateEventModal from './components/CreateEventModal';
 import DeleteEventModal from './components/DeleteEventModal';
+import DeleteTimelineModal from './components/DeleteTimelineModal';
 import AmortizationModal from './components/AmortizationModal';
 import EditInstallmentModal from './components/EditInstallmentModal';
 import {
@@ -116,6 +117,7 @@ export default function App() {
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
   const [isTimelineSettingsModalOpen, setIsTimelineSettingsModalOpen] = useState(false);
   const [editingTimeline, setEditingTimeline] = useState(null);
+  const [deletingTimeline, setDeletingTimeline] = useState(null);
 
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -335,7 +337,19 @@ export default function App() {
     ) || activeTimeboardTimelines[0];
 
     const isLoanType = currentSelected?.type === TimelineType.LOAN || currentSelected?.type === 'loan' || currentSelected?.type === 'emprestimo' || currentSelected?.type === 'Empréstimo';
-    const computedEvents = isLoanType ? recalculateLoanState(currentSelected, rawEvents || []) : (rawEvents || []);
+
+    let computedEvents = rawEvents || [];
+    const loanTimelines = activeTimeboardTimelines.filter(
+      (tl) => tl.type === TimelineType.LOAN || tl.type === 'loan' || tl.type === 'emprestimo' || tl.type === 'Empréstimo'
+    );
+
+    if (loanTimelines.length > 0) {
+      loanTimelines.forEach((loanTl) => {
+        computedEvents = recalculateLoanState(loanTl, computedEvents);
+      });
+    } else if (isLoanType) {
+      computedEvents = recalculateLoanState(currentSelected, computedEvents);
+    }
 
     const computedMetrics = isLoanType ? getLoanMetrics(currentSelected, computedEvents) : currentSelected?.loanHeaderResult;
 
@@ -669,16 +683,32 @@ export default function App() {
     }
   };
 
-  const handleDeleteTimeline = () => {
-    if (!activeTimeline) return;
-    if (window.confirm(`Tem a certeza que deseja eliminar a timeline "${activeTimeline.name}"?`)) {
-      const targetId = activeTimeline.id;
+  const handleRequestDeleteTimeline = (timelineOrId) => {
+    let target = timelineOrId;
+    if (typeof timelineOrId === 'string') {
+      target = timelines.find((tl) => tl.id === timelineOrId) || activeTimeline;
+    }
+    setDeletingTimeline(target || activeTimeline);
+  };
+
+  const handleConfirmDeleteTimeline = async (timelineId) => {
+    const targetId = typeof timelineId === 'object' ? timelineId.id : timelineId;
+    if (!targetId) return;
+
+    try {
       const filtered = timelines.filter((tl) => tl.id !== targetId);
       setTimelines(filtered);
       if (filtered.length > 0) {
         setActiveTimelineId(filtered[0].id);
       }
-      api.deleteTimeline(targetId).catch(console.error);
+      setRawEvents((prev) => prev.filter((ev) => ev.timelineId !== targetId && ev.timelineOriginId !== targetId));
+      await api.deleteTimeline(targetId);
+      showToast(t('toast.timelineDeletedSuccess') || 'Linha de tempo eliminada com sucesso!', 'success');
+    } catch (err) {
+      console.error('Error deleting timeline:', err);
+      showToast(t('toast.timelineDeleteError') || 'Erro ao eliminar linha de tempo.', 'error');
+    } finally {
+      setDeletingTimeline(null);
     }
   };
 
@@ -1543,7 +1573,7 @@ export default function App() {
                 onSelectFinancialTab={setActiveFinancialTab}
                 onEdit={handleOpenEditTimeline}
                 onToggleStatus={handleToggleTimelineStatus}
-                onDelete={handleDeleteTimeline}
+                onDelete={handleRequestDeleteTimeline}
                 onReset={() => setIsResetConfirmOpen(true)}
                 onOpenCreateTimeline={handleOpenCreateTimeline}
                 onOpenAmortizationModal={() => handleOpenAmortizationModal()}
@@ -1581,7 +1611,7 @@ export default function App() {
         isOpen={isTimelineSettingsModalOpen}
         onClose={() => setIsTimelineSettingsModalOpen(false)}
         onSave={handleSaveTimeline}
-        onDelete={handleDeleteTimeline}
+        onDelete={handleRequestDeleteTimeline}
         initialData={editingTimeline}
       />
 
@@ -1623,6 +1653,14 @@ export default function App() {
         onClose={() => setDeletingEvent(null)}
         event={deletingEvent}
         onConfirmDelete={handleConfirmDeleteEvent}
+      />
+
+      {/* Delete Timeline Confirmation Modal */}
+      <DeleteTimelineModal
+        isOpen={Boolean(deletingTimeline)}
+        onClose={() => setDeletingTimeline(null)}
+        timeline={deletingTimeline}
+        onConfirmDelete={handleConfirmDeleteTimeline}
       />
 
       {/* Reset Timeline Confirmation Modal */}

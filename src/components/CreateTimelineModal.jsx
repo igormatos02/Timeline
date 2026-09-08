@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, FolderPlus, Edit2, CreditCard, DollarSign, Calendar, ShieldCheck, ShieldAlert, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, parseISO, setMonth, setYear } from 'date-fns';
-import { generateLoanInstallments } from '../utils/loanCalculations';
+import { generateLoanInstallments, formatCurrency } from '../utils/loanCalculations';
 import { TimelineType, TimelineStatus, EventPeriodicity, EventAggregation } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
@@ -591,9 +591,10 @@ export default function CreateTimelineModal({
           {/* Tabela de Simulação de Prestações */}
           {showSimulation && (
             <div style={{ marginTop: '20px', marginBottom: '20px', padding: '16px', background: 'var(--bg-glass, rgba(255,255,255,0.02))', borderRadius: '12px', border: '1px solid var(--border-glass-glow)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--primary-light)', fontWeight: '700' }}>
-                  {t('loanModal.simulationTitle')}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--primary-light)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Sparkles size={16} />
+                  <span>{t('loanModal.simulationTitle')}</span>
                 </h4>
                 <button
                   type="button"
@@ -603,6 +604,69 @@ export default function CreateTimelineModal({
                   <X size={16} />
                 </button>
               </div>
+
+              {/* Cabeçalho de Métricas da Simulação */}
+              {(() => {
+                const simCapital = parseFloat(formData.totalDebt) || simulationEvents.reduce((acc, ev) => acc + Number(ev.installmentCapital ?? ev.principalAmount ?? 0), 0);
+                const simInterest = simulationEvents.reduce((acc, ev) => acc + Number(ev.installmentInterest ?? ev.interestPortion ?? 0), 0);
+                const simFees = simulationEvents.reduce((acc, ev) => acc + Number(ev.installmentFee ?? ev.taxAmount ?? 0), 0);
+                const simTotalCost = simCapital + simInterest + simFees;
+
+                return (
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                      gap: '12px',
+                      marginBottom: '16px',
+                      padding: '12px 14px',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-glass)'
+                    }}
+                  >
+                    {/* ORIGINAL CAPITAL */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+                        {t('loanHeader.originalCapital') || 'ORIGINAL CAPITAL'}
+                      </span>
+                      <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#10b981' }}>
+                        {formatCurrency(simCapital)}
+                      </span>
+                    </div>
+
+                    {/* ESTIMATED TOTAL INTEREST */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+                        {t('loanHeader.totalEstimatedInterest') || 'ESTIMATED TOTAL INTEREST'}
+                      </span>
+                      <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#f59e0b' }}>
+                        {formatCurrency(simInterest)}
+                      </span>
+                    </div>
+
+                    {/* ESTIMATED TOTAL FEES */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+                        {t('loanHeader.totalEstimatedFees') || 'ESTIMATED TOTAL FEES'}
+                      </span>
+                      <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#a855f7' }}>
+                        {formatCurrency(simFees)}
+                      </span>
+                    </div>
+
+                    {/* TOTAL LOAN COST */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+                        {t('loanHeader.totalLoanCost') || 'TOTAL LOAN COST'}
+                      </span>
+                      <span style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--primary-light)' }}>
+                        {formatCurrency(simTotalCost)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>

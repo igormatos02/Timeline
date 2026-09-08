@@ -1375,7 +1375,7 @@ export default function TimelineEventCard({
                   title={`Vencimento: ${event.date}`}
                 >
                   <Calendar size={11} />
-                  <span>Vence dia {parseInt(event.date.substring(8, 10), 10)}</span>
+                  <span>{t('loanCard.dueDay', { day: parseInt(event.date.substring(8, 10), 10) })}</span>
                 </span>
               )}
 
@@ -2294,7 +2294,7 @@ export default function TimelineEventCard({
             {!isAmortized && ((event.installmentFee ?? event.taxAmount ?? event.tax_amount ?? 0) > 0) && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                  Imposto de Selo
+                  {t('loanCard.stampTax') || 'Imposto de Selo'}
                 </span>
                 <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#a855f7' }}>
                   {formatCurrency(event.installmentFee ?? event.taxAmount ?? event.tax_amount ?? 0)}
@@ -3019,10 +3019,10 @@ export default function TimelineEventCard({
                 border: '1px solid rgba(16, 185, 129, 0.35)',
                 fontWeight: '700'
               }}
-              title="Marcar como pagas todas as prestações deste empréstimo anteriores a esta parcela (inclusive)"
+              title={t('buttons.payUpToHereTitle') || "Marcar como pagas todas as prestações deste empréstimo anteriores a esta parcela (inclusive)"}
             >
               <CheckCircle2 size={13} style={{ color: '#10b981' }} />
-              <span>Pagar até aqui</span>
+              <span>{t('buttons.payUpToHere') || "Pagar até aqui"}</span>
             </button>
           )}
 

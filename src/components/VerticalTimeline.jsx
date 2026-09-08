@@ -59,7 +59,7 @@ import {
 import TimelineEventCard from './TimelineEventCard';
 import FloatingTaskStack from './FloatingTaskStack';
 import { getGroupingForPeriodicity, formatCurrency } from '../utils/loanCalculations';
-import { EventType, EventStatus, EventStatusLabel, TimelineType, TimeboardType, IncomeEventCategory, ExpensesEventCategory, InvestmentEventCategory, LoanEventCategory } from '../enums/index.js';
+import { EventType, EventStatus, EventStatusLabel, TimelineType, TimeboardType, IncomeEventCategory, ExpensesEventCategory, InvestmentEventCategory, LoanEventCategory, AmortizationEventCategory, AmortizationStrategy } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 function VerticalTimeline({
@@ -121,6 +121,11 @@ function VerticalTimeline({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  React.useEffect(() => {
+    setSelectedCategoryFilter('all');
+    setSelectedStatusFilter(EventStatus.ALL);
+  }, [timeline?.id]);
 
   const isFinancial = activeTimeboard?.type === TimeboardType.FINANCIAL || activeTimeboard?.type === 'financial' || isFinancialTimeline;
   const isProjects = activeTimeboard?.type === TimeboardType.PROJECTS || activeTimeboard?.type === 'projects' || timeline?.type === 'project';
@@ -399,10 +404,16 @@ function VerticalTimeline({
         }
       }
 
-      const matchesCategory =
-        selectedCategoryFilter === 'all' ||
-        selectedCategoryFilter === 'Todos' ||
-        ev.category === selectedCategoryFilter;
+      let matchesCategory = true;
+      if (selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') {
+        if (selectedCategoryFilter === EventType.LOAN_INSTALLMENT || selectedCategoryFilter === 'parcela_emprestimo' || selectedCategoryFilter === 'loan_installment' || selectedCategoryFilter === LoanEventCategory.LOAN_INSTALLMENT) {
+          matchesCategory = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || ev.category === 'loan_installment' || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
+        } else if (selectedCategoryFilter === EventType.AMORTIZATION || selectedCategoryFilter === 'amortizacao' || selectedCategoryFilter === 'amortization' || selectedCategoryFilter === LoanEventCategory.AMORTIZATION) {
+          matchesCategory = ev.eventType === EventType.AMORTIZATION || ev.category === 'amortizacao' || ev.category === 'amortization' || ev.category === AmortizationEventCategory.REDUCE_TERM || ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT || ev.category === AmortizationStrategy.REDUCE_TERM || ev.category === AmortizationStrategy.REDUCE_INSTALLMENT;
+        } else {
+          matchesCategory = ev.category === selectedCategoryFilter || ev.eventType === selectedCategoryFilter;
+        }
+      }
 
       const matchesTimelineMultiSelect =
         timeline.type !== TimelineType.BALANCE ||
@@ -701,12 +712,13 @@ function VerticalTimeline({
       const map = new Map();
       (timelineEvents || []).forEach((ev) => {
         if (!ev || !ev.date || ev.isDeleted) return;
-        if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-        const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent || ev.category === 'parcela_emprestimo' || ev.category === 'amortizacao';
+        if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida') return;
+        const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
 
-        if (isLoan) {
+        if (isLoanInstallment) {
           const mKey = ev.date.substring(0, 7);
-          map.set(mKey, (map.get(mKey) || 0) + Number(ev.amount || 0));
+          const amt = Number(ev.installmentAmount !== undefined ? ev.installmentAmount : (ev.amount || 0));
+          map.set(mKey, (map.get(mKey) || 0) + amt);
         }
       });
       return map;
@@ -758,8 +770,15 @@ function VerticalTimeline({
       let mInv = 0;
 
       mG.events.forEach((ev) => {
-        const amt = Number(ev.amount || 0);
-        const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent;
+        if (!ev || !ev.date || ev.isDeleted) return;
+        if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida') return;
+
+        const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
+        const amt = isLoanInstallment
+          ? Number(ev.installmentAmount !== undefined ? ev.installmentAmount : (ev.amount || 0))
+          : Number(ev.amount || 0);
+
+        const isLoan = isLoanInstallment || ev.eventType === EventType.AMORTIZATION || ev.category === 'amortizacao';
         const isIncome = ev.eventType === EventType.INCOME;
         const isExpense = ev.eventType === EventType.EXPENSE || isLoan;
         const isInvestment = ev.eventType === EventType.INVESTMENT;
@@ -842,10 +861,14 @@ function VerticalTimeline({
           let mMonthInvestmentPaid = 0;
 
           mGroup.events.forEach((ev) => {
-            if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.isDeleted) return;
+            if (!ev || ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida' || ev.isDeleted) return;
 
-            const amt = Number(ev.amount || 0);
-            const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT;
+            const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
+            const amt = isLoanInstallment
+              ? Number(ev.installmentAmount !== undefined ? ev.installmentAmount : (ev.amount || 0))
+              : Number(ev.amount || 0);
+
+            const isLoan = isLoanInstallment || ev.eventType === EventType.AMORTIZATION || ev.category === 'amortizacao';
             const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment;
             const isIncome = (ev.eventType === EventType.INCOME || ev.isIncome) && !ev.isExpense && !ev.isInvestment && !isLoan;
             const isExpense = ((ev.eventType === EventType.EXPENSE || ev.isExpense) || isLoan) && !isInvestment;
@@ -1777,31 +1800,37 @@ function VerticalTimeline({
               <span>{t('sidebar.categoryType')}</span>
             </div>
             <div className="sidebar-btn-group">
-              {
-              /* 
-              ([TimelineType.INCOME, TimelineType.BALANCE, TimelineType.INVESTMENT, TimelineType.EXPENSE].includes(timeline.type)
+              {(timeline.type === TimelineType.LOAN
                 ? [
-                  { id: EventCategory.ALL, name: t('category.all'), icon: <Layers size={13} /> },
-                  { id: EventCategory.RECURRING_INCOME, name: t('category.recurringIncome'), icon: <DollarSign size={13} /> },
-                  { id: EventCategory.SPORADIC_INCOME, name: t('category.sporadicIncome'), icon: <Gift size={13} /> },
-                  { id: EventCategory.FIXED_EXPENSE, name: t('category.fixedExpense'), icon: <CreditCard size={13} /> },
-                  { id: EventCategory.VARIABLE_EXPENSE, name: t('category.variableExpense'), icon: <Tag size={13} /> },
-                  { id: EventCategory.SAVINGS_INVESTMENT, name: t('category.savingsInvestment'), icon: <PiggyBank size={13} /> },
-                  { id: EventCategory.ASSET_INVESTMENT, name: t('category.assetInvestment'), icon: <Landmark size={13} /> },
-                  { id: EventCategory.OTHER_INVESTMENT, name: t('category.otherInvestment'), icon: <Sparkles size={13} /> }
+                  { id: 'all', name: t('category.allTypes'), icon: <Layers size={13} /> },
+                  { id: EventType.LOAN_INSTALLMENT, name: t('category.loanInstallment'), icon: <CreditCard size={13} /> },
+                  { id: EventType.AMORTIZATION, name: t('category.amortization'), icon: <TrendingDown size={13} /> }
                 ]
-                : timeline.type === TimelineType.LOAN
+                : [TimelineType.INCOME, TimelineType.EXPENSE, TimelineType.INVESTMENT].includes(timeline.type)
                   ? [
-                    { id: EventCategory.ALL, name: t('category.all'), icon: <Layers size={13} /> },
-                    { id: EventCategory.LOAN_INSTALLMENT, name: t('category.loanInstallment'), icon: <CreditCard size={13} /> },
-                    { id: EventCategory.AMORTIZATION, name: t('category.amortization'), icon: <TrendingDown size={13} /> }
+                    { id: 'all', name: t('category.all'), icon: <Layers size={13} /> },
+                    ...(timeline.type === TimelineType.INCOME
+                      ? [
+                        { id: IncomeEventCategory.RECURRING, name: t('category.recurringIncome'), icon: <DollarSign size={13} /> },
+                        { id: IncomeEventCategory.SPORADIC, name: t('category.sporadicIncome'), icon: <Gift size={13} /> }
+                      ]
+                      : timeline.type === TimelineType.EXPENSE
+                        ? [
+                          { id: ExpensesEventCategory.FIXED, name: t('category.fixedExpense'), icon: <CreditCard size={13} /> },
+                          { id: ExpensesEventCategory.VARIABLE, name: t('category.variableExpense'), icon: <Tag size={13} /> }
+                        ]
+                        : [
+                          { id: InvestmentEventCategory.SAVINGS, name: t('category.savingsInvestment'), icon: <PiggyBank size={13} /> },
+                          { id: InvestmentEventCategory.ASSET, name: t('category.assetInvestment'), icon: <Landmark size={13} /> },
+                          { id: InvestmentEventCategory.OTHER, name: t('category.otherInvestment'), icon: <Sparkles size={13} /> }
+                        ])
                   ]
                   : [
-                    { id: EventCategory.ALL, name: t('category.allTypes'), icon: <Layers size={13} /> },
-                    { id: EventCategory.SCHEDULE, name: t('category.schedule'), icon: <Calendar size={13} /> },
-                    { id: EventCategory.REPETITIVE, name: t('category.repetitive'), icon: <Repeat size={13} /> },
-                    { id: EventCategory.TASK, name: t('category.task'), icon: <Pin size={13} /> },
-                    { id: EventCategory.NOTE, name: t('category.note'), icon: <FileText size={13} /> }
+                    { id: 'all', name: t('category.allTypes'), icon: <Layers size={13} /> },
+                    { id: 'schedule', name: t('category.schedule'), icon: <Calendar size={13} /> },
+                    { id: 'repetitive', name: t('category.repetitive'), icon: <Repeat size={13} /> },
+                    { id: 'task', name: t('category.task'), icon: <Pin size={13} /> },
+                    { id: 'note', name: t('category.note'), icon: <FileText size={13} /> }
                   ]
               ).map((cat) => (
                 <button
@@ -1816,7 +1845,7 @@ function VerticalTimeline({
                   </div>
                   {selectedCategoryFilter === cat.id && <span style={{ fontSize: '0.75rem', color: 'var(--primary-light)' }}>✓</span>}
                 </button>
-              ))*/}
+              ))}
             </div>
           </div>
         )}

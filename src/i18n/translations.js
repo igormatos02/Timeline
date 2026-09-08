@@ -24,7 +24,9 @@ export const translations = {
       edit: "Edit",
       all: "All",
       deselectAll: "Deselect",
-      add: "Add"
+      add: "Add",
+      payUpToHere: "Pay up to here",
+      payUpToHereTitle: "Mark all previous installments of this loan up to this one as paid"
     },
 
     // Toast Notifications
@@ -34,7 +36,9 @@ export const translations = {
       eventUpdatedSuccess: "Event updated successfully in database!",
       eventDeletedSuccess: "Event deleted from database!",
       eventSaveError: "Error saving event to database.",
-      eventDeleteError: "Error deleting event from database."
+      eventDeleteError: "Error deleting event from database.",
+      timelineDeletedSuccess: "Timeline deleted successfully!",
+      timelineDeleteError: "Error deleting timeline."
     },
 
     // Timeline Rows & Cards
@@ -75,9 +79,18 @@ export const translations = {
       capitalAbated: "Capital Abated",
       interest: "Interest",
       interestSaved: "Interest Saved",
+      stampTax: "Stamp Duty",
       lateFee: "Late Fee",
       remainingDebt: "Remaining Debt",
       abatedInfo: "Installment abated by early extraordinary amortization."
+    },
+
+    // Delete Timeline Modal
+    deleteTimelineModal: {
+      title: "Delete Timeline",
+      subtitle: "Confirm timeline deletion",
+      warning: "Are you sure you want to delete this timeline and all its associated events? This action cannot be undone.",
+      eventsCount: "{count} associated events will be removed"
     },
 
     // Sidebar Filters
@@ -361,7 +374,9 @@ export const translations = {
       edit: "Editar",
       all: "Todos",
       deselectAll: "Desmarcar",
-      add: "Adicionar"
+      add: "Adicionar",
+      payUpToHere: "Pagar até aqui",
+      payUpToHereTitle: "Marcar como pagas todas as prestações deste empréstimo anteriores a esta parcela (inclusive)"
     },
 
     // Toast Notifications
@@ -371,7 +386,9 @@ export const translations = {
       eventUpdatedSuccess: "Evento atualizado com sucesso na base de dados!",
       eventDeletedSuccess: "Evento eliminado da base de dados!",
       eventSaveError: "Erro ao guardar evento na base de dados.",
-      eventDeleteError: "Erro ao eliminar evento da base de dados."
+      eventDeleteError: "Erro ao eliminar evento da base de dados.",
+      timelineDeletedSuccess: "Linha de tempo eliminada com sucesso!",
+      timelineDeleteError: "Erro ao eliminar linha de tempo."
     },
 
     // Timeline Rows & Cards
@@ -412,9 +429,18 @@ export const translations = {
       capitalAbated: "Capital Abatido",
       interest: "Juros",
       interestSaved: "Juros Poupados",
+      stampTax: "Imposto de Selo",
       lateFee: "Mora / Atraso",
       remainingDebt: "Saldo Devedor",
       abatedInfo: "Parcela abatida por amortização extraordinária antecipada."
+    },
+
+    // Delete Timeline Modal
+    deleteTimelineModal: {
+      title: "Eliminar Linha de Tempo",
+      subtitle: "Confirmar eliminação da timeline",
+      warning: "Tem a certeza que deseja eliminar esta linha de tempo e todos os seus registos associados? Esta ação não pode ser desfeita.",
+      eventsCount: "{count} registos associados serão removidos"
     },
 
     // Sidebar Filters

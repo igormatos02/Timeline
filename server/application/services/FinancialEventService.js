@@ -419,12 +419,9 @@ export class FinancialEventService {
       if (targetDate) {
         const year = parseInt(targetDate.substring(0, 4), 10);
         const month = parseInt(targetDate.substring(5, 7), 10);
-        const aliases = Array.from(new Set([effectiveSeriesId, rootEvent?.id, directEvent?.id, id].filter(Boolean)));
-        await financialEventStatusRepository.upsertStatus(year, month, effectiveSeriesId, EventStatus.DELETED, {
-          timelineId: rootEvent?.timelineId || rootEvent?.timeline_id,
-          timeboardId: rootEvent?.timeboardId || rootEvent?.timeboard_id,
-          aliases
-        });
+        const aliases = Array.from(new Set([effectiveSeriesId, rootEvent?.id, directEvent?.id, id, newVersionRow?.id].filter(Boolean)));
+        // Exclui da tabela de status todos os status deste evento com mês/ano igual ou superior à data da exclusão
+        await financialEventStatusRepository.deleteStatusFromMonthOnward(year, month, aliases);
       }
       return true;
     }

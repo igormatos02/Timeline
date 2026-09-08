@@ -122,6 +122,33 @@ export class SupabaseFinancialEventStatusRepository {
     return true;
   }
 
+  async deleteStatusFromMonthOnward(targetYear, targetMonth, eventId) {
+    if (!targetYear || !targetMonth || !eventId) return false;
+    const cleanIds = (Array.isArray(eventId) ? eventId : [eventId]).filter(Boolean).map(String);
+    if (cleanIds.length === 0) return true;
+
+    // 1. Apaga anos futuros (year > targetYear)
+    await supabase
+      .from(this.tableName)
+      .delete()
+      .in('event_id', cleanIds)
+      .gt('year', Number(targetYear));
+
+    // 2. Apaga mesmo ano, mês igual ou superior (year == targetYear E month >= targetMonth)
+    const { error } = await supabase
+      .from(this.tableName)
+      .delete()
+      .in('event_id', cleanIds)
+      .eq('year', Number(targetYear))
+      .gte('month', Number(targetMonth));
+
+    if (error) {
+      console.error('Error deleting statuses from month onward:', error.message);
+      return false;
+    }
+    return true;
+  }
+
   async deleteByTimelineId(timelineId) {
     if (!timelineId) return false;
     const { error } = await supabase

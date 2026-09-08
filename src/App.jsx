@@ -336,10 +336,12 @@ export default function App() {
     const isLoanType = currentSelected?.type === TimelineType.LOAN || currentSelected?.type === 'loan' || currentSelected?.type === 'emprestimo' || currentSelected?.type === 'Empréstimo';
     const computedEvents = isLoanType ? recalculateLoanState(currentSelected, rawEvents || []) : (rawEvents || []);
 
+    const computedMetrics = isLoanType ? getLoanMetrics(currentSelected, computedEvents) : currentSelected?.loanHeaderResult;
+
     return {
       ...currentSelected,
-      loanHeaderResult: currentSelected?.loanHeaderResult,
-      procedureMetrics: currentSelected?.procedureMetrics || currentSelected?.loanHeaderResult,
+      loanHeaderResult: computedMetrics,
+      procedureMetrics: computedMetrics,
       timelines: activeTimeboardTimelines,
       events: computedEvents
     };

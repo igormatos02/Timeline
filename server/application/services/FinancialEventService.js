@@ -255,7 +255,12 @@ export class FinancialEventService {
     const allRawEvents = await eventRepository.getAll();
     const directEvent = await eventRepository.getById(id);
 
-    if (directEvent?.isAmortizationEvent?.() || directEvent?.eventType === EventType.AMORTIZATION) {
+    if (directEvent?.isAmortizationEvent?.() || directEvent?.eventType === EventType.AMORTIZATION || directEvent?.category === LoanEventCategory.AMORTIZATION) {
+      if (directEvent?.date) {
+        const year = parseInt(directEvent.date.substring(0, 4), 10);
+        const month = parseInt(directEvent.date.substring(5, 7), 10);
+        await financialEventStatusRepository.deleteStatus(year, month, id);
+      }
       return eventRepository.delete(id);
     }
 
@@ -263,7 +268,14 @@ export class FinancialEventService {
       directEvent?.isLoanEvent?.() ||
       directEvent?.isSystemLoanEvent ||
       directEvent?.eventType === EventType.AMORTIZATION;
-    if (isLoan) return eventRepository.delete(id);
+    if (isLoan) {
+      if (directEvent?.date) {
+        const year = parseInt(directEvent.date.substring(0, 4), 10);
+        const month = parseInt(directEvent.date.substring(5, 7), 10);
+        await financialEventStatusRepository.deleteStatus(year, month, id);
+      }
+      return eventRepository.delete(id);
+    }
 
     const targetSeriesId = directEvent?.eventId || directEvent?.event_id || directEvent?.sobrepositionOver || options.eventId;
 
@@ -324,6 +336,12 @@ export class FinancialEventService {
         periodicity: EventPeriodicity.ONCE
       });
       return true;
+    }
+
+    if (directEvent?.date) {
+      const year = parseInt(directEvent.date.substring(0, 4), 10);
+      const month = parseInt(directEvent.date.substring(5, 7), 10);
+      await financialEventStatusRepository.deleteStatus(year, month, id);
     }
 
     return eventRepository.delete(id);

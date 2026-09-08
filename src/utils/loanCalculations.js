@@ -7,10 +7,10 @@ import {
   IncomeEventCategory,
   InvestmentEventCategory,
   TimelineType,
-  AmortizationStrategy,
   EventPriority,
   EventAggregation,
-  isPositiveStatus
+  isPositiveStatus,
+  AmortizationEventCategory
 } from '../enums/index.js';
 
 /**
@@ -78,19 +78,19 @@ export function generateLoanInstallments({
   periodicity = EventAggregation.MONTHLY
 }) {
   const events = [];
-  
+
   // 1. Inputs initialization & fallbacks
   const initialCapital = Number(totalAmountFinanced !== undefined ? totalAmountFinanced : (totalDebt || 0));
   const n = parseInt(numberOfInstallments !== undefined ? numberOfInstallments : totalInstallments, 10) || 1;
-  
+
   // Applicable TAN: TaxaAplicavel = TANRate + Spread (se spread for fornecido separadamente)
   const baseTan = Number(tanRate || 0);
   const spreadVal = Number(spread || 0);
   const applicableTan = baseTan + spreadVal;
-  
+
   // Stamp tax rate on interest (e.g. 4%)
   const stampTaxRate = Number(interestStampTaxRate !== undefined ? interestStampTaxRate : (taxaImpostoSeloJuros || 0));
-  
+
   // 2. Date calculation: debtStartDate & dueDay
   const startIso = debtStartDate || startDate;
   const baseDate = parseISO(startIso);
@@ -237,6 +237,121 @@ export function generateLoanSchedule(params) {
 }
 
 /**
+ * Helper to recalculate installments in-memory based on extraordinary amortizations
+ */
+function applyAmortizationsInMemory(timeline, eventsList) {
+  // Extrair todos os eventos de amortização ativos desta timeline
+  const amortEvents = eventsList.filter((ev) => {
+    if (!ev || ev.isDeleted || ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return false;
+    if (timeline && timeline.id && ev.timelineId && ev.timelineId !== timeline.id && ev.timelineOriginId !== timeline.id) return false;
+    const isAmort = ev.category === AmortizationEventCategory.REDUCE_TERM || ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT || ev.eventType === EventType.AMORTIZATION || ev.isAmortization;
+    return isAmort && isPositiveStatus(ev.status);
+  }).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  if (amortEvents.length === 0) return eventsList;
+
+  let currentEvents = [...eventsList];
+
+  for (const amortEv of amortEvents) {
+    const amortVal = Number(amortEv.amount || amortEv.amortizationAmount || 0);
+    if (isNaN(amortVal) || amortVal <= 0) continue;
+
+    const category = amortEv.category || amortEv.strategy || AmortizationEventCategory.REDUCE_TERM;
+    const amortDate = amortEv.date || '1900-01-01';
+
+    const isReduceInstallment = category === AmortizationEventCategory.REDUCE_INSTALLMENT || category === 'reduce_installment' || amortEv.strategy === 'reduce_installment';
+
+    if (isReduceInstallment) {
+      // Redução no Valor da Parcela (REDUCE_INSTALLMENT)
+      const futureUnpaid = currentEvents.filter((ev) => {
+        if (timeline && timeline.id && ev.timelineId && ev.timelineId !== timeline.id && ev.timelineOriginId !== timeline.id) return false;
+        const isLoanInst = ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT;
+        return isLoanInst && !isPositiveStatus(ev.status) && ev.date >= amortDate;
+      });
+
+      if (futureUnpaid.length > 0) {
+        const remainingDebtBefore = futureUnpaid.reduce((acc, ev) => acc + Number(ev.principalAmount || Math.round(Number(ev.amount || 0) * 0.82)), 0);
+        const newFuturePrincipal = Math.max(0, remainingDebtBefore - amortVal);
+        const ratio = remainingDebtBefore > 0 ? (newFuturePrincipal / remainingDebtBefore) : 1;
+
+        currentEvents = currentEvents.map((ev) => {
+          if (timeline && timeline.id && ev.timelineId && ev.timelineId !== timeline.id && ev.timelineOriginId !== timeline.id) return ev;
+          const isLoanInst = ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT;
+          if (isLoanInst && !isPositiveStatus(ev.status) && ev.date >= amortDate) {
+            const origCap = Number(ev.principalAmount || Math.round(Number(ev.amount || 0) * 0.82));
+            const origJur = Number(ev.interestPortion || Math.round(Number(ev.amount || 0) * 0.18));
+            const newCap = Math.round(origCap * ratio * 100) / 100;
+            const newJur = Math.round(origJur * ratio * 100) / 100;
+            return {
+              ...ev,
+              amount: Math.round((newCap + newJur) * 100) / 100,
+              principalAmount: newCap,
+              interestPortion: newJur
+            };
+          }
+          return ev;
+        });
+      }
+    } else {
+      // Redução de Prazo (REDUCE_TERM - Abater parcelas a partir da última parcela da timeline inteira)
+      const futureUnpaid = currentEvents
+        .filter((ev) => {
+          if (timeline && timeline.id && ev.timelineId && ev.timelineId !== timeline.id && ev.timelineOriginId !== timeline.id) return false;
+          const isLoanInst = ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT;
+          return isLoanInst && !isPositiveStatus(ev.status) && ev.status !== EventStatus.AMORTIZED && !ev.isAbatida;
+        })
+        .sort((a, b) => {
+          const numA = Number(a.installmentNumber || 0);
+          const numB = Number(b.installmentNumber || 0);
+          if (numA && numB) return numB - numA;
+          return (b.date || '').localeCompare(a.date || '');
+        }); // Ordenar do maior número de parcela / última data para o menor número de parcela (decrescente)
+
+      let remainingToDeduct = amortVal;
+      const updatesMap = new Map();
+
+      for (let i = 0; i < futureUnpaid.length; i++) {
+        if (remainingToDeduct <= 0) break;
+        const inst = futureUnpaid[i];
+        const instPrincipal = Number(inst.principalAmount !== undefined ? inst.principalAmount : Math.round(Number(inst.amount || 0) * 0.82 * 100) / 100);
+
+        if (remainingToDeduct >= instPrincipal && instPrincipal > 0) {
+          updatesMap.set(inst.id, {
+            status: EventStatus.AMORTIZED,
+            isAbatida: true,
+            isCompleted: true,
+            originalAmount: inst.amount || instPrincipal,
+            amount: 0,
+            principalAmount: 0,
+            interestPortion: 0,
+            labels: Array.from(new Set([...(inst.labels || []), 'Amortized']))
+          });
+          remainingToDeduct -= instPrincipal;
+        } else if (remainingToDeduct > 0 && instPrincipal > 0) {
+          const newCap = Math.max(0, Math.round((instPrincipal - remainingToDeduct) * 100) / 100);
+          const origJur = Number(inst.interestPortion || Math.round(Number(inst.amount || 0) * 0.18 * 100) / 100);
+          updatesMap.set(inst.id, {
+            amount: Math.round((newCap + origJur) * 100) / 100,
+            principalAmount: newCap,
+            labels: Array.from(new Set([...(inst.labels || []), 'Partial Amortization']))
+          });
+          remainingToDeduct = 0;
+        }
+      }
+
+      currentEvents = currentEvents.map((ev) => {
+        if (updatesMap.has(ev.id)) {
+          return { ...ev, ...updatesMap.get(ev.id) };
+        }
+        return ev;
+      });
+    }
+  }
+
+  return currentEvents;
+}
+
+/**
  * Recalculate remaining balances and installment numbers across all loan events
  */
 export function recalculateLoanState(timeline, eventsList) {
@@ -245,7 +360,10 @@ export function recalculateLoanState(timeline, eventsList) {
   const todayStr = '2026-08-21';
   const today = parseISO(todayStr);
 
-  const sorted = [...eventsList].sort((a, b) => {
+  // Aplicar amortizações dinamicamente em memória
+  const preparedList = applyAmortizationsInMemory(timeline, eventsList);
+
+  const sorted = [...preparedList].sort((a, b) => {
     if (a.date === b.date) {
       return (a.installmentNumber || 0) - (b.installmentNumber || 0);
     }
@@ -256,6 +374,21 @@ export function recalculateLoanState(timeline, eventsList) {
     const isLoanInst = ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.eventType === EventType.LOAN_INSTALLMENT;
 
     if (isLoanInst) {
+      const isAbatida = ev.status === EventStatus.AMORTIZED || Boolean(ev.isAbatida);
+      if (isAbatida) {
+        return {
+          ...ev,
+          status: EventStatus.AMORTIZED,
+          isAbatida: true,
+          isCompleted: true,
+          amount: 0,
+          principalAmount: 0,
+          interestPortion: 0,
+          interestAmount: 0,
+          balanceAfter: runningBalance
+        };
+      }
+
       const totalAmount = Number(ev.amount || 0);
       let principal = ev.principalAmount !== undefined
         ? Number(ev.principalAmount)

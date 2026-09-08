@@ -20,7 +20,7 @@ import {
 } from './utils/loanCalculations';
 import * as api from './services/api';
 import { generateUUID } from './utils/uuid';
-import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, AmortizationStrategy, isPositiveStatus } from './enums/index.js';
+import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, AmortizationStrategy, AmortizationEventCategory, isPositiveStatus } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
@@ -144,10 +144,9 @@ export default function App() {
     const endDate = format(endObj, 'yyyy-MM-dd');
 
     try {
+      // Para timelines de empréstimos, buscar a série completa sem truncar por horizonte de 1 ano
       const params = {
-        timeboardId: activeTimeboardId,
-        startDate,
-        endDate
+        timeboardId: activeTimeboardId
       };
 
       const evData = await api.fetchEvents(params);
@@ -334,12 +333,15 @@ export default function App() {
       (tl) => tl.id === activeFinancialTab || tl.type === activeFinancialTab || tl.id === activeTimelineId || tl.type === activeTimelineId
     ) || activeTimeboardTimelines[0];
 
+    const isLoanType = currentSelected?.type === TimelineType.LOAN || currentSelected?.type === 'loan' || currentSelected?.type === 'emprestimo' || currentSelected?.type === 'Empréstimo';
+    const computedEvents = isLoanType ? recalculateLoanState(currentSelected, rawEvents || []) : (rawEvents || []);
+
     return {
       ...currentSelected,
       loanHeaderResult: currentSelected?.loanHeaderResult,
       procedureMetrics: currentSelected?.procedureMetrics || currentSelected?.loanHeaderResult,
       timelines: activeTimeboardTimelines,
-      events: rawEvents || []
+      events: computedEvents
     };
   }, [activeTimeboard, activeTimeboardTimelines, activeFinancialTab, activeTimelineId, rawEvents]);
 
@@ -1306,6 +1308,9 @@ export default function App() {
       time: '12:00',
       amount: amortVal,
       amortizationAmount: amortVal,
+      category: (strategy === AmortizationStrategy.REDUCE_INSTALLMENT || strategy === 'reduce_installment')
+        ? AmortizationEventCategory.REDUCE_INSTALLMENT
+        : AmortizationEventCategory.REDUCE_TERM,
       eventType: EventType.AMORTIZATION,
       isAmortization: true,
       isExpense: true,

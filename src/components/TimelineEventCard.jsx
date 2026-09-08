@@ -138,10 +138,10 @@ export default function TimelineEventCard({
 
   const isPaidLoan = isLoanInstallment && (effectiveStatus === EventStatus.PAID || effectiveStatus === EventStatus.SETTLED || effectiveStatus === EventStatus.COMPLETED || effectiveStatus === EventStatus.AMORTIZED);
   const isOverdueLoan = isLoanInstallment && (isOverdue || effectiveStatus === EventStatus.OVERDUE);
-  const isAbatida = effectiveStatus === 'abatida' || Boolean(event.isAbatida) || (Array.isArray(event.labels) && event.labels.includes('Abatida'));
+  const isAmortized = isLoanInstallment && effectiveStatus === EventStatus.AMORTIZED;
 
   const abatedBreakdown = React.useMemo(() => {
-    if (!isAbatida) return null;
+    if (!isAmortized) return null;
     let origCapital = 0;
     let origInterest = 0;
     const origTotal = Number(event.originalAmount || (Number(event.amount) > 0 ? event.amount : 218.47));
@@ -158,9 +158,9 @@ export default function TimelineEventCard({
       origInterest = Math.round((origTotal - origCapital) * 100) / 100;
     }
     return { origTotal, origCapital, origInterest };
-  }, [isAbatida, event.description, event.originalAmount, event.amount]);
+  }, [isAmortized, event.description, event.originalAmount, event.amount]);
 
-  const isLocked = event.isLocked !== undefined ? !!event.isLocked : (isCompleted || isAbatida);
+  const isLocked = event.isLocked !== undefined ? !!event.isLocked : (isCompleted || isAmortized);
 
   const [isEditingAmount, setIsEditingAmount] = useState(false);
   const [tempAmount, setTempAmount] = useState(event.amount !== undefined ? event.amount : '');
@@ -1008,7 +1008,7 @@ export default function TimelineEventCard({
     };
   }
 
-  if (isAbatida) {
+  if (isAmortized) {
     cardStyle = {
       ...cardStyle,
       opacity: 0.48,
@@ -1252,15 +1252,17 @@ export default function TimelineEventCard({
                 className="event-title"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (isAbatida) return;
-                  if (!isLoanInstallment) {
+                  if (isAmortized) return;
+                  if (isLoanInstallment) {
+                    handleNavigateToTimelineOrigin();
+                  } else if (isRecurring) {
                     setIsEditingTitle(true);
-                  } else if (onNavigateToTimeline && originInfo) {
-                    onNavigateToTimeline(originInfo.timelineId, originInfo.tab);
+                  } else {
+                    setIsEditingTitle(true);
                   }
                 }}
                 title={
-                  isAbatida
+                  isAmortized
                     ? 'Esta parcela foi totalmente liquidada/abatida por amortização extraordinária.'
                     : isLoanInstallment
                       ? `Clique para ir à timeline do ${originInfo ? originInfo.label : 'Empréstimo'}`
@@ -1270,9 +1272,9 @@ export default function TimelineEventCard({
                 }
                 style={{
                   margin: 0,
-                  color: isAbatida ? 'var(--text-dim)' : isInertFuture ? 'var(--text-muted)' : 'var(--text-main)',
-                  textDecoration: isAbatida ? 'line-through' : 'none',
-                  cursor: isAbatida ? 'default' : 'pointer'
+                  color: isAmortized ? 'var(--text-dim)' : isInertFuture ? 'var(--text-muted)' : 'var(--text-main)',
+                  textDecoration: isAmortized ? 'line-through' : 'none',
+                  cursor: isAmortized ? 'default' : 'pointer'
                 }}
               >
                 {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
@@ -1301,7 +1303,7 @@ export default function TimelineEventCard({
                 </span>
               )}
 
-              {isAbatida && (
+              {isAmortized && (
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                   <span
                     style={{
@@ -2149,9 +2151,9 @@ export default function TimelineEventCard({
             {/* Valor Total da Parcela */}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                {isAbatida ? t('loanCard.totalPaid') : t('loanCard.totalInstallment')}
+                {isAmortized ? t('loanCard.totalPaid') : t('loanCard.totalInstallment')}
               </span>
-              {isAbatida ? (
+              {isAmortized ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)', textDecoration: 'line-through' }}>
                     {formatCurrency(abatedBreakdown?.origTotal || event.originalAmount || 218.47)}
@@ -2168,10 +2170,10 @@ export default function TimelineEventCard({
             {/* Decomposição: Capital Amortizado */}
             <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                {isAbatida ? t('loanCard.capitalAbated') : t('loanCard.capitalDebt')}
+                {isAmortized ? t('loanCard.capitalAbated') : t('loanCard.capitalDebt')}
               </span>
-              <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAbatida ? 'var(--text-main)' : isInertFuture ? 'var(--text-muted)' : 'var(--text-main)' }}>
-                {isAbatida
+              <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAmortized ? 'var(--text-main)' : isInertFuture ? 'var(--text-muted)' : 'var(--text-main)' }}>
+                {isAmortized
                   ? formatCurrency(abatedBreakdown?.origCapital || 194.88)
                   : formatCurrency(event.principalAmount !== undefined ? event.principalAmount : (event.principal_amount !== undefined ? event.principal_amount : 0))}
               </span>
@@ -2179,20 +2181,20 @@ export default function TimelineEventCard({
 
             {/* Juros Contratuais */}
             <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
-              <span style={{ fontSize: '0.7rem', color: isAbatida ? '#10b981' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                {isAbatida ? t('loanCard.interestSaved') : t('loanCard.interest')}
+              <span style={{ fontSize: '0.7rem', color: isAmortized ? '#10b981' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                {isAmortized ? t('loanCard.interestSaved') : t('loanCard.interest')}
               </span>
-              <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAbatida ? '#10b981' : isInertFuture ? '#94a3b8' : '#f59e0b' }}>
-                {isAbatida
+              <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAmortized ? '#10b981' : isInertFuture ? '#94a3b8' : '#f59e0b' }}>
+                {isAmortized
                   ? `+${formatCurrency(abatedBreakdown?.origInterest || 23.59)}`
                   : formatCurrency(
-                      event.interestPortion !== undefined ? event.interestPortion : (event.interest_portion !== undefined ? event.interest_portion : 0)
-                    )}
+                    event.interestPortion !== undefined ? event.interestPortion : (event.interest_portion !== undefined ? event.interest_portion : 0)
+                  )}
               </span>
             </div>
 
             {/* Imposto de Selo (se > 0) */}
-            {!isAbatida && (event.taxAmount !== undefined ? event.taxAmount : event.tax_amount) > 0 && (
+            {!isAmortized && (event.taxAmount !== undefined ? event.taxAmount : event.tax_amount) > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                   Imposto de Selo
@@ -2209,7 +2211,7 @@ export default function TimelineEventCard({
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                   {t('loanCard.remainingDebt')}
                 </span>
-                <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAbatida || isInertFuture ? '#94a3b8' : 'var(--primary-light)' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAmortized || isInertFuture ? '#94a3b8' : 'var(--primary-light)' }}>
                   {formatCurrency(event.balanceAfter !== undefined ? event.balanceAfter : (event.remainingDebtAfter !== undefined ? event.remainingDebtAfter : (event.remaining_debt_after || 0)))}
                 </span>
               </div>
@@ -2218,7 +2220,7 @@ export default function TimelineEventCard({
 
           {/* Inline Loan Payment Fast Toggle */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {isAbatida ? (
+            {isAmortized ? (
               <div
                 style={{
                   background: 'rgba(148, 163, 184, 0.12)',

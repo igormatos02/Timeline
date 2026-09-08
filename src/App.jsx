@@ -767,10 +767,18 @@ export default function App() {
             eventId: editingEvent.eventId || editingEvent.seriesId
           };
           await api.updateEvent(editingEvent.id, updated);
-          setRawEvents((prev) => prev.map((ev) => (ev.id === editingEvent.id ? updated : ev)));
+          await refreshTimelines();
           showToast(t('toast.eventUpdatedSuccess') || 'Evento atualizado com sucesso na base de dados!', 'success');
         } else {
-          const isRecurring = eventData.periodicity === 'recorrente' || eventData.isRecurring || (eventData.category && eventData.category.includes('recorrente'));
+          const isRecurring = Boolean(
+            eventData.periodicity === 'recorrente' ||
+            eventData.periodicity === 'recurring' ||
+            eventData.periodicity === EventPeriodicity.RECURRING ||
+            eventData.periodicity === EventPeriodicity.PERIOD ||
+            eventData.periodicity === 'period' ||
+            eventData.isRecurring ||
+            (eventData.category && eventData.category.includes('recorrente'))
+          );
           const newEvent = {
             ...eventData,
             id: generateUUID(),
@@ -779,10 +787,10 @@ export default function App() {
             timelineOriginId: targetTimelineId,
             eventId: isRecurring ? generateUUID() : null,
             version: 0,
-            isRecurring: Boolean(isRecurring)
+            isRecurring
           };
           await api.createEvent(newEvent);
-          setRawEvents((prev) => [newEvent, ...prev]);
+          await refreshTimelines();
           showToast(t('toast.eventCreatedSuccess') || 'Evento adicionado com sucesso na base de dados!', 'success');
         }
 

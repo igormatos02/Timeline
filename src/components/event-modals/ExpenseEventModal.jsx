@@ -239,7 +239,7 @@ export default function ExpenseEventModal({
 
   // Subpartes: valor total derivado
   const totalBreakdownAmount = breakdownItems.reduce(
-    (acc, it) => acc + (Number(it.amount) || 0),
+    (acc, it) => acc + (parseFloat(it.amount) || 0),
     0
   );
 
@@ -590,7 +590,6 @@ export default function ExpenseEventModal({
             )}
           </div>
 
-          {/* 2. Valor (€) e Quebra em Subpartes */}
           <div style={{ marginBottom: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
               <label style={{ fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-main)' }}>
@@ -634,7 +633,6 @@ export default function ExpenseEventModal({
             </div>
           </div>
 
-          {/* 3. Desmembramento em Subpartes */}
           <div style={{ padding: '12px', borderRadius: '10px', background: 'var(--bg-glass, rgba(255,255,255,0.03))', border: '1px solid var(--border-glass)', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: breakdownItems.length > 0 ? '10px' : '0' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -644,14 +642,14 @@ export default function ExpenseEventModal({
                 type="button"
                 onClick={() => {
                   if (breakdownItems.length === 0) {
-                    const curVal = parseFloat(formData.amount) || 0;
+                    const curVal = formData.amount !== '' && !isNaN(formData.amount) ? parseFloat(formData.amount) : '';
                     setBreakdownItems([
-                      { id: crypto.randomUUID(), name: 'Parte 1', amount: curVal || 0 }
+                      { id: crypto.randomUUID(), name: 'Parte 1', amount: curVal !== '' && curVal > 0 ? curVal : '' }
                     ]);
                   } else {
                     setBreakdownItems([
                       ...breakdownItems,
-                      { id: crypto.randomUUID(), name: `Parte ${breakdownItems.length + 1}`, amount: 0 }
+                      { id: crypto.randomUUID(), name: `Parte ${breakdownItems.length + 1}`, amount: '' }
                     ]);
                   }
                 }}
@@ -693,11 +691,13 @@ export default function ExpenseEventModal({
                         type="number"
                         step="0.01"
                         min="0"
+                        placeholder="0.00"
                         className="form-input"
                         style={{ padding: '6px 10px', fontSize: '0.85rem', fontWeight: '700', paddingLeft: '22px' }}
-                        value={item.amount}
+                        value={item.amount !== undefined ? item.amount : ''}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => {
-                          const val = parseFloat(e.target.value) || 0;
+                          const val = e.target.value;
                           setBreakdownItems((prev) => prev.map((it, i) => (i === idx ? { ...it, amount: val } : it)));
                         }}
                       />

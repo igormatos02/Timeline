@@ -54,13 +54,53 @@ import {
   Zap,
   Activity,
   Bell,
-  FolderKanban
+  FolderKanban,
+  Utensils,
+  Droplets,
+  Flame,
+  Wifi,
+  Bus,
+  HeartPulse,
+  GraduationCap,
+  Film,
+  ShoppingBag,
+  Shirt,
+  Wrench,
+  Hammer,
+  ShieldCheck,
+  Dog,
+  Plane
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
 import FloatingTaskStack from './FloatingTaskStack';
 import { getGroupingForPeriodicity, formatCurrency } from '../utils/loanCalculations';
 import { EventType, EventStatus, EventStatusLabel, TimelineType, TimeboardType, IncomeEventCategory, ExpensesEventCategory, InvestmentEventCategory, LoanEventCategory, AmortizationEventCategory, AmortizationStrategy } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
+
+const EXPENSE_CATEGORY_ITEMS = [
+  { id: ExpensesEventCategory.FOOD, icon: Utensils, color: '#10b981' },
+  { id: ExpensesEventCategory.RENT, icon: Home, color: '#6366f1' },
+  { id: ExpensesEventCategory.ELECTRICITY, icon: Zap, color: '#f59e0b' },
+  { id: ExpensesEventCategory.WATER, icon: Droplets, color: '#06b6d4' },
+  { id: ExpensesEventCategory.GAS, icon: Flame, color: '#f97316' },
+  { id: ExpensesEventCategory.COMMUNICATIONS, icon: Wifi, color: '#3b82f6' },
+  { id: ExpensesEventCategory.TRANSPORTATION, icon: Bus, color: '#8b5cf6' },
+  { id: ExpensesEventCategory.AUTO, icon: Car, color: '#ec4899' },
+  { id: ExpensesEventCategory.HEALTH, icon: HeartPulse, color: '#ef4444' },
+  { id: ExpensesEventCategory.EDUCATION, icon: GraduationCap, color: '#14b8a6' },
+  { id: ExpensesEventCategory.ENTERTAINMENT, icon: Film, color: '#d946ef' },
+  { id: ExpensesEventCategory.SHOPPING, icon: ShoppingBag, color: '#f43f5e' },
+  { id: ExpensesEventCategory.CLOTHING, icon: Shirt, color: '#a855f7' },
+  { id: ExpensesEventCategory.CARMAINTENANCE, icon: Wrench, color: '#eab308' },
+  { id: ExpensesEventCategory.HOUSEMAINTENANCE, icon: Hammer, color: '#84cc16' },
+  { id: ExpensesEventCategory.ENSURANCE, icon: ShieldCheck, color: '#0284c7' },
+  { id: ExpensesEventCategory.PETS, icon: Dog, color: '#f97316' },
+  { id: ExpensesEventCategory.TRAVEL, icon: Plane, color: '#06b6d4' },
+  { id: ExpensesEventCategory.PERSONAL_CARE, icon: Sparkles, color: '#ec4899' },
+  { id: ExpensesEventCategory.FIXED_EXPENSE, icon: CreditCard, color: '#64748b' },
+  { id: ExpensesEventCategory.VARIABLE_EXPENSE, icon: Tag, color: '#94a3b8' },
+  { id: ExpensesEventCategory.OTHER, icon: ShoppingCart, color: '#a1a1aa' }
+];
 
 function VerticalTimeline({
   timeline,
@@ -125,6 +165,7 @@ function VerticalTimeline({
   React.useEffect(() => {
     setSelectedCategoryFilter('all');
     setSelectedStatusFilter(EventStatus.ALL);
+    setSelectedExpenseCategories([]);
   }, [timeline?.id]);
 
   const isFinancial = activeTimeboard?.type === TimeboardType.FINANCIAL || activeTimeboard?.type === 'financial' || isFinancialTimeline;
@@ -197,6 +238,29 @@ function VerticalTimeline({
     } else {
       setSelectedTimelineIds(availableCreditOptions.map((o) => o.id));
     }
+  };
+
+  // Multi-selection of categories for Expense timeline
+  const [selectedExpenseCategories, setSelectedExpenseCategories] = useState([]);
+
+  const toggleExpenseCategory = (catId) => {
+    if (selectedExpenseCategories.length === 0) {
+      setSelectedExpenseCategories([catId]);
+    } else if (selectedExpenseCategories.includes(catId)) {
+      const next = selectedExpenseCategories.filter((item) => item !== catId);
+      setSelectedExpenseCategories(next);
+    } else {
+      const next = [...selectedExpenseCategories, catId];
+      if (next.length === EXPENSE_CATEGORY_ITEMS.length) {
+        setSelectedExpenseCategories([]);
+      } else {
+        setSelectedExpenseCategories(next);
+      }
+    }
+  };
+
+  const selectAllExpenseCategories = () => {
+    setSelectedExpenseCategories([]);
   };
 
   // Agrupamento fixo mensal por agora
@@ -405,7 +469,20 @@ function VerticalTimeline({
       }
 
       let matchesCategory = true;
-      if (selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') {
+      if (timeline.type === TimelineType.EXPENSE) {
+        if (selectedExpenseCategories.length > 0) {
+          const evCat = (ev.category || '').toLowerCase();
+          matchesCategory = selectedExpenseCategories.some((cat) => {
+            const targetCat = cat.toLowerCase();
+            if (evCat === targetCat) return true;
+            if (targetCat === ExpensesEventCategory.OTHER) {
+              const allKnown = Object.values(ExpensesEventCategory).map((v) => v.toLowerCase());
+              return !allKnown.includes(evCat);
+            }
+            return false;
+          });
+        }
+      } else if (selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') {
         if (selectedCategoryFilter === EventType.LOAN_INSTALLMENT || selectedCategoryFilter === 'parcela_emprestimo' || selectedCategoryFilter === 'loan_installment' || selectedCategoryFilter === LoanEventCategory.LOAN_INSTALLMENT) {
           matchesCategory = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || ev.category === 'loan_installment' || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
         } else if (selectedCategoryFilter === EventType.AMORTIZATION || selectedCategoryFilter === 'amortizacao' || selectedCategoryFilter === 'amortization' || selectedCategoryFilter === LoanEventCategory.AMORTIZATION) {
@@ -484,6 +561,7 @@ function VerticalTimeline({
     searchQuery,
     selectedStatusFilter,
     selectedCategoryFilter,
+    selectedExpenseCategories,
     selectedLabelFilter,
     selectedTimelineIds,
     timeline.type,
@@ -690,12 +768,37 @@ function VerticalTimeline({
 
     const monthsList = Array.from(monthMap.values());
 
+    // Helper to verify if an event belongs to active / selected timelines
+    const isEventInActiveTimelines = (ev) => {
+      if (!ev) return false;
+      if (timeline.type === TimelineType.BALANCE) {
+        if (selectedTimelineIds.length === 0) return true;
+        return selectedTimelineIds.includes(ev.timelineId) || selectedTimelineIds.includes(ev.timelineOriginId);
+      }
+      if (isFinancialTimeline) {
+        if (timeline.type === TimelineType.INCOME) {
+          return ev.eventType === EventType.INCOME || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
+        }
+        if (timeline.type === TimelineType.EXPENSE) {
+          return ev.eventType === EventType.EXPENSE || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
+        }
+        if (timeline.type === TimelineType.INVESTMENT) {
+          return ev.eventType === EventType.INVESTMENT || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
+        }
+        if (timeline.type === TimelineType.LOAN || (timeline.type || '').toLowerCase() === 'loan' || (timeline.type || '').toLowerCase() === 'empréstimo') {
+          return ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
+        }
+      }
+      return ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
+    };
+
     // Pre-calculate total projected expenses per month across all events (excluding loans)
     const monthExpensesTotalMap = useMemo(() => {
       const map = new Map();
       (timelineEvents || []).forEach((ev) => {
         if (!ev || !ev.date || ev.isDeleted) return;
         if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
+        if (!isEventInActiveTimelines(ev)) return;
         const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent || ev.category === 'parcela_emprestimo' || ev.category === 'amortizacao';
         const isExpense = ev.eventType === EventType.EXPENSE && !isLoan;
 
@@ -705,7 +808,7 @@ function VerticalTimeline({
         }
       });
       return map;
-    }, [timelineEvents]);
+    }, [timelineEvents, selectedTimelineIds, timeline.type, timeline.id, isFinancialTimeline]);
 
     // Pre-calculate total projected loan payments per month across all events
     const monthLoansTotalMap = useMemo(() => {
@@ -713,6 +816,7 @@ function VerticalTimeline({
       (timelineEvents || []).forEach((ev) => {
         if (!ev || !ev.date || ev.isDeleted) return;
         if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida') return;
+        if (!isEventInActiveTimelines(ev)) return;
         const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
 
         if (isLoanInstallment) {
@@ -722,7 +826,7 @@ function VerticalTimeline({
         }
       });
       return map;
-    }, [timelineEvents]);
+    }, [timelineEvents, selectedTimelineIds, timeline.type, timeline.id, isFinancialTimeline]);
 
     // Pre-calculate total projected income per month across all events
     const monthIncomeTotalMap = useMemo(() => {
@@ -730,6 +834,7 @@ function VerticalTimeline({
       (timelineEvents || []).forEach((ev) => {
         if (!ev || !ev.date || ev.isDeleted) return;
         if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
+        if (!isEventInActiveTimelines(ev)) return;
         const isIncome = ev.eventType === EventType.INCOME;
 
         if (isIncome) {
@@ -738,7 +843,7 @@ function VerticalTimeline({
         }
       });
       return map;
-    }, [timelineEvents]);
+    }, [timelineEvents, selectedTimelineIds, timeline.type, timeline.id, isFinancialTimeline]);
 
     // Pre-calculate total projected investments per month across all events
     const monthInvestmentsTotalMap = useMemo(() => {
@@ -746,6 +851,7 @@ function VerticalTimeline({
       (timelineEvents || []).forEach((ev) => {
         if (!ev || !ev.date || ev.isDeleted) return;
         if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
+        if (!isEventInActiveTimelines(ev)) return;
         const isInvestment = ev.eventType === EventType.INVESTMENT;
 
         if (isInvestment) {
@@ -754,7 +860,7 @@ function VerticalTimeline({
         }
       });
       return map;
-    }, [timelineEvents]);
+    }, [timelineEvents, selectedTimelineIds, timeline.type, timeline.id, isFinancialTimeline]);
 
     // Pre-calculate chronological running cumulative metrics
     const monthCumulativeMap = new Map();
@@ -1794,7 +1900,76 @@ function VerticalTimeline({
         )}
 
         {/* 5. Tipo / Natureza Filter */}
-        {timeline.type !== TimelineType.BALANCE && (
+        {timeline.type === TimelineType.EXPENSE ? (
+          <div className="sidebar-section">
+            <div className="sidebar-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{t('sidebar.categoryType')}</span>
+              {selectedExpenseCategories.length > 0 && (
+                <button
+                  type="button"
+                  className="sidebar-action-link"
+                  onClick={selectAllExpenseCategories}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--primary-light)',
+                    cursor: 'pointer',
+                    fontSize: '0.72rem',
+                    padding: 0,
+                    fontWeight: '700'
+                  }}
+                >
+                  {t('buttons.all')}
+                </button>
+              )}
+            </div>
+            <div className="sidebar-btn-group" style={{ maxHeight: '320px', overflowY: 'auto', paddingRight: '2px' }}>
+              {/* Opção "Todas as Categorias" */}
+              <button
+                type="button"
+                className={`sidebar-filter-item ${selectedExpenseCategories.length === 0 ? 'active' : ''}`}
+                onClick={() => setSelectedExpenseCategories([])}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Layers size={13} />
+                  <span>{t('sidebar.allCategories') || t('category.all')}</span>
+                </div>
+                {selectedExpenseCategories.length === 0 ? (
+                  <CheckSquare size={13} style={{ color: 'var(--primary-light)' }} />
+                ) : (
+                  <Square size={13} style={{ color: 'var(--text-dim)' }} />
+                )}
+              </button>
+
+              {/* Lista de Categorias de Despesas do Enum com Ícones e Cores */}
+              {EXPENSE_CATEGORY_ITEMS.map((cat) => {
+                const isSelected = selectedExpenseCategories.includes(cat.id);
+                const IconComponent = cat.icon;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
+                    onClick={() => toggleExpenseCategory(cat.id)}
+                    style={isSelected ? { borderColor: `${cat.color}66` } : {}}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ color: cat.color, display: 'inline-flex', alignItems: 'center' }}>
+                        <IconComponent size={13} />
+                      </span>
+                      <span>{t(`expenseCategories.${cat.id}`) || cat.id}</span>
+                    </div>
+                    {isSelected ? (
+                      <CheckSquare size={13} style={{ color: cat.color }} />
+                    ) : (
+                      <Square size={13} style={{ color: 'var(--text-dim)' }} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : timeline.type !== TimelineType.BALANCE && (
           <div className="sidebar-section">
             <div className="sidebar-section-title">
               <span>{t('sidebar.categoryType')}</span>
@@ -1806,7 +1981,7 @@ function VerticalTimeline({
                   { id: EventType.LOAN_INSTALLMENT, name: t('category.loanInstallment'), icon: <CreditCard size={13} /> },
                   { id: EventType.AMORTIZATION, name: t('category.amortization'), icon: <TrendingDown size={13} /> }
                 ]
-                : [TimelineType.INCOME, TimelineType.EXPENSE, TimelineType.INVESTMENT].includes(timeline.type)
+                : [TimelineType.INCOME, TimelineType.INVESTMENT].includes(timeline.type)
                   ? [
                     { id: 'all', name: t('category.all'), icon: <Layers size={13} /> },
                     ...(timeline.type === TimelineType.INCOME
@@ -1814,16 +1989,11 @@ function VerticalTimeline({
                         { id: IncomeEventCategory.RECURRING, name: t('category.recurringIncome'), icon: <DollarSign size={13} /> },
                         { id: IncomeEventCategory.SPORADIC, name: t('category.sporadicIncome'), icon: <Gift size={13} /> }
                       ]
-                      : timeline.type === TimelineType.EXPENSE
-                        ? [
-                          { id: ExpensesEventCategory.FIXED, name: t('category.fixedExpense'), icon: <CreditCard size={13} /> },
-                          { id: ExpensesEventCategory.VARIABLE, name: t('category.variableExpense'), icon: <Tag size={13} /> }
-                        ]
-                        : [
-                          { id: InvestmentEventCategory.SAVINGS, name: t('category.savingsInvestment'), icon: <PiggyBank size={13} /> },
-                          { id: InvestmentEventCategory.ASSET, name: t('category.assetInvestment'), icon: <Landmark size={13} /> },
-                          { id: InvestmentEventCategory.OTHER, name: t('category.otherInvestment'), icon: <Sparkles size={13} /> }
-                        ])
+                      : [
+                        { id: InvestmentEventCategory.SAVINGS, name: t('category.savingsInvestment'), icon: <PiggyBank size={13} /> },
+                        { id: InvestmentEventCategory.ASSET, name: t('category.assetInvestment'), icon: <Landmark size={13} /> },
+                        { id: InvestmentEventCategory.OTHER, name: t('category.otherInvestment'), icon: <Sparkles size={13} /> }
+                      ])
                   ]
                   : [
                     { id: 'all', name: t('category.allTypes'), icon: <Layers size={13} /> },
@@ -1872,7 +2042,12 @@ function VerticalTimeline({
       <div className="timeline-content-stream">
         {/* Sticky Header Dock */}
         <div className="sticky-header-dock">
-          {headerComponent}
+          {React.isValidElement(headerComponent)
+            ? React.cloneElement(headerComponent, {
+                filteredEvents: timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0 ? filteredEvents : undefined,
+                selectedExpenseCategories: timeline.type === TimelineType.EXPENSE ? selectedExpenseCategories : undefined
+              })
+            : headerComponent}
         </div>
 
         {/* 📌 Pilha de Tarefas Pendentes (apenas para timelines de projeto/gerais, oculta em Financeiro, Entradas, Empréstimos e Principal) */}

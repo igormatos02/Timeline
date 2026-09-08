@@ -24,6 +24,8 @@ export default function ExpenseTimelineHeader({
   timeline,
   allTimelines = [],
   events = [],
+  filteredEvents,
+  selectedExpenseCategories = [],
   onEdit,
   onDelete,
   onAddEvent,
@@ -150,16 +152,63 @@ export default function ExpenseTimelineHeader({
               }}
             >
               <Plus size={14} />
-              <span>{t('expenseHeader.addExpense')}</span>
+              <span>{t('expenseHeader.addExpenseButton')}</span>
             </button>
+          )}
+
+          {/* Alternância de Modo de Visualização */}
+          {setActiveViewMode && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                background: 'var(--bg-card)',
+                borderRadius: '8px',
+                padding: '2px',
+                border: '1px solid var(--border-glass)'
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setActiveViewMode('summary')}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  fontSize: '0.74rem',
+                  border: 'none',
+                  background: activeViewMode === 'summary' ? 'var(--primary-color)' : 'transparent',
+                  color: activeViewMode === 'summary' ? '#ffffff' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontWeight: activeViewMode === 'summary' ? '700' : '500'
+                }}
+              >
+                {t('expenseHeader.viewSummary')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveViewMode('categories')}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  fontSize: '0.74rem',
+                  border: 'none',
+                  background: activeViewMode === 'categories' ? 'var(--primary-color)' : 'transparent',
+                  color: activeViewMode === 'categories' ? '#ffffff' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontWeight: activeViewMode === 'categories' ? '700' : '500'
+                }}
+              >
+                {t('expenseHeader.viewCategories')}
+              </button>
+            </div>
           )}
 
           {onReset && (
             <button
               type="button"
-              className="btn btn-outline-danger btn-sm"
+              className="btn btn-ghost btn-sm"
               onClick={onReset}
-              title={t('expenseHeader.resetTitle')}
+              title={t('buttons.reset') || (language === 'pt' ? 'Reiniciar' : 'Reset')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -170,29 +219,27 @@ export default function ExpenseTimelineHeader({
               }}
             >
               <RotateCcw size={13} />
-              <span>{t('buttons.reset') || 'Reset'}</span>
+              <span>{t('buttons.reset') || (language === 'pt' ? 'Reset' : 'Reset')}</span>
             </button>
           )}
 
           {onEdit && (
             <button
               type="button"
+              className="btn btn-secondary btn-sm"
               onClick={onEdit}
               title={t('expenseHeader.settingsTitle')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                background: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.2)',
-                color: 'var(--primary-light)',
-                cursor: 'pointer',
-                padding: '6px 8px',
+                gap: '5px',
+                padding: '6px 10px',
                 borderRadius: '8px',
-                transition: 'all 0.15s ease'
+                fontSize: '0.74rem'
               }}
             >
-              <Settings size={15} />
+              <Settings size={13} />
+              <span>{t('buttons.edit') || (language === 'pt' ? 'Editar' : 'Edit')}</span>
             </button>
           )}
 
@@ -220,41 +267,47 @@ export default function ExpenseTimelineHeader({
 
       {/* Conteúdo Expandido com Métricas de Despesas no Novo Layout */}
       {!collapsed && (() => {
-        const eventsList = timeline.events || events || [];
+        const isFiltered = (selectedExpenseCategories && selectedExpenseCategories.length > 0) || (filteredEvents !== undefined);
+        const eventsList = (isFiltered && filteredEvents) ? filteredEvents : (events && events.length > 0 ? events : (timeline.events || []));
         const currentMonthStr = new Date().toISOString().substring(0, 7);
 
-        // DTO vindo da Stored Procedure SQL Supabase get_expense_timeline_metrics
-        const dto = timeline.expenseHeaderResult || timeline.procedureMetrics || metrics.expenseHeaderResult;
+        // DTO vindo da Stored Procedure SQL Supabase get_expense_timeline_metrics (usado apenas se não estiver filtrado)
+        const dto = !isFiltered ? (timeline.expenseHeaderResult || timeline.procedureMetrics || metrics.expenseHeaderResult) : null;
 
         // 1. GASTOS POR CATEGORIA & ENTRADAS (Calculado com base nos eventos visíveis na UI)
         const validEnumValues = Object.values(ExpenseEventCategory);
-        let monthTotalExpense = dto?.current_month_expense ?? 0;
-        let monthTotalIncome = dto?.current_month_income ?? 0;
-
-        // Se o total no DTO estiver zerado, calcular diretamente da lista de eventos da UI do mês corrente
         let uiTotalExp = 0;
         let uiTotalInc = 0;
+        const currentMonthCategoryTotals = {};
+        const allCategoryTotals = {};
+
         eventsList.forEach((ev) => {
           if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
-          const isExpense = ev.eventType === 'expense' || ev.eventType === EventType.EXPENSE;
-          const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME;
+          const isExpense = ev.eventType === 'expense' || ev.eventType === EventType.EXPENSE || ev.isExpense;
+          const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME || ev.isIncome;
 
           if (isExpense) {
-            uiTotalExp += Number(ev.amount || 0);
-          } else if (isIncome) {
+            const amt = Number(ev.amount || 0);
+            let cat = (ev.category || '').toLowerCase();
+            if (!validEnumValues.includes(cat)) {
+              cat = ExpenseEventCategory.OTHER;
+            }
+            allCategoryTotals[cat] = (allCategoryTotals[cat] || 0) + amt;
+
+            if (ev.date.startsWith(currentMonthStr)) {
+              uiTotalExp += amt;
+              currentMonthCategoryTotals[cat] = (currentMonthCategoryTotals[cat] || 0) + amt;
+            }
+          } else if (isIncome && ev.date.startsWith(currentMonthStr)) {
             uiTotalInc += Number(ev.amount || 0);
           }
         });
 
-        if (monthTotalExpense === 0 && uiTotalExp > 0) {
-          monthTotalExpense = uiTotalExp;
-        }
-        if (monthTotalIncome === 0 && uiTotalInc > 0) {
-          monthTotalIncome = uiTotalInc;
-        }
+        let monthTotalExpense = dto?.current_month_expense ?? uiTotalExp;
+        let monthTotalIncome = dto?.current_month_income ?? uiTotalInc;
 
         // Extrair lista de categorias diretamente do DTO ou dos eventos da UI
-        let categoryList = (dto?.categories_breakdown && dto.categories_breakdown.length > 0)
+        let categoryList = (!isFiltered && dto?.categories_breakdown && dto.categories_breakdown.length > 0)
           ? dto.categories_breakdown.map((item) => ({
               rawCat: item.category,
               name: item.category, // Membro exato do enum ExpenseEventCategory
@@ -263,30 +316,18 @@ export default function ExpenseTimelineHeader({
             }))
           : [];
 
-        // Fallback para cálculo local se a lista de categorias estiver vazia
+        // Fallback para cálculo local se a lista de categorias estiver vazia ou filtrada
         if (categoryList.length === 0) {
-          const categoryTotals = {};
-          eventsList.forEach((ev) => {
-            if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
-            const isExpense = ev.eventType === 'expense' || ev.eventType === EventType.EXPENSE;
+          const targetCategoryTotals = Object.keys(currentMonthCategoryTotals).length > 0 ? currentMonthCategoryTotals : allCategoryTotals;
+          const targetTotal = Object.values(targetCategoryTotals).reduce((sum, val) => sum + val, 0);
 
-            if (isExpense) {
-              const amt = Number(ev.amount || 0);
-              let cat = (ev.category || '').toLowerCase();
-              if (!validEnumValues.includes(cat)) {
-                cat = ExpenseEventCategory.OTHER;
-              }
-              categoryTotals[cat] = (categoryTotals[cat] || 0) + amt;
-            }
-          });
-
-          categoryList = Object.entries(categoryTotals)
+          categoryList = Object.entries(targetCategoryTotals)
             .filter(([cat]) => validEnumValues.includes(cat))
             .map(([cat, amt]) => ({
               rawCat: cat,
               name: cat,
               amount: amt,
-              percent: monthTotalExpense > 0 ? Math.round((amt / monthTotalExpense) * 100) : 0
+              percent: targetTotal > 0 ? Math.round((amt / targetTotal) * 100) : 0
             }))
             .sort((a, b) => b.amount - a.amount);
         }
@@ -306,8 +347,8 @@ export default function ExpenseTimelineHeader({
           const evMonthKey = ev.date.substring(0, 7);
 
           if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
-            const isExpense = ev.eventType === 'expense' || ev.eventType === EventType.EXPENSE;
-            const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME;
+            const isExpense = ev.eventType === 'expense' || ev.eventType === EventType.EXPENSE || ev.isExpense;
+            const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME || ev.isIncome;
 
             if (isExpense) {
               annualTotalExpense += Number(ev.amount || 0);
@@ -358,11 +399,11 @@ export default function ExpenseTimelineHeader({
           }
         });
 
-        if (committedAmount30 === 0 && uiCommAmt > 0) {
+        if (isFiltered || committedAmount30 === 0) {
           committedAmount30 = uiCommAmt;
           committedCount30 = uiCommCnt;
         }
-        if (paidAmountMonth === 0 && uiPaidAmt > 0) {
+        if (isFiltered || paidAmountMonth === 0) {
           paidAmountMonth = uiPaidAmt;
           paidCountMonth = uiPaidCnt;
         }

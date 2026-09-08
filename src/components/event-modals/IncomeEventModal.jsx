@@ -181,7 +181,7 @@ export default function IncomeEventModal({
 
   // Subpartes: valor total derivado
   const totalBreakdownAmount = breakdownItems.reduce(
-    (acc, it) => acc + (Number(it.amount) || 0),
+    (acc, it) => acc + (parseFloat(it.amount) || 0),
     0
   );
 
@@ -210,6 +210,10 @@ export default function IncomeEventModal({
       ? formData.recurrenceEndDate
       : null;
 
+    const cleanBreakdown = breakdownItems.length > 0
+      ? breakdownItems.map((it) => ({ ...it, amount: parseFloat(it.amount) || 0 }))
+      : undefined;
+
     const eventPayload = {
       ...(initialData || {}),
       title: formData.title.trim(),
@@ -221,7 +225,7 @@ export default function IncomeEventModal({
       recurrenceEndDate,
       endDate: recurrenceEndDate,
       amount: finalAmount,
-      breakdownItems: breakdownItems.length > 0 ? breakdownItems : undefined,
+      breakdownItems: cleanBreakdown,
       eventType: EventType.INCOME,
       timelineId: timeline?.id,
       timelineOriginId: timeline?.id,
@@ -399,14 +403,14 @@ export default function IncomeEventModal({
                 type="button"
                 onClick={() => {
                   if (breakdownItems.length === 0) {
-                    const curVal = parseFloat(formData.amount) || 0;
+                    const curVal = formData.amount !== '' && !isNaN(formData.amount) ? parseFloat(formData.amount) : '';
                     setBreakdownItems([
-                      { id: crypto.randomUUID(), name: 'Parte 1', amount: curVal || 0 }
+                      { id: crypto.randomUUID(), name: 'Parte 1', amount: curVal !== '' && curVal > 0 ? curVal : '' }
                     ]);
                   } else {
                     setBreakdownItems([
                       ...breakdownItems,
-                      { id: crypto.randomUUID(), name: `Parte ${breakdownItems.length + 1}`, amount: 0 }
+                      { id: crypto.randomUUID(), name: `Parte ${breakdownItems.length + 1}`, amount: '' }
                     ]);
                   }
                 }}
@@ -448,11 +452,13 @@ export default function IncomeEventModal({
                         type="number"
                         step="0.01"
                         min="0"
+                        placeholder="0.00"
                         className="form-input"
                         style={{ padding: '6px 10px', fontSize: '0.85rem', fontWeight: '700', paddingLeft: '22px' }}
-                        value={item.amount}
+                        value={item.amount !== undefined ? item.amount : ''}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => {
-                          const val = parseFloat(e.target.value) || 0;
+                          const val = e.target.value;
                           setBreakdownItems((prev) => prev.map((it, i) => (i === idx ? { ...it, amount: val } : it)));
                         }}
                       />

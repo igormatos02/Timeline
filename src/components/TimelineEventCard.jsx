@@ -348,7 +348,12 @@ export default function TimelineEventCard({
       setNewSubpartAmount('');
     }
 
-    const calculatedSum = finalItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
+    finalItems = finalItems.map((it) => ({
+      ...it,
+      amount: parseFloat(it.amount) || 0
+    }));
+
+    const calculatedSum = finalItems.reduce((acc, it) => acc + (parseFloat(it.amount) || 0), 0);
 
     if (onUpdateEventDirect) {
       onUpdateEventDirect({
@@ -372,10 +377,8 @@ export default function TimelineEventCard({
 
   // Handlers para manipular o rascunho (draft)
   const handleDraftUpdateAmount = (idx, newAmountStr) => {
-    const num = Number(newAmountStr);
-    if (isNaN(num) || num < 0) return;
     setDraftSubparts((prev) =>
-      prev.map((it, i) => (i === idx ? { ...it, amount: num } : it))
+      prev.map((it, i) => (i === idx ? { ...it, amount: newAmountStr } : it))
     );
   };
 
@@ -2764,9 +2767,10 @@ export default function TimelineEventCard({
                         type="number"
                         step="0.01"
                         min="0"
+                        placeholder="0.00"
                         disabled={!canEditAmount}
                         className="inline-amount-input"
-                        value={item.amount}
+                        value={item.amount !== undefined ? item.amount : ''}
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => handleDraftUpdateAmount(idx, e.target.value)}
                         style={{

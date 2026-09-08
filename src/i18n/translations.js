@@ -23,6 +23,7 @@ export const translations = {
       delete: "Delete",
       edit: "Edit",
       all: "All",
+      deselectAll: "Deselect",
       add: "Add",
       reset: "Reset",
       payUpToHere: "Pay up to here",

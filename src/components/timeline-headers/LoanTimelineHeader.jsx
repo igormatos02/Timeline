@@ -9,7 +9,9 @@ import {
   Settings,
   Trash2,
   Copy,
-  Check
+  Check,
+  Building2,
+  FileText
 } from 'lucide-react';
 import { format, parseISO, differenceInCalendarDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -72,6 +74,26 @@ export default function LoanTimelineHeader({
     timeline.procedureMetrics ||
     timeline.metrics ||
     {};
+
+  const contractNumber =
+    timeline.contractNumber ||
+    timeline.contract_number ||
+    timeline.loanContract?.contractNumber ||
+    timeline.loanContract?.contract_number ||
+    loanMetrics.contractNumber ||
+    loanMetrics.contract_number ||
+    '';
+
+  const bankName =
+    timeline.bankName ||
+    timeline.bank_name ||
+    timeline.loanContract?.bankName ||
+    timeline.loanContract?.bank_name ||
+    timeline.institution ||
+    timeline.loanContract?.institution ||
+    loanMetrics.bankName ||
+    loanMetrics.bank_name ||
+    '';
 
   const formatDateShort = (dateStr) => {
     try {
@@ -390,9 +412,9 @@ export default function LoanTimelineHeader({
               )}
             </div>
 
-            <p
+            <div
               style={{
-                margin: '2px 0 0',
+                margin: '3px 0 0',
                 fontSize: '0.78rem',
                 color: textColorMuted,
                 display: 'flex',
@@ -404,6 +426,53 @@ export default function LoanTimelineHeader({
               {timeline.description && (
                 <span>
                   {timeline.description}
+                </span>
+              )}
+
+              {bankName && (
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: '600',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: isInactive
+                      ? 'rgba(148, 163, 184, 0.1)'
+                      : 'rgba(99, 102, 241, 0.09)',
+                    border: isInactive
+                      ? '1px solid rgba(148, 163, 184, 0.2)'
+                      : `1px solid ${headerColor}33`,
+                    color: isInactive ? 'var(--text-muted)' : headerColor,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title={t('loanModal.bankNameLabel') || 'Instituição Financeira'}
+                >
+                  <Building2 size={12} style={{ flexShrink: 0 }} />
+                  <span>{bankName}</span>
+                </span>
+              )}
+
+              {contractNumber && (
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: '600',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid var(--border-glass)',
+                    color: textColorMain,
+                    fontFamily: 'monospace',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title={t('loanModal.contractNumberLabel') || 'Número do Contrato'}
+                >
+                  <FileText size={12} style={{ color: headerColor, flexShrink: 0 }} />
+                  <span>{t('loanHeader.contractNumberShort') || 'Nº Contrato'}: {contractNumber}</span>
                 </span>
               )}
 
@@ -446,7 +515,7 @@ export default function LoanTimelineHeader({
                   </button>
                 </span>
               )}
-            </p>
+            </div>
           </div>
         </div>
 

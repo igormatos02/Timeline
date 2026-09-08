@@ -430,9 +430,11 @@ export const translations = {
       totalAlreadyPaid: "TOTAL ALREADY PAID",
       loanCostTitle: "LOAN COST",
       originalCapital: "ORIGINAL CAPITAL",
-      totalEstimatedInterest: "ESTIMATED TOTAL INTEREST",
-      totalEstimatedFees: "ESTIMATED TOTAL FEES",
-      totalLoanCost: "TOTAL LOAN COST"
+      totalContractInterest: "TOTAL CONTRACT INTEREST",
+      totalContractFees: "TOTAL CONTRACT FEES",
+      totalContractCost: "TOTAL CONTRACT COST",
+      contractNumberShort: "Contract No.",
+      institutionLabel: "Institution",
     },
 
     // Expense Timeline Header
@@ -970,7 +972,9 @@ export const translations = {
       originalCapital: "CAPITAL ORIGINAL",
       totalEstimatedInterest: "JUROS TOTAIS ESTIMADOS",
       totalEstimatedFees: "IMPOSTOS / TAXAS TOTAIS",
-      totalLoanCost: "CUSTO TOTAL DO EMPRÉSTIMO"
+      totalLoanCost: "CUSTO TOTAL DO EMPRÉSTIMO",
+      contractNumberShort: "Nº Contrato",
+      institutionLabel: "Instituição",
     },
 
     // Expense Timeline Header

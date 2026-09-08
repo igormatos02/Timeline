@@ -450,137 +450,146 @@ export default function BalanceTimelineHeader({
               })()}
             </div>
 
-            {/* Quadrante 2: INVESTIMENTOS (Pie/Donut por Categoria e Total Acumulado) */}
+            {/* Quadrante 2: ANNUAL INCOME BREAKDOWN (Despesas + Investimentos + Empréstimos vs Renda) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                INVESTIMENTOS
+                ANNUAL INCOME BREAKDOWN
               </div>
               {(() => {
-                const categoryColorMap = {
-                  savings: '#10b981',
-                  assets: '#6366f1',
-                  stocks: '#38bdf8',
-                  funds: '#f59e0b',
-                  crypto: '#ec4899',
-                  real_estate: '#8b5cf6',
-                  other: '#64748b'
-                };
+                const eventsList = (events && events.length > 0 ? events : timeline.events) || [];
 
-                let invItems = (finMetrics.investments_breakdown || []).map((b) => ({
-                  name: b.category_label || b.category,
-                  amount: Number(b.total_amount || b.amount || 0),
-                  percent: Number(b.percentage || b.percent || 0),
-                  color: categoryColorMap[b.category] || '#6366f1'
-                })).filter((i) => i.amount > 0 || i.percent > 0);
+                // Timezone-safe 12-month window
+                const now = new Date();
+                const sy = now.getFullYear();
+                const sm = now.getMonth(); // 0-indexed
+                const startMK = `${sy}-${String(sm + 1).padStart(2, '0')}`;
+                const etm = sm + 12;
+                const ey = sy + Math.floor(etm / 12);
+                const em = etm % 12;
+                const endMK = `${ey}-${String(em + 1).padStart(2, '0')}`;
 
-                if (invItems.length === 0) {
-                  const poupanca = finMetrics.totalPoupanca ?? 0;
-                  const patrimonio = finMetrics.totalPatrimonioAcquisition ?? 0;
-                  const outros = finMetrics.totalOutros ?? 0;
-                  invItems = [
-                    { name: 'Poupança', amount: poupanca, color: '#10b981' },
-                    { name: 'Ativos / Património', amount: patrimonio, color: '#6366f1' },
-                    { name: 'Outros', amount: outros, color: '#38bdf8' }
-                  ].filter((i) => i.amount > 0);
-                }
+                let annualIncome = 0;
+                let annualExpense = 0;
+                let annualInvestment = 0;
+                let annualLoan = 0;
 
-                const defaultItems = invItems.length > 0 ? invItems : [
-                  { name: 'Poupança', amount: 1, percent: 50, color: '#10b981' },
-                  { name: 'Ativos', amount: 1, percent: 50, color: '#6366f1' }
-                ];
+                eventsList.forEach((ev) => {
+                  if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
+                  const mk = ev.date.substring(0, 7);
+                  if (mk < startMK || mk >= endMK) return;
 
-                const totalSum = defaultItems.reduce((acc, i) => acc + (i.amount || 0), 0);
-                const itemsWithPct = defaultItems.map((i) => ({
-                  ...i,
-                  percent: i.percent ?? (totalSum > 0 ? Math.round((i.amount / totalSum) * 100) : 0)
-                }));
+                  const isIncome = ev.eventType === 'income' || ev.isIncome;
+                  const isExpense = ev.eventType === 'expense' || ev.isExpense;
+                  const isInvestment = ev.eventType === 'investment' || ev.isInvestment;
+                  // loan_installment = regular monthly installments (recalculated after amortizations)
+                  // Exclude amortization events (extra payments, not regular installments)
+                  const isLoan = (ev.eventType === 'loan_installment' || ev.isSystemLoanEvent)
+                    && ev.eventType !== 'amortization'
+                    && ev.category !== 'amortizacao';
+                  const amt = Number(ev.amount || 0);
 
-                let cumulativePercent = 0;
-                const getCoordinatesForPercent = (percent) => {
-                  const x = Math.cos(2 * Math.PI * percent);
-                  const y = Math.sin(2 * Math.PI * percent);
-                  return [x, y];
-                };
-
-                const slices = itemsWithPct.map((slice) => {
-                  const startPercent = cumulativePercent;
-                  cumulativePercent += slice.percent / 100;
-                  const endPercent = cumulativePercent;
-
-                  const [startX, startY] = getCoordinatesForPercent(startPercent);
-                  const [endX, endY] = getCoordinatesForPercent(endPercent);
-                  const largeArcFlag = slice.percent / 100 > 0.5 ? 1 : 0;
-
-                  const pathData = [
-                    `M ${startX} ${startY}`,
-                    `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
-                    `L 0 0`
-                  ].join(' ');
-
-                  return { ...slice, pathData };
+                  if (isIncome) annualIncome += amt;
+                  else if (isExpense) annualExpense += amt;
+                  else if (isInvestment && !ev.isFirstOccurrence) annualInvestment += amt;
+                  else if (isLoan) annualLoan += amt;
                 });
 
-                const totalInvested = finMetrics.investmentsTotalAccumulated || finMetrics.totalInvested || 0;
+                const expPct = annualIncome > 0 ? Math.round((annualExpense / annualIncome) * 100) : 0;
+                const invPct = annualIncome > 0 ? Math.round((annualInvestment / annualIncome) * 100) : 0;
+                const loanPct = annualIncome > 0 ? Math.round((annualLoan / annualIncome) * 100) : 0;
+                const freePct = Math.max(0, 100 - expPct - invPct - loanPct);
+                const totalCommitted = expPct + invPct + loanPct;
+
+                if (annualIncome === 0) {
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
+                      <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
+                        <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                          <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                        </svg>
+                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '42px', height: '42px', borderRadius: '50%', background: 'var(--bg-card, #0f172a)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-glass)', fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-dim)' }}>
+                          0%
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>Sem rendimentos projetados</span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>Adicione entradas para visualizar a distribuição anual.</span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Build pie slices
+                const segments = [
+                  { label: 'Gastos', pct: expPct, amount: annualExpense, color: '#f43f5e' },
+                  { label: 'Investimentos', pct: invPct, amount: annualInvestment, color: '#6366f1' },
+                  { label: 'Empréstimos', pct: loanPct, amount: annualLoan, color: '#f59e0b' },
+                  { label: 'Disponível', pct: freePct, amount: Math.max(0, annualIncome - annualExpense - annualInvestment - annualLoan), color: '#10b981' }
+                ].filter((s) => s.pct > 0);
+
+                let cumPct = 0;
+                const slices = segments.map((seg) => {
+                  const start = cumPct;
+                  cumPct += seg.pct / 100;
+                  const end = cumPct;
+                  const sx = Math.cos(2 * Math.PI * start);
+                  const sy2 = Math.sin(2 * Math.PI * start);
+                  const ex = Math.cos(2 * Math.PI * end);
+                  const ey2 = Math.sin(2 * Math.PI * end);
+                  const large = seg.pct / 100 > 0.5 ? 1 : 0;
+                  const path = seg.pct >= 99.9
+                    ? `M 1 0 A 1 1 0 1 1 -0.999 0 L 0 0`
+                    : `M ${sx} ${sy2} A 1 1 0 ${large} 1 ${ex} ${ey2} L 0 0`;
+                  return { ...seg, path };
+                });
 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
                       <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
                         <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
-                          {slices.map((s, idx) => (
-                            <path
-                              key={idx}
-                              d={s.pathData}
-                              fill={s.color}
-                            />
+                          {slices.map((s, i) => (
+                            <path key={i} d={s.path} fill={s.color} style={{ transition: 'all 0.2s ease' }}>
+                              <title>{`${s.label}: ${s.pct}% (${formatCurrency(s.amount)})`}</title>
+                            </path>
                           ))}
                         </svg>
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            width: '46px',
-                            height: '46px',
-                            borderRadius: '50%',
-                            background: 'var(--bg-card, #0f172a)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.72rem',
-                            fontWeight: '800',
-                            color: '#6366f1'
-                          }}
-                        >
-                          100%
+                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '46px', height: '46px', borderRadius: '50%', background: 'var(--bg-card, #0f172a)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-glass)', fontSize: '0.74rem', fontWeight: '800', color: totalCommitted > 85 ? '#f43f5e' : '#0ea5e9' }}>
+                          {totalCommitted}%
                         </div>
                       </div>
 
-                      {/* Lista de % por Categoria */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                        {itemsWithPct.map((item, idx) => (
-                          <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
+                        {segments.filter(s => s.label !== 'Disponível').map((seg, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color }} />
-                              <span style={{ color: 'var(--text-dim)' }}>{item.name}</span>
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: seg.color, flexShrink: 0 }} />
+                              <span style={{ color: 'var(--text-dim)' }}>{seg.label}</span>
                             </div>
-                            <strong style={{ color: 'var(--text-main)', fontSize: '0.7rem' }}>{item.percent}%</strong>
+                            <strong style={{ color: 'var(--text-main)' }}>{seg.pct}%</strong>
                           </div>
                         ))}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }} />
+                            <span style={{ color: 'var(--text-dim)' }}>Disponível</span>
+                          </div>
+                          <strong style={{ color: '#10b981' }}>{freePct}%</strong>
+                        </div>
                       </div>
                     </div>
 
                     <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '600' }}>Total Acumulado</span>
-                      <strong style={{ color: '#6366f1', fontSize: '0.86rem', fontWeight: '800' }}>
-                        {formatCurrency(totalInvested)}
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '600' }}>Total Anual Projetado</span>
+                      <strong style={{ color: '#0ea5e9', fontSize: '0.86rem', fontWeight: '800' }}>
+                        {formatCurrency(annualIncome)}
                       </strong>
                     </div>
                   </div>
                 );
               })()}
             </div>
+
 
             {/* Quadrante 3: EMPRÉSTIMOS E FINANCIAMENTOS (Donut SVG por Financiamento) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>

@@ -594,6 +594,7 @@ function applyAmortizationsInMemory(
             originalInstallmentFee: origFee,
             savedInterest: isFullyAmortized ? origInt : Math.max(0, Math.round((origInt - interest) * 100) / 100),
 
+            amount: amount,
             installmentAmount: amount,
             installmentCapital: capital,
             installmentInterest: interest,
@@ -664,6 +665,7 @@ function applyAmortizationsInMemory(
             originalInstallmentFee: origFee,
             savedInterest: origInt,
 
+            amount: 0,
             installmentAmount: 0,
             installmentCapital: 0,
             installmentInterest: 0,
@@ -703,6 +705,7 @@ function applyAmortizationsInMemory(
             originalInstallmentFee: origFee,
             savedInterest: 0,
 
+            amount: newAmount,
             installmentAmount: newAmount,
             installmentCapital: newCapital
           });

@@ -72,9 +72,10 @@ import {
   Plane
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
+import MonthProjectionBadges from './MonthProjectionBadges.jsx';
 import FloatingTaskStack from './FloatingTaskStack';
 import { getGroupingForPeriodicity, formatCurrency } from '../utils/loanCalculations';
-import { EventType, EventStatus, EventStatusLabel, TimelineType, TimeboardType, IncomeEventCategory, ExpensesEventCategory, InvestmentEventCategory, LoanEventCategory, AmortizationEventCategory, AmortizationStrategy } from '../enums/index.js';
+import { EventType, EventStatus, EventStatusLabel, TimelineType, TimelineStatus, TimeboardType, IncomeEventCategory, ExpensesEventCategory, InvestmentEventCategory, LoanEventCategory, AmortizationEventCategory, AmortizationStrategy } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 const EXPENSE_CATEGORY_ITEMS = [
@@ -215,12 +216,29 @@ function VerticalTimeline({
 
   // Multi-selection of timelines for Balance view (derived dynamically from real timelines)
   const availableCreditOptions = useMemo(() => {
-    return (timelines || []).filter((t) => t.type !== TimelineType.BALANCE).map((t) => ({
-      id: t.id,
-      name: t.name,
-      color: t.color || '#6366f1'
-    }));
+    return (timelines || [])
+      .filter((t) => t.type !== TimelineType.BALANCE && t.status !== TimelineStatus.INACTIVE && t.status !== 'inactive' && t.status !== 'Inativo' && t.isActive !== false)
+      .map((t) => ({
+        id: t.id,
+        name: t.name,
+        color: t.color || '#6366f1'
+      }));
   }, [timelines]);
+
+  const inactiveTimelineIdSet = useMemo(() => {
+    return new Set(
+      (timelines || [])
+        .filter((t) => t.status === TimelineStatus.INACTIVE || t.status === 'inactive' || t.status === 'Inativo' || t.isActive === false)
+        .map((t) => t.id)
+    );
+  }, [timelines]);
+
+  const isEventTimelineActive = (ev) => {
+    if (!ev) return false;
+    const tlId = ev.timelineId || ev.timelineOriginId;
+    if (tlId && inactiveTimelineIdSet.has(tlId)) return false;
+    return true;
+  };
 
   const [selectedTimelineIds, setSelectedTimelineIds] = useState([]);
 
@@ -429,8 +447,8 @@ function VerticalTimeline({
   // Determine earliest and latest dates in timeline dynamically
   const currentMonthStart = startOfMonth(todayDate);
   const currentMonthEnd = endOfMonth(todayDate);
-  const startDateObj = isBalancoView ? subMonths(currentMonthStart, 11) : subMonths(currentMonthStart, Math.max(1, pastHorizonYears) * 12);
-  const maxDateObj = isBalancoView ? currentMonthEnd : addMonths(currentMonthEnd, Math.max(1, futureHorizonYears) * 12);
+  const startDateObj = subMonths(currentMonthStart, Math.max(1, pastHorizonYears) * 12);
+  const maxDateObj = addMonths(currentMonthEnd, Math.max(1, futureHorizonYears) * 12);
 
   // Generate array of days from startDate up to maxDateObj (Descending: future at top, past at bottom)
   const daysArray = useMemo(() => {
@@ -527,16 +545,8 @@ function VerticalTimeline({
         if (!isThisTimeline) return false;
       }
 
-      // No Balanço: mostrar somente até ao fim do mês corrente
-      if (isBalancoView) {
-        const currentMonthEndStr = format(currentMonthEnd, 'yyyy-MM-dd');
-        if (ev.date > currentMonthEndStr) {
-          return false;
-        }
-      }
-
       // Respeitar os limites dinâmicos do horizonte de tempo para todas as timelines financeiras
-      if (isFinancialTimeline && !isBalancoView) {
+      if (isFinancialTimeline) {
         const maxEndStr = format(maxDateObj, 'yyyy-MM-dd');
         const minStartStr = format(startDateObj, 'yyyy-MM-dd');
         if (ev.date > maxEndStr || ev.date < minStartStr) {
@@ -676,9 +686,9 @@ function VerticalTimeline({
                   </div>
 
                   {hasEvents ? (
-                    weekData.events.map((ev) => (
+                    weekData.events.map((ev, evIdx) => (
                       <div
-                        key={ev.id}
+                        key={`${ev.id || ev.eventId || 'wev'}_${ev.date}_${evIdx}`}
                         id={ev.status === EventStatus.OVERDUE ? 'loan-inst-overdue' : undefined}
                         style={{ marginBottom: '12px' }}
                       >
@@ -792,15 +802,18 @@ function VerticalTimeline({
       return ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
     };
 
-    // Pre-calculate total projected expenses per month across all events (excluding loans)
+    // Pre-calculate total projected expenses per month across all events in timeboard scope (excluding loans)
     const monthExpensesTotalMap = useMemo(() => {
       const map = new Map();
       (timelineEvents || []).forEach((ev) => {
         if (!ev || !ev.date || ev.isDeleted) return;
         if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-        if (!isEventInActiveTimelines(ev)) return;
+        if (!isEventTimelineActive(ev)) return;
+        if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
+          if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
+        }
         const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent || ev.category === 'parcela_emprestimo' || ev.category === 'amortizacao';
-        const isExpense = ev.eventType === EventType.EXPENSE && !isLoan;
+        const isExpense = (ev.eventType === EventType.EXPENSE || ev.category === 'saida_recorrente' || ev.category === 'expense' || ev.isExpense) && !isLoan;
 
         if (isExpense) {
           const mKey = ev.date.substring(0, 7);
@@ -808,34 +821,42 @@ function VerticalTimeline({
         }
       });
       return map;
-    }, [timelineEvents, selectedTimelineIds, timeline.type, timeline.id, isFinancialTimeline]);
+    }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
 
-    // Pre-calculate total projected loan payments per month across all events
+    // Pre-calculate total projected loan payments per month across all events in timeboard scope
     const monthLoansTotalMap = useMemo(() => {
       const map = new Map();
       (timelineEvents || []).forEach((ev) => {
         if (!ev || !ev.date || ev.isDeleted) return;
         if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida') return;
-        if (!isEventInActiveTimelines(ev)) return;
+        if (!isEventTimelineActive(ev)) return;
+        if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
+          if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
+        }
         const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
 
         if (isLoanInstallment) {
           const mKey = ev.date.substring(0, 7);
-          const amt = Number(ev.installmentAmount !== undefined ? ev.installmentAmount : (ev.amount || 0));
+          const amt = Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0));
           map.set(mKey, (map.get(mKey) || 0) + amt);
         }
       });
       return map;
-    }, [timelineEvents, selectedTimelineIds, timeline.type, timeline.id, isFinancialTimeline]);
+    }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
 
-    // Pre-calculate total projected income per month across all events
+    // Pre-calculate total projected income per month across all events in timeboard scope
     const monthIncomeTotalMap = useMemo(() => {
       const map = new Map();
       (timelineEvents || []).forEach((ev) => {
         if (!ev || !ev.date || ev.isDeleted) return;
         if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-        if (!isEventInActiveTimelines(ev)) return;
-        const isIncome = ev.eventType === EventType.INCOME;
+        if (!isEventTimelineActive(ev)) return;
+        if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
+          if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
+        }
+        const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent || ev.category === 'parcela_emprestimo' || ev.category === 'amortizacao';
+        const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment;
+        const isIncome = (ev.eventType === EventType.INCOME || ev.category === 'entrada_recorrente' || ev.category === 'income' || ev.isIncome) && !isLoan && !isInvestment;
 
         if (isIncome) {
           const mKey = ev.date.substring(0, 7);
@@ -843,16 +864,19 @@ function VerticalTimeline({
         }
       });
       return map;
-    }, [timelineEvents, selectedTimelineIds, timeline.type, timeline.id, isFinancialTimeline]);
+    }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
 
-    // Pre-calculate total projected investments per month across all events
+    // Pre-calculate total projected investments per month across all events in timeboard scope
     const monthInvestmentsTotalMap = useMemo(() => {
       const map = new Map();
       (timelineEvents || []).forEach((ev) => {
         if (!ev || !ev.date || ev.isDeleted) return;
         if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-        if (!isEventInActiveTimelines(ev)) return;
-        const isInvestment = ev.eventType === EventType.INVESTMENT;
+        if (!isEventTimelineActive(ev)) return;
+        if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
+          if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
+        }
+        const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment;
 
         if (isInvestment) {
           const mKey = ev.date.substring(0, 7);
@@ -860,7 +884,7 @@ function VerticalTimeline({
         }
       });
       return map;
-    }, [timelineEvents, selectedTimelineIds, timeline.type, timeline.id, isFinancialTimeline]);
+    }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
 
     // Pre-calculate chronological running cumulative metrics
     const monthCumulativeMap = new Map();
@@ -920,8 +944,8 @@ function VerticalTimeline({
           style={{ background: timeline.color || 'var(--timeline-line-active)' }}
         />
 
-        {/* Botão de Carregar / Projetar Mais Meses Futuros */}
-        {onLoadMoreFuture && !isBalancoView && (
+        {/* Botão Carregar Mais Futuro */}
+        {onLoadMoreFuture && (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0 28px 0', position: 'relative', zIndex: 10 }}>
             <button
               type="button"
@@ -957,53 +981,6 @@ function VerticalTimeline({
           const monthTitleStr = format(mGroup.monthDate, 'MMMM yyyy', { locale: dateLocale });
           const hasEvents = mGroup.events.length > 0;
 
-          // Calculate month stats
-          let mMonthIncome = 0;
-          let mMonthExpense = 0;
-          let mMonthInvestment = 0;
-
-          let mMonthIncomePaid = 0;
-          let mMonthExpensePaid = 0;
-          let mMonthInvestmentPaid = 0;
-
-          mGroup.events.forEach((ev) => {
-            if (!ev || ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida' || ev.isDeleted) return;
-
-            const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
-            const amt = isLoanInstallment
-              ? Number(ev.installmentAmount !== undefined ? ev.installmentAmount : (ev.amount || 0))
-              : Number(ev.amount || 0);
-
-            const isLoan = isLoanInstallment || ev.eventType === EventType.AMORTIZATION || ev.category === 'amortizacao';
-            const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment;
-            const isIncome = (ev.eventType === EventType.INCOME || ev.isIncome) && !ev.isExpense && !ev.isInvestment && !isLoan;
-            const isExpense = ((ev.eventType === EventType.EXPENSE || ev.isExpense) || isLoan) && !isInvestment;
-
-            const isIncomeReceived = ev.status === EventStatus.RECEIVED || ev.status === EventStatus.PAID || ev.isCompleted;
-            const isExpensePaid = ev.status === EventStatus.PAID || ev.status === EventStatus.SETTLED || ev.isCompleted;
-            const isInvested = ev.status === EventStatus.INVESTED || ev.status === EventStatus.PAID || ev.isCompleted;
-
-            if (isIncome) {
-              mMonthIncome += amt;
-              if (isIncomeReceived) mMonthIncomePaid += amt;
-            }
-            if (isExpense) {
-              mMonthExpense += amt;
-              if (isExpensePaid) mMonthExpensePaid += amt;
-            }
-            if (isInvestment) {
-              mMonthInvestment += amt;
-              if (isInvested) mMonthInvestmentPaid += amt;
-            }
-          });
-
-          // No Balanço: Se for mês passado ou atual, computar o que foi efetivamente recebido/pago/investido para atualizar dinamicamente com o status
-          const effectiveIncome = isBalancoView ? (isFutureMonth ? mMonthIncome : mMonthIncomePaid) : mMonthIncome;
-          const effectiveExpense = isBalancoView ? (isFutureMonth ? mMonthExpense : mMonthExpensePaid) : mMonthExpense;
-          const effectiveInvestment = isBalancoView ? (isFutureMonth ? mMonthInvestment : mMonthInvestmentPaid) : mMonthInvestment;
-          const mNetRealizedMonth = effectiveIncome - (effectiveExpense + effectiveInvestment);
-          const mNetProjectedMonth = mMonthIncome - (mMonthExpense + mMonthInvestment);
-          const cumData = monthCumulativeMap.get(monthKeyStr) || { income: 0, expense: 0, investment: 0 };
           const mMonthProjectedExpense = monthExpensesTotalMap.get(monthKeyStr) || 0;
           const mMonthProjectedLoan = monthLoansTotalMap.get(monthKeyStr) || 0;
           const mMonthProjectedIncome = monthIncomeTotalMap.get(monthKeyStr) || 0;
@@ -1046,14 +1023,12 @@ function VerticalTimeline({
               <div className="day-content-col">
                 <div className="group-card" style={isFutureMonth ? { borderColor: 'rgba(148, 163, 184, 0.18)' } : undefined}>
                   <div className="group-card-header" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-                    {/* Linha Superior: Nome do Mês à esquerda, Contador e Botões de Ação à direita */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', width: '100%' }}>
                       <h3 className="group-card-title" style={{ margin: 0, textTransform: 'capitalize', color: isFutureMonth ? 'var(--text-muted)' : 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Clock size={18} style={{ color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)' }} /> {monthTitleStr}
                       </h3>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        {/* Badge do Contador */}
                         <span
                           className="group-card-badge"
                           style={{
@@ -1069,15 +1044,12 @@ function VerticalTimeline({
                           {t('timeline.eventsCount', { count: mGroup.events.length })}
                         </span>
 
-                        {/* Botão Amortizar no Mês (disponível do mês atual em diante; oculto em meses passados e em parcelas abatidas) */}
                         {onOpenAmortizationModal && isLoanTimelineOrTab && (() => {
                           const thisMonthStr = format(mGroup.monthDate, 'yyyy-MM');
                           if (thisMonthStr < '2026-08') return null;
-
                           const monthLoanEvents = mGroup.events.filter((e) => e.category === 'parcela_emprestimo');
                           const isAbatidaMonth = monthLoanEvents.length > 0 && monthLoanEvents.every((e) => e.isAbatida || e.status === 'Abatida');
                           if (isAbatidaMonth) return null;
-
                           return (
                             <button
                               type="button"
@@ -1110,7 +1082,6 @@ function VerticalTimeline({
                           );
                         })()}
 
-                        {/* Botão Adicionar Evento no Mês (oculto em timelines / abas de empréstimo) */}
                         {onAddEventForDate && !isLoanTimelineOrTab && (
                           <button
                             type="button"
@@ -1143,145 +1114,21 @@ function VerticalTimeline({
                       </div>
                     </div>
 
-                    {/* Linha Inferior: Badges Projetados Unificados para linhas de tempo do Financeiro (oculto em empréstimos e créditos) */}
-                    {isFinancialTimeline && !isLoanTimelineOrTab && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
-                        {/* Indicador Projeção do Mês */}
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            fontSize: '0.72rem',
-                            fontWeight: '700',
-                            color: isFutureMonth ? 'var(--text-dim)' : 'var(--text-muted)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.04em',
-                            marginRight: '2px'
-                          }}
-                        >
-                          <Sparkles size={12} style={{ color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)' }} />
-                          <span>{t('timeline.monthProjection')}</span>
-                        </span>
-
-                        {/* 1. Entradas Projetadas */}
-                        <span
-                          className="group-card-badge"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            height: '26px',
-                            boxSizing: 'border-box',
-                            background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthProjectedIncome > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
-                            color: isFutureMonth ? 'var(--text-dim)' : (mMonthProjectedIncome > 0 ? '#10b981' : 'var(--text-dim)'),
-                            borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthProjectedIncome > 0 ? 'rgba(16, 185, 129, 0.35)' : 'var(--border-glass)'),
-                            fontWeight: '800',
-                            fontSize: '0.76rem'
-                          }}
-                          title={t('timeline.monthIncomeTitle')}
-                        >
-                          <DollarSign size={12} />
-                          <span>+{formatCurrency(mMonthProjectedIncome)}</span>
-                        </span>
-
-                        {/* 2. Gasto Projetado */}
-                        <span
-                          className="group-card-badge"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            height: '26px',
-                            boxSizing: 'border-box',
-                            background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthProjectedExpense > 0 ? 'rgba(244, 63, 94, 0.12)' : 'rgba(255, 255, 255, 0.04)'),
-                            color: isFutureMonth ? 'var(--text-dim)' : (mMonthProjectedExpense > 0 ? '#f43f5e' : 'var(--text-dim)'),
-                            borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthProjectedExpense > 0 ? 'rgba(244, 63, 94, 0.3)' : 'var(--border-glass)'),
-                            fontWeight: '800',
-                            fontSize: '0.76rem'
-                          }}
-                          title={t('timeline.monthExpenseTitle')}
-                        >
-                          <TrendingDown size={12} />
-                          <span>-{formatCurrency(mMonthProjectedExpense)}</span>
-                        </span>
-
-                        {/* 3. Investimento Projetado */}
-                        <span
-                          className="group-card-badge"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            height: '26px',
-                            boxSizing: 'border-box',
-                            background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthProjectedInvestment > 0 ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.04)'),
-                            color: isFutureMonth ? 'var(--text-dim)' : (mMonthProjectedInvestment > 0 ? '#818cf8' : 'var(--text-dim)'),
-                            borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthProjectedInvestment > 0 ? 'rgba(99, 102, 241, 0.3)' : 'var(--border-glass)'),
-                            fontWeight: '800',
-                            fontSize: '0.76rem'
-                          }}
-                          title={t('timeline.monthInvestmentTitle')}
-                        >
-                          <PiggyBank size={12} />
-                          <span>{formatCurrency(mMonthProjectedInvestment)}</span>
-                        </span>
-
-                        {/* 4. Total em Empréstimos a Pagar */}
-                        <span
-                          className="group-card-badge"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            height: '26px',
-                            boxSizing: 'border-box',
-                            background: isFutureMonth ? 'rgba(148, 163, 184, 0.08)' : (mMonthProjectedLoan > 0 ? 'rgba(234, 179, 8, 0.14)' : 'rgba(255, 255, 255, 0.04)'),
-                            color: isFutureMonth ? 'var(--text-dim)' : (mMonthProjectedLoan > 0 ? '#eab308' : 'var(--text-dim)'),
-                            borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.2)' : (mMonthProjectedLoan > 0 ? 'rgba(234, 179, 8, 0.35)' : 'var(--border-glass)'),
-                            fontWeight: '800',
-                            fontSize: '0.76rem'
-                          }}
-                          title={t('timeline.monthLoanTitle') || 'Total em prestações de empréstimos a pagar este mês'}
-                        >
-                          <Landmark size={12} />
-                          <span>{formatCurrency(mMonthProjectedLoan)}</span>
-                        </span>
-
-                        {/* 4. Saldo Líquido Projetado */}
-                        <span
-                          className="group-card-badge"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            height: '26px',
-                            boxSizing: 'border-box',
-                            background: isFutureMonth
-                              ? 'rgba(148, 163, 184, 0.08)'
-                              : (mMonthProjectedSaldo >= 0 ? 'rgba(56, 189, 248, 0.12)' : 'rgba(244, 63, 94, 0.12)'),
-                            color: isFutureMonth
-                              ? 'var(--text-dim)'
-                              : (mMonthProjectedSaldo >= 0 ? '#38bdf8' : '#f43f5e'),
-                            borderColor: isFutureMonth
-                              ? 'rgba(148, 163, 184, 0.2)'
-                              : (mMonthProjectedSaldo >= 0 ? 'rgba(56, 189, 248, 0.35)' : 'rgba(244, 63, 94, 0.35)'),
-                            fontWeight: '800',
-                            fontSize: '0.76rem'
-                          }}
-                          title={t('timeline.monthBalanceTitle')}
-                        >
-                          <Scale size={12} />
-                          <span>{t('timeline.balance')}: {mMonthProjectedSaldo >= 0 ? '+' : ''}{formatCurrency(mMonthProjectedSaldo)}</span>
-                        </span>
-                      </div>
-                    )}
+                    <MonthProjectionBadges
+                      income={mMonthProjectedIncome}
+                      expense={mMonthProjectedExpense}
+                      investment={mMonthProjectedInvestment}
+                      loan={mMonthProjectedLoan}
+                      saldo={mMonthProjectedSaldo}
+                      isFutureMonth={isFutureMonth}
+                      t={t}
+                    />
                   </div>
 
                   {hasEvents ? (
-                    mGroup.events.map((ev) => (
+                    mGroup.events.map((ev, evIdx) => (
                       <div
-                        key={ev.id}
+                        key={`${ev.id || ev.eventId || 'mev'}_${ev.date}_${evIdx}`}
                         id={ev.status === EventStatus.OVERDUE ? 'loan-inst-overdue' : undefined}
                         style={{ marginBottom: '12px' }}
                       >
@@ -1309,7 +1156,6 @@ function VerticalTimeline({
                       </div>
                     ))
                   ) : (
-                    /* Linha informativa quando o mês está vazio */
                     <div
                       className="empty-day-row"
                       onClick={() => {
@@ -1339,8 +1185,8 @@ function VerticalTimeline({
           );
         })}
 
-        {/* Botão de Carregar Mais Meses Anteriores (Histórico) */}
-        {onLoadMorePast && !isBalancoView && (
+        {/* Botão Carregar Mais Passado */}
+        {onLoadMorePast && (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0 16px 0', position: 'relative', zIndex: 10 }}>
             <button
               type="button"
@@ -1479,9 +1325,9 @@ function VerticalTimeline({
                         </div>
 
                         {hasEvents ? (
-                          mGroup.events.map((ev) => (
+                          mGroup.events.map((ev, evIdx) => (
                             <TimelineEventCard
-                              key={ev.id}
+                              key={`${ev.id || ev.eventId || 'yev'}_${ev.date}_${evIdx}`}
                               event={ev}
                               allEvents={timeline.events || []}
                               currentTimelineId={timeline.id}
@@ -1576,9 +1422,9 @@ function VerticalTimeline({
 
               <div className="day-content-col">
                 {hasEvents ? (
-                  dayEvents.map((ev) => (
+                  dayEvents.map((ev, evIdx) => (
                     <div
-                      key={ev.id}
+                      key={`${ev.id || ev.eventId || 'dev'}_${ev.date}_${evIdx}`}
                       id={ev.status === EventStatus.OVERDUE ? 'loan-inst-overdue' : undefined}
                     >
                       <TimelineEventCard
@@ -1674,9 +1520,9 @@ function VerticalTimeline({
                         zIndex: 100
                       }}
                     >
-                      {timelineOptions.map((opt) => (
+                      {timelineOptions.map((opt, optIdx) => (
                         <button
-                          key={opt.key}
+                          key={opt.key || `opt-${optIdx}`}
                           type="button"
                           onClick={() => {
                             setIsTimelineDropdownOpen(false);
@@ -1717,7 +1563,7 @@ function VerticalTimeline({
               )}
             </div>
             <div className="sidebar-btn-group">
-              {((timelines && timelines.length > 0) ? timelines : (timeline?.timelines || [])).map((tl) => {
+              {((timelines && timelines.length > 0) ? timelines : (timeline?.timelines || [])).map((tl, tlIdx) => {
                 const isActive = activeFinancialTab === tl.id || timeline?.id === tl.id;
                 const tlColor = tl.color;
                 const getTimelineIcon = (type) => {
@@ -1747,7 +1593,7 @@ function VerticalTimeline({
 
                 return (
                   <button
-                    key={tl.id}
+                    key={tl.id || `tl-${tlIdx}`}
                     type="button"
                     className={`sidebar-filter-item ${isActive ? 'active' : ''}`}
                     onClick={() => {
@@ -1839,9 +1685,9 @@ function VerticalTimeline({
                   { id: EventStatus.COMPLETED, name: EventStatusLabel[EventStatus.COMPLETED], icon: <CheckCircle2 size={13} /> },
                   { id: EventStatus.PLANNED, name: EventStatusLabel[EventStatus.PLANNED], icon: <Calendar size={13} /> }
                 ]
-            ).map((st) => (
+            ).map((st, stIdx) => (
               <button
-                key={st.id}
+                key={st.id || `st-${stIdx}`}
                 type="button"
                 className={`sidebar-filter-item ${selectedStatusFilter === st.id ? 'active' : ''}`}
                 onClick={() => setSelectedStatusFilter(st.id)}
@@ -1877,11 +1723,11 @@ function VerticalTimeline({
               </button>
             </div>
             <div className="sidebar-btn-group">
-              {availableCreditOptions.map((opt) => {
+              {availableCreditOptions.map((opt, optIdx) => {
                 const isSelected = selectedTimelineIds.includes(opt.id);
                 return (
                   <button
-                    key={opt.id}
+                    key={opt.id || `opt-credit-${optIdx}`}
                     type="button"
                     className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
                     onClick={() => toggleTimelineSelection(opt.id)}
@@ -1942,12 +1788,12 @@ function VerticalTimeline({
               </button>
 
               {/* Lista de Categorias de Despesas do Enum com Ícones e Cores */}
-              {EXPENSE_CATEGORY_ITEMS.map((cat) => {
+              {EXPENSE_CATEGORY_ITEMS.map((cat, catIdx) => {
                 const isSelected = selectedExpenseCategories.includes(cat.id);
                 const IconComponent = cat.icon;
                 return (
                   <button
-                    key={cat.id}
+                    key={cat.id || `exp-cat-${catIdx}`}
                     type="button"
                     className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
                     onClick={() => toggleExpenseCategory(cat.id)}
@@ -2002,9 +1848,9 @@ function VerticalTimeline({
                     { id: 'task', name: t('category.task'), icon: <Pin size={13} /> },
                     { id: 'note', name: t('category.note'), icon: <FileText size={13} /> }
                   ]
-              ).map((cat) => (
+              ).map((cat, catIdx) => (
                 <button
-                  key={cat.id}
+                  key={cat.id || `cat-filter-${catIdx}`}
                   type="button"
                   className={`sidebar-filter-item ${selectedCategoryFilter === cat.id ? 'active' : ''}`}
                   onClick={() => setSelectedCategoryFilter(cat.id)}

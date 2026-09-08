@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, DollarSign, Calendar, FileText, X, TrendingDown, Clock } from 'lucide-react';
 import { formatCurrency } from '../utils/loanCalculations';
-import { EventStatus } from '../../shared/enums/EventStatus.js';
+import { EventStatus, AmortizationStrategy, AmortizationEventCategory } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 export default function AmortizationModal({ isOpen, onClose, onSave, remainingBalance, defaultDate = '2026-08-21', initialEvent = null }) {
   const { t } = useTranslation();
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(defaultDate || '2026-08-21');
-  const [strategy, setStrategy] = useState('reduce_term'); // 'reduce_term' | 'reduce_installment'
+  const [strategy, setStrategy] = useState(AmortizationStrategy.REDUCE_TERM);
   const [status, setStatus] = useState(EventStatus.AMORTIZED);
   const [notes, setNotes] = useState('');
 
@@ -17,14 +17,20 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
     if (initialEvent) {
       setAmount(initialEvent.amount || initialEvent.amortizationAmount || '');
       setDate(initialEvent.date || defaultDate || '2026-08-21');
-      setStrategy(initialEvent.strategy || 'reduce_term');
+      const eventStrategy =
+        initialEvent.strategy ||
+        initialEvent.amortizationStrategy ||
+        (initialEvent.category === AmortizationEventCategory.REDUCE_INSTALLMENT
+          ? AmortizationStrategy.REDUCE_INSTALLMENT
+          : AmortizationStrategy.REDUCE_TERM);
+      setStrategy(eventStrategy);
       const isAmortized = initialEvent.status === EventStatus.AMORTIZED;
       setStatus(isAmortized ? EventStatus.AMORTIZED : EventStatus.PENDING);
       setNotes(initialEvent.notes || (initialEvent.description && !initialEvent.description.startsWith('Amortização extraordinária') ? initialEvent.description : ''));
     } else {
       if (defaultDate) setDate(defaultDate);
       setAmount('');
-      setStrategy('reduce_term');
+      setStrategy(AmortizationStrategy.REDUCE_TERM);
       setStatus(EventStatus.AMORTIZED);
       setNotes('');
     }
@@ -57,7 +63,7 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
 
     setAmount('');
     setNotes('');
-    setStatus('Amortizado');
+    setStatus(EventStatus.AMORTIZED);
     onClose();
   };
 
@@ -117,17 +123,17 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
             <label className="form-label">O que deseja alterar com a amortização?</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '6px' }}>
               <div
-                onClick={() => setStrategy('reduce_term')}
+                onClick={() => setStrategy(AmortizationStrategy.REDUCE_TERM)}
                 style={{
                   padding: '14px 12px',
                   borderRadius: '10px',
-                  border: `2px solid ${strategy === 'reduce_term' ? 'var(--primary)' : 'var(--border-glass)'}`,
-                  background: strategy === 'reduce_term' ? 'rgba(99, 102, 241, 0.14)' : 'var(--bg-glass)',
+                  border: `2px solid ${strategy === AmortizationStrategy.REDUCE_TERM ? 'var(--primary)' : 'var(--border-glass)'}`,
+                  background: strategy === AmortizationStrategy.REDUCE_TERM ? 'rgba(99, 102, 241, 0.14)' : 'var(--bg-glass)',
                   cursor: 'pointer',
                   transition: 'all 0.2s'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '0.9rem', color: strategy === 'reduce_term' ? 'var(--primary-light)' : 'var(--text-main)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '0.9rem', color: strategy === AmortizationStrategy.REDUCE_TERM ? 'var(--primary-light)' : 'var(--text-main)' }}>
                   <Clock size={16} /> 1. Diminuir Prazo
                 </div>
                 <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '6px', lineHeight: '1.4' }}>
@@ -136,17 +142,17 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
               </div>
 
               <div
-                onClick={() => setStrategy('reduce_installment')}
+                onClick={() => setStrategy(AmortizationStrategy.REDUCE_INSTALLMENT)}
                 style={{
                   padding: '14px 12px',
                   borderRadius: '10px',
-                  border: `2px solid ${strategy === 'reduce_installment' ? '#10b981' : 'var(--border-glass)'}`,
-                  background: strategy === 'reduce_installment' ? 'rgba(16, 185, 129, 0.14)' : 'var(--bg-glass)',
+                  border: `2px solid ${strategy === AmortizationStrategy.REDUCE_INSTALLMENT ? '#10b981' : 'var(--border-glass)'}`,
+                  background: strategy === AmortizationStrategy.REDUCE_INSTALLMENT ? 'rgba(16, 185, 129, 0.14)' : 'var(--bg-glass)',
                   cursor: 'pointer',
                   transition: 'all 0.2s'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '0.9rem', color: strategy === 'reduce_installment' ? '#10b981' : 'var(--text-main)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '0.9rem', color: strategy === AmortizationStrategy.REDUCE_INSTALLMENT ? '#10b981' : 'var(--text-main)' }}>
                   <TrendingDown size={16} /> 2. Diminuir Parcela
                 </div>
                 <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '6px', lineHeight: '1.4' }}>

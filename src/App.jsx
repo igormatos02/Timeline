@@ -698,7 +698,12 @@ export default function App() {
   const handleOpenEditEvent = (eventObj) => {
     focusedMonthRef.current = eventObj?.date ? eventObj.date.substring(0, 7) : null;
     scrollYBeforeModalRef.current = window.scrollY;
-    if (eventObj?.category === 'amortizacao' || eventObj?.financialType === 'amortizacao' || eventObj?.isAmortization) {
+    if (
+      eventObj?.eventType === EventType.AMORTIZATION ||
+      eventObj?.category === AmortizationEventCategory.REDUCE_TERM ||
+      eventObj?.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
+      eventObj?.isAmortization
+    ) {
       handleOpenAmortizationModal(eventObj.date, eventObj);
       return;
     }
@@ -1303,16 +1308,20 @@ export default function App() {
       timelineOriginId: targetTimeline.id,
       timelineOriginName: loanName,
       timelineOriginColor: targetTimeline.color || '#10b981',
-      title: `Amortização ${loanName}: ${formatCurrency(amortVal)}`,
-      description: notes || `Amortização extraordinária para ${strategy === AmortizationStrategy.REDUCE_TERM || strategy === 'reduce_term' ? 'redução do prazo' : 'redução da parcela'}.`,
+      description:
+        notes ||
+        (strategy === AmortizationStrategy.REDUCE_TERM
+          ? 'Amortização extraordinária para redução do prazo.'
+          : 'Amortização extraordinária para redução da parcela.'),
       date: targetDate,
       dayOfMonth: parseInt(targetDate.substring(8, 10), 10) || 15,
       time: '12:00',
       amount: amortVal,
       amortizationAmount: amortVal,
-      category: (strategy === AmortizationStrategy.REDUCE_INSTALLMENT || strategy === 'reduce_installment')
-        ? AmortizationEventCategory.REDUCE_INSTALLMENT
-        : AmortizationEventCategory.REDUCE_TERM,
+      category:
+        strategy === AmortizationStrategy.REDUCE_INSTALLMENT
+          ? AmortizationEventCategory.REDUCE_INSTALLMENT
+          : AmortizationEventCategory.REDUCE_TERM,
       eventType: EventType.AMORTIZATION,
       isAmortization: true,
       isExpense: true,
@@ -1322,10 +1331,19 @@ export default function App() {
       status: isCompleted ? EventStatus.AMORTIZED : EventStatus.PENDING,
       isCompleted: isCompleted,
       priority: EventPriority.HIGH,
-      strategy: strategy || AmortizationStrategy.REDUCE_TERM,
-      amortizationStrategy: strategy || AmortizationStrategy.REDUCE_TERM,
+      strategy:
+        strategy === AmortizationStrategy.REDUCE_INSTALLMENT
+          ? AmortizationStrategy.REDUCE_INSTALLMENT
+          : AmortizationStrategy.REDUCE_TERM,
+      amortizationStrategy:
+        strategy === AmortizationStrategy.REDUCE_INSTALLMENT
+          ? AmortizationStrategy.REDUCE_INSTALLMENT
+          : AmortizationStrategy.REDUCE_TERM,
       notes: notes || '',
-      labels: ['Amortização', strategy === AmortizationStrategy.REDUCE_TERM || strategy === 'reduce_term' ? 'Redução Prazo' : 'Redução Parcela'],
+      labels: [
+        'Amortização',
+        strategy === AmortizationStrategy.REDUCE_TERM ? 'Redução Prazo' : 'Redução Parcela'
+      ],
       version: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

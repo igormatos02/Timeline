@@ -1,7 +1,7 @@
 import { IRepository } from '../../../domain/repositories/IRepository.js';
 import { TimelineEvent } from '../../../domain/entities/TimelineEvent.js';
 import { supabase } from './supabaseClient.js';
-import { EventType, EventStatus } from '../../../../shared/enums/index.js';
+import { EventType, EventStatus, AmortizationEventCategory, AmortizationStrategy } from '../../../../shared/enums/index.js';
 
 /**
  * Infrastructure Adapter: SupabaseFinancialEventRepository
@@ -152,6 +152,20 @@ export class SupabaseFinancialEventRepository extends IRepository {
           ? Number(row.amortization_amount)
           : null,
 
+      strategy:
+        row.category === AmortizationEventCategory.REDUCE_INSTALLMENT
+          ? AmortizationEventCategory.REDUCE_INSTALLMENT
+          : row.category === AmortizationEventCategory.REDUCE_TERM
+            ? AmortizationEventCategory.REDUCE_TERM
+            : null,
+
+      amortizationStrategy:
+        row.category === AmortizationEventCategory.REDUCE_INSTALLMENT
+          ? AmortizationEventCategory.REDUCE_INSTALLMENT
+          : row.category === AmortizationEventCategory.REDUCE_TERM
+            ? AmortizationEventCategory.REDUCE_TERM
+            : null,
+
       remainingDebtAfter:
         row.remaining_debt_after != null
           ? Number(row.remaining_debt_after)
@@ -277,7 +291,11 @@ export class SupabaseFinancialEventRepository extends IRepository {
 
       category:
         data.category ||
-        defaultCategory,
+        (data.strategy === AmortizationEventCategory.REDUCE_INSTALLMENT || data.amortizationStrategy === AmortizationEventCategory.REDUCE_INSTALLMENT
+          ? AmortizationEventCategory.REDUCE_INSTALLMENT
+          : data.strategy === AmortizationEventCategory.REDUCE_TERM || data.amortizationStrategy === AmortizationEventCategory.REDUCE_TERM
+            ? AmortizationEventCategory.REDUCE_TERM
+            : defaultCategory),
 
       // ---------------------------------------------------------------
       // ONLY TimelineEvent installment fields
@@ -545,6 +563,16 @@ export class SupabaseFinancialEventRepository extends IRepository {
 
     if (data.priority !== undefined) {
       row.priority = data.priority;
+    }
+
+    if (data.category !== undefined) {
+      row.category = data.category;
+    } else if (data.strategy !== undefined || data.amortizationStrategy !== undefined) {
+      const strat = data.strategy || data.amortizationStrategy;
+      row.category =
+        strat === AmortizationEventCategory.REDUCE_INSTALLMENT
+          ? AmortizationEventCategory.REDUCE_INSTALLMENT
+          : AmortizationEventCategory.REDUCE_TERM;
     }
 
     if (data.amortizationAmount !== undefined) {

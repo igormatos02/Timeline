@@ -146,7 +146,7 @@ export function isAbated(ev) {
   return (
     ev.status === EventStatus.ABATED ||
     ev.status === EventStatus.AMORTIZED ||
-    Boolean(ev.isAbatida)
+    Boolean(ev.isAbated)
   );
 }
 
@@ -154,26 +154,26 @@ export function isAbated(ev) {
  * Returns the capital (principal) portion of an installment.
  *
  * Priority:
- *   1. ev.installmentCapital / ev.principalAmount — if stored and > 0
+ *   1. ev.installmentCapital / ev.principalAmount — if stored
  *   2. ev.installmentAmount - ev.installmentInterest - ev.installmentFee — if interest is known
  *   3. 82% of installmentAmount — last resort (French amortization approximation)
  *
- * Returns 0 when passed null or abated.
+ * Returns 0 when passed null, abated, or explicitly zeroed.
  */
 export function getPrincipal(ev) {
   if (!ev) return 0;
   const cap = ev.installmentCapital ?? ev.principalAmount ?? ev.principal_amount;
 
-  // Trust a stored positive number.
-  if (cap != null && Number(cap) > 0) {
-    return Number(cap);
+  // Trust a stored number (including 0).
+  if (cap != null && !isNaN(Number(cap))) {
+    return Math.max(0, Number(cap));
   }
 
   const total = getInstallmentAmount(ev);
-  if (total <= 0) return 0; // abated or unknown
+  if (total <= 0) return 0; // abated or zeroed out
 
   const interest = ev.installmentInterest ?? ev.interestAmount ?? ev.interestPortion ?? ev.interest_amount;
-  if (interest != null) {
+  if (interest != null && !isNaN(Number(interest))) {
     const fee = getInstallmentFee(ev);
     return Math.max(0, Math.round((total - Number(interest) - fee) * 100) / 100);
   }
@@ -187,7 +187,7 @@ export function getPrincipal(ev) {
  */
 export function getInstallmentAmount(ev) {
   if (!ev) return 0;
-  return Number(ev.installmentAmount ?? ev.installment_amount ?? ev.amount ?? 0);
+  return Math.max(0, Number(ev.installmentAmount ?? ev.installment_amount ?? ev.amount ?? 0));
 }
 
 /**
@@ -201,14 +201,16 @@ export function getInstallmentAmount(ev) {
 export function getInstallmentInterest(ev) {
   if (!ev) return 0;
   const interest = ev.installmentInterest ?? ev.interestAmount ?? ev.interestPortion ?? ev.interest_amount;
-  if (interest != null) return Number(interest);
+  if (interest != null && !isNaN(Number(interest))) {
+    return Math.max(0, Number(interest));
+  }
 
   const total = getInstallmentAmount(ev);
   if (total <= 0) return 0;
 
   // Derive from total - capital - fee if capital is stored
   const cap = ev.installmentCapital ?? ev.principalAmount ?? ev.principal_amount;
-  if (cap != null) {
+  if (cap != null && !isNaN(Number(cap))) {
     const fee = getInstallmentFee(ev);
     return Math.max(0, Math.round((total - Number(cap) - fee) * 100) / 100);
   }
@@ -224,7 +226,10 @@ export function getInstallmentInterest(ev) {
 export function getInstallmentFee(ev) {
   if (!ev) return 0;
   const fee = ev.installmentFee ?? ev.installment_fee ?? ev.taxAmount ?? ev.tax_amount;
-  return fee != null ? Number(fee) : 0;
+  if (fee != null && !isNaN(Number(fee))) {
+    return Math.max(0, Number(fee));
+  }
+  return 0;
 }
 
 /** Computes the due date for installment k (1-indexed). */
@@ -560,7 +565,11 @@ function applyAmortizationsInMemory(
             ) / 100;
 
           const fee =
-            getInstallmentFee(ev);
+            Math.round(
+              getInstallmentFee(ev) *
+              (ratio === 0 ? 0 : 1) *
+              100
+            ) / 100;
 
           const amount =
             Math.round(
@@ -571,13 +580,30 @@ function applyAmortizationsInMemory(
               ) * 100
             ) / 100;
 
+          const origCap = ev.originalInstallmentCapital ?? ev.installmentCapital ?? getPrincipal(ev);
+          const origInt = ev.originalInstallmentInterest ?? ev.installmentInterest ?? getInstallmentInterest(ev);
+          const origFee = ev.originalInstallmentFee ?? ev.installmentFee ?? getInstallmentFee(ev);
+          const origTotal = ev.originalInstallmentAmount ?? ev.installmentAmount ?? getInstallmentAmount(ev);
+
+          const isFullyAmortized = ratio === 0 || (capital === 0 && interest === 0 && amount === 0);
+
           return {
             ...ev,
+
+            originalInstallmentAmount: origTotal,
+            originalInstallmentCapital: origCap,
+            originalInstallmentInterest: origInt,
+            originalInstallmentFee: origFee,
+            savedInterest: isFullyAmortized ? origInt : Math.max(0, Math.round((origInt - interest) * 100) / 100),
 
             installmentAmount: amount,
             installmentCapital: capital,
             installmentInterest: interest,
-            installmentFee: fee
+            installmentFee: fee,
+
+            status: isFullyAmortized ? EventStatus.ABATED : ev.status,
+            isAbated: isFullyAmortized ? true : Boolean(ev.isAbated),
+            isCompleted: isFullyAmortized ? true : Boolean(ev.isCompleted)
           };
         }
       );
@@ -622,11 +648,22 @@ function applyAmortizationsInMemory(
           continue;
         }
 
+        const origCap = inst.originalInstallmentCapital ?? inst.installmentCapital ?? getPrincipal(inst);
+        const origInt = inst.originalInstallmentInterest ?? inst.installmentInterest ?? getInstallmentInterest(inst);
+        const origFee = inst.originalInstallmentFee ?? inst.installmentFee ?? getInstallmentFee(inst);
+        const origTotal = inst.originalInstallmentAmount ?? inst.installmentAmount ?? getInstallmentAmount(inst);
+
         if (remaining >= principal) {
           patch.set(inst.id, {
             status: EventStatus.ABATED,
-            isAbatida: true,
+            isAbated: true,
             isCompleted: true,
+
+            originalInstallmentAmount: origTotal,
+            originalInstallmentCapital: origCap,
+            originalInstallmentInterest: origInt,
+            originalInstallmentFee: origFee,
+            savedInterest: origInt,
 
             installmentAmount: 0,
             installmentCapital: 0,
@@ -661,6 +698,12 @@ function applyAmortizationsInMemory(
             ) / 100;
 
           patch.set(inst.id, {
+            originalInstallmentAmount: origTotal,
+            originalInstallmentCapital: origCap,
+            originalInstallmentInterest: origInt,
+            originalInstallmentFee: origFee,
+            savedInterest: 0,
+
             installmentAmount: newAmount,
             installmentCapital: newCapital
           });
@@ -1055,37 +1098,39 @@ export function getLoanMetrics(
     void amount;
   }
 
-  // ---------------------------------------------------------
-  // Remaining capital
-  // ---------------------------------------------------------
-
-  const remainingDebt =
-    Math.max(
-      0,
-      Math.round(
-        eventsList.reduce(
-          (acc, ev) => {
-            if (
-              !isLoanInstallment(ev) ||
-              isAbated(ev) ||
-              isPositiveStatus(ev.status)
-            ) {
-              return acc;
-            }
-
-            return (
-              acc +
-              getPrincipal(ev)
-            );
-          },
-          0
-        ) * 100
-      ) / 100
-    );
-
   // Total amortized capital includes paid regular installment principal plus extraordinary amortizations
   const amortizedCapital = Math.round((regularPrincipalPaid + extraordinaryAmortized) * 100) / 100;
   const principalPaid = amortizedCapital;
+
+  // ---------------------------------------------------------
+  // Remaining capital (Remaining Debt)
+  // ---------------------------------------------------------
+
+  const remainingDebt =
+    originalCapital > 0
+      ? Math.max(0, Math.round((originalCapital - amortizedCapital) * 100) / 100)
+      : Math.max(
+          0,
+          Math.round(
+            eventsList.reduce(
+              (acc, ev) => {
+                if (
+                  !isLoanInstallment(ev) ||
+                  isAbated(ev) ||
+                  isPositiveStatus(ev.status)
+                ) {
+                  return acc;
+                }
+
+                return (
+                  acc +
+                  getPrincipal(ev)
+                );
+              },
+              0
+            ) * 100
+          ) / 100
+        );
 
   // ---------------------------------------------------------
   // Future interest

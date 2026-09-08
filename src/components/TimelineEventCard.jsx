@@ -40,11 +40,11 @@ import {
   X,
   Target
 } from 'lucide-react';
-import { formatCurrency } from '../utils/loanCalculations';
+import { formatCurrency, isLoanInstallment as checkIsLoanInstallment, isAmortizationEvent as checkIsAmortizationEvent } from '../utils/loanCalculations';
 import { format, endOfMonth } from 'date-fns';
 import { generateUUID } from '../utils/uuid';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { EventType, TimelineType, EventStatus, EventPeriodicity } from '../enums/index.js';
+import { EventType, TimelineType, EventStatus, EventPeriodicity, AmortizationEventCategory, LoanEventCategory } from '../enums/index.js';
 
 export default function TimelineEventCard({
   event,
@@ -80,13 +80,9 @@ export default function TimelineEventCard({
   const currentMonthEndStr = format(endOfMonth(now), 'yyyy-MM-dd');
 
   const effectiveStatus = (localStatus || event.status || '').toLowerCase();
-  const isAmortization = event.eventType === EventType.AMORTIZATION || event.category === 'amortizacao';
+  const isAmortization = checkIsAmortizationEvent(event);
   const isLoanInstallment =
-    event.eventType === EventType.LOAN_INSTALLMENT ||
-    event.category === 'parcela_emprestimo' ||
-    event.category === 'auto_loan' ||
-    event.category === 'personal_loan' ||
-    event.category === 'mortgage' ||
+    checkIsLoanInstallment(event) ||
     Boolean(event.isSystemLoanEvent && !isAmortization) ||
     Boolean(event.installmentNumber || event.installment_number) ||
     Boolean(currentTimelineId && String(currentTimelineId).includes('loan')) ||
@@ -142,23 +138,66 @@ export default function TimelineEventCard({
 
   const abatedBreakdown = React.useMemo(() => {
     if (!isAmortized) return null;
-    let origCapital = 0;
-    let origInterest = 0;
-    const origTotal = Number(event.originalAmount || (Number(event.amount) > 0 ? event.amount : 218.47));
 
-    if (event.description) {
-      const match = event.description.match(/\(([\d\s.,]+)\s*€?\s*capital\s*\+\s*([\d\s.,]+)\s*€?\s*juros/i);
+    let origCapital = Number(
+      event.originalInstallmentCapital ??
+      event.originalCapital ??
+      event.principalAmount ??
+      0
+    );
+    let origInterest = Number(
+      event.originalInstallmentInterest ??
+      event.originalInterest ??
+      event.savedInterest ??
+      event.interestPortion ??
+      event.interestAmount ??
+      0
+    );
+    let origFee = Number(
+      event.originalInstallmentFee ??
+      event.installmentFee ??
+      event.taxAmount ??
+      0
+    );
+    let origTotal = Number(
+      event.originalInstallmentAmount ??
+      event.originalAmount ??
+      0
+    );
+
+    // If values were not stored directly, extract them from description
+    if ((!origCapital || !origInterest) && event.description) {
+      const match = event.description.match(/([\d\s.,]+)\s*€?\s*capital\s*\+\s*([\d\s.,]+)\s*€?\s*(?:interest|juros)/i);
       if (match && match[1] && match[2]) {
-        origCapital = parseFloat(match[1].replace(/\s/g, '').replace(',', '.'));
-        origInterest = parseFloat(match[2].replace(/\s/g, '').replace(',', '.'));
+        const parsedCap = parseFloat(match[1].replace(/\s/g, '').replace(',', '.'));
+        const parsedInt = parseFloat(match[2].replace(/\s/g, '').replace(',', '.'));
+        if (!isNaN(parsedCap) && parsedCap > 0) origCapital = parsedCap;
+        if (!isNaN(parsedInt) && parsedInt > 0) origInterest = parsedInt;
       }
     }
-    if (!origCapital || isNaN(origCapital)) {
-      origCapital = Math.round(origTotal * 0.85 * 100) / 100;
-      origInterest = Math.round((origTotal - origCapital) * 100) / 100;
+
+    if (!origTotal) {
+      origTotal = origCapital + origInterest + origFee;
     }
-    return { origTotal, origCapital, origInterest };
-  }, [isAmortized, event.description, event.originalAmount, event.amount]);
+
+    return { origTotal, origCapital, origInterest, origFee };
+  }, [
+    isAmortized,
+    event.originalInstallmentCapital,
+    event.originalCapital,
+    event.principalAmount,
+    event.originalInstallmentInterest,
+    event.originalInterest,
+    event.savedInterest,
+    event.interestPortion,
+    event.interestAmount,
+    event.originalInstallmentFee,
+    event.installmentFee,
+    event.taxAmount,
+    event.originalInstallmentAmount,
+    event.originalAmount,
+    event.description
+  ]);
 
   const isLocked = event.isLocked !== undefined ? !!event.isLocked : (isCompleted || isAmortized);
 
@@ -2067,7 +2106,9 @@ export default function TimelineEventCard({
                 Finalidade
               </span>
               <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--primary-light)' }}>
-                {event.strategy === 'reduce_installment' ? 'Redução da Parcela' : 'Redução do Prazo'}
+                {event.strategy === AmortizationEventCategory.REDUCE_INSTALLMENT || event.category === AmortizationEventCategory.REDUCE_INSTALLMENT
+                  ? 'Redução da Parcela'
+                  : 'Redução do Prazo'}
               </span>
             </div>
 
@@ -2156,10 +2197,10 @@ export default function TimelineEventCard({
               {isAmortized ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)', textDecoration: 'line-through' }}>
-                    {formatCurrency(abatedBreakdown?.origTotal || event.originalAmount || 218.47)}
+                    {formatCurrency(abatedBreakdown?.origTotal || event.originalInstallmentAmount || event.originalAmount || 0)}
                   </span>
                   <span style={{ fontSize: '0.94rem', fontWeight: '800', color: '#10b981' }}>
-                    {formatCurrency(abatedBreakdown?.origCapital || 194.88)}
+                    {formatCurrency(abatedBreakdown?.origCapital || event.originalInstallmentCapital || 0)}
                   </span>
                 </div>
               ) : (
@@ -2174,7 +2215,7 @@ export default function TimelineEventCard({
               </span>
               <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAmortized ? 'var(--text-main)' : isInertFuture ? 'var(--text-muted)' : 'var(--text-main)' }}>
                 {isAmortized
-                  ? formatCurrency(abatedBreakdown?.origCapital || 194.88)
+                  ? formatCurrency(abatedBreakdown?.origCapital || event.originalInstallmentCapital || 0)
                   : formatCurrency(event.installmentCapital ?? event.principalAmount ?? event.principal_amount ?? 0)}
               </span>
             </div>
@@ -2186,7 +2227,7 @@ export default function TimelineEventCard({
               </span>
               <span style={{ fontSize: '0.88rem', fontWeight: '800', color: isAmortized ? '#10b981' : isInertFuture ? '#94a3b8' : '#f59e0b' }}>
                 {isAmortized
-                  ? `+${formatCurrency(abatedBreakdown?.origInterest || 23.59)}`
+                  ? `+${formatCurrency(abatedBreakdown?.origInterest || event.savedInterest || event.originalInstallmentInterest || 0)}`
                   : formatCurrency(event.installmentInterest ?? event.interestPortion ?? event.interest_portion ?? 0)}
               </span>
             </div>

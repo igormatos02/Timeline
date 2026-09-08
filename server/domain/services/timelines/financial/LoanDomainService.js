@@ -173,44 +173,12 @@ export class LoanDomainService {
      */
     const amortizedCapital = Math.max(
       0,
-      totalCapitalPaidFromEvents + totalExtraordinaryAmortized
+      Math.round((totalCapitalPaidFromEvents + totalExtraordinaryAmortized) * 100) / 100
     );
-
-    /**
-     * Use remainingDebtAfter when it is available.
-     * Otherwise calculate: original capital - amortized capital
-     */
-    const paidEventsWithRemaining =
-      sortedEvents.filter(
-        (ev) =>
-          (
-            isPositiveStatus(ev.status) ||
-            ev.isCompleted
-          ) &&
-          ev.remainingDebtAfter !== undefined &&
-          ev.remainingDebtAfter !== null
-      );
-
-    const lastPaidEvent =
-      paidEventsWithRemaining[
-      paidEventsWithRemaining.length - 1
-      ];
-
-    let calculatedRemainingDebt =
-      totalDebt - amortizedCapital;
-
-    if (
-      lastPaidEvent &&
-      lastPaidEvent.remainingDebtAfter !== undefined &&
-      lastPaidEvent.remainingDebtAfter !== null
-    ) {
-      calculatedRemainingDebt =
-        Number(lastPaidEvent.remainingDebtAfter);
-    }
 
     const remainingDebt = Math.max(
       0,
-      Math.min(totalDebt, calculatedRemainingDebt)
+      Math.round((totalDebt - amortizedCapital) * 100) / 100
     );
 
     /**

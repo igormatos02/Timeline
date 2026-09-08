@@ -400,17 +400,17 @@ export class FinancialEventService {
 
     function extractInstallmentPrincipal(inst) {
       // Use canonical field names; fall back to legacy names for backward compat
-      const cap = inst.installmentCapital ?? inst.principalAmount;
-      if (cap != null && Number(cap) > 0) return Number(cap);
+      const cap = inst.installmentCapital ?? inst.principalAmount ?? inst.principal_amount;
+      if (cap != null && !isNaN(Number(cap))) return Math.max(0, Number(cap));
       const total = Number(inst.installmentAmount || inst.amount || 0);
       const interest = Number(inst.installmentInterest ?? inst.interestPortion ?? inst.interestAmount ?? 0);
       if (interest > 0 && interest < total) return Math.round((total - interest) * 100) / 100;
-      return Math.max(1, Math.round(total * 0.82 * 100) / 100);
+      return Math.round(total * 0.82 * 100) / 100;
     }
 
-    if (strategy === AmortizationStrategy.REDUCE_TERM || strategy === 'reduce_term') {
+    if (strategy === AmortizationStrategy.REDUCE_TERM) {
       const futureUnpaid = loanInstallments
-        .filter((ev) => ev.status !== EventStatus.PAID && ev.status !== EventStatus.COMPLETED && !ev.isCompleted && ev.status !== EventStatus.ABATED && !ev.isAbatida && ev.date >= amortDate)
+        .filter((ev) => ev.status !== EventStatus.PAID && ev.status !== EventStatus.COMPLETED && !ev.isCompleted && ev.status !== EventStatus.ABATED && ev.status !== EventStatus.AMORTIZED && ev.date >= amortDate)
         .sort((a, b) => (a.date > b.date ? 1 : -1));
 
       let remainingToDeduct = amortVal;
@@ -425,14 +425,13 @@ export class FinancialEventService {
           updates.push({
             id: inst.id,
             data: {
-              status: EventStatus.AMORTIZED,
-              isAbatida: true,
+              status: EventStatus.ABATED,
               isCompleted: true,
               installmentAmount: 0,
               installmentCapital: 0,
               installmentInterest: 0,
               installmentFee: 0,
-              labels: Array.from(new Set([...(inst.labels || []), 'Abatida'])),
+              labels: Array.from(new Set([...(inst.labels || []), 'Abated'])),
               updatedAt: now
             }
           });
@@ -446,7 +445,7 @@ export class FinancialEventService {
             data: {
               installmentAmount: Math.round((newPrincipal + interestPortion + fee) * 100) / 100,
               installmentCapital: newPrincipal,
-              labels: Array.from(new Set([...(inst.labels || []), 'Abatida Parcial'])),
+              labels: Array.from(new Set([...(inst.labels || []), 'Partially Abated'])),
               updatedAt: now
             }
           });
@@ -461,7 +460,7 @@ export class FinancialEventService {
     } else {
       // reduce_installment
       const futureUnpaid = loanInstallments.filter(
-        (ev) => ev.status !== EventStatus.PAID && ev.status !== EventStatus.COMPLETED && !ev.isCompleted && ev.status !== 'Abatida' && !ev.isAbatida && ev.date >= amortDate
+        (ev) => ev.status !== EventStatus.PAID && ev.status !== EventStatus.COMPLETED && !ev.isCompleted && ev.status !== EventStatus.ABATED && ev.status !== EventStatus.AMORTIZED && ev.date >= amortDate
       );
       if (futureUnpaid.length > 0) {
         let currentRemainingDebt = futureUnpaid.reduce((acc, ev) => acc + extractInstallmentPrincipal(ev), 0);
@@ -470,7 +469,7 @@ export class FinancialEventService {
         const firstEv = futureUnpaid[0];
         const originalInstallment = Number(firstEv.installmentAmount || firstEv.amount || 0);
         const newFuturePrincipal = Math.max(0, currentRemainingDebt - amortVal);
-        const reductionRatio = currentRemainingDebt > 0 ? newFuturePrincipal / currentRemainingDebt : 1;
+        const reductionRatio = currentRemainingDebt > 0 ? newFuturePrincipal / currentRemainingDebt : 0;
 
         const updates = futureUnpaid.map((ev) => {
           const origCap = Number(ev.installmentCapital ?? ev.principalAmount ?? Math.round((ev.installmentAmount || ev.amount || originalInstallment) * 0.82 * 100) / 100);
@@ -478,14 +477,25 @@ export class FinancialEventService {
           const origFee = Number(ev.installmentFee ?? ev.taxAmount ?? 0);
           const newCap = Math.round(origCap * reductionRatio * 100) / 100;
           const newJur = Math.round(origJur * reductionRatio * 100) / 100;
-          const newTotal = Math.round((newCap + newJur + origFee) * 100) / 100;
+          const newFee = Math.round(origFee * (reductionRatio === 0 ? 0 : 1) * 100) / 100;
+          const newTotal = Math.round((newCap + newJur + newFee) * 100) / 100;
+          const isFullyAmortized = reductionRatio === 0 || (newCap === 0 && newJur === 0 && newTotal === 0);
+
+          const labels = Array.from(new Set([
+            ...(ev.labels || []),
+            isFullyAmortized ? 'Abated' : 'Partially Abated'
+          ]));
+
           return {
             id: ev.id,
             data: {
               installmentAmount: newTotal,
               installmentCapital: newCap,
               installmentInterest: newJur,
-              installmentFee: origFee,
+              installmentFee: newFee,
+              status: isFullyAmortized ? EventStatus.ABATED : ev.status,
+              isCompleted: isFullyAmortized ? true : Boolean(ev.isCompleted),
+              labels,
               updatedAt: now
             }
           };

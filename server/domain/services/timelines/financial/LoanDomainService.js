@@ -26,13 +26,15 @@ export class LoanDomainService {
 
     const activeMonth = currentMonthKey || new Date().toISOString().substring(0, 7);
 
-    // Ordenar eventos de empréstimo por data / número de prestação
-    const sortedEvents = [...loanEvents].sort((a, b) => {
-      const numA = Number(a.installmentNumber || 0);
-      const numB = Number(b.installmentNumber || 0);
-      if (numA && numB) return numA - numB;
-      return (a.date || '').localeCompare(b.date || '');
-    });
+    // Excluir qualquer evento de amortização extraordinária - processar estritamente apenas parcelas do contrato (LOAN_INSTALLMENT)
+    const sortedEvents = [...loanEvents]
+      .filter((ev) => ev && !ev.isDeleted && (ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'LOAN_INSTALLMENT'))
+      .sort((a, b) => {
+        const numA = Number(a.installmentNumber || 0);
+        const numB = Number(b.installmentNumber || 0);
+        if (numA && numB) return numA - numB;
+        return (a.date || '').localeCompare(b.date || '');
+      });
 
     // Calcular a soma total de capital amortizável de todas as prestações da série
     const sumCapitalFromAllEvents = sortedEvents.reduce((sum, ev) => {
@@ -54,7 +56,7 @@ export class LoanDomainService {
     }, 0);
 
     // Obter o saldo devedor restante baseado estritamente nas parcelas PAGAS
-    const paidEventsWithRemaining = [...sortedEvents].filter(ev => (isPositiveStatus(ev.status) || ev.isCompleted) && ev.remainingDebtAfter !== undefined && ev.remainingDebtAfter !== null);
+    const paidEventsWithRemaining = sortedEvents.filter(ev => (isPositiveStatus(ev.status) || ev.isCompleted) && ev.remainingDebtAfter !== undefined && ev.remainingDebtAfter !== null);
     const lastPaidEvent = paidEventsWithRemaining[paidEventsWithRemaining.length - 1];
 
     let calculatedRemainingDebt = totalDebtFromTimeline - totalCapitalPaidFromEvents;
@@ -79,37 +81,25 @@ export class LoanDomainService {
     let paidInstallmentsCount = 0;
     let nextDueDate = null;
 
-    // Contagem e agregação estrita de parcelas de empréstimo (excluindo amortizações extraordinárias da contagem de parcelas)
-    const loanInstallmentEvents = sortedEvents.filter(
-      (ev) => ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'LOAN_INSTALLMENT' || (ev.eventType !== EventType.AMORTIZATION && ev.category !== 'AMORTIZATION')
-    );
-
-    const totalInstallmentsCount = loanInstallmentEvents.length || Number(loanContract?.totalInstallments || loanContract?.total_installments || 0);
+    const totalInstallmentsCount = sortedEvents.length || Number(loanContract?.totalInstallments || loanContract?.total_installments || 0);
 
     for (const ev of sortedEvents) {
-      const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'LOAN_INSTALLMENT' || (ev.eventType !== EventType.AMORTIZATION && ev.category !== 'AMORTIZATION');
       const cap = Number(ev.installmentCapital !== undefined ? ev.installmentCapital : (ev.principalAmount || 0));
       const intVal = Number(ev.interestPortion !== undefined ? ev.interestPortion : (ev.interestAmount || ev.interest_amount || 0));
       const feeVal = Number(ev.taxAmount !== undefined ? ev.taxAmount : (ev.installmentFee || ev.tax_amount || 0));
-      const isPaidOrAbatida = isPositiveStatus(ev.status) || ev.isCompleted || ev.status === EventStatus.AMORTIZED || Boolean(ev.isAbatida);
+      const isPaidOrAbatida = isPositiveStatus(ev.status) || ev.isCompleted;
 
-      if (isLoanInstallment) {
-        totalEstimatedInterest += (intVal + feeVal);
-      }
+      totalEstimatedInterest += (intVal + feeVal);
 
       if (isPaidOrAbatida) {
         paidCapital += cap;
-        if (isLoanInstallment) {
-          paidInterest += (intVal + feeVal);
-          paidInstallmentsCount++;
-        }
+        paidInterest += (intVal + feeVal);
+        paidInstallmentsCount++;
       } else {
-        if (isLoanInstallment) {
-          futureCapital += cap;
-          futureInterest += (intVal + feeVal);
-          if (!nextDueDate && ev.date) {
-            nextDueDate = ev.date;
-          }
+        futureCapital += cap;
+        futureInterest += (intVal + feeVal);
+        if (!nextDueDate && ev.date) {
+          nextDueDate = ev.date;
         }
       }
     }
@@ -120,7 +110,7 @@ export class LoanDomainService {
     const normalizedFutureCapital = remainingDebt;
     const futureTotal = normalizedFutureCapital + futureInterest;
     const remainingInstallmentsCount = Math.max(0, totalInstallmentsCount - paidInstallmentsCount);
-    const lastActiveInstallment = loanInstallmentEvents.filter(ev => !ev.isAbatida && ev.status !== EventStatus.AMORTIZED).pop() || loanInstallmentEvents[loanInstallmentEvents.length - 1];
+    const lastActiveInstallment = sortedEvents.filter(ev => !isPositiveStatus(ev.status)).pop() || sortedEvents[sortedEvents.length - 1];
     const estimatedPayoffDate = lastActiveInstallment?.date || loanContract?.endDate || loanContract?.end_date || null;
 
     const monthlyInstallmentsPaid = sortedEvents

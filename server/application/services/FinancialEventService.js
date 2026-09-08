@@ -54,17 +54,13 @@ export class FinancialEventService {
         if (matchedStatus) {
           ev.status = matchedStatus;
           ev.isCompleted = isPositiveStatus(matchedStatus);
-        } else if (ev.eventType === EventType.AMORTIZATION || ev.category === 'amortizacao' || ev.category === 'amortization') {
-          // Eventos de amortização extraordinária pendentes contam como amortizados por padrão
-          ev.status = EventStatus.AMORTIZED;
-          ev.isCompleted = true;
         } else {
-          ev.status = EventStatus.PENDING;
-          ev.isCompleted = false;
+          ev.status = ev.status || EventStatus.PENDING;
+          ev.isCompleted = isPositiveStatus(ev.status);
         }
       } else {
-        ev.status = EventStatus.PENDING;
-        ev.isCompleted = false;
+        ev.status = ev.status || EventStatus.PENDING;
+        ev.isCompleted = isPositiveStatus(ev.status);
       }
     }
 
@@ -167,12 +163,7 @@ export class FinancialEventService {
       });
     }
 
-    if (created.isAmortizationEvent?.() || created.eventType === EventType.AMORTIZATION) {
-      if (payload.status === EventStatus.AMORTIZED || payload.status === EventStatus.COMPLETED || payload.isCompleted) {
-        await this.processLoanAmortization(created);
-      }
-    }
-
+    // Apenas grava o registo do evento de amortização na base de dados, sem alterar as parcelas da timeline
     return created;
   }
 
@@ -256,14 +247,6 @@ export class FinancialEventService {
       timeboardId: targetEvent.timeboardId || targetEvent.timeboard_id
     });
 
-    if (targetEvent.isAmortizationEvent?.() || targetEvent.eventType === EventType.AMORTIZATION) {
-      if (toggled.isCompleted) {
-        await this.processLoanAmortization({ ...targetEvent, ...toggled });
-      } else {
-        await this.rollbackLoanAmortization(targetEvent);
-      }
-    }
-
     return { ...targetEvent, ...toggled };
   }
 
@@ -273,7 +256,6 @@ export class FinancialEventService {
     const directEvent = await eventRepository.getById(id);
 
     if (directEvent?.isAmortizationEvent?.() || directEvent?.eventType === EventType.AMORTIZATION) {
-      await this.rollbackLoanAmortization(directEvent);
       return eventRepository.delete(id);
     }
 

@@ -1324,37 +1324,22 @@ export default function App() {
       updatedAt: new Date().toISOString()
     };
 
-    // 1. Atualizar o estado local imediatamente
-    setTimelines((prev) =>
-      prev.map((tl) => {
-        if (tl.id === targetTimeline.id) {
-          if (isCompleted) {
-            const calculated = applyExtraordinaryAmortization({
-              timeline: tl,
-              eventsList: tl.events || [],
-              amortizationAmount: amortVal,
-              amortizationDateStr: targetDate,
-              strategy: strategy,
-              notes: notes,
-              existingAmortEvent: amortEvent
-            });
-            return { ...tl, events: calculated };
-          } else {
-            return { ...tl, events: [...(tl.events || []), amortEvent] };
-          }
-        }
-        return tl;
-      })
-    );
+    // 1. Atualizar o estado local otimisticamente
+    setRawEvents((prev) => {
+      const filtered = prev.filter((e) => e.id !== amortEvent.id);
+      return [amortEvent, ...filtered];
+    });
 
     setEditingAmortization(null);
 
-    // 2. Gravar na base de dados
+    // 2. Gravar apenas o registo do evento de amortização na base de dados
     try {
       await api.createEvent(amortEvent);
+      showToast(t('toast.eventCreatedSuccess') || 'Evento de amortização registado com sucesso!', 'success');
       await refreshTimelines();
     } catch (err) {
       console.error('Error saving amortization event:', err);
+      showToast('Erro ao guardar evento de amortização na base de dados.', 'error');
     }
   };
 

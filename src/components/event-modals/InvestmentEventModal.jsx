@@ -203,6 +203,8 @@ export default function InvestmentEventModal({
 
   const daysArray = Array.from({ length: totalDays }, (_, i) => i + 1);
 
+  const isFirstEvent = !initialData || Boolean(initialData.isFirstOccurrence) || (!initialData.isProjected && !initialData.id?.includes('_') && (initialData.version === undefined || Number(initialData.version) === 0));
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
@@ -212,7 +214,9 @@ export default function InvestmentEventModal({
     const finalDate = `${baseYearStr}-${baseMonthStr}-${safeDayStr}`;
 
     const finalAmount = parseFloat(formData.amount) || 0;
-    const finalInitialAmount = formData.initialInvestedAmount !== '' ? (parseFloat(formData.initialInvestedAmount) || 0) : 0;
+    const finalInitialAmount = isFirstEvent
+      ? (formData.initialInvestedAmount !== '' ? (parseFloat(formData.initialInvestedAmount) || 0) : 0)
+      : (initialData?.initialInvestedAmount !== undefined ? (parseFloat(initialData.initialInvestedAmount) || 0) : 0);
     const finalTargetAmount = formData.targetAmount !== '' ? (parseFloat(formData.targetAmount) || 0) : 0;
 
     const labels = formData.labelsInput
@@ -544,28 +548,30 @@ export default function InvestmentEventModal({
             </div>
           </div>
 
-          {/* Campos de Planeamento: Aporte Inicial e Meta Final */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '700', marginBottom: '4px', color: 'var(--text-muted)' }}>
-                {t('modal.initialInvestedAmount') || 'Aporte Inicial (€)'}
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={formData.initialInvestedAmount}
-                  onChange={(e) => setFormData({ ...formData, initialInvestedAmount: e.target.value })}
-                  className="form-input"
-                  style={{ width: '100%', padding: '8px 10px 8px 26px', borderRadius: '8px', fontSize: '0.9rem', boxSizing: 'border-box' }}
-                />
-                <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-                  €
-                </span>
+          {/* Campos de Planeamento: Aporte Inicial (Apenas no primeiro evento) e Meta Final */}
+          <div style={{ display: 'grid', gridTemplateColumns: isFirstEvent ? '1fr 1fr' : '1fr', gap: '10px', marginBottom: '16px' }}>
+            {isFirstEvent && (
+              <div>
+                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '700', marginBottom: '4px', color: 'var(--text-muted)' }}>
+                  {t('modal.initialInvestedAmount') || 'Aporte Inicial (€)'}
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={formData.initialInvestedAmount}
+                    onChange={(e) => setFormData({ ...formData, initialInvestedAmount: e.target.value })}
+                    className="form-input"
+                    style={{ width: '100%', padding: '8px 10px 8px 26px', borderRadius: '8px', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                  />
+                  <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
+                    €
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '700', marginBottom: '4px', color: 'var(--text-muted)' }}>

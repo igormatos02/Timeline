@@ -6,7 +6,9 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  Settings
+  Settings,
+  Copy,
+  Check
 } from 'lucide-react';
 
 export default function DefaultTimelineHeader({
@@ -18,6 +20,16 @@ export default function DefaultTimelineHeader({
   onAddEvent
 }) {
   const [collapsed, setIsCollapsed] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
+
+  const handleCopyId = (e) => {
+    e.stopPropagation();
+    if (timeline?.id) {
+      navigator.clipboard.writeText(String(timeline.id));
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 1800);
+    }
+  };
 
   if (!timeline) return null;
 
@@ -117,10 +129,31 @@ export default function DefaultTimelineHeader({
                     border: '1px solid var(--border-glass)',
                     color: 'var(--text-dim)',
                     fontFamily: 'monospace',
-                    userSelect: 'all'
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
                   }}
                 >
-                  ID: {timeline.id}
+                  <span style={{ userSelect: 'all' }}>ID: {timeline.id}</span>
+                  <button
+                    type="button"
+                    onClick={handleCopyId}
+                    title={copiedId ? 'Copiado!' : 'Copiar ID'}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      padding: '1px 2px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: copiedId ? '#10b981' : 'var(--text-muted)',
+                      borderRadius: '3px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {copiedId ? <Check size={11} strokeWidth={2.5} /> : <Copy size={11} />}
+                  </button>
                 </span>
               )}
             </p>

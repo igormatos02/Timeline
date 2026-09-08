@@ -19,6 +19,7 @@ import {
   Sliders,
   DollarSign,
   ArrowUpRight,
+  ArrowDownRight,
   ExternalLink,
   Sparkles,
   Gift,
@@ -42,7 +43,7 @@ import { formatCurrency, isLoanInstallment as checkIsLoanInstallment, isAmortiza
 import { format, endOfMonth } from 'date-fns';
 import { generateUUID } from '../utils/uuid';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { EventType, TimelineType, EventStatus, EventPeriodicity, AmortizationEventCategory, LoanEventCategory } from '../enums/index.js';
+import { EventType, TimelineType, EventStatus, EventPeriodicity, AmortizationEventCategory, LoanEventCategory, InvestmentEventCategory } from '../enums/index.js';
 
 export default function TimelineEventCard({
   event,
@@ -88,6 +89,13 @@ export default function TimelineEventCard({
   const isIncomeEvent = event.eventType === EventType.INCOME;
   const isExpenseEvent = event.eventType === EventType.EXPENSE;
   const isInvestmentEvent = event.eventType === EventType.INVESTMENT;
+  const isSavingsInvestment = isInvestmentEvent && (
+    !event.category ||
+    event.category === 'savings' ||
+    event.category === InvestmentEventCategory.SAVINGS ||
+    event.category === 'investimento_poupanca' ||
+    event.category === 'poupanca'
+  );
 
   const isRecurringEvent = Boolean(
     event.isRecurring === true ||
@@ -1789,6 +1797,35 @@ export default function TimelineEventCard({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Botão Withdrawal / Retirada (Apenas para Categoria Savings) */}
+            {isSavingsInvestment && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                className="btn btn-sm"
+                title={t('buttons.withdrawal') || 'Withdrawal'}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  color: '#f87171',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '9999px',
+                  padding: '5px 12px',
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <ArrowDownRight size={13} />
+                <span>{t('buttons.withdrawal') || 'Withdrawal'}</span>
+              </button>
+            )}
+
             {isInertFuture ? (
               <div
                 style={{

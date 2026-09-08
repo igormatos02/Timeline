@@ -27,7 +27,8 @@ export const translations = {
       add: "Add",
       reset: "Reset",
       payUpToHere: "Pay up to here",
-      payUpToHereTitle: "Mark all previous installments of this loan up to this one as paid"
+      payUpToHereTitle: "Mark all previous installments of this loan up to this one as paid",
+      withdrawal: "Withdrawal"
     },
 
     // Common
@@ -564,7 +565,8 @@ export const translations = {
       add: "Adicionar",
       reset: "Reset",
       payUpToHere: "Pagar até aqui",
-      payUpToHereTitle: "Marcar como pagas todas as prestações deste empréstimo anteriores a esta parcela (inclusive)"
+      payUpToHereTitle: "Marcar como pagas todas as prestações deste empréstimo anteriores a esta parcela (inclusive)",
+      withdrawal: "Retirada"
     },
 
     // Common

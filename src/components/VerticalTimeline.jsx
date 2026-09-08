@@ -69,7 +69,8 @@ import {
   Hammer,
   ShieldCheck,
   Dog,
-  Plane
+  Plane,
+  ArrowDownRight
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
 import MonthProjectionBadges from './MonthProjectionBadges.jsx';
@@ -143,6 +144,7 @@ function VerticalTimeline({
   ].includes(timeline.type);
 
   const isLoanTimelineOrTab = timeline.type === TimelineType.LOAN;
+  const isInvestmentTimelineOrTab = timeline.type === TimelineType.INVESTMENT || timeline.type === 'investimentos' || timeline.type === 'investment';
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState(EventStatus.ALL);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');

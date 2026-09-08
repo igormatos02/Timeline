@@ -10,7 +10,10 @@ import {
   ChevronUp,
   Layers,
   Settings,
-  RotateCcw
+  RotateCcw,
+  ArrowDownRight,
+  Copy,
+  Check
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/loanCalculations';
 import { InvestmentEventCategory } from '../../../shared/enums/InvestmentEventCategory.js';
@@ -30,6 +33,16 @@ export default function InvestmentTimelineHeader({
 }) {
   const { t } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
+
+  const handleCopyId = (e) => {
+    e.stopPropagation();
+    if (timeline?.id) {
+      navigator.clipboard.writeText(String(timeline.id));
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 1800);
+    }
+  };
 
   if (!timeline) return null;
 
@@ -124,6 +137,7 @@ export default function InvestmentTimelineHeader({
   let totalInstallmentsReceived = 0;
   let initialContribution = 0;
   let totalReceivedCount = 0;
+  let highestTargetVersion = -1;
   let customTarget = 0;
 
   eventsList.forEach((ev) => {
@@ -138,8 +152,10 @@ export default function InvestmentTimelineHeader({
       if (Number(ev.initialInvestedAmount || 0) > 0 && (ev.isFirstOccurrence || !ev.isProjected)) {
         initialContribution += Number(ev.initialInvestedAmount);
       }
-      if (Number(ev.targetAmount || 0) > 0) {
-        customTarget = Math.max(customTarget, Number(ev.targetAmount));
+      const evVer = Number(ev.version !== undefined ? ev.version : (ev.eventVersion !== undefined ? ev.eventVersion : (ev.event_version || 0)));
+      if (Number(ev.targetAmount || 0) > 0 && evVer >= highestTargetVersion) {
+        highestTargetVersion = evVer;
+        customTarget = Number(ev.targetAmount);
       }
     }
   });
@@ -263,10 +279,31 @@ export default function InvestmentTimelineHeader({
                     border: '1px solid var(--border-glass)',
                     color: 'var(--text-dim)',
                     fontFamily: 'monospace',
-                    userSelect: 'all'
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
                   }}
                 >
-                  ID: {timeline.id}
+                  <span style={{ userSelect: 'all' }}>ID: {timeline.id}</span>
+                  <button
+                    type="button"
+                    onClick={handleCopyId}
+                    title={copiedId ? 'Copiado!' : 'Copiar ID'}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      padding: '1px 2px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: copiedId ? '#10b981' : 'var(--text-muted)',
+                      borderRadius: '3px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {copiedId ? <Check size={11} strokeWidth={2.5} /> : <Copy size={11} />}
+                  </button>
                 </span>
               )}
             </p>

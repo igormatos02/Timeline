@@ -109,9 +109,19 @@ export function projectEvents(rawEvents = [], options = {}) {
 
     const horizonDate = parseISO(horizonEndDate);
     const dayOfMonth = rootVersion.dayOfMonth || baseDate.getDate() || 1;
-    const seriesTargetAmount = sortedVersions.find(
+
+    // A meta (targetAmount) da série de investimento deve ser sempre a da maior versão
+    const sortedByVersionDesc = [...versions].sort((a, b) => {
+      const vA = Number(a.version !== undefined ? a.version : (a.eventVersion !== undefined ? a.eventVersion : (a.event_version || 0)));
+      const vB = Number(b.version !== undefined ? b.version : (b.eventVersion !== undefined ? b.eventVersion : (b.event_version || 0)));
+      return vB - vA;
+    });
+    const highestVersionWithTarget = sortedByVersionDesc.find(
       (v) => v.targetAmount !== undefined && v.targetAmount !== null && Number(v.targetAmount) > 0
-    )?.targetAmount;
+    );
+    const seriesTargetAmount = highestVersionWithTarget
+      ? highestVersionWithTarget.targetAmount
+      : (sortedByVersionDesc[0]?.targetAmount ?? rootVersion.targetAmount);
 
     let curDate = baseDate;
     let safetyCounter = 0;
@@ -176,7 +186,7 @@ export function projectEvents(rawEvents = [], options = {}) {
             targetAmount:
               override.targetAmount !== undefined && override.targetAmount !== null
                 ? override.targetAmount
-                : activeVersion.targetAmount || seriesTargetAmount,
+                : (seriesTargetAmount !== undefined && seriesTargetAmount !== null ? seriesTargetAmount : activeVersion.targetAmount),
             initialInvestedAmount:
               override.initialInvestedAmount !== undefined && override.initialInvestedAmount !== null
                 ? override.initialInvestedAmount
@@ -192,7 +202,7 @@ export function projectEvents(rawEvents = [], options = {}) {
           id: `${seriesId}_${curDateStr}`,
           eventId: seriesId,
           version: activeVersion.version,
-          targetAmount: activeVersion.targetAmount || seriesTargetAmount,
+          targetAmount: seriesTargetAmount !== undefined && seriesTargetAmount !== null ? seriesTargetAmount : activeVersion.targetAmount,
           initialInvestedAmount: isFirstOccurrence ? (activeVersion.initialInvestedAmount || 0) : 0,
           date: curDateStr,
           isProjected: !isFirstOccurrence,

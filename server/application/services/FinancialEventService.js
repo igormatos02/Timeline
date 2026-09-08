@@ -269,6 +269,60 @@ export class FinancialEventService {
       return eventRepository.update(id, updatePayload);
     }
 
+    const isInvestment = (
+      directUpdates.eventType === EventType.INVESTMENT ||
+      existing?.eventType === EventType.INVESTMENT ||
+      directUpdates.category === InvestmentEventCategory.SAVINGS ||
+      directUpdates.category === InvestmentEventCategory.ASSETS ||
+      directUpdates.category === InvestmentEventCategory.OTHER ||
+      existing?.category === InvestmentEventCategory.SAVINGS ||
+      existing?.category === InvestmentEventCategory.ASSETS ||
+      existing?.category === InvestmentEventCategory.OTHER
+    );
+
+    // Sincronizar targetAmount e initialInvestedAmount em todos os registos existentes da série de investimento
+    if (seriesVersions.length > 0 && (directUpdates.targetAmount !== undefined || directUpdates.initialInvestedAmount !== undefined)) {
+      for (const sv of seriesVersions) {
+        if (sv.id) {
+          const syncPatch = {};
+          if (directUpdates.targetAmount !== undefined) syncPatch.targetAmount = directUpdates.targetAmount;
+          if (directUpdates.initialInvestedAmount !== undefined) syncPatch.initialInvestedAmount = directUpdates.initialInvestedAmount;
+          if (directUpdates.title || directUpdates.name) {
+            syncPatch.title = directUpdates.title || directUpdates.name;
+            syncPatch.name = directUpdates.name || directUpdates.title;
+          }
+          if (directUpdates.category) syncPatch.category = directUpdates.category;
+          await eventRepository.update(sv.id, syncPatch);
+        }
+      }
+    }
+
+    // Para investimentos: alterar a meta ou propriedades sem mudança de prestação/valor do mês não cria nova versão
+    const isAmountChanged = (
+      directUpdates.amount !== undefined &&
+      existing?.amount !== undefined &&
+      Number(directUpdates.amount) !== Number(existing?.amount)
+    );
+
+    if (isInvestment && !isAmountChanged) {
+      const targetRecordId = existingDirect?.id || seriesRootEvent?.id || (id && !id.includes('_') ? id : null);
+      if (targetRecordId) {
+        const updatePayload = {
+          ...directUpdates,
+          is_recurring: isRecurring,
+          isRecurring: isRecurring
+        };
+        if (directUpdates.status) {
+          const targetDate = directUpdates.date || existingDirect?.date || existing?.date;
+          await this._syncStatus(targetDate, targetSeriesId, directUpdates.status, {
+            timelineId: directUpdates.timelineId || directUpdates.timeline_id || existingDirect?.timelineId || existing?.timelineId,
+            timeboardId: directUpdates.timeboardId || directUpdates.timeboard_id || existingDirect?.timeboardId || existing?.timeboard_id
+          });
+        }
+        return eventRepository.update(targetRecordId, updatePayload);
+      }
+    }
+
     // 2. Eventos não-recorrentes ou edição global de toda a série ou edição direta do registo da mesma data
     const isDirectRecordInPlace = (
       existingDirect &&

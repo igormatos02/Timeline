@@ -313,6 +313,17 @@ export const translations = {
       other: "Other Income"
     },
 
+    // Investment Categories
+    investmentCategories: {
+      savings: "Savings & Deposits",
+      stocks: "Stocks & Equities",
+      funds: "Funds & ETFs",
+      real_estate: "Real Estate",
+      crypto: "Crypto & Digital Assets",
+      assets: "Assets & Equity",
+      other: "Other Investments"
+    },
+
     // Timeboard Modal
     timeboardModal: {
       newTitle: "Create Timeboard",
@@ -463,6 +474,10 @@ export const translations = {
       annualProjectionTitle: "ANNUAL PROJECTION",
       projectionNext12Months: "Projection (Next 12 months):",
       annualTarget: "annual target {amount}",
+      currentTitle: "CURRENT",
+      receivedTotalLabel: "Received:",
+      targetLabel: "Target:",
+      targetReached: "{percent}% of target reached",
       next30DaysTitle: "NEXT 30 DAYS",
       projected30dLabel: "Projected 30d:",
       receivedLabel: "Received:",
@@ -470,6 +485,34 @@ export const translations = {
       monthVsPrevMonth: "This month vs previous month:",
       annualProjectionLabel: "Annual projection:",
       chartTitle: "INCOME VOLUME EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)",
+      summaryView: "Summary",
+      evolutionView: "Evolution"
+    },
+
+    // Investment Timeline Header
+    investmentHeader: {
+      badge: "Investments & Wealth",
+      addInvestment: "New Contribution",
+      resetTitle: "Clear all movements in this timeline",
+      settingsTitle: "Timeline Settings",
+      deleteTitle: "Delete this timeline",
+      categoriesTitle: "INVESTMENTS BY CATEGORY",
+      noInvestments: "No investments recorded",
+      noInvestmentsHint: "Add contributions to view the category breakdown.",
+      annualProjectionTitle: "ANNUAL CONTRIBUTION PROJECTION",
+      projectionNext12Months: "Projected Contributions (12m):",
+      annualTarget: "estimated target {amount}",
+      currentTitle: "CURRENT",
+      receivedTotalLabel: "Received / Invested:",
+      targetLabel: "Target:",
+      targetReached: "{percent}% of target reached",
+      next30DaysTitle: "NEXT 30 DAYS",
+      projected30dLabel: "Projected 30d:",
+      investedLabel: "Invested:",
+      projectedVsInvestedCount: "{projected} projected ({invested} already settled)",
+      monthVsPrevMonth: "This month vs previous month:",
+      annualProjectionLabel: "Annual projection:",
+      chartTitle: "CONTRIBUTION VOLUME EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)",
       summaryView: "Summary",
       evolutionView: "Evolution"
     },
@@ -807,6 +850,17 @@ export const translations = {
       other: "Outras Entradas"
     },
 
+    // Investment Categories
+    investmentCategories: {
+      savings: "Poupança & Depósitos",
+      stocks: "Ações & Bolsa",
+      funds: "Fundos & ETFs",
+      real_estate: "Imobiliário & REITs",
+      crypto: "Criptoativos",
+      assets: "Património & Bens",
+      other: "Outros Investimentos"
+    },
+
     // Timeboard Modal
     timeboardModal: {
       newTitle: "Criar Timeboard",
@@ -957,6 +1011,10 @@ export const translations = {
       annualProjectionTitle: "PROJEÇÃO ANUAL",
       projectionNext12Months: "Projeção (Próximos 12 meses):",
       annualTarget: "alvo anual {amount}",
+      currentTitle: "ATUAL",
+      receivedTotalLabel: "Recebidos:",
+      targetLabel: "Target:",
+      targetReached: "{percent}% do target atingido",
       next30DaysTitle: "PRÓXIMOS 30 DIAS",
       projected30dLabel: "Previstos 30d:",
       receivedLabel: "Recebidos:",
@@ -964,6 +1022,34 @@ export const translations = {
       monthVsPrevMonth: "Este mês vs mês anterior:",
       annualProjectionLabel: "Projeção anual:",
       chartTitle: "EVOLUÇÃO DO VOLUME DE ENTRADAS (ÚLTIMOS 6 MESES + MÊS ATUAL)",
+      summaryView: "Resumo",
+      evolutionView: "Evolução"
+    },
+
+    // Investment Timeline Header
+    investmentHeader: {
+      badge: "Investimentos & Poupança",
+      addInvestment: "Novo Aporte",
+      resetTitle: "Limpar todos os movimentos desta timeline",
+      settingsTitle: "Definições da Timeline",
+      deleteTitle: "Excluir esta timeline",
+      categoriesTitle: "INVESTIMENTOS POR CATEGORIA",
+      noInvestments: "Sem investimentos registados",
+      noInvestmentsHint: "Adicione aportes para visualizar o gráfico por categoria.",
+      annualProjectionTitle: "PROJEÇÃO ANUAL DE APORTES",
+      projectionNext12Months: "Aportes Projetados (12m):",
+      annualTarget: "alvo estimado {amount}",
+      currentTitle: "ATUAL",
+      receivedTotalLabel: "Recebidos / Aportados:",
+      targetLabel: "Target:",
+      targetReached: "{percent}% do target atingido",
+      next30DaysTitle: "PRÓXIMOS 30 DIAS",
+      projected30dLabel: "Previstos 30d:",
+      investedLabel: "Aportados:",
+      projectedVsInvestedCount: "{projected} previstos ({invested} já liquidados)",
+      monthVsPrevMonth: "Este mês vs mês anterior:",
+      annualProjectionLabel: "Projeção anual:",
+      chartTitle: "EVOLUÇÃO DO VOLUME DE APORTES (ÚLTIMOS 6 MESES + MÊS ATUAL)",
       summaryView: "Resumo",
       evolutionView: "Evolução"
     },

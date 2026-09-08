@@ -65,15 +65,6 @@ const EXPENSE_CATEGORY_META = {
   [ExpenseEventCategory.OTHER]: { icon: Tag, color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' }
 };
 
-const POPULAR_EXPENSE_CATEGORIES = [
-  ExpenseEventCategory.RENT,
-  ExpenseEventCategory.FOOD,
-  ExpenseEventCategory.ELECTRICITY,
-  ExpenseEventCategory.AUTO,
-  ExpenseEventCategory.COMMUNICATIONS,
-  ExpenseEventCategory.SHOPPING
-];
-
 export default function ExpenseEventModal({
   isOpen,
   onClose,
@@ -127,12 +118,13 @@ export default function ExpenseEventModal({
       if (e.key === 'Escape') {
         if (isDayPickerOpen) setIsDayPickerOpen(false);
         else if (isEndMonthPickerOpen) setIsEndMonthPickerOpen(false);
+        else if (isCategoryDropdownOpen) setIsCategoryDropdownOpen(false);
         else onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isDayPickerOpen, isEndMonthPickerOpen, onClose]);
+  }, [isOpen, isDayPickerOpen, isEndMonthPickerOpen, isCategoryDropdownOpen, onClose]);
 
   // Inicialização de dados
   useEffect(() => {
@@ -435,42 +427,6 @@ export default function ExpenseEventModal({
                 </button>
               );
             })()}
-
-            {/* Atalhos rápidos / Categorias Populares */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
-              {POPULAR_EXPENSE_CATEGORIES.map((catKey) => {
-                const meta = EXPENSE_CATEGORY_META[catKey];
-                const IconComp = meta.icon;
-                const isSelected = formData.category === catKey;
-                return (
-                  <button
-                    key={catKey}
-                    type="button"
-                    onClick={() => {
-                      setFormData({ ...formData, category: catKey });
-                      setIsCategoryDropdownOpen(false);
-                    }}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      padding: '4px 8px',
-                      borderRadius: '6px',
-                      fontSize: '0.72rem',
-                      fontWeight: isSelected ? '800' : '600',
-                      border: isSelected ? `1px solid ${meta.color}` : '1px solid var(--border-glass)',
-                      background: isSelected ? meta.bg : 'rgba(255, 255, 255, 0.02)',
-                      color: isSelected ? meta.color : 'var(--text-dim)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <IconComp size={12} style={{ color: meta.color }} />
-                    <span>{t(`expenseCategories.${catKey}`)}</span>
-                  </button>
-                );
-              })}
-            </div>
 
             {/* Menu Popover de Todas as Categorias */}
             {isCategoryDropdownOpen && (

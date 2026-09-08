@@ -125,32 +125,33 @@ export default function IncomeTimelineHeader({
   const annualTarget = dto?.annual_target || (metrics.monthlyBaseSalary ? metrics.monthlyBaseSalary * 12 : 36000);
   const annualAchievementPercent = annualTarget > 0 ? Math.min(100, Math.round((annualTotalIncome / annualTarget) * 100)) : 0;
 
-  // 3. PRÓXIMOS 30 DIAS & RECEBIDOS NO MÊS
-  const todayStr = new Date().toISOString().substring(0, 10);
-  const next30Date = new Date();
-  next30Date.setDate(next30Date.getDate() + 30);
-  const next30Str = next30Date.toISOString().substring(0, 10);
-
-  let projectedAmount30 = 0;
-  let projectedCount30 = 0;
-  let receivedAmountMonth = 0;
-  let receivedCountMonth = 0;
+  // 3. ATUAL: TOTAL RECEBIDO & TARGET
+  let totalReceived = 0;
+  let totalReceivedCount = 0;
+  let customTarget = 0;
 
   eventsList.forEach((ev) => {
     if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
     const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME || ev.isIncome;
     if (isIncome) {
-      if (ev.date >= todayStr && ev.date <= next30Str) {
-        projectedAmount30 += Number(ev.amount || 0);
-        projectedCount30 += 1;
+      const isReceived = ev.status === 'paid' || ev.status === 'received' || ev.status === 'completed' || ev.status === 'settled' || ev.isCompleted;
+      if (isReceived) {
+        totalReceived += Number(ev.amount || 0);
+        totalReceivedCount += 1;
       }
-      const isReceived = ev.status === 'paid' || ev.status === 'received' || ev.status === 'completed' || ev.isCompleted;
-      if (ev.date.startsWith(currentMonthStr) && isReceived) {
-        receivedAmountMonth += Number(ev.amount || 0);
-        receivedCountMonth += 1;
+      if (Number(ev.targetAmount || 0) > 0) {
+        customTarget = Math.max(customTarget, Number(ev.targetAmount));
       }
     }
   });
+
+  const targetAmount = customTarget > 0
+    ? customTarget
+    : (timeline.targetAmount || timeline.target || metrics?.targetAmount || metrics?.annualTarget || dto?.target || dto?.annual_target || 30000);
+
+  const targetPercent = targetAmount > 0
+    ? Math.min(100, Math.round((totalReceived / targetAmount) * 100))
+    : 0;
 
   return (
     <div
@@ -633,24 +634,22 @@ export default function IncomeTimelineHeader({
               })()}
             </div>
 
-            {/* Quadrante 3: PRÓXIMOS 30 DIAS (PieChart Donut SVG de Recebimentos) */}
+            {/* Quadrante 3: ATUAL (PieChart Donut SVG de Atingimento do Target) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {t('incomeHeader.next30DaysTitle') || 'NEXT 30 DAYS'}
+                {t('incomeHeader.currentTitle') || 'ATUAL'}
               </div>
               {(() => {
-                const totalPrevisto = monthTotalIncome > 0 ? monthTotalIncome : projectedAmount30;
-                const receivedPercent = totalPrevisto > 0 ? Math.min(100, Math.round((receivedAmountMonth / totalPrevisto) * 100)) : 0;
-                const receivedFraction = Math.min(1, Math.max(0, receivedPercent / 100));
+                const targetFraction = Math.min(1, Math.max(0, targetPercent / 100));
 
-                const sliceX = Math.cos(2 * Math.PI * receivedFraction);
-                const sliceY = Math.sin(2 * Math.PI * receivedFraction);
-                const largeArcFlag = receivedFraction > 0.5 ? 1 : 0;
+                const sliceX = Math.cos(2 * Math.PI * targetFraction);
+                const sliceY = Math.sin(2 * Math.PI * targetFraction);
+                const largeArcFlag = targetFraction > 0.5 ? 1 : 0;
 
                 const sliceColor = '#10b981'; // Verde para Recebido
-                const remainingColor = 'rgba(6, 182, 212, 0.25)'; // Ciano para pendente
+                const remainingColor = 'rgba(16, 185, 129, 0.2)';
 
-                const pathData = receivedFraction >= 0.999
+                const pathData = targetFraction >= 0.999
                   ? `M 1 0 A 1 1 0 1 1 -0.999 0 L 0 0`
                   : `M 1 0 A 1 1 0 ${largeArcFlag} 1 ${sliceX} ${sliceY} L 0 0`;
 
@@ -659,9 +658,9 @@ export default function IncomeTimelineHeader({
                     <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
                       <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
                         <circle cx="0" cy="0" r="1" fill={remainingColor} />
-                        {receivedFraction > 0 && (
+                        {targetFraction > 0 && (
                           <path d={pathData} fill={sliceColor} style={{ transition: 'all 0.3s ease' }}>
-                            <title>{`${t('incomeHeader.receivedLabel') || 'Received'}: ${receivedPercent}%`}</title>
+                            <title>{`${t('incomeHeader.targetReached', { percent: targetPercent }) || `${targetPercent}% do target`}`}</title>
                           </path>
                         )}
                       </svg>
@@ -684,21 +683,21 @@ export default function IncomeTimelineHeader({
                           color: sliceColor
                         }}
                       >
-                        {receivedPercent}%
+                        {targetPercent}%
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>{t('incomeHeader.projected30dLabel') || 'Projected 30d:'}</span>
-                        <strong style={{ color: '#06b6d4' }}>{formatCurrency(projectedAmount30)}</strong>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>{t('incomeHeader.receivedTotalLabel') || 'recebidos:'}</span>
+                        <strong style={{ color: '#10b981', fontSize: '0.86rem' }}>{formatCurrency(totalReceived)}</strong>
                       </div>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>{t('incomeHeader.receivedLabel') || 'Received:'}</span>
-                        <strong style={{ color: '#10b981' }}>{formatCurrency(receivedAmountMonth)}</strong>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>{t('incomeHeader.targetLabel') || 'target:'}</span>
+                        <strong style={{ color: '#06b6d4', fontSize: '0.86rem' }}>{formatCurrency(targetAmount)}</strong>
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        {t('incomeHeader.projectedVsReceivedCount', { projected: projectedCount30, received: receivedCountMonth }) || `${projectedCount30} projected (${receivedCountMonth} received)`}
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                        {t('incomeHeader.targetReached', { percent: targetPercent }) || `${targetPercent}% do target atingido`}
                       </div>
                     </div>
                   </div>

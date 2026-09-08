@@ -120,46 +120,39 @@ export default function InvestmentTimelineHeader({
   const annualTarget = dto?.monthly_target ? dto.monthly_target * 12 : 6000;
   const annualAchievementPercent = annualTarget > 0 ? Math.min(100, Math.round((annualTotalInvested / annualTarget) * 100)) : 0;
 
-  // 3. PRÓXIMOS 30 DIAS & APORTES REALIZADOS NO MÊS
-  const todayStr = new Date().toISOString().substring(0, 10);
-  const next30Date = new Date();
-  next30Date.setDate(next30Date.getDate() + 30);
-  const next30Str = next30Date.toISOString().substring(0, 10);
-
-  let committedAmount30 = dto?.committed_amount_30 ?? 0;
-  let committedCount30 = dto?.committed_count_30 ?? 0;
-  let paidAmountMonth = dto?.paid_amount_month ?? 0;
-  let paidCountMonth = dto?.paid_count_month ?? 0;
-
-  let uiCommAmt = 0;
-  let uiCommCnt = 0;
-  let uiPaidAmt = 0;
-  let uiPaidCnt = 0;
+  // 3. ATUAL: TOTAL RECEBIDO / APORTADO (INCLUINDO APORTE INICIAL) & TARGET
+  let totalInstallmentsReceived = 0;
+  let initialContribution = 0;
+  let totalReceivedCount = 0;
+  let customTarget = 0;
 
   eventsList.forEach((ev) => {
     if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
     const isInvestment = ev.eventType === 'investment' || ev.eventType === EventType.INVESTMENT || ev.isInvestment;
     if (isInvestment) {
-      if (ev.date >= todayStr && ev.date <= next30Str) {
-        uiCommAmt += Number(ev.amount || 0);
-        uiCommCnt += 1;
+      const isReceived = ev.status === 'paid' || ev.status === 'settled' || ev.status === 'completed' || ev.status === 'received' || ev.status === 'invested' || ev.isCompleted;
+      if (isReceived) {
+        totalInstallmentsReceived += Number(ev.amount || 0);
+        totalReceivedCount += 1;
       }
-      const isPaid = ev.status === 'paid' || ev.status === 'settled' || ev.status === 'completed' || ev.isCompleted;
-      if (ev.date.startsWith(currentMonthStr) && isPaid) {
-        uiPaidAmt += Number(ev.amount || 0);
-        uiPaidCnt += 1;
+      if (Number(ev.initialInvestedAmount || 0) > 0 && initialContribution === 0) {
+        initialContribution = Number(ev.initialInvestedAmount);
+      }
+      if (Number(ev.targetAmount || 0) > 0) {
+        customTarget = Math.max(customTarget, Number(ev.targetAmount));
       }
     }
   });
 
-  if (committedAmount30 === 0 && uiCommAmt > 0) {
-    committedAmount30 = uiCommAmt;
-    committedCount30 = uiCommCnt;
-  }
-  if (paidAmountMonth === 0 && uiPaidAmt > 0) {
-    paidAmountMonth = uiPaidAmt;
-    paidCountMonth = uiPaidCnt;
-  }
+  const totalReceived = totalInstallmentsReceived + initialContribution;
+
+  const targetAmount = customTarget > 0
+    ? customTarget
+    : (timeline.targetAmount || timeline.target || metrics?.targetAmount || metrics?.target || dto?.target || dto?.annual_target || 30000);
+
+  const targetPercent = targetAmount > 0
+    ? Math.min(100, Math.round((totalReceived / targetAmount) * 100))
+    : 0;
 
   return (
     <div
@@ -641,24 +634,22 @@ export default function InvestmentTimelineHeader({
               })()}
             </div>
 
-            {/* Quadrante 3: PRÓXIMOS 30 DIAS (PieChart Donut SVG de Aportes) */}
+            {/* Quadrante 3: ATUAL (PieChart Donut SVG de Atingimento do Target) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                PRÓXIMOS 30 DIAS
+                {t('investmentHeader.currentTitle') || 'ATUAL'}
               </div>
               {(() => {
-                const totalPrevistoOuAportado = monthTotalInvested > 0 ? monthTotalInvested : committedAmount30;
-                const paidPercent = totalPrevistoOuAportado > 0 ? Math.min(100, Math.round((paidAmountMonth / totalPrevistoOuAportado) * 100)) : 0;
-                const paidFraction = Math.min(1, Math.max(0, paidPercent / 100));
+                const targetFraction = Math.min(1, Math.max(0, targetPercent / 100));
 
-                const sliceX = Math.cos(2 * Math.PI * paidFraction);
-                const sliceY = Math.sin(2 * Math.PI * paidFraction);
-                const largeArcFlag = paidFraction > 0.5 ? 1 : 0;
+                const sliceX = Math.cos(2 * Math.PI * targetFraction);
+                const sliceY = Math.sin(2 * Math.PI * targetFraction);
+                const largeArcFlag = targetFraction > 0.5 ? 1 : 0;
 
-                const sliceColor = '#6366f1';
-                const remainingColor = 'rgba(99, 102, 241, 0.25)';
+                const sliceColor = '#8b5cf6';
+                const remainingColor = 'rgba(139, 92, 246, 0.2)';
 
-                const pathData = paidFraction >= 0.999
+                const pathData = targetFraction >= 0.999
                   ? `M 1 0 A 1 1 0 1 1 -0.999 0 L 0 0`
                   : `M 1 0 A 1 1 0 ${largeArcFlag} 1 ${sliceX} ${sliceY} L 0 0`;
 
@@ -667,9 +658,9 @@ export default function InvestmentTimelineHeader({
                     <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
                       <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
                         <circle cx="0" cy="0" r="1" fill={remainingColor} />
-                        {paidFraction > 0 && (
+                        {targetFraction > 0 && (
                           <path d={pathData} fill={sliceColor} style={{ transition: 'all 0.3s ease' }}>
-                            <title>{`Aportado: ${paidPercent}%`}</title>
+                            <title>{`${t('investmentHeader.targetReached', { percent: targetPercent }) || `${targetPercent}% do target`}`}</title>
                           </path>
                         )}
                       </svg>
@@ -692,21 +683,21 @@ export default function InvestmentTimelineHeader({
                           color: sliceColor
                         }}
                       >
-                        {paidPercent}%
+                        {targetPercent}%
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Previstos 30d:</span>
-                        <strong style={{ color: '#6366f1' }}>{formatCurrency(committedAmount30)}</strong>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.receivedTotalLabel') || 'recebidos:'}</span>
+                        <strong style={{ color: '#10b981', fontSize: '0.86rem' }}>{formatCurrency(totalReceived)}</strong>
                       </div>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Aportados:</span>
-                        <strong style={{ color: '#10b981' }}>{formatCurrency(paidAmountMonth)}</strong>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.targetLabel') || 'target:'}</span>
+                        <strong style={{ color: '#8b5cf6', fontSize: '0.86rem' }}>{formatCurrency(targetAmount)}</strong>
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        {committedCount30} previstos ({paidCountMonth} já liquidados)
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                        {t('investmentHeader.targetReached', { percent: targetPercent }) || `${targetPercent}% do target atingido`}
                       </div>
                     </div>
                   </div>

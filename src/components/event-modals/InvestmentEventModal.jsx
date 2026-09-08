@@ -2,21 +2,35 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   PiggyBank,
+  TrendingUp,
+  Layers,
   Landmark,
+  Zap,
   Sparkles,
+  Tag,
   Calendar,
   Repeat,
-  Zap,
   ChevronDown,
   Clock,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Target
+  Search,
+  Check
 } from 'lucide-react';
 import { format, parseISO, addMonths, getDaysInMonth, setMonth, setYear } from 'date-fns';
-import { EventStatus, EventPeriodicity, EventType } from '../../../shared/enums/index.js';
+import { EventStatus, EventPeriodicity, EventType, InvestmentEventCategory } from '../../../shared/enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
+
+const INVESTMENT_CATEGORY_META = {
+  [InvestmentEventCategory.SAVINGS]: { icon: PiggyBank, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' },
+  [InvestmentEventCategory.STOCKS]: { icon: TrendingUp, color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' },
+  [InvestmentEventCategory.FUNDS]: { icon: Layers, color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)' },
+  [InvestmentEventCategory.REAL_ESTATE]: { icon: Landmark, color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
+  [InvestmentEventCategory.CRYPTO]: { icon: Zap, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
+  [InvestmentEventCategory.ASSETS]: { icon: Sparkles, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)' },
+  [InvestmentEventCategory.OTHER]: { icon: Tag, color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' }
+};
 
 export default function InvestmentEventModal({
   isOpen,
@@ -32,8 +46,9 @@ export default function InvestmentEventModal({
   const [isDayPickerOpen, setIsDayPickerOpen] = useState(false);
   const [isEndMonthPickerOpen, setIsEndMonthPickerOpen] = useState(false);
   const [endMonthPickerYear, setEndMonthPickerYear] = useState(2026);
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
   const [updateScope, setUpdateScope] = useState('single');
-  const [investmentSubtype, setInvestmentSubtype] = useState('investimento_poupanca');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -47,7 +62,8 @@ export default function InvestmentEventModal({
     initialInvestedAmount: '',
     targetAmount: '',
     labelsInput: '',
-    isAutomatic: false
+    isAutomatic: false,
+    category: InvestmentEventCategory.SAVINGS
   });
 
   // 1. Foco e seleção automática do título ao abrir
@@ -70,12 +86,13 @@ export default function InvestmentEventModal({
       if (e.key === 'Escape') {
         if (isDayPickerOpen) setIsDayPickerOpen(false);
         else if (isEndMonthPickerOpen) setIsEndMonthPickerOpen(false);
+        else if (isCategoryDropdownOpen) setIsCategoryDropdownOpen(false);
         else onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isDayPickerOpen, isEndMonthPickerOpen, onClose]);
+  }, [isOpen, isDayPickerOpen, isEndMonthPickerOpen, isCategoryDropdownOpen, onClose]);
 
   // Inicialização de dados
   useEffect(() => {
@@ -96,14 +113,6 @@ export default function InvestmentEventModal({
     }
 
     if (initialData) {
-      if (initialData.category === 'investimento_patrimonio') {
-        setInvestmentSubtype('investimento_patrimonio');
-      } else if (initialData.category === 'investimento_outros' || initialData.category?.includes('etf')) {
-        setInvestmentSubtype('investimento_outros');
-      } else {
-        setInvestmentSubtype('investimento_poupanca');
-      }
-
       let initPeriodicity = EventPeriodicity.RECURRING;
       if (
         initialData.periodicity === EventPeriodicity.PERIOD ||
@@ -130,6 +139,11 @@ export default function InvestmentEventModal({
         } catch { }
       }
 
+      let cat = initialData.category || InvestmentEventCategory.SAVINGS;
+      if (cat === 'investimento_poupanca') cat = InvestmentEventCategory.SAVINGS;
+      else if (cat === 'investimento_patrimonio') cat = InvestmentEventCategory.ASSETS;
+      else if (cat === 'investimento_outros') cat = InvestmentEventCategory.OTHER;
+
       setFormData({
         title: initialData.title || '',
         date: targetDate,
@@ -139,10 +153,11 @@ export default function InvestmentEventModal({
         periodicity: initPeriodicity,
         recurrenceEndDate: endRecDate,
         amount: initialData.amount !== undefined ? initialData.amount : (initialData.initialInvestedAmount || ''),
-        initialInvestedAmount: initialData.initialInvestedAmount !== undefined ? initialData.initialInvestedAmount : '',
-        targetAmount: initialData.targetAmount || '',
+        initialInvestedAmount: initialData.initialInvestedAmount !== undefined && initialData.initialInvestedAmount !== null ? initialData.initialInvestedAmount : '',
+        targetAmount: initialData.targetAmount !== undefined && initialData.targetAmount !== null ? initialData.targetAmount : '',
         labelsInput: Array.isArray(initialData.labels) ? initialData.labels.join(', ') : '',
-        isAutomatic: Boolean(initialData.isAutomatic)
+        isAutomatic: Boolean(initialData.isAutomatic),
+        category: cat
       });
       setUpdateScope('subsequent');
     } else {
@@ -167,16 +182,15 @@ export default function InvestmentEventModal({
         initialInvestedAmount: '',
         targetAmount: '',
         labelsInput: '',
-        isAutomatic: false
+        isAutomatic: false,
+        category: InvestmentEventCategory.SAVINGS
       });
       setUpdateScope('single');
-      setInvestmentSubtype('investimento_poupanca');
     }
   }, [initialData, defaultDate, isOpen]);
 
   if (!isOpen) return null;
 
-  // Informações de data base do botão que abriu o modal
   let baseYearStr = '2026';
   let baseMonthStr = '08';
   let totalDays = 31;
@@ -227,7 +241,7 @@ export default function InvestmentEventModal({
       timelineId: timeline?.id,
       timelineOriginId: timeline?.id,
       labels,
-      category: investmentSubtype,
+      category: formData.category || InvestmentEventCategory.SAVINGS,
       isAutomatic: formData.isAutomatic,
       updateScope: initialData?.seriesId ? updateScope : undefined
     };
@@ -280,10 +294,10 @@ export default function InvestmentEventModal({
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                {initialData ? (t('modal.editInvestment') || 'Editar Investimento') : (t('modal.newInvestment') || 'Novo Investimento / Poupança')}
+                {initialData ? (t('modal.editInvestment') || 'Editar Investimento') : (t('modal.newInvestment') || 'Novo Investimento')}
               </h3>
               <div style={{ fontSize: '0.76rem', color: '#8b5cf6', fontWeight: '700' }}>
-                {timeline?.name || 'Investimentos'} • {format(parseISO(`${baseYearStr}-${baseMonthStr}-01`), 'MMMM yyyy', { locale: dateLocale })}
+                {timeline?.name || t('timeline.investments') || 'Investimentos'} • {format(parseISO(`${baseYearStr}-${baseMonthStr}-01`), 'MMMM yyyy', { locale: dateLocale })}
               </div>
             </div>
           </div>
@@ -299,60 +313,17 @@ export default function InvestmentEventModal({
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Subtipo do Investimento */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-              {t('modal.investmentSubtype') || 'Tipo de Aplicação / Investimento'}
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-              {[
-                { id: 'investimento_poupanca', label: t('investment.typeSavings') || 'Poupança / Refúgio', icon: <PiggyBank size={14} /> },
-                { id: 'investimento_patrimonio', label: t('investment.typeAssets') || 'Patrimônio / Imóvel', icon: <Landmark size={14} /> },
-                { id: 'investimento_outros', label: t('investment.typeOthers') || 'Outros / ETFs', icon: <Sparkles size={14} /> }
-              ].map((sub) => {
-                const isSelected = investmentSubtype === sub.id;
-                return (
-                  <button
-                    key={sub.id}
-                    type="button"
-                    onClick={() => setInvestmentSubtype(sub.id)}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                      padding: '10px 6px',
-                      borderRadius: '8px',
-                      border: isSelected ? '2px solid #8b5cf6' : '1px solid var(--border-glass)',
-                      background: isSelected ? 'rgba(139, 92, 246, 0.18)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                      color: isSelected ? '#a855f7' : 'var(--text-muted)',
-                      fontSize: '0.76rem',
-                      fontWeight: isSelected ? '800' : '600',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {sub.icon}
-                    <span>{sub.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 1. Título do Investimento (Foco e seleção automática ao abrir) */}
+          {/* 1. Título do Investimento */}
           <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-              {t('modal.titleLabel') || 'Nome / Título do Investimento *'}
+              {t('modal.investmentTitleLabel') || t('modal.titleLabel') || 'Título / Descrição *'}
             </label>
             <input
               ref={titleInputRef}
               type="text"
               required
               autoFocus
-              placeholder={t('modal.investmentTitlePlaceholder') || 'Ex: Fundo de Emergência, ETF S&P500, Entrada de Casa...'}
+              placeholder={t('modal.investmentTitlePlaceholder') || 'Ex: Poupança, Ações, Fundos ETF, Cripto...'}
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="form-input"
@@ -360,10 +331,189 @@ export default function InvestmentEventModal({
             />
           </div>
 
-          {/* 2. Valor Mensal (€) */}
+          {/* Categoria do Investimento Elegante */}
+          <div style={{ marginBottom: '14px', position: 'relative' }}>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+              {t('modal.categoryLabel') || t('sidebar.categoryType') || 'Categoria'}
+            </label>
+
+            {/* Botão Seletor Principal */}
+            {(() => {
+              const currentMeta = INVESTMENT_CATEGORY_META[formData.category] || INVESTMENT_CATEGORY_META[InvestmentEventCategory.OTHER];
+              const CurrentIcon = currentMeta.icon;
+              return (
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    borderRadius: '10px',
+                    background: 'var(--bg-glass, rgba(255,255,255,0.03))',
+                    border: isCategoryDropdownOpen ? '1px solid #8b5cf6' : '1px solid var(--border-glass)',
+                    boxShadow: isCategoryDropdownOpen ? '0 0 12px rgba(139, 92, 246, 0.2)' : 'none',
+                    color: 'var(--text-main)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '8px',
+                        background: currentMeta.bg,
+                        color: currentMeta.color,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                    >
+                      <CurrentIcon size={16} />
+                    </div>
+                    <span style={{ fontSize: '0.86rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                      {t(`investmentCategories.${formData.category}`) || formData.category}
+                    </span>
+                  </div>
+                  <ChevronDown
+                    size={16}
+                    style={{
+                      color: 'var(--text-muted)',
+                      transform: isCategoryDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease'
+                    }}
+                  />
+                </button>
+              );
+            })()}
+
+            {/* Menu Popover de Todas as Categorias */}
+            {isCategoryDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  marginTop: '6px',
+                  background: 'var(--bg-card, #131722)',
+                  border: '1px solid rgba(139, 92, 246, 0.35)',
+                  borderRadius: '12px',
+                  boxShadow: '0 16px 36px rgba(0, 0, 0, 0.85)',
+                  padding: '12px',
+                  zIndex: 100,
+                  backdropFilter: 'blur(16px)',
+                  maxHeight: '260px',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                {/* Campo de Busca Rápida */}
+                <div style={{ position: 'relative', marginBottom: '8px' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+                  <input
+                    type="text"
+                    value={categorySearch}
+                    onChange={(e) => setCategorySearch(e.target.value)}
+                    placeholder={t('sidebar.search') || 'Buscar categoria...'}
+                    style={{
+                      width: '100%',
+                      padding: '6px 10px 6px 30px',
+                      fontSize: '0.78rem',
+                      borderRadius: '6px',
+                      background: 'var(--bg-glass, rgba(255,255,255,0.05))',
+                      border: '1px solid var(--border-glass)',
+                      color: 'var(--text-main)',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                {/* Lista de Categorias com Scroll */}
+                <div
+                  style={{
+                    overflowY: 'auto',
+                    flex: 1,
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '6px',
+                    paddingRight: '4px'
+                  }}
+                >
+                  {Object.entries(InvestmentEventCategory)
+                    .filter(([_, catVal]) => {
+                      if (!categorySearch.trim()) return true;
+                      const label = t(`investmentCategories.${catVal}`) || catVal;
+                      return label.toLowerCase().includes(categorySearch.toLowerCase());
+                    })
+                    .map(([_, catVal]) => {
+                      const meta = INVESTMENT_CATEGORY_META[catVal] || INVESTMENT_CATEGORY_META[InvestmentEventCategory.OTHER];
+                      const IconComp = meta.icon;
+                      const isSelected = formData.category === catVal;
+                      return (
+                        <button
+                          key={catVal}
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, category: catVal });
+                            setIsCategoryDropdownOpen(false);
+                            setCategorySearch('');
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '8px',
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            border: isSelected ? `1px solid ${meta.color}` : '1px solid transparent',
+                            background: isSelected ? meta.bg : 'rgba(255, 255, 255, 0.02)',
+                            color: isSelected ? meta.color : 'var(--text-main)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                            <div
+                              style={{
+                                width: '22px',
+                                height: '22px',
+                                borderRadius: '6px',
+                                background: meta.bg,
+                                color: meta.color,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                              }}
+                            >
+                              <IconComp size={12} />
+                            </div>
+                            <span style={{ fontSize: '0.76rem', fontWeight: isSelected ? '700' : '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {t(`investmentCategories.${catVal}`) || catVal}
+                            </span>
+                          </div>
+                          {isSelected && <Check size={14} style={{ color: meta.color, flexShrink: 0 }} />}
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Valor a Investir / Aporte Mensal */}
           <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-              {t('modal.monthlyInvestmentAmount') || 'Aporte Mensal / Valor (€)'}
+              {t('modal.monthlyInvestmentAmount') || t('modal.investmentAmountLabel') || 'Aporte Mensal / Valor (€) *'}
             </label>
             <div style={{ position: 'relative' }}>
               <input
@@ -381,18 +531,18 @@ export default function InvestmentEventModal({
                   borderRadius: '8px',
                   fontSize: '1.05rem',
                   fontWeight: '800',
-                  color: '#a855f7',
+                  color: '#8b5cf6',
                   boxSizing: 'border-box'
                 }}
               />
-              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#a855f7', fontWeight: '800' }}>
+              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#8b5cf6', fontWeight: '800' }}>
                 €
               </span>
             </div>
           </div>
 
-          {/* Valor Inicial e Meta (Opcionais) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+          {/* Campos de Planeamento: Aporte Inicial e Meta Final */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '700', marginBottom: '4px', color: 'var(--text-muted)' }}>
                 {t('modal.initialInvestedAmount') || 'Aporte Inicial (€)'}
@@ -436,7 +586,7 @@ export default function InvestmentEventModal({
             </div>
           </div>
 
-          {/* 4. Periodicidade: Recorrente, Pontual, Período */}
+          {/* Periodicidade: Recorrente, Pontual, Período */}
           <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
               {t('modal.periodicity') || 'Periodicidade'}
@@ -470,7 +620,7 @@ export default function InvestmentEventModal({
                       borderRadius: '8px',
                       border: isSelected ? '2px solid #8b5cf6' : '1px solid var(--border-glass)',
                       background: isSelected ? 'rgba(139, 92, 246, 0.18)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                      color: isSelected ? '#a855f7' : 'var(--text-muted)',
+                      color: isSelected ? '#8b5cf6' : 'var(--text-muted)',
                       fontSize: '0.8rem',
                       fontWeight: isSelected ? '800' : '600',
                       cursor: 'pointer',
@@ -484,7 +634,7 @@ export default function InvestmentEventModal({
               })}
             </div>
 
-            {/* Se for Período: Seletor de Mês Final Elegante */}
+            {/* Se for Período: Seletor de Mês Final */}
             {formData.periodicity === EventPeriodicity.PERIOD && (
               <div
                 style={{
@@ -495,7 +645,7 @@ export default function InvestmentEventModal({
                   borderRadius: '10px'
                 }}
               >
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#a855f7', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#8b5cf6', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px' }}>
                   <Calendar size={13} />
                   <span>{t('modal.endMonth') || 'Mês Final'}</span>
                 </label>
@@ -522,7 +672,7 @@ export default function InvestmentEventModal({
                   <ChevronDown
                     size={15}
                     style={{
-                      color: '#a855f7',
+                      color: '#8b5cf6',
                       transform: isEndMonthPickerOpen ? 'rotate(180deg)' : 'none',
                       transition: 'transform 0.2s'
                     }}
@@ -550,7 +700,7 @@ export default function InvestmentEventModal({
                       >
                         <ChevronLeft size={16} />
                       </button>
-                      <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#a855f7' }}>
+                      <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#8b5cf6' }}>
                         {endMonthPickerYear}
                       </span>
                       <button
@@ -592,7 +742,7 @@ export default function InvestmentEventModal({
                                 ? 'rgba(255,255,255,0.01)'
                                 : 'var(--bg-glass, rgba(255,255,255,0.03))',
                               color: isSelectedMonth
-                                ? '#a855f7'
+                                ? '#8b5cf6'
                                 : isPastThanStart
                                 ? 'var(--text-dim)'
                                 : 'var(--text-main)',
@@ -623,10 +773,10 @@ export default function InvestmentEventModal({
             )}
           </div>
 
-          {/* 5. Dia do Mês */}
+          {/* Dia do Mês */}
           <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-              {t('modal.dayOfMonth') || 'Dia de Depósito'}
+              {t('modal.dayOfMonth') || 'Dia de Aplicação / Vencimento'}
             </label>
             <div
               style={{
@@ -666,7 +816,7 @@ export default function InvestmentEventModal({
                 <span style={{ fontSize: '0.74rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                   {t('modal.selectDueDay') || 'Selecionar Dia'}
                 </span>
-                <span style={{ fontSize: '0.74rem', color: '#a855f7', fontWeight: '800' }}>
+                <span style={{ fontSize: '0.74rem', color: '#8b5cf6', fontWeight: '800' }}>
                   {format(parseISO(`${baseYearStr}-${baseMonthStr}-01`), 'MMMM yyyy', { locale: dateLocale })} ({totalDays} {(t('sidebar.day') || 'dia').toLowerCase()}s)
                 </span>
               </div>
@@ -688,7 +838,7 @@ export default function InvestmentEventModal({
                         borderRadius: '6px',
                         border: isSelected ? '2px solid #8b5cf6' : '1px solid var(--border-glass)',
                         background: isSelected ? 'rgba(139, 92, 246, 0.22)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                        color: isSelected ? '#a855f7' : 'var(--text-main)',
+                        color: isSelected ? '#8b5cf6' : 'var(--text-main)',
                         cursor: 'pointer',
                         transition: 'all 0.15s ease'
                       }}
@@ -701,7 +851,7 @@ export default function InvestmentEventModal({
             </div>
           )}
 
-          {/* 6. Status Elegante em Cards / Pills */}
+          {/* Status Elegante em Cards / Pills */}
           <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
               {t('modal.status') || 'Estado'}
@@ -717,17 +867,17 @@ export default function InvestmentEventModal({
                   gap: '8px',
                   padding: '10px 12px',
                   borderRadius: '8px',
-                  border: formData.status === EventStatus.PLANNED ? '2px solid #eab308' : '1px solid var(--border-glass)',
-                  background: formData.status === EventStatus.PLANNED ? 'rgba(234, 179, 8, 0.14)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                  color: formData.status === EventStatus.PLANNED ? '#facc15' : 'var(--text-muted)',
+                  border: (formData.status === EventStatus.PLANNED || formData.status === EventStatus.PENDING) ? '2px solid #eab308' : '1px solid var(--border-glass)',
+                  background: (formData.status === EventStatus.PLANNED || formData.status === EventStatus.PENDING) ? 'rgba(234, 179, 8, 0.14)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
+                  color: (formData.status === EventStatus.PLANNED || formData.status === EventStatus.PENDING) ? '#facc15' : 'var(--text-muted)',
                   cursor: 'pointer',
-                  fontWeight: formData.status === EventStatus.PLANNED ? '800' : '600',
+                  fontWeight: (formData.status === EventStatus.PLANNED || formData.status === EventStatus.PENDING) ? '800' : '600',
                   fontSize: '0.82rem',
                   transition: 'all 0.15s ease'
                 }}
               >
                 <Clock size={15} />
-                <span>{t('modal.statusPlanned') || 'Planeado'}</span>
+                <span>{t('modal.statusPlanned') || t('modal.statusPending') || 'Previsto'}</span>
               </button>
 
               <button
@@ -740,11 +890,11 @@ export default function InvestmentEventModal({
                   gap: '8px',
                   padding: '10px 12px',
                   borderRadius: '8px',
-                  border: formData.status === EventStatus.INVESTED ? '2px solid #8b5cf6' : '1px solid var(--border-glass)',
-                  background: formData.status === EventStatus.INVESTED ? 'rgba(139, 92, 246, 0.16)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                  color: formData.status === EventStatus.INVESTED ? '#a855f7' : 'var(--text-muted)',
+                  border: (formData.status === EventStatus.INVESTED || formData.status === EventStatus.PAID || formData.status === EventStatus.RECEIVED) ? '2px solid #8b5cf6' : '1px solid var(--border-glass)',
+                  background: (formData.status === EventStatus.INVESTED || formData.status === EventStatus.PAID || formData.status === EventStatus.RECEIVED) ? 'rgba(139, 92, 246, 0.16)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
+                  color: (formData.status === EventStatus.INVESTED || formData.status === EventStatus.PAID || formData.status === EventStatus.RECEIVED) ? '#8b5cf6' : 'var(--text-muted)',
                   cursor: 'pointer',
-                  fontWeight: formData.status === EventStatus.INVESTED ? '800' : '600',
+                  fontWeight: (formData.status === EventStatus.INVESTED || formData.status === EventStatus.PAID || formData.status === EventStatus.RECEIVED) ? '800' : '600',
                   fontSize: '0.82rem',
                   transition: 'all 0.15s ease'
                 }}
@@ -755,7 +905,7 @@ export default function InvestmentEventModal({
             </div>
           </div>
 
-          {/* 7. Switch Automático Moderno */}
+          {/* Switch Aplicação / Débito Automático Moderno */}
           <div
             style={{
               display: 'flex',
@@ -769,9 +919,9 @@ export default function InvestmentEventModal({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Zap size={16} style={{ color: formData.isAutomatic ? '#a855f7' : 'var(--text-dim)' }} />
+              <Zap size={16} style={{ color: formData.isAutomatic ? '#8b5cf6' : 'var(--text-dim)' }} />
               <span style={{ fontSize: '0.84rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                {t('modal.automatic') || 'Transferência Automática'}
+                {t('modal.automatic') || 'Aporte / Débito Automático'}
               </span>
             </div>
             <button
@@ -818,7 +968,7 @@ export default function InvestmentEventModal({
                   gap: '8px',
                   fontSize: '0.8rem',
                   fontWeight: '700',
-                  color: updateScope === 'subsequent' ? '#a855f7' : 'var(--text-dim)',
+                  color: updateScope === 'subsequent' ? '#8b5cf6' : 'var(--text-dim)',
                   cursor: 'pointer',
                   userSelect: 'none',
                   background: updateScope === 'subsequent' ? 'rgba(139, 92, 246, 0.14)' : 'rgba(255, 255, 255, 0.04)',
@@ -852,11 +1002,13 @@ export default function InvestmentEventModal({
               type="submit"
               className="btn btn-primary btn-sm"
               style={{
-                background: '#8b5cf6',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                 borderColor: '#8b5cf6',
+                boxShadow: '0 4px 14px rgba(139, 92, 246, 0.35)',
                 padding: '8px 20px',
                 borderRadius: '8px',
-                fontWeight: '800'
+                fontWeight: '800',
+                color: '#ffffff'
               }}
             >
               {initialData ? (t('modal.saveChanges') || 'Salvar Alterações') : (t('modal.addInvestment') || 'Adicionar Investimento')}

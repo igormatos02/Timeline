@@ -114,12 +114,44 @@ export class SupabaseFinancialEventRepository extends IRepository {
       isTerminated: Boolean(row.is_terminated),
 
       labels: Array.isArray(row.labels)
-        ? row.labels
+        ? row.labels.filter(l => typeof l !== 'string' || (!l.startsWith('meta:initial:') && !l.startsWith('meta:target:')))
         : [],
 
       breakdownItems: Array.isArray(row.breakdown_items)
-        ? row.breakdown_items
+        ? row.breakdown_items.filter(it => !it?._isFinancialMeta)
         : [],
+
+      initialInvestedAmount: (() => {
+        let val = 0;
+        if (Array.isArray(row.breakdown_items)) {
+          const meta = row.breakdown_items.find(it => it && it._isFinancialMeta);
+          if (meta && meta.initialInvestedAmount != null) val = Number(meta.initialInvestedAmount);
+        }
+        if (!val && Array.isArray(row.labels)) {
+          const l = row.labels.find(lbl => typeof lbl === 'string' && lbl.startsWith('meta:initial:'));
+          if (l) val = Number(l.replace('meta:initial:', '')) || 0;
+        }
+        if (!val && row.initial_invested_amount != null) {
+          val = Number(row.initial_invested_amount);
+        }
+        return val || 0;
+      })(),
+
+      targetAmount: (() => {
+        let val = 0;
+        if (Array.isArray(row.breakdown_items)) {
+          const meta = row.breakdown_items.find(it => it && it._isFinancialMeta);
+          if (meta && meta.targetAmount != null) val = Number(meta.targetAmount);
+        }
+        if (!val && Array.isArray(row.labels)) {
+          const l = row.labels.find(lbl => typeof lbl === 'string' && lbl.startsWith('meta:target:'));
+          if (l) val = Number(l.replace('meta:target:', '')) || 0;
+        }
+        if (!val && row.target_amount != null) {
+          val = Number(row.target_amount);
+        }
+        return val || 0;
+      })(),
 
       notes: row.notes || '',
 
@@ -357,15 +389,32 @@ export class SupabaseFinancialEventRepository extends IRepository {
           ? data.totalInstallments
           : null,
 
-      labels:
-        Array.isArray(data.labels)
-          ? data.labels
-          : [],
+      labels: (() => {
+        let labels = Array.isArray(data.labels) ? [...data.labels] : [];
+        labels = labels.filter(l => typeof l !== 'string' || (!l.startsWith('meta:initial:') && !l.startsWith('meta:target:')));
+        if (data.initialInvestedAmount != null && Number(data.initialInvestedAmount) > 0) {
+          labels.push(`meta:initial:${Number(data.initialInvestedAmount)}`);
+        }
+        if (data.targetAmount != null && Number(data.targetAmount) > 0) {
+          labels.push(`meta:target:${Number(data.targetAmount)}`);
+        }
+        return labels;
+      })(),
 
-      breakdown_items:
-        Array.isArray(data.breakdownItems)
-          ? data.breakdownItems
-          : [],
+      breakdown_items: (() => {
+        let items = Array.isArray(data.breakdownItems) ? [...data.breakdownItems] : [];
+        items = items.filter(it => !it?._isFinancialMeta);
+        const hasMeta = (data.initialInvestedAmount != null && Number(data.initialInvestedAmount) > 0) ||
+                        (data.targetAmount != null && Number(data.targetAmount) > 0);
+        if (hasMeta) {
+          items.push({
+            _isFinancialMeta: true,
+            initialInvestedAmount: Number(data.initialInvestedAmount) || 0,
+            targetAmount: Number(data.targetAmount) || 0
+          });
+        }
+        return items;
+      })(),
 
       notes: data.notes || '',
 
@@ -455,35 +504,39 @@ export class SupabaseFinancialEventRepository extends IRepository {
           : null;
     }
 
-    if (
-      data.name !== undefined ||
-      data.title !== undefined
-    ) {
-      row.name =
-        data.name !== undefined
-          ? data.name
-          : data.title;
+    if (data.name !== undefined) {
+      row.name = data.name;
+    }
+
+    if (data.title !== undefined) {
+      row.name = data.title;
     }
 
     if (data.description !== undefined) {
       row.description = data.description;
     }
 
-    if (data.eventType !== undefined) {
-      row.event_type = data.eventType;
-    }
-
     if (data.category !== undefined) {
       row.category = data.category;
     }
 
-    // ---------------------------------------------------------------
-    // ONLY TimelineEvent installment fields
-    // ---------------------------------------------------------------
+    if (
+      data.eventType !== undefined ||
+      data.event_type !== undefined
+    ) {
+      row.event_type =
+        data.eventType ||
+        data.event_type;
+    }
 
     if (data.installmentAmount !== undefined) {
       row.installment_amount =
         Number(data.installmentAmount) || 0;
+    }
+
+    if (data.amount !== undefined && row.installment_amount === undefined) {
+      row.installment_amount =
+        Number(data.amount) || 0;
     }
 
     if (data.installmentCapital !== undefined) {
@@ -507,8 +560,19 @@ export class SupabaseFinancialEventRepository extends IRepository {
           : null;
     }
 
+    if (data.amortizationAmount !== undefined) {
+      row.amortization_amount =
+        data.amortizationAmount !== null
+          ? Number(data.amortizationAmount)
+          : null;
+    }
+
     if (data.aggregation !== undefined) {
       row.aggregation = data.aggregation;
+    }
+
+    if (data.periodicity !== undefined && row.aggregation === undefined) {
+      row.aggregation = data.periodicity;
     }
 
     if (data.date !== undefined) {
@@ -545,18 +609,31 @@ export class SupabaseFinancialEventRepository extends IRepository {
         data.totalInstallments;
     }
 
-    if (data.labels !== undefined) {
-      row.labels =
-        Array.isArray(data.labels)
-          ? data.labels
-          : [];
+    if (data.labels !== undefined || data.initialInvestedAmount !== undefined || data.targetAmount !== undefined) {
+      let labels = Array.isArray(data.labels) ? [...data.labels] : [];
+      labels = labels.filter(l => typeof l !== 'string' || (!l.startsWith('meta:initial:') && !l.startsWith('meta:target:')));
+      if (data.initialInvestedAmount != null && Number(data.initialInvestedAmount) > 0) {
+        labels.push(`meta:initial:${Number(data.initialInvestedAmount)}`);
+      }
+      if (data.targetAmount != null && Number(data.targetAmount) > 0) {
+        labels.push(`meta:target:${Number(data.targetAmount)}`);
+      }
+      row.labels = labels;
     }
 
-    if (data.breakdownItems !== undefined) {
-      row.breakdown_items =
-        Array.isArray(data.breakdownItems)
-          ? data.breakdownItems
-          : [];
+    if (data.breakdownItems !== undefined || data.initialInvestedAmount !== undefined || data.targetAmount !== undefined) {
+      let items = Array.isArray(data.breakdownItems) ? [...data.breakdownItems] : [];
+      items = items.filter(it => !it?._isFinancialMeta);
+      const hasMeta = (data.initialInvestedAmount != null && Number(data.initialInvestedAmount) > 0) ||
+                      (data.targetAmount != null && Number(data.targetAmount) > 0);
+      if (hasMeta) {
+        items.push({
+          _isFinancialMeta: true,
+          initialInvestedAmount: Number(data.initialInvestedAmount) || 0,
+          targetAmount: Number(data.targetAmount) || 0
+        });
+      }
+      row.breakdown_items = items;
     }
 
     if (data.notes !== undefined) {

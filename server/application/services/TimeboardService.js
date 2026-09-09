@@ -1,4 +1,5 @@
 import { timeboardRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardRepository.js';
+import { timeboardMemberRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardMemberRepository.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
 import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
@@ -16,6 +17,54 @@ export class TimeboardService {
     }));
   }
 
+  async getTimeboardsForUser(userId) {
+    if (!userId) {
+      return {
+        myTimeboards: [],
+        sharedTimeboards: [],
+        all: []
+      };
+    }
+
+    const timelines = await timelineRepository.getAll();
+
+    // 1. My Timeboards: strictly filtered in Supabase query by owner_id = userId
+    const myRaw = await timeboardRepository.findByOwnerId(userId);
+    const myTimeboards = myRaw.map((tb) => ({
+      ...tb,
+      timelines: timelines.filter((tl) => tl.timeboardId === tb.id)
+    }));
+
+    // 2. Shared Timeboards: from timeboard_members where user_id = userId
+    const sharedRaw = await timeboardMemberRepository.getSharedTimeboardsForUser(userId);
+    const myIds = new Set(myTimeboards.map((t) => t.id));
+    const sharedTimeboards = sharedRaw
+      .filter((tb) => !myIds.has(tb.id))
+      .map((tb) => ({
+        ...tb,
+        isShared: true,
+        timelines: timelines.filter((tl) => tl.timeboardId === tb.id)
+      }));
+
+    return {
+      myTimeboards,
+      sharedTimeboards,
+      all: [...myTimeboards, ...sharedTimeboards]
+    };
+  }
+
+  async addMember(timeboardId, userId) {
+    return timeboardMemberRepository.addMember(timeboardId, userId);
+  }
+
+  async removeMember(timeboardId, userId) {
+    return timeboardMemberRepository.removeMember(timeboardId, userId);
+  }
+
+  async getMembers(timeboardId) {
+    return timeboardMemberRepository.getByTimeboardId(timeboardId);
+  }
+
   async getTimeboardById(id) {
     const timeboard = await timeboardRepository.getById(id);
     if (!timeboard) return null;
@@ -28,8 +77,11 @@ export class TimeboardService {
   }
 
   async createTimeboard(data) {
+    const ownerId = data.ownerId || data.owner_id || data.userId || data.user_id || null;
     const createdTimeboard = await timeboardRepository.create({
       ...data,
+      ownerId: ownerId,
+      owner_id: ownerId,
       type: data.type || TimeboardType.FINANCIAL
     });
 

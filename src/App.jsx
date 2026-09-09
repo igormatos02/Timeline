@@ -28,11 +28,22 @@ import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
 import { RotateCcw, X, Plus } from 'lucide-react';
+import LandingPage from './components/landing/LandingPage.jsx';
+import TimeboardsHub from './components/dashboard-hub/TimeboardsHub.jsx';
 import './App.css';
 
 export default function App() {
   const { showToast } = useToast();
-  const { t } = useTranslation();
+  const { language, setLanguage, t } = useTranslation();
+
+  // Authentication & View State
+  const [currentUser, setCurrentUser] = useState(() => api.getCurrentUser());
+  const [currentView, setCurrentView] = useState(() => {
+    const user = api.getCurrentUser();
+    if (!user) return 'landing';
+    const savedView = localStorage.getItem('chrono_current_view');
+    return savedView === 'workspace' ? 'workspace' : 'hub';
+  });
 
   // Timeboards State (Top Level Grouping)
   const [timeboards, setTimeboards] = useState(() => {
@@ -45,6 +56,9 @@ export default function App() {
     } catch (e) { }
     return [];
   });
+
+  const [myTimeboards, setMyTimeboards] = useState([]);
+  const [sharedTimeboards, setSharedTimeboards] = useState([]);
 
   const [activeTimeboardId, setActiveTimeboardId] = useState(() => {
     try {
@@ -89,20 +103,34 @@ export default function App() {
     return null;
   });
 
-  // Load latest data from Database on mount - Timeboards only for now
+  // Load latest data from Database on mount - Timeboards for current user
   useEffect(() => {
     let isMounted = true;
 
-    // 1. Load Timeboards from Database
-    api.fetchTimeboards()
+    api.fetchTimeboards(currentUser?.id)
       .then((data) => {
-        if (isMounted && Array.isArray(data) && data.length > 0) {
+        if (!isMounted) return;
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          const my = data.myTimeboards || [];
+          const shared = data.sharedTimeboards || [];
+          const all = data.all || [...my, ...shared];
+          setMyTimeboards(my);
+          setSharedTimeboards(shared);
+          setTimeboards(all);
+          setActiveTimeboardId((currentId) => {
+            const saved = localStorage.getItem('chrono_active_timeboard_id');
+            const targetId = saved || currentId;
+            const exists = all.some((tb) => tb.id === targetId);
+            return exists ? targetId : (all[0]?.id || null);
+          });
+        } else if (Array.isArray(data)) {
           setTimeboards(data);
+          setMyTimeboards(data);
           setActiveTimeboardId((currentId) => {
             const saved = localStorage.getItem('chrono_active_timeboard_id');
             const targetId = saved || currentId;
             const exists = data.some((tb) => tb.id === targetId);
-            return exists ? targetId : data[0].id;
+            return exists ? targetId : (data[0]?.id || null);
           });
         }
       })
@@ -111,7 +139,7 @@ export default function App() {
       });
 
     return () => { isMounted = false; };
-  }, []);
+  }, [currentUser?.id]);
 
   const [rawEvents, setRawEvents] = useState([]);
 
@@ -1463,18 +1491,28 @@ export default function App() {
       );
       api.updateTimeboard(editingTimeboard.id, updated).catch(console.error);
     } else {
+      const current = currentUser || api.getCurrentUser();
+      const currentUserId = current ? current.id : null;
+
       const newTb = {
         ...formData,
         id: generateUUID(),
-        tenantId: DEFAULT_TENANT.id
+        tenantId: DEFAULT_TENANT.id,
+        ownerId: currentUserId,
+        owner_id: currentUserId
       };
 
-      // Optimistic update of timeboard list
+      // Optimistic update of timeboard list and myTimeboards
       setTimeboards((prev) => [...prev, newTb]);
+      setMyTimeboards((prev) => [...prev, newTb]);
       setActiveTimeboardId(newTb.id);
 
       try {
         const createdTb = await api.createTimeboard(newTb);
+        if (createdTb && createdTb.id) {
+          setTimeboards((prev) => prev.map((tb) => (tb.id === newTb.id ? { ...tb, ...createdTb } : tb)));
+          setMyTimeboards((prev) => prev.map((tb) => (tb.id === newTb.id ? { ...tb, ...createdTb } : tb)));
+        }
         // Refresh timelines from backend to load newly created default timelines (Balance, Income, Expense, Investments)
         const updatedTimelines = await api.fetchTimelines({ timeboardId: newTb.id });
         if (Array.isArray(updatedTimelines) && updatedTimelines.length > 0) {
@@ -1521,6 +1559,95 @@ export default function App() {
     }
   };
 
+  const handleAuthSuccess = (user) => {
+    setCurrentUser(user);
+    setCurrentView('hub');
+    localStorage.setItem('chrono_current_view', 'hub');
+    showToast(`Bem-vindo, ${user.name}!`);
+  };
+
+  const handleLogout = () => {
+    api.logoutUser();
+    setCurrentUser(null);
+    setCurrentView('landing');
+    localStorage.removeItem('chrono_current_view');
+    showToast('Sessão terminada com sucesso.');
+  };
+
+  const handleSelectTimeboardFromHub = (tbId) => {
+    setActiveTimeboardId(tbId);
+    setActiveTimelineId(null);
+    setActiveFinancialTab(null);
+    setCurrentView('workspace');
+    localStorage.setItem('chrono_current_view', 'workspace');
+  };
+
+  const handleNavigateToHub = () => {
+    setCurrentView('hub');
+    localStorage.setItem('chrono_current_view', 'hub');
+  };
+
+  // 1. Landing Page View (When not logged in or explicitly at landing)
+  if (!currentUser || currentView === 'landing') {
+    return (
+      <LandingPage
+        onAuthSuccess={handleAuthSuccess}
+        t={t}
+      />
+    );
+  }
+
+  // 2. Dashboards / Timeboards Hub View (Second page when logged in)
+  if (currentView === 'hub') {
+    return (
+      <div className="app-container">
+        <TimeboardsHub
+          timeboards={timeboards}
+          myTimeboards={myTimeboards}
+          sharedTimeboards={sharedTimeboards}
+          currentUser={currentUser}
+          onSelectTimeboard={handleSelectTimeboardFromHub}
+          onOpenCreateTimeboard={() => {
+            setEditingTimeboard(null);
+            setIsTimeboardModalOpen(true);
+          }}
+          onOpenEditTimeboard={(tb) => {
+            setEditingTimeboard(tb);
+            setIsTimeboardSettingsModalOpen(true);
+          }}
+          onDeleteTimeboard={handleDeleteTimeboard}
+          onLogout={handleLogout}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+          language={language}
+          onToggleLanguage={() => setLanguage(language === 'pt' ? 'en' : 'pt')}
+          t={t}
+        />
+
+        {/* Global Modals for Timeboard management */}
+        <CreateTimeboardModal
+          isOpen={isTimeboardModalOpen}
+          onClose={() => setIsTimeboardModalOpen(false)}
+          onSave={handleSaveTimeboard}
+          onDelete={handleDeleteTimeboard}
+          initialData={null}
+        />
+
+        <TimeboardSettingsModal
+          isOpen={isTimeboardSettingsModalOpen}
+          onClose={() => {
+            setIsTimeboardSettingsModalOpen(false);
+            setEditingTimeboard(null);
+          }}
+          timeboard={editingTimeboard}
+          onSaveTimeboard={handleSaveTimeboard}
+          onDeleteTimeboard={handleDeleteTimeboard}
+        />
+      </div>
+    );
+  }
+
+  // 3. Timeline Workspace View (When a specific timeboard is active)
   return (
     <div className="app-container">
       {/* Navbar */}
@@ -1543,6 +1670,8 @@ export default function App() {
         onScrollToToday={handleScrollToToday}
         theme={theme}
         onToggleTheme={handleToggleTheme}
+        onNavigateToHub={handleNavigateToHub}
+        onLogout={handleLogout}
       />
 
       {/* Main Layout Area */}

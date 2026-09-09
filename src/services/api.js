@@ -21,6 +21,12 @@ export function getActiveTenantId() {
   return localStorage.getItem('chrono_active_tenant_id') || DEFAULT_TENANT.id;
 }
 
+export function isUserLoggedIn() {
+  const token = localStorage.getItem('chrono_auth_token');
+  const user = localStorage.getItem('chrono_active_user');
+  return Boolean(token || user);
+}
+
 export function getCurrentUser() {
   const customUser = localStorage.getItem('chrono_active_user');
   if (customUser) {
@@ -28,7 +34,145 @@ export function getCurrentUser() {
       return JSON.parse(customUser);
     } catch { }
   }
-  return DEFAULT_USER;
+  return isUserLoggedIn() ? DEFAULT_USER : null;
+}
+
+export function setCurrentUser(user) {
+  if (!user) {
+    localStorage.removeItem('chrono_active_user');
+    localStorage.removeItem('chrono_auth_token');
+    return;
+  }
+  localStorage.setItem('chrono_active_user', JSON.stringify(user));
+  localStorage.setItem('chrono_auth_token', `token_${Date.now()}`);
+}
+
+export async function loginWithEmail(email, password) {
+  if (!email || !password) {
+    throw new Error('Email e palavra-passe são obrigatórios.');
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Falha ao iniciar sessão.');
+    }
+
+    const name = data.name || email.split('@')[0];
+    const initials = name.substring(0, 2).toUpperCase();
+
+    const user = {
+      id: data.id,
+      name: name,
+      email: data.email || email,
+      avatarInitials: initials,
+      avatarUrl: data.avatarUrl || null,
+      googleId: data.googleId || null,
+      role: 'Administrador',
+      tenantId: DEFAULT_TENANT.id,
+      tenantName: DEFAULT_TENANT.name
+    };
+
+    setCurrentUser(user);
+    return user;
+  } catch (err) {
+    console.error('[api.loginWithEmail] Error:', err);
+    throw err;
+  }
+}
+
+export async function registerWithEmail(name, email, password) {
+  if (!email || !password) {
+    throw new Error('Email e palavra-passe são obrigatórios.');
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ name, email, password })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Falha ao criar conta.');
+    }
+
+    const userName = data.name || name || email.split('@')[0];
+    const initials = userName.substring(0, 2).toUpperCase();
+
+    const user = {
+      id: data.id,
+      name: userName,
+      email: data.email || email,
+      avatarInitials: initials,
+      avatarUrl: data.avatarUrl || null,
+      googleId: null,
+      role: 'Administrador',
+      tenantId: DEFAULT_TENANT.id,
+      tenantName: DEFAULT_TENANT.name
+    };
+
+    setCurrentUser(user);
+    return user;
+  } catch (err) {
+    console.error('[api.registerWithEmail] Error:', err);
+    throw err;
+  }
+}
+
+export async function loginWithGoogle(customGoogleData = null) {
+  const googlePayload = customGoogleData || {
+    googleId: `google_${Date.now()}`,
+    name: 'Igor Matos',
+    email: 'igor.matos@timeline.app',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/google`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(googlePayload)
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Falha ao autenticar com Google.');
+    }
+
+    const userName = data.name || googlePayload.name;
+    const initials = userName.substring(0, 2).toUpperCase();
+
+    const user = {
+      id: data.id,
+      name: userName,
+      email: data.email || googlePayload.email,
+      avatarInitials: initials,
+      avatarUrl: data.avatarUrl || googlePayload.avatarUrl,
+      googleId: data.googleId || googlePayload.googleId,
+      role: 'Administrador',
+      tenantId: DEFAULT_TENANT.id,
+      tenantName: DEFAULT_TENANT.name
+    };
+
+    setCurrentUser(user);
+    return user;
+  } catch (err) {
+    console.error('[api.loginWithGoogle] Error:', err);
+    throw err;
+  }
+}
+
+export function logoutUser() {
+  localStorage.removeItem('chrono_active_user');
+  localStorage.removeItem('chrono_auth_token');
 }
 
 function getHeaders(custom = {}) {
@@ -40,8 +184,14 @@ function getHeaders(custom = {}) {
 }
 
 // Timeboards
-export async function fetchTimeboards() {
-  const res = await fetch(`${API_BASE}/timeboards`, {
+export async function fetchTimeboards(userId = null) {
+  const current = getCurrentUser();
+  const targetUserId = userId || (current ? current.id : null);
+  const url = targetUserId
+    ? `${API_BASE}/timeboards?userId=${encodeURIComponent(targetUserId)}`
+    : `${API_BASE}/timeboards`;
+
+  const res = await fetch(url, {
     headers: getHeaders()
   });
   if (!res.ok) throw new Error(`Failed to fetch timeboards: ${res.statusText}`);
@@ -49,11 +199,13 @@ export async function fetchTimeboards() {
 }
 
 export async function createTimeboard(timeboardData) {
+  const current = getCurrentUser();
   const res = await fetch(`${API_BASE}/timeboards`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({
       tenantId: getActiveTenantId(),
+      ownerId: current ? current.id : null,
       ...timeboardData
     })
   });
@@ -77,6 +229,35 @@ export async function deleteTimeboard(id) {
     headers: getHeaders()
   });
   if (!res.ok) throw new Error('Failed to delete timeboard');
+  return res.json();
+}
+
+// Timeboard Members (Shared Dashboards)
+export async function fetchTimeboardMembers(timeboardId) {
+  if (!timeboardId) return [];
+  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/members`, {
+    headers: getHeaders()
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function addTimeboardMember(timeboardId, memberUserId) {
+  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/members`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ userId: memberUserId })
+  });
+  if (!res.ok) throw new Error('Failed to add member to timeboard');
+  return res.json();
+}
+
+export async function removeTimeboardMember(timeboardId, memberUserId) {
+  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/members/${memberUserId}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to remove member from timeboard');
   return res.json();
 }
 

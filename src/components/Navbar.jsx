@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Plus, LayoutGrid, Sparkles, Sun, Moon, LocateFixed, User, Shield, Settings, ChevronDown } from 'lucide-react';
+import { Clock, Plus, LayoutGrid, Sparkles, Sun, Moon, LocateFixed, User, Shield, Settings, ChevronDown, LogOut } from 'lucide-react';
 import { getCurrentUser } from '../services/api';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
@@ -11,9 +11,15 @@ export default function Navbar({
   onOpenEditTimeboard,
   onScrollToToday,
   theme,
-  onToggleTheme
+  onToggleTheme,
+  onNavigateToHub,
+  onLogout
 }) {
-  const currentUser = getCurrentUser();
+  const currentUser = getCurrentUser() || {
+    name: 'Igor Matos',
+    avatarInitials: 'IM',
+    tenantName: 'Espaço Pessoal'
+  };
   const { language, setLanguage, t } = useTranslation();
 
   const activeTimeboard = timeboards.find((tb) => tb.id === activeTimeboardId);
@@ -22,7 +28,12 @@ export default function Navbar({
     <header className="app-header">
       <div className="header-content">
         {/* Brand Logo */}
-        <div className="brand-logo">
+        <div
+          className="brand-logo"
+          onClick={onNavigateToHub}
+          style={{ cursor: onNavigateToHub ? 'pointer' : 'default' }}
+          title={onNavigateToHub ? 'Voltar à Lista de Dashboards' : undefined}
+        >
           <div className="logo-icon">
             <Clock size={22} />
           </div>
@@ -30,7 +41,6 @@ export default function Navbar({
             <div className="brand-title">
               Timeboard <Sparkles size={16} style={{ color: '#818cf8' }} />
             </div>
-            <div className="brand-subtitle">{t('header.brandSubtitle')}</div>
           </div>
         </div>
 
@@ -202,6 +212,25 @@ export default function Navbar({
               </span>
             </div>
           </div>
+
+          {/* Logout Action Button */}
+          {onLogout && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={onLogout}
+              style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                borderColor: 'rgba(239, 68, 68, 0.3)',
+                color: '#f87171',
+                padding: '6px 10px',
+                borderRadius: '8px'
+              }}
+              title="Terminar Sessão (Logout)"
+            >
+              <LogOut size={14} />
+            </button>
+          )}
         </div>
       </div>
     </header>

@@ -274,7 +274,7 @@ export class SupabaseFinancialEventRepository extends IRepository {
         ? data.tenantId
         : data.tenant_id && uuidRegex.test(data.tenant_id)
           ? data.tenant_id
-          : null;
+          : '9e3c3070-d4db-43be-ab03-3f852a9a81da';
 
     const effectiveTimeboardId =
       data.timeboardId && uuidRegex.test(data.timeboardId)
@@ -533,12 +533,13 @@ export class SupabaseFinancialEventRepository extends IRepository {
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-    if (data.tenantId !== undefined) {
+    if (data.tenantId !== undefined || data.tenant_id !== undefined) {
+      const rawTenant = data.tenantId || data.tenant_id;
       row.tenant_id =
-        data.tenantId &&
-          uuidRegex.test(data.tenantId)
-          ? data.tenantId
-          : null;
+        rawTenant &&
+          uuidRegex.test(rawTenant)
+          ? rawTenant
+          : '9e3c3070-d4db-43be-ab03-3f852a9a81da';
     }
 
     if (data.timeboardId !== undefined) {

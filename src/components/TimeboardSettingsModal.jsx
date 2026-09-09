@@ -340,43 +340,37 @@ export default function TimeboardSettingsModal({
     }
   };
 
-  // Compute Owner and include in persons list as fixed Administrator Member
+  // Compute Owner and include as a dedicated, fixed 'Proprietário' entry at the top of the list
   const ownerId = timeboard?.ownerId || timeboard?.owner_id || timeboard?.userId || timeboard?.user_id;
   const currentUser = api.getCurrentUser();
-  const isCurrentOwner = !ownerId || (currentUser && currentUser.id === ownerId);
-  const ownerName = timeboard?.ownerName || timeboard?.owner_name || (isCurrentOwner ? (currentUser?.name || currentUser?.email?.split('@')[0]) : null) || 'Proprietário';
-  const ownerEmail = timeboard?.ownerEmail || timeboard?.owner_email || (isCurrentOwner ? currentUser?.email : null);
+  const isCurrentOwner = !ownerId || (currentUser && (currentUser.id === ownerId || currentUser.email === timeboard?.ownerEmail));
+  const ownerName = timeboard?.ownerName || timeboard?.owner_name || (isCurrentOwner ? (currentUser?.name || currentUser?.email?.split('@')[0]) : null) || 'Igor Matos';
+  const ownerEmail = timeboard?.ownerEmail || timeboard?.owner_email || (isCurrentOwner ? currentUser?.email : null) || 'igor.matos@timeline.app';
 
-  const ownerInPersonsIndex = persons.findIndex(
-    (p) => (ownerId && (p.userId === ownerId || p.user_id === ownerId)) || p.isOwner
-  );
+  const ownerPerson = {
+    id: `owner-${ownerId || 'main'}`,
+    name: ownerName,
+    email: ownerEmail,
+    type: PersonType.MEMBER,
+    role: 'OWNER',
+    userId: ownerId || currentUser?.id,
+    isOwner: true
+  };
 
-  let fullPersonsList = [];
-  if (ownerInPersonsIndex >= 0) {
-    fullPersonsList = persons.map((p, idx) =>
-      idx === ownerInPersonsIndex
-        ? {
-            ...p,
-            type: PersonType.MEMBER,
-            role: PersonRole.ADMIN,
-            isOwner: true
-          }
-        : p
-    );
-  } else if (ownerId || currentUser) {
-    const ownerPerson = {
-      id: `owner-${ownerId || currentUser?.id || 'main'}`,
-      name: ownerName,
-      email: ownerEmail,
-      type: PersonType.MEMBER,
-      role: PersonRole.ADMIN,
-      userId: ownerId || currentUser?.id,
-      isOwner: true
-    };
-    fullPersonsList = [ownerPerson, ...persons];
-  } else {
-    fullPersonsList = [...persons];
-  }
+  // Regular persons from database are always editable members/entities
+  const regularPersons = persons
+    .filter((p) => {
+      const pEmail = p.email ? p.email.toLowerCase().trim() : null;
+      const oEmail = ownerEmail ? ownerEmail.toLowerCase().trim() : null;
+      if (pEmail && oEmail && pEmail === oEmail) return false;
+      return true;
+    })
+    .map((p) => ({
+      ...p,
+      isOwner: false
+    }));
+
+  const fullPersonsList = [ownerPerson, ...regularPersons];
 
   // Filter counts & Metrics based on fullPersonsList
   const countAll = fullPersonsList.length;
@@ -1046,7 +1040,9 @@ export default function TimeboardSettingsModal({
                               {/* Name with Type Icon in front + Status Indicator */}
                               <td style={{ padding: '12px 16px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                  {isOrg ? (
+                                  {p.isOwner ? (
+                                    <Crown size={16} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                                  ) : isOrg ? (
                                     <Building2 size={16} style={{ color: '#3b82f6', flexShrink: 0 }} />
                                   ) : isMember ? (
                                     <UserCheck size={16} style={{ color: '#8b5cf6', flexShrink: 0 }} />
@@ -1078,9 +1074,10 @@ export default function TimeboardSettingsModal({
                               {/* Role */}
                               <td style={{ padding: '12px 16px' }}>
                                 {p.isOwner ? (
-                                  <span style={{ color: 'var(--text-main)', fontSize: '0.84rem', fontWeight: '600' }}>
-                                    {t('timeboardSettings.entities.roles.admin') || 'Administrador'}
-                                  </span>
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#f59e0b', fontWeight: '600', fontSize: '0.84rem' }}>
+                                    <Crown size={14} />
+                                    <span>{t('timeboardSettings.entities.roles.owner') || 'Proprietário'}</span>
+                                  </div>
                                 ) : isMember ? (
                                   <CustomRoleDropdown
                                     currentRole={p.role || PersonRole.CONTRIBUTOR}
@@ -1095,8 +1092,8 @@ export default function TimeboardSettingsModal({
                               {/* Action Buttons */}
                               <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                                 {p.isOwner ? (
-                                  <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontWeight: '500' }}>
-                                    Proprietário
+                                  <span style={{ color: 'var(--text-muted)', fontSize: '0.84rem' }}>
+                                    —
                                   </span>
                                 ) : (
                                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>

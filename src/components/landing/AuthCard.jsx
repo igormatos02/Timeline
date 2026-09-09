@@ -37,7 +37,10 @@ export default function AuthCard({ onAuthSuccess, initialEmail = '', pendingInvi
     setIsLoading(true);
     setErrorMsg('');
     try {
-      await api.loginWithGoogle(pendingInvite);
+      const user = await api.loginWithGoogle(pendingInvite);
+      if (user && onAuthSuccess) {
+        onAuthSuccess(user);
+      }
     } catch (err) {
       setErrorMsg(err.message || 'Falha ao autenticar com a Google.');
       setIsLoading(false);

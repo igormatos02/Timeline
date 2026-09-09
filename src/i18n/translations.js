@@ -396,6 +396,7 @@ export const translations = {
           actions: "Actions"
         },
         roles: {
+          owner: "Owner",
           admin: "Administrator",
           contributor: "Contributor"
         },
@@ -1043,6 +1044,7 @@ export const translations = {
           actions: "Ações"
         },
         roles: {
+          owner: "Proprietário",
           admin: "Administrador",
           contributor: "Colaborador"
         },

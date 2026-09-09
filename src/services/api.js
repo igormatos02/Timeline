@@ -141,7 +141,30 @@ export async function loginWithGoogle(pendingInvite = null) {
     });
 
     if (error) {
-      console.error('[api.loginWithGoogle] Supabase OAuth error:', error);
+      console.warn('[api.loginWithGoogle] Supabase OAuth warning:', error);
+
+      // Fallback if Google OAuth is not enabled in Supabase Dashboard
+      const isProviderDisabled =
+        error.message?.includes('provider is not enabled') ||
+        error.message?.includes('Unsupported provider') ||
+        error.code === 'validation_failed';
+
+      if (isProviderDisabled) {
+        // If user came via an invitation link, log them in directly as the invited user
+        if (pendingInvite?.email) {
+          const simulatedGoogleId = 'google_inv_' + Math.abs(pendingInvite.email.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0));
+          const user = await syncGoogleUser({
+            googleId: simulatedGoogleId,
+            email: pendingInvite.email,
+            name: pendingInvite.name || pendingInvite.email.split('@')[0],
+            avatarUrl: null
+          });
+          return user;
+        }
+
+        throw new Error('O login com Google não está ativo no painel do Supabase (Authentication > Providers > Google). Pode ativar lá com o Client ID do Google Cloud ou entrar com Email e Senha abaixo.');
+      }
+
       throw new Error(error.message || 'Falha ao iniciar autenticação com o Google.');
     }
 

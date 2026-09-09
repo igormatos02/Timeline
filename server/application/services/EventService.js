@@ -32,8 +32,8 @@ export class EventService {
     return service.updateEvent(id, updates);
   }
 
-  async toggleEventPayment(id) {
-    return financialEventService.toggleEventPayment(id);
+  async toggleEventPayment(id, explicitStatus = null) {
+    return financialEventService.toggleEventPayment(id, explicitStatus);
   }
 
   async deleteEvent(id, options = {}) {

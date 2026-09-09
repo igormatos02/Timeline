@@ -18,6 +18,7 @@ import {
   EventAggregation,
   TimelineType,
   isPositiveStatus,
+  isCancelledStatus,
   AmortizationEventCategory,
   AmortizationStrategy
 } from '../enums/index.js';
@@ -509,6 +510,7 @@ function applyAmortizationsInMemory(
       isLoanInstallment(ev) &&
       isEventForTimeline(ev, timeline) &&
       !isPositiveStatus(ev.status) &&
+      !isCancelledStatus(ev.status) &&
       !isAbated(ev);
 
     if (isReduceInstallment) {
@@ -1049,9 +1051,12 @@ export function getLoanMetrics(
   let nextInstallment = null;
 
   for (const ev of timelineEvents) {
+    if (!ev || ev.isDeleted) continue;
+    const isCancelled = isCancelledStatus(ev.status);
+
     // Extraordinary amortization events
     if (isAmortizationEvent(ev)) {
-      if (isPositiveStatus(ev.status) || ev.isCompleted) {
+      if (!isCancelled && (isPositiveStatus(ev.status) || ev.isCompleted)) {
         const amortVal = Number(
           ev.amortizationAmount ??
           ev.installmentAmount ??
@@ -1067,6 +1072,10 @@ export function getLoanMetrics(
     }
 
     if (!isLoanInstallment(ev)) {
+      continue;
+    }
+
+    if (isCancelled) {
       continue;
     }
 
@@ -1134,7 +1143,8 @@ export function getLoanMetrics(
                 if (
                   !isLoanInstallment(ev) ||
                   isAbated(ev) ||
-                  isPositiveStatus(ev.status)
+                  isPositiveStatus(ev.status) ||
+                  isCancelledStatus(ev.status)
                 ) {
                   return acc;
                 }

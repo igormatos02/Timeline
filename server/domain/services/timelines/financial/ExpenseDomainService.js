@@ -11,6 +11,7 @@ export class ExpenseDomainService {
   filterEvents(events = [], timelineId = null) {
     return events.filter((ev) => {
       if (!ev || ev.isDeleted) return false;
+      if (ev.status === EventStatus.CANCELLED || ev.status === 'cancelled' || ev.status === 'cancelado') return false;
       if (timelineId && ev.timelineId === timelineId) return true;
       if (ev.eventType === EventType.AMORTIZATION) return false;
 
@@ -26,16 +27,17 @@ export class ExpenseDomainService {
   calculateMetrics(expenseEvents = [], currentMonthKey = null) {
     const activeMonth = currentMonthKey || new Date().toISOString().substring(0, 7);
 
-    const monthlyTotal = expenseEvents
-      .filter((ev) => ev.date && ev.date.startsWith(activeMonth) && !ev.isDeleted)
+    const validEvents = expenseEvents.filter((ev) => !ev.isDeleted && ev.status !== EventStatus.CANCELLED && ev.status !== 'cancelled' && ev.status !== 'cancelado');
+
+    const monthlyTotal = validEvents
+      .filter((ev) => ev.date && ev.date.startsWith(activeMonth))
       .reduce((sum, ev) => sum + (Number(ev.amount) || 0), 0);
 
-    const paidTotal = expenseEvents
+    const paidTotal = validEvents
       .filter(
         (ev) =>
           ev.date &&
           ev.date.startsWith(activeMonth) &&
-          !ev.isDeleted &&
           (ev.status === EventStatus.PAID)
       )
       .reduce((sum, ev) => sum + (Number(ev.amount) || 0), 0);

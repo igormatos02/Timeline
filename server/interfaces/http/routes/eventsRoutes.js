@@ -36,7 +36,7 @@ eventsRouter.put('/:id', async (req, res) => {
 // POST /api/events/:id/toggle-payment
 eventsRouter.post('/:id/toggle-payment', async (req, res) => {
   try {
-    const updated = await eventService.toggleEventPayment(req.params.id);
+    const updated = await eventService.toggleEventPayment(req.params.id, req.body?.status);
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: err.message });

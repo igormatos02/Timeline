@@ -245,35 +245,58 @@ export class TimelineEvent {
   }
 }
 
-export function calcToggledStatus(event) {
-  const isAmortization = event.eventType === EventType.AMORTIZATION || (typeof event.isAmortizationEvent === 'function' && event.isAmortizationEvent());
-  if (isAmortization) {
-    const isCurrentlyAmortized =
-      event.status === EventStatus.AMORTIZED || event.status === EventStatus.COMPLETED || Boolean(event.isCompleted);
+export function calcToggledStatus(event, explicitStatus = null) {
+  if (explicitStatus) {
     return {
-      status: isCurrentlyAmortized ? EventStatus.PENDING : EventStatus.AMORTIZED,
-      isCompleted: !isCurrentlyAmortized
+      status: explicitStatus,
+      isCompleted: isPositiveStatus(explicitStatus)
     };
   }
 
+  const isAmortization = event.eventType === EventType.AMORTIZATION || (typeof event.isAmortizationEvent === 'function' && event.isAmortizationEvent());
   const isInvestment = event.eventType === EventType.INVESTMENT;
   const isIncome = event.eventType === EventType.INCOME;
 
-  const isCompletedNow =
-    event.status === EventStatus.PAID ||
-    event.status === EventStatus.RECEIVED ||
-    event.status === EventStatus.INVESTED ||
-    event.status === EventStatus.COMPLETED ||
+  const currentStatus = String(event.status || '').toLowerCase();
+
+  const isPositive =
+    isPositiveStatus(currentStatus) ||
+    currentStatus === EventStatus.PAID ||
+    currentStatus === EventStatus.RECEIVED ||
+    currentStatus === EventStatus.INVESTED ||
+    currentStatus === EventStatus.AMORTIZED ||
+    currentStatus === EventStatus.COMPLETED ||
     Boolean(event.isCompleted);
 
-  const willBeCompleted = !isCompletedNow;
+  const isCancelled =
+    currentStatus === EventStatus.CANCELLED ||
+    currentStatus === 'cancelled' ||
+    currentStatus === 'cancelado';
 
-  const newStatus = willBeCompleted
-    ? (isIncome ? EventStatus.RECEIVED : (isInvestment ? EventStatus.INVESTED : EventStatus.PAID))
-    : (isInvestment ? EventStatus.PLANNED : EventStatus.PENDING);
+  // 3-state cycle:
+  // 1. Negative (pending/planned) -> 2. Positive (paid/received/invested/amortized) -> 3. Cancelled (cancelled) -> 1. Negative
+  if (isCancelled) {
+    const nextNeg = isInvestment ? EventStatus.PLANNED : EventStatus.PENDING;
+    return {
+      status: nextNeg,
+      isCompleted: false
+    };
+  }
+
+  if (isPositive) {
+    return {
+      status: EventStatus.CANCELLED,
+      isCompleted: false
+    };
+  }
+
+  let positiveStatus = EventStatus.PAID;
+  if (isIncome) positiveStatus = EventStatus.RECEIVED;
+  else if (isInvestment) positiveStatus = EventStatus.INVESTED;
+  else if (isAmortization) positiveStatus = EventStatus.AMORTIZED;
 
   return {
-    status: newStatus,
-    isCompleted: willBeCompleted
+    status: positiveStatus,
+    isCompleted: true
   };
 }

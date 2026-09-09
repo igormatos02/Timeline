@@ -1306,35 +1306,57 @@ export default function App() {
   // Loan Specific Handlers (Empréstimo)
   // ----------------------------------------------------
 
-  // Toggle installment payment / income / expense / investment status
-  const handleToggleLoanPayment = async (installmentId) => {
+  // Toggle installment payment / income / expense / investment status (3-state: Negative -> Positive -> Cancelled -> Negative)
+  const handleToggleLoanPayment = async (installmentId, explicitStatus = null) => {
     if (!installmentId) return;
 
     const clickTimeStr = format(new Date(), 'HH:mm');
+
+    const getNextState = (ev) => {
+      if (explicitStatus) {
+        return {
+          nextStatus: explicitStatus,
+          nextCompleted: isPositiveStatus(explicitStatus)
+        };
+      }
+
+      const isIncome = ev.eventType === EventType.INCOME;
+      const isInvestment = ev.eventType === EventType.INVESTMENT;
+      const isAmortization = ev.eventType === EventType.AMORTIZATION;
+
+      const isCurrCancelled = ev.status === EventStatus.CANCELLED || ev.status === 'cancelled' || ev.status === 'cancelado';
+      const isCurrPositive = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
+
+      if (isCurrCancelled) {
+        return {
+          nextStatus: isInvestment ? EventStatus.PLANNED : EventStatus.PENDING,
+          nextCompleted: false
+        };
+      }
+
+      if (isCurrPositive) {
+        return {
+          nextStatus: EventStatus.CANCELLED,
+          nextCompleted: false
+        };
+      }
+
+      let positiveStatus = EventStatus.PAID;
+      if (isIncome) positiveStatus = EventStatus.RECEIVED;
+      else if (isInvestment) positiveStatus = EventStatus.INVESTED;
+      else if (isAmortization) positiveStatus = EventStatus.AMORTIZED;
+
+      return {
+        nextStatus: positiveStatus,
+        nextCompleted: true
+      };
+    };
 
     // 1. Optimistic update in rawEvents
     setRawEvents((prevEvents) =>
       prevEvents.map((ev) => {
         if (ev.id !== installmentId) return ev;
-
-        const isIncome = ev.eventType === EventType.INCOME;
-        const isInvestment = ev.eventType === EventType.INVESTMENT;
-
-        let nextStatus, nextCompleted;
-        if (isIncome) {
-          const isCurrReceived = ev.status === EventStatus.RECEIVED || Boolean(ev.isCompleted);
-          nextStatus = isCurrReceived ? EventStatus.PENDING : EventStatus.RECEIVED;
-          nextCompleted = !isCurrReceived;
-        } else if (isInvestment) {
-          const isCurrInvested = ev.status === EventStatus.INVESTED || ev.status === EventStatus.PAID || Boolean(ev.isCompleted);
-          nextStatus = isCurrInvested ? EventStatus.PLANNED : EventStatus.INVESTED;
-          nextCompleted = !isCurrInvested;
-        } else {
-          const isCurrPaid = ev.status === EventStatus.PAID || Boolean(ev.isCompleted);
-          nextStatus = isCurrPaid ? EventStatus.PENDING : EventStatus.PAID;
-          nextCompleted = !isCurrPaid;
-        }
-
+        const { nextStatus, nextCompleted } = getNextState(ev);
         return {
           ...ev,
           status: nextStatus,
@@ -1352,25 +1374,7 @@ export default function App() {
 
         const updatedEvents = (tl.events || []).map((ev) => {
           if (ev.id !== installmentId) return ev;
-
-          const isIncome = ev.eventType === EventType.INCOME;
-          const isInvestment = ev.eventType === EventType.INVESTMENT;
-
-          let nextStatus, nextCompleted;
-          if (isIncome) {
-            const isCurrReceived = ev.status === EventStatus.RECEIVED || Boolean(ev.isCompleted);
-            nextStatus = isCurrReceived ? EventStatus.PENDING : EventStatus.RECEIVED;
-            nextCompleted = !isCurrReceived;
-          } else if (isInvestment) {
-            const isCurrInvested = ev.status === EventStatus.INVESTED || ev.status === EventStatus.PAID || Boolean(ev.isCompleted);
-            nextStatus = isCurrInvested ? EventStatus.PLANNED : EventStatus.INVESTED;
-            nextCompleted = !isCurrInvested;
-          } else {
-            const isCurrPaid = ev.status === EventStatus.PAID || Boolean(ev.isCompleted);
-            nextStatus = isCurrPaid ? EventStatus.PENDING : EventStatus.PAID;
-            nextCompleted = !isCurrPaid;
-          }
-
+          const { nextStatus, nextCompleted } = getNextState(ev);
           return {
             ...ev,
             status: nextStatus,
@@ -1388,7 +1392,7 @@ export default function App() {
     });
 
     try {
-      await api.toggleEventPayment(installmentId);
+      await api.toggleEventPayment(installmentId, explicitStatus);
       await refreshTimelines();
     } catch (err) {
       console.error('Error toggling payment status:', err);

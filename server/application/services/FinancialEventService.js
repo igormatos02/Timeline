@@ -17,6 +17,8 @@ export class FinancialEventService {
 
     if (status === EventStatus.DELETED || status === 'deleted') {
       await financialEventStatusRepository.upsertStatus(year, month, eventId, EventStatus.DELETED, options);
+    } else if (status === EventStatus.CANCELLED || status === 'cancelled' || status === 'Cancelado') {
+      await financialEventStatusRepository.upsertStatus(year, month, eventId, EventStatus.CANCELLED, options);
     } else if (isPositiveStatus(status)) {
       await financialEventStatusRepository.upsertStatus(year, month, eventId, status, options);
     } else if (isNegativeStatus(status)) {
@@ -433,7 +435,7 @@ export class FinancialEventService {
     return eventRepository.create(singleOverridePayload);
   }
 
-  async toggleEventPayment(id) {
+  async toggleEventPayment(id, explicitStatus = null) {
     const allEvents = await this.getAllEvents();
     const targetEvent = allEvents.find((e) => e.id === id || e.eventId === id || e.sobrepositionOver === id);
 
@@ -441,7 +443,7 @@ export class FinancialEventService {
       throw new Error(`Event not found: ${id}`);
     }
 
-    const toggled = calcToggledStatus(targetEvent);
+    const toggled = calcToggledStatus(targetEvent, explicitStatus);
     const targetEventId = targetEvent.eventId || targetEvent.id;
     const targetDate = targetEvent.date;
 

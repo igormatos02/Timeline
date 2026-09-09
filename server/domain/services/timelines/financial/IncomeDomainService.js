@@ -11,6 +11,7 @@ export class IncomeDomainService {
   filterEvents(events = [], timelineId = null) {
     return events.filter((ev) => {
       if (!ev || ev.isDeleted) return false;
+      if (ev.status === EventStatus.CANCELLED || ev.status === 'cancelled' || ev.status === 'cancelado') return false;
       if (timelineId && ev.timelineId === timelineId) return true;
       return (
         ev.eventType === EventType.INCOME
@@ -24,16 +25,17 @@ export class IncomeDomainService {
   calculateMetrics(incomeEvents = [], currentMonthKey = null) {
     const activeMonth = currentMonthKey || new Date().toISOString().substring(0, 7);
 
-    const monthlyTotal = incomeEvents
-      .filter((ev) => ev.date && ev.date.startsWith(activeMonth) && !ev.isDeleted)
+    const validEvents = incomeEvents.filter((ev) => !ev.isDeleted && ev.status !== EventStatus.CANCELLED && ev.status !== 'cancelled' && ev.status !== 'cancelado');
+
+    const monthlyTotal = validEvents
+      .filter((ev) => ev.date && ev.date.startsWith(activeMonth))
       .reduce((sum, ev) => sum + (Number(ev.amount) || 0), 0);
 
-    const receivedTotal = incomeEvents
+    const receivedTotal = validEvents
       .filter(
         (ev) =>
           ev.date &&
           ev.date.startsWith(activeMonth) &&
-          !ev.isDeleted &&
           (ev.status === EventStatus.RECEIVED)
       )
       .reduce((sum, ev) => sum + (Number(ev.amount) || 0), 0);

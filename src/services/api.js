@@ -615,10 +615,11 @@ export async function updateEvent(id, updates) {
   return res.json();
 }
 
-export async function toggleEventPayment(id) {
+export async function toggleEventPayment(id, status = null) {
   const res = await fetch(`${API_BASE}/events/${id}/toggle-payment`, {
     method: 'POST',
-    headers: getHeaders()
+    headers: getHeaders(),
+    ...(status ? { body: JSON.stringify({ status }) } : {})
   });
   if (!res.ok) throw new Error('Failed to toggle event payment');
   return res.json();

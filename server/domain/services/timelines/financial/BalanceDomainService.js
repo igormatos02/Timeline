@@ -41,7 +41,7 @@ export class BalanceDomainService {
     );
 
     const monthlyLoanInstallments = activeLoanEvents
-      .filter((ev) => ev.date && ev.date.startsWith(activeMonth) && !ev.isDeleted)
+      .filter((ev) => ev.date && ev.date.startsWith(activeMonth) && !ev.isDeleted && ev.status !== EventStatus.CANCELLED && ev.status !== 'cancelled' && ev.status !== 'cancelado')
       .reduce((sum, ev) => sum + (Number(ev.amount) || 0), 0);
 
     const totalActiveDebt = activeLoans.reduce(

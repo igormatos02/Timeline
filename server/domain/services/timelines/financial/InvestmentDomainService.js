@@ -11,6 +11,7 @@ export class InvestmentDomainService {
   filterEvents(events = [], timelineId = null) {
     return events.filter((ev) => {
       if (!ev || ev.isDeleted) return false;
+      if (ev.status === EventStatus.CANCELLED || ev.status === 'cancelled' || ev.status === 'cancelado') return false;
       if (timelineId && ev.timelineId === timelineId) return true;
       return (
         ev.eventType === EventType.INVESTMENT
@@ -24,21 +25,22 @@ export class InvestmentDomainService {
   calculateMetrics(investmentEvents = [], currentMonthKey = null) {
     const activeMonth = currentMonthKey || new Date().toISOString().substring(0, 7);
 
-    const monthlyContributions = investmentEvents
-      .filter((ev) => ev.date && ev.date.startsWith(activeMonth) && !ev.isDeleted && !ev.isExternal && !ev.is_external)
+    const validEvents = investmentEvents.filter((ev) => !ev.isDeleted && ev.status !== EventStatus.CANCELLED && ev.status !== 'cancelled' && ev.status !== 'cancelado');
+
+    const monthlyContributions = validEvents
+      .filter((ev) => ev.date && ev.date.startsWith(activeMonth) && !ev.isExternal && !ev.is_external)
       .reduce((sum, ev) => sum + (Number(ev.amount) || 0), 0);
 
-    const investedTotal = investmentEvents
+    const investedTotal = validEvents
       .filter(
         (ev) =>
           ev.date &&
           ev.date.startsWith(activeMonth) &&
-          !ev.isDeleted &&
           (ev.status === EventStatus.INVESTED)
       )
       .reduce((sum, ev) => sum + (Number(ev.amount) || 0), 0);
 
-    const accumulatedSavings = investmentEvents.reduce((max, ev) => {
+    const accumulatedSavings = validEvents.reduce((max, ev) => {
       const prior = Number(ev.initialInvestedAmount || 0);
       return Math.max(max, prior);
     }, 0);

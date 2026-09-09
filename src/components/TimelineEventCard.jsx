@@ -40,7 +40,8 @@ import {
   Target,
   Building2,
   UserCheck,
-  FileCheck2
+  FileCheck2,
+  Ban
 } from 'lucide-react';
 import { formatCurrency, isLoanInstallment as checkIsLoanInstallment, isAmortizationEvent as checkIsAmortizationEvent } from '../utils/loanCalculations';
 import { format, endOfMonth } from 'date-fns';
@@ -139,36 +140,45 @@ export default function TimelineEventCard({
 
   const isInertFuture = event.date > currentMonthEndStr;
 
-  const isCompleted =
+  const isCancelled =
+    effectiveStatus === EventStatus.CANCELLED ||
+    effectiveStatus === 'cancelled' ||
+    effectiveStatus === 'cancelado' ||
+    event.status === EventStatus.CANCELLED ||
+    event.status === 'cancelled' ||
+    event.status === 'Cancelado';
+
+  const isCompleted = !isCancelled && (
     effectiveStatus === EventStatus.PAID ||
     effectiveStatus === EventStatus.RECEIVED ||
     effectiveStatus === EventStatus.INVESTED ||
     effectiveStatus === EventStatus.SETTLED ||
     effectiveStatus === EventStatus.COMPLETED ||
-    effectiveStatus === EventStatus.AMORTIZED;
+    effectiveStatus === EventStatus.AMORTIZED
+  );
 
   const isOverdue = Boolean(
     event.date &&
     event.date < todayStr &&
     !isCompleted &&
-    effectiveStatus !== EventStatus.CANCELLED &&
+    !isCancelled &&
     effectiveStatus !== EventStatus.DELETED
   );
 
-  const isReceivedIncome = isIncomeEvent && isCompleted;
-  const isOverdueIncome = isIncomeEvent && isOverdue;
-  const isNextIncome = isIncomeEvent && event.date >= todayStr && event.date <= currentMonthEndStr && !isReceivedIncome;
-  const isFarFutureIncome = isIncomeEvent && event.date > currentMonthEndStr && !isReceivedIncome;
+  const isReceivedIncome = isIncomeEvent && isCompleted && !isCancelled;
+  const isOverdueIncome = isIncomeEvent && isOverdue && !isCancelled;
+  const isNextIncome = isIncomeEvent && event.date >= todayStr && event.date <= currentMonthEndStr && !isReceivedIncome && !isCancelled;
+  const isFarFutureIncome = isIncomeEvent && event.date > currentMonthEndStr && !isReceivedIncome && !isCancelled;
 
-  const isPaidExpense = isExpenseEvent && isCompleted;
-  const isOverdueExpense = isExpenseEvent && isOverdue;
+  const isPaidExpense = isExpenseEvent && isCompleted && !isCancelled;
+  const isOverdueExpense = isExpenseEvent && isOverdue && !isCancelled;
 
-  const isCompletedInvestment = isInvestmentEvent && isCompleted;
-  const isOverdueInvestment = isInvestmentEvent && isOverdue;
+  const isCompletedInvestment = isInvestmentEvent && isCompleted && !isCancelled;
+  const isOverdueInvestment = isInvestmentEvent && isOverdue && !isCancelled;
 
-  const isPaidLoan = isLoanInstallment && (effectiveStatus === EventStatus.PAID || effectiveStatus === EventStatus.SETTLED || effectiveStatus === EventStatus.COMPLETED || effectiveStatus === EventStatus.AMORTIZED);
-  const isOverdueLoan = isLoanInstallment && (isOverdue || effectiveStatus === EventStatus.OVERDUE);
-  const isAmortized = isLoanInstallment && effectiveStatus === EventStatus.AMORTIZED;
+  const isPaidLoan = isLoanInstallment && !isCancelled && (effectiveStatus === EventStatus.PAID || effectiveStatus === EventStatus.SETTLED || effectiveStatus === EventStatus.COMPLETED || effectiveStatus === EventStatus.AMORTIZED);
+  const isOverdueLoan = isLoanInstallment && !isCancelled && (isOverdue || effectiveStatus === EventStatus.OVERDUE);
+  const isAmortized = isLoanInstallment && !isCancelled && effectiveStatus === EventStatus.AMORTIZED;
 
   const abatedBreakdown = React.useMemo(() => {
     if (!isAmortized) return null;
@@ -677,6 +687,7 @@ export default function TimelineEventCard({
           display: 'inline-flex',
           alignItems: 'center',
           gap: '5px',
+          textDecoration: isCancelled ? 'line-through' : 'none',
           transition: 'opacity 0.15s ease'
         }}
       >
@@ -1167,6 +1178,17 @@ export default function TimelineEventCard({
     };
   }
 
+  if (isCancelled) {
+    cardStyle = {
+      ...cardStyle,
+      opacity: 0.55,
+      background: 'rgba(148, 163, 184, 0.05)',
+      borderColor: 'rgba(148, 163, 184, 0.25)',
+      borderLeft: '4px solid #64748b',
+      filter: 'grayscale(0.9)'
+    };
+  }
+
   // Event Origin / Sub-vision info for right-aligned badge (coherent with vision palettes)
   const getEventOriginInfo = () => {
     if (
@@ -1419,8 +1441,8 @@ export default function TimelineEventCard({
                 }
                 style={{
                   margin: 0,
-                  color: isAmortized ? 'var(--text-dim)' : isInertFuture ? 'var(--text-muted)' : 'var(--text-main)',
-                  textDecoration: isAmortized ? 'line-through' : 'none',
+                  color: (isAmortized || isCancelled) ? 'var(--text-dim)' : isInertFuture ? 'var(--text-muted)' : 'var(--text-main)',
+                  textDecoration: (isAmortized || isCancelled) ? 'line-through' : 'none',
                   cursor: isAmortized ? 'default' : 'pointer'
                 }}
               >
@@ -1657,27 +1679,33 @@ export default function TimelineEventCard({
                 className="btn btn-sm"
                 title="Clique para alternar o status"
                 style={{
-                  background: isReceivedIncome
-                    ? 'rgba(16, 185, 129, 0.16)'
-                    : isOverdueIncome
-                      ? 'rgba(239, 68, 68, 0.16)'
-                      : isNextIncome
-                        ? 'rgba(245, 158, 11, 0.14)'
-                        : 'rgba(148, 163, 184, 0.1)',
-                  color: isReceivedIncome
-                    ? '#10b981'
-                    : isOverdueIncome
-                      ? '#f87171'
-                      : isNextIncome
-                        ? '#f59e0b'
-                        : '#94a3b8',
-                  border: isReceivedIncome
-                    ? '1px solid rgba(16, 185, 129, 0.35)'
-                    : isOverdueIncome
-                      ? '1px solid rgba(239, 68, 68, 0.4)'
-                      : isNextIncome
-                        ? '1px solid rgba(245, 158, 11, 0.35)'
-                        : '1px solid rgba(148, 163, 184, 0.2)',
+                  background: isCancelled
+                    ? 'rgba(148, 163, 184, 0.15)'
+                    : isReceivedIncome
+                      ? 'rgba(16, 185, 129, 0.16)'
+                      : isOverdueIncome
+                        ? 'rgba(239, 68, 68, 0.16)'
+                        : isNextIncome
+                          ? 'rgba(245, 158, 11, 0.14)'
+                          : 'rgba(148, 163, 184, 0.1)',
+                  color: isCancelled
+                    ? '#94a3b8'
+                    : isReceivedIncome
+                      ? '#10b981'
+                      : isOverdueIncome
+                        ? '#f87171'
+                        : isNextIncome
+                          ? '#f59e0b'
+                          : '#94a3b8',
+                  border: isCancelled
+                    ? '1px solid rgba(148, 163, 184, 0.35)'
+                    : isReceivedIncome
+                      ? '1px solid rgba(16, 185, 129, 0.35)'
+                      : isOverdueIncome
+                        ? '1px solid rgba(239, 68, 68, 0.4)'
+                        : isNextIncome
+                          ? '1px solid rgba(245, 158, 11, 0.35)'
+                          : '1px solid rgba(148, 163, 184, 0.2)',
                   borderRadius: '9999px',
                   padding: '5px 14px',
                   fontSize: '0.78rem',
@@ -1694,7 +1722,12 @@ export default function TimelineEventCard({
                       : 'none'
                 }}
               >
-                {isReceivedIncome ? (
+                {isCancelled ? (
+                  <>
+                    <Ban size={14} style={{ color: '#94a3b8' }} />
+                    <span>{t('status.cancelled')}</span>
+                  </>
+                ) : isReceivedIncome ? (
                   <>
                     <CheckCircle2 size={14} style={{ color: '#10b981' }} />
                     <span>{t('status.received')}</span>
@@ -1787,21 +1820,27 @@ export default function TimelineEventCard({
               className="btn btn-sm"
               title="Clique para alternar o status"
               style={{
-                background: isPaidExpense
-                  ? 'rgba(16, 185, 129, 0.16)'
-                  : isOverdueExpense
-                    ? 'rgba(239, 68, 68, 0.16)'
-                    : 'rgba(245, 158, 11, 0.14)',
-                color: isPaidExpense
-                  ? '#10b981'
-                  : isOverdueExpense
-                    ? '#f87171'
-                    : '#f59e0b',
-                border: isPaidExpense
-                  ? '1px solid rgba(16, 185, 129, 0.35)'
-                  : isOverdueExpense
-                    ? '1px solid rgba(239, 68, 68, 0.4)'
-                    : '1px solid rgba(245, 158, 11, 0.35)',
+                background: isCancelled
+                  ? 'rgba(148, 163, 184, 0.15)'
+                  : isPaidExpense
+                    ? 'rgba(16, 185, 129, 0.16)'
+                    : isOverdueExpense
+                      ? 'rgba(239, 68, 68, 0.16)'
+                      : 'rgba(245, 158, 11, 0.14)',
+                color: isCancelled
+                  ? '#94a3b8'
+                  : isPaidExpense
+                    ? '#10b981'
+                    : isOverdueExpense
+                      ? '#f87171'
+                      : '#f59e0b',
+                border: isCancelled
+                  ? '1px solid rgba(148, 163, 184, 0.35)'
+                  : isPaidExpense
+                    ? '1px solid rgba(16, 185, 129, 0.35)'
+                    : isOverdueExpense
+                      ? '1px solid rgba(239, 68, 68, 0.4)'
+                      : '1px solid rgba(245, 158, 11, 0.35)',
                 borderRadius: '9999px',
                 padding: '5px 14px',
                 fontSize: '0.78rem',
@@ -1812,7 +1851,12 @@ export default function TimelineEventCard({
                 gap: '6px'
               }}
             >
-              {isPaidExpense ? (
+              {isCancelled ? (
+                <>
+                  <Ban size={14} style={{ color: '#94a3b8' }} />
+                  <span>{t('status.cancelled')}</span>
+                </>
+              ) : isPaidExpense ? (
                 <>
                   <CheckCircle2 size={14} style={{ color: '#10b981' }} />
                   <span>{t('status.paid')}</span>
@@ -2014,27 +2058,33 @@ export default function TimelineEventCard({
                 className="btn btn-sm"
                 title="Clique para alternar o status"
                 style={{
-                  background: event.category === 'investimento_patrimonio'
-                    ? (event.status === 'Financiado' ? 'rgba(2, 132, 199, 0.16)' : 'rgba(16, 185, 129, 0.16)')
-                    : isCompletedInvestment
-                      ? 'rgba(139, 92, 246, 0.16)'
-                      : isOverdueInvestment
-                        ? 'rgba(239, 68, 68, 0.16)'
-                        : 'rgba(148, 163, 184, 0.12)',
-                  color: event.category === 'investimento_patrimonio'
-                    ? (event.status === 'Financiado' ? '#38bdf8' : '#10b981')
-                    : isCompletedInvestment
-                      ? '#8b5cf6'
-                      : isOverdueInvestment
-                        ? '#f87171'
-                        : '#94a3b8',
-                  border: event.category === 'investimento_patrimonio'
-                    ? (event.status === 'Financiado' ? '1px solid rgba(2, 132, 199, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)')
-                    : isCompletedInvestment
-                      ? '1px solid rgba(139, 92, 246, 0.35)'
-                      : isOverdueInvestment
-                        ? '1px solid rgba(239, 68, 68, 0.4)'
-                        : '1px solid rgba(148, 163, 184, 0.3)',
+                  background: isCancelled
+                    ? 'rgba(148, 163, 184, 0.15)'
+                    : event.category === 'investimento_patrimonio'
+                      ? (event.status === 'Financiado' ? 'rgba(2, 132, 199, 0.16)' : 'rgba(16, 185, 129, 0.16)')
+                      : isCompletedInvestment
+                        ? 'rgba(139, 92, 246, 0.16)'
+                        : isOverdueInvestment
+                          ? 'rgba(239, 68, 68, 0.16)'
+                          : 'rgba(148, 163, 184, 0.12)',
+                  color: isCancelled
+                    ? '#94a3b8'
+                    : event.category === 'investimento_patrimonio'
+                      ? (event.status === 'Financiado' ? '#38bdf8' : '#10b981')
+                      : isCompletedInvestment
+                        ? '#8b5cf6'
+                        : isOverdueInvestment
+                          ? '#f87171'
+                          : '#94a3b8',
+                  border: isCancelled
+                    ? '1px solid rgba(148, 163, 184, 0.35)'
+                    : event.category === 'investimento_patrimonio'
+                      ? (event.status === 'Financiado' ? '1px solid rgba(2, 132, 199, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)')
+                      : isCompletedInvestment
+                        ? '1px solid rgba(139, 92, 246, 0.35)'
+                        : isOverdueInvestment
+                          ? '1px solid rgba(239, 68, 68, 0.4)'
+                          : '1px solid rgba(148, 163, 184, 0.3)',
                   borderRadius: '9999px',
                   padding: '5px 14px',
                   fontSize: '0.78rem',
@@ -2045,7 +2095,12 @@ export default function TimelineEventCard({
                   gap: '6px'
                 }}
               >
-                {event.category === 'investimento_patrimonio' ? (
+                {isCancelled ? (
+                  <>
+                    <Ban size={14} style={{ color: '#94a3b8' }} />
+                    <span>{t('status.cancelled')}</span>
+                  </>
+                ) : event.category === 'investimento_patrimonio' ? (
                   event.status === 'Financiado' ? (
                     <>
                       <CreditCard size={14} style={{ color: '#38bdf8' }} />
@@ -2274,15 +2329,21 @@ export default function TimelineEventCard({
                 }
               }}
               style={{
-                background: (event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted)
-                  ? 'rgba(16, 185, 129, 0.16)'
-                  : 'rgba(245, 158, 11, 0.16)',
-                color: (event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted)
-                  ? '#10b981'
-                  : '#f59e0b',
-                border: (event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted)
-                  ? '1px solid rgba(16, 185, 129, 0.4)'
-                  : '1px solid rgba(245, 158, 11, 0.4)',
+                background: isCancelled
+                  ? 'rgba(148, 163, 184, 0.15)'
+                  : (isCompleted || event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted)
+                    ? 'rgba(16, 185, 129, 0.16)'
+                    : 'rgba(245, 158, 11, 0.16)',
+                color: isCancelled
+                  ? '#94a3b8'
+                  : (isCompleted || event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted)
+                    ? '#10b981'
+                    : '#f59e0b',
+                border: isCancelled
+                  ? '1px solid rgba(148, 163, 184, 0.35)'
+                  : (isCompleted || event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted)
+                    ? '1px solid rgba(16, 185, 129, 0.4)'
+                    : '1px solid rgba(245, 158, 11, 0.4)',
                 borderRadius: '9999px',
                 padding: '5px 14px',
                 fontSize: '0.78rem',
@@ -2293,9 +2354,14 @@ export default function TimelineEventCard({
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
               }}
-              title={language === 'en' ? "Click to toggle between Amortized and Pending" : "Clique para alternar entre Amortizado (Efetivado) e Pendente (Agendado)"}
+              title="Clique para alternar o status"
             >
-              {(event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted) ? (
+              {isCancelled ? (
+                <>
+                  <Ban size={13} style={{ color: '#94a3b8' }} />
+                  <span>{t('status.cancelled')}</span>
+                </>
+              ) : (isCompleted || event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted) ? (
                 <>
                   <CheckCircle2 size={13} style={{ color: '#10b981' }} />
                   <span>{t('status.amortized')}</span>
@@ -2471,21 +2537,27 @@ export default function TimelineEventCard({
                 className="btn btn-sm"
                 title="Clique para alternar o status"
                 style={{
-                  background: isPaidLoan
-                    ? 'rgba(16, 185, 129, 0.16)'
-                    : isOverdueLoan
-                      ? 'rgba(239, 68, 68, 0.16)'
-                      : 'rgba(245, 158, 11, 0.14)',
-                  color: isPaidLoan
-                    ? '#10b981'
-                    : isOverdueLoan
-                      ? '#f87171'
-                      : '#f59e0b',
-                  border: isPaidLoan
-                    ? '1px solid rgba(16, 185, 129, 0.35)'
-                    : isOverdueLoan
-                      ? '1px solid rgba(239, 68, 68, 0.4)'
-                      : '1px solid rgba(245, 158, 11, 0.35)',
+                  background: isCancelled
+                    ? 'rgba(148, 163, 184, 0.15)'
+                    : isPaidLoan
+                      ? 'rgba(16, 185, 129, 0.16)'
+                      : isOverdueLoan
+                        ? 'rgba(239, 68, 68, 0.16)'
+                        : 'rgba(245, 158, 11, 0.14)',
+                  color: isCancelled
+                    ? '#94a3b8'
+                    : isPaidLoan
+                      ? '#10b981'
+                      : isOverdueLoan
+                        ? '#f87171'
+                        : '#f59e0b',
+                  border: isCancelled
+                    ? '1px solid rgba(148, 163, 184, 0.35)'
+                    : isPaidLoan
+                      ? '1px solid rgba(16, 185, 129, 0.35)'
+                      : isOverdueLoan
+                        ? '1px solid rgba(239, 68, 68, 0.4)'
+                        : '1px solid rgba(245, 158, 11, 0.35)',
                   borderRadius: '9999px',
                   padding: '5px 14px',
                   fontSize: '0.78rem',
@@ -2500,7 +2572,12 @@ export default function TimelineEventCard({
                     : 'none'
                 }}
               >
-                {isPaidLoan ? (
+                {isCancelled ? (
+                  <>
+                    <Ban size={14} style={{ color: '#94a3b8' }} />
+                    <span>{t('status.cancelled')}</span>
+                  </>
+                ) : isPaidLoan ? (
                   <>
                     <CheckCircle2 size={14} style={{ color: '#10b981' }} />
                     <span>{t('status.settled')}</span>

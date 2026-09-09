@@ -35,6 +35,15 @@ export class TimelineService {
       return {
         ...timeline,
         loanContract,
+        totalInstallments: Number(loanContract?.totalInstallments ?? timeline.totalInstallments ?? 0),
+        originalCapital: Number(loanContract?.originalCapital ?? timeline.originalCapital ?? timeline.totalDebt ?? 0),
+        tanRate: Number(loanContract?.tanRate ?? timeline.tanRate ?? 0),
+        spread: Number(loanContract?.spread ?? timeline.spread ?? 0),
+        dueDay: Number(loanContract?.dueDay ?? timeline.dueDay ?? 15),
+        startDate: loanContract?.startDate || timeline.startDate || null,
+        contractNumber: loanContract?.contractNumber || timeline.contractNumber || '',
+        bankName: loanContract?.bankName || timeline.bankName || '',
+        interestStampTaxRate: Number(loanContract?.installmentStampTax ?? timeline.interestStampTaxRate ?? 0),
         loanHeaderResult: metrics,
         procedureMetrics: metrics,
         metrics

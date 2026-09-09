@@ -2393,11 +2393,11 @@ export default function TimelineEventCard({
               </span>
             </div>
 
-            {/* Imposto de Selo (se > 0) */}
+            {/* Taxas Cobradas (se > 0) */}
             {!isAmortized && ((event.installmentFee ?? event.taxAmount ?? event.tax_amount ?? 0) > 0) && (
               <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                  {t('loanCard.stampTax') || 'Imposto de Selo'}
+                  {t('loanCard.stampTax') || 'Taxas Cobradas'}
                 </span>
                 <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#a855f7' }}>
                   {formatCurrency(event.installmentFee ?? event.taxAmount ?? event.tax_amount ?? 0)}

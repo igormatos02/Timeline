@@ -110,8 +110,8 @@ export function getPeriodicityLabel(periodicity) {
 }
 
 /** Returns true if the event belongs to this loan timeline. */
-function isEventForTimeline(ev, timeline) {
-  if (!timeline?.id) return true;
+export function isEventForTimeline(ev, timeline) {
+  if (!timeline?.id || !ev) return false;
 
   return (
     ev.timelineId === timeline.id ||
@@ -864,6 +864,9 @@ export function propagateInstallmentAmountForward(
   const total =
     Number(newTotalAmount);
 
+  const targetEvent = eventsList.find((e) => e.id === targetEventId);
+  const targetTimelineId = targetEvent?.timelineId || targetEvent?.timelineOriginId;
+
   const computePrincipal = () =>
     newPrincipal !== null
       ? Number(newPrincipal)
@@ -902,8 +905,13 @@ export function propagateInstallmentAmountForward(
       };
     }
 
+    const matchesTimeline = !targetTimelineId ||
+      ev.timelineId === targetTimelineId ||
+      ev.timelineOriginId === targetTimelineId;
+
     if (
       targetFound &&
+      matchesTimeline &&
       isLoanInstallment(ev) &&
       !isPositiveStatus(ev.status)
     ) {
@@ -996,18 +1004,23 @@ export function getLoanMetrics(
 ) {
   const today = todayISO();
 
+  // Filter events strictly for the specified timeline if timeline is provided
+  const timelineEvents = timeline?.id
+    ? eventsList.filter((ev) => isEventForTimeline(ev, timeline))
+    : eventsList;
+
   // ---------------------------------------------------------
   // Original capital
   // ---------------------------------------------------------
 
   const originalCapital =
     Number(
-      timeline?.loanContract?.originalCapital ||
       timeline?.originalCapital ||
       timeline?.totalDebt ||
+      timeline?.loanContract?.originalCapital ||
       0
     ) ||
-    eventsList.reduce(
+    timelineEvents.reduce(
       (acc, ev) => {
         if (!isLoanInstallment(ev)) {
           return acc;
@@ -1035,7 +1048,7 @@ export function getLoanMetrics(
 
   let nextInstallment = null;
 
-  for (const ev of eventsList) {
+  for (const ev of timelineEvents) {
     // Extraordinary amortization events
     if (isAmortizationEvent(ev)) {
       if (isPositiveStatus(ev.status) || ev.isCompleted) {
@@ -1116,7 +1129,7 @@ export function getLoanMetrics(
       : Math.max(
           0,
           Math.round(
-            eventsList.reduce(
+            timelineEvents.reduce(
               (acc, ev) => {
                 if (
                   !isLoanInstallment(ev) ||
@@ -1144,7 +1157,7 @@ export function getLoanMetrics(
     Math.max(
       0,
       Math.round(
-        eventsList.reduce(
+        timelineEvents.reduce(
           (acc, ev) => {
             if (
               !isLoanInstallment(ev) ||
@@ -1168,7 +1181,7 @@ export function getLoanMetrics(
     Math.max(
       0,
       Math.round(
-        eventsList.reduce(
+        timelineEvents.reduce(
           (acc, ev) => {
             if (
               !isLoanInstallment(ev) ||
@@ -1238,7 +1251,7 @@ export function getLoanMetrics(
   // ---------------------------------------------------------
 
   const openInstallments =
-    eventsList
+    timelineEvents
       .filter(
         (ev) =>
           isLoanInstallment(ev) &&
@@ -1256,7 +1269,7 @@ export function getLoanMetrics(
       openInstallments.length - 1
       ]
       : (
-        eventsList
+        timelineEvents
           .filter(isLoanInstallment)
           .sort((a, b) =>
             a.date.localeCompare(
@@ -1283,10 +1296,19 @@ export function getLoanMetrics(
       nextInstallment?.installmentAmount || 0
     ) ||
     Number(
-      eventsList.find(
+      timelineEvents.find(
         isLoanInstallment
       )?.installmentAmount || 0
     );
+
+  const contractTotalInstallments = Number(
+    timeline?.totalInstallments ??
+    timeline?.loanContract?.totalInstallments ??
+    timeline?.numberOfInstallments ??
+    0
+  );
+
+  const finalTotalInstallments = contractTotalInstallments > 0 ? contractTotalInstallments : totalCount;
 
   return {
     // Capital
@@ -1323,12 +1345,12 @@ export function getLoanMetrics(
     // Installment counts
     paidInstallments: paidCount,
     overdueInstallments: overdueCount,
-    totalInstallments: totalCount,
+    totalInstallments: finalTotalInstallments,
 
     remainingInstallments:
       Math.max(
         0,
-        totalCount - paidCount
+        finalTotalInstallments - paidCount
       ),
 
     // Dates & amounts

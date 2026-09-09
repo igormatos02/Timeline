@@ -10,7 +10,8 @@ import { authRouter } from './interfaces/http/routes/authRoutes.js';
 export const app = express();
 
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // API Routes
 app.use('/api/auth', authRouter);

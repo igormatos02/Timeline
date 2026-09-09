@@ -1,6 +1,6 @@
 export { TimelineAssociationType } from './TimelineAssociationType.js';
 export { EventType } from './EventType.js';
-export { TimelineType } from './TimelineType.js';
+export { TimelineType, isLoanTimelineType, normalizeTimelineType } from './TimelineType.js';
 export { EventStatus, EventStatusLabel, getEventStatusLabel, isPositiveStatus, isNegativeStatus } from './EventStatus.js';
 export { EventPeriodicity } from './EventPeriodicity.js';
 export { EventPriority } from './EventPriority.js';

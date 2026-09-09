@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Sparkles, FolderPlus, Edit2, CreditCard, DollarSign, Calendar, ShieldCheck, ShieldAlert, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, parseISO, setMonth, setYear } from 'date-fns';
 import { generateLoanInstallments, formatCurrency } from '../utils/loanCalculations';
-import { TimelineType, TimelineStatus, EventPeriodicity, EventAggregation } from '../enums/index.js';
+import { TimelineType, TimelineStatus, EventPeriodicity, EventAggregation, isLoanTimelineType } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 export default function CreateTimelineModal({
@@ -174,7 +174,7 @@ export default function CreateTimelineModal({
   };
 
   const isEditing = Boolean(initialData && initialData.id);
-  const isLoanType = (formData.type || initialData?.type || '').toLowerCase() === TimelineType.LOAN || (formData.type || initialData?.type || '').toLowerCase() === 'loan' || (formData.type || initialData?.type || '').toLowerCase() === 'empréstimo' || (formData.type || initialData?.type || '').toLowerCase() === 'emprestimo';
+  const isLoanType = isLoanTimelineType(formData.type || initialData?.type);
   const isStatusActive = formData.status === TimelineStatus.ACTIVE;
   const isStatusInactive = formData.status === TimelineStatus.INACTIVE;
 

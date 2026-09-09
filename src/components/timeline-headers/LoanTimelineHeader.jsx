@@ -1109,11 +1109,9 @@ export default function LoanTimelineHeader({
                   color: textColorMain
                 }}
               >
-                {loanMetrics.paidInstallments ??
-                  0}{' '}
+                {loanMetrics.paidInstallments ?? 0}{' '}
                 /{' '}
-                {loanMetrics.totalInstallments ??
-                  0}
+                {timeline.totalInstallments || timeline.loanContract?.totalInstallments || loanMetrics.totalInstallments || 0}
               </div>
 
               <div
@@ -1129,8 +1127,7 @@ export default function LoanTimelineHeader({
                   '{count} restantes'
                 ).replace(
                   '{count}',
-                  loanMetrics.remainingInstallments ??
-                  0
+                  Math.max(0, (timeline.totalInstallments || timeline.loanContract?.totalInstallments || loanMetrics.totalInstallments || 0) - (loanMetrics.paidInstallments || 0))
                 )}
               </div>
             </div>

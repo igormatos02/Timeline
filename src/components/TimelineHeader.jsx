@@ -1,5 +1,5 @@
 import React from 'react';
-import { TimelineType } from '../enums/index.js';
+import { TimelineType, isLoanTimelineType } from '../enums/index.js';
 import {
   BalanceTimelineHeader,
   IncomeTimelineHeader,
@@ -20,11 +20,11 @@ function TimelineHeader(props) {
 
   if (!timeline) return null;
 
-  const typeLower = (timeline.type || '').toLowerCase();
-
-  if (typeLower === TimelineType.LOAN || typeLower === 'loan' || typeLower === 'empréstimo' || typeLower === 'emprestimo') {
+  if (isLoanTimelineType(timeline.type)) {
     return <LoanTimelineHeader {...props} />;
   }
+
+  const typeLower = (timeline.type || '').toLowerCase();
 
   switch (typeLower) {
     case TimelineType.BALANCE:

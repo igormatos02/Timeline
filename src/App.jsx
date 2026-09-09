@@ -23,7 +23,7 @@ import {
 } from './utils/loanCalculations';
 import * as api from './services/api';
 import { generateUUID } from './utils/uuid';
-import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus } from './enums/index.js';
+import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
@@ -500,12 +500,10 @@ export default function App() {
       (tl) => tl.id === activeFinancialTab || tl.type === activeFinancialTab || tl.id === activeTimelineId || tl.type === activeTimelineId
     ) || activeTimeboardTimelines[0];
 
-    const isLoanType = currentSelected?.type === TimelineType.LOAN || currentSelected?.type === 'loan' || currentSelected?.type === 'emprestimo' || currentSelected?.type === 'Empréstimo';
+    const isLoanType = isLoanTimelineType(currentSelected?.type);
 
     let computedEvents = rawEvents || [];
-    const loanTimelines = activeTimeboardTimelines.filter(
-      (tl) => tl.type === TimelineType.LOAN || tl.type === 'loan' || tl.type === 'emprestimo' || tl.type === 'Empréstimo'
-    );
+    const loanTimelines = activeTimeboardTimelines.filter((tl) => isLoanTimelineType(tl.type));
 
     if (loanTimelines.length > 0) {
       loanTimelines.forEach((loanTl) => {
@@ -538,7 +536,7 @@ export default function App() {
     if (!activeTimeline) return;
     let enrichedTimeline = { ...activeTimeline };
 
-    const isLoanType = activeTimeline.type === TimelineType.LOAN || activeTimeline.type === 'loan' || activeTimeline.type === 'empréstimo' || activeTimeline.type === 'emprestimo';
+    const isLoanType = isLoanTimelineType(activeTimeline.type);
 
     if (isLoanType) {
       try {
@@ -571,7 +569,8 @@ export default function App() {
   const handleSaveTimeline = async (formData) => {
     const isInactive = formData.status === TimelineStatus.INACTIVE;
     const finalStatus = isInactive ? TimelineStatus.INACTIVE : TimelineStatus.ACTIVE;
-    const timelineType = formData.type || TimelineType.LOAN;
+    const timelineType = normalizeTimelineType(formData.type || editingTimeline?.type || TimelineType.LOAN);
+    const isLoan = isLoanTimelineType(timelineType) || isLoanTimelineType(editingTimeline?.type);
 
     if (editingTimeline && editingTimeline.id) {
       // Update existing timeline
@@ -580,13 +579,16 @@ export default function App() {
         type: timelineType,
         status: finalStatus
       };
-      setTimelines((prev) =>
-        prev.map((tl) => (tl.id === editingTimeline.id ? { ...tl, ...updatedData } : tl))
-      );
-      try {
-        await api.updateTimeline(editingTimeline.id, updatedData);
+      const { events, timelines, loanHeaderResult, procedureMetrics, ...timelinePayload } = updatedData;
 
-        if (timelineType === TimelineType.LOAN || timelineType === 'loan') {
+      if (isLoan) {
+        setIsUpdatingInstallments(true);
+      }
+
+      try {
+        await api.updateTimeline(editingTimeline.id, timelinePayload);
+
+        if (isLoan) {
           const parsedTotalDebt = Number(formData.totalDebt) || 0;
           const parsedTotalInstallments = Number(formData.totalInstallments) || 120;
           const parsedStampTax = Number(
@@ -603,6 +605,12 @@ export default function App() {
             existingContract = await api.fetchLoanContract(editingTimeline.id);
           } catch (e) { }
 
+          const dueDayNum = Number(formData.dueDay) || 15;
+          const dueDayStr = dueDayNum.toString().padStart(2, '0');
+          const fullStartDateStr = formData.startDate
+            ? (formData.startDate.length === 7 ? `${formData.startDate}-${dueDayStr}` : formData.startDate)
+            : new Date().toISOString().substring(0, 10);
+
           const contractPayload = {
             timelineId: editingTimeline.id,
             timeboardId: activeTimeboardId,
@@ -611,11 +619,11 @@ export default function App() {
             bankName: formData.bankName || '',
             originalCapital: parsedTotalDebt,
             totalInstallments: parsedTotalInstallments,
-            dueDay: Number(formData.dueDay) || 15,
+            dueDay: dueDayNum,
             tanRate: Number(formData.tanRate) || 0,
             spread: Number(formData.spread) || 0,
             installmentStampTax: parsedStampTax,
-            startDate: formData.startDate || new Date().toISOString().substring(0, 10)
+            startDate: fullStartDateStr
           };
 
           if (existingContract && existingContract.id) {
@@ -625,12 +633,6 @@ export default function App() {
           }
 
           // 2. Recalcular sempre os eventos de prestações com os novos valores do contrato
-          const dueDayNum = Number(formData.dueDay) || 15;
-          const dueDayStr = dueDayNum.toString().padStart(2, '0');
-          const fullStartDateStr = formData.startDate
-            ? (formData.startDate.length === 7 ? `${formData.startDate}-${dueDayStr}` : formData.startDate)
-            : new Date().toISOString().substring(0, 10);
-
           const newScheduleEvents = generateLoanInstallments({
             totalDebt: parsedTotalDebt,
             totalAmountFinanced: parsedTotalDebt,
@@ -668,34 +670,24 @@ export default function App() {
                   id: matchExisting.id,
                   payload: {
                     ...matchExisting,
+                    eventType: EventType.LOAN_INSTALLMENT,
+                    category: LoanEventCategory.LOAN_INSTALLMENT,
+                    isSystemLoanEvent: true,
                     amount: newEv.amount,
                     installmentAmount: newEv.amount,
-                    installment_amount: newEv.amount,
-                    principalAmount: newEv.principalAmount,
-                    principal_amount: newEv.principalAmount,
                     installmentCapital: newEv.principalAmount,
-                    installment_capital: newEv.principalAmount,
-                    interestPortion: newEv.interestPortion,
-                    interest_portion: newEv.interestPortion,
                     installmentInterest: newEv.interestPortion,
-                    installment_interest: newEv.interestPortion,
-                    taxAmount: newEv.taxAmount,
-                    tax_amount: newEv.taxAmount,
                     installmentFee: newEv.taxAmount,
-                    installment_fee: newEv.taxAmount,
                     balanceAfter: newEv.balanceAfter,
-                    balance_after: newEv.balanceAfter,
-                    remainingDebtAfter: newEv.balanceAfter,
-                    remaining_debt_after: newEv.balanceAfter,
                     description: newEv.description,
                     date: newEv.date,
+                    dueDate: newEv.date,
                     installmentNumber: newEv.installmentNumber,
-                    installment_number: newEv.installmentNumber,
                     totalInstallments: newEv.totalInstallments,
-                    total_installments: newEv.totalInstallments,
                     id: matchExisting.id,
                     timelineId: editingTimeline.id,
-                    timelineOriginId: editingTimeline.id
+                    timelineOriginId: editingTimeline.id,
+                    timeboardId: activeTimeboardId
                   }
                 });
               } else {
@@ -703,6 +695,9 @@ export default function App() {
                   isUpdate: false,
                   payload: {
                     ...newEv,
+                    eventType: EventType.LOAN_INSTALLMENT,
+                    category: LoanEventCategory.LOAN_INSTALLMENT,
+                    isSystemLoanEvent: true,
                     timelineId: editingTimeline.id,
                     timelineOriginId: editingTimeline.id,
                     timeboardId: activeTimeboardId
@@ -711,11 +706,21 @@ export default function App() {
               }
             }
 
-            // 1. Atualizar UI otimisticamente de imediato (preservando a ordenação por número de prestação / data)
+            // Excluir parcelas excedentes se o total de parcelas diminuiu
+            const excessEvents = existingEvents.filter(e => {
+              const instNum = Number(e.installmentNumber || e.installment_number || 0);
+              return instNum > newScheduleEvents.length;
+            });
+            if (excessEvents.length > 0) {
+              await Promise.all(excessEvents.map(e => api.deleteEvent(e.id)));
+            }
+
+            // 1. Atualizar UI otimisticamente de imediato
             const optimisticEvList = payloadsToSave.map(p => p.payload);
+            const excessIds = new Set(excessEvents.map(e => e.id));
             setRawEvents((prev) => {
               const updatedIds = new Set(optimisticEvList.filter(e => e.id).map(e => e.id));
-              const filteredPrev = prev.filter(e => !updatedIds.has(e.id));
+              const filteredPrev = prev.filter(e => !updatedIds.has(e.id) && !excessIds.has(e.id));
               const merged = [...filteredPrev, ...optimisticEvList];
               return merged.sort((a, b) => {
                 const instA = Number(a.installmentNumber || a.installment_number || 0);
@@ -725,29 +730,28 @@ export default function App() {
               });
             });
 
-            // 2. Mostrar overlay e processar requisições em lotes paralelos (batching) em segundo plano
-            setIsUpdatingInstallments(true);
-            try {
-              const BATCH_SIZE = 10;
-              for (let i = 0; i < payloadsToSave.length; i += BATCH_SIZE) {
-                const batch = payloadsToSave.slice(i, i + BATCH_SIZE);
-                await Promise.all(
-                  batch.map(item =>
-                    item.isUpdate
-                      ? api.updateEvent(item.id, item.payload)
-                      : api.createEvent(item.payload)
-                  )
-                );
-              }
-            } finally {
-              setIsUpdatingInstallments(false);
+            // 2. Processar requisições em lotes paralelos (batching)
+            const BATCH_SIZE = 10;
+            for (let i = 0; i < payloadsToSave.length; i += BATCH_SIZE) {
+              const batch = payloadsToSave.slice(i, i + BATCH_SIZE);
+              await Promise.all(
+                batch.map(item =>
+                  item.isUpdate
+                    ? api.updateEvent(item.id, item.payload)
+                    : api.createEvent(item.payload)
+                )
+              );
             }
           }
         }
 
-        refreshTimelines();
+        await refreshTimelines();
+        showToast(isLoan ? 'Contrato e parcelas atualizados com sucesso!' : 'Linha de tempo atualizada com sucesso!', 'success');
       } catch (err) {
         console.error('Error updating timeline and loan contract:', err);
+        showToast('Erro ao atualizar: ' + (err.message || 'Erro desconhecido'), 'error');
+      } finally {
+        setIsUpdatingInstallments(false);
       }
     } else {
       // Create new timeline
@@ -764,16 +768,32 @@ export default function App() {
       setTimelines((prev) => [newTl, ...prev]);
       setActiveTimelineId(newTl.id);
 
+      if (isLoan) {
+        setIsUpdatingInstallments(true);
+      }
+
       try {
-        // 1. Create Timeline
-        await api.createTimeline(newTl);
+        // 1. Create Timeline (strip embedded events array from timeline payload)
+        const { events, timelines, loanHeaderResult, procedureMetrics, ...createPayload } = newTl;
+        await api.createTimeline(createPayload);
 
         // 2. If it's a Loan Timeline, create the Loan Contract first, then generate Installments
         const parsedTotalDebt = Number(formData.totalDebt) || 0;
         const parsedTotalInstallments = Number(formData.totalInstallments) || 120;
-        const calculatedInstallmentAmount = Number(formData.installmentAmount) || (parsedTotalInstallments > 0 ? Math.round((parsedTotalDebt / parsedTotalInstallments) * 100) / 100 : 0);
+        const dueDayNum = Number(formData.dueDay) || 15;
+        const dueDayStr = dueDayNum.toString().padStart(2, '0');
+        const fullStartDateStr = formData.startDate
+          ? (formData.startDate.length === 7 ? `${formData.startDate}-${dueDayStr}` : formData.startDate)
+          : new Date().toISOString().substring(0, 10);
+        const parsedStampTax = Number(
+          formData.interestStampTaxRate !== undefined && formData.interestStampTaxRate !== ''
+            ? formData.interestStampTaxRate
+            : (formData.installmentStampTax !== undefined && formData.installmentStampTax !== ''
+                ? formData.installmentStampTax
+                : (formData.taxaImpostoSeloJuros !== undefined ? formData.taxaImpostoSeloJuros : 0))
+        ) || 0;
 
-        if (timelineType === TimelineType.LOAN) {
+        if (isLoan) {
           // Create LoanContract record in DB
           await api.createLoanContract({
             timelineId: newTimelineId,
@@ -783,11 +803,11 @@ export default function App() {
             bankName: formData.bankName || '',
             originalCapital: parsedTotalDebt,
             totalInstallments: parsedTotalInstallments,
-            dueDay: Number(formData.dueDay) || 15,
+            dueDay: dueDayNum,
             tanRate: Number(formData.tanRate) || 0,
             spread: Number(formData.spread) || 0,
-            installmentStampTax: Number(formData.interestStampTaxRate || formData.installmentStampTax) || 0,
-            startDate: formData.startDate || new Date().toISOString().substring(0, 10)
+            installmentStampTax: parsedStampTax,
+            startDate: fullStartDateStr
           });
 
           // 3. Create financial events for installments directly from simulated/generated events payload
@@ -801,32 +821,42 @@ export default function App() {
                 numberOfInstallments: parsedTotalInstallments,
                 tanRate: Number(formData.tanRate) || 0,
                 spread: Number(formData.spread) || 0,
-                taxaImpostoSeloJuros: Number(formData.interestStampTaxRate || formData.installmentStampTax) || 0,
-                interestStampTaxRate: Number(formData.interestStampTaxRate || formData.installmentStampTax) || 0,
-                startDate: formData.startDate || new Date().toISOString().substring(0, 10),
-                debtStartDate: formData.startDate || new Date().toISOString().substring(0, 10),
-                dueDay: Number(formData.dueDay) || 15,
+                taxaImpostoSeloJuros: parsedStampTax,
+                interestStampTaxRate: parsedStampTax,
+                startDate: fullStartDateStr,
+                debtStartDate: fullStartDateStr,
+                dueDay: dueDayNum,
                 periodicity: formData.periodicity || formData.aggregation || EventAggregation.MONTHLY
               }) : []);
 
           if (installmentEvents.length > 0) {
-            // Save each calculated installment event into backend DB
-            await Promise.all(
-              installmentEvents.map((ev) =>
-                api.createEvent({
-                  ...ev,
-                  timelineId: newTimelineId,
-                  timelineOriginId: newTimelineId,
-                  timeboardId: activeTimeboardId
-                })
-              )
-            );
+            const BATCH_SIZE = 10;
+            for (let i = 0; i < installmentEvents.length; i += BATCH_SIZE) {
+              const batch = installmentEvents.slice(i, i + BATCH_SIZE);
+              await Promise.all(
+                batch.map((ev) =>
+                  api.createEvent({
+                    ...ev,
+                    eventType: EventType.LOAN_INSTALLMENT,
+                    category: LoanEventCategory.LOAN_INSTALLMENT,
+                    isSystemLoanEvent: true,
+                    timelineId: newTimelineId,
+                    timelineOriginId: newTimelineId,
+                    timeboardId: activeTimeboardId
+                  })
+                )
+              );
+            }
           }
         }
 
         await refreshTimelines();
+        showToast(isLoan ? 'Contrato e parcelas criados com sucesso!' : 'Linha de tempo criada com sucesso!', 'success');
       } catch (err) {
         console.error('Error creating timeline, contract or generating loan installments:', err);
+        showToast('Erro ao criar: ' + (err.message || 'Erro desconhecido'), 'error');
+      } finally {
+        setIsUpdatingInstallments(false);
       }
     }
   };
@@ -1349,7 +1379,7 @@ export default function App() {
           };
         });
 
-        const finalEvents = (tl.type === TimelineType.LOAN || tl.type === 'Empréstimo' || tl.type === 'emprestimo')
+        const finalEvents = isLoanTimelineType(tl.type)
           ? recalculateLoanState(tl, updatedEvents)
           : updatedEvents;
 
@@ -1491,11 +1521,11 @@ export default function App() {
     }
 
     let targetTimeline = activeTimeboardTimelines.find((t) => t.id === activeFinancialTab || t.id === activeTimelineId);
-    if (!targetTimeline && (activeTimeline?.type === TimelineType.LOAN || activeTimeline?.type === 'loan' || activeTimeline?.type === 'emprestimo' || activeTimeline?.type === 'Empréstimo')) {
+    if (!targetTimeline && isLoanTimelineType(activeTimeline?.type)) {
       targetTimeline = activeTimeline;
     }
     if (!targetTimeline) {
-      targetTimeline = activeTimeboardTimelines.find((t) => t.type === TimelineType.LOAN || t.type === 'loan' || t.type === 'emprestimo' || t.type === 'Empréstimo') || activeTimeboardTimelines[0];
+      targetTimeline = activeTimeboardTimelines.find((t) => isLoanTimelineType(t.type)) || activeTimeboardTimelines[0];
     }
 
     if (!targetTimeline) return;
@@ -1572,7 +1602,7 @@ export default function App() {
     }
   };
 
-  const loanMetrics = activeTimeline?.type === 'Empréstimo'
+  const loanMetrics = isLoanTimelineType(activeTimeline?.type)
     ? getLoanMetrics(activeTimeline, activeTimeline.events || [])
     : null;
 

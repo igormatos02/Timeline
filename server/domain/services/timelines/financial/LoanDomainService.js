@@ -217,8 +217,9 @@ export class LoanDomainService {
     let nextDueDate = null;
 
     const totalInstallmentsCount =
-      sortedEvents.length ||
-      Number(loanContract?.totalInstallments || 0);
+      Number(loanContract?.totalInstallments || 0) ||
+      Number(loanTimeline?.totalInstallments || 0) ||
+      sortedEvents.length;
 
     // Apply extraordinary amortizations in-memory to calculate exact future schedule based on strategy
     let processedEvents = sortedEvents.map((ev) => ({ ...ev }));

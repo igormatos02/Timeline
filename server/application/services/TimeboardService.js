@@ -6,6 +6,7 @@ import { loanContractRepository } from '../../infrastructure/database/supabase/S
 import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
 import { financialEventStatusRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventStatusRepository.js';
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
+import { userRepository } from '../../infrastructure/database/supabase/SupabaseUserRepository.js';
 import { emailService } from './EmailService.js';
 import { TimeboardType, TimelineType, TimelineStatus, EventAggregation, InvitationStatus } from '../../../shared/enums/index.js';
 
@@ -109,12 +110,17 @@ export class TimeboardService {
       throw new Error('timeboardId e userId são obrigatórios.');
     }
 
-    // 1. Add to timeboard_members idempotently
+    const timeboard = await timeboardRepository.getById(timeboardId);
+    const isOwner = timeboard && (timeboard.ownerId === userId || timeboard.userId === userId);
+
+    // 1. Add to timeboard_members idempotently (unless already owner)
     let member = null;
-    try {
-      member = await timeboardMemberRepository.addMember(timeboardId, userId);
-    } catch (err) {
-      console.log(`[TimeboardService.acceptInvite] Member might already exist: ${err.message}`);
+    if (!isOwner) {
+      try {
+        member = await timeboardMemberRepository.addMember(timeboardId, userId);
+      } catch (err) {
+        console.log(`[TimeboardService.acceptInvite] Member might already exist: ${err.message}`);
+      }
     }
 
     // 2. Update status in timeboard_invitations table to ACCEPTED
@@ -125,21 +131,31 @@ export class TimeboardService {
         console.warn(`[TimeboardService.acceptInvite] Could not update invitation status: ${err.message}`);
       }
 
-      // 3. Link user to persons record
-      try {
-        const persons = await personRepository.getByTimeboardId(timeboardId);
-        const cleanEmail = email.toLowerCase().trim();
-        const matchingPerson = persons.find(p => p.email && p.email.toLowerCase().trim() === cleanEmail);
-        if (matchingPerson && (!matchingPerson.userId || matchingPerson.userId !== userId)) {
-          await personRepository.update(matchingPerson.id, { userId: userId });
+      // 3. Link user to persons record only if the user is NOT the owner and user's email matches
+      if (!isOwner) {
+        try {
+          const acceptingUser = await userRepository.getById(userId);
+          const cleanEmail = email.toLowerCase().trim();
+          const userEmail = acceptingUser?.email ? acceptingUser.email.toLowerCase().trim() : null;
+
+          // Only link if the accepting user's email matches the invitation target email
+          if (!userEmail || userEmail === cleanEmail) {
+            const persons = await personRepository.getByTimeboardId(timeboardId);
+            const matchingPerson = persons.find((p) => p.email && p.email.toLowerCase().trim() === cleanEmail);
+            if (matchingPerson && (!matchingPerson.userId || matchingPerson.userId !== userId)) {
+              await personRepository.update(matchingPerson.id, { userId: userId });
+            }
+          } else {
+            console.warn(`[TimeboardService.acceptInvite] Skipping person link: accepting user email (${userEmail}) does not match invite email (${cleanEmail})`);
+          }
+        } catch (err) {
+          console.warn(`[TimeboardService.acceptInvite] Could not link person: ${err.message}`);
         }
-      } catch (err) {
-        console.warn(`[TimeboardService.acceptInvite] Could not link person: ${err.message}`);
       }
     }
 
-    const timeboard = await this.getTimeboardById(timeboardId);
-    return { success: true, member, timeboard };
+    const updatedTimeboard = await this.getTimeboardById(timeboardId);
+    return { success: true, member, timeboard: updatedTimeboard };
   }
 
   async sendInvitation({ timeboardId, personId, email, role, inviterName, invitedBy, originUrl }) {

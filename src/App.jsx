@@ -120,10 +120,21 @@ export default function App() {
   useEffect(() => {
     if (!currentUser?.id || !pendingInvite?.timeboardId) return;
 
+    const cleanUserEmail = currentUser.email ? currentUser.email.toLowerCase().trim() : '';
+    const cleanInviteEmail = pendingInvite.email ? pendingInvite.email.toLowerCase().trim() : '';
+
+    // If the invite is for a specific email that does not match the currently logged in user:
+    if (cleanInviteEmail && cleanUserEmail && cleanInviteEmail !== cleanUserEmail) {
+      console.warn(`[Invite] Active user (${cleanUserEmail}) does not match invite target email (${cleanInviteEmail}).`);
+      showToast(`Este convite é para "${cleanInviteEmail}". Sessão atual: "${cleanUserEmail}".`, 'info');
+      // Do not auto-link mismatched user account
+      return;
+    }
+
     let isMounted = true;
     (async () => {
       try {
-        await api.acceptTimeboardInvite(pendingInvite.timeboardId, currentUser.id, pendingInvite.email || currentUser.email);
+        await api.acceptTimeboardInvite(pendingInvite.timeboardId, currentUser.id, cleanInviteEmail || cleanUserEmail);
         if (!isMounted) return;
 
         showToast('Convite aceite com sucesso! Bem-vindo ao Timeboard.', 'success');
@@ -161,7 +172,7 @@ export default function App() {
     })();
 
     return () => { isMounted = false; };
-  }, [currentUser?.id, pendingInvite?.timeboardId]);
+  }, [currentUser?.id, currentUser?.email, pendingInvite?.timeboardId, pendingInvite?.email]);
 
   // Load latest data from Database on mount - Timeboards for current user
   useEffect(() => {

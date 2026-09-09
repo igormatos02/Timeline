@@ -14,5 +14,7 @@ export { LoanEventCategory } from './LoanEventCategory.js';
 export { AmortizationEventCategory, AmortizationStrategy } from './AmortizationEventCategory.js';
 export { EventDeletionMode } from './EventDeletionMode.js';
 export { EventUpdateMode } from './EventUpdateMode.js';
+export { PersonRole } from './PersonRole.js';
+export { PersonType } from './PersonType.js';
 
 

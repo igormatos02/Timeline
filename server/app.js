@@ -4,6 +4,7 @@ import { timeboardsRouter } from './interfaces/http/routes/timeboardsRoutes.js';
 import { timelinesRouter } from './interfaces/http/routes/timelinesRoutes.js';
 import { eventsRouter } from './interfaces/http/routes/eventsRoutes.js';
 import { loansRouter } from './interfaces/http/routes/loansRoutes.js';
+import { personsRouter } from './interfaces/http/routes/personsRoutes.js';
 
 export const app = express();
 
@@ -15,6 +16,7 @@ app.use('/api/timeboards', timeboardsRouter);
 app.use('/api/timelines', timelinesRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/loans', loansRouter);
+app.use('/api/persons', personsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

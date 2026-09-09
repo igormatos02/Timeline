@@ -344,6 +344,87 @@ export const translations = {
       typeReminders: "Reminders"
     },
 
+    // Timeboard Full Settings Modal
+    timeboardSettings: {
+      modalTitle: "Timeboard Settings",
+      modalSubtitle: "Manage general parameters, entities, and configurations for this timeboard",
+      tabs: {
+        general: "General",
+        entities: "Entities & Persons",
+        settings: "Settings"
+      },
+      general: {
+        title: "General Information",
+        subtitle: "Basic parameters of this Timeboard workspace",
+        nameLabel: "Timeboard Name *",
+        namePlaceholder: "e.g., Main Timeboard, Personal Finances...",
+        descriptionLabel: "Description",
+        descriptionPlaceholder: "Brief description of objectives or scope...",
+        typeLabel: "Timeboard Type (Read-only)",
+        typeLockedNotice: "🔒 The timeboard type cannot be modified after creation.",
+        saveButton: "Save Changes",
+        dangerZone: "Danger Zone",
+        deleteTimeboardTitle: "Delete this Timeboard",
+        deleteTimeboardDesc: "Permanently removes this timeboard, all its timelines, and linked events.",
+        deleteButton: "Delete Timeboard"
+      },
+      entities: {
+        title: "Entities & Team Members",
+        subtitle: "People and organizations with access or linked to this timeboard",
+        addEntityButton: "Add Entity",
+        addPersonTitle: "Add Person / Organization",
+        editPersonTitle: "Edit Person / Organization",
+        searchPlaceholder: "Search by name, email or tax ID...",
+        emptyStateTitle: "No entities added yet",
+        emptyStateDesc: "Add people or organizations to assign roles and manage timeline responsibilities.",
+        sendInvite: "Send Invitation",
+        inviteSentToast: "Invitation sent successfully to",
+        table: {
+          entity: "Name / Entity",
+          type: "Type",
+          role: "Role",
+          contact: "Contact (Email / Phone)",
+          taxId: "Tax ID (NIF/CPF)",
+          userAccount: "User Account",
+          actions: "Actions"
+        },
+        roles: {
+          admin: "Administrator",
+          contributor: "Contributor"
+        },
+        types: {
+          person: "Person",
+          organization: "Organization"
+        },
+        userAccountStatus: {
+          linked: "Linked User",
+          noAccount: "No Account"
+        },
+        form: {
+          typeLabel: "Entity Type *",
+          nameLabel: "Full Name / Organization Name *",
+          namePlaceholder: "e.g., John Doe or Tech Solutions Ltd",
+          emailLabel: "Email Address",
+          emailPlaceholder: "e.g., user@example.com",
+          phoneLabel: "Phone Number",
+          phonePlaceholder: "e.g., +351 912 345 678",
+          taxIdLabel: "Tax ID (NIF / CPF / VAT)",
+          taxIdPlaceholder: "e.g., PT123456789",
+          roleLabel: "Role *",
+          userAccountLabel: "Linked User Account ID",
+          userAccountPlaceholder: "Leave blank if not registered yet (NULL)",
+          saveButton: "Save Entity",
+          cancelButton: "Cancel"
+        },
+        deleteConfirm: "Are you sure you want to remove this entity from the timeboard?"
+      },
+      settingsTab: {
+        title: "Advanced Configurations",
+        emptyTitle: "Settings Under Construction",
+        emptyDesc: "Additional timeboard parameters, automations, and custom preferences will be available here soon."
+      }
+    },
+
     // Loan Timeline Modal
     loanModal: {
       newTitle: "New Loan",
@@ -894,6 +975,87 @@ export const translations = {
       typeFinancial: "Financeiro (Financial)",
       typeProjects: "Projetos (Projects)",
       typeReminders: "Lembretes (Reminders)"
+    },
+
+    // Timeboard Full Settings Modal
+    timeboardSettings: {
+      modalTitle: "Definições do Timeboard",
+      modalSubtitle: "Gerir parâmetros gerais, entidades e configurações deste timeboard",
+      tabs: {
+        general: "Geral",
+        entities: "Entidades & Pessoas",
+        settings: "Configurações"
+      },
+      general: {
+        title: "Informações Gerais",
+        subtitle: "Parâmetros básicos deste espaço Timeboard",
+        nameLabel: "Nome do Timeboard *",
+        namePlaceholder: "Ex: Timeboard Principal, Finanças Pessoais...",
+        descriptionLabel: "Descrição",
+        descriptionPlaceholder: "Breve descrição dos objetivos ou escopo...",
+        typeLabel: "Tipo de Timeboard (Apenas Leitura)",
+        typeLockedNotice: "🔒 O tipo de timeboard não pode ser alterado após a criação.",
+        saveButton: "Guardar Alterações",
+        dangerZone: "Zona de Perigo",
+        deleteTimeboardTitle: "Eliminar este Timeboard",
+        deleteTimeboardDesc: "Remove permanentemente este timeboard, todas as suas timelines e eventos associados.",
+        deleteButton: "Eliminar Timeboard"
+      },
+      entities: {
+        title: "Entidades & Membros da Equipa",
+        subtitle: "Pessoas e empresas com acesso ou associadas a este timeboard",
+        addEntityButton: "Adicionar Entidade",
+        addPersonTitle: "Adicionar Pessoa / Empresa",
+        editPersonTitle: "Editar Pessoa / Empresa",
+        searchPlaceholder: "Pesquisar por nome, email ou NIF...",
+        emptyStateTitle: "Nenhuma entidade adicionada",
+        emptyStateDesc: "Adicione pessoas ou empresas para atribuir papéis (roles) e gerir responsabilidades na timeline.",
+        sendInvite: "Enviar Convite",
+        inviteSentToast: "Convite enviado com sucesso para",
+        table: {
+          entity: "Nome / Entidade",
+          type: "Tipo",
+          role: "Função (Role)",
+          contact: "Contacto (Email / Tel)",
+          taxId: "NIF / CPF / Documento",
+          userAccount: "Conta de Utilizador",
+          actions: "Ações"
+        },
+        roles: {
+          admin: "Administrador",
+          contributor: "Colaborador"
+        },
+        types: {
+          person: "Pessoa",
+          organization: "Empresa / Organização"
+        },
+        userAccountStatus: {
+          linked: "Conta Vinculada",
+          noAccount: "Sem Conta"
+        },
+        form: {
+          typeLabel: "Tipo de Entidade *",
+          nameLabel: "Nome Completo / Razão Social *",
+          namePlaceholder: "Ex: Maria Silva ou Empresa XYZ Lda",
+          emailLabel: "Endereço de Email",
+          emailPlaceholder: "Ex: utilizador@exemplo.com",
+          phoneLabel: "Contacto Telefónico",
+          phonePlaceholder: "Ex: +351 912 345 678",
+          taxIdLabel: "NIF / CPF / Identificação Fiscal",
+          taxIdPlaceholder: "Ex: 123456789",
+          roleLabel: "Função (Role) *",
+          userAccountLabel: "ID da Conta de Utilizador (User ID)",
+          userAccountPlaceholder: "Deixe em branco se não registado (NULL)",
+          saveButton: "Guardar Entidade",
+          cancelButton: "Cancelar"
+        },
+        deleteConfirm: "Tem a certeza que deseja remover esta entidade do timeboard?"
+      },
+      settingsTab: {
+        title: "Configurações Avançadas",
+        emptyTitle: "Configurações em Desenvolvimento",
+        emptyDesc: "Parâmetros adicionais de automação, integrações e preferências avançadas estarão disponíveis aqui em breve."
+      }
     },
 
     // Loan Timeline Modal

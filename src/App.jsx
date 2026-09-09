@@ -6,6 +6,7 @@ import VerticalTimeline from './components/VerticalTimeline';
 import CreateTimelineModal from './components/CreateTimelineModal';
 import EditTimelineSettingsModal from './components/EditTimelineSettingsModal';
 import CreateTimeboardModal from './components/CreateTimeboardModal';
+import TimeboardSettingsModal from './components/TimeboardSettingsModal';
 import CreateEventModal from './components/CreateEventModal';
 import DeleteEventModal from './components/DeleteEventModal';
 import DeleteTimelineModal from './components/DeleteTimelineModal';
@@ -53,6 +54,7 @@ export default function App() {
     return null;
   });
   const [isTimeboardModalOpen, setIsTimeboardModalOpen] = useState(false);
+  const [isTimeboardSettingsModalOpen, setIsTimeboardSettingsModalOpen] = useState(false);
   const [editingTimeboard, setEditingTimeboard] = useState(null);
   const [isUpdatingInstallments, setIsUpdatingInstallments] = useState(false);
 
@@ -1536,7 +1538,7 @@ export default function App() {
         }}
         onOpenEditTimeboard={(tb) => {
           setEditingTimeboard(tb);
-          setIsTimeboardModalOpen(true);
+          setIsTimeboardSettingsModalOpen(true);
         }}
         onScrollToToday={handleScrollToToday}
         theme={theme}
@@ -1621,7 +1623,18 @@ export default function App() {
         onClose={() => setIsTimeboardModalOpen(false)}
         onSave={handleSaveTimeboard}
         onDelete={handleDeleteTimeboard}
-        initialData={editingTimeboard}
+        initialData={null}
+      />
+
+      <TimeboardSettingsModal
+        isOpen={isTimeboardSettingsModalOpen}
+        onClose={() => {
+          setIsTimeboardSettingsModalOpen(false);
+          setEditingTimeboard(null);
+        }}
+        timeboard={editingTimeboard}
+        onSaveTimeboard={handleSaveTimeboard}
+        onDeleteTimeboard={handleDeleteTimeboard}
       />
 
       <CreateTimelineModal

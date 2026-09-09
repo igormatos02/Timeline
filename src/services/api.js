@@ -80,6 +80,143 @@ export async function deleteTimeboard(id) {
   return res.json();
 }
 
+// Persons & Organizations (Entities) Cache Helpers
+function getLocalPersons(timeboardId) {
+  try {
+    const key = `chrono_persons_${timeboardId}`;
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setLocalPersons(timeboardId, list) {
+  try {
+    const key = `chrono_persons_${timeboardId}`;
+    localStorage.setItem(key, JSON.stringify(list));
+  } catch (e) {
+    console.error('Failed to save persons to localStorage:', e);
+  }
+}
+
+export async function fetchPersons(params = {}) {
+  let tbId = '';
+  if (typeof params === 'string') {
+    tbId = params;
+  } else if (params && typeof params === 'object') {
+    tbId = params.timeboardId || params.timeboard_id || '';
+  }
+  if (!tbId) return [];
+
+  try {
+    const res = await fetch(`${API_BASE}/persons?timeboardId=${encodeURIComponent(tbId)}`, {
+      headers: getHeaders()
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setLocalPersons(tbId, data);
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn(`[api.fetchPersons] Network error, loading from local cache:`, err);
+  }
+
+  // Fallback to local cache
+  return getLocalPersons(tbId);
+}
+
+export async function createPerson(personData) {
+  const tbId = personData.timeboardId || personData.timeboard_id;
+  try {
+    const res = await fetch(`${API_BASE}/persons`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(personData)
+    });
+    if (res.ok) {
+      const created = await res.json();
+      if (tbId) {
+        const current = getLocalPersons(tbId);
+        setLocalPersons(tbId, [...current.filter(p => p.id !== created.id), created]);
+      }
+      return created;
+    }
+  } catch (err) {
+    console.warn(`[api.createPerson] Network error, saving locally:`, err);
+  }
+
+  // Local fallback creation
+  const localCreated = {
+    ...personData,
+    id: personData.id || `person_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  if (tbId) {
+    const current = getLocalPersons(tbId);
+    setLocalPersons(tbId, [...current, localCreated]);
+  }
+  return localCreated;
+}
+
+export async function updatePerson(id, updates) {
+  const tbId = updates.timeboardId || updates.timeboard_id;
+  try {
+    const res = await fetch(`${API_BASE}/persons/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(updates)
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      if (tbId) {
+        const current = getLocalPersons(tbId);
+        setLocalPersons(tbId, current.map(p => (p.id === id ? { ...p, ...updated } : p)));
+      }
+      return updated;
+    }
+  } catch (err) {
+    console.warn(`[api.updatePerson] Network error, updating locally:`, err);
+  }
+
+  // Local fallback update
+  if (tbId) {
+    const current = getLocalPersons(tbId);
+    const existing = current.find(p => p.id === id);
+    const updated = { ...existing, ...updates, id, updatedAt: new Date().toISOString() };
+    setLocalPersons(tbId, current.map(p => (p.id === id ? updated : p)));
+    return updated;
+  }
+  return { id, ...updates };
+}
+
+export async function deletePerson(id, timeboardId = null) {
+  try {
+    const res = await fetch(`${API_BASE}/persons/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    if (res.ok) {
+      if (timeboardId) {
+        const current = getLocalPersons(timeboardId);
+        setLocalPersons(timeboardId, current.filter(p => p.id !== id));
+      }
+      return res.json();
+    }
+  } catch (err) {
+    console.warn(`[api.deletePerson] Network error, removing locally:`, err);
+  }
+
+  if (timeboardId) {
+    const current = getLocalPersons(timeboardId);
+    setLocalPersons(timeboardId, current.filter(p => p.id !== id));
+  }
+  return { success: true };
+}
+
 // Timelines
 export async function fetchTimelines(params = {}) {
   const query = new URLSearchParams(

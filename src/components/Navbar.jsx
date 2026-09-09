@@ -28,7 +28,7 @@ export default function Navbar({
           </div>
           <div>
             <div className="brand-title">
-              Chrono Timeboard <Sparkles size={16} style={{ color: '#818cf8' }} />
+              Timeboard <Sparkles size={16} style={{ color: '#818cf8' }} />
             </div>
             <div className="brand-subtitle">{t('header.brandSubtitle')}</div>
           </div>

@@ -12,14 +12,12 @@ export const ExpensesEventCategory = Object.freeze({
   PERSONAL_CARE: 'personal_care',
   SHOPPING: 'shopping',
   CARMAINTENANCE: 'carmaintenance',
-  HOUSEMAINTENANCE: 'housemaintenance',
+  HOUSE: 'house',
   ENSURANCE: 'ensurance',
   PETS: 'pets',
   TRAVEL: 'travel',
   CLOTHING: 'clothing',
-  FIXED_EXPENSE: 'fixed_expense',
-  VARIABLE_EXPENSE: 'variable_expense',
-  AUTO: 'auto',
+  SERVICES: 'services',
   OTHER: 'other'
 });
 

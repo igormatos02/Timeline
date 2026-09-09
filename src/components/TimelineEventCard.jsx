@@ -834,13 +834,23 @@ export default function TimelineEventCard({
           color: '#fbbf24',
           border: 'rgba(245, 158, 11, 0.3)'
         };
+      case 'house':
       case 'housemaintenance':
         return {
-          label: 'Manutenção Casa',
+          label: 'Casa / Habitação',
           icon: <Home size={12} />,
           bg: 'rgba(168, 85, 247, 0.15)',
           color: '#c084fc',
           border: 'rgba(168, 85, 247, 0.3)'
+        };
+      case 'services':
+      case 'fixed_expense':
+        return {
+          label: 'Serviços',
+          icon: <Sliders size={12} />,
+          bg: 'rgba(100, 116, 139, 0.15)',
+          color: '#94a3b8',
+          border: 'rgba(100, 116, 139, 0.3)'
         };
       case 'ensurance':
         return {

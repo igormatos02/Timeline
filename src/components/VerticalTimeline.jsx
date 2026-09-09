@@ -87,20 +87,18 @@ const EXPENSE_CATEGORY_ITEMS = [
   { id: ExpensesEventCategory.GAS, icon: Flame, color: '#f97316' },
   { id: ExpensesEventCategory.COMMUNICATIONS, icon: Wifi, color: '#3b82f6' },
   { id: ExpensesEventCategory.TRANSPORTATION, icon: Bus, color: '#8b5cf6' },
-  { id: ExpensesEventCategory.AUTO, icon: Car, color: '#ec4899' },
   { id: ExpensesEventCategory.HEALTH, icon: HeartPulse, color: '#ef4444' },
   { id: ExpensesEventCategory.EDUCATION, icon: GraduationCap, color: '#14b8a6' },
   { id: ExpensesEventCategory.ENTERTAINMENT, icon: Film, color: '#d946ef' },
   { id: ExpensesEventCategory.SHOPPING, icon: ShoppingBag, color: '#f43f5e' },
   { id: ExpensesEventCategory.CLOTHING, icon: Shirt, color: '#a855f7' },
   { id: ExpensesEventCategory.CARMAINTENANCE, icon: Wrench, color: '#eab308' },
-  { id: ExpensesEventCategory.HOUSEMAINTENANCE, icon: Hammer, color: '#84cc16' },
+  { id: ExpensesEventCategory.HOUSE, icon: Hammer, color: '#84cc16' },
   { id: ExpensesEventCategory.ENSURANCE, icon: ShieldCheck, color: '#0284c7' },
   { id: ExpensesEventCategory.PETS, icon: Dog, color: '#f97316' },
   { id: ExpensesEventCategory.TRAVEL, icon: Plane, color: '#06b6d4' },
   { id: ExpensesEventCategory.PERSONAL_CARE, icon: Sparkles, color: '#ec4899' },
-  { id: ExpensesEventCategory.FIXED_EXPENSE, icon: CreditCard, color: '#64748b' },
-  { id: ExpensesEventCategory.VARIABLE_EXPENSE, icon: Tag, color: '#94a3b8' },
+  { id: ExpensesEventCategory.SERVICES, icon: CreditCard, color: '#64748b' },
   { id: ExpensesEventCategory.OTHER, icon: ShoppingCart, color: '#a1a1aa' }
 ];
 

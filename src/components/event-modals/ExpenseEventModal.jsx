@@ -48,20 +48,18 @@ const EXPENSE_CATEGORY_META = {
   [ExpenseEventCategory.GAS]: { icon: Flame, color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)' },
   [ExpenseEventCategory.COMMUNICATIONS]: { icon: Wifi, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' },
   [ExpenseEventCategory.TRANSPORTATION]: { icon: Bus, color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
-  [ExpenseEventCategory.AUTO]: { icon: Car, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)' },
   [ExpenseEventCategory.HEALTH]: { icon: HeartPulse, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)' },
   [ExpenseEventCategory.EDUCATION]: { icon: GraduationCap, color: '#6366f1', bg: 'rgba(99, 102, 241, 0.15)' },
   [ExpenseEventCategory.ENTERTAINMENT]: { icon: Film, color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)' },
   [ExpenseEventCategory.SHOPPING]: { icon: ShoppingBag, color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.15)' },
   [ExpenseEventCategory.CLOTHING]: { icon: Shirt, color: '#14b8a6', bg: 'rgba(20, 184, 166, 0.15)' },
   [ExpenseEventCategory.CARMAINTENANCE]: { icon: Wrench, color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)' },
-  [ExpenseEventCategory.HOUSEMAINTENANCE]: { icon: Hammer, color: '#84cc16', bg: 'rgba(132, 204, 22, 0.15)' },
+  [ExpenseEventCategory.HOUSE]: { icon: Hammer, color: '#84cc16', bg: 'rgba(132, 204, 22, 0.15)' },
   [ExpenseEventCategory.ENSURANCE]: { icon: ShieldCheck, color: '#0ea5e9', bg: 'rgba(14, 165, 233, 0.15)' },
   [ExpenseEventCategory.PETS]: { icon: Dog, color: '#d97706', bg: 'rgba(217, 119, 6, 0.15)' },
   [ExpenseEventCategory.TRAVEL]: { icon: Plane, color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)' },
   [ExpenseEventCategory.PERSONAL_CARE]: { icon: Sparkles, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)' },
-  [ExpenseEventCategory.FIXED_EXPENSE]: { icon: Pin, color: '#64748b', bg: 'rgba(100, 116, 139, 0.15)' },
-  [ExpenseEventCategory.VARIABLE_EXPENSE]: { icon: TrendingUp, color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)' },
+  [ExpenseEventCategory.SERVICES]: { icon: Pin, color: '#64748b', bg: 'rgba(100, 116, 139, 0.15)' },
   [ExpenseEventCategory.OTHER]: { icon: Tag, color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' }
 };
 

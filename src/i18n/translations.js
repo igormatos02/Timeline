@@ -506,7 +506,7 @@ export const translations = {
 
     // Investment Timeline Header
     investmentHeader: {
-      badge: "Investments & Wealth",
+      badge: "Savings & Investments",
       addInvestment: "New Contribution",
       resetTitle: "Clear all movements in this timeline",
       settingsTitle: "Timeline Settings",
@@ -1058,7 +1058,7 @@ export const translations = {
 
     // Investment Timeline Header
     investmentHeader: {
-      badge: "Investimentos & Poupança",
+      badge: "Poupança & Investimentos",
       addInvestment: "Novo Aporte",
       resetTitle: "Limpar todos os movimentos desta timeline",
       settingsTitle: "Definições da Timeline",

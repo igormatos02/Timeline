@@ -300,7 +300,7 @@ export default function InvestmentTimelineHeader({
                   textTransform: 'uppercase'
                 }}
               >
-                Investimentos & Poupança
+                {t('investmentHeader.badge') || 'Poupança & Investimentos'}
               </span>
             </div>
             <p

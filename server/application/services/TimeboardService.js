@@ -86,7 +86,7 @@ export class TimeboardService {
         },
         {
           timeboardId: createdTimeboard.id,
-          name: 'Investments / Savings',
+          name: 'Savings / Investments',
           type: TimelineType.INVESTMENT,
           color: '#6366f1',
           description: 'Management of savings, equity, and contributions',

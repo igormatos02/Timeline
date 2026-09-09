@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar } from 'lucide-react';
 import { EventStatus, EventPeriodicity, EventType } from '../../enums/index.js';
+import ObligationSelector from '../ObligationSelector.jsx';
 
 export default function DefaultEventModal({
   isOpen,
@@ -8,14 +9,18 @@ export default function DefaultEventModal({
   onSave,
   initialData,
   defaultDate,
-  timeline
+  timeline,
+  timeboardId
 }) {
+  const [obligationError, setObligationError] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     date: defaultDate || '2026-08-21',
     amount: '',
     status: EventStatus.PENDING,
-    notes: ''
+    notes: '',
+    isObligation: false,
+    obligationPersonId: ''
   });
 
   useEffect(() => {
@@ -36,7 +41,9 @@ export default function DefaultEventModal({
         date: initialData.date || defaultDate || '2026-08-21',
         amount: initialData.amount !== undefined ? initialData.amount : '',
         status: initialData.status || EventStatus.PENDING,
-        notes: initialData.notes || ''
+        notes: initialData.notes || '',
+        isObligation: Boolean(initialData.isObligation || initialData.is_obligation),
+        obligationPersonId: initialData.obligationPersonId || initialData.obligation_person_id || ''
       });
     } else {
       setFormData({
@@ -44,7 +51,9 @@ export default function DefaultEventModal({
         date: defaultDate || '2026-08-21',
         amount: '',
         status: EventStatus.PENDING,
-        notes: ''
+        notes: '',
+        isObligation: false,
+        obligationPersonId: ''
       });
     }
   }, [initialData, defaultDate, isOpen]);
@@ -55,6 +64,12 @@ export default function DefaultEventModal({
     e.preventDefault();
     if (!formData.title.trim()) return;
 
+    if (formData.isObligation && !formData.obligationPersonId) {
+      setObligationError(true);
+      return;
+    }
+    setObligationError(false);
+
     const eventPayload = {
       ...(initialData || {}),
       title: formData.title.trim(),
@@ -64,7 +79,9 @@ export default function DefaultEventModal({
       eventType: EventType.GENERIC,
       timelineId: timeline?.id,
       timelineOriginId: timeline?.id,
-      notes: formData.notes
+      notes: formData.notes,
+      isObligation: formData.isObligation,
+      obligationPersonId: formData.isObligation ? formData.obligationPersonId : null
     };
 
     onSave(eventPayload);
@@ -95,7 +112,7 @@ export default function DefaultEventModal({
         className="modal-card"
         onClick={(e) => e.stopPropagation()}
         style={{
-          maxWidth: '480px',
+          maxWidth: '640px',
           width: '100%',
           background: 'var(--bg-card, #131722)',
           borderRadius: '16px',
@@ -172,6 +189,27 @@ export default function DefaultEventModal({
               style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', boxSizing: 'border-box' }}
             />
           </div>
+
+          {/* Seletor de Obrigação */}
+          <ObligationSelector
+            isObligation={formData.isObligation}
+            obligationPersonId={formData.obligationPersonId}
+            onToggleObligation={(val) => {
+              setFormData((prev) => ({
+                ...prev,
+                isObligation: val,
+                obligationPersonId: val ? prev.obligationPersonId : ''
+              }));
+              if (!val) setObligationError(false);
+            }}
+            onSelectPerson={(personId) => {
+              setFormData((prev) => ({ ...prev, obligationPersonId: personId }));
+              if (personId) setObligationError(false);
+            }}
+            timeboardId={timeboardId || timeline?.timeboardId || timeline?.timeboard_id}
+            accentColor="var(--primary, #3b82f6)"
+            showError={obligationError}
+          />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px', borderTop: '1px solid var(--border-glass)', paddingTop: '16px' }}>
             <button

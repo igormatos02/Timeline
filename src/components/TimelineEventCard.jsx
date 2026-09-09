@@ -37,13 +37,17 @@ import {
   Landmark,
   Check,
   X,
-  Target
+  Target,
+  Building2,
+  UserCheck,
+  FileCheck2
 } from 'lucide-react';
 import { formatCurrency, isLoanInstallment as checkIsLoanInstallment, isAmortizationEvent as checkIsAmortizationEvent } from '../utils/loanCalculations';
 import { format, endOfMonth } from 'date-fns';
 import { generateUUID } from '../utils/uuid';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { EventType, TimelineType, EventStatus, EventPeriodicity, AmortizationEventCategory, LoanEventCategory, InvestmentEventCategory } from '../enums/index.js';
+import { EventType, TimelineType, EventStatus, EventPeriodicity, PersonType, AmortizationEventCategory, LoanEventCategory, InvestmentEventCategory } from '../enums/index.js';
+import * as api from '../services/api.js';
 
 export default function TimelineEventCard({
   event,
@@ -67,6 +71,30 @@ export default function TimelineEventCard({
   const [newItemText, setNewItemText] = useState('');
   const [localAuto, setLocalAuto] = React.useState(Boolean(event.automatic || event.isAutomatic));
   const [localStatus, setLocalStatus] = React.useState(event.status);
+
+  const isObligationEvent = Boolean(event.isObligation || event.is_obligation);
+  const obligationPersonId = event.obligationPersonId || event.obligation_person_id;
+  const [obligationPerson, setObligationPerson] = React.useState(
+    event.obligationPerson || event.obligation_person || null
+  );
+
+  React.useEffect(() => {
+    if (event.obligationPerson || event.obligation_person) {
+      setObligationPerson(event.obligationPerson || event.obligation_person);
+      return;
+    }
+    if (isObligationEvent && obligationPersonId) {
+      const tbId = event.timeboardId || event.timeboard_id;
+      if (tbId) {
+        api.fetchPersons(tbId).then((personsList) => {
+          if (Array.isArray(personsList)) {
+            const found = personsList.find((p) => p.id === obligationPersonId);
+            if (found) setObligationPerson(found);
+          }
+        }).catch(() => {});
+      }
+    }
+  }, [isObligationEvent, obligationPersonId, event.timeboardId, event.timeboard_id, event.obligationPerson, event.obligation_person]);
 
   React.useEffect(() => {
     setLocalAuto(Boolean(event.automatic || event.isAutomatic));
@@ -1036,19 +1064,64 @@ export default function TimelineEventCard({
 
   const priorityStyle = getPriorityStyle(event.priority);
 
-  // Card specific backgrounds
+  // Card specific backgrounds and theme palette
+  const getCardTheme = () => {
+    if (isIncomeEvent) {
+      return {
+        color: '#10b981',
+        bg: 'rgba(16, 185, 129, 0.12)',
+        border: 'rgba(16, 185, 129, 0.3)',
+        lightText: '#34d399'
+      };
+    }
+    if (isExpenseEvent) {
+      return {
+        color: '#f43f5e',
+        bg: 'rgba(244, 63, 94, 0.12)',
+        border: 'rgba(244, 63, 94, 0.3)',
+        lightText: '#fb7185'
+      };
+    }
+    if (isInvestmentEvent) {
+      return {
+        color: '#8b5cf6',
+        bg: 'rgba(139, 92, 246, 0.12)',
+        border: 'rgba(139, 92, 246, 0.3)',
+        lightText: '#a78bfa'
+      };
+    }
+    if (isLoanInstallment) {
+      return {
+        color: '#0ea5e9',
+        bg: 'rgba(14, 165, 233, 0.12)',
+        border: 'rgba(14, 165, 233, 0.3)',
+        lightText: '#38bdf8'
+      };
+    }
+    if (isAmortization) {
+      return {
+        color: '#10b981',
+        bg: 'rgba(16, 185, 129, 0.12)',
+        border: 'rgba(16, 185, 129, 0.3)',
+        lightText: '#34d399'
+      };
+    }
+    return {
+      color: 'var(--primary-light, #818cf8)',
+      bg: 'rgba(99, 102, 241, 0.12)',
+      border: 'rgba(99, 102, 241, 0.3)',
+      lightText: 'var(--text-main, #e2e8f0)'
+    };
+  };
+
+  const cardTheme = getCardTheme();
+
   let cardStyle = {};
   if (isIncomeEvent) {
     cardStyle = {
       background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-card) 100%)',
       borderLeft: '4px solid #10b981',
       borderColor: 'rgba(16, 185, 129, 0.35)'
-    };
-  } else if (isOverdueExpense || isOverdueInvestment || isOverdueLoan || (isOverdue && !isCompleted)) {
-    cardStyle = {
-      background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, var(--bg-card) 100%)',
-      borderLeft: '4px solid #ef4444',
-      borderColor: 'rgba(239, 68, 68, 0.32)'
     };
   } else if (isExpenseEvent) {
     cardStyle = {
@@ -1374,6 +1447,58 @@ export default function TimelineEventCard({
                 >
                   <Calendar size={11} />
                   <span>{t('loanCard.dueDay', { day: parseInt(event.date.substring(8, 10), 10) })}</span>
+                </span>
+              )}
+
+              {/* Badge de Identificador do Obligator (Coerente com a paleta do card) */}
+              {isObligationEvent && (
+                <span
+                  style={{
+                    background: cardTheme.bg,
+                    color: cardTheme.color,
+                    border: `1px solid ${cardTheme.border}`,
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    fontSize: '0.72rem',
+                    fontWeight: '700',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    flexShrink: 0
+                  }}
+                  title={
+                    obligationPerson
+                      ? `Obrigação atribuída a: ${obligationPerson.name} (${
+                          obligationPerson.type === PersonType.ORGANIZATION
+                            ? (t('timeboardSettings.entities.types.organization') || 'Empresa')
+                            : obligationPerson.type === PersonType.MEMBER
+                            ? (t('timeboardSettings.entities.types.member') || 'Membro')
+                            : (t('timeboardSettings.entities.types.person') || 'Pessoa')
+                        })`
+                      : (t('modal.obligation') || 'Obrigação')
+                  }
+                >
+                  <FileCheck2 size={12} style={{ color: cardTheme.color }} />
+                  <span style={{ textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: '800', letterSpacing: '0.04em' }}>
+                    {t('modal.obligation') || 'Obrigação'}
+                  </span>
+                  {obligationPerson ? (
+                    <>
+                      <span style={{ opacity: 0.4 }}>:</span>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        {obligationPerson.type === PersonType.ORGANIZATION ? (
+                          <Building2 size={11} style={{ opacity: 0.9 }} />
+                        ) : obligationPerson.type === PersonType.MEMBER ? (
+                          <UserCheck size={11} style={{ opacity: 0.9 }} />
+                        ) : (
+                          <User size={11} style={{ opacity: 0.9 }} />
+                        )}
+                        <span style={{ color: 'var(--text-main, #ffffff)', fontWeight: '800' }}>
+                          {obligationPerson.name}
+                        </span>
+                      </div>
+                    </>
+                  ) : null}
                 </span>
               )}
 
@@ -1806,12 +1931,24 @@ export default function TimelineEventCard({
             )}
 
             {(event.isExternal || event.is_external) && (
-              <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
-                <span style={{ fontSize: '0.7rem', color: '#38bdf8', textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                  <ExternalLink size={11} /> {t('modal.externalDeposit') || 'Depósito Externo'}
-                </span>
-                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#38bdf8' }}>
-                  {t('modal.externalDeposit') || 'Depósito Externo'}
+              <div style={{ display: 'flex', alignItems: 'center', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
+                <span
+                  style={{
+                    background: 'rgba(139, 92, 246, 0.14)',
+                    color: '#a78bfa',
+                    border: '1px solid rgba(139, 92, 246, 0.35)',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    fontSize: '0.72rem',
+                    fontWeight: '700',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title={t('modal.isExternalDepositHint') || 'Depósito externo (não compromete renda)'}
+                >
+                  <ExternalLink size={11} strokeWidth={2.5} />
+                  <span>{t('modal.externalDeposit') || 'Depósito Externo'}</span>
                 </span>
               </div>
             )}
@@ -1828,9 +1965,9 @@ export default function TimelineEventCard({
                 className="btn btn-sm"
                 title={t('buttons.withdrawal') || 'Withdrawal'}
                 style={{
-                  background: 'rgba(239, 68, 68, 0.12)',
-                  color: '#f87171',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  background: 'rgba(139, 92, 246, 0.12)',
+                  color: '#a78bfa',
+                  border: '1px solid rgba(139, 92, 246, 0.3)',
                   borderRadius: '9999px',
                   padding: '5px 12px',
                   fontSize: '0.78rem',
@@ -1842,7 +1979,7 @@ export default function TimelineEventCard({
                   transition: 'all 0.15s ease'
                 }}
               >
-                <ArrowDownRight size={13} />
+                <ArrowDownRight size={13} strokeWidth={2.4} />
                 <span>{t('buttons.withdrawal') || 'Withdrawal'}</span>
               </button>
             )}

@@ -83,6 +83,10 @@ export class TimelineEvent {
     is_external,
     automatic,
     isAutomatic,
+    isObligation = false,
+    is_obligation,
+    obligationPersonId = null,
+    obligation_person_id,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString(),
     created_at,
@@ -197,6 +201,8 @@ export class TimelineEvent {
     this.totalInstallments = total_installments !== undefined ? total_installments : totalInstallments;
     this.labels = Array.isArray(labels) ? labels : [];
     this.breakdownItems = Array.isArray(breakdown_items) ? breakdown_items : (Array.isArray(breakdownItems) ? breakdownItems : []);
+    this.isObligation = Boolean(isObligation || is_obligation);
+    this.obligationPersonId = obligationPersonId || obligation_person_id || null;
     this.createdAt = created_at || createdAt;
     this.updatedAt = updated_at || updatedAt;
   }
@@ -231,6 +237,9 @@ export class TimelineEvent {
     }
     if (!data.title || typeof data.title !== 'string' || data.title.trim() === '') {
       throw new Error('Event title is required');
+    }
+    if ((data.isObligation || data.is_obligation) && !(data.obligationPersonId || data.obligation_person_id)) {
+      throw new Error('Obligation person ID is required when isObligation is true');
     }
     return true;
   }

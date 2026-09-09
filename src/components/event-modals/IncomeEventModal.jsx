@@ -22,6 +22,7 @@ import {
 import { format, parseISO, addMonths, getDaysInMonth, setMonth, setYear } from 'date-fns';
 import { EventStatus, EventPeriodicity, EventType, IncomeEventCategory, EventUpdateMode } from '../../../shared/enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
+import ObligationSelector from '../ObligationSelector';
 
 const INCOME_CATEGORY_META = {
   [IncomeEventCategory.SALARY]: { icon: DollarSign, color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
@@ -39,7 +40,8 @@ export default function IncomeEventModal({
   onSave,
   initialData,
   defaultDate,
-  timeline
+  timeline,
+  timeboardId
 }) {
   const { t, dateLocale } = useTranslation();
   const titleInputRef = useRef(null);
@@ -51,6 +53,7 @@ export default function IncomeEventModal({
   const [categorySearch, setCategorySearch] = useState('');
   const [updateScope, setUpdateScope] = useState(EventUpdateMode.SINGLE);
   const [breakdownItems, setBreakdownItems] = useState([]);
+  const [obligationError, setObligationError] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -63,7 +66,9 @@ export default function IncomeEventModal({
     amount: '',
     labelsInput: '',
     isAutomatic: false,
-    category: IncomeEventCategory.SALARY
+    category: IncomeEventCategory.SALARY,
+    isObligation: false,
+    obligationPersonId: ''
   });
 
   // 1. Foco e seleção automática do título ao abrir
@@ -150,7 +155,9 @@ export default function IncomeEventModal({
         amount: initialData.amount !== undefined ? initialData.amount : '',
         labelsInput: Array.isArray(initialData.labels) ? initialData.labels.join(', ') : '',
         isAutomatic: Boolean(initialData.isAutomatic),
-        category: initialData.category || IncomeEventCategory.SALARY
+        category: initialData.category || IncomeEventCategory.SALARY,
+        isObligation: Boolean(initialData.isObligation || initialData.is_obligation),
+        obligationPersonId: initialData.obligationPersonId || initialData.obligation_person_id || ''
       });
       setUpdateScope(EventUpdateMode.SUBSEQUENT);
       setBreakdownItems(initialData.breakdownItems ? JSON.parse(JSON.stringify(initialData.breakdownItems)) : []);
@@ -175,11 +182,14 @@ export default function IncomeEventModal({
         amount: '',
         labelsInput: '',
         isAutomatic: false,
-        category: IncomeEventCategory.SALARY
+        category: IncomeEventCategory.SALARY,
+        isObligation: false,
+        obligationPersonId: ''
       });
       setUpdateScope(EventUpdateMode.SINGLE);
       setBreakdownItems([]);
     }
+    setObligationError(false);
   }, [initialData, defaultDate, isOpen]);
 
   if (!isOpen) return null;
@@ -209,6 +219,11 @@ export default function IncomeEventModal({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
+
+    if (formData.isObligation && !formData.obligationPersonId) {
+      setObligationError(true);
+      return;
+    }
 
     const safeDay = Math.min(totalDays, Math.max(1, Number(formData.dayOfMonth) || 1));
     const safeDayStr = safeDay.toString().padStart(2, '0');
@@ -246,6 +261,10 @@ export default function IncomeEventModal({
       labels,
       category: formData.category || IncomeEventCategory.SALARY,
       isAutomatic: formData.isAutomatic,
+      isObligation: Boolean(formData.isObligation),
+      is_obligation: Boolean(formData.isObligation),
+      obligationPersonId: formData.isObligation ? formData.obligationPersonId : null,
+      obligation_person_id: formData.isObligation ? formData.obligationPersonId : null,
       updateScope: (initialData?.seriesId || initialData?.eventId || initialData?.isRecurring || isRecurring) ? updateScope : undefined
     };
 
@@ -277,7 +296,7 @@ export default function IncomeEventModal({
         className="modal-card"
         onClick={(e) => e.stopPropagation()}
         style={{
-          maxWidth: '520px',
+          maxWidth: '680px',
           width: '100%',
           maxHeight: '90vh',
           overflowY: 'auto',
@@ -974,6 +993,23 @@ export default function IncomeEventModal({
               />
             </button>
           </div>
+
+          {/* Selector de Obrigação (isObligation & obligationPersonId) */}
+          <ObligationSelector
+            isObligation={formData.isObligation}
+            obligationPersonId={formData.obligationPersonId}
+            onChangeIsObligation={(val) => {
+              setFormData({ ...formData, isObligation: val });
+              if (!val) setObligationError(false);
+            }}
+            onChangeObligationPersonId={(id) => {
+              setFormData({ ...formData, obligationPersonId: id });
+              if (id) setObligationError(false);
+            }}
+            timeboardId={timeline?.timeboardId || timeline?.timeboard_id || timeboardId}
+            error={obligationError}
+            t={t}
+          />
 
           {/* Switch Mudar Subsequentes com o mesmo estilo do Recebimento Automático */}
           {initialData && (initialData.seriesId || initialData.eventId || initialData.isRecurring || formData.periodicity === EventPeriodicity.RECURRING || formData.periodicity === EventPeriodicity.PERIOD) && (

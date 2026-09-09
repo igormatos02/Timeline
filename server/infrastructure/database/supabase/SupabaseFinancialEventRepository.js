@@ -240,6 +240,11 @@ export class SupabaseFinancialEventRepository extends IRepository {
           ? Number(row.balance_after)
           : null,
 
+      isObligation: Boolean(row.is_obligation || row.isObligation),
+      is_obligation: Boolean(row.is_obligation || row.isObligation),
+      obligationPersonId: row.obligation_person_id || row.obligationPersonId || null,
+      obligation_person_id: row.obligation_person_id || row.obligationPersonId || null,
+
       createdAt: row.created_at,
       updatedAt: row.updated_at
     });
@@ -456,6 +461,17 @@ export class SupabaseFinancialEventRepository extends IRepository {
       notes: data.notes || '',
 
       priority: data.priority || 'Normal',
+
+      is_obligation: Boolean(
+        data.isObligation !== undefined
+          ? data.isObligation
+          : (data.is_obligation !== undefined ? data.is_obligation : false)
+      ),
+
+      obligation_person_id:
+        data.obligationPersonId ||
+        data.obligation_person_id ||
+        null,
 
       created_at:
         data.createdAt ||

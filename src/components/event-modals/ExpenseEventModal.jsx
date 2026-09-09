@@ -39,6 +39,7 @@ import {
 import { format, parseISO, addMonths, getDaysInMonth, setMonth, setYear } from 'date-fns';
 import { EventStatus, EventPeriodicity, EventType, ExpenseEventCategory, EventUpdateMode } from '../../../shared/enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
+import ObligationSelector from '../ObligationSelector.jsx';
 
 const EXPENSE_CATEGORY_META = {
   [ExpenseEventCategory.FOOD]: { icon: Utensils, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
@@ -69,7 +70,8 @@ export default function ExpenseEventModal({
   onSave,
   initialData,
   defaultDate,
-  timeline
+  timeline,
+  timeboardId
 }) {
   const { t, dateLocale } = useTranslation();
   const titleInputRef = useRef(null);
@@ -81,6 +83,7 @@ export default function ExpenseEventModal({
   const [categorySearch, setCategorySearch] = useState('');
   const [updateScope, setUpdateScope] = useState(EventUpdateMode.SINGLE);
   const [breakdownItems, setBreakdownItems] = useState([]);
+  const [obligationError, setObligationError] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -93,7 +96,9 @@ export default function ExpenseEventModal({
     amount: '',
     labelsInput: '',
     isAutomatic: false,
-    category: ExpenseEventCategory.OTHER
+    category: ExpenseEventCategory.OTHER,
+    isObligation: false,
+    obligationPersonId: ''
   });
 
   // 1. Foco e seleção automática do título ao abrir
@@ -180,7 +185,9 @@ export default function ExpenseEventModal({
         amount: initialData.amount !== undefined ? initialData.amount : '',
         labelsInput: Array.isArray(initialData.labels) ? initialData.labels.join(', ') : '',
         isAutomatic: Boolean(initialData.isAutomatic),
-        category: initialData.category || ExpenseEventCategory.OTHER
+        category: initialData.category || ExpenseEventCategory.OTHER,
+        isObligation: Boolean(initialData.isObligation || initialData.is_obligation),
+        obligationPersonId: initialData.obligationPersonId || initialData.obligation_person_id || ''
       });
       setUpdateScope(EventUpdateMode.SUBSEQUENT);
       setBreakdownItems(initialData.breakdownItems ? JSON.parse(JSON.stringify(initialData.breakdownItems)) : []);
@@ -205,7 +212,9 @@ export default function ExpenseEventModal({
         amount: '',
         labelsInput: '',
         isAutomatic: false,
-        category: ExpenseEventCategory.OTHER
+        category: ExpenseEventCategory.OTHER,
+        isObligation: false,
+        obligationPersonId: ''
       });
       setUpdateScope(EventUpdateMode.SINGLE);
       setBreakdownItems([]);
@@ -240,6 +249,12 @@ export default function ExpenseEventModal({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
+
+    if (formData.isObligation && !formData.obligationPersonId) {
+      setObligationError(true);
+      return;
+    }
+    setObligationError(false);
 
     const safeDay = Math.min(totalDays, Math.max(1, Number(formData.dayOfMonth) || 1));
     const safeDayStr = safeDay.toString().padStart(2, '0');
@@ -277,6 +292,8 @@ export default function ExpenseEventModal({
       labels,
       category: formData.category || ExpenseEventCategory.OTHER,
       isAutomatic: formData.isAutomatic,
+      isObligation: formData.isObligation,
+      obligationPersonId: formData.isObligation ? formData.obligationPersonId : null,
       updateScope: (initialData?.seriesId || initialData?.eventId || initialData?.isRecurring || isRecurring) ? updateScope : undefined
     };
 
@@ -308,7 +325,7 @@ export default function ExpenseEventModal({
         className="modal-card"
         onClick={(e) => e.stopPropagation()}
         style={{
-          maxWidth: '520px',
+          maxWidth: '680px',
           width: '100%',
           maxHeight: '90vh',
           overflowY: 'auto',
@@ -1058,6 +1075,27 @@ export default function ExpenseEventModal({
               </button>
             </div>
           )}
+
+          {/* Seletor de Obrigação */}
+          <ObligationSelector
+            isObligation={formData.isObligation}
+            obligationPersonId={formData.obligationPersonId}
+            onToggleObligation={(val) => {
+              setFormData((prev) => ({
+                ...prev,
+                isObligation: val,
+                obligationPersonId: val ? prev.obligationPersonId : ''
+              }));
+              if (!val) setObligationError(false);
+            }}
+            onSelectPerson={(personId) => {
+              setFormData((prev) => ({ ...prev, obligationPersonId: personId }));
+              if (personId) setObligationError(false);
+            }}
+            timeboardId={timeboardId || timeline?.timeboardId || timeline?.timeboard_id}
+            accentColor="#f43f5e"
+            showError={obligationError}
+          />
 
           {/* Botões do Rodapé */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '22px', borderTop: '1px solid var(--border-glass)', paddingTop: '16px' }}>

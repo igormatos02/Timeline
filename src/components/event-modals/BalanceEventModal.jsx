@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { format, parseISO, addMonths } from 'date-fns';
 import { TimelineType, EventStatus, EventPeriodicity, EventType } from '../../enums/index.js';
+import ObligationSelector from '../ObligationSelector.jsx';
 
 export default function BalanceEventModal({
   isOpen,
@@ -19,10 +20,12 @@ export default function BalanceEventModal({
   initialData,
   defaultDate,
   timeline,
-  allTimelines = []
+  allTimelines = [],
+  timeboardId
 }) {
   const [movementType, setMovementType] = useState('entrada'); // 'entrada' | 'saida' | 'investimento'
   const [targetTimelineId, setTargetTimelineId] = useState('');
+  const [obligationError, setObligationError] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -33,7 +36,9 @@ export default function BalanceEventModal({
     periodicity: EventPeriodicity.RECURRENT,
     recurrenceEndDate: '',
     amount: '',
-    labelsInput: ''
+    labelsInput: '',
+    isObligation: false,
+    obligationPersonId: ''
   });
 
   useEffect(() => {
@@ -91,7 +96,9 @@ export default function BalanceEventModal({
         periodicity: initialData.periodicity || EventPeriodicity.RECURRENT,
         recurrenceEndDate: initialData.recurrenceEndDate || initialData.endDate || '',
         amount: initialData.amount !== undefined ? initialData.amount : '',
-        labelsInput: Array.isArray(initialData.labels) ? initialData.labels.join(', ') : ''
+        labelsInput: Array.isArray(initialData.labels) ? initialData.labels.join(', ') : '',
+        isObligation: Boolean(initialData.isObligation || initialData.is_obligation),
+        obligationPersonId: initialData.obligationPersonId || initialData.obligation_person_id || ''
       });
       setTargetTimelineId(initialData.timelineId || '');
     } else {
@@ -109,7 +116,9 @@ export default function BalanceEventModal({
         periodicity: EventPeriodicity.RECURRENT,
         recurrenceEndDate: defaultEndMonth,
         amount: '',
-        labelsInput: ''
+        labelsInput: '',
+        isObligation: false,
+        obligationPersonId: ''
       });
     }
   }, [initialData, defaultDate, isOpen]);
@@ -119,6 +128,12 @@ export default function BalanceEventModal({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
+
+    if (formData.isObligation && !formData.obligationPersonId) {
+      setObligationError(true);
+      return;
+    }
+    setObligationError(false);
 
     let finalDate = formData.date;
     try {
@@ -149,7 +164,9 @@ export default function BalanceEventModal({
       eventType: isExp ? EventType.EXPENSE : isInv ? EventType.INVESTMENT : EventType.INCOME,
       timelineId: targetTimelineId || timeline?.id,
       timelineOriginId: targetTimelineId || timeline?.id,
-      labels
+      labels,
+      isObligation: formData.isObligation,
+      obligationPersonId: formData.isObligation ? formData.obligationPersonId : null
     };
 
     onSave(eventPayload);
@@ -182,7 +199,7 @@ export default function BalanceEventModal({
         className="modal-card"
         onClick={(e) => e.stopPropagation()}
         style={{
-          maxWidth: '540px',
+          maxWidth: '680px',
           width: '100%',
           maxHeight: '90vh',
           overflowY: 'auto',
@@ -380,6 +397,27 @@ export default function BalanceEventModal({
               style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', boxSizing: 'border-box' }}
             />
           </div>
+
+          {/* Seletor de Obrigação */}
+          <ObligationSelector
+            isObligation={formData.isObligation}
+            obligationPersonId={formData.obligationPersonId}
+            onToggleObligation={(val) => {
+              setFormData((prev) => ({
+                ...prev,
+                isObligation: val,
+                obligationPersonId: val ? prev.obligationPersonId : ''
+              }));
+              if (!val) setObligationError(false);
+            }}
+            onSelectPerson={(personId) => {
+              setFormData((prev) => ({ ...prev, obligationPersonId: personId }));
+              if (personId) setObligationError(false);
+            }}
+            timeboardId={timeboardId || timeline?.timeboardId || timeline?.timeboard_id}
+            accentColor={accentColor}
+            showError={obligationError}
+          />
 
           {/* Botões do Rodapé */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px', borderTop: '1px solid var(--border-glass)', paddingTop: '16px' }}>

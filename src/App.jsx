@@ -1659,6 +1659,7 @@ export default function App() {
         initialData={editingEvent}
         defaultDate={selectedDateForNewEvent}
         timeline={activeTimeline}
+        timeboardId={activeTimeboardId}
         allTimelines={timelines}
         defaultNature={eventModalDefaultNature}
         activeFinancialTab={activeFinancialTab}

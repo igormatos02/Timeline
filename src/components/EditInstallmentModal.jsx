@@ -95,7 +95,7 @@ export default function EditInstallmentModal({
 
   return (
     <div className="modal-overlay">
-      <div className="modal-card" style={{ maxWidth: '520px' }}>
+      <div className="modal-card" style={{ maxWidth: '640px' }}>
         <div className="modal-header">
           <div>
             <h2 className="modal-title" style={{ fontSize: '1.2rem' }}>

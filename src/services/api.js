@@ -261,6 +261,28 @@ export async function removeTimeboardMember(timeboardId, memberUserId) {
   return res.json();
 }
 
+export async function sendTimeboardInvitation({ timeboardId, personId, email, role, inviterName }) {
+  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/invite`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ personId, email, role, inviterName })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Falha ao enviar convite por email.');
+  return data;
+}
+
+export async function acceptTimeboardInvite(timeboardId, userId, email = null) {
+  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/accept-invite`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ userId, email })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Falha ao aceitar convite.');
+  return data;
+}
+
 // Persons & Organizations (Entities) Cache Helpers
 function getLocalPersons(timeboardId) {
   try {

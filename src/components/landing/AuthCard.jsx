@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   Eye,
@@ -11,19 +11,27 @@ import {
   Mail,
   User,
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  Send
 } from 'lucide-react';
 import * as api from '../../services/api.js';
 
-export default function AuthCard({ onAuthSuccess, t }) {
-  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register' | 'forgot'
+export default function AuthCard({ onAuthSuccess, initialEmail = '', pendingInvite = null, t }) {
+  const [authMode, setAuthMode] = useState(initialEmail ? 'register' : 'login'); // 'login' | 'register' | 'forgot'
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  useEffect(() => {
+    if (initialEmail && !email) {
+      setEmail(initialEmail);
+      setAuthMode('register');
+    }
+  }, [initialEmail]);
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
@@ -86,6 +94,46 @@ export default function AuthCard({ onAuthSuccess, t }) {
           timeboard <Sparkles size={18} style={{ color: '#818cf8' }} />
         </div>
       </div>
+
+      {/* Pending Invite Banner */}
+      {pendingInvite && (
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.15) 100%)',
+            border: '1px solid rgba(99, 102, 241, 0.4)',
+            borderRadius: '10px',
+            padding: '12px 14px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '10px'
+          }}
+        >
+          <div
+            style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '8px',
+              background: 'rgba(99, 102, 241, 0.3)',
+              color: '#c7d2fe',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}
+          >
+            <Send size={15} />
+          </div>
+          <div>
+            <div style={{ color: '#ffffff', fontWeight: '700', fontSize: '0.86rem' }}>
+              Convite para Timeboard Recebido! 🎉
+            </div>
+            <div style={{ color: '#cbd5e1', fontSize: '0.78rem', marginTop: '2px', lineHeight: 1.4 }}>
+              Inicie sessão ou crie a sua conta para aceder diretamente ao dashboard partilhado.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error / Success Feedback */}
       {errorMsg && (
@@ -215,7 +263,7 @@ export default function AuthCard({ onAuthSuccess, t }) {
           ) : authMode === 'register' ? (
             <>
               <UserPlus size={16} />
-              <span>Criar Conta</span>
+              <span>Criar Conta & Entrar</span>
             </>
           ) : authMode === 'forgot' ? (
             <>

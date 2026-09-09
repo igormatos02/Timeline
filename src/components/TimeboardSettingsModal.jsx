@@ -268,15 +268,21 @@ export default function TimeboardSettingsModal({
         )
       );
 
-      // 3. Simulate sending invitation email
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      // 3. Send real invitation email via Brevo API
+      await api.sendTimeboardInvitation({
+        timeboardId: timeboard.id,
+        personId: invitingPerson.id,
+        email: targetEmail,
+        role: targetRole,
+        inviterName: api.getCurrentUser()?.name || 'Administrador'
+      });
 
-      showToast(`Convite de acesso enviado com sucesso para ${targetEmail}!`);
+      showToast(`Convite enviado por email com sucesso para ${targetEmail}!`);
       setIsInviteModalOpen(false);
       setInvitingPerson(null);
     } catch (err) {
       console.error('Failed to send invite & update person:', err);
-      showToast('Erro ao enviar convite. Tente novamente.');
+      showToast(err.message || 'Erro ao enviar convite. Tente novamente.');
     } finally {
       setIsSendingInvite(false);
     }

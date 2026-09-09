@@ -56,6 +56,52 @@ timeboardsRouter.delete('/:id/members/:userId', async (req, res) => {
   }
 });
 
+// GET /api/timeboards/:id/invitations
+timeboardsRouter.get('/:id/invitations', async (req, res) => {
+  try {
+    const invitations = await timeboardService.getInvitations(req.params.id);
+    res.json(invitations);
+  } catch (err) {
+    console.error('Error fetching invitations:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/timeboards/:id/invite
+timeboardsRouter.post('/:id/invite', async (req, res) => {
+  try {
+    const { personId, email, role, inviterName, invitedBy, invited_by } = req.body;
+    const originUrl = req.headers.origin || req.headers.referer;
+    const result = await timeboardService.sendInvitation({
+      timeboardId: req.params.id,
+      personId,
+      email,
+      role,
+      inviterName,
+      invitedBy: invitedBy || invited_by,
+      originUrl
+    });
+    res.json(result);
+  } catch (err) {
+    console.error('Error sending invitation:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/timeboards/:id/accept-invite
+timeboardsRouter.post('/:id/accept-invite', async (req, res) => {
+  try {
+    const { userId, email } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId is required' });
+
+    const result = await timeboardService.acceptInvite(req.params.id, userId, email);
+    res.json(result);
+  } catch (err) {
+    console.error('Error accepting invitation:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // GET /api/timeboards/:id
 timeboardsRouter.get('/:id', async (req, res) => {
   try {

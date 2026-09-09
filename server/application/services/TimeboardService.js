@@ -1,10 +1,13 @@
 import { timeboardRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardRepository.js';
 import { timeboardMemberRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardMemberRepository.js';
+import { timeboardInvitationRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardInvitationRepository.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
 import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
 import { financialEventStatusRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventStatusRepository.js';
-import { TimeboardType, TimelineType, TimelineStatus, EventAggregation } from '../../../shared/enums/index.js';
+import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
+import { emailService } from './EmailService.js';
+import { TimeboardType, TimelineType, TimelineStatus, EventAggregation, InvitationStatus } from '../../../shared/enums/index.js';
 
 export class TimeboardService {
   async getAllTimeboards() {
@@ -63,6 +66,111 @@ export class TimeboardService {
 
   async getMembers(timeboardId) {
     return timeboardMemberRepository.getByTimeboardId(timeboardId);
+  }
+
+  async getInvitations(timeboardId) {
+    return timeboardInvitationRepository.getByTimeboardId(timeboardId);
+  }
+
+  async acceptInvite(timeboardId, userId, email = null) {
+    if (!timeboardId || !userId) {
+      throw new Error('timeboardId e userId são obrigatórios.');
+    }
+
+    // 1. Add to timeboard_members idempotently
+    let member = null;
+    try {
+      member = await timeboardMemberRepository.addMember(timeboardId, userId);
+    } catch (err) {
+      console.log(`[TimeboardService.acceptInvite] Member might already exist: ${err.message}`);
+    }
+
+    // 2. Update status in timeboard_invitations table to ACCEPTED
+    if (email) {
+      try {
+        await timeboardInvitationRepository.markAsAccepted(timeboardId, email);
+      } catch (err) {
+        console.warn(`[TimeboardService.acceptInvite] Could not update invitation status: ${err.message}`);
+      }
+
+      // 3. Link user to persons record
+      try {
+        const persons = await personRepository.getByTimeboardId(timeboardId);
+        const cleanEmail = email.toLowerCase().trim();
+        const matchingPerson = persons.find(p => p.email && p.email.toLowerCase().trim() === cleanEmail);
+        if (matchingPerson && (!matchingPerson.userId || matchingPerson.userId !== userId)) {
+          await personRepository.update(matchingPerson.id, { userId: userId });
+        }
+      } catch (err) {
+        console.warn(`[TimeboardService.acceptInvite] Could not link person: ${err.message}`);
+      }
+    }
+
+    const timeboard = await this.getTimeboardById(timeboardId);
+    return { success: true, member, timeboard };
+  }
+
+  async sendInvitation({ timeboardId, personId, email, role, inviterName, invitedBy, originUrl }) {
+    if (!timeboardId || !email) {
+      throw new Error('timeboardId e email são obrigatórios para envio de convite.');
+    }
+
+    const timeboard = await timeboardRepository.getById(timeboardId);
+    if (!timeboard) {
+      throw new Error('Timeboard não encontrado.');
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const finalRole = role || 'contributor';
+
+    // 1. If personId provided, update person with email and role
+    let personName = '';
+    if (personId) {
+      const existing = await personRepository.getById(personId);
+      if (existing) {
+        personName = existing.name || '';
+        await personRepository.update(personId, {
+          email: cleanEmail,
+          role: finalRole,
+          timeboardId: timeboardId
+        });
+      }
+    }
+
+    // 2. Record invitation in timeboard_invitations table
+    let invitationRecord = null;
+    try {
+      invitationRecord = await timeboardInvitationRepository.create({
+        timeboardId: timeboardId,
+        email: cleanEmail,
+        role: finalRole,
+        status: InvitationStatus.PENDING,
+        invitedBy: invitedBy || null
+      });
+    } catch (err) {
+      console.warn(`[TimeboardService.sendInvitation] Could not save invitation record: ${err.message}`);
+    }
+
+    // 3. Build accept invitation URL
+    const baseUrl = originUrl || process.env.APP_URL || 'https://timeboard.pt';
+    const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const acceptUrl = `${cleanBaseUrl}/?inviteTimeboardId=${encodeURIComponent(timeboardId)}&email=${encodeURIComponent(cleanEmail)}`;
+
+    // 4. Send via Brevo
+    const emailResult = await emailService.sendTimeboardInvitation({
+      toEmail: cleanEmail,
+      toName: personName,
+      timeboardName: timeboard.name,
+      timeboardId: timeboardId,
+      inviterName: inviterName || 'Administrador do Timeboard',
+      role: finalRole,
+      acceptUrl: acceptUrl
+    });
+
+    return {
+      ...emailResult,
+      invitation: invitationRecord
+    };
   }
 
   async getTimeboardById(id) {

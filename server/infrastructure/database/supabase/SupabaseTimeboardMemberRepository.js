@@ -66,8 +66,20 @@ export class SupabaseTimeboardMemberRepository extends IRepository {
   }
 
   async addMember(timeboardId, userId) {
-    const row = entityToRow({ timeboardId, userId });
     try {
+      // Check if membership already exists
+      const { data: existing, error: findError } = await supabase
+        .from(TABLE)
+        .select('*')
+        .eq('timeboard_id', timeboardId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!findError && existing) {
+        return rowToEntity(existing);
+      }
+
+      const row = entityToRow({ timeboardId, userId });
       const { data, error } = await supabase
         .from(TABLE)
         .insert(row)

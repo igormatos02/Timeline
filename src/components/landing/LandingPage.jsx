@@ -19,7 +19,7 @@ import {
 import AuthCard from './AuthCard.jsx';
 import './LandingPage.css';
 
-export default function LandingPage({ onAuthSuccess, t }) {
+export default function LandingPage({ onAuthSuccess, initialEmail = '', pendingInvite = null, t }) {
   return (
     <div className="landing-container">
       {/* Dynamic Glow and Grid Background */}
@@ -79,7 +79,12 @@ export default function LandingPage({ onAuthSuccess, t }) {
 
         {/* Right Column: Auth Card */}
         <div className="landing-hero-auth">
-          <AuthCard onAuthSuccess={onAuthSuccess} t={t} />
+          <AuthCard
+            onAuthSuccess={onAuthSuccess}
+            initialEmail={initialEmail}
+            pendingInvite={pendingInvite}
+            t={t}
+          />
         </div>
       </main>
 
@@ -104,12 +109,12 @@ export default function LandingPage({ onAuthSuccess, t }) {
           </div>
 
           <div className="landing-feature-card">
-            <div className="landing-feature-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
-              <TrendingUp size={24} />
+            <div className="landing-feature-icon" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc' }}>
+              <BarChart3 size={24} />
             </div>
-            <h3 className="landing-feature-title">Motor de Crédito & Amortizações</h3>
+            <h3 className="landing-feature-title">Balanço & Metas Anuais</h3>
             <p className="landing-feature-desc">
-              Simulação de redução de prazo ou de prestação, liquidação pontual ou em cadeia com recálculo automático de juros.
+              Acompanhe metas de poupança e rendimento anual, comparando saldos reais com metas orçamentadas mês a mês.
             </p>
           </div>
 
@@ -124,12 +129,12 @@ export default function LandingPage({ onAuthSuccess, t }) {
           </div>
 
           <div className="landing-feature-card">
-            <div className="landing-feature-icon" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc' }}>
-              <BarChart3 size={24} />
+            <div className="landing-feature-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
+              <TrendingUp size={24} />
             </div>
-            <h3 className="landing-feature-title">Balanço & Metas Anuais</h3>
+            <h3 className="landing-feature-title">Motor de Crédito & Amortizações</h3>
             <p className="landing-feature-desc">
-              Acompanhe metas de poupança e rendimento anual, comparando saldos reais com metas orçamentadas mês a mês.
+              Simulação de redução de prazo ou de prestação, liquidação pontual ou em cadeia com recálculo automático de juros.
             </p>
           </div>
 

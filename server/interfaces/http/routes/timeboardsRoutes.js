@@ -67,6 +67,28 @@ timeboardsRouter.get('/:id/invitations', async (req, res) => {
   }
 });
 
+// POST /api/timeboards/:id/invitations/:invitationId/revoke
+timeboardsRouter.post('/:id/invitations/:invitationId/revoke', async (req, res) => {
+  try {
+    const result = await timeboardService.revokeInvitation(req.params.id, req.params.invitationId);
+    res.json({ success: true, result });
+  } catch (err) {
+    console.error('Error revoking invitation:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/timeboards/:id/persons/:personId/unlink
+timeboardsRouter.post('/:id/persons/:personId/unlink', async (req, res) => {
+  try {
+    const result = await timeboardService.unlinkPersonMember(req.params.id, req.params.personId);
+    res.json(result);
+  } catch (err) {
+    console.error('Error unlinking person member:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // POST /api/timeboards/:id/invite
 timeboardsRouter.post('/:id/invite', async (req, res) => {
   try {

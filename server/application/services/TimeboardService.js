@@ -72,6 +72,38 @@ export class TimeboardService {
     return timeboardInvitationRepository.getByTimeboardId(timeboardId);
   }
 
+  async revokeInvitation(timeboardId, invitationId) {
+    if (!invitationId) throw new Error('invitationId é obrigatório');
+    return timeboardInvitationRepository.revoke(invitationId);
+  }
+
+  async unlinkPersonMember(timeboardId, personId) {
+    if (!personId) throw new Error('personId é obrigatório');
+    const person = await personRepository.getById(personId);
+    if (!person) throw new Error('Entidade/Pessoa não encontrada.');
+
+    const userId = person.userId || person.user_id;
+    if (userId) {
+      try {
+        await timeboardMemberRepository.removeMember(timeboardId, userId);
+      } catch (err) {
+        console.warn(`[TimeboardService.unlinkPersonMember] removeMember warning: ${err.message}`);
+      }
+    }
+
+    // Unset userId in persons table
+    await personRepository.update(personId, { userId: null });
+
+    // Cancel any pending invitation for this email
+    if (person.email) {
+      try {
+        await timeboardInvitationRepository.revokeByEmail(timeboardId, person.email);
+      } catch (e) {}
+    }
+
+    return { success: true };
+  }
+
   async acceptInvite(timeboardId, userId, email = null) {
     if (!timeboardId || !userId) {
       throw new Error('timeboardId e userId são obrigatórios.');

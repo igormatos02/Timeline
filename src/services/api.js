@@ -261,14 +261,42 @@ export async function removeTimeboardMember(timeboardId, memberUserId) {
   return res.json();
 }
 
-export async function sendTimeboardInvitation({ timeboardId, personId, email, role, inviterName }) {
+export async function sendTimeboardInvitation({ timeboardId, personId, email, role, inviterName, invitedBy }) {
   const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/invite`, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify({ personId, email, role, inviterName })
+    body: JSON.stringify({ personId, email, role, inviterName, invitedBy })
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Falha ao enviar convite por email.');
+  return data;
+}
+
+export async function fetchTimeboardInvitations(timeboardId) {
+  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/invitations`, {
+    headers: getHeaders()
+  });
+  if (!res.ok) throw new Error('Falha ao obter lista de convites.');
+  return res.json();
+}
+
+export async function revokeTimeboardInvitation(timeboardId, invitationId) {
+  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/invitations/${invitationId}/revoke`, {
+    method: 'POST',
+    headers: getHeaders()
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Falha ao revogar convite.');
+  return data;
+}
+
+export async function unlinkPersonMember(timeboardId, personId) {
+  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/persons/${personId}/unlink`, {
+    method: 'POST',
+    headers: getHeaders()
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Falha ao desvincular membro.');
   return data;
 }
 

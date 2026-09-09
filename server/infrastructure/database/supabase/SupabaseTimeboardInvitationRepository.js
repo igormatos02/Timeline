@@ -176,6 +176,37 @@ export class SupabaseTimeboardInvitationRepository extends IRepository {
     }
   }
 
+  async revoke(id) {
+    if (!id) return false;
+    return this.update(id, { status: InvitationStatus.CANCELLED });
+  }
+
+  async revokeByEmail(timeboardId, email) {
+    if (!timeboardId || !email) return false;
+    const cleanEmail = email.toLowerCase().trim();
+    try {
+      const { data, error } = await supabase
+        .from(TABLE)
+        .update({
+          status: InvitationStatus.CANCELLED,
+          updated_at: new Date().toISOString()
+        })
+        .eq('timeboard_id', timeboardId)
+        .ilike('email', cleanEmail)
+        .eq('status', InvitationStatus.PENDING)
+        .select();
+
+      if (error) {
+        console.warn(`[SupabaseTimeboardInvitationRepository] revokeByEmail warning: ${error.message}`);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn(`[SupabaseTimeboardInvitationRepository] revokeByEmail catch: ${err.message}`);
+      return false;
+    }
+  }
+
   async delete(id) {
     if (!id) return false;
     try {

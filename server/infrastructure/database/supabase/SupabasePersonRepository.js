@@ -12,32 +12,33 @@ function rowToEntity(row) {
   if (!row) return null;
   return new Person({
     id: row.id,
-    timeboardId: row.timeboard_id || row.timeboardId,
+    timeboardId: row.timeboard_id,
     type: row.type || PersonType.PERSON,
-    name: row.name,
+    personName: row.person_name || '',
+    obligatorIdentification: row.obligator_identification || '',
     email: row.email || '',
     phone: row.phone || '',
-    taxId: row.tax_id || row.taxId || '',
+    birthDate: row.birth_date || null,
+    observation: row.observation || '',
     role: row.role || PersonRole.CONTRIBUTOR,
-    userId: row.user_id || row.userId || null,
-    createdAt: row.created_at || row.createdAt,
-    updatedAt: row.updated_at || row.updatedAt
+    userId: row.user_id || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   });
 }
 
 function entityToRow(data) {
   const row = {};
   if (data.timeboardId !== undefined) row.timeboard_id = data.timeboardId;
-  if (data.timeboard_id !== undefined) row.timeboard_id = data.timeboard_id;
   if (data.type !== undefined) row.type = data.type;
-  if (data.name !== undefined) row.name = data.name;
+  if (data.personName !== undefined) row.person_name = data.personName;
+  if (data.obligatorIdentification !== undefined) row.obligator_identification = data.obligatorIdentification;
   if (data.email !== undefined) row.email = data.email;
   if (data.phone !== undefined) row.phone = data.phone;
-  if (data.taxId !== undefined) row.tax_id = data.taxId;
-  if (data.tax_id !== undefined) row.tax_id = data.tax_id;
+  if (data.birthDate !== undefined) row.birth_date = data.birthDate;
+  if (data.observation !== undefined) row.observation = data.observation;
   if (data.role !== undefined) row.role = data.role;
   if (data.userId !== undefined) row.user_id = data.userId;
-  if (data.user_id !== undefined) row.user_id = data.user_id;
   return row;
 }
 
@@ -48,8 +49,7 @@ export class SupabasePersonRepository extends IRepository {
         .from(TABLE)
         .select('*')
         .eq('timeboard_id', timeboardId)
-        .order('type', { ascending: true })
-        .order('name', { ascending: true });
+        .order('type', { ascending: true });
 
       if (error) {
         console.warn(`[SupabasePersonRepository] getByTimeboardId fallback: ${error.message}`);
@@ -59,13 +59,13 @@ export class SupabasePersonRepository extends IRepository {
         return mem.map(rowToEntity).sort((a, b) => {
           const typeComp = (a.type || '').toLowerCase().localeCompare((b.type || '').toLowerCase());
           if (typeComp !== 0) return typeComp;
-          return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+          return (a.personName || '').localeCompare(b.personName || '', undefined, { sensitivity: 'base' });
         });
       }
       return (data || []).map(rowToEntity).sort((a, b) => {
         const typeComp = (a.type || '').toLowerCase().localeCompare((b.type || '').toLowerCase());
         if (typeComp !== 0) return typeComp;
-        return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+        return (a.personName || '').localeCompare(b.personName || '', undefined, { sensitivity: 'base' });
       });
     } catch (err) {
       console.warn(`[SupabasePersonRepository] getByTimeboardId catch fallback: ${err.message}`);
@@ -75,7 +75,7 @@ export class SupabasePersonRepository extends IRepository {
       return mem.map(rowToEntity).sort((a, b) => {
         const typeComp = (a.type || '').toLowerCase().localeCompare((b.type || '').toLowerCase());
         if (typeComp !== 0) return typeComp;
-        return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+        return (a.personName || '').localeCompare(b.personName || '', undefined, { sensitivity: 'base' });
       });
     }
   }
@@ -133,12 +133,31 @@ export class SupabasePersonRepository extends IRepository {
 
   async create(data) {
     const row = entityToRow(data);
+    row.created_at = new Date().toISOString();
+    row.updated_at = new Date().toISOString();
+
     try {
-      const { data: created, error } = await supabase
+      // First attempt with full row
+      let { data: created, error } = await supabase
         .from(TABLE)
         .insert(row)
         .select()
         .single();
+
+      // If a new column does not exist yet in Supabase schema, remove it and retry
+      if (error && (error.message?.includes('column') || error.code === 'PGRST204')) {
+        const safeRow = { ...row };
+        if (error.message?.includes('person_name')) delete safeRow.person_name;
+        if (error.message?.includes('name') && safeRow.person_name) delete safeRow.name;
+        if (error.message?.includes('obligator_identification')) delete safeRow.obligator_identification;
+        if (error.message?.includes('tax_id') && safeRow.obligator_identification) delete safeRow.tax_id;
+        if (error.message?.includes('birth_date')) delete safeRow.birth_date;
+        if (error.message?.includes('observation')) delete safeRow.observation;
+
+        const retry = await supabase.from(TABLE).insert(safeRow).select().single();
+        created = retry.data;
+        error = retry.error;
+      }
 
       if (error) {
         console.warn(`[SupabasePersonRepository] create fallback: ${error.message}`);
@@ -147,9 +166,7 @@ export class SupabasePersonRepository extends IRepository {
           id: newId,
           ...row,
           timeboard_id: row.timeboard_id || data.timeboardId || data.timeboard_id,
-          timeboardId: row.timeboard_id || data.timeboardId || data.timeboard_id,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          timeboardId: row.timeboard_id || data.timeboardId || data.timeboard_id
         };
         inMemoryPersons.set(newId, memRow);
         return rowToEntity(memRow);
@@ -162,9 +179,7 @@ export class SupabasePersonRepository extends IRepository {
         id: newId,
         ...row,
         timeboard_id: row.timeboard_id || data.timeboardId || data.timeboard_id,
-        timeboardId: row.timeboard_id || data.timeboardId || data.timeboard_id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        timeboardId: row.timeboard_id || data.timeboardId || data.timeboard_id
       };
       inMemoryPersons.set(newId, memRow);
       return rowToEntity(memRow);
@@ -176,12 +191,27 @@ export class SupabasePersonRepository extends IRepository {
     row.updated_at = new Date().toISOString();
 
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from(TABLE)
         .update(row)
         .eq('id', id)
         .select()
         .single();
+
+      // If a new column does not exist yet in Supabase schema, remove it and retry
+      if (error && (error.message?.includes('column') || error.code === 'PGRST204')) {
+        const safeRow = { ...row };
+        if (error.message?.includes('person_name')) delete safeRow.person_name;
+        if (error.message?.includes('name') && safeRow.person_name) delete safeRow.name;
+        if (error.message?.includes('obligator_identification')) delete safeRow.obligator_identification;
+        if (error.message?.includes('tax_id') && safeRow.obligator_identification) delete safeRow.tax_id;
+        if (error.message?.includes('birth_date')) delete safeRow.birth_date;
+        if (error.message?.includes('observation')) delete safeRow.observation;
+
+        const retry = await supabase.from(TABLE).update(safeRow).eq('id', id).select().single();
+        data = retry.data;
+        error = retry.error;
+      }
 
       if (error) {
         console.warn(`[SupabasePersonRepository] update fallback: ${error.message}`);
@@ -217,4 +247,3 @@ export class SupabasePersonRepository extends IRepository {
 }
 
 export const personRepository = new SupabasePersonRepository();
-

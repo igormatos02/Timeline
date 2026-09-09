@@ -9,24 +9,28 @@ export class Person {
     id,
     timeboardId = null,
     type = PersonType.PERSON,
-    name = '',
-    email = '',
+    personName = '',
+    obligatorIdentification = '',
     phone = '',
-    taxId = '',
+    email = '',
+    birthDate = null,
+    observation = '',
     role = PersonRole.CONTRIBUTOR,
     userId = null,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
-  }) {
+  } = {}) {
     this.id = id;
     this.timeboardId = timeboardId;
-    this.type = type || PersonType.PERSON;
-    this.name = name;
-    this.email = email;
+    this.type = type;
+    this.personName = personName;
+    this.obligatorIdentification = obligatorIdentification;
     this.phone = phone;
-    this.taxId = taxId;
-    this.role = role || PersonRole.CONTRIBUTOR;
-    this.userId = userId || null;
+    this.email = email;
+    this.birthDate = birthDate;
+    this.observation = observation;
+    this.role = role;
+    this.userId = userId;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }
@@ -40,10 +44,13 @@ export class Person {
   }
 
   static validate(data) {
-    if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') {
-      throw new Error('Person/Organization name is required');
+    if (!data.personName || typeof data.personName !== 'string' || data.personName.trim() === '') {
+      throw new Error('personName is required');
     }
-    if (!data.timeboardId && !data.timeboard_id) {
+    if (!data.obligatorIdentification || typeof data.obligatorIdentification !== 'string' || data.obligatorIdentification.trim() === '') {
+      throw new Error('obligatorIdentification is required');
+    }
+    if (!data.timeboardId) {
       throw new Error('timeboardId is required');
     }
     return true;

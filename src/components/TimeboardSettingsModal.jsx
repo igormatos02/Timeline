@@ -66,10 +66,12 @@ export default function TimeboardSettingsModal({
   const [editingEntity, setEditingEntity] = useState(null);
   const [entityForm, setEntityForm] = useState({
     type: PersonType.PERSON,
-    name: '',
+    personName: '',
+    obligatorIdentification: '',
     email: '',
     phone: '',
-    taxId: '',
+    birthDate: '',
+    observation: '',
     role: PersonRole.CONTRIBUTOR
   });
   const [isSavingEntity, setIsSavingEntity] = useState(false);
@@ -82,6 +84,16 @@ export default function TimeboardSettingsModal({
   const [inviteRole, setInviteRole] = useState(PersonRole.CONTRIBUTOR);
   const [isSendingInvite, setIsSendingInvite] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedTimeboardId, setCopiedTimeboardId] = useState(false);
+
+  const handleCopyTimeboardId = (e) => {
+    e?.stopPropagation?.();
+    if (timeboard?.id) {
+      navigator.clipboard.writeText(String(timeboard.id));
+      setCopiedTimeboardId(true);
+      setTimeout(() => setCopiedTimeboardId(false), 1800);
+    }
+  };
 
   // Sync state when timeboard or isOpen changes
   useEffect(() => {
@@ -157,20 +169,24 @@ export default function TimeboardSettingsModal({
       setEditingEntity(entity);
       setEntityForm({
         type: entity.type || PersonType.PERSON,
-        name: entity.name || '',
+        personName: entity.personName || entity.person_name || entity.name || '',
+        obligatorIdentification: entity.obligatorIdentification || entity.obligator_identification || entity.taxId || entity.tax_id || '',
         email: entity.email || '',
         phone: entity.phone || '',
-        taxId: entity.taxId || entity.tax_id || '',
+        birthDate: entity.birthDate || entity.birth_date || '',
+        observation: entity.observation || entity.notes || '',
         role: entity.role || PersonRole.CONTRIBUTOR
       });
     } else {
       setEditingEntity(null);
       setEntityForm({
         type: selectedTypeFilter !== 'all' ? selectedTypeFilter : PersonType.PERSON,
-        name: '',
+        personName: '',
+        obligatorIdentification: '',
         email: '',
         phone: '',
-        taxId: '',
+        birthDate: '',
+        observation: '',
         role: PersonRole.CONTRIBUTOR
       });
     }
@@ -180,16 +196,30 @@ export default function TimeboardSettingsModal({
   // Handler: Save Entity (Create or Update)
   const handleSaveEntity = async (e) => {
     e.preventDefault();
-    if (!entityForm.name.trim()) return;
+    const effectivePersonName = entityForm.personName.trim();
+    const effectiveObligatorId = entityForm.obligatorIdentification.trim();
+
+    if (!effectivePersonName) {
+      alert(t('timeboardSettings.entities.form.personNameRequired') || 'O Nome da Pessoa é obrigatório.');
+      return;
+    }
+    if (!effectiveObligatorId) {
+      alert(t('timeboardSettings.entities.form.obligatorIdRequired') || 'A Identificação do Obrigado é obrigatória.');
+      return;
+    }
 
     setIsSavingEntity(true);
     const payload = {
       timeboardId: timeboard.id,
       type: entityForm.type,
-      name: entityForm.name.trim(),
+      personName: effectivePersonName,
+      name: effectivePersonName,
+      obligatorIdentification: effectiveObligatorId,
+      taxId: effectiveObligatorId,
       email: entityForm.email.trim() || null,
       phone: entityForm.phone.trim() || null,
-      taxId: entityForm.taxId.trim() || null,
+      birthDate: entityForm.birthDate || null,
+      observation: entityForm.observation.trim() || null,
       role: entityForm.type === PersonType.MEMBER ? (entityForm.role || PersonRole.CONTRIBUTOR) : null,
       userId: editingEntity?.userId || editingEntity?.user_id || null
     };
@@ -198,16 +228,17 @@ export default function TimeboardSettingsModal({
       if (editingEntity && editingEntity.id) {
         const updated = await api.updatePerson(editingEntity.id, payload);
         setPersons((prev) => prev.map((p) => (p.id === editingEntity.id ? { ...p, ...updated } : p)));
-        showToast(`Entidade "${payload.name}" atualizada com sucesso.`);
+        showToast(`Entidade "${effectivePersonName}" atualizada com sucesso.`);
       } else {
         const created = await api.createPerson(payload);
         setPersons((prev) => [...prev, created]);
-        showToast(`Entidade "${payload.name}" adicionada com sucesso.`);
+        showToast(`Entidade "${effectivePersonName}" adicionada com sucesso.`);
       }
       setIsEntityModalOpen(false);
       setEditingEntity(null);
     } catch (err) {
       console.error('Failed to save entity:', err);
+      showToast(err.message || 'Falha ao guardar entidade.', 'error');
     } finally {
       setIsSavingEntity(false);
     }
@@ -392,10 +423,12 @@ export default function TimeboardSettingsModal({
     }
     if (!entitySearch) return true;
     const q = entitySearch.toLowerCase();
-    const nameMatch = p.name?.toLowerCase().includes(q);
+    const nameMatch = (p.personName || p.person_name || p.name)?.toLowerCase().includes(q);
     const emailMatch = p.email?.toLowerCase().includes(q);
-    const taxMatch = (p.taxId || p.tax_id)?.toLowerCase().includes(q);
-    return nameMatch || emailMatch || taxMatch;
+    const taxMatch = (p.obligatorIdentification || p.obligator_identification || p.taxId || p.tax_id)?.toLowerCase().includes(q);
+    const phoneMatch = p.phone?.toLowerCase().includes(q);
+    const obsMatch = (p.observation || p.notes)?.toLowerCase().includes(q);
+    return nameMatch || emailMatch || taxMatch || phoneMatch || obsMatch;
   });
 
   return (
@@ -591,28 +624,9 @@ export default function TimeboardSettingsModal({
               <Settings size={22} />
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                  {t('timeboardSettings.modalTitle') || 'Definições do Timeboard'}
-                </h2>
-                <span
-                  style={{
-                    fontSize: '0.74rem',
-                    fontWeight: '700',
-                    background: 'rgba(99, 102, 241, 0.12)',
-                    color: 'var(--primary-light, #6366f1)',
-                    padding: '3px 10px',
-                    borderRadius: '999px',
-                    border: '1px solid var(--border-glass)',
-                    maxWidth: '220px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {timeboard.name}
-                </span>
-              </div>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                {t('timeboardSettings.modalTitle') || 'Definições do Timeboard'}
+              </h2>
               <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                 {t('timeboardSettings.modalSubtitle') || 'Gerir entidades, permissões de membros e configurações deste espaço'}
               </p>
@@ -689,6 +703,58 @@ export default function TimeboardSettingsModal({
                   <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--text-muted, #94a3b8)' }}>
                     {t('timeboardSettings.general.subtitle') || 'Parâmetros básicos deste espaço Timeboard'}
                   </p>
+
+                  {timeboard?.id && (
+                    <div style={{ marginTop: '10px' }}>
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          padding: '4px 10px',
+                          borderRadius: '8px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.12))',
+                          color: 'var(--text-muted, #94a3b8)',
+                          fontFamily: 'monospace',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <span style={{ userSelect: 'all' }}>ID: {timeboard.id}</span>
+                        <button
+                          type="button"
+                          onClick={handleCopyTimeboardId}
+                          title={copiedTimeboardId ? 'Copiado!' : 'Copiar ID do Timeboard'}
+                          style={{
+                            background: copiedTimeboardId ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+                            border: `1px solid ${copiedTimeboardId ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-glass, rgba(255, 255, 255, 0.12))'}`,
+                            color: copiedTimeboardId ? '#10b981' : 'var(--text-main, #cbd5e1)',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '0.72rem',
+                            fontWeight: '600',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {copiedTimeboardId ? (
+                            <>
+                              <Check size={12} strokeWidth={2.5} />
+                              <span>{t('common.copied') || 'Copiado'}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy size={12} />
+                              <span>{t('common.copy') || 'Copiar'}</span>
+                            </>
+                          )}
+                        </button>
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <form onSubmit={handleSaveGeneral} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -1054,11 +1120,27 @@ export default function TimeboardSettingsModal({
                                     <User size={16} style={{ color: '#10b981', flexShrink: 0 }} />
                                   )}
 
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                       <span style={{ fontWeight: '600', fontSize: '0.88rem', color: 'var(--text-main, #fff)' }}>
-                                        {p.name}
+                                        {p.personName || p.person_name || p.name}
                                       </span>
+                                      {(p.obligatorIdentification || p.obligator_identification || p.taxId || p.tax_id) && (
+                                        <span 
+                                          title="Identificação do Obrigado"
+                                          style={{
+                                            fontSize: '0.70rem',
+                                            fontWeight: '600',
+                                            padding: '1px 6px',
+                                            borderRadius: '4px',
+                                            background: 'rgba(255, 255, 255, 0.08)',
+                                            color: 'var(--text-muted, #94a3b8)',
+                                            border: '1px solid rgba(255, 255, 255, 0.08)'
+                                          }}
+                                        >
+                                          {p.obligatorIdentification || p.obligator_identification || p.taxId || p.tax_id}
+                                        </span>
+                                      )}
                                       {hasUserAccount && (
                                         <Check size={14} style={{ color: '#10b981' }} title="Conta de Utilizador Vinculada" />
                                       )}
@@ -1066,11 +1148,16 @@ export default function TimeboardSettingsModal({
                                         <Clock size={13} style={{ color: '#f59e0b' }} title="Convite Pendente" />
                                       )}
                                     </div>
-                                    {p.email && (
-                                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted, #94a3b8)' }}>
-                                        {p.email}
-                                      </span>
-                                    )}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '0.74rem', color: 'var(--text-muted, #94a3b8)' }}>
+                                      {p.email && <span>{p.email}</span>}
+                                      {p.phone && <span>• {p.phone}</span>}
+                                      {(p.birthDate || p.birth_date) && <span>• 🎂 {p.birthDate || p.birth_date}</span>}
+                                      {p.observation && (
+                                        <span title={p.observation} style={{ fontStyle: 'italic', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          • {p.observation}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </td>
@@ -1160,7 +1247,7 @@ export default function TimeboardSettingsModal({
                                     {/* Delete Button */}
                                     <button
                                       type="button"
-                                      onClick={() => handleDeleteEntity(p.id, p.name)}
+                                      onClick={() => handleDeleteEntity(p.id, p.personName || p.person_name || p.name)}
                                       title="Eliminar"
                                       style={{
                                         background: 'rgba(239, 68, 68, 0.1)',
@@ -1430,17 +1517,17 @@ export default function TimeboardSettingsModal({
                 </div>
               </div>
 
-              {/* Name */}
+              {/* Person Name */}
               <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
-                  {t('timeboardSettings.entities.form.nameLabel') || 'Nome Completo / Razão Social *'}
+                  {t('timeboardSettings.entities.form.personNameLabel') || 'Nome da Pessoa / Razão Social *'}
                 </label>
                 <input
                   type="text"
                   required
-                  value={entityForm.name}
-                  onChange={(e) => setEntityForm({ ...entityForm, name: e.target.value })}
-                  placeholder={t('timeboardSettings.entities.form.namePlaceholder') || 'Ex: Maria Silva ou Empresa XYZ Lda'}
+                  value={entityForm.personName}
+                  onChange={(e) => setEntityForm({ ...entityForm, personName: e.target.value })}
+                  placeholder={t('timeboardSettings.entities.form.personNamePlaceholder') || 'Ex: Maria Silva ou Empresa XYZ Lda'}
                   style={{
                     background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
                     border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
@@ -1448,6 +1535,113 @@ export default function TimeboardSettingsModal({
                     padding: '11px 14px',
                     color: 'var(--text-main, #fff)',
                     fontSize: '0.92rem'
+                  }}
+                />
+              </div>
+
+              {/* Obligator Identification */}
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
+                  {t('timeboardSettings.entities.form.obligatorIdentificationLabel') || 'Identificação do Obrigado *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={entityForm.obligatorIdentification}
+                  onChange={(e) => setEntityForm({ ...entityForm, obligatorIdentification: e.target.value })}
+                  placeholder={t('timeboardSettings.entities.form.obligatorIdentificationPlaceholder') || 'Ex: NIF, CPF, BI ou Nº de Documento'}
+                  style={{
+                    background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
+                    border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
+                    borderRadius: '10px',
+                    padding: '11px 14px',
+                    color: 'var(--text-main, #fff)',
+                    fontSize: '0.88rem'
+                  }}
+                />
+              </div>
+
+              {/* Birth Date & Phone Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
+                    {t('timeboardSettings.entities.form.birthDateLabel') || 'Data de Nascimento'}
+                  </label>
+                  <input
+                    type="date"
+                    value={entityForm.birthDate}
+                    onChange={(e) => setEntityForm({ ...entityForm, birthDate: e.target.value })}
+                    style={{
+                      background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
+                      border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
+                      borderRadius: '10px',
+                      padding: '11px 14px',
+                      color: 'var(--text-main, #fff)',
+                      fontSize: '0.88rem'
+                    }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
+                    {t('timeboardSettings.entities.form.phoneLabel') || 'Telefone (Opcional)'}
+                  </label>
+                  <input
+                    type="tel"
+                    value={entityForm.phone}
+                    onChange={(e) => setEntityForm({ ...entityForm, phone: e.target.value })}
+                    placeholder={t('timeboardSettings.entities.form.phonePlaceholder') || 'Ex: +351 912 345 678'}
+                    style={{
+                      background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
+                      border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
+                      borderRadius: '10px',
+                      padding: '11px 14px',
+                      color: 'var(--text-main, #fff)',
+                      fontSize: '0.88rem'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Email Address */}
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
+                  {t('timeboardSettings.entities.form.emailLabel') || 'Endereço de Email'}
+                </label>
+                <input
+                  type="email"
+                  value={entityForm.email}
+                  onChange={(e) => setEntityForm({ ...entityForm, email: e.target.value })}
+                  placeholder={t('timeboardSettings.entities.form.emailPlaceholder') || 'Ex: utilizador@exemplo.com'}
+                  style={{
+                    background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
+                    border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
+                    borderRadius: '10px',
+                    padding: '11px 14px',
+                    color: 'var(--text-main, #fff)',
+                    fontSize: '0.88rem'
+                  }}
+                />
+              </div>
+
+              {/* Observation / Notes */}
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
+                  {t('timeboardSettings.entities.form.observationLabel') || 'Observações'}
+                </label>
+                <textarea
+                  rows={2}
+                  value={entityForm.observation}
+                  onChange={(e) => setEntityForm({ ...entityForm, observation: e.target.value })}
+                  placeholder={t('timeboardSettings.entities.form.observationPlaceholder') || 'Adicione notas ou observações relevantes...'}
+                  style={{
+                    background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
+                    border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
+                    borderRadius: '10px',
+                    padding: '11px 14px',
+                    color: 'var(--text-main, #fff)',
+                    fontSize: '0.88rem',
+                    resize: 'vertical'
                   }}
                 />
               </div>
@@ -1525,70 +1719,6 @@ export default function TimeboardSettingsModal({
                   </div>
                 </div>
               )}
-
-              {/* Email & Phone Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
-                    {t('timeboardSettings.entities.form.emailLabel') || 'Endereço de Email'}
-                  </label>
-                  <input
-                    type="email"
-                    value={entityForm.email}
-                    onChange={(e) => setEntityForm({ ...entityForm, email: e.target.value })}
-                    placeholder={t('timeboardSettings.entities.form.emailPlaceholder') || 'Ex: utilizador@exemplo.com'}
-                    style={{
-                      background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
-                      border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
-                      borderRadius: '10px',
-                      padding: '11px 14px',
-                      color: 'var(--text-main, #fff)',
-                      fontSize: '0.88rem'
-                    }}
-                  />
-                </div>
-
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
-                    {t('timeboardSettings.entities.form.phoneLabel') || 'Telefone'}
-                  </label>
-                  <input
-                    type="tel"
-                    value={entityForm.phone}
-                    onChange={(e) => setEntityForm({ ...entityForm, phone: e.target.value })}
-                    placeholder={t('timeboardSettings.entities.form.phonePlaceholder') || 'Ex: +351 912 345 678'}
-                    style={{
-                      background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
-                      border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
-                      borderRadius: '10px',
-                      padding: '11px 14px',
-                      color: 'var(--text-main, #fff)',
-                      fontSize: '0.88rem'
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Tax ID */}
-              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
-                  {t('timeboardSettings.entities.form.taxIdLabel') || 'NIF / CPF / Documento Fiscal'}
-                </label>
-                <input
-                  type="text"
-                  value={entityForm.taxId}
-                  onChange={(e) => setEntityForm({ ...entityForm, taxId: e.target.value })}
-                  placeholder={t('timeboardSettings.entities.form.taxIdPlaceholder') || 'Ex: 123456789'}
-                  style={{
-                    background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
-                    border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
-                    borderRadius: '10px',
-                    padding: '11px 14px',
-                    color: 'var(--text-main, #fff)',
-                    fontSize: '0.88rem'
-                  }}
-                />
-              </div>
 
               {/* Linked Account Status & Unlink Action (Inside Form) */}
               {editingEntity && (
@@ -1683,7 +1813,7 @@ export default function TimeboardSettingsModal({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSavingEntity || !entityForm.name.trim()}
+                  disabled={isSavingEntity || !entityForm.personName?.trim() || !entityForm.obligatorIdentification?.trim()}
                   style={{
                     background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
                     border: 'none',

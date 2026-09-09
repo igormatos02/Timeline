@@ -183,7 +183,7 @@ export class TimeboardService {
     if (personId) {
       const existing = await personRepository.getById(personId);
       if (existing) {
-        personName = existing.name || '';
+        personName = existing.personName || '';
         await personRepository.update(personId, {
           email: cleanEmail,
           role: finalRole,

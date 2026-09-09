@@ -79,6 +79,8 @@ export class TimelineEvent {
     is_system_loan_event,
     isRecurring,
     is_recurring,
+    isExternal = false,
+    is_external,
     automatic,
     isAutomatic,
     createdAt = new Date().toISOString(),
@@ -182,6 +184,8 @@ export class TimelineEvent {
     this.isInvestment = this.eventType === EventType.INVESTMENT;
     this.isAmortization = this.eventType === EventType.AMORTIZATION;
     this.isRecurring = Boolean(is_recurring !== undefined ? is_recurring : isRecurring);
+    this.isExternal = Boolean(isExternal !== undefined ? isExternal : is_external);
+    this.is_external = this.isExternal;
     this.automatic = Boolean(automatic || isAutomatic);
     this.isAutomatic = this.automatic;
     this.isCompleted = Boolean(isCompleted);

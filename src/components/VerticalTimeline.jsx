@@ -878,6 +878,7 @@ function VerticalTimeline({
         if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
           if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
         }
+        if (ev.isExternal || ev.is_external) return;
         const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment;
 
         if (isInvestment) {

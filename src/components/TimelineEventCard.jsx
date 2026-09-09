@@ -1794,6 +1794,17 @@ export default function TimelineEventCard({
                 </span>
               </div>
             )}
+
+            {(event.isExternal || event.is_external) && (
+              <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '14px' }}>
+                <span style={{ fontSize: '0.7rem', color: '#38bdf8', textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <ExternalLink size={11} /> {t('modal.externalDeposit') || 'Depósito Externo'}
+                </span>
+                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#38bdf8' }}>
+                  {t('modal.externalDeposit') || 'Depósito Externo'}
+                </span>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

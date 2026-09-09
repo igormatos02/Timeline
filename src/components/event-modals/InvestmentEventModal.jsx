@@ -16,7 +16,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  Check
+  Check,
+  ExternalLink
 } from 'lucide-react';
 import { format, parseISO, addMonths, getDaysInMonth, setMonth, setYear } from 'date-fns';
 import { EventStatus, EventPeriodicity, EventType, InvestmentEventCategory, EventUpdateMode } from '../../../shared/enums/index.js';
@@ -63,6 +64,7 @@ export default function InvestmentEventModal({
     targetAmount: '',
     labelsInput: '',
     isAutomatic: false,
+    isExternal: false,
     category: InvestmentEventCategory.SAVINGS
   });
 
@@ -157,6 +159,7 @@ export default function InvestmentEventModal({
         targetAmount: initialData.targetAmount !== undefined && initialData.targetAmount !== null ? initialData.targetAmount : '',
         labelsInput: Array.isArray(initialData.labels) ? initialData.labels.join(', ') : '',
         isAutomatic: Boolean(initialData.isAutomatic),
+        isExternal: Boolean(initialData.isExternal !== undefined ? initialData.isExternal : initialData.is_external),
         category: cat
       });
       setUpdateScope(EventUpdateMode.SUBSEQUENT);
@@ -183,6 +186,7 @@ export default function InvestmentEventModal({
         targetAmount: '',
         labelsInput: '',
         isAutomatic: false,
+        isExternal: false,
         category: InvestmentEventCategory.SAVINGS
       });
       setUpdateScope(EventUpdateMode.SINGLE);
@@ -248,6 +252,8 @@ export default function InvestmentEventModal({
       labels,
       category: formData.category || InvestmentEventCategory.SAVINGS,
       isAutomatic: formData.isAutomatic,
+      isExternal: Boolean(formData.isExternal),
+      is_external: Boolean(formData.isExternal),
       updateScope: (initialData?.seriesId || initialData?.eventId || initialData?.isRecurring || isRecurring) ? updateScope : undefined
     };
 
@@ -908,6 +914,65 @@ export default function InvestmentEventModal({
                   position: 'absolute',
                   top: '3px',
                   left: formData.isAutomatic ? '22px' : '4px',
+                  transition: 'left 0.2s ease',
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
+                }}
+              />
+            </button>
+          </div>
+
+          {/* Switch É depósito externo? */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 14px',
+              borderRadius: '10px',
+              background: 'var(--bg-glass, rgba(255,255,255,0.03))',
+              border: formData.isExternal ? '1px solid rgba(139, 92, 246, 0.4)' : '1px solid var(--border-glass)',
+              marginBottom: '16px'
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ExternalLink size={16} style={{ color: formData.isExternal ? '#8b5cf6' : 'var(--text-dim)' }} />
+                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                  {t('modal.isExternalDeposit') || 'É depósito externo?'}
+                </span>
+              </div>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', paddingLeft: '24px' }}>
+                {t('modal.isExternalDepositHint') || 'Não abate das entradas no cálculo de saldo/comprometimento.'}
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={formData.isExternal}
+              onClick={() => setFormData({ ...formData, isExternal: !formData.isExternal })}
+              style={{
+                width: '44px',
+                height: '24px',
+                borderRadius: '9999px',
+                background: formData.isExternal ? '#8b5cf6' : 'rgba(148, 163, 184, 0.25)',
+                border: 'none',
+                cursor: 'pointer',
+                position: 'relative',
+                transition: 'background 0.2s ease',
+                padding: 0,
+                flexShrink: 0
+              }}
+            >
+              <span
+                style={{
+                  display: 'block',
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '50%',
+                  background: '#ffffff',
+                  position: 'absolute',
+                  top: '3px',
+                  left: formData.isExternal ? '22px' : '4px',
                   transition: 'left 0.2s ease',
                   boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
                 }}

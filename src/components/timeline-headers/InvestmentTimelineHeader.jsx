@@ -123,19 +123,46 @@ export default function InvestmentTimelineHeader({
 
 
   let annualTotalInvested = 0;
+  let annualRegularInvested = 0;
+  let annualExternalInvested = 0;
+  let currentMonthRegularInvested = 0;
+  let currentMonthExternalInvested = 0;
   let annualTotalIncome = 0;
 
   // eventsList already contains rawEvents from all timelines (set by App.jsx activeTimeline memo)
   // So we scan it once for both income and investment events in the 12-month window
   eventsList.forEach((ev) => {
     if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
-    const evMonthKey = ev.date.substring(0, 7);
-    if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
-      const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME || ev.isIncome;
-      const isInvestment = ev.eventType === 'investment' || ev.eventType === EventType.INVESTMENT || ev.isInvestment;
-      if (isIncome) annualTotalIncome += Number(ev.amount || 0);
-      // Exclude initial contribution (first occurrence) from the commitment calculation
-      if (isInvestment && !ev.isFirstOccurrence) annualTotalInvested += Number(ev.amount || 0);
+    const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME || ev.isIncome;
+    const isInvestment = ev.eventType === 'investment' || ev.eventType === EventType.INVESTMENT || ev.isInvestment;
+    const isExternal = Boolean(ev.isExternal || ev.is_external);
+    const amt = Number(ev.amount || 0);
+
+    if (isIncome) {
+      const evMonthKey = ev.date.substring(0, 7);
+      if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
+        annualTotalIncome += amt;
+      }
+    }
+
+    if (isInvestment) {
+      if (ev.date.startsWith(currentMonthStr)) {
+        if (isExternal) {
+          currentMonthExternalInvested += amt;
+        } else {
+          currentMonthRegularInvested += amt;
+        }
+      }
+
+      const evMonthKey = ev.date.substring(0, 7);
+      if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
+        if (isExternal) {
+          annualExternalInvested += amt;
+        } else if (!ev.isFirstOccurrence) {
+          annualRegularInvested += amt;
+          annualTotalInvested += amt;
+        }
+      }
     }
   });
 
@@ -146,7 +173,8 @@ export default function InvestmentTimelineHeader({
   }
 
   if (annualTotalInvested === 0) {
-    annualTotalInvested = monthTotalInvested * 12;
+    annualTotalInvested = (currentMonthRegularInvested > 0 ? currentMonthRegularInvested : monthTotalInvested) * 12;
+    annualRegularInvested = annualTotalInvested;
   }
 
   const annualCommitmentPercent = annualTotalIncome > 0
@@ -832,7 +860,8 @@ export default function InvestmentTimelineHeader({
               diffPercentStr = '+100%';
             }
 
-            const annualProj = (currentMonthTotal > 0 ? currentMonthTotal : monthTotalInvested) * 12;
+            const baseRegularAnnual = annualRegularInvested > 0 ? annualRegularInvested : ((currentMonthRegularInvested > 0 ? currentMonthRegularInvested : monthTotalInvested) * 12);
+            const annualProj = baseRegularAnnual + annualExternalInvested;
             const maxMonthTotal = Math.max(...last7Months.map((m) => m.total), 1);
 
             return (

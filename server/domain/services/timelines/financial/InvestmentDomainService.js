@@ -25,7 +25,7 @@ export class InvestmentDomainService {
     const activeMonth = currentMonthKey || new Date().toISOString().substring(0, 7);
 
     const monthlyContributions = investmentEvents
-      .filter((ev) => ev.date && ev.date.startsWith(activeMonth) && !ev.isDeleted)
+      .filter((ev) => ev.date && ev.date.startsWith(activeMonth) && !ev.isDeleted && !ev.isExternal && !ev.is_external)
       .reduce((sum, ev) => sum + (Number(ev.amount) || 0), 0);
 
     const investedTotal = investmentEvents

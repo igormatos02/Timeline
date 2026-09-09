@@ -272,6 +272,9 @@ export const translations = {
       statusInvested: "Invested",
       statusPlanned: "Planned",
       automatic: "Automatic Payment / Debit",
+      isExternalDeposit: "Is external deposit?",
+      isExternalDepositHint: "External deposits do not commit regular monthly income and are excluded from outflow deductions.",
+      externalDeposit: "External Deposit",
       cancel: "Cancel",
       saveChanges: "Save Changes",
       changeSubsequent: "Apply to subsequent months"
@@ -812,6 +815,9 @@ export const translations = {
       statusInvested: "Investido",
       statusPlanned: "Previsto",
       automatic: "Débito / Pagamento Automático",
+      isExternalDeposit: "É depósito externo?",
+      isExternalDepositHint: "Depósitos externos não abatem das entradas e não entram no cálculo de comprometimento da renda.",
+      externalDeposit: "Depósito Externo",
       cancel: "Cancelar",
       saveChanges: "Salvar Alterações",
       changeSubsequent: "Aplicar aos meses futuros"

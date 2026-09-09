@@ -510,7 +510,7 @@ export default function BalanceTimelineHeader({
 
                   if (isIncome) annualIncome += amt;
                   else if (isExpense) annualExpense += amt;
-                  else if (isInvestment && !ev.isFirstOccurrence) annualInvestment += amt;
+                  else if (isInvestment && !ev.isFirstOccurrence && !ev.isExternal && !ev.is_external) annualInvestment += amt;
                   // Loan: only use event-based if no metrics were found on active timelines
                   else if (
                     annualLoan === 0 &&

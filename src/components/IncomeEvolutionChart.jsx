@@ -107,6 +107,7 @@ export default function IncomeEvolutionChart({
       let monthIncome = 0;
       let monthExpense = 0;
       let monthInvestment = 0;
+      let monthInvestmentOutflow = 0;
       let eventCount = 0;
 
       if (eventsByMonth[monthKey] && eventsByMonth[monthKey].length > 0) {
@@ -118,6 +119,7 @@ export default function IncomeEvolutionChart({
           const isIncome = (ev.eventType === EventType.INCOME || ev.isIncome === true) && !isLoan;
           const isExpense = (ev.eventType === EventType.EXPENSE || ev.isExpense === true || isLoan) && !ev.isInvestment;
           const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment === true;
+          const isExternal = Boolean(ev.isExternal || ev.is_external);
 
           const isValid = chartMode === 'acumulado_real' ? isReceived : true;
           if (isValid) {
@@ -131,6 +133,9 @@ export default function IncomeEvolutionChart({
             }
             if (isInvestment) {
               monthInvestment += amt;
+              if (!isExternal) {
+                monthInvestmentOutflow += amt;
+              }
               if (activeFinancialTab === 'investimentos') eventCount++;
             }
             if (timeline?.type === TimelineType.BALANCE) {
@@ -148,8 +153,8 @@ export default function IncomeEvolutionChart({
       } else if (timeline?.type === TimelineType.INVESTMENT) {
         monthTotal = monthInvestment;
       } else {
-        // Balanço líquido = Entradas - Gastos/Empréstimos - Investimentos
-        monthTotal = monthIncome - monthExpense - monthInvestment;
+        // Balanço líquido = Entradas - Gastos/Empréstimos - Investimentos (apenas os internos)
+        monthTotal = monthIncome - monthExpense - monthInvestmentOutflow;
       }
 
       runningTotal += monthTotal;

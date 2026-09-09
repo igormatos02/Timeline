@@ -89,6 +89,8 @@ export class SupabaseFinancialEventRepository extends IRepository {
       isAutomatic: row.automatic,
 
       isRecurring: row.is_recurring,
+      isExternal: Boolean(row.is_external),
+      is_external: Boolean(row.is_external),
 
       periodicity:
         row.aggregation ||
@@ -407,6 +409,13 @@ export class SupabaseFinancialEventRepository extends IRepository {
             : false
         ),
 
+      is_external:
+        Boolean(
+          data.isExternal !== undefined
+            ? data.isExternal
+            : (data.is_external !== undefined ? data.is_external : false)
+        ),
+
       installment_number:
         data.installmentNumber !== undefined
           ? data.installmentNumber
@@ -623,6 +632,10 @@ export class SupabaseFinancialEventRepository extends IRepository {
 
     if (data.isRecurring !== undefined) {
       row.is_recurring = Boolean(data.isRecurring);
+    }
+
+    if (data.isExternal !== undefined || data.is_external !== undefined) {
+      row.is_external = Boolean(data.isExternal !== undefined ? data.isExternal : data.is_external);
     }
 
     if (data.installmentNumber !== undefined) {

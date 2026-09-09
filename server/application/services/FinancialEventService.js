@@ -280,13 +280,17 @@ export class FinancialEventService {
       existing?.category === InvestmentEventCategory.OTHER
     );
 
-    // Sincronizar targetAmount e initialInvestedAmount em todos os registos existentes da série de investimento
-    if (seriesVersions.length > 0 && (directUpdates.targetAmount !== undefined || directUpdates.initialInvestedAmount !== undefined)) {
+    // Sincronizar targetAmount, initialInvestedAmount e isExternal em todos os registos existentes da série de investimento
+    if (seriesVersions.length > 0 && (directUpdates.targetAmount !== undefined || directUpdates.initialInvestedAmount !== undefined || directUpdates.isExternal !== undefined || directUpdates.is_external !== undefined)) {
       for (const sv of seriesVersions) {
         if (sv.id) {
           const syncPatch = {};
           if (directUpdates.targetAmount !== undefined) syncPatch.targetAmount = directUpdates.targetAmount;
           if (directUpdates.initialInvestedAmount !== undefined) syncPatch.initialInvestedAmount = directUpdates.initialInvestedAmount;
+          if (directUpdates.isExternal !== undefined || directUpdates.is_external !== undefined) {
+            syncPatch.isExternal = Boolean(directUpdates.isExternal !== undefined ? directUpdates.isExternal : directUpdates.is_external);
+            syncPatch.is_external = syncPatch.isExternal;
+          }
           if (directUpdates.title || directUpdates.name) {
             syncPatch.title = directUpdates.title || directUpdates.name;
             syncPatch.name = directUpdates.name || directUpdates.title;

@@ -23,7 +23,9 @@ import {
   CheckCircle2,
   Check,
   ChevronDown,
-  UserCheck
+  UserCheck,
+  Copy,
+  Link
 } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { PersonRole, PersonType, TimeboardType } from '../enums/index.js';
@@ -67,6 +69,14 @@ export default function TimeboardSettingsModal({
   });
   const [isSavingEntity, setIsSavingEntity] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+
+  // Send Invitation Modal State
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [invitingPerson, setInvitingPerson] = useState(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState(PersonRole.CONTRIBUTOR);
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   // Sync state when timeboard or isOpen changes
   useEffect(() => {
@@ -220,10 +230,56 @@ export default function TimeboardSettingsModal({
     }
   };
 
-  // Handler: Send Invitation
+  // Handler: Open Send Invitation Modal
   const handleSendInvite = (person) => {
-    const targetEmail = person.email || person.name;
-    showToast(`${t('timeboardSettings.entities.inviteSentToast') || 'Convite enviado com sucesso para'} ${targetEmail}!`);
+    setInvitingPerson(person);
+    setInviteEmail(person.email || '');
+    setInviteRole(person.role || PersonRole.CONTRIBUTOR);
+    setIsInviteModalOpen(true);
+    setCopiedLink(false);
+  };
+
+  const isValidEmail = (email) => {
+    return Boolean(email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()));
+  };
+
+  const handleConfirmSendInvite = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!invitingPerson || !isValidEmail(inviteEmail)) return;
+
+    setIsSendingInvite(true);
+    const targetEmail = inviteEmail.trim().toLowerCase();
+    const targetRole = inviteRole || PersonRole.CONTRIBUTOR;
+
+    try {
+      // 1. Update person in Database (both email and role)
+      const updated = await api.updatePerson(invitingPerson.id, {
+        email: targetEmail,
+        role: targetRole,
+        timeboardId: timeboard.id
+      });
+
+      // 2. Update local persons table state
+      setPersons((prev) =>
+        prev.map((p) =>
+          p.id === invitingPerson.id
+            ? { ...p, ...updated, email: targetEmail, role: targetRole }
+            : p
+        )
+      );
+
+      // 3. Simulate sending invitation email
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      showToast(`Convite de acesso enviado com sucesso para ${targetEmail}!`);
+      setIsInviteModalOpen(false);
+      setInvitingPerson(null);
+    } catch (err) {
+      console.error('Failed to send invite & update person:', err);
+      showToast('Erro ao enviar convite. Tente novamente.');
+    } finally {
+      setIsSendingInvite(false);
+    }
   };
 
   // Filter counts
@@ -1468,6 +1524,295 @@ export default function TimeboardSettingsModal({
                   }}
                 >
                   {t('timeboardSettings.entities.form.saveButton') || 'Guardar Entidade'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🚀 Modal de Envio de Convite para Membros */}
+      {isInviteModalOpen && invitingPerson && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(5, 8, 18, 0.85)',
+            backdropFilter: 'blur(12px)',
+            zIndex: 1400,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            animation: 'fadeIn 0.2s ease-out'
+          }}
+        >
+          <div
+            className="modal-container"
+            style={{
+              width: '100%',
+              maxWidth: '560px',
+              background: 'var(--bg-card, #111827)',
+              border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
+              borderRadius: '16px',
+              padding: '28px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 35px rgba(139, 92, 246, 0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px',
+              position: 'relative'
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(99, 102, 241, 0.2) 100%)',
+                    color: '#c084fc',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid rgba(139, 92, 246, 0.35)'
+                  }}
+                >
+                  <Send size={18} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#ffffff', margin: 0 }}>
+                    {t('timeboardSettings.entities.inviteModal.title') || 'Enviar Convite de Acesso'}
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted, #94a3b8)', margin: 0, marginTop: '2px' }}>
+                    {t('timeboardSettings.entities.inviteModal.subtitle') || 'Convide este membro para aceder ao Timeboard'} <strong style={{ color: '#fff' }}>{timeboard?.name}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsInviteModalOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Member Card Summary */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.08))',
+                borderRadius: '10px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.8rem',
+                    fontWeight: '800'
+                  }}
+                >
+                  {invitingPerson.name ? invitingPerson.name.substring(0, 2).toUpperCase() : 'MB'}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontWeight: '700', fontSize: '0.92rem', color: '#ffffff' }}>
+                    {invitingPerson.name}
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    {invitingPerson.taxId || invitingPerson.tax_id || 'Membro do Timeboard'}
+                  </span>
+                </div>
+              </div>
+
+              <span
+                style={{
+                  background: 'rgba(139, 92, 246, 0.15)',
+                  color: '#c084fc',
+                  border: '1px solid rgba(139, 92, 246, 0.3)',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: '700'
+                }}
+              >
+                Membro
+              </span>
+            </div>
+
+            <form onSubmit={handleConfirmSendInvite} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              {/* Email Input */}
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.84rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>{t('timeboardSettings.entities.inviteModal.emailLabel') || 'Endereço de Email do Membro *'}</span>
+                  {isValidEmail(inviteEmail) ? (
+                    <span style={{ fontSize: '0.74rem', color: '#10b981', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Check size={13} /> Email válido
+                    </span>
+                  ) : inviteEmail.trim() ? (
+                    <span style={{ fontSize: '0.74rem', color: '#f87171', fontWeight: '600' }}>
+                      Email inválido
+                    </span>
+                  ) : null}
+                </label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <Mail size={16} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)' }} />
+                  <input
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="exemplo@empresa.com"
+                    required
+                    style={{
+                      width: '100%',
+                      background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
+                      border: isValidEmail(inviteEmail)
+                        ? '1px solid #10b981'
+                        : '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
+                      borderRadius: '10px',
+                      padding: '11px 14px 11px 38px',
+                      color: 'var(--text-main, #fff)',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Role Selection */}
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ fontSize: '0.84rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
+                  {t('timeboardSettings.entities.inviteModal.roleLabel') || 'Função / Permissão a Conceder'}
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {/* Contributor Option */}
+                  <div
+                    onClick={() => setInviteRole(PersonRole.CONTRIBUTOR)}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '10px',
+                      border: inviteRole === PersonRole.CONTRIBUTOR ? '1.5px solid #6366f1' : '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
+                      background: inviteRole === PersonRole.CONTRIBUTOR ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      transition: 'all 0.2s ease',
+                      boxShadow: inviteRole === PersonRole.CONTRIBUTOR ? '0 0 16px rgba(99, 102, 241, 0.2)' : 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#a5b4fc', fontWeight: '700', fontSize: '0.86rem' }}>
+                        <Users size={15} />
+                        <span>{t('timeboardSettings.entities.roles.contributor') || 'Colaborador'}</span>
+                      </div>
+                      {inviteRole === PersonRole.CONTRIBUTOR && (
+                        <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                          <Check size={11} strokeWidth={3} />
+                        </div>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      Editar & visualizar eventos
+                    </span>
+                  </div>
+
+                  {/* Admin Option */}
+                  <div
+                    onClick={() => setInviteRole(PersonRole.ADMIN)}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '10px',
+                      border: inviteRole === PersonRole.ADMIN ? '1.5px solid #f59e0b' : '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
+                      background: inviteRole === PersonRole.ADMIN ? 'rgba(245, 158, 11, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      transition: 'all 0.2s ease',
+                      boxShadow: inviteRole === PersonRole.ADMIN ? '0 0 16px rgba(245, 158, 11, 0.2)' : 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fbbf24', fontWeight: '700', fontSize: '0.86rem' }}>
+                        <Crown size={15} />
+                        <span>{t('timeboardSettings.entities.roles.admin') || 'Administrador'}</span>
+                      </div>
+                      {inviteRole === PersonRole.ADMIN && (
+                        <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>
+                          <Check size={11} strokeWidth={3} />
+                        </div>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      Acesso total e gestão
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsInviteModalOpen(false)}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
+                    color: 'var(--text-muted)',
+                    padding: '10px 18px',
+                    borderRadius: '10px',
+                    fontSize: '0.88rem',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {t('timeboardSettings.entities.form.cancelButton') || 'Cancelar'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSendingInvite || !isValidEmail(inviteEmail)}
+                  style={{
+                    background: isValidEmail(inviteEmail)
+                      ? 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)'
+                      : 'rgba(255, 255, 255, 0.08)',
+                    border: 'none',
+                    color: isValidEmail(inviteEmail) ? '#ffffff' : 'var(--text-muted)',
+                    padding: '10px 22px',
+                    borderRadius: '10px',
+                    fontSize: '0.88rem',
+                    fontWeight: '700',
+                    cursor: (!isValidEmail(inviteEmail) || isSendingInvite) ? 'not-allowed' : 'pointer',
+                    boxShadow: isValidEmail(inviteEmail) ? '0 4px 14px rgba(139, 92, 246, 0.35)' : 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <Send size={15} />
+                  <span>{isSendingInvite ? 'A enviar...' : (t('timeboardSettings.entities.inviteModal.sendButton') || 'Enviar Convite')}</span>
                 </button>
               </div>
             </form>

@@ -151,7 +151,7 @@ export default function LoanTimelineHeader({
     const evList = timeline.events || [];
     const sample = evList.find(
       (ev) => ev && (ev.eventType === 'loan_installment' || ev.isSystemLoanEvent) &&
-              ev.eventType !== 'amortization'
+        ev.eventType !== 'amortization'
     );
     const fromEvent = Number(sample?.installmentAmount || sample?.amount || 0);
     return fromEvent > 0 ? fromEvent * 12 : 0;
@@ -668,7 +668,7 @@ export default function LoanTimelineHeader({
               gap: '14px'
             }}
           >
-            {/* SALDO DEVEDOR card */}
+            {/* 1. SALDO DEVEDOR card */}
             <div
               style={{
                 background: 'rgba(255, 255, 255, 0.02)',
@@ -694,167 +694,53 @@ export default function LoanTimelineHeader({
                   'Saldo Devedor'}
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div
-                  style={{
-                    fontSize: '1.4rem',
-                    fontWeight: '800',
-                    color: textColorLight
-                  }}
-                >
-                  {formatCurrency(
-                    loanMetrics.remainingDebt ??
-                    loanMetrics.remainingBalance ??
-                    0
-                  )}
-                </div>
-
-                <div
-                  style={{
-                    fontSize: '0.74rem',
-                    color: textColorMuted
-                  }}
-                >
-                  {t(
-                    'loanHeader.capitalStillDue'
-                  ) ||
-                    'Capital ainda devido'}
-                </div>
-              </div>
-            </div>
-
-            {/* CAPITAL AMORTIZADO Donut card */}
-            <div
-              style={{
-                background: 'rgba(255, 255, 255, 0.02)',
-                padding: '14px',
-                borderRadius: '10px',
-                border: '1px solid var(--border-glass)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px'
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '0.74rem',
-                  color: textColorDim,
-                  textTransform: 'uppercase',
-                  fontWeight: '800',
-                  letterSpacing: '0.5px'
-                }}
-              >
-                {t('loanHeader.amortizedCapital') ||
-                  'Capital Amortizado'}
-              </div>
-
               {(() => {
-                const amortizedCap = loanMetrics.amortizedCapital ?? 0;
-                const origCapital = loanMetrics.originalCapital ?? timeline.loanContract?.financedAmount ?? 0;
-
-                if (amortizedCap === 0 && origCapital === 0) {
-                  return (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
-                      <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
-                        <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                          <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
-                        </svg>
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            width: '42px',
-                            height: '42px',
-                            borderRadius: '50%',
-                            background: 'var(--bg-card, #0f172a)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            border: '1px solid var(--border-glass)',
-                            fontSize: '0.7rem',
-                            fontWeight: '700',
-                            color: 'var(--text-dim)'
-                          }}
-                        >
-                          0%
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                          {formatCurrency(0)}
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
-                          {(t('loanHeader.ofOriginalCapital') || '0% do capital original').replace('{percent}', 0)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                }
-
-                const usedFraction = Math.min(1, Math.max(0, progressPercent / 100));
-                const sliceX = Math.cos(2 * Math.PI * usedFraction);
-                const sliceY = Math.sin(2 * Math.PI * usedFraction);
-                const largeArcFlag = usedFraction > 0.5 ? 1 : 0;
-
-                const sliceColor = isInactive ? '#94a3b8' : textColorGreen;
-                const remainingColor = 'rgba(255, 255, 255, 0.08)';
-
-                const pathData = usedFraction >= 0.999
-                  ? `M 1 0 A 1 1 0 1 1 -0.999 0 L 0 0`
-                  : `M 1 0 A 1 1 0 ${largeArcFlag} 1 ${sliceX} ${sliceY} L 0 0`;
+                const remDebt = loanMetrics.remainingDebt ?? loanMetrics.remainingBalance ?? 0;
+                const futureTotalInstallments = loanMetrics.futureTotal ?? (remDebt + (loanMetrics.futureInterest ?? 0) + (loanMetrics.futureFee ?? 0));
 
                 return (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                    {/* PieChart Donut SVG para % Amortizado */}
-                    <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
-                      <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
-                        {/* Fundo (Restante / Devido) */}
-                        <circle cx="0" cy="0" r="1" fill={remainingColor} />
-                        {/* Fatia Amortizada */}
-                        {usedFraction > 0 && (
-                          <path d={pathData} fill={sliceColor} style={{ transition: 'all 0.3s ease' }}>
-                            <title>{`${t('loanHeader.amortizedCapital') || 'Capital Amortizado'} ${progressPercent}%`}</title>
-                          </path>
-                        )}
-                      </svg>
-                      {/* Miolo Donut com % */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div>
                       <div
                         style={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          width: '46px',
-                          height: '46px',
-                          borderRadius: '50%',
-                          background: 'var(--bg-card, #0f172a)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: '1px solid var(--border-glass)',
-                          fontSize: '0.74rem',
+                          fontSize: '1.25rem',
                           fontWeight: '800',
-                          color: sliceColor
+                          color: isInactive ? 'var(--text-dim)' : textColorLight,
+                          lineHeight: 1.1
                         }}
                       >
-                        {progressPercent}%
+                        {formatCurrency(remDebt)}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '0.72rem',
+                          color: textColorMuted,
+                          marginTop: '2px'
+                        }}
+                      >
+                        {t('loanHeader.capitalStillDue') || 'Capital ainda devido'}
                       </div>
                     </div>
 
-                    {/* Informações Numéricas de Capital Amortizado */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
-                        {t('loanHeader.amortizedCapital') || 'Capital Amortizado'}
+                    <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '6px' }}>
+                      <div
+                        style={{
+                          fontSize: '1.25rem',
+                          fontWeight: '800',
+                          color: isInactive ? 'var(--text-dim)' : textColorMain,
+                          lineHeight: 1.1
+                        }}
+                      >
+                        {formatCurrency(futureTotalInstallments)}
                       </div>
-                      <div style={{ fontSize: '0.94rem', fontWeight: '800', color: isInactive ? 'var(--text-dim)' : textColorGreen }}>
-                        {formatCurrency(amortizedCap)}
-                      </div>
-                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                        {origCapital > 0
-                          ? (t('loanHeader.ofOriginalCapitalAmount', { amount: formatCurrency(origCapital) }) || `de ${formatCurrency(origCapital)} capital original`)
-                          : (t('loanHeader.ofOriginalCapital') || '{percent}% do capital original').replace('{percent}', progressPercent)}
+                      <div
+                        style={{
+                          fontSize: '0.72rem',
+                          color: textColorMuted,
+                          marginTop: '2px'
+                        }}
+                      >
+                        {t('loanHeader.installmentStillDue') || 'Instalment still due'}
                       </div>
                     </div>
                   </div>
@@ -862,7 +748,7 @@ export default function LoanTimelineHeader({
               })()}
             </div>
 
-            {/* ANNUAL COMMITMENT card */}
+            {/* 2. ANNUAL COMMITMENT Donut card */}
             <div
               style={{
                 background: 'rgba(255, 255, 255, 0.02)',
@@ -995,6 +881,145 @@ export default function LoanTimelineHeader({
                           {t('loanHeader.projectedNext12Months') || 'projetado nos próximos 12 meses'}
                         </div>
                       )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* 3. CAPITAL AMORTIZADO Donut card */}
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                padding: '14px',
+                borderRadius: '10px',
+                border: '1px solid var(--border-glass)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '0.74rem',
+                  color: textColorDim,
+                  textTransform: 'uppercase',
+                  fontWeight: '800',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                {t('loanHeader.amortizedCapital') ||
+                  'Capital Amortizado'}
+              </div>
+
+              {(() => {
+                const amortizedCap = loanMetrics.amortizedCapital ?? 0;
+                const origCapital = loanMetrics.originalCapital ?? timeline.loanContract?.financedAmount ?? 0;
+
+                if (amortizedCap === 0 && origCapital === 0) {
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
+                      <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
+                        <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                          <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                        </svg>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: '42px',
+                            height: '42px',
+                            borderRadius: '50%',
+                            background: 'var(--bg-card, #0f172a)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '1px solid var(--border-glass)',
+                            fontSize: '0.7rem',
+                            fontWeight: '700',
+                            color: 'var(--text-dim)'
+                          }}
+                        >
+                          0%
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                          {formatCurrency(0)}
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
+                          {(t('loanHeader.ofOriginalCapital') || '0% do capital original').replace('{percent}', 0)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const usedFraction = Math.min(1, Math.max(0, progressPercent / 100));
+                const sliceX = Math.cos(2 * Math.PI * usedFraction);
+                const sliceY = Math.sin(2 * Math.PI * usedFraction);
+                const largeArcFlag = usedFraction > 0.5 ? 1 : 0;
+
+                const sliceColor = isInactive ? '#94a3b8' : textColorGreen;
+                const remainingColor = 'rgba(255, 255, 255, 0.08)';
+
+                const pathData = usedFraction >= 0.999
+                  ? `M 1 0 A 1 1 0 1 1 -0.999 0 L 0 0`
+                  : `M 1 0 A 1 1 0 ${largeArcFlag} 1 ${sliceX} ${sliceY} L 0 0`;
+
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                    {/* PieChart Donut SVG para % Amortizado */}
+                    <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
+                      <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
+                        {/* Fundo (Restante / Devido) */}
+                        <circle cx="0" cy="0" r="1" fill={remainingColor} />
+                        {/* Fatia Amortizada */}
+                        {usedFraction > 0 && (
+                          <path d={pathData} fill={sliceColor} style={{ transition: 'all 0.3s ease' }}>
+                            <title>{`${t('loanHeader.amortizedCapital') || 'Capital Amortizado'} ${progressPercent}%`}</title>
+                          </path>
+                        )}
+                      </svg>
+                      {/* Miolo Donut com % */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          width: '46px',
+                          height: '46px',
+                          borderRadius: '50%',
+                          background: 'var(--bg-card, #0f172a)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: '1px solid var(--border-glass)',
+                          fontSize: '0.74rem',
+                          fontWeight: '800',
+                          color: sliceColor
+                        }}
+                      >
+                        {progressPercent}%
+                      </div>
+                    </div>
+
+                    {/* Informações Numéricas de Capital Amortizado */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
+                        {t('loanHeader.amortizedCapital') || 'Capital Amortizado'}
+                      </div>
+                      <div style={{ fontSize: '0.94rem', fontWeight: '800', color: isInactive ? 'var(--text-dim)' : textColorGreen }}>
+                        {formatCurrency(amortizedCap)}
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                        {origCapital > 0
+                          ? (t('loanHeader.ofOriginalCapitalAmount', { amount: formatCurrency(origCapital) }) || `de ${formatCurrency(origCapital)} capital original`)
+                          : (t('loanHeader.ofOriginalCapital') || '{percent}% do capital original').replace('{percent}', progressPercent)}
+                      </div>
                     </div>
                   </div>
                 );

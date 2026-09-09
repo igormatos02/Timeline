@@ -394,7 +394,14 @@ export const translations = {
         },
         types: {
           person: "Person",
-          organization: "Organization"
+          organization: "Organization",
+          member: "Member"
+        },
+        filters: {
+          all: "All",
+          person: "Persons",
+          organization: "Organizations",
+          member: "Members"
         },
         userAccountStatus: {
           linked: "Linked User",
@@ -1027,7 +1034,14 @@ export const translations = {
         },
         types: {
           person: "Pessoa",
-          organization: "Empresa / Organização"
+          organization: "Empresa / Organização",
+          member: "Membro"
+        },
+        filters: {
+          all: "Todos",
+          person: "Pessoas",
+          organization: "Empresas",
+          member: "Membros"
         },
         userAccountStatus: {
           linked: "Conta Vinculada",

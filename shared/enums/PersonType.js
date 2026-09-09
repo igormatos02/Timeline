@@ -1,4 +1,6 @@
 export const PersonType = Object.freeze({
   PERSON: 'person',
-  ORGANIZATION: 'organization'
+  ORGANIZATION: 'organization',
+  MEMBER: 'member'
 });
+

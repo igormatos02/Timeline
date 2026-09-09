@@ -30,6 +30,7 @@ import { useTranslation } from './i18n/LanguageContext.jsx';
 import { RotateCcw, X, Plus } from 'lucide-react';
 import LandingPage from './components/landing/LandingPage.jsx';
 import TimeboardsHub from './components/dashboard-hub/TimeboardsHub.jsx';
+import { supabase } from './services/supabaseClient.js';
 import './App.css';
 
 export default function App() {
@@ -44,6 +45,61 @@ export default function App() {
     const savedView = localStorage.getItem('chrono_current_view');
     return savedView === 'workspace' ? 'workspace' : 'hub';
   });
+
+  // Effect: Listen to Supabase Auth State (Google OAuth Callback)
+  useEffect(() => {
+    let isMounted = true;
+
+    // Check existing session on mount
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user && isMounted) {
+        const gUser = session.user;
+        const gPayload = {
+          googleId: gUser.id,
+          email: gUser.email,
+          name: gUser.user_metadata?.full_name || gUser.user_metadata?.name || (gUser.email ? gUser.email.split('@')[0] : 'Utilizador Google'),
+          avatarUrl: gUser.user_metadata?.avatar_url || gUser.user_metadata?.picture || null
+        };
+        try {
+          const appUser = await api.syncGoogleUser(gPayload);
+          if (!isMounted) return;
+          setCurrentUser(appUser);
+          setCurrentView((prev) => (prev === 'landing' ? 'hub' : prev));
+        } catch (err) {
+          console.error('[App] Failed to sync Google OAuth session:', err);
+        }
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user && isMounted) {
+        const gUser = session.user;
+        const gPayload = {
+          googleId: gUser.id,
+          email: gUser.email,
+          name: gUser.user_metadata?.full_name || gUser.user_metadata?.name || (gUser.email ? gUser.email.split('@')[0] : 'Utilizador Google'),
+          avatarUrl: gUser.user_metadata?.avatar_url || gUser.user_metadata?.picture || null
+        };
+        try {
+          const appUser = await api.syncGoogleUser(gPayload);
+          if (!isMounted) return;
+          setCurrentUser(appUser);
+          setCurrentView((prev) => (prev === 'landing' ? 'hub' : prev));
+        } catch (err) {
+          console.error('[App] Failed to sync Google OAuth sign-in:', err);
+        }
+      } else if (event === 'SIGNED_OUT' && isMounted) {
+        setCurrentUser(null);
+        setCurrentView('landing');
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
+  }, []);
 
   // Timeboards State (Top Level Grouping)
   const [timeboards, setTimeboards] = useState(() => {

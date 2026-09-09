@@ -1,9 +1,5 @@
-/**
- * Frontend API Client for Chrono Timeline Backend
- * Communicates with /api endpoints with seamless multi-tenant header
- */
-
 import { DEFAULT_TENANT } from '../constants/tenant.js';
+import { supabase } from './supabaseClient.js';
 
 const API_BASE = '/api';
 
@@ -34,7 +30,7 @@ export function getCurrentUser() {
       return JSON.parse(customUser);
     } catch { }
   }
-  return isUserLoggedIn() ? DEFAULT_USER : null;
+  return null;
 }
 
 export function setCurrentUser(user) {
@@ -127,13 +123,39 @@ export async function registerWithEmail(name, email, password) {
   }
 }
 
-export async function loginWithGoogle(customGoogleData = null) {
-  const googlePayload = customGoogleData || {
-    googleId: `google_${Date.now()}`,
-    name: 'Igor Matos',
-    email: 'igor.matos@timeline.app',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
-  };
+export async function loginWithGoogle(pendingInvite = null) {
+  try {
+    let redirectUrl = window.location.origin;
+    if (pendingInvite?.timeboardId) {
+      const params = new URLSearchParams();
+      params.set('inviteTimeboardId', pendingInvite.timeboardId);
+      if (pendingInvite.email) params.set('email', pendingInvite.email);
+      redirectUrl = `${window.location.origin}/?${params.toString()}`;
+    }
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl
+      }
+    });
+
+    if (error) {
+      console.error('[api.loginWithGoogle] Supabase OAuth error:', error);
+      throw new Error(error.message || 'Falha ao iniciar autenticação com o Google.');
+    }
+
+    return data;
+  } catch (err) {
+    console.error('[api.loginWithGoogle] Error:', err);
+    throw err;
+  }
+}
+
+export async function syncGoogleUser(googlePayload) {
+  if (!googlePayload || !googlePayload.googleId) {
+    throw new Error('Dados do Google inválidos.');
+  }
 
   try {
     const res = await fetch(`${API_BASE}/auth/google`, {
@@ -147,7 +169,7 @@ export async function loginWithGoogle(customGoogleData = null) {
       throw new Error(data.error || 'Falha ao autenticar com Google.');
     }
 
-    const userName = data.name || googlePayload.name;
+    const userName = data.name || googlePayload.name || (googlePayload.email ? googlePayload.email.split('@')[0] : 'Utilizador Google');
     const initials = userName.substring(0, 2).toUpperCase();
 
     const user = {
@@ -155,7 +177,7 @@ export async function loginWithGoogle(customGoogleData = null) {
       name: userName,
       email: data.email || googlePayload.email,
       avatarInitials: initials,
-      avatarUrl: data.avatarUrl || googlePayload.avatarUrl,
+      avatarUrl: data.avatarUrl || googlePayload.avatarUrl || null,
       googleId: data.googleId || googlePayload.googleId,
       role: 'Administrador',
       tenantId: DEFAULT_TENANT.id,
@@ -165,14 +187,17 @@ export async function loginWithGoogle(customGoogleData = null) {
     setCurrentUser(user);
     return user;
   } catch (err) {
-    console.error('[api.loginWithGoogle] Error:', err);
+    console.error('[api.syncGoogleUser] Error:', err);
     throw err;
   }
 }
 
-export function logoutUser() {
+export async function logoutUser() {
   localStorage.removeItem('chrono_active_user');
   localStorage.removeItem('chrono_auth_token');
+  try {
+    await supabase.auth.signOut();
+  } catch (e) {}
 }
 
 function getHeaders(custom = {}) {

@@ -47,7 +47,13 @@ export default function ObligationSelector({
       api.fetchPersons(timeboardId)
         .then((data) => {
           if (isMounted) {
-            setPersons(Array.isArray(data) ? data : []);
+            const list = Array.isArray(data) ? data : [];
+            const sorted = [...list].sort((a, b) => {
+              const typeComp = (a.type || PersonType.PERSON || '').toLowerCase().localeCompare((b.type || PersonType.PERSON || '').toLowerCase());
+              if (typeComp !== 0) return typeComp;
+              return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+            });
+            setPersons(sorted);
           }
         })
         .catch((err) => {

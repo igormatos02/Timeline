@@ -395,8 +395,13 @@ export async function fetchPersons(params = {}) {
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
-        setLocalPersons(tbId, data);
-        return data;
+        const sorted = [...data].sort((a, b) => {
+          const typeComp = (a.type || '').toLowerCase().localeCompare((b.type || '').toLowerCase());
+          if (typeComp !== 0) return typeComp;
+          return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+        });
+        setLocalPersons(tbId, sorted);
+        return sorted;
       }
     }
   } catch (err) {
@@ -404,7 +409,12 @@ export async function fetchPersons(params = {}) {
   }
 
   // Fallback to local cache
-  return getLocalPersons(tbId);
+  const cached = getLocalPersons(tbId);
+  return [...cached].sort((a, b) => {
+    const typeComp = (a.type || '').toLowerCase().localeCompare((b.type || '').toLowerCase());
+    if (typeComp !== 0) return typeComp;
+    return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+  });
 }
 
 export async function createPerson(personData) {

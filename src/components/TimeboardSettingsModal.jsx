@@ -370,7 +370,11 @@ export default function TimeboardSettingsModal({
       isOwner: false
     }));
 
-  const fullPersonsList = [ownerPerson, ...regularPersons];
+  const fullPersonsList = [ownerPerson, ...regularPersons].sort((a, b) => {
+    const typeComp = (a.type || PersonType.PERSON).toLowerCase().localeCompare((b.type || PersonType.PERSON).toLowerCase());
+    if (typeComp !== 0) return typeComp;
+    return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+  });
 
   // Filter counts & Metrics based on fullPersonsList
   const countAll = fullPersonsList.length;

@@ -48,22 +48,35 @@ export class SupabasePersonRepository extends IRepository {
         .from(TABLE)
         .select('*')
         .eq('timeboard_id', timeboardId)
-        .order('created_at', { ascending: true });
+        .order('type', { ascending: true })
+        .order('name', { ascending: true });
 
       if (error) {
         console.warn(`[SupabasePersonRepository] getByTimeboardId fallback: ${error.message}`);
         const mem = Array.from(inMemoryPersons.values()).filter(
           (p) => p.timeboard_id === timeboardId || p.timeboardId === timeboardId
         );
-        return mem.map(rowToEntity);
+        return mem.map(rowToEntity).sort((a, b) => {
+          const typeComp = (a.type || '').toLowerCase().localeCompare((b.type || '').toLowerCase());
+          if (typeComp !== 0) return typeComp;
+          return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+        });
       }
-      return (data || []).map(rowToEntity);
+      return (data || []).map(rowToEntity).sort((a, b) => {
+        const typeComp = (a.type || '').toLowerCase().localeCompare((b.type || '').toLowerCase());
+        if (typeComp !== 0) return typeComp;
+        return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+      });
     } catch (err) {
       console.warn(`[SupabasePersonRepository] getByTimeboardId catch fallback: ${err.message}`);
       const mem = Array.from(inMemoryPersons.values()).filter(
         (p) => p.timeboard_id === timeboardId || p.timeboardId === timeboardId
       );
-      return mem.map(rowToEntity);
+      return mem.map(rowToEntity).sort((a, b) => {
+        const typeComp = (a.type || '').toLowerCase().localeCompare((b.type || '').toLowerCase());
+        if (typeComp !== 0) return typeComp;
+        return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+      });
     }
   }
 

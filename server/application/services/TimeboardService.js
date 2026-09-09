@@ -8,6 +8,7 @@ import { financialEventStatusRepository } from '../../infrastructure/database/su
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
 import { userRepository } from '../../infrastructure/database/supabase/SupabaseUserRepository.js';
 import { emailService } from './EmailService.js';
+import { getAppUrl } from '../../../shared/config/appConfig.js';
 import { TimeboardType, TimelineType, TimelineStatus, EventAggregation, InvitationStatus } from '../../../shared/enums/index.js';
 
 export class TimeboardService {
@@ -99,7 +100,7 @@ export class TimeboardService {
     if (person.email) {
       try {
         await timeboardInvitationRepository.revokeByEmail(timeboardId, person.email);
-      } catch (e) {}
+      } catch (e) { }
     }
 
     return { success: true };
@@ -123,30 +124,36 @@ export class TimeboardService {
       }
     }
 
-    // 2. Update status in timeboard_invitations table to ACCEPTED
-    if (email) {
+    // 2. Fetch accepting user and email
+    const acceptingUser = await userRepository.findById(userId);
+    const effectiveEmail = email || acceptingUser?.email;
+
+    if (effectiveEmail) {
+      const cleanEmail = effectiveEmail.toLowerCase().trim();
       try {
-        await timeboardInvitationRepository.markAsAccepted(timeboardId, email);
+        await timeboardInvitationRepository.markAsAccepted(timeboardId, cleanEmail);
       } catch (err) {
         console.warn(`[TimeboardService.acceptInvite] Could not update invitation status: ${err.message}`);
       }
 
-      // 3. Link user to persons record only if the user is NOT the owner and user's email matches
+      // 3. Link user to persons record only if the user is NOT the owner
       if (!isOwner) {
         try {
-          const acceptingUser = await userRepository.getById(userId);
-          const cleanEmail = email.toLowerCase().trim();
-          const userEmail = acceptingUser?.email ? acceptingUser.email.toLowerCase().trim() : null;
-
-          // Only link if the accepting user's email matches the invitation target email
-          if (!userEmail || userEmail === cleanEmail) {
-            const persons = await personRepository.getByTimeboardId(timeboardId);
-            const matchingPerson = persons.find((p) => p.email && p.email.toLowerCase().trim() === cleanEmail);
-            if (matchingPerson && (!matchingPerson.userId || matchingPerson.userId !== userId)) {
+          const persons = await personRepository.getByTimeboardId(timeboardId);
+          const matchingPerson = persons.find((p) => p.email && p.email.toLowerCase().trim() === cleanEmail);
+          if (matchingPerson) {
+            if (!matchingPerson.userId || matchingPerson.userId !== userId) {
               await personRepository.update(matchingPerson.id, { userId: userId });
             }
           } else {
-            console.warn(`[TimeboardService.acceptInvite] Skipping person link: accepting user email (${userEmail}) does not match invite email (${cleanEmail})`);
+            await personRepository.create({
+              timeboardId: timeboardId,
+              type: PersonType.MEMBER,
+              name: acceptingUser?.name || cleanEmail.split('@')[0],
+              email: cleanEmail,
+              userId: userId,
+              role: PersonRole.CONTRIBUTOR
+            });
           }
         } catch (err) {
           console.warn(`[TimeboardService.acceptInvite] Could not link person: ${err.message}`);
@@ -200,8 +207,7 @@ export class TimeboardService {
     }
 
     // 3. Build accept invitation URL
-    const baseUrl = originUrl || process.env.APP_URL || 'https://timeboard.pt';
-    const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const cleanBaseUrl = getAppUrl(originUrl);
     const acceptUrl = `${cleanBaseUrl}/?inviteTimeboardId=${encodeURIComponent(timeboardId)}&email=${encodeURIComponent(cleanEmail)}`;
 
     // 4. Send via Brevo

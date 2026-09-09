@@ -88,6 +88,10 @@ export class SupabaseUserRepository {
     }
   }
 
+  async getById(id) {
+    return this.findById(id);
+  }
+
   async create(data) {
     let row = entityToRow(data);
     try {

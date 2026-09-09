@@ -1650,7 +1650,22 @@ export default function App() {
       setTimeboards((prev) =>
         prev.map((tb) => (tb.id === editingTimeboard.id ? { ...tb, ...updated } : tb))
       );
-      api.updateTimeboard(editingTimeboard.id, updated).catch(console.error);
+      setMyTimeboards((prev) =>
+        prev.map((tb) => (tb.id === editingTimeboard.id ? { ...tb, ...updated } : tb))
+      );
+      try {
+        const saved = await api.updateTimeboard(editingTimeboard.id, updated);
+        if (saved) {
+          setTimeboards((prev) =>
+            prev.map((tb) => (tb.id === editingTimeboard.id ? { ...tb, ...saved } : tb))
+          );
+          setMyTimeboards((prev) =>
+            prev.map((tb) => (tb.id === editingTimeboard.id ? { ...tb, ...saved } : tb))
+          );
+        }
+      } catch (err) {
+        console.error('Error updating timeboard:', err);
+      }
     } else {
       const current = currentUser || api.getCurrentUser();
       const currentUserId = current ? current.id : null;

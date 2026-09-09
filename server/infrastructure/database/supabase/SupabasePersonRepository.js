@@ -97,6 +97,40 @@ export class SupabasePersonRepository extends IRepository {
     }
   }
 
+  async findByEmail(email) {
+    if (!email) return [];
+    try {
+      const cleanEmail = email.toLowerCase().trim();
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select('*')
+        .ilike('email', cleanEmail);
+      if (error) return [];
+      return (data || []).map(rowToEntity);
+    } catch {
+      return [];
+    }
+  }
+
+  async linkUserByEmail(email, userId) {
+    if (!email || !userId) return false;
+    try {
+      const cleanEmail = email.toLowerCase().trim();
+      const { error } = await supabase
+        .from(TABLE)
+        .update({ user_id: userId, updated_at: new Date().toISOString() })
+        .ilike('email', cleanEmail);
+      if (error) {
+        console.warn(`[SupabasePersonRepository] linkUserByEmail warning: ${error.message}`);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn(`[SupabasePersonRepository] linkUserByEmail catch: ${err.message}`);
+      return false;
+    }
+  }
+
   async create(data) {
     const row = entityToRow(data);
     try {

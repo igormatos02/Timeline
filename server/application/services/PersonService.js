@@ -1,10 +1,26 @@
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
+import { userRepository } from '../../infrastructure/database/supabase/SupabaseUserRepository.js';
 import { Person } from '../../domain/entities/Person.js';
 
 export class PersonService {
   async getPersonsByTimeboard(timeboardId) {
     if (!timeboardId) return [];
-    return await personRepository.getByTimeboardId(timeboardId);
+    const persons = await personRepository.getByTimeboardId(timeboardId);
+
+    // Auto-link any persons whose email matches a registered user in `users` table
+    for (const p of persons) {
+      if (p.email && !p.userId) {
+        try {
+          const matchingUser = await userRepository.findByEmail(p.email);
+          if (matchingUser && matchingUser.id) {
+            p.userId = matchingUser.id;
+            await personRepository.update(p.id, { userId: matchingUser.id });
+          }
+        } catch (e) {}
+      }
+    }
+
+    return persons;
   }
 
   async getPersonById(id) {

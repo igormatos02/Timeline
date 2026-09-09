@@ -1,5 +1,6 @@
 import { DEFAULT_TENANT } from '../constants/tenant.js';
 import { supabase } from './supabaseClient.js';
+import { getAppUrl } from '../../shared/config/appConfig.js';
 
 const API_BASE = '/api';
 
@@ -125,12 +126,13 @@ export async function registerWithEmail(name, email, password) {
 
 export async function loginWithGoogle(pendingInvite = null) {
   try {
-    let redirectUrl = window.location.origin;
+    const baseUrl = getAppUrl();
+    let redirectUrl = baseUrl;
     if (pendingInvite?.timeboardId) {
       const params = new URLSearchParams();
       params.set('inviteTimeboardId', pendingInvite.timeboardId);
       if (pendingInvite.email) params.set('email', pendingInvite.email);
-      redirectUrl = `${window.location.origin}/?${params.toString()}`;
+      redirectUrl = `${baseUrl}/?${params.toString()}`;
     }
 
     const { data, error } = await supabase.auth.signInWithOAuth({

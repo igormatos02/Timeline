@@ -1,6 +1,34 @@
 import { userRepository } from '../../infrastructure/database/supabase/SupabaseUserRepository.js';
+import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
+import { timeboardInvitationRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardInvitationRepository.js';
+import { timeboardMemberRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardMemberRepository.js';
 
 export class AuthService {
+  async _postAuthSync(user) {
+    if (!user || !user.id || !user.email) return;
+    const cleanEmail = user.email.toLowerCase().trim();
+    try {
+      // 1. Link any existing persons rows in any timeboard with this email
+      await personRepository.linkUserByEmail(cleanEmail, user.id);
+
+      // 2. Auto-accept and join timeboards with pending invitations for this email
+      const invites = await timeboardInvitationRepository.getAll();
+      const matchingInvites = (invites || []).filter(
+        (inv) => inv.email && inv.email.toLowerCase().trim() === cleanEmail
+      );
+      for (const inv of matchingInvites) {
+        if (inv.timeboardId) {
+          try {
+            await timeboardMemberRepository.addMember(inv.timeboardId, user.id);
+            await timeboardInvitationRepository.markAsAccepted(inv.timeboardId, cleanEmail);
+          } catch (e) {}
+        }
+      }
+    } catch (err) {
+      console.warn('[AuthService._postAuthSync] warning:', err.message);
+    }
+  }
+
   async registerWithEmail({ name, email, password }) {
     if (!email || !email.trim()) {
       throw new Error('O email é obrigatório.');
@@ -25,7 +53,9 @@ export class AuthService {
       avatarUrl: null
     });
 
-    return created.toJSON();
+    const userObj = created.toJSON();
+    await this._postAuthSync(userObj);
+    return userObj;
   }
 
   async loginWithEmail({ email, password }) {
@@ -48,7 +78,9 @@ export class AuthService {
       throw new Error('Palavra-passe incorreta.');
     }
 
-    return user.toJSON();
+    const userObj = user.toJSON();
+    await this._postAuthSync(userObj);
+    return userObj;
   }
 
   async loginOrRegisterWithGoogle({ googleId, email, name, avatarUrl }) {
@@ -61,7 +93,9 @@ export class AuthService {
     // 1. Check if user with this google_id already exists
     let user = await userRepository.findByGoogleId(googleId);
     if (user) {
-      return user.toJSON();
+      const userObj = user.toJSON();
+      await this._postAuthSync(userObj);
+      return userObj;
     }
 
     // 2. Check if user with this email exists -> link google_id
@@ -72,7 +106,9 @@ export class AuthService {
           googleId: googleId,
           avatarUrl: avatarUrl || user.avatarUrl
         });
-        return updated.toJSON();
+        const userObj = updated.toJSON();
+        await this._postAuthSync(userObj);
+        return userObj;
       }
     }
 
@@ -86,7 +122,9 @@ export class AuthService {
       avatarUrl: avatarUrl || null
     });
 
-    return created.toJSON();
+    const userObj = created.toJSON();
+    await this._postAuthSync(userObj);
+    return userObj;
   }
 }
 

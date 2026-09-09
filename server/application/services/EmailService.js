@@ -1,13 +1,14 @@
 import { BrevoClient } from '@getbrevo/brevo';
 import dotenv from 'dotenv';
+import { getAppUrl } from '../../../shared/config/appConfig.js';
 dotenv.config({ path: './server/.env' });
 
 class EmailService {
   constructor() {
     this.apiKey = process.env.BREVO_API_KEY;
-    this.senderEmail = process.env.BREVO_SENDER_EMAIL || 'invitation@timeboard.pt';
     this.senderName = process.env.BREVO_SENDER_NAME || 'Timeboard';
-    this.appUrl = process.env.APP_URL || 'https://timeboard.pt';
+    this.senderEmail = process.env.BREVO_SENDER_EMAIL || 'invitation@timeboard.pt';
+    this.appUrl = getAppUrl();
     
     if (this.apiKey) {
       this.client = new BrevoClient({ apiKey: this.apiKey });

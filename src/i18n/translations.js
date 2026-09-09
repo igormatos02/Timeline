@@ -436,6 +436,12 @@ export const translations = {
       totalContractCost: "TOTAL CONTRACT COST",
       contractNumberShort: "Contract No.",
       institutionLabel: "Institution",
+      annualCommitmentTitle: "ANNUAL COMMITMENT",
+      noAnnualCommitment: "No annual commitment",
+      noAnnualCommitmentHint: "No projected annual data available.",
+      annualCommitmentLabel: "Annual Commitment",
+      ofAnnualTotal: "of {amount} annual total",
+      projectedNext12Months: "projected in the next 12 months",
     },
 
     // Expense Timeline Header
@@ -977,6 +983,12 @@ export const translations = {
       totalLoanCost: "CUSTO TOTAL DO EMPRÉSTIMO",
       contractNumberShort: "Nº Contrato",
       institutionLabel: "Instituição",
+      annualCommitmentTitle: "COMPROMETIMENTO ANUAL",
+      noAnnualCommitment: "Sem compromisso anual",
+      noAnnualCommitmentHint: "Sem dados anuais projetados.",
+      annualCommitmentLabel: "Comprometimento Anual",
+      ofAnnualTotal: "de {amount} total anual",
+      projectedNext12Months: "projetado nos próximos 12 meses",
     },
 
     // Expense Timeline Header

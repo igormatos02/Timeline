@@ -757,62 +757,122 @@ export default function LoanTimelineHeader({
             {/* ANNUAL COMMITMENT card */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <div style={{ fontSize: '0.74rem', color: textColorDim, textTransform: 'uppercase', fontWeight: '700' }}>
-                ANNUAL COMMITMENT
+                {t('loanHeader.annualCommitmentTitle') || 'COMPROMETIMENTO ANUAL'}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ position: 'relative', width: '64px', height: '64px', flexShrink: 0 }}>
-                  <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
-                    <circle cx="0" cy="0" r="0.82" fill="none"
-                      stroke={isInactive ? 'rgba(148,163,184,0.15)' : 'rgba(245,158,11,0.15)'}
-                      strokeWidth="0.32" />
-                    {annualCommitmentPct > 0 && annualCommitmentPct < 100 && (
-                      <path
-                        d={(() => {
-                          const pct = Math.min(annualCommitmentPct, 100) / 100;
-                          const ex = Math.cos(2 * Math.PI * pct - Math.PI / 2);
-                          const ey2 = Math.sin(2 * Math.PI * pct - Math.PI / 2);
-                          const large = pct > 0.5 ? 1 : 0;
-                          return `M 0 -0.82 A 0.82 0.82 0 ${large} 1 ${(0.82 * ex).toFixed(4)} ${(0.82 * ey2).toFixed(4)}`;
-                        })()}
-                        fill="none"
-                        stroke={isInactive ? '#94a3b8' : annualCommitmentPct >= 80 ? '#f43f5e' : '#f59e0b'}
-                        strokeWidth="0.32"
-                        strokeLinecap="round"
-                      />
-                    )}
-                    {annualCommitmentPct >= 100 && (
-                      <circle cx="0" cy="0" r="0.82" fill="none"
-                        stroke={isInactive ? '#94a3b8' : '#f43f5e'}
-                        strokeWidth="0.32" />
-                    )}
-                  </svg>
-                  <div style={{
-                    position: 'absolute', top: '50%', left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    fontSize: '0.78rem', fontWeight: '800',
-                    color: annualCommitmentPct >= 80
-                      ? (isInactive ? '#64748b' : '#f43f5e')
-                      : (isInactive ? '#94a3b8' : '#f59e0b')
-                  }}>
-                    {annualCommitmentPct}%
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <div style={{ fontSize: '1.05rem', fontWeight: '800', color: isInactive ? '#64748b' : '#f59e0b' }}>
-                    {formatCurrency(annualLoanCost)}
-                  </div>
-                  <div style={{ fontSize: '0.68rem', color: textColorMuted }}>
-                    Annual Commitment
-                  </div>
-                  {annualIncomeProjected > 0 && (
-                    <div style={{ fontSize: '0.68rem', color: textColorMuted }}>
-                      of {formatCurrency(annualIncomeProjected)} annual total
+              {(() => {
+                if (annualLoanCost === 0 && annualIncomeProjected === 0) {
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
+                      <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
+                        <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                          <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                        </svg>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: '42px',
+                            height: '42px',
+                            borderRadius: '50%',
+                            background: 'var(--bg-card, #0f172a)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '1px solid var(--border-glass)',
+                            fontSize: '0.7rem',
+                            fontWeight: '700',
+                            color: 'var(--text-dim)'
+                          }}
+                        >
+                          0%
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                          {t('loanHeader.noAnnualCommitment') || 'Sem compromisso anual'}
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
+                          {t('loanHeader.noAnnualCommitmentHint') || 'Sem dados anuais projetados.'}
+                        </span>
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
+                  );
+                }
+
+                const usedFraction = Math.min(1, Math.max(0, annualCommitmentPct / 100));
+                const sliceX = Math.cos(2 * Math.PI * usedFraction);
+                const sliceY = Math.sin(2 * Math.PI * usedFraction);
+                const largeArcFlag = usedFraction > 0.5 ? 1 : 0;
+
+                const sliceColor = isInactive ? '#94a3b8' : annualCommitmentPct >= 80 ? '#f43f5e' : '#f59e0b';
+                const remainingColor = 'rgba(255, 255, 255, 0.08)';
+
+                const pathData = usedFraction >= 0.999
+                  ? `M 1 0 A 1 1 0 1 1 -0.999 0 L 0 0`
+                  : `M 1 0 A 1 1 0 ${largeArcFlag} 1 ${sliceX} ${sliceY} L 0 0`;
+
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                    {/* PieChart Donut SVG para % Anual */}
+                    <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
+                      <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
+                        {/* Fundo (Restante / Livre) */}
+                        <circle cx="0" cy="0" r="1" fill={remainingColor} />
+                        {/* Fatia Comprometida */}
+                        {usedFraction > 0 && (
+                          <path d={pathData} fill={sliceColor} style={{ transition: 'all 0.3s ease' }}>
+                            <title>{`${t('loanHeader.annualCommitmentLabel') || 'Comprometimento Anual'} ${annualCommitmentPct}%`}</title>
+                          </path>
+                        )}
+                      </svg>
+                      {/* Miolo Donut com % Anual */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          width: '46px',
+                          height: '46px',
+                          borderRadius: '50%',
+                          background: 'var(--bg-card, #0f172a)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: '1px solid var(--border-glass)',
+                          fontSize: '0.74rem',
+                          fontWeight: '800',
+                          color: sliceColor
+                        }}
+                      >
+                        {annualCommitmentPct}%
+                      </div>
+                    </div>
+
+                    {/* Informações Numéricas de Dívidas vs Entradas Anuais */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
+                        {t('loanHeader.annualCommitmentLabel') || 'Comprometimento Anual'}
+                      </div>
+                      <div style={{ fontSize: '0.94rem', fontWeight: '800', color: isInactive ? 'var(--text-dim)' : 'var(--text-main)' }}>
+                        {formatCurrency(annualLoanCost)}
+                      </div>
+                      {annualIncomeProjected > 0 ? (
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                          {t('loanHeader.ofAnnualTotal', { amount: formatCurrency(annualIncomeProjected) }) || `de ${formatCurrency(annualIncomeProjected)} total anual`}
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                          {t('loanHeader.projectedNext12Months') || 'projetado nos próximos 12 meses'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

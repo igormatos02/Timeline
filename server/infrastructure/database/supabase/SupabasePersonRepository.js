@@ -52,13 +52,17 @@ export class SupabasePersonRepository extends IRepository {
 
       if (error) {
         console.warn(`[SupabasePersonRepository] getByTimeboardId fallback: ${error.message}`);
-        const mem = Array.from(inMemoryPersons.values()).filter(p => p.timeboardId === timeboardId);
+        const mem = Array.from(inMemoryPersons.values()).filter(
+          (p) => p.timeboard_id === timeboardId || p.timeboardId === timeboardId
+        );
         return mem.map(rowToEntity);
       }
       return (data || []).map(rowToEntity);
     } catch (err) {
       console.warn(`[SupabasePersonRepository] getByTimeboardId catch fallback: ${err.message}`);
-      const mem = Array.from(inMemoryPersons.values()).filter(p => p.timeboardId === timeboardId);
+      const mem = Array.from(inMemoryPersons.values()).filter(
+        (p) => p.timeboard_id === timeboardId || p.timeboardId === timeboardId
+      );
       return mem.map(rowToEntity);
     }
   }
@@ -95,6 +99,8 @@ export class SupabasePersonRepository extends IRepository {
         const memRow = {
           id: newId,
           ...row,
+          timeboard_id: row.timeboard_id || data.timeboardId || data.timeboard_id,
+          timeboardId: row.timeboard_id || data.timeboardId || data.timeboard_id,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
@@ -108,6 +114,8 @@ export class SupabasePersonRepository extends IRepository {
       const memRow = {
         id: newId,
         ...row,
+        timeboard_id: row.timeboard_id || data.timeboardId || data.timeboard_id,
+        timeboardId: row.timeboard_id || data.timeboardId || data.timeboard_id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -162,3 +170,4 @@ export class SupabasePersonRepository extends IRepository {
 }
 
 export const personRepository = new SupabasePersonRepository();
+

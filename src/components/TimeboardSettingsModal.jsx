@@ -340,16 +340,54 @@ export default function TimeboardSettingsModal({
     }
   };
 
-  // Filter counts & Metrics
-  const countAll = persons.length;
-  const countPersons = persons.filter((p) => (p.type || PersonType.PERSON) === PersonType.PERSON).length;
-  const countOrgs = persons.filter((p) => p.type === PersonType.ORGANIZATION).length;
-  const countMembers = persons.filter((p) => p.type === PersonType.MEMBER).length;
-  const countLinked = persons.filter((p) => Boolean(p.userId || p.user_id)).length;
+  // Compute Owner and include in persons list as fixed Administrator Member
+  const ownerId = timeboard?.ownerId || timeboard?.owner_id || timeboard?.userId || timeboard?.user_id;
+  const currentUser = api.getCurrentUser();
+  const isCurrentOwner = !ownerId || (currentUser && currentUser.id === ownerId);
+  const ownerName = timeboard?.ownerName || timeboard?.owner_name || (isCurrentOwner ? (currentUser?.name || currentUser?.email?.split('@')[0]) : null) || 'Proprietário';
+  const ownerEmail = timeboard?.ownerEmail || timeboard?.owner_email || (isCurrentOwner ? currentUser?.email : null);
+
+  const ownerInPersonsIndex = persons.findIndex(
+    (p) => (ownerId && (p.userId === ownerId || p.user_id === ownerId)) || p.isOwner
+  );
+
+  let fullPersonsList = [];
+  if (ownerInPersonsIndex >= 0) {
+    fullPersonsList = persons.map((p, idx) =>
+      idx === ownerInPersonsIndex
+        ? {
+            ...p,
+            type: PersonType.MEMBER,
+            role: PersonRole.ADMIN,
+            isOwner: true
+          }
+        : p
+    );
+  } else if (ownerId || currentUser) {
+    const ownerPerson = {
+      id: `owner-${ownerId || currentUser?.id || 'main'}`,
+      name: ownerName,
+      email: ownerEmail,
+      type: PersonType.MEMBER,
+      role: PersonRole.ADMIN,
+      userId: ownerId || currentUser?.id,
+      isOwner: true
+    };
+    fullPersonsList = [ownerPerson, ...persons];
+  } else {
+    fullPersonsList = [...persons];
+  }
+
+  // Filter counts & Metrics based on fullPersonsList
+  const countAll = fullPersonsList.length;
+  const countPersons = fullPersonsList.filter((p) => (p.type || PersonType.PERSON) === PersonType.PERSON).length;
+  const countOrgs = fullPersonsList.filter((p) => p.type === PersonType.ORGANIZATION).length;
+  const countMembers = fullPersonsList.filter((p) => p.type === PersonType.MEMBER).length;
+  const countLinked = fullPersonsList.filter((p) => Boolean(p.userId || p.user_id)).length;
   const countPendingInvites = invitations.filter((i) => i.status === (InvitationStatus.PENDING || 'PENDING')).length;
 
   // Filtered persons
-  const filteredPersons = persons.filter((p) => {
+  const filteredPersons = fullPersonsList.filter((p) => {
     const currentType = p.type || PersonType.PERSON;
     if (selectedTypeFilter !== 'all' && currentType !== selectedTypeFilter) {
       return false;
@@ -631,7 +669,7 @@ export default function TimeboardSettingsModal({
               onClick={() => setActiveTab('entities')}
               icon={<Users size={18} />}
               label={t('timeboardSettings.tabs.entities') || 'Entidades & Membros'}
-              badge={persons.length > 0 ? persons.length : null}
+              badge={fullPersonsList.length > 0 ? fullPersonsList.length : null}
             />
             <TabButton
               active={activeTab === 'settings'}
@@ -1039,7 +1077,11 @@ export default function TimeboardSettingsModal({
 
                               {/* Role */}
                               <td style={{ padding: '12px 16px' }}>
-                                {isMember ? (
+                                {p.isOwner ? (
+                                  <span style={{ color: 'var(--text-main)', fontSize: '0.84rem', fontWeight: '600' }}>
+                                    {t('timeboardSettings.entities.roles.admin') || 'Administrador'}
+                                  </span>
+                                ) : isMember ? (
                                   <CustomRoleDropdown
                                     currentRole={p.role || PersonRole.CONTRIBUTOR}
                                     onChange={(newRole) => handleChangeRole(p.id, newRole)}
@@ -1052,84 +1094,90 @@ export default function TimeboardSettingsModal({
 
                               {/* Action Buttons */}
                               <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                  {/* Send Invite Button for Members without linked account */}
-                                  {isMember && !hasUserAccount && (
+                                {p.isOwner ? (
+                                  <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontWeight: '500' }}>
+                                    Proprietário
+                                  </span>
+                                ) : (
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                    {/* Send Invite Button for Members without linked account */}
+                                    {isMember && !hasUserAccount && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSendInvite(p)}
+                                        title={isPendingInvite ? "Reenviar convite por email" : "Enviar convite por email"}
+                                        style={{
+                                          background: 'rgba(99, 102, 241, 0.1)',
+                                          border: '1px solid var(--border-glass, rgba(99, 102, 241, 0.25))',
+                                          color: 'var(--primary-light, #6366f1)',
+                                          padding: '5px 9px',
+                                          borderRadius: '6px',
+                                          cursor: 'pointer',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '5px',
+                                          fontSize: '0.76rem',
+                                          fontWeight: '600',
+                                          transition: 'all 0.15s ease',
+                                          whiteSpace: 'nowrap'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          e.currentTarget.style.background = 'var(--primary, #6366f1)';
+                                          e.currentTarget.style.color = '#ffffff';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
+                                          e.currentTarget.style.color = 'var(--primary-light, #6366f1)';
+                                        }}
+                                      >
+                                        <Send size={12} />
+                                        <span>Send invite</span>
+                                      </button>
+                                    )}
+
+                                    {/* Edit Button */}
                                     <button
                                       type="button"
-                                      onClick={() => handleSendInvite(p)}
-                                      title={isPendingInvite ? "Reenviar convite por email" : "Enviar convite por email"}
+                                      onClick={() => handleOpenEntityForm(p)}
+                                      title="Editar"
                                       style={{
-                                        background: 'rgba(99, 102, 241, 0.1)',
-                                        border: '1px solid var(--border-glass, rgba(99, 102, 241, 0.25))',
-                                        color: 'var(--primary-light, #6366f1)',
-                                        padding: '5px 9px',
+                                        background: 'var(--bg-app, rgba(255, 255, 255, 0.05))',
+                                        border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
+                                        color: 'var(--text-main, #cbd5e1)',
+                                        padding: '6px',
                                         borderRadius: '6px',
                                         cursor: 'pointer',
                                         display: 'inline-flex',
                                         alignItems: 'center',
-                                        gap: '5px',
-                                        fontSize: '0.76rem',
-                                        fontWeight: '600',
-                                        transition: 'all 0.15s ease',
-                                        whiteSpace: 'nowrap'
-                                      }}
-                                      onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = 'var(--primary, #6366f1)';
-                                        e.currentTarget.style.color = '#ffffff';
-                                      }}
-                                      onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
-                                        e.currentTarget.style.color = 'var(--primary-light, #6366f1)';
+                                        justifyContent: 'center',
+                                        transition: 'all 0.15s ease'
                                       }}
                                     >
-                                      <Send size={12} />
-                                      <span>Send invite</span>
+                                      <Edit3 size={13} />
                                     </button>
-                                  )}
 
-                                  {/* Edit Button */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenEntityForm(p)}
-                                    title="Editar"
-                                    style={{
-                                      background: 'var(--bg-app, rgba(255, 255, 255, 0.05))',
-                                      border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
-                                      color: 'var(--text-main, #cbd5e1)',
-                                      padding: '6px',
-                                      borderRadius: '6px',
-                                      cursor: 'pointer',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      transition: 'all 0.15s ease'
-                                    }}
-                                  >
-                                    <Edit3 size={13} />
-                                  </button>
-
-                                  {/* Delete Button */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteEntity(p.id, p.name)}
-                                    title="Eliminar"
-                                    style={{
-                                      background: 'rgba(239, 68, 68, 0.1)',
-                                      border: '1px solid rgba(239, 68, 68, 0.25)',
-                                      color: '#f87171',
-                                      padding: '6px',
-                                      borderRadius: '6px',
-                                      cursor: 'pointer',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      transition: 'all 0.15s ease'
-                                    }}
-                                  >
-                                    <Trash2 size={13} />
-                                  </button>
-                                </div>
+                                    {/* Delete Button */}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteEntity(p.id, p.name)}
+                                      title="Eliminar"
+                                      style={{
+                                        background: 'rgba(239, 68, 68, 0.1)',
+                                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                                        color: '#f87171',
+                                        padding: '6px',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        transition: 'all 0.15s ease'
+                                      }}
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
+                                )}
                               </td>
                             </tr>
                           );

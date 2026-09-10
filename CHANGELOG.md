@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.9](https://github.com/igormatos02/Timeline/compare/v0.1.8...v0.1.9) (2026-09-10)
+
+
+### Features
+
+* **timeline:** add 2-option status dropdown menu to event cards ([181d59e](https://github.com/igormatos02/Timeline/commit/181d59eaa6c1ddddc19c42573fab5895dbc3bde6))
+
 ### [0.1.8](https://github.com/igormatos02/Timeline/compare/v0.1.7...v0.1.8) (2026-09-10)
 
 

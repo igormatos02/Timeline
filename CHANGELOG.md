@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.6](https://github.com/igormatos02/Timeline/compare/v0.1.5...v0.1.6) (2026-09-10)
+
+
+### Bug Fixes
+
+* **timeline:** remove background and border styling from month projection badges ([e074efa](https://github.com/igormatos02/Timeline/commit/e074efa30ec319bcf09b502e738bd2964d359872))
+
 ### [0.1.5](https://github.com/igormatos02/Timeline/compare/v0.1.4...v0.1.5) (2026-09-10)
 
 

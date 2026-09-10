@@ -207,6 +207,237 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const isOverdueLoan = isLoanInstallment && !isCancelled && (isOverdue || effectiveStatus === EventStatus.OVERDUE);
   const isAmortized = isLoanInstallment && !isCancelled && effectiveStatus === EventStatus.AMORTIZED;
 
+  const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
+  const statusMenuRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!isStatusMenuOpen) return;
+    const handleClickOutside = (e) => {
+      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target)) {
+        setIsStatusMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setIsStatusMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isStatusMenuOpen]);
+
+  const statusMenuOptions = React.useMemo(() => {
+    // 1. Positive or Pending Option ("A outra opção")
+    let primaryOption;
+    if (isIncomeEvent) {
+      if (isReceivedIncome) {
+        primaryOption = {
+          label: t('status.toReceive') || 'A Receber',
+          targetStatus: EventStatus.PENDING,
+          icon: <Clock size={13} style={{ color: '#f59e0b' }} />,
+          color: '#f59e0b'
+        };
+      } else {
+        primaryOption = {
+          label: t('status.received') || 'Recebido',
+          targetStatus: EventStatus.RECEIVED,
+          icon: <CheckCircle2 size={13} style={{ color: '#10b981' }} />,
+          color: '#10b981'
+        };
+      }
+    } else if (isExpenseEvent) {
+      if (isPaidExpense) {
+        primaryOption = {
+          label: t('status.pending') || 'A Pagar',
+          targetStatus: EventStatus.PENDING,
+          icon: <Clock size={13} style={{ color: '#f59e0b' }} />,
+          color: '#f59e0b'
+        };
+      } else {
+        primaryOption = {
+          label: t('status.paid') || 'Pago',
+          targetStatus: EventStatus.PAID,
+          icon: <CheckCircle2 size={13} style={{ color: '#10b981' }} />,
+          color: '#10b981'
+        };
+      }
+    } else if (isInvestmentEvent) {
+      if (isCompletedInvestment) {
+        primaryOption = {
+          label: t('status.planned') || 'Previsto',
+          targetStatus: EventStatus.PLANNED,
+          icon: <Clock size={13} style={{ color: '#818cf8' }} />,
+          color: '#818cf8'
+        };
+      } else {
+        primaryOption = {
+          label: t('status.invested') || 'Aportado',
+          targetStatus: EventStatus.INVESTED,
+          icon: <CheckCircle2 size={13} style={{ color: '#10b981' }} />,
+          color: '#10b981'
+        };
+      }
+    } else if (isAmortization || event.eventType === EventType.AMORTIZATION) {
+      if (isAmortized) {
+        primaryOption = {
+          label: t('status.pending') || 'Pendente',
+          targetStatus: EventStatus.PENDING,
+          icon: <Clock size={13} style={{ color: '#f59e0b' }} />,
+          color: '#f59e0b'
+        };
+      } else {
+        primaryOption = {
+          label: t('status.amortized') || 'Amortizado',
+          targetStatus: EventStatus.AMORTIZED,
+          icon: <CheckCircle2 size={13} style={{ color: '#10b981' }} />,
+          color: '#10b981'
+        };
+      }
+    } else if (isLoanInstallment) {
+      if (isPaidLoan) {
+        primaryOption = {
+          label: t('status.pending') || 'A Pagar',
+          targetStatus: EventStatus.PENDING,
+          icon: <Clock size={13} style={{ color: '#f59e0b' }} />,
+          color: '#f59e0b'
+        };
+      } else {
+        primaryOption = {
+          label: t('status.settled') || 'Liquidado',
+          targetStatus: EventStatus.PAID,
+          icon: <CheckCircle2 size={13} style={{ color: '#10b981' }} />,
+          color: '#10b981'
+        };
+      }
+    } else {
+      if (isCompleted) {
+        primaryOption = {
+          label: t('status.pending') || 'Pendente',
+          targetStatus: EventStatus.PENDING,
+          icon: <Clock size={13} style={{ color: '#f59e0b' }} />,
+          color: '#f59e0b'
+        };
+      } else {
+        primaryOption = {
+          label: t('status.completed') || 'Concluído',
+          targetStatus: EventStatus.COMPLETED,
+          icon: <CheckCircle2 size={13} style={{ color: '#10b981' }} />,
+          color: '#10b981'
+        };
+      }
+    }
+
+    // 2. Cancel Option
+    let cancelOption;
+    if (isCancelled) {
+      const isInv = isInvestmentEvent;
+      cancelOption = {
+        label: isInv ? (t('status.planned') || 'Reativar (Previsto)') : (t('status.pending') || 'Reativar (Pendente)'),
+        targetStatus: isInv ? EventStatus.PLANNED : EventStatus.PENDING,
+        icon: <Clock size={13} style={{ color: '#38bdf8' }} />,
+        color: '#38bdf8'
+      };
+    } else {
+      cancelOption = {
+        label: t('status.cancelled') || 'Cancelar',
+        targetStatus: EventStatus.CANCELLED,
+        icon: <Ban size={13} style={{ color: '#94a3b8' }} />,
+        color: '#94a3b8'
+      };
+    }
+
+    return [primaryOption, cancelOption];
+  }, [
+    isIncomeEvent,
+    isExpenseEvent,
+    isInvestmentEvent,
+    isAmortization,
+    event.eventType,
+    isLoanInstallment,
+    isReceivedIncome,
+    isPaidExpense,
+    isCompletedInvestment,
+    isAmortized,
+    isPaidLoan,
+    isCompleted,
+    isCancelled,
+    t
+  ]);
+
+  const renderStatusDropdownButton = (buttonProps, children) => (
+    <div ref={statusMenuRef} style={{ position: 'relative', display: 'inline-flex' }}>
+      <button
+        type="button"
+        disabled={isTogglingStatus}
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsStatusMenuOpen((prev) => !prev);
+        }}
+        {...buttonProps}
+      >
+        {children}
+      </button>
+
+      {isStatusMenuOpen && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            right: 0,
+            zIndex: 99999,
+            background: 'var(--bg-card, #131722)',
+            border: '1px solid var(--border-glass-glow, rgba(99, 102, 241, 0.35))',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.75), 0 0 15px rgba(99, 102, 241, 0.15)',
+            borderRadius: '10px',
+            padding: '5px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '3px',
+            minWidth: '140px',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {statusMenuOptions.map((opt, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={async (e) => {
+                e.stopPropagation();
+                setIsStatusMenuOpen(false);
+                await handleStatusToggle(e, opt.targetStatus);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 10px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'transparent',
+                color: opt.color,
+                fontSize: '0.78rem',
+                fontWeight: '700',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'background 0.15s ease',
+                whiteSpace: 'nowrap'
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              {opt.icon}
+              <span>{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   const abatedBreakdown = React.useMemo(() => {
     if (!isAmortized) return null;
 
@@ -1944,59 +2175,57 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   <span>{t('status.planned')}</span>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  disabled={isTogglingStatus}
-                  onClick={handleStatusToggle}
-                  className="btn btn-sm"
-                  title="Clique para alternar o status"
-                  style={{
-                    background: isCancelled
-                      ? 'rgba(148, 163, 184, 0.15)'
-                      : isReceivedIncome
-                        ? 'rgba(16, 185, 129, 0.16)'
-                        : isOverdueIncome
-                          ? 'rgba(252, 191, 73, 0.16)'
-                          : isNextIncome
-                            ? 'rgba(245, 158, 11, 0.14)'
-                            : 'rgba(148, 163, 184, 0.1)',
-                    color: isCancelled
-                      ? '#94a3b8'
-                      : isReceivedIncome
-                        ? '#10b981'
-                        : isOverdueIncome
-                          ? '#fcbf49'
-                          : isNextIncome
-                            ? '#f59e0b'
-                            : '#94a3b8',
-                    border: isCancelled
-                      ? '1px solid rgba(148, 163, 184, 0.35)'
-                      : isReceivedIncome
-                        ? '1px solid rgba(16, 185, 129, 0.35)'
-                        : isOverdueIncome
-                          ? '1px solid rgba(252, 191, 73, 0.4)'
-                          : isNextIncome
-                            ? '1px solid rgba(245, 158, 11, 0.35)'
-                            : '1px solid rgba(148, 163, 184, 0.2)',
-                    borderRadius: '9999px',
-                    padding: '4px 12px',
-                    fontSize: '0.76rem',
-                    fontWeight: '700',
-                    cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
-                    opacity: isTogglingStatus ? 0.6 : 1,
-                    pointerEvents: isTogglingStatus ? 'none' : 'auto',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    transition: 'all 0.15s ease',
-                    boxShadow: isOverdueIncome
-                      ? '0 2px 10px rgba(252, 191, 73, 0.25)'
-                      : isReceivedIncome
-                        ? '0 2px 8px rgba(16, 185, 129, 0.2)'
-                        : 'none'
-                  }}
-                >
-                  {isCancelled ? (
+                renderStatusDropdownButton(
+                  {
+                    className: 'btn btn-sm',
+                    title: t('timeline.clickToChangeStatus') || 'Clique para alterar o status',
+                    style: {
+                      background: isCancelled
+                        ? 'rgba(148, 163, 184, 0.15)'
+                        : isReceivedIncome
+                          ? 'rgba(16, 185, 129, 0.16)'
+                          : isOverdueIncome
+                            ? 'rgba(252, 191, 73, 0.16)'
+                            : isNextIncome
+                              ? 'rgba(245, 158, 11, 0.14)'
+                              : 'rgba(148, 163, 184, 0.1)',
+                      color: isCancelled
+                        ? '#94a3b8'
+                        : isReceivedIncome
+                          ? '#10b981'
+                          : isOverdueIncome
+                            ? '#fcbf49'
+                            : isNextIncome
+                              ? '#f59e0b'
+                              : '#94a3b8',
+                      border: isCancelled
+                        ? '1px solid rgba(148, 163, 184, 0.35)'
+                        : isReceivedIncome
+                          ? '1px solid rgba(16, 185, 129, 0.35)'
+                          : isOverdueIncome
+                            ? '1px solid rgba(252, 191, 73, 0.4)'
+                            : isNextIncome
+                              ? '1px solid rgba(245, 158, 11, 0.35)'
+                              : '1px solid rgba(148, 163, 184, 0.2)',
+                      borderRadius: '9999px',
+                      padding: '4px 12px',
+                      fontSize: '0.76rem',
+                      fontWeight: '700',
+                      cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
+                      opacity: isTogglingStatus ? 0.6 : 1,
+                      pointerEvents: isTogglingStatus ? 'none' : 'auto',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      transition: 'all 0.15s ease',
+                      boxShadow: isOverdueIncome
+                        ? '0 2px 10px rgba(252, 191, 73, 0.25)'
+                        : isReceivedIncome
+                          ? '0 2px 8px rgba(16, 185, 129, 0.2)'
+                          : 'none'
+                    }
+                  },
+                  isCancelled ? (
                     <>
                       <Ban size={13} style={{ color: '#94a3b8' }} />
                       <span>{t('status.cancelled')}</span>
@@ -2016,8 +2245,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       <Clock size={13} style={{ color: isNextIncome ? '#f59e0b' : '#94a3b8' }} />
                       <span>{t('status.toReceive')}</span>
                     </>
-                  )}
-                </button>
+                  )
+                )
               )}
             </div>
           </div>
@@ -2101,48 +2330,46 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   <span>{t('status.pending')}</span>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  disabled={isTogglingStatus}
-                  onClick={handleStatusToggle}
-                  className="btn btn-sm"
-                  title="Clique para alternar o status"
-                  style={{
-                    background: isCancelled
-                      ? 'rgba(148, 163, 184, 0.15)'
-                      : isPaidExpense
-                        ? 'rgba(16, 185, 129, 0.16)'
-                        : isOverdueExpense
-                          ? 'rgba(252, 191, 73, 0.16)'
-                          : 'rgba(245, 158, 11, 0.14)',
-                    color: isCancelled
-                      ? '#94a3b8'
-                      : isPaidExpense
-                        ? '#10b981'
-                        : isOverdueExpense
-                          ? '#fcbf49'
-                          : '#f59e0b',
-                    border: isCancelled
-                      ? '1px solid rgba(148, 163, 184, 0.35)'
-                      : isPaidExpense
-                        ? '1px solid rgba(16, 185, 129, 0.35)'
-                        : isOverdueExpense
-                          ? '1px solid rgba(252, 191, 73, 0.4)'
-                          : '1px solid rgba(245, 158, 11, 0.35)',
-                    borderRadius: '9999px',
-                    padding: '4px 12px',
-                    fontSize: '0.76rem',
-                    fontWeight: '700',
-                    cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
-                    opacity: isTogglingStatus ? 0.6 : 1,
-                    pointerEvents: isTogglingStatus ? 'none' : 'auto',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  {isCancelled ? (
+                renderStatusDropdownButton(
+                  {
+                    className: 'btn btn-sm',
+                    title: t('timeline.clickToChangeStatus') || 'Clique para alterar o status',
+                    style: {
+                      background: isCancelled
+                        ? 'rgba(148, 163, 184, 0.15)'
+                        : isPaidExpense
+                          ? 'rgba(16, 185, 129, 0.16)'
+                          : isOverdueExpense
+                            ? 'rgba(252, 191, 73, 0.16)'
+                            : 'rgba(245, 158, 11, 0.14)',
+                      color: isCancelled
+                        ? '#94a3b8'
+                        : isPaidExpense
+                          ? '#10b981'
+                          : isOverdueExpense
+                            ? '#fcbf49'
+                            : '#f59e0b',
+                      border: isCancelled
+                        ? '1px solid rgba(148, 163, 184, 0.35)'
+                        : isPaidExpense
+                          ? '1px solid rgba(16, 185, 129, 0.35)'
+                          : isOverdueExpense
+                            ? '1px solid rgba(252, 191, 73, 0.4)'
+                            : '1px solid rgba(245, 158, 11, 0.35)',
+                      borderRadius: '9999px',
+                      padding: '4px 12px',
+                      fontSize: '0.76rem',
+                      fontWeight: '700',
+                      cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
+                      opacity: isTogglingStatus ? 0.6 : 1,
+                      pointerEvents: isTogglingStatus ? 'none' : 'auto',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      transition: 'all 0.15s ease'
+                    }
+                  },
+                  isCancelled ? (
                     <>
                       <Ban size={13} style={{ color: '#94a3b8' }} />
                       <span>{t('status.cancelled')}</span>
@@ -2162,8 +2389,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       <Clock size={13} style={{ color: '#f59e0b' }} />
                       <span>{t('status.pending')}</span>
                     </>
-                  )}
-                </button>
+                  )
+                )
               )}
             </div>
           </div>
@@ -2349,54 +2576,52 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   <span>{t('status.planned')}</span>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  disabled={isTogglingStatus}
-                  onClick={handleStatusToggle}
-                  className="btn btn-sm"
-                  title="Clique para alternar o status"
-                  style={{
-                    background: isCancelled
-                      ? 'rgba(148, 163, 184, 0.15)'
-                      : event.category === 'investimento_patrimonio'
-                        ? (event.status === 'Financiado' ? 'rgba(2, 132, 199, 0.16)' : 'rgba(16, 185, 129, 0.16)')
-                        : isCompletedInvestment
-                          ? 'rgba(139, 92, 246, 0.16)'
-                          : isOverdueInvestment
-                            ? 'rgba(252, 191, 73, 0.16)'
-                            : 'rgba(148, 163, 184, 0.12)',
-                    color: isCancelled
-                      ? '#94a3b8'
-                      : event.category === 'investimento_patrimonio'
-                        ? (event.status === 'Financiado' ? '#38bdf8' : '#10b981')
-                        : isCompletedInvestment
-                          ? '#8b5cf6'
-                          : isOverdueInvestment
-                            ? '#fcbf49'
-                            : '#94a3b8',
-                    border: isCancelled
-                      ? '1px solid rgba(148, 163, 184, 0.35)'
-                      : event.category === 'investimento_patrimonio'
-                        ? (event.status === 'Financiado' ? '1px solid rgba(2, 132, 199, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)')
-                        : isCompletedInvestment
-                          ? '1px solid rgba(139, 92, 246, 0.35)'
-                          : isOverdueInvestment
-                            ? '1px solid rgba(252, 191, 73, 0.4)'
-                            : '1px solid rgba(148, 163, 184, 0.3)',
-                    borderRadius: '9999px',
-                    padding: '4px 12px',
-                    fontSize: '0.76rem',
-                    fontWeight: '700',
-                    cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
-                    opacity: isTogglingStatus ? 0.6 : 1,
-                    pointerEvents: isTogglingStatus ? 'none' : 'auto',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  {isCancelled ? (
+                renderStatusDropdownButton(
+                  {
+                    className: 'btn btn-sm',
+                    title: t('timeline.clickToChangeStatus') || 'Clique para alterar o status',
+                    style: {
+                      background: isCancelled
+                        ? 'rgba(148, 163, 184, 0.15)'
+                        : event.category === 'investimento_patrimonio'
+                          ? (event.status === 'Financiado' ? 'rgba(2, 132, 199, 0.16)' : 'rgba(16, 185, 129, 0.16)')
+                          : isCompletedInvestment
+                            ? 'rgba(139, 92, 246, 0.16)'
+                            : isOverdueInvestment
+                              ? 'rgba(252, 191, 73, 0.16)'
+                              : 'rgba(148, 163, 184, 0.12)',
+                      color: isCancelled
+                        ? '#94a3b8'
+                        : event.category === 'investimento_patrimonio'
+                          ? (event.status === 'Financiado' ? '#38bdf8' : '#10b981')
+                          : isCompletedInvestment
+                            ? '#8b5cf6'
+                            : isOverdueInvestment
+                              ? '#fcbf49'
+                              : '#94a3b8',
+                      border: isCancelled
+                        ? '1px solid rgba(148, 163, 184, 0.35)'
+                        : event.category === 'investimento_patrimonio'
+                          ? (event.status === 'Financiado' ? '1px solid rgba(2, 132, 199, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)')
+                          : isCompletedInvestment
+                            ? '1px solid rgba(139, 92, 246, 0.35)'
+                            : isOverdueInvestment
+                              ? '1px solid rgba(252, 191, 73, 0.4)'
+                              : '1px solid rgba(148, 163, 184, 0.3)',
+                      borderRadius: '9999px',
+                      padding: '4px 12px',
+                      fontSize: '0.76rem',
+                      fontWeight: '700',
+                      cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
+                      opacity: isTogglingStatus ? 0.6 : 1,
+                      pointerEvents: isTogglingStatus ? 'none' : 'auto',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      transition: 'all 0.15s ease'
+                    }
+                  },
+                  isCancelled ? (
                     <>
                       <Ban size={13} style={{ color: '#94a3b8' }} />
                       <span>{t('status.cancelled')}</span>
@@ -2428,8 +2653,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       <Clock size={13} style={{ color: '#94a3b8' }} />
                       <span>{t('status.planned')}</span>
                     </>
-                  )}
-                </button>
+                  )
+                )
               )}
             </div>
           </div>
@@ -2633,41 +2858,39 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
-              <button
-                type="button"
-                disabled={isTogglingStatus}
-                onClick={handleStatusToggle}
-                style={{
-                  background: isCancelled
-                    ? 'rgba(148, 163, 184, 0.15)'
-                    : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED)
-                      ? 'rgba(16, 185, 129, 0.16)'
-                      : 'rgba(245, 158, 11, 0.16)',
-                  color: isCancelled
-                    ? '#94a3b8'
-                    : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED)
-                      ? '#10b981'
-                      : '#f59e0b',
-                  border: isCancelled
-                    ? '1px solid rgba(148, 163, 184, 0.35)'
-                    : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED)
-                      ? '1px solid rgba(16, 185, 129, 0.4)'
-                      : '1px solid rgba(245, 158, 11, 0.4)',
-                  borderRadius: '9999px',
-                  padding: '4px 12px',
-                  fontSize: '0.76rem',
-                  fontWeight: '800',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
-                  opacity: isTogglingStatus ? 0.6 : 1,
-                  pointerEvents: isTogglingStatus ? 'none' : 'auto',
-                  transition: 'all 0.15s ease'
-                }}
-                title="Clique para alternar o status"
-              >
-                {isCancelled ? (
+              {renderStatusDropdownButton(
+                {
+                  title: t('timeline.clickToChangeStatus') || 'Clique para alterar o status',
+                  style: {
+                    background: isCancelled
+                      ? 'rgba(148, 163, 184, 0.15)'
+                      : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED)
+                        ? 'rgba(16, 185, 129, 0.16)'
+                        : 'rgba(245, 158, 11, 0.16)',
+                    color: isCancelled
+                      ? '#94a3b8'
+                      : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED)
+                        ? '#10b981'
+                        : '#f59e0b',
+                    border: isCancelled
+                      ? '1px solid rgba(148, 163, 184, 0.35)'
+                      : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED)
+                        ? '1px solid rgba(16, 185, 129, 0.4)'
+                        : '1px solid rgba(245, 158, 11, 0.4)',
+                    borderRadius: '9999px',
+                    padding: '4px 12px',
+                    fontSize: '0.76rem',
+                    fontWeight: '800',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
+                    opacity: isTogglingStatus ? 0.6 : 1,
+                    pointerEvents: isTogglingStatus ? 'none' : 'auto',
+                    transition: 'all 0.15s ease'
+                  }
+                },
+                isCancelled ? (
                   <>
                     <Ban size={13} style={{ color: '#94a3b8' }} />
                     <span>{t('status.cancelled')}</span>
@@ -2682,8 +2905,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     <Clock size={12} />
                     <span>{t('status.planned') || 'Previsto'}</span>
                   </>
-                )}
-              </button>
+                )
+              )}
             </div>
           </div>
 
@@ -2835,51 +3058,49 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   <span>Pendente</span>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  disabled={isTogglingStatus}
-                  onClick={handleStatusToggle}
-                  className="btn btn-sm"
-                  title="Clique para alternar o status"
-                  style={{
-                    background: isCancelled
-                      ? 'rgba(148, 163, 184, 0.15)'
-                      : isPaidLoan
-                        ? 'rgba(16, 185, 129, 0.16)'
-                        : isOverdueLoan
-                          ? 'rgba(252, 191, 73, 0.16)'
-                          : 'rgba(245, 158, 11, 0.14)',
-                    color: isCancelled
-                      ? '#94a3b8'
-                      : isPaidLoan
-                        ? '#10b981'
-                        : isOverdueLoan
-                          ? '#fcbf49'
-                          : '#f59e0b',
-                    border: isCancelled
-                      ? '1px solid rgba(148, 163, 184, 0.35)'
-                      : isPaidLoan
-                        ? '1px solid rgba(16, 185, 129, 0.35)'
-                        : isOverdueLoan
-                          ? '1px solid rgba(252, 191, 73, 0.4)'
-                          : '1px solid rgba(245, 158, 11, 0.35)',
-                    borderRadius: '9999px',
-                    padding: '4px 12px',
-                    fontSize: '0.76rem',
-                    fontWeight: '700',
-                    cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
-                    opacity: isTogglingStatus ? 0.6 : 1,
-                    pointerEvents: isTogglingStatus ? 'none' : 'auto',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    transition: 'all 0.15s ease',
-                    boxShadow: isPaidLoan
-                      ? '0 2px 8px rgba(16, 185, 129, 0.2)'
-                      : 'none'
-                  }}
-                >
-                  {isCancelled ? (
+                renderStatusDropdownButton(
+                  {
+                    className: 'btn btn-sm',
+                    title: t('timeline.clickToChangeStatus') || 'Clique para alterar o status',
+                    style: {
+                      background: isCancelled
+                        ? 'rgba(148, 163, 184, 0.15)'
+                        : isPaidLoan
+                          ? 'rgba(16, 185, 129, 0.16)'
+                          : isOverdueLoan
+                            ? 'rgba(252, 191, 73, 0.16)'
+                            : 'rgba(245, 158, 11, 0.14)',
+                      color: isCancelled
+                        ? '#94a3b8'
+                        : isPaidLoan
+                          ? '#10b981'
+                          : isOverdueLoan
+                            ? '#fcbf49'
+                            : '#f59e0b',
+                      border: isCancelled
+                        ? '1px solid rgba(148, 163, 184, 0.35)'
+                        : isPaidLoan
+                          ? '1px solid rgba(16, 185, 129, 0.35)'
+                          : isOverdueLoan
+                            ? '1px solid rgba(252, 191, 73, 0.4)'
+                            : '1px solid rgba(245, 158, 11, 0.35)',
+                      borderRadius: '9999px',
+                      padding: '4px 12px',
+                      fontSize: '0.76rem',
+                      fontWeight: '700',
+                      cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
+                      opacity: isTogglingStatus ? 0.6 : 1,
+                      pointerEvents: isTogglingStatus ? 'none' : 'auto',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      transition: 'all 0.15s ease',
+                      boxShadow: isPaidLoan
+                        ? '0 2px 8px rgba(16, 185, 129, 0.2)'
+                        : 'none'
+                    }
+                  },
+                  isCancelled ? (
                     <>
                       <Ban size={13} style={{ color: '#94a3b8' }} />
                       <span>{t('status.cancelled')}</span>
@@ -2899,8 +3120,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       <Clock size={13} style={{ color: '#f59e0b' }} />
                       <span>{t('status.pending')}</span>
                     </>
-                  )}
-                </button>
+                  )
+                )
               )}
             </div>
           </div>

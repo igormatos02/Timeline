@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.5](https://github.com/igormatos02/Timeline/compare/v0.1.4...v0.1.5) (2026-09-10)
+
+
+### Bug Fixes
+
+* **balance:** calculate period loan debt from compute start date up to current month ([e571cfc](https://github.com/igormatos02/Timeline/commit/e571cfcc29fcfa49ae1485f8037be312fb5ba7a9))
+
 ### [0.1.4](https://github.com/igormatos02/Timeline/compare/v0.1.3...v0.1.4) (2026-09-10)
 
 

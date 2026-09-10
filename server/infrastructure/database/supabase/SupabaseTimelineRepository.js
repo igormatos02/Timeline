@@ -42,15 +42,26 @@ function entityToRow(data) {
   if (data.type !== undefined) row.type = data.type;
   if (data.color !== undefined) row.color = data.color;
   if (data.description !== undefined) row.description = data.description;
-  if (data.isSystemDefault !== undefined) row.is_system_default = data.isSystemDefault;
-  if (data.canDelete !== undefined) row.can_delete = data.canDelete;
-  if (data.startDate !== undefined) row.start_date = data.startDate;
-  if (data.start_date !== undefined) row.start_date = data.start_date;
-  if (data.endDate !== undefined) row.end_date = data.endDate;
-  if (data.end_date !== undefined) row.end_date = data.end_date;
+  if (data.isSystemDefault !== undefined) row.is_system_default = Boolean(data.isSystemDefault);
+  if (data.canDelete !== undefined) row.can_delete = Boolean(data.canDelete);
+
+  const rawStart = data.startDate !== undefined ? data.startDate : data.start_date;
+  if (rawStart && typeof rawStart === 'string' && rawStart.trim() !== '') {
+    row.start_date = rawStart.length === 7 ? `${rawStart}-01` : rawStart;
+  } else {
+    row.start_date = null;
+  }
+
+  const rawEnd = data.endDate !== undefined ? data.endDate : data.end_date;
+  if (rawEnd && typeof rawEnd === 'string' && rawEnd.trim() !== '') {
+    row.end_date = rawEnd.length === 7 ? `${rawEnd}-01` : rawEnd;
+  } else {
+    row.end_date = null;
+  }
+
   if (data.status !== undefined) row.status = data.status;
   if (data.aggregation !== undefined || data.periodicity !== undefined) {
-    row.aggregation = data.aggregation || data.periodicity;
+    row.aggregation = data.aggregation || data.periodicity || 'monthly';
   }
   row.tenant_id = data.tenantId || data.tenant_id || '9e3c3070-d4db-43be-ab03-3f852a9a81da';
   return row;

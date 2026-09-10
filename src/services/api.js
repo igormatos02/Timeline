@@ -550,7 +550,10 @@ export async function createTimeline(timelineData) {
       ...timelineData
     })
   });
-  if (!res.ok) throw new Error('Failed to create timeline');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to create timeline');
+  }
   return res.json();
 }
 
@@ -560,7 +563,10 @@ export async function updateTimeline(id, updates) {
     headers: getHeaders(),
     body: JSON.stringify(updates)
   });
-  if (!res.ok) throw new Error('Failed to update timeline');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to update timeline');
+  }
   return res.json();
 }
 

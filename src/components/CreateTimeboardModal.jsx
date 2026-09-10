@@ -211,11 +211,17 @@ export default function CreateTimeboardModal({
                 <option value={TimeboardType.FINANCIAL} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
                   {t('timeboardModal.typeFinancial')}
                 </option>
+                <option value={TimeboardType.EMPTY} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
+                  {t('timeboardModal.typeEmpty') || 'Vazio (Empty)'}
+                </option>
                 <option value={TimeboardType.PROJECTS} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
                   {t('timeboardModal.typeProjects')}
                 </option>
                 <option value={TimeboardType.REMINDERS} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
                   {t('timeboardModal.typeReminders')}
+                </option>
+                <option value={TimeboardType.CONDOFLOW} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
+                  {t('timeboardModal.typeCondoflow') || 'Condoflow'}
                 </option>
               </select>
               <div

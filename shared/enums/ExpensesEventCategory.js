@@ -18,6 +18,8 @@ export const ExpensesEventCategory = Object.freeze({
   TRAVEL: 'travel',
   CLOTHING: 'clothing',
   SERVICES: 'services',
+  CONDOMINIUM: 'condominium',
+  RESERVE: 'reserve',
   OTHER: 'other'
 });
 

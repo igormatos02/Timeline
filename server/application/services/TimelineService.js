@@ -11,7 +11,7 @@ import {
   loanDomainService,
   balanceDomainService
 } from '../../domain/services/timelines/financial/index.js';
-import { TimelineType } from '../../../shared/enums/index.js';
+import { TimelineType, normalizeTimelineType } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -176,11 +176,35 @@ export class TimelineService {
   }
 
   async createTimeline(data) {
+    const type = normalizeTimelineType(data.type || TimelineType.CUSTOM);
+    const timeboardId = data.timeboardId || data.timeboard_id;
+
+    const singleInstanceTypes = [
+      TimelineType.BALANCE,
+      TimelineType.INCOME,
+      TimelineType.EXPENSE,
+      TimelineType.INVESTMENT
+    ];
+
+    if (timeboardId && singleInstanceTypes.includes(type)) {
+      const existingTimelines = await timelineRepository.getAllByTimeboardId(timeboardId);
+      const duplicate = existingTimelines.some(
+        (tl) => normalizeTimelineType(tl.type) === type
+      );
+      if (duplicate) {
+        throw new Error(
+          t('backend.validation.timelineAlreadyExists') ||
+          `Uma timeline do tipo "${type}" já existe neste timeboard.`
+        );
+      }
+    }
+
     return timelineRepository.create({
       status: 'ativa',
       canDelete: true,
       isSystemDefault: false,
-      ...data
+      ...data,
+      type
     });
   }
 

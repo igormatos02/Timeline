@@ -147,6 +147,10 @@ export const translations = {
       showEmpty: "Show empty",
       visible: "Visible",
       hidden: "Hidden",
+      balanceTimeline: "Balance Timeline",
+      incomeTimeline: "Income Timeline",
+      expenseTimeline: "Expenses Timeline",
+      investmentTimeline: "Investments Timeline",
       loanTimeline: "Loan Timeline",
       projectTimeline: "Project Timeline",
       reminderTimeline: "Reminder Timeline",
@@ -336,6 +340,8 @@ export const translations = {
       travel: "Travel",
       personal_care: "Personal Care",
       services: "Services",
+      condominium: "Condominium",
+      reserve: "Reserve Fund",
       other: "Other Expenses"
     },
 
@@ -376,7 +382,9 @@ export const translations = {
       typeLabel: "Timeboard Type *",
       typeFinancial: "Financial",
       typeProjects: "Projects",
-      typeReminders: "Reminders"
+      typeReminders: "Reminders",
+      typeEmpty: "Empty",
+      typeCondoflow: "Condoflow"
     },
 
     // Timeboard Full Settings Modal
@@ -957,7 +965,11 @@ export const translations = {
       showEmpty: "Mostrar vazios",
       visible: "Visível",
       hidden: "Oculto",
-      loanTimeline: "Linha de Empréstimo",
+      balanceTimeline: "Linha de Balanço",
+      incomeTimeline: "Linha de Entrada",
+      expenseTimeline: "Linha de Saída / Despesas",
+      investmentTimeline: "Linha de Investimentos",
+      loanTimeline: "Linha de Crédito / Empréstimo",
       projectTimeline: "Timeline de Projeto",
       reminderTimeline: "Timeline de Lembretes",
       customTimeline: "Timeline Personalizada"
@@ -1146,6 +1158,8 @@ export const translations = {
       travel: "Viagens",
       personal_care: "Cuidados Pessoais",
       services: "Serviços",
+      condominium: "Condomínio",
+      reserve: "Fundo de Reserva",
       other: "Outras Despesas"
     },
 
@@ -1186,7 +1200,9 @@ export const translations = {
       typeLabel: "Tipo de Timeboard *",
       typeFinancial: "Financeiro (Financial)",
       typeProjects: "Projetos (Projects)",
-      typeReminders: "Lembretes (Reminders)"
+      typeReminders: "Lembretes (Reminders)",
+      typeEmpty: "Vazio (Empty)",
+      typeCondoflow: "Condoflow"
     },
 
     // Timeboard Full Settings Modal

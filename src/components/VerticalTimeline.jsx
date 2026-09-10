@@ -78,7 +78,7 @@ import MonthProjectionBadges from './MonthProjectionBadges.jsx';
 import FloatingTaskStack from './FloatingTaskStack';
 import { getGroupingForPeriodicity } from '../utils/loanCalculations';
 import { formatCurrency } from '../utils/formatCurrency';
-import { EventType, EventStatus, EventStatusLabel, TimelineType, TimelineStatus, TimeboardType, IncomeEventCategory, ExpensesEventCategory, InvestmentEventCategory, LoanEventCategory, AmortizationEventCategory, AmortizationStrategy } from '../enums/index.js';
+import { EventType, EventStatus, EventStatusLabel, TimelineType, TimelineStatus, TimeboardType, IncomeEventCategory, ExpensesEventCategory, InvestmentEventCategory, LoanEventCategory, AmortizationEventCategory, AmortizationStrategy, normalizeTimelineType } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 const EXPENSE_CATEGORY_ITEMS = [
@@ -194,45 +194,77 @@ function VerticalTimeline({
   const isReminders = activeTimeboard?.type === TimeboardType.REMINDERS || activeTimeboard?.type === 'reminders' || timeline?.type === 'reminder';
 
   const timelineOptions = useMemo(() => {
-    if (isFinancial) {
-      return [
-        {
-          key: 'loan',
-          type: TimelineType.LOAN,
-          label: t('sidebar.loanTimeline'),
-          icon: <CreditCard size={14} style={{ color: '#6366f1' }} />
-        }
-      ];
+    const list = [];
+    const currentTypes = new Set(
+      (timelines || []).map((tl) => normalizeTimelineType(tl.type))
+    );
+
+    // Balance (allowed once per timeboard)
+    if (!currentTypes.has(TimelineType.BALANCE)) {
+      list.push({
+        key: 'balance',
+        type: TimelineType.BALANCE,
+        label: t('sidebar.balanceTimeline') || 'Linha de Balanço',
+        icon: <Scale size={14} style={{ color: '#0ea5e9' }} />
+      });
     }
-    if (isProjects) {
-      return [
-        {
-          key: 'project',
-          type: TimelineType.PROJECT,
-          label: t('sidebar.projectTimeline'),
-          icon: <FolderKanban size={14} style={{ color: '#a855f7' }} />
-        }
-      ];
+
+    // Income (allowed once per timeboard)
+    if (!currentTypes.has(TimelineType.INCOME)) {
+      list.push({
+        key: 'income',
+        type: TimelineType.INCOME,
+        label: t('sidebar.incomeTimeline') || 'Linha de Entrada',
+        icon: <TrendingUp size={14} style={{ color: '#10b981' }} />
+      });
     }
-    if (isReminders) {
-      return [
-        {
-          key: 'reminder',
-          type: TimelineType.REMINDER,
-          label: t('sidebar.reminderTimeline'),
-          icon: <Bell size={14} style={{ color: '#f59e0b' }} />
-        }
-      ];
+
+    // Expense (allowed once per timeboard)
+    if (!currentTypes.has(TimelineType.EXPENSE)) {
+      list.push({
+        key: 'expense',
+        type: TimelineType.EXPENSE,
+        label: t('sidebar.expenseTimeline') || 'Linha de Saída / Despesas',
+        icon: <ShoppingCart size={14} style={{ color: '#f43f5e' }} />
+      });
     }
-    return [
-      {
-        key: 'loan',
-        type: TimelineType.LOAN,
-        label: t('sidebar.loanTimeline'),
-        icon: <CreditCard size={14} style={{ color: '#6366f1' }} />
-      }
-    ];
-  }, [isFinancial, isProjects, isReminders, t]);
+
+    // Investment (allowed once per timeboard)
+    if (!currentTypes.has(TimelineType.INVESTMENT)) {
+      list.push({
+        key: 'investment',
+        type: TimelineType.INVESTMENT,
+        label: t('sidebar.investmentTimeline') || 'Linha de Investimentos',
+        icon: <PiggyBank size={14} style={{ color: '#8b5cf6' }} />
+      });
+    }
+
+    // Loan / Credit (allowed multiple times)
+    list.push({
+      key: 'loan',
+      type: TimelineType.LOAN,
+      label: t('sidebar.loanTimeline') || 'Linha de Crédito / Empréstimo',
+      icon: <CreditCard size={14} style={{ color: '#6366f1' }} />
+    });
+
+    // Project (allowed multiple times)
+    list.push({
+      key: 'project',
+      type: TimelineType.PROJECT,
+      label: t('sidebar.projectTimeline') || 'Timeline de Projeto',
+      icon: <FolderKanban size={14} style={{ color: '#a855f7' }} />
+    });
+
+    // Reminder (allowed multiple times)
+    list.push({
+      key: 'reminder',
+      type: TimelineType.REMINDER,
+      label: t('sidebar.reminderTimeline') || 'Timeline de Lembretes',
+      icon: <Bell size={14} style={{ color: '#f59e0b' }} />
+    });
+
+    return list;
+  }, [timelines, t]);
 
   // Multi-selection of timelines for Balance view (derived dynamically from real timelines)
   const availableCreditOptions = useMemo(() => {

@@ -59,6 +59,8 @@ const EXPENSE_CATEGORY_META = {
   [ExpenseEventCategory.TRAVEL]: { icon: Plane, color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)' },
   [ExpenseEventCategory.PERSONAL_CARE]: { icon: Sparkles, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)' },
   [ExpenseEventCategory.SERVICES]: { icon: Pin, color: '#64748b', bg: 'rgba(100, 116, 139, 0.15)' },
+  [ExpenseEventCategory.CONDOMINIUM]: { icon: Landmark, color: '#0ea5e9', bg: 'rgba(14, 165, 233, 0.15)' },
+  [ExpenseEventCategory.RESERVE]: { icon: PiggyBank, color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)' },
   [ExpenseEventCategory.OTHER]: { icon: Tag, color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' }
 };
 

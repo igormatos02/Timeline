@@ -64,13 +64,40 @@ export default function TimeboardsHub({
   const filteredShared = filterList(sharedTimeboards);
 
   const getTypeDetails = (type) => {
-    if (type === TimeboardType.PROJECT) {
+    if (type === TimeboardType.EMPTY || type === 'empty') {
+      return {
+        label: t('timeboard.empty') || 'Vazio',
+        color: '#a855f7',
+        bg: 'rgba(168, 85, 247, 0.15)',
+        border: 'rgba(168, 85, 247, 0.3)',
+        icon: <Layers size={20} style={{ color: '#a855f7' }} />
+      };
+    }
+    if (type === TimeboardType.PROJECT || type === TimeboardType.PROJECTS || type === 'projects' || type === 'project') {
       return {
         label: t('timeboard.project') || 'Projeto',
         color: '#60a5fa',
         bg: 'rgba(59, 130, 246, 0.15)',
         border: 'rgba(59, 130, 246, 0.3)',
         icon: <FolderKanban size={20} style={{ color: '#60a5fa' }} />
+      };
+    }
+    if (type === TimeboardType.REMINDERS || type === 'reminders' || type === 'reminder') {
+      return {
+        label: t('timeboard.reminders') || 'Lembretes',
+        color: '#f59e0b',
+        bg: 'rgba(245, 158, 11, 0.15)',
+        border: 'rgba(245, 158, 11, 0.3)',
+        icon: <Calendar size={20} style={{ color: '#f59e0b' }} />
+      };
+    }
+    if (type === TimeboardType.CONDOFLOW || type === 'condoflow') {
+      return {
+        label: 'Condoflow',
+        color: '#06b6d4',
+        bg: 'rgba(6, 182, 212, 0.15)',
+        border: 'rgba(6, 182, 212, 0.3)',
+        icon: <LayoutGrid size={20} style={{ color: '#06b6d4' }} />
       };
     }
     return {

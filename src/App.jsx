@@ -23,6 +23,7 @@ import {
   isLoanInstallment
 } from './utils/loanCalculations';
 import { formatCurrency } from './utils/formatCurrency';
+import { generateUUID } from './utils/uuid.js';
 import * as api from './services/api';
 import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
@@ -219,6 +220,7 @@ export default function App() {
 
   // Modal states
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
+  const [createTimelineInitialType, setCreateTimelineInitialType] = useState(null);
   const [isTimelineSettingsModalOpen, setIsTimelineSettingsModalOpen] = useState(false);
   const [editingTimeline, setEditingTimeline] = useState(null);
   const [deletingTimeline, setDeletingTimeline] = useState(null);
@@ -474,8 +476,9 @@ export default function App() {
   // ----------------------------------------------------
   // Timeline Handlers
   // ----------------------------------------------------
-  const handleOpenCreateTimeline = () => {
+  const handleOpenCreateTimeline = (initialType = null) => {
     setEditingTimeline(null);
+    setCreateTimelineInitialType(initialType || null);
     setIsTimelineModalOpen(true);
   };
 
@@ -1897,6 +1900,8 @@ export default function App() {
           onClose={() => setIsTimelineModalOpen(false)}
           onSave={handleSaveTimeline}
           initialData={editingTimeline}
+          initialType={createTimelineInitialType}
+          existingTimelines={activeTimeboardTimelines}
         />
 
         <EditTimelineSettingsModal

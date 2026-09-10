@@ -1,0 +1,48 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "provider": {
+        "ollama": {
+            "npm": "@ai-sdk/openai-compatible",
+            "name": "Ollama Local",
+            "options": {
+                "baseURL": "http://localhost:11434/v1"
+            },
+            "models": {
+                "devstral-small-2-24b-8k": {
+                    "name": "Devstral Small 2 24B 8K",
+                    "limit": {
+                        "context": 8192,
+                        "input": 8192,
+                        "output": 4096
+                    }
+                }
+            }
+        }
+    },
+    "model": "ollama/devstral-small-2-24b-8k",
+    "lsp": true,
+    "instructions": [
+        "AGENTS.md"
+    ],
+    "references": {
+        "express": {
+            "repository": "expressjs/express",
+            "description": "Express.js documentation"
+        },
+        "node": {
+            "repository": "nodejs/node",
+            "description": "Node.js internals"
+        }
+    },
+    "mcp": {
+        "node": {
+            "type": "local",
+            "command": [
+                "npx",
+                "-y",
+                "@anthropic-ai/mcp-server-node"
+            ],
+            "enabled": true
+        }
+    }
+}

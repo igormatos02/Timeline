@@ -362,7 +362,7 @@ export async function acceptTimeboardInvite(timeboardId, userId, email = null) {
 }
 
 // Persons & Organizations (Entities) Cache Helpers
-function getLocalPersons(timeboardId) {
+export function getLocalPersons(timeboardId) {
   try {
     const key = `chrono_persons_${timeboardId}`;
     const data = localStorage.getItem(key);

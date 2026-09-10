@@ -73,6 +73,7 @@ import {
   ArrowDownRight
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
+import { compareEventsWithinDay } from '../utils/eventSorting.js';
 import MonthProjectionBadges from './MonthProjectionBadges.jsx';
 import FloatingTaskStack from './FloatingTaskStack';
 import { getGroupingForPeriodicity } from '../utils/loanCalculations';
@@ -102,6 +103,24 @@ const EXPENSE_CATEGORY_ITEMS = [
   { id: ExpensesEventCategory.SERVICES, icon: CreditCard, color: '#64748b' },
   { id: ExpensesEventCategory.OTHER, icon: ShoppingCart, color: '#a1a1aa' }
 ];
+
+const groupEventsByDate = (events = []) => {
+  const groups = [];
+  const map = new Map();
+  for (const ev of events) {
+    const dateKey = ev.date || ev.dueDate || 'no-date';
+    if (!map.has(dateKey)) {
+      const group = { date: dateKey, events: [] };
+      map.set(dateKey, group);
+      groups.push(group);
+    }
+    map.get(dateKey).events.push(ev);
+  }
+  for (const group of groups) {
+    group.events.sort(compareEventsWithinDay);
+  }
+  return groups;
+};
 
 function VerticalTimeline({
   timeline,
@@ -386,21 +405,16 @@ function VerticalTimeline({
 
   const userInteractedRef = React.useRef(false);
 
-  // Track physical or programmatic scroll position to mark user interaction
+  // Track physical user interaction (wheel, touch, mouse down, keydown)
   React.useEffect(() => {
     const handleUserInteraction = () => {
       userInteractedRef.current = true;
     };
-    if (window.scrollY > 0) {
-      userInteractedRef.current = true;
-    }
-    window.addEventListener('scroll', handleUserInteraction, { passive: true });
     window.addEventListener('wheel', handleUserInteraction, { passive: true });
     window.addEventListener('touchmove', handleUserInteraction, { passive: true });
     window.addEventListener('keydown', handleUserInteraction, { passive: true });
     window.addEventListener('mousedown', handleUserInteraction, { passive: true });
     return () => {
-      window.removeEventListener('scroll', handleUserInteraction);
       window.removeEventListener('wheel', handleUserInteraction);
       window.removeEventListener('touchmove', handleUserInteraction);
       window.removeEventListener('keydown', handleUserInteraction);
@@ -408,23 +422,26 @@ function VerticalTimeline({
     };
   }, []);
 
-  // Auto-scroll directly to Current Month (August 2026) on mount or tab switch
+  // Position on Current Month / Today on timeline or tab switch (single pass via requestAnimationFrame)
   React.useEffect(() => {
     userInteractedRef.current = false;
-    positionOnToday('instant');
-    const t1 = setTimeout(() => {
-      if (!userInteractedRef.current) positionOnToday('instant');
-    }, 50);
-    const t2 = setTimeout(() => {
-      if (!userInteractedRef.current) positionOnToday('instant');
-    }, 200);
-    const t3 = setTimeout(() => {
-      if (!userInteractedRef.current) positionOnToday('instant');
-    }, 500);
+    let cancelled = false;
+
+    const rafId = requestAnimationFrame(() => {
+      if (cancelled || userInteractedRef.current) return;
+      const success = positionOnToday('instant');
+      if (!success) {
+        requestAnimationFrame(() => {
+          if (!cancelled && !userInteractedRef.current) {
+            positionOnToday('instant');
+          }
+        });
+      }
+    });
+
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
+      cancelled = true;
+      cancelAnimationFrame(rafId);
     };
   }, [timeline?.id, activeFinancialTab, positionOnToday]);
 
@@ -581,12 +598,6 @@ function VerticalTimeline({
     activeFinancialTab,
   ]);
 
-  // Re-anchor scroll on Today when events load from backend if user has not manually interacted
-  React.useLayoutEffect(() => {
-    if (!userInteractedRef.current) {
-      positionOnToday('instant');
-    }
-  }, [filteredEvents, timelineEvents, positionOnToday]);
   const availableLabels = useMemo(() => {
     return Array.from(new Set(allEvents.flatMap((ev) => ev.labels || [])));
   }, [allEvents]);
@@ -599,6 +610,9 @@ function VerticalTimeline({
         map[ev.date] = [];
       }
       map[ev.date].push(ev);
+    });
+    Object.values(map).forEach((list) => {
+      list.sort(compareEventsWithinDay);
     });
     return map;
   }, [filteredEvents]);
@@ -687,18 +701,14 @@ function VerticalTimeline({
                   </div>
 
                   {hasEvents ? (
-                    weekData.events.map((ev, evIdx) => (
+                    groupEventsByDate(weekData.events).map((dateGroup, gIdx) => (
                       <div
-                        key={`${ev.id || ev.eventId || 'wev'}_${ev.date}_${evIdx}`}
-                        id={ev.status === EventStatus.OVERDUE ? 'loan-inst-overdue' : undefined}
-                        style={{ marginBottom: '12px' }}
+                        key={`${dateGroup.date}_${gIdx}`}
+                        style={{ marginBottom: '8px' }}
                       >
-                        <div style={{ fontSize: '0.78rem', color: 'var(--primary-light)', fontWeight: '700', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Calendar size={13} />
-                          <span>{format(parseISO(ev.date), language === 'en' ? 'EEEE, MMMM d' : "EEEE, d 'de' MMMM", { locale: dateLocale })}</span>
-                        </div>
                         <TimelineEventCard
-                          event={ev}
+                          events={dateGroup.events}
+                          timelineColor={timeline.color}
                           allEvents={timeline.events || []}
                           currentTimelineId={timeline.id}
                           timelineType={timeline.type}
@@ -1130,18 +1140,14 @@ function VerticalTimeline({
                   </div>
 
                   {hasEvents ? (
-                    mGroup.events.map((ev, evIdx) => (
+                    groupEventsByDate(mGroup.events).map((dateGroup, gIdx) => (
                       <div
-                        key={`${ev.id || ev.eventId || 'mev'}_${ev.date}_${evIdx}`}
-                        id={ev.status === EventStatus.OVERDUE ? 'loan-inst-overdue' : undefined}
-                        style={{ marginBottom: '12px' }}
+                        key={`${dateGroup.date}_${gIdx}`}
+                        style={{ marginBottom: '8px' }}
                       >
-                        <div style={{ fontSize: '0.78rem', color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)', fontWeight: '700', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Calendar size={13} />
-                          <span>{format(parseISO(ev.date), language === 'en' ? 'EEEE, MMMM d' : "EEEE, d 'de' MMMM", { locale: dateLocale })}</span>
-                        </div>
                         <TimelineEventCard
-                          event={ev}
+                          events={dateGroup.events}
+                          timelineColor={timeline.color}
                           allEvents={timeline.events || []}
                           currentTimelineId={timeline.id}
                           timelineType={timeline.type}
@@ -1329,23 +1335,28 @@ function VerticalTimeline({
                         </div>
 
                         {hasEvents ? (
-                          mGroup.events.map((ev, evIdx) => (
-                            <TimelineEventCard
-                              key={`${ev.id || ev.eventId || 'yev'}_${ev.date}_${evIdx}`}
-                              event={ev}
-                              allEvents={timeline.events || []}
-                              currentTimelineId={timeline.id}
-                              timelineType={timeline.type}
-                              activeFinancialTab={activeFinancialTab}
-                              onEdit={onEditEvent}
-                              onUpdateEventDirect={onUpdateEventDirect}
-                              onDelete={onDeleteEvent}
-                              onToggleTask={onToggleTask}
-                              onToggleLoanPayment={onToggleLoanPayment}
-                              onPayUpToHere={onPayUpToHere}
-                              onOpenEditInstallment={onOpenEditInstallment}
-                              onNavigateToTimeline={onNavigateToTimeline}
-                            />
+                          groupEventsByDate(mGroup.events).map((dateGroup, gIdx) => (
+                            <div
+                              key={`${dateGroup.date}_${gIdx}`}
+                              style={{ marginBottom: '8px' }}
+                            >
+                              <TimelineEventCard
+                                events={dateGroup.events}
+                                timelineColor={timeline.color}
+                                allEvents={timeline.events || []}
+                                currentTimelineId={timeline.id}
+                                timelineType={timeline.type}
+                                activeFinancialTab={activeFinancialTab}
+                                onEdit={onEditEvent}
+                                onUpdateEventDirect={onUpdateEventDirect}
+                                onDelete={onDeleteEvent}
+                                onToggleTask={onToggleTask}
+                                onToggleLoanPayment={onToggleLoanPayment}
+                                onPayUpToHere={onPayUpToHere}
+                                onOpenEditInstallment={onOpenEditInstallment}
+                                onNavigateToTimeline={onNavigateToTimeline}
+                              />
+                            </div>
                           ))
                         ) : (
                           <div
@@ -1426,28 +1437,22 @@ function VerticalTimeline({
 
               <div className="day-content-col">
                 {hasEvents ? (
-                  dayEvents.map((ev, evIdx) => (
-                    <div
-                      key={`${ev.id || ev.eventId || 'dev'}_${ev.date}_${evIdx}`}
-                      id={ev.status === EventStatus.OVERDUE ? 'loan-inst-overdue' : undefined}
-                    >
-                      <TimelineEventCard
-                        event={ev}
-                        allEvents={timeline.events || []}
-                        currentTimelineId={timeline.id}
-                        timelineType={timeline.type}
-                        activeFinancialTab={activeFinancialTab}
-                        onEdit={onEditEvent}
-                        onUpdateEventDirect={onUpdateEventDirect}
-                        onDelete={onDeleteEvent}
-                        onToggleTask={onToggleTask}
-                        onToggleLoanPayment={onToggleLoanPayment}
-                        onPayUpToHere={onPayUpToHere}
-                        onOpenEditInstallment={onOpenEditInstallment}
-                        onNavigateToTimeline={onNavigateToTimeline}
-                      />
-                    </div>
-                  ))
+                  <TimelineEventCard
+                    events={dayEvents}
+                    timelineColor={timeline.color}
+                    allEvents={timeline.events || []}
+                    currentTimelineId={timeline.id}
+                    timelineType={timeline.type}
+                    activeFinancialTab={activeFinancialTab}
+                    onEdit={onEditEvent}
+                    onUpdateEventDirect={onUpdateEventDirect}
+                    onDelete={onDeleteEvent}
+                    onToggleTask={onToggleTask}
+                    onToggleLoanPayment={onToggleLoanPayment}
+                    onPayUpToHere={onPayUpToHere}
+                    onOpenEditInstallment={onOpenEditInstallment}
+                    onNavigateToTimeline={onNavigateToTimeline}
+                  />
                 ) : (
                   <div
                     className="empty-day-row"
@@ -1894,9 +1899,9 @@ function VerticalTimeline({
         <div className="sticky-header-dock">
           {React.isValidElement(headerComponent)
             ? React.cloneElement(headerComponent, {
-                filteredEvents: timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0 ? filteredEvents : undefined,
-                selectedExpenseCategories: timeline.type === TimelineType.EXPENSE ? selectedExpenseCategories : undefined
-              })
+              filteredEvents: timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0 ? filteredEvents : undefined,
+              selectedExpenseCategories: timeline.type === TimelineType.EXPENSE ? selectedExpenseCategories : undefined
+            })
             : headerComponent}
         </div>
 

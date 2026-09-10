@@ -153,6 +153,13 @@ export default function BalanceTimelineHeader({
 
   const todayDate = new Date();
   const currentMonthStr = format(todayDate, 'yyyy-MM');
+  const currentMonthLabel = (() => {
+    try {
+      return format(todayDate, 'MMMM yyyy', { locale: pt });
+    } catch {
+      return '';
+    }
+  })();
 
   let calculatedIncome = 0;
   let calculatedExpenses = 0;
@@ -434,10 +441,10 @@ export default function BalanceTimelineHeader({
 
           {/* Grid Principal 2x2 padronizado com Donut SVGs */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-            {/* Quadrante 1: BALANÇO ATUAL (Donut SVG de Entradas vs Saídas/Investido/Devido) */}
+            {/* Quadrante 1: BALANÇO ATÉ O MÊS ATUAL */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                BALANÇO ATUAL
+                Balanço até o mês atual ({currentMonthLabel})
               </div>
               {(() => {
                 const totalReceived = finMetrics.totalReceived ?? 0;

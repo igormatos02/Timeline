@@ -1,24 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  X,
   ShoppingCart,
-  Calendar,
-  Repeat,
-  Zap,
-  ChevronDown,
-  Plus,
-  Trash2,
-  Clock,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   Utensils,
   Home,
   Droplets,
   Flame,
   Wifi,
   Bus,
-  Car,
   HeartPulse,
   GraduationCap,
   Film,
@@ -31,15 +19,25 @@ import {
   Plane,
   Sparkles,
   Pin,
-  TrendingUp,
   Tag,
-  Search,
-  Check
+  Zap,
+  Repeat
 } from 'lucide-react';
-import { format, parseISO, addMonths, getDaysInMonth, setMonth, setYear } from 'date-fns';
+import { format, parseISO, addMonths, getDaysInMonth } from 'date-fns';
 import { EventStatus, EventPeriodicity, EventType, ExpenseEventCategory, EventUpdateMode } from '../../../shared/enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
+import { useModalEscape } from '../../hooks/useModalEscape.js';
+import ModalShell from '../ui/ModalShell.jsx';
+import EuroInput from '../ui/EuroInput.jsx';
+import CategorySelector from '../ui/CategorySelector.jsx';
+import PeriodicitySelector from '../ui/PeriodicitySelector.jsx';
+import MonthPickerPopover from '../ui/MonthPickerPopover.jsx';
+import DayPickerPopover from '../ui/DayPickerPopover.jsx';
+import ToggleSwitch from '../ui/ToggleSwitch.jsx';
+import BreakdownItems from '../ui/BreakdownItems.jsx';
 import ObligationSelector from '../ObligationSelector.jsx';
+
+const ACCENT = '#f43f5e';
 
 const EXPENSE_CATEGORY_META = {
   [ExpenseEventCategory.FOOD]: { icon: Utensils, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
@@ -65,29 +63,22 @@ const EXPENSE_CATEGORY_META = {
 };
 
 export default function ExpenseEventModal({
-  isOpen,
-  onClose,
-  onSave,
-  initialData,
-  defaultDate,
-  timeline,
-  timeboardId
+  isOpen, onClose, onSave, initialData, defaultDate, timeline, timeboardId
 }) {
   const { t, dateLocale } = useTranslation();
   const titleInputRef = useRef(null);
 
   const [isDayPickerOpen, setIsDayPickerOpen] = useState(false);
   const [isEndMonthPickerOpen, setIsEndMonthPickerOpen] = useState(false);
-  const [endMonthPickerYear, setEndMonthPickerYear] = useState(2026);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
-  const [categorySearch, setCategorySearch] = useState('');
+  const [endMonthPickerYear, setEndMonthPickerYear] = useState(new Date().getFullYear());
   const [updateScope, setUpdateScope] = useState(EventUpdateMode.SINGLE);
   const [breakdownItems, setBreakdownItems] = useState([]);
   const [obligationError, setObligationError] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
-    date: defaultDate || '2026-08-21',
+    date: defaultDate || format(new Date(), 'yyyy-MM-dd'),
     dayOfMonth: 1,
     time: '09:00',
     status: EventStatus.PENDING,
@@ -101,7 +92,12 @@ export default function ExpenseEventModal({
     obligationPersonId: ''
   });
 
-  // 1. Foco e seleção automática do título ao abrir
+  useModalEscape(isOpen, onClose, [
+    [isDayPickerOpen, setIsDayPickerOpen],
+    [isEndMonthPickerOpen, setIsEndMonthPickerOpen],
+    [isCategoryDropdownOpen, setIsCategoryDropdownOpen]
+  ]);
+
   useEffect(() => {
     if (isOpen) {
       const timer = setTimeout(() => {
@@ -114,37 +110,21 @@ export default function ExpenseEventModal({
     }
   }, [isOpen]);
 
-  // Handle Escape key to close modal or open popovers
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        if (isDayPickerOpen) setIsDayPickerOpen(false);
-        else if (isEndMonthPickerOpen) setIsEndMonthPickerOpen(false);
-        else if (isCategoryDropdownOpen) setIsCategoryDropdownOpen(false);
-        else onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isDayPickerOpen, isEndMonthPickerOpen, isCategoryDropdownOpen, onClose]);
-
-  // Inicialização de dados
   useEffect(() => {
     if (!isOpen) return;
 
-    const todayStr = '2026-08-21';
-    const targetDate = initialData?.date || defaultDate || todayStr;
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const targetDate = initialData?.date || defaultDate || today;
 
     let parsedDay = 1;
-    let initialYear = 2026;
+    let initialYear = new Date().getFullYear();
     try {
       const d = parseISO(targetDate);
       if (!isNaN(d.getDate())) parsedDay = d.getDate();
       if (!isNaN(d.getFullYear())) initialYear = d.getFullYear();
     } catch {
       parsedDay = 1;
-      initialYear = 2026;
+      initialYear = new Date().getFullYear();
     }
 
     if (initialData) {
@@ -192,7 +172,7 @@ export default function ExpenseEventModal({
       setUpdateScope(EventUpdateMode.SUBSEQUENT);
       setBreakdownItems(initialData.breakdownItems ? JSON.parse(JSON.stringify(initialData.breakdownItems)) : []);
     } else {
-      let defaultEndMonth = '2026-12';
+      let defaultEndMonth = format(addMonths(parseISO(targetDate), 6), 'yyyy-MM');
       try {
         const d6 = addMonths(parseISO(targetDate), 6);
         defaultEndMonth = format(d6, 'yyyy-MM');
@@ -221,25 +201,8 @@ export default function ExpenseEventModal({
     }
   }, [initialData, defaultDate, isOpen]);
 
-  if (!isOpen) return null;
-
-  // Informações de data base do botão que abriu o modal
-  let baseYearStr = '2026';
-  let baseMonthStr = '08';
-  let totalDays = 31;
-  try {
-    const pDate = parseISO(formData.date);
-    baseYearStr = format(pDate, 'yyyy');
-    baseMonthStr = format(pDate, 'MM');
-    totalDays = getDaysInMonth(pDate) || 31;
-  } catch (e) { }
-
-  const daysArray = Array.from({ length: totalDays }, (_, i) => i + 1);
-
-  // Subpartes: valor total derivado
   const totalBreakdownAmount = breakdownItems.reduce(
-    (acc, it) => acc + (parseFloat(it.amount) || 0),
-    0
+    (acc, it) => acc + (parseFloat(it.amount) || 0), 0
   );
 
   const displayedAmount = breakdownItems.length > 0
@@ -249,12 +212,15 @@ export default function ExpenseEventModal({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
-
     if (formData.isObligation && !formData.obligationPersonId) {
       setObligationError(true);
       return;
     }
     setObligationError(false);
+
+    const baseYearStr = format(parseISO(formData.date), 'yyyy');
+    const baseMonthStr = format(parseISO(formData.date), 'MM');
+    const totalDays = getDaysInMonth(parseISO(formData.date)) || 31;
 
     const safeDay = Math.min(totalDays, Math.max(1, Number(formData.dayOfMonth) || 1));
     const safeDayStr = safeDay.toString().padStart(2, '0');
@@ -273,7 +239,7 @@ export default function ExpenseEventModal({
       ? formData.recurrenceEndDate
       : null;
 
-    const eventPayload = {
+    onSave({
       ...(initialData || {}),
       name: formData.title.trim(),
       title: formData.title.trim(),
@@ -295,834 +261,184 @@ export default function ExpenseEventModal({
       isObligation: formData.isObligation,
       obligationPersonId: formData.isObligation ? formData.obligationPersonId : null,
       updateScope: (initialData?.seriesId || initialData?.eventId || initialData?.isRecurring || isRecurring) ? updateScope : undefined
-    };
-
-    onSave(eventPayload);
+    });
     onClose();
   };
 
+  const subtitle = `${timeline?.name || t('timeline.expenses')} • ${format(parseISO(formData.date), 'MMMM yyyy', { locale: dateLocale })}`;
+
   return (
-    <div
-      className="modal-overlay"
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(6px)',
-        WebkitBackdropFilter: 'blur(6px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        padding: '16px',
-        boxSizing: 'border-box'
-      }}
-    >
-      <div
-        className="modal-card"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          maxWidth: '680px',
-          width: '100%',
-          maxHeight: '90vh',
-          overflowY: 'auto',
-          background: 'var(--bg-card, #131722)',
-          borderRadius: '16px',
-          border: '1px solid rgba(244, 63, 94, 0.35)',
-          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(244, 63, 94, 0.15)',
-          padding: '24px',
-          boxSizing: 'border-box'
-        }}
-      >
-        {/* Cabeçalho */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ background: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e', padding: '8px', borderRadius: '10px', display: 'flex' }}>
-              <ShoppingCart size={20} />
-            </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                {initialData ? (t('modal.editExpense') || 'Editar Despesa') : (t('modal.newExpense') || 'Nova Despesa')}
-              </h3>
-              <div style={{ fontSize: '0.76rem', color: '#f43f5e', fontWeight: '700' }}>
-                {timeline?.name || t('timeline.expenses')} • {format(parseISO(`${baseYearStr}-${baseMonthStr}-01`), 'MMMM yyyy', { locale: dateLocale })}
-              </div>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="action-icon-btn"
-            onClick={onClose}
-            aria-label="Fechar"
-            style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}
-          >
-            <X size={18} />
+    <ModalShell
+      isOpen={isOpen} onClose={onClose} onSubmit={handleSubmit} accent={ACCENT}
+      icon={ShoppingCart}
+      title={initialData ? (t('modal.editExpense') || 'Editar Despesa') : (t('modal.newExpense') || 'Nova Despesa')}
+      subtitle={subtitle}
+      footer={
+        <>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}
+            style={{ padding: '8px 16px', borderRadius: '8px' }}>{t('modal.cancel') || 'Cancelar'}</button>
+          <button type="submit" className="btn btn-primary btn-sm"
+            style={{ background: ACCENT, borderColor: ACCENT, padding: '8px 20px', borderRadius: '8px', fontWeight: '800' }}>
+            {initialData ? (t('modal.saveChanges') || 'Salvar Alterações') : (t('modal.addExpense') || 'Adicionar Despesa')}
           </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          {/* 1. Título da Despesa (Foco e seleção automática ao abrir) */}
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-              {t('modal.expenseTitleLabel') || 'Descrição da Despesa *'}
-            </label>
-            <input
-              ref={titleInputRef}
-              type="text"
-              required
-              autoFocus
-              placeholder={t('modal.expenseTitlePlaceholder') || 'Ex: Renda / Aluguel, Supermercado, Eletricidade, Carro...'}
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="form-input"
-              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', boxSizing: 'border-box' }}
-            />
-          </div>
-
-          {/* Categoria da Despesa Elegante (Apenas na criação) */}
-          {!initialData && (
-            <div style={{ marginBottom: '14px', position: 'relative' }}>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-                {t('modal.categoryLabel') || t('sidebar.categoryType') || 'Categoria'}
-              </label>
-
-            {/* Botão Seletor Principal */}
-            {(() => {
-              const currentMeta = EXPENSE_CATEGORY_META[formData.category] || EXPENSE_CATEGORY_META[ExpenseEventCategory.OTHER];
-              const CurrentIcon = currentMeta.icon;
-              return (
-                <button
-                  type="button"
-                  onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 12px',
-                    borderRadius: '10px',
-                    background: 'var(--bg-glass, rgba(255,255,255,0.03))',
-                    border: isCategoryDropdownOpen ? '1px solid #f43f5e' : '1px solid var(--border-glass)',
-                    boxShadow: isCategoryDropdownOpen ? '0 0 12px rgba(244, 63, 94, 0.2)' : 'none',
-                    color: 'var(--text-main)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxSizing: 'border-box'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div
-                      style={{
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '8px',
-                        background: currentMeta.bg,
-                        color: currentMeta.color,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0
-                      }}
-                    >
-                      <CurrentIcon size={16} />
-                    </div>
-                    <span style={{ fontSize: '0.86rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                      {t(`expenseCategories.${formData.category}`) || formData.category}
-                    </span>
-                  </div>
-                  <ChevronDown
-                    size={16}
-                    style={{
-                      color: 'var(--text-muted)',
-                      transform: isCategoryDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.2s ease'
-                    }}
-                  />
-                </button>
-              );
-            })()}
-
-            {/* Menu Popover de Todas as Categorias */}
-            {isCategoryDropdownOpen && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  marginTop: '6px',
-                  background: 'var(--bg-card, #131722)',
-                  border: '1px solid rgba(244, 63, 94, 0.35)',
-                  borderRadius: '12px',
-                  boxShadow: '0 16px 36px rgba(0, 0, 0, 0.85)',
-                  padding: '12px',
-                  zIndex: 100,
-                  backdropFilter: 'blur(16px)',
-                  maxHeight: '260px',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}
-              >
-                {/* Campo de Busca Rápida */}
-                <div style={{ position: 'relative', marginBottom: '8px' }}>
-                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
-                  <input
-                    type="text"
-                    value={categorySearch}
-                    onChange={(e) => setCategorySearch(e.target.value)}
-                    placeholder={t('sidebar.search') || 'Buscar categoria...'}
-                    style={{
-                      width: '100%',
-                      padding: '6px 10px 6px 30px',
-                      fontSize: '0.78rem',
-                      borderRadius: '6px',
-                      background: 'var(--bg-glass, rgba(255,255,255,0.05))',
-                      border: '1px solid var(--border-glass)',
-                      color: 'var(--text-main)',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                {/* Lista de Categorias com Scroll */}
-                <div
-                  style={{
-                    overflowY: 'auto',
-                    flex: 1,
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '6px',
-                    paddingRight: '4px'
-                  }}
-                >
-                  {Object.entries(ExpenseEventCategory)
-                    .filter(([_, catVal]) => {
-                      if (!categorySearch.trim()) return true;
-                      const label = t(`expenseCategories.${catVal}`) || catVal;
-                      return label.toLowerCase().includes(categorySearch.toLowerCase());
-                    })
-                    .map(([_, catVal]) => {
-                      const meta = EXPENSE_CATEGORY_META[catVal] || EXPENSE_CATEGORY_META[ExpenseEventCategory.OTHER];
-                      const IconComp = meta.icon;
-                      const isSelected = formData.category === catVal;
-                      return (
-                        <button
-                          key={catVal}
-                          type="button"
-                          onClick={() => {
-                            setFormData({ ...formData, category: catVal });
-                            setIsCategoryDropdownOpen(false);
-                            setCategorySearch('');
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: '8px',
-                            padding: '6px 10px',
-                            borderRadius: '8px',
-                            border: isSelected ? `1px solid ${meta.color}` : '1px solid transparent',
-                            background: isSelected ? meta.bg : 'rgba(255, 255, 255, 0.02)',
-                            color: isSelected ? meta.color : 'var(--text-main)',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                            <div
-                              style={{
-                                width: '22px',
-                                height: '22px',
-                                borderRadius: '6px',
-                                background: meta.bg,
-                                color: meta.color,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0
-                              }}
-                            >
-                              <IconComp size={12} />
-                            </div>
-                            <span style={{ fontSize: '0.76rem', fontWeight: isSelected ? '700' : '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {t(`expenseCategories.${catVal}`) || catVal}
-                            </span>
-                          </div>
-                          {isSelected && <Check size={14} style={{ color: meta.color, flexShrink: 0 }} />}
-                        </button>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-          </div>
-          )}
-
-          <div style={{ marginBottom: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
-              <label style={{ fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                {t('modal.expenseAmountLabel') || 'Valor da Despesa (€) *'}
-              </label>
-              {breakdownItems.length > 0 && (
-                <span style={{ fontSize: '0.72rem', color: '#f43f5e', fontWeight: '800' }}>
-                  ({breakdownItems.length} {(t('modal.subparts') || 'Subpartes').toLowerCase()})
-                </span>
-              )}
-            </div>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                placeholder="0.00"
-                readOnly={breakdownItems.length > 0}
-                value={displayedAmount}
-                onChange={(e) => {
-                  if (breakdownItems.length === 0) {
-                    setFormData({ ...formData, amount: e.target.value });
-                  }
-                }}
-                className="form-input"
-                style={{
-                  width: '100%',
-                  padding: '10px 12px 10px 32px',
-                  borderRadius: '8px',
-                  fontSize: '1.05rem',
-                  fontWeight: '800',
-                  color: '#f43f5e',
-                  background: breakdownItems.length > 0 ? 'rgba(244, 63, 94, 0.08)' : undefined,
-                  boxSizing: 'border-box'
-                }}
-              />
-              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#f43f5e', fontWeight: '800' }}>
-                €
-              </span>
-            </div>
-          </div>
-
-          <div style={{ padding: '12px', borderRadius: '10px', background: 'var(--bg-glass, rgba(255,255,255,0.03))', border: '1px solid var(--border-glass)', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: breakdownItems.length > 0 ? '10px' : '0' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                {t('modal.subparts') || 'Subpartes'} {breakdownItems.length > 0 && `(${breakdownItems.length})`}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (breakdownItems.length === 0) {
-                    const curVal = formData.amount !== '' && !isNaN(formData.amount) ? parseFloat(formData.amount) : '';
-                    setBreakdownItems([
-                      { id: crypto.randomUUID(), name: 'Parte 1', amount: curVal !== '' && curVal > 0 ? curVal : '' }
-                    ]);
-                  } else {
-                    setBreakdownItems([
-                      ...breakdownItems,
-                      { id: crypto.randomUUID(), name: `Parte ${breakdownItems.length + 1}`, amount: '' }
-                    ]);
-                  }
-                }}
-                style={{
-                  background: 'rgba(244, 63, 94, 0.15)',
-                  border: '1px solid rgba(244, 63, 94, 0.35)',
-                  borderRadius: '6px',
-                  color: '#f43f5e',
-                  padding: '4px 10px',
-                  fontSize: '0.75rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                <Plus size={12} /> {breakdownItems.length === 0 ? (t('modal.splitIntoSubparts') || 'Dividir em Subpartes') : (t('modal.addSubpart') || 'Adicionar Parte')}
-              </button>
-            </div>
-
-            {breakdownItems.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
-                {breakdownItems.map((item, idx) => (
-                  <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 28px', gap: '8px', alignItems: 'center' }}>
-                    <input
-                      type="text"
-                      className="form-input"
-                      style={{ padding: '6px 10px', fontSize: '0.85rem' }}
-                      placeholder={t('modal.partNamePlaceholder', { index: idx + 1 }) || `Nome da parte ${idx + 1}`}
-                      value={item.name}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setBreakdownItems((prev) => prev.map((it, i) => (i === idx ? { ...it, name: val } : it)));
-                      }}
-                    />
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        className="form-input"
-                        style={{ padding: '6px 10px', fontSize: '0.85rem', fontWeight: '700', paddingLeft: '22px' }}
-                        value={item.amount !== undefined ? item.amount : ''}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setBreakdownItems((prev) => prev.map((it, i) => (i === idx ? { ...it, amount: val } : it)));
-                        }}
-                      />
-                      <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: '#f43f5e', fontWeight: '800' }}>
-                        €
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setBreakdownItems((prev) => prev.filter((_, i) => i !== idx))}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#f43f5e',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '4px'
-                      }}
-                      title={t('modal.removeSubpart') || 'Remover parte'}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 4. Periodicidade: Recorrente, Pontual, Período (Apenas na criação) */}
-          {!initialData && (
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-                {t('modal.periodicity') || 'Periodicidade'}
-              </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-              {[
-                { id: EventPeriodicity.RECURRING, label: t('modal.recurrent') || 'Recorrente', icon: <Repeat size={14} /> },
-                { id: EventPeriodicity.ONCE, label: t('modal.unique') || 'Única', icon: <Zap size={14} /> },
-                { id: EventPeriodicity.PERIOD, label: t('modal.period') || 'Período', icon: <Calendar size={14} /> }
-              ].map((p) => {
-                const isSelected = formData.periodicity === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => {
-                      if (p.id === EventPeriodicity.PERIOD && !formData.recurrenceEndDate) {
-                        const fallbackEnd = format(addMonths(parseISO(formData.date || '2026-08-21'), 6), 'yyyy-MM');
-                        setFormData({ ...formData, periodicity: p.id, recurrenceEndDate: fallbackEnd });
-                      } else {
-                        setFormData({ ...formData, periodicity: p.id });
-                      }
-                    }}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                      padding: '10px 8px',
-                      borderRadius: '8px',
-                      border: isSelected ? '2px solid #f43f5e' : '1px solid var(--border-glass)',
-                      background: isSelected ? 'rgba(244, 63, 94, 0.18)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                      color: isSelected ? '#f43f5e' : 'var(--text-muted)',
-                      fontSize: '0.8rem',
-                      fontWeight: isSelected ? '800' : '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {p.icon}
-                    <span>{p.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Se for Período: Seletor de Mês Final Elegante */}
-            {formData.periodicity === EventPeriodicity.PERIOD && (
-              <div
-                style={{
-                  marginTop: '10px',
-                  padding: '12px',
-                  background: 'rgba(244, 63, 94, 0.08)',
-                  border: '1px solid rgba(244, 63, 94, 0.28)',
-                  borderRadius: '10px'
-                }}
-              >
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f43f5e', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px' }}>
-                  <Calendar size={13} />
-                  <span>{t('modal.endMonth') || 'Mês Final'}</span>
-                </label>
-
-                {/* Botão Bonito que abre o Seletor de Mês */}
-                <div
-                  onClick={() => setIsEndMonthPickerOpen(!isEndMonthPickerOpen)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    background: 'var(--bg-card, #131722)',
-                    border: isEndMonthPickerOpen ? '2px solid #f43f5e' : '1px solid rgba(244, 63, 94, 0.35)',
-                    borderRadius: '8px',
-                    padding: '9px 12px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                    {formData.recurrenceEndDate
-                      ? format(parseISO(`${formData.recurrenceEndDate}-01`), 'MMMM yyyy', { locale: dateLocale })
-                      : (t('modal.endMonth') || 'Mês Final')}
-                  </span>
-                  <ChevronDown
-                    size={15}
-                    style={{
-                      color: '#f43f5e',
-                      transform: isEndMonthPickerOpen ? 'rotate(180deg)' : 'none',
-                      transition: 'transform 0.2s'
-                    }}
-                  />
-                </div>
-
-                {/* Popover Grade de 12 Meses com Navegação de Ano */}
-                {isEndMonthPickerOpen && (
-                  <div
-                    style={{
-                      marginTop: '8px',
-                      background: 'var(--bg-card, #131722)',
-                      border: '1px solid rgba(244, 63, 94, 0.3)',
-                      borderRadius: '10px',
-                      padding: '12px',
-                      boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
-                    }}
-                  >
-                    {/* Barra de navegação por ano */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <button
-                        type="button"
-                        onClick={() => setEndMonthPickerYear(prev => prev - 1)}
-                        style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: '4px' }}
-                      >
-                        <ChevronLeft size={16} />
-                      </button>
-                      <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#f43f5e' }}>
-                        {endMonthPickerYear}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setEndMonthPickerYear(prev => prev + 1)}
-                        style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: '4px' }}
-                      >
-                        <ChevronRight size={16} />
-                      </button>
-                    </div>
-
-                    {/* Grade de 12 meses */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                      {Array.from({ length: 12 }, (_, mIdx) => {
-                        const mStr = String(mIdx + 1).padStart(2, '0');
-                        const curMonthKey = `${endMonthPickerYear}-${mStr}`;
-                        const isSelectedMonth = formData.recurrenceEndDate === curMonthKey;
-                        const isPastThanStart = curMonthKey < `${baseYearStr}-${baseMonthStr}`;
-
-                        const sampleDate = setMonth(setYear(new Date(), endMonthPickerYear), mIdx);
-                        const monthLabel = format(sampleDate, 'MMM', { locale: dateLocale });
-
-                        return (
-                          <button
-                            key={curMonthKey}
-                            type="button"
-                            disabled={isPastThanStart}
-                            onClick={() => {
-                              setFormData({ ...formData, recurrenceEndDate: curMonthKey });
-                              setIsEndMonthPickerOpen(false);
-                            }}
-                            style={{
-                              padding: '8px 4px',
-                              borderRadius: '6px',
-                              border: isSelectedMonth ? '2px solid #f43f5e' : '1px solid var(--border-glass)',
-                              background: isSelectedMonth
-                                ? 'rgba(244, 63, 94, 0.25)'
-                                : isPastThanStart
-                                ? 'rgba(255,255,255,0.01)'
-                                : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                              color: isSelectedMonth
-                                ? '#f43f5e'
-                                : isPastThanStart
-                                ? 'var(--text-dim)'
-                                : 'var(--text-main)',
-                              fontWeight: isSelectedMonth ? '800' : '600',
-                              fontSize: '0.78rem',
-                              textTransform: 'capitalize',
-                              cursor: isPastThanStart ? 'not-allowed' : 'pointer',
-                              opacity: isPastThanStart ? 0.35 : 1
-                            }}
-                          >
-                            {monthLabel}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '8px', lineHeight: 1.3 }}>
-                  {t('modal.periodExplanation', {
-                    start: format(parseISO(`${baseYearStr}-${baseMonthStr}-01`), 'MMMM yyyy', { locale: dateLocale }),
-                    end: formData.recurrenceEndDate
-                      ? format(parseISO(`${formData.recurrenceEndDate}-01`), 'MMMM yyyy', { locale: dateLocale })
-                      : '...'
-                  }) || `Projeção mensal de ${format(parseISO(`${baseYearStr}-${baseMonthStr}-01`), 'MMMM yyyy', { locale: dateLocale })} até ao mês selecionado.`}
-                </div>
-              </div>
-            )}
-          </div>
-          )}
-
-          {/* 5. Dia do Mês */}
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-              {t('modal.dayOfMonth') || 'Dia de Vencimento'}
-            </label>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: 'var(--bg-glass, rgba(255,255,255,0.03))',
-                border: isDayPickerOpen ? '2px solid #f43f5e' : '1px solid var(--border-glass)',
-                borderRadius: '8px',
-                padding: '10px 14px',
-                cursor: 'pointer',
-                boxSizing: 'border-box'
-              }}
-              onClick={() => setIsDayPickerOpen(!isDayPickerOpen)}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Calendar size={16} style={{ color: '#f43f5e' }} />
-                <span style={{ fontSize: '0.92rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                  {t('sidebar.day') || 'Dia'} {formData.dayOfMonth}
-                </span>
-              </div>
-              <ChevronDown
-                size={15}
-                style={{
-                  color: 'var(--text-muted)',
-                  transform: isDayPickerOpen ? 'rotate(180deg)' : 'none',
-                  transition: 'transform 0.2s'
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Grid Popover de Seleção Rápida de Dias (1..31) */}
-          {isDayPickerOpen && (
-            <div style={{ background: 'var(--bg-card, #131722)', border: '1px solid var(--border-glass)', borderRadius: '10px', padding: '12px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.74rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                  {t('modal.selectDueDay') || 'Selecionar Dia'}
-                </span>
-                <span style={{ fontSize: '0.74rem', color: '#f43f5e', fontWeight: '800' }}>
-                  {format(parseISO(`${baseYearStr}-${baseMonthStr}-01`), 'MMMM yyyy', { locale: dateLocale })} ({totalDays} {(t('sidebar.day') || 'dia').toLowerCase()}s)
-                </span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
-                {daysArray.map((d) => {
-                  const isSelected = Number(formData.dayOfMonth) === d;
-                  return (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => {
-                        setFormData({ ...formData, dayOfMonth: d });
-                        setIsDayPickerOpen(false);
-                      }}
-                      style={{
-                        padding: '7px 0',
-                        fontSize: '0.82rem',
-                        fontWeight: isSelected ? '800' : '600',
-                        borderRadius: '6px',
-                        border: isSelected ? '2px solid #f43f5e' : '1px solid var(--border-glass)',
-                        background: isSelected ? 'rgba(244, 63, 94, 0.22)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                        color: isSelected ? '#f43f5e' : 'var(--text-main)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      {d}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* 7. Switch Automático Moderno */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '12px 14px',
-              borderRadius: '10px',
-              background: 'var(--bg-glass, rgba(255,255,255,0.03))',
-              border: '1px solid var(--border-glass)',
-              marginBottom: '16px'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Zap size={16} style={{ color: formData.isAutomatic ? '#f43f5e' : 'var(--text-dim)' }} />
-              <span style={{ fontSize: '0.84rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                {t('modal.automatic') || 'Débito / Pagamento Automático'}
-              </span>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={formData.isAutomatic}
-              onClick={() => setFormData({ ...formData, isAutomatic: !formData.isAutomatic })}
-              style={{
-                width: '44px',
-                height: '24px',
-                borderRadius: '9999px',
-                background: formData.isAutomatic ? '#f43f5e' : 'rgba(148, 163, 184, 0.25)',
-                border: 'none',
-                cursor: 'pointer',
-                position: 'relative',
-                transition: 'background 0.2s ease',
-                padding: 0
-              }}
-            >
-              <span
-                style={{
-                  display: 'block',
-                  width: '18px',
-                  height: '18px',
-                  borderRadius: '50%',
-                  background: '#ffffff',
-                  position: 'absolute',
-                  top: '3px',
-                  left: formData.isAutomatic ? '22px' : '4px',
-                  transition: 'left 0.2s ease',
-                  boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
-                }}
-              />
-            </button>
-          </div>
-
-          {/* Switch Mudar Subsequentes com o mesmo estilo do Pagamento Automático */}
-          {initialData && (initialData.seriesId || initialData.eventId || initialData.isRecurring || formData.periodicity === EventPeriodicity.RECURRING || formData.periodicity === EventPeriodicity.PERIOD) && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '12px 14px',
-                borderRadius: '10px',
-                background: 'var(--bg-glass, rgba(255,255,255,0.03))',
-                border: '1px solid var(--border-glass)',
-                marginBottom: '16px'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Repeat size={16} style={{ color: updateScope === EventUpdateMode.SUBSEQUENT ? '#f43f5e' : 'var(--text-dim)' }} />
-                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                  {t('modal.changeSubsequent') || 'Aplicar alterações aos meses futuros'}
-                </span>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={updateScope === EventUpdateMode.SUBSEQUENT}
-                onClick={() => setUpdateScope(updateScope === EventUpdateMode.SUBSEQUENT ? EventUpdateMode.SINGLE : EventUpdateMode.SUBSEQUENT)}
-                style={{
-                  width: '44px',
-                  height: '24px',
-                  borderRadius: '9999px',
-                  background: updateScope === EventUpdateMode.SUBSEQUENT ? '#f43f5e' : 'rgba(148, 163, 184, 0.25)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  position: 'relative',
-                  transition: 'background 0.2s ease',
-                  padding: 0
-                }}
-              >
-                <span
-                  style={{
-                    display: 'block',
-                    width: '18px',
-                    height: '18px',
-                    borderRadius: '50%',
-                    background: '#ffffff',
-                    position: 'absolute',
-                    top: '3px',
-                    left: updateScope === EventUpdateMode.SUBSEQUENT ? '22px' : '4px',
-                    transition: 'left 0.2s ease',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
-                  }}
-                />
-              </button>
-            </div>
-          )}
-
-          {/* Seletor de Obrigação */}
-          <ObligationSelector
-            isObligation={formData.isObligation}
-            obligationPersonId={formData.obligationPersonId}
-            onToggleObligation={(val) => {
-              setFormData((prev) => ({
-                ...prev,
-                isObligation: val,
-                obligationPersonId: val ? prev.obligationPersonId : ''
-              }));
-              if (!val) setObligationError(false);
-            }}
-            onSelectPerson={(personId) => {
-              setFormData((prev) => ({ ...prev, obligationPersonId: personId }));
-              if (personId) setObligationError(false);
-            }}
-            timeboardId={timeboardId || timeline?.timeboardId || timeline?.timeboard_id}
-            accentColor="#f43f5e"
-            showError={obligationError}
-          />
-
-          {/* Botões do Rodapé */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '22px', borderTop: '1px solid var(--border-glass)', paddingTop: '16px' }}>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={onClose}
-              style={{ padding: '8px 16px', borderRadius: '8px' }}
-            >
-              {t('modal.cancel') || 'Cancelar'}
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary btn-sm"
-              style={{
-                background: '#f43f5e',
-                borderColor: '#f43f5e',
-                padding: '8px 20px',
-                borderRadius: '8px',
-                fontWeight: '800'
-              }}
-            >
-              {initialData ? (t('modal.saveChanges') || 'Salvar Alterações') : (t('modal.addExpense') || 'Adicionar Despesa')}
-            </button>
-          </div>
-        </form>
+        </>
+      }
+    >
+      <div style={{ marginBottom: '14px' }}>
+        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
+          {t('modal.expenseTitleLabel') || 'Descrição da Despesa *'}
+        </label>
+        <input
+          ref={titleInputRef}
+          type="text"
+          required
+          autoFocus
+          placeholder={t('modal.expenseTitlePlaceholder') || 'Ex: Renda / Aluguel, Supermercado, Eletricidade, Carro...'}
+          value={formData.title}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          className="form-input"
+          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', boxSizing: 'border-box' }}
+        />
       </div>
-    </div>
+
+      {!initialData && (
+        <CategorySelector
+          value={formData.category}
+          onChange={(category) => setFormData((prev) => ({ ...prev, category }))}
+          categoryMeta={EXPENSE_CATEGORY_META}
+          accent={ACCENT}
+          translationPrefix="expenseCategories"
+          t={t}
+          label={t('modal.categoryLabel') || t('sidebar.categoryType') || 'Categoria'}
+          isOpen={isCategoryDropdownOpen}
+          onToggle={() => {
+            setIsCategoryDropdownOpen(!isCategoryDropdownOpen);
+            setIsDayPickerOpen(false);
+            setIsEndMonthPickerOpen(false);
+          }}
+        />
+      )}
+
+      <EuroInput
+        label={t('modal.expenseAmountLabel') || 'Valor da Despesa (€) *'}
+        value={displayedAmount}
+        accent={ACCENT}
+        readOnly={breakdownItems.length > 0}
+        background={breakdownItems.length > 0 ? 'rgba(244, 63, 94, 0.08)' : undefined}
+        onChange={(e) => {
+          if (breakdownItems.length === 0) {
+            setFormData({ ...formData, amount: e.target.value });
+          }
+        }}
+        labelExtra={breakdownItems.length > 0 ? (
+          <span style={{ fontSize: '0.72rem', color: ACCENT, fontWeight: '800' }}>
+            ({breakdownItems.length} {(t('modal.subparts') || 'Subpartes').toLowerCase()})
+          </span>
+        ) : null}
+      />
+
+      <BreakdownItems
+        items={breakdownItems}
+        onChange={setBreakdownItems}
+        accent={ACCENT}
+        t={t}
+        initialAmount={formData.amount}
+      />
+
+      {!initialData && (
+        <>
+          <PeriodicitySelector
+            value={formData.periodicity}
+            onChange={(id) => {
+              setFormData((prev) => {
+                if (id === EventPeriodicity.PERIOD && !prev.recurrenceEndDate) {
+                  return {
+                    ...prev,
+                    periodicity: id,
+                    recurrenceEndDate: format(addMonths(parseISO(prev.date || format(new Date(), 'yyyy-MM-dd')), 6), 'yyyy-MM')
+                  };
+                }
+                return { ...prev, periodicity: id };
+              });
+            }}
+            accent={ACCENT}
+            t={t}
+          />
+          {formData.periodicity === EventPeriodicity.PERIOD && (
+            <MonthPickerPopover
+              value={formData.recurrenceEndDate}
+              onChange={(month) => setFormData({ ...formData, recurrenceEndDate: month })}
+              accent={ACCENT}
+              dateLocale={dateLocale}
+              label={t('modal.endMonth') || 'Mês Final'}
+              isOpen={isEndMonthPickerOpen}
+              onToggle={() => {
+                setIsEndMonthPickerOpen(!isEndMonthPickerOpen);
+                setIsDayPickerOpen(false);
+                setIsCategoryDropdownOpen(false);
+              }}
+              year={endMonthPickerYear}
+              onYearChange={setEndMonthPickerYear}
+              baseDate={formData.date}
+              explanation={t('modal.periodExplanation', {
+                start: format(parseISO(formData.date), 'MMMM yyyy', { locale: dateLocale }),
+                end: formData.recurrenceEndDate
+                  ? format(parseISO(`${formData.recurrenceEndDate}-01`), 'MMMM yyyy', { locale: dateLocale })
+                  : '...'
+              })}
+            />
+          )}
+        </>
+      )}
+
+      <DayPickerPopover
+        label={t('modal.dayOfMonth') || 'Dia de Vencimento'}
+        value={formData.dayOfMonth}
+        onChange={(day) => setFormData((prev) => ({ ...prev, dayOfMonth: day }))}
+        accent={ACCENT}
+        dateLocale={dateLocale}
+        baseDate={formData.date}
+        isOpen={isDayPickerOpen}
+        onToggle={() => {
+          setIsDayPickerOpen(!isDayPickerOpen);
+          setIsEndMonthPickerOpen(false);
+          setIsCategoryDropdownOpen(false);
+        }}
+      />
+
+      <ToggleSwitch
+        checked={formData.isAutomatic}
+        onChange={(val) => setFormData({ ...formData, isAutomatic: val })}
+        label={t('modal.automatic') || 'Débito / Pagamento Automático'}
+        icon={Zap}
+        accent={ACCENT}
+      />
+
+      {initialData && (initialData.seriesId || initialData.eventId || initialData.isRecurring || formData.periodicity === EventPeriodicity.RECURRING || formData.periodicity === EventPeriodicity.PERIOD) && (
+        <ToggleSwitch
+          checked={updateScope === EventUpdateMode.SUBSEQUENT}
+          onChange={(val) => setUpdateScope(val ? EventUpdateMode.SUBSEQUENT : EventUpdateMode.SINGLE)}
+          label={t('modal.changeSubsequent') || 'Aplicar alterações aos meses futuros'}
+          icon={Repeat}
+          accent={ACCENT}
+        />
+      )}
+
+      <ObligationSelector
+        isObligation={formData.isObligation}
+        obligationPersonId={formData.obligationPersonId}
+        onToggleObligation={(val) => {
+          setFormData((prev) => ({ ...prev, isObligation: val, obligationPersonId: val ? prev.obligationPersonId : '' }));
+          if (!val) setObligationError(false);
+        }}
+        onSelectPerson={(personId) => {
+          setFormData((prev) => ({ ...prev, obligationPersonId: personId }));
+          if (personId) setObligationError(false);
+        }}
+        timeboardId={timeboardId || timeline?.timeboardId || timeline?.timeboard_id}
+        accentColor={ACCENT}
+        showError={obligationError}
+      />
+    </ModalShell>
   );
 }

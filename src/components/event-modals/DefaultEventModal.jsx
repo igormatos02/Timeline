@@ -1,44 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar } from 'lucide-react';
-import { EventStatus, EventPeriodicity, EventType } from '../../enums/index.js';
+import { Calendar } from 'lucide-react';
+import { format } from 'date-fns';
+import { EventStatus, EventType } from '../../enums/index.js';
+import { useModalEscape } from '../../hooks/useModalEscape.js';
+import ModalShell from '../ui/ModalShell.jsx';
 import ObligationSelector from '../ObligationSelector.jsx';
 
 export default function DefaultEventModal({
-  isOpen,
-  onClose,
-  onSave,
-  initialData,
-  defaultDate,
-  timeline,
-  timeboardId
+  isOpen, onClose, onSave, initialData, defaultDate, timeline, timeboardId
 }) {
   const [obligationError, setObligationError] = useState(false);
   const [formData, setFormData] = useState({
-    title: '',
-    date: defaultDate || '2026-08-21',
-    amount: '',
-    status: EventStatus.PENDING,
-    notes: '',
-    isObligation: false,
-    obligationPersonId: ''
+    title: '', date: defaultDate || format(new Date(), 'yyyy-MM-dd'),
+    amount: '', status: EventStatus.PENDING, notes: '',
+    isObligation: false, obligationPersonId: ''
   });
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  useModalEscape(isOpen, onClose);
 
   useEffect(() => {
     if (!isOpen) return;
-
+    const today = format(new Date(), 'yyyy-MM-dd');
     if (initialData) {
       setFormData({
         title: initialData.title || '',
-        date: initialData.date || defaultDate || '2026-08-21',
+        date: initialData.date || defaultDate || today,
         amount: initialData.amount !== undefined ? initialData.amount : '',
         status: initialData.status || EventStatus.PENDING,
         notes: initialData.notes || '',
@@ -47,189 +33,89 @@ export default function DefaultEventModal({
       });
     } else {
       setFormData({
-        title: '',
-        date: defaultDate || '2026-08-21',
-        amount: '',
-        status: EventStatus.PENDING,
-        notes: '',
-        isObligation: false,
-        obligationPersonId: ''
+        title: '', date: defaultDate || today, amount: '',
+        status: EventStatus.PENDING, notes: '',
+        isObligation: false, obligationPersonId: ''
       });
     }
   }, [initialData, defaultDate, isOpen]);
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
-
     if (formData.isObligation && !formData.obligationPersonId) {
-      setObligationError(true);
-      return;
+      setObligationError(true); return;
     }
     setObligationError(false);
-
-    const eventPayload = {
+    onSave({
       ...(initialData || {}),
-      title: formData.title.trim(),
-      date: formData.date,
+      title: formData.title.trim(), date: formData.date,
       amount: parseFloat(formData.amount) || 0,
       status: initialData ? (initialData.status || EventStatus.PENDING) : EventStatus.PENDING,
-      eventType: EventType.GENERIC,
-      timelineId: timeline?.id,
-      timelineOriginId: timeline?.id,
-      notes: formData.notes,
+      eventType: EventType.GENERIC, timelineId: timeline?.id,
+      timelineOriginId: timeline?.id, notes: formData.notes,
       isObligation: formData.isObligation,
       obligationPersonId: formData.isObligation ? formData.obligationPersonId : null
-    };
-
-    onSave(eventPayload);
+    });
     onClose();
   };
 
+  const accent = 'var(--primary, #3b82f6)';
+
   return (
-    <div
-      className="modal-overlay"
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(6px)',
-        WebkitBackdropFilter: 'blur(6px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        padding: '16px',
-        boxSizing: 'border-box'
-      }}
+    <ModalShell
+      isOpen={isOpen} onClose={onClose} onSubmit={handleSubmit} accent={accent}
+      maxWidth="640px" showBorderGlow={false}
+      icon={Calendar} title={initialData ? 'Editar Evento' : 'Novo Evento'}
+      subtitle={timeline?.name}
+      footer={
+        <>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}
+            style={{ padding: '8px 16px', borderRadius: '8px' }}>Cancelar</button>
+          <button type="submit" className="btn btn-primary btn-sm"
+            style={{ padding: '8px 20px', borderRadius: '8px', fontWeight: '800' }}>Salvar</button>
+        </>
+      }
     >
-      <div
-        className="modal-card"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          maxWidth: '640px',
-          width: '100%',
-          background: 'var(--bg-card, #131722)',
-          borderRadius: '16px',
-          border: '1px solid var(--border-glass)',
-          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.85)',
-          padding: '24px',
-          boxSizing: 'border-box'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ background: 'var(--bg-app)', color: 'var(--primary-light)', padding: '8px', borderRadius: '10px', display: 'flex' }}>
-              <Calendar size={20} />
-            </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                {initialData ? 'Editar Evento' : 'Novo Evento'}
-              </h3>
-              <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
-                {timeline?.name}
-              </div>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="action-icon-btn"
-            onClick={onClose}
-            aria-label="Fechar"
-            style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}
-          >
-            <X size={18} />
-          </button>
+      <div style={{ marginBottom: '14px' }}>
+          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>Título *</label>
+          <input type="text" required value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            className="form-input"
+            style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', boxSizing: 'border-box' }} />
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-              Título *
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="form-input"
-              style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', boxSizing: 'border-box' }}
-            />
-          </div>
+        <div style={{ marginBottom: '14px' }}>
+          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>Data *</label>
+          <input type="date" required value={formData.date}
+            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            className="form-input"
+            style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', boxSizing: 'border-box' }} />
+        </div>
 
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-              Data *
-            </label>
-            <input
-              type="date"
-              required
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="form-input"
-              style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', boxSizing: 'border-box' }}
-            />
-          </div>
+        <div style={{ marginBottom: '14px' }}>
+          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>Valor (€) (Opcional)</label>
+          <input type="number" step="0.01" value={formData.amount}
+            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+            className="form-input"
+            style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', boxSizing: 'border-box' }} />
+        </div>
 
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-              Valor (€) (Opcional)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              className="form-input"
-              style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', boxSizing: 'border-box' }}
-            />
-          </div>
-
-          {/* Seletor de Obrigação */}
-          <ObligationSelector
-            isObligation={formData.isObligation}
-            obligationPersonId={formData.obligationPersonId}
-            onToggleObligation={(val) => {
-              setFormData((prev) => ({
-                ...prev,
-                isObligation: val,
-                obligationPersonId: val ? prev.obligationPersonId : ''
-              }));
-              if (!val) setObligationError(false);
-            }}
-            onSelectPerson={(personId) => {
-              setFormData((prev) => ({ ...prev, obligationPersonId: personId }));
-              if (personId) setObligationError(false);
-            }}
-            timeboardId={timeboardId || timeline?.timeboardId || timeline?.timeboard_id}
-            accentColor="var(--primary, #3b82f6)"
-            showError={obligationError}
-          />
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px', borderTop: '1px solid var(--border-glass)', paddingTop: '16px' }}>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={onClose}
-              style={{ padding: '8px 16px', borderRadius: '8px' }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary btn-sm"
-              style={{ padding: '8px 20px', borderRadius: '8px', fontWeight: '800' }}
-            >
-              Salvar
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <ObligationSelector
+          isObligation={formData.isObligation}
+          obligationPersonId={formData.obligationPersonId}
+          onToggleObligation={(val) => {
+            setFormData((prev) => ({ ...prev, isObligation: val, obligationPersonId: val ? prev.obligationPersonId : '' }));
+            if (!val) setObligationError(false);
+          }}
+          onSelectPerson={(personId) => {
+            setFormData((prev) => ({ ...prev, obligationPersonId: personId }));
+            if (personId) setObligationError(false);
+          }}
+          timeboardId={timeboardId || timeline?.timeboardId || timeline?.timeboard_id}
+          accentColor={accent}
+          showError={obligationError}
+        />
+    </ModalShell>
   );
 }

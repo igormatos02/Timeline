@@ -1,4 +1,6 @@
-const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
+import packageJson from '../../../package.json';
+
+const appVersion = packageJson.version || (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev');
 
 export default function VersionBadge({ style }) {
   return (

@@ -1,4 +1,7 @@
 import { TimelineType, TimelineStatus, EventAggregation } from '../../../shared/enums/index.js';
+import { createT } from '../../../shared/i18n/index.js';
+
+const t = createT('en');
 
 /**
  * Aggregate Root: Timeline
@@ -81,11 +84,11 @@ export class Timeline {
 
   static validate(data) {
     if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') {
-      throw new Error('Timeline name is required');
+      throw new Error(t('backend.validation.timelineNameRequired'));
     }
     const validStatuses = Object.values(TimelineStatus);
     if (data.status && !validStatuses.includes(data.status)) {
-      throw new Error(`Invalid timeline status: ${data.status}`);
+      throw new Error(t('backend.validation.invalidTimelineStatus', { status: data.status }));
     }
     return true;
   }

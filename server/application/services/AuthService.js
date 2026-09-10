@@ -2,6 +2,9 @@ import { userRepository } from '../../infrastructure/database/supabase/SupabaseU
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
 import { timeboardInvitationRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardInvitationRepository.js';
 import { timeboardMemberRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardMemberRepository.js';
+import { createT } from '../../../shared/i18n/index.js';
+
+const t = createT('en');
 
 export class AuthService {
   async _postAuthSync(user) {
@@ -31,16 +34,16 @@ export class AuthService {
 
   async registerWithEmail({ name, email, password }) {
     if (!email || !email.trim()) {
-      throw new Error('O email é obrigatório.');
+      throw new Error(t('backend.validation.emailRequired'));
     }
     if (!password || password.length < 4) {
-      throw new Error('A palavra-passe deve ter pelo menos 4 caracteres.');
+      throw new Error(t('backend.validation.passwordMinLength'));
     }
 
     const cleanEmail = email.toLowerCase().trim();
     const existing = await userRepository.findByEmail(cleanEmail);
     if (existing) {
-      throw new Error('Já existe uma conta registada com este endereço de email.');
+      throw new Error(t('backend.validation.emailAlreadyExists'));
     }
 
     const cleanName = (name && name.trim()) || cleanEmail.split('@')[0];
@@ -60,22 +63,22 @@ export class AuthService {
 
   async loginWithEmail({ email, password }) {
     if (!email || !password) {
-      throw new Error('Email e palavra-passe são obrigatórios.');
+      throw new Error(t('backend.validation.emailAndPasswordRequired'));
     }
 
     const cleanEmail = email.toLowerCase().trim();
     const user = await userRepository.findByEmail(cleanEmail);
     if (!user) {
-      throw new Error('Não foi encontrada nenhuma conta com este email.');
+      throw new Error(t('backend.validation.accountNotFound'));
     }
 
     // If user registered with Google and has no password
     if (!user.password && user.googleId) {
-      throw new Error('Esta conta foi criada com o Google. Por favor utilize o botão "Entrar com Google".');
+      throw new Error(t('backend.validation.googleAccountOnly'));
     }
 
     if (user.password && user.password !== password) {
-      throw new Error('Palavra-passe incorreta.');
+      throw new Error(t('backend.validation.incorrectPassword'));
     }
 
     const userObj = user.toJSON();
@@ -85,7 +88,7 @@ export class AuthService {
 
   async loginOrRegisterWithGoogle({ googleId, email, name, avatarUrl }) {
     if (!googleId) {
-      throw new Error('google_id é obrigatório para autenticação com Google.');
+      throw new Error(t('backend.validation.googleIdRequired'));
     }
 
     const cleanEmail = email ? email.toLowerCase().trim() : null;
@@ -113,7 +116,7 @@ export class AuthService {
     }
 
     // 3. Create new user with google_id and password = null
-    const cleanName = (name && name.trim()) || (cleanEmail ? cleanEmail.split('@')[0] : 'Utilizador Google');
+    const cleanName = (name && name.trim()) || (cleanEmail ? cleanEmail.split('@')[0] : t('backend.service.googleUserFallback'));
     const created = await userRepository.create({
       name: cleanName,
       email: cleanEmail,

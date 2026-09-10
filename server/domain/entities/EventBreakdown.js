@@ -1,3 +1,7 @@
+import { createT } from '../../../shared/i18n/index.js';
+
+const t = createT('en');
+
 /**
  * Entity / Value Object: EventBreakdown
  * Sub-item breakdown for financial event expense categorization.
@@ -21,10 +25,10 @@ export class EventBreakdown {
 
   static validate(data) {
     if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') {
-      throw new Error('Breakdown name is required');
+      throw new Error(t('backend.validation.breakdownNameRequired'));
     }
     if (data.amount === undefined || isNaN(Number(data.amount))) {
-      throw new Error('Valid breakdown amount is required');
+      throw new Error(t('backend.validation.breakdownAmountRequired'));
     }
     return true;
   }

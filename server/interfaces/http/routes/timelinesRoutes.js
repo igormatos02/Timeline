@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { timelineService } from '../../../application/services/TimelineService.js';
+import { createT } from '../../../../shared/i18n/index.js';
+
+const t = createT('en');
 
 export const timelinesRouter = Router();
 
@@ -24,7 +27,7 @@ timelinesRouter.get('/', async (req, res) => {
 timelinesRouter.get('/:id', async (req, res) => {
   try {
     const timeline = await timelineService.getTimelineById(req.params.id, req.query);
-    if (!timeline) return res.status(404).json({ error: 'Timeline not found' });
+    if (!timeline) return res.status(404).json({ error: t('backend.validation.timelineNotFound') });
     res.json(timeline);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -45,7 +48,7 @@ timelinesRouter.post('/', async (req, res) => {
 timelinesRouter.put('/:id', async (req, res) => {
   try {
     const updated = await timelineService.updateTimeline(req.params.id, req.body);
-    if (!updated) return res.status(404).json({ error: 'Timeline not found' });
+    if (!updated) return res.status(404).json({ error: t('backend.validation.timelineNotFound') });
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: err.message });

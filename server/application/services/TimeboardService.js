@@ -10,6 +10,9 @@ import { userRepository } from '../../infrastructure/database/supabase/SupabaseU
 import { emailService } from './EmailService.js';
 import { getAppUrl } from '../../../shared/config/appConfig.js';
 import { TimeboardType, TimelineType, TimelineStatus, EventAggregation, InvitationStatus } from '../../../shared/enums/index.js';
+import { createT } from '../../../shared/i18n/index.js';
+
+const t = createT('en');
 
 export class TimeboardService {
   async getAllTimeboards() {
@@ -75,14 +78,14 @@ export class TimeboardService {
   }
 
   async revokeInvitation(timeboardId, invitationId) {
-    if (!invitationId) throw new Error('invitationId é obrigatório');
+    if (!invitationId) throw new Error(t('backend.validation.invitationIdRequired'));
     return timeboardInvitationRepository.revoke(invitationId);
   }
 
   async unlinkPersonMember(timeboardId, personId) {
-    if (!personId) throw new Error('personId é obrigatório');
+    if (!personId) throw new Error(t('backend.validation.personIdRequired'));
     const person = await personRepository.getById(personId);
-    if (!person) throw new Error('Entidade/Pessoa não encontrada.');
+    if (!person) throw new Error(t('backend.validation.personNotFound'));
 
     const userId = person.userId || person.user_id;
     if (userId) {
@@ -108,7 +111,7 @@ export class TimeboardService {
 
   async acceptInvite(timeboardId, userId, email = null) {
     if (!timeboardId || !userId) {
-      throw new Error('timeboardId e userId são obrigatórios.');
+      throw new Error(t('backend.validation.timeboardIdAndUserIdRequired'));
     }
 
     const timeboard = await timeboardRepository.getById(timeboardId);
@@ -167,12 +170,12 @@ export class TimeboardService {
 
   async sendInvitation({ timeboardId, personId, email, role, inviterName, invitedBy, originUrl }) {
     if (!timeboardId || !email) {
-      throw new Error('timeboardId e email são obrigatórios para envio de convite.');
+      throw new Error(t('backend.validation.timeboardIdAndEmailRequired'));
     }
 
     const timeboard = await timeboardRepository.getById(timeboardId);
     if (!timeboard) {
-      throw new Error('Timeboard não encontrado.');
+      throw new Error(t('backend.validation.timeboardNotFound'));
     }
 
     const cleanEmail = email.toLowerCase().trim();
@@ -216,7 +219,7 @@ export class TimeboardService {
       toName: personName,
       timeboardName: timeboard.name,
       timeboardId: timeboardId,
-      inviterName: inviterName || 'Administrador do Timeboard',
+      inviterName: inviterName || t('backend.service.timeboardAdmin'),
       role: finalRole,
       acceptUrl: acceptUrl
     });
@@ -258,10 +261,10 @@ export class TimeboardService {
       defaultTimelines = [
         {
           timeboardId: createdTimeboard.id,
-          name: 'Balance',
+          name: t('backend.timeline.balance'),
           type: TimelineType.BALANCE,
           color: '#0ea5e9',
-          description: 'Consolidated view of financial flow',
+          description: t('backend.timeline.balanceDescription'),
           isSystemDefault: true,
           canDelete: false,
           status: TimelineStatus.ACTIVE,
@@ -272,10 +275,10 @@ export class TimeboardService {
         },
         {
           timeboardId: createdTimeboard.id,
-          name: 'Inflow / Income',
+          name: t('backend.timeline.income'),
           type: TimelineType.INCOME,
           color: '#10b981',
-          description: 'Management of salaries, earnings, and revenues',
+          description: t('backend.timeline.incomeDescription'),
           isSystemDefault: false,
           canDelete: true,
           status: TimelineStatus.ACTIVE,
@@ -286,10 +289,10 @@ export class TimeboardService {
         },
         {
           timeboardId: createdTimeboard.id,
-          name: 'Expenses / Expenditures',
+          name: t('backend.timeline.expenses'),
           type: TimelineType.EXPENSE,
           color: '#f43f5e',
-          description: 'Management of fixed, recurring, and variable expenses',
+          description: t('backend.timeline.expensesDescription'),
           isSystemDefault: false,
           canDelete: true,
           status: TimelineStatus.ACTIVE,
@@ -300,10 +303,10 @@ export class TimeboardService {
         },
         {
           timeboardId: createdTimeboard.id,
-          name: 'Savings / Investments',
+          name: t('backend.timeline.savings'),
           type: TimelineType.INVESTMENT,
           color: '#6366f1',
-          description: 'Management of savings, equity, and contributions',
+          description: t('backend.timeline.savingsDescription'),
           isSystemDefault: false,
           canDelete: true,
           status: TimelineStatus.ACTIVE,
@@ -317,10 +320,10 @@ export class TimeboardService {
       defaultTimelines = [
         {
           timeboardId: createdTimeboard.id,
-          name: 'My Projects',
+          name: t('backend.timeline.projects'),
           type: TimelineType.PROJECT || 'project',
           color: '#8b5cf6',
-          description: 'Project planning, milestones and tasks timeline',
+          description: t('backend.timeline.projectsDescription'),
           isSystemDefault: true,
           canDelete: false,
           status: TimelineStatus.ACTIVE,
@@ -334,10 +337,10 @@ export class TimeboardService {
       defaultTimelines = [
         {
           timeboardId: createdTimeboard.id,
-          name: 'My Reminders',
+          name: t('backend.timeline.reminders'),
           type: TimelineType.REMINDER || 'reminder',
           color: '#f59e0b',
-          description: 'Schedule reminders, alerts and notes',
+          description: t('backend.timeline.remindersDescription'),
           isSystemDefault: true,
           canDelete: false,
           status: TimelineStatus.ACTIVE,

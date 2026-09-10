@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { timeboardService } from '../../../application/services/TimeboardService.js';
+import { createT } from '../../../../shared/i18n/index.js';
+
+const t = createT('en');
 
 export const timeboardsRouter = Router();
 
@@ -37,7 +40,7 @@ timeboardsRouter.post('/:id/members', async (req, res) => {
   try {
     const { userId, user_id } = req.body;
     const targetUserId = userId || user_id;
-    if (!targetUserId) return res.status(400).json({ error: 'userId is required' });
+    if (!targetUserId) return res.status(400).json({ error: t('backend.validation.userIdRequired') });
 
     const member = await timeboardService.addMember(req.params.id, targetUserId);
     res.status(201).json(member);
@@ -114,7 +117,7 @@ timeboardsRouter.post('/:id/invite', async (req, res) => {
 timeboardsRouter.post('/:id/accept-invite', async (req, res) => {
   try {
     const { userId, email } = req.body;
-    if (!userId) return res.status(400).json({ error: 'userId is required' });
+    if (!userId) return res.status(400).json({ error: t('backend.validation.userIdRequired') });
 
     const result = await timeboardService.acceptInvite(req.params.id, userId, email);
     res.json(result);
@@ -128,7 +131,7 @@ timeboardsRouter.post('/:id/accept-invite', async (req, res) => {
 timeboardsRouter.get('/:id', async (req, res) => {
   try {
     const timeboard = await timeboardService.getTimeboardById(req.params.id);
-    if (!timeboard) return res.status(404).json({ error: 'Timeboard not found' });
+    if (!timeboard) return res.status(404).json({ error: t('backend.validation.timeboardNotFound') });
     res.json(timeboard);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -149,7 +152,7 @@ timeboardsRouter.post('/', async (req, res) => {
 timeboardsRouter.put('/:id', async (req, res) => {
   try {
     const updated = await timeboardService.updateTimeboard(req.params.id, req.body);
-    if (!updated) return res.status(404).json({ error: 'Timeboard not found' });
+    if (!updated) return res.status(404).json({ error: t('backend.validation.timeboardNotFound') });
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: err.message });

@@ -1,7 +1,10 @@
 import { BrevoClient } from '@getbrevo/brevo';
 import dotenv from 'dotenv';
 import { getAppUrl } from '../../../shared/config/appConfig.js';
+import { createT } from '../../../shared/i18n/index.js';
 dotenv.config({ path: './server/.env' });
+
+const t = createT('en');
 
 class EmailService {
   constructor() {
@@ -32,16 +35,18 @@ class EmailService {
     const client = this.getClient();
     const finalAcceptUrl = acceptUrl || `${this.appUrl}/?inviteTimeboardId=${encodeURIComponent(timeboardId)}&email=${encodeURIComponent(toEmail)}`;
 
-    const roleLabel = role === 'admin' ? 'Administrador' : 'Colaborador';
-    const cleanInviterName = inviterName || 'Um membro da equipa';
-    const cleanTbName = timeboardName || 'Timeboard';
+    const roleLabel = role === 'admin' ? t('backend.email.roleAdmin') : t('backend.email.roleContributor');
+    const cleanInviterName = inviterName || t('backend.email.defaultInviter');
+    const cleanTbName = timeboardName || t('backend.email.timeboardLabel');
 
-    const subject = `Convite para colaborar no Timeboard: ${cleanTbName}`;
-    const textContent = `Olá ${toName || ''},\n\n` +
-      `${cleanInviterName} convidou-te para aceder e colaborar no Timeboard "${cleanTbName}" com a função de ${roleLabel}.\n\n` +
-      `Para aceitar o convite e aceder ao dashboard, clica no link abaixo:\n` +
-      `${finalAcceptUrl}\n\n` +
-      `Cumprimentos,\nEquipa Timeboard`;
+    const subject = t('backend.email.invitationSubject', { name: cleanTbName });
+    const textContent = t('backend.email.invitationTextGreeting', { name: toName || '' }) + '\n\n' +
+      t('backend.email.invitationTextBody', {
+        inviter: cleanInviterName,
+        name: cleanTbName,
+        role: roleLabel,
+        url: finalAcceptUrl
+      });
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -64,7 +69,7 @@ class EmailService {
                       <span style="font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">timeboard</span>
                       <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #6366f1; margin-top: 4px;"></span>
                     </div>
-                    <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 13px; font-weight: 500;">Gestão Financeira & Linhas Temporais</p>
+                    <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 13px; font-weight: 500;">${t('backend.email.brandSubtitle')}</p>
                   </td>
                 </tr>
 
@@ -72,21 +77,21 @@ class EmailService {
                 <tr>
                   <td style="padding: 32px;">
                     <h1 style="color: #ffffff; font-size: 20px; font-weight: 700; margin: 0 0 16px 0;">
-                      Olá ${toName ? toName : ''},
+                      ${t('backend.email.greeting', { name: toName ? toName : '' })}
                     </h1>
                     
                     <p style="color: #cbd5e1; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0;">
-                      <strong style="color: #ffffff;">${cleanInviterName}</strong> convidou-te para colaborar no Timeboard <strong style="color: #818cf8;">"${cleanTbName}"</strong>.
+                      <strong style="color: #ffffff;">${cleanInviterName}</strong> ${t('backend.email.invitationHtmlBody')} <strong style="color: #818cf8;">"${cleanTbName}"</strong>.
                     </p>
 
                     <!-- Details Card -->
                     <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; margin-bottom: 28px;">
                       <tr>
                         <td style="padding: 16px 20px;">
-                          <div style="color: #94a3b8; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Timeboard</div>
+                          <div style="color: #94a3b8; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">${t('backend.email.timeboardLabel')}</div>
                           <div style="color: #ffffff; font-size: 16px; font-weight: 700;">${cleanTbName}</div>
                           
-                          <div style="margin-top: 12px; color: #94a3b8; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Permissão de Acesso</div>
+                          <div style="margin-top: 12px; color: #94a3b8; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">${t('backend.email.accessPermissionLabel')}</div>
                           <div style="display: inline-block; padding: 4px 10px; border-radius: 6px; background-color: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.4); color: #c7d2fe; font-size: 13px; font-weight: 600;">
                             ${roleLabel}
                           </div>
@@ -97,12 +102,12 @@ class EmailService {
                     <!-- Action Button -->
                     <div style="text-align: center; margin-bottom: 28px;">
                       <a href="${finalAcceptUrl}" style="display: inline-block; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #ffffff; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 32px; border-radius: 10px; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4); text-align: center;">
-                        Aceitar Convite & Aceder
+                        ${t('backend.email.acceptButton')}
                       </a>
                     </div>
 
                     <p style="color: #64748b; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
-                      Se o botão acima não funcionar, copie e cole o seguinte link no seu navegador:<br>
+                      ${t('backend.email.fallbackInstruction')}<br>
                       <a href="${finalAcceptUrl}" style="color: #818cf8; word-break: break-all; text-decoration: underline;">${finalAcceptUrl}</a>
                     </p>
                   </td>
@@ -112,7 +117,7 @@ class EmailService {
                 <tr>
                   <td style="padding: 20px 32px; background-color: #0d131f; border-top: 1px solid rgba(255, 255, 255, 0.06); text-align: center;">
                     <p style="color: #64748b; font-size: 12px; margin: 0;">
-                      © ${new Date().getFullYear()} Timeboard. Todos os direitos reservados.
+                      © ${new Date().getFullYear()} Timeboard. ${t('backend.email.copyright')}
                     </p>
                   </td>
                 </tr>
@@ -143,7 +148,7 @@ class EmailService {
       return { success: true, messageId: response?.messageId, url: finalAcceptUrl };
     } catch (err) {
       console.error('[EmailService] Failed to send invitation email:', err?.response?.body || err.message);
-      throw new Error(`Erro ao enviar email de convite via Brevo: ${err.message}`);
+      throw new Error(t('backend.email.emailSendError', { error: err.message }));
     }
   }
 }

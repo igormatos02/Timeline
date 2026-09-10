@@ -1,4 +1,7 @@
 import { TimeboardType } from '../../../shared/enums/index.js';
+import { createT } from '../../../shared/i18n/index.js';
+
+const t = createT('en');
 
 /**
  * Aggregate Root: Timeboard
@@ -35,7 +38,7 @@ export class Timeboard {
 
   static validate(data) {
     if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') {
-      throw new Error('Timeboard name is required');
+      throw new Error(t('backend.validation.timeboardNameRequired'));
     }
     return true;
   }

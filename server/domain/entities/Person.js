@@ -1,4 +1,7 @@
 import { PersonType, PersonRole } from '../../../shared/enums/index.js';
+import { createT } from '../../../shared/i18n/index.js';
+
+const t = createT('en');
 
 /**
  * Entity: Person
@@ -45,13 +48,13 @@ export class Person {
 
   static validate(data) {
     if (!data.personName || typeof data.personName !== 'string' || data.personName.trim() === '') {
-      throw new Error('personName is required');
+      throw new Error(t('backend.validation.personNameRequired'));
     }
     if (!data.obligatorIdentification || typeof data.obligatorIdentification !== 'string' || data.obligatorIdentification.trim() === '') {
-      throw new Error('obligatorIdentification is required');
+      throw new Error(t('backend.validation.obligatorIdentificationRequired'));
     }
     if (!data.timeboardId) {
-      throw new Error('timeboardId is required');
+      throw new Error(t('backend.validation.timeboardIdRequired'));
     }
     return true;
   }

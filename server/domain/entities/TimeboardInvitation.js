@@ -1,4 +1,7 @@
 import { InvitationStatus } from '../enums/index.js';
+import { createT } from '../../../shared/i18n/index.js';
+
+const t = createT('en');
 
 /**
  * Entity: TimeboardInvitation
@@ -31,10 +34,10 @@ export class TimeboardInvitation {
 
   static validate(data) {
     if (!data.timeboardId && !data.timeboard_id) {
-      throw new Error('timeboardId is required');
+      throw new Error(t('backend.validation.timeboardIdRequired'));
     }
     if (!data.email) {
-      throw new Error('email is required');
+      throw new Error(t('backend.validation.emailRequiredField'));
     }
     return true;
   }

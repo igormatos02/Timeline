@@ -1,5 +1,19 @@
 export const translations = {
   en: {
+
+
+    // Header / Brand
+    header: {
+      brandSubtitle: "Financial Management & Timelines",
+      selectTimeboard: "Select Timeboard",
+      goToToday: "Go to Today",
+      goToTodayTitle: "Return to today's date / current period",
+      newTimeboard: "New Timeboard",
+      createTimeboardTitle: "Create new Timeboard",
+      toggleThemeDark: "Switch to dark theme",
+      toggleThemeLight: "Switch to light theme"
+    },
+
     // Header / Brand
     header: {
       brandSubtitle: "Financial Management & Timelines",
@@ -656,6 +670,92 @@ export const translations = {
       horizon: "Horizon:",
       year: "Year",
       years: "Years"
+    },
+
+    // Backend
+    backend: {
+      validation: {
+        emailRequired: "Email is required",
+        passwordMinLength: "Password must be at least 4 characters",
+        emailAlreadyExists: "An account is already registered with this email address",
+        emailAndPasswordRequired: "Email and password are required",
+        accountNotFound: "No account found with this email",
+        googleAccountOnly: "This account was created with Google. Please use the 'Sign in with Google' button.",
+        incorrectPassword: "Incorrect password",
+        googleIdRequired: "Google ID is required for Google authentication",
+        timeboardIdRequired: "timeboardId is required",
+        emailRequiredField: "email is required",
+        userIdRequired: "userId is required",
+        invitationIdRequired: "invitationId is required",
+        personIdRequired: "personId is required",
+        personNotFound: "Entity/Person not found",
+        timeboardIdAndUserIdRequired: "timeboardId and userId are required",
+        timeboardIdAndEmailRequired: "timeboardId and email are required for sending invitation",
+        timeboardNotFound: "Timeboard not found",
+        timelineNotFound: "Timeline not found",
+        timelineSystemCannotBeDeleted: "System timeline cannot be deleted",
+        eventNotFound: "Event not found",
+        loanNotFound: "Loan not found",
+        personNameRequired: "personName is required",
+        obligatorIdentificationRequired: "obligatorIdentification is required",
+        timeboardNameRequired: "Timeboard name is required",
+        timelineNameRequired: "Timeline name is required",
+        invalidTimelineStatus: "Invalid timeline status: {status}",
+        eventDateRequired: "Valid event date (YYYY-MM-DD) is required",
+        eventTitleRequired: "Event title is required",
+        obligationPersonIdRequired: "Obligation person ID is required when isObligation is true",
+        breakdownNameRequired: "Breakdown name is required",
+        breakdownAmountRequired: "Valid breakdown amount is required",
+        timeboardIdQueryParamRequired: "timeboardId query parameter is required"
+      },
+      service: {
+        googleUserFallback: "Google User",
+        timeboardAdmin: "Timeboard Administrator"
+      },
+      timeline: {
+        balance: "Balance",
+        balanceDescription: "Consolidated view of financial flow",
+        income: "Inflow / Income",
+        incomeDescription: "Management of salaries, earnings, and revenues",
+        expenses: "Expenses / Expenditures",
+        expensesDescription: "Management of fixed, recurring, and variable expenses",
+        savings: "Savings / Investments",
+        savingsDescription: "Management of savings, equity, and contributions",
+        projects: "My Projects",
+        projectsDescription: "Project planning, milestones and tasks timeline",
+        reminders: "My Reminders",
+        remindersDescription: "Schedule reminders, alerts and notes"
+      },
+      loan: {
+        amortizationTitle: "Extraordinary Amortization ({name})",
+        amortizationDescription: "Early amortization of {amount} €. Remaining balance: {remaining} €."
+      },
+      event: {
+        seriesClosed: "Series Closed",
+        seriesClosedSuffix: "(Closed)",
+        occurrenceDeleted: "Occurrence Deleted",
+        occurrenceDeletedSuffix: "(Deleted)",
+        defaultName: "Financial Event",
+        abated: "Abated",
+        partiallyAbated: "Partially Abated"
+      },
+      email: {
+        invitationSubject: "Invitation to collaborate on Timeboard: {name}",
+        invitationTextGreeting: "Hello {name},",
+        invitationTextBody: "{inviter} invited you to access and collaborate on the Timeboard \"{name}\" with the role of {role}.\n\nTo accept the invitation and access the dashboard, click the link below:\n{url}\n\nKind regards,\nTimeboard Team",
+        brandSubtitle: "Financial Management & Timelines",
+        greeting: "Hello {name},",
+        invitationHtmlBody: "{inviter} invited you to collaborate on the Timeboard",
+        timeboardLabel: "Timeboard",
+        accessPermissionLabel: "Access Permission",
+        acceptButton: "Accept Invitation & Access",
+        fallbackInstruction: "If the button above doesn't work, copy and paste the following link into your browser:",
+        copyright: "All rights reserved.",
+        roleAdmin: "Admin",
+        roleContributor: "Contributor",
+        defaultInviter: "A team member",
+        emailSendError: "Error sending invitation email via Brevo: {error}"
+      }
     }
   },
 
@@ -1316,6 +1416,92 @@ export const translations = {
       horizon: "Horizonte:",
       year: "Ano",
       years: "Anos"
+    },
+
+    // Backend
+    backend: {
+      validation: {
+        emailRequired: "O email é obrigatório.",
+        passwordMinLength: "A palavra-passe deve ter pelo menos 4 caracteres.",
+        emailAlreadyExists: "Já existe uma conta registada com este endereço de email.",
+        emailAndPasswordRequired: "Email e palavra-passe são obrigatórios.",
+        accountNotFound: "Não foi encontrada nenhuma conta com este email.",
+        googleAccountOnly: "Esta conta foi criada com o Google. Por favor utilize o botão \"Entrar com Google\".",
+        incorrectPassword: "Palavra-passe incorreta.",
+        googleIdRequired: "google_id é obrigatório para autenticação com Google.",
+        timeboardIdRequired: "timeboardId é obrigatório",
+        emailRequiredField: "email é obrigatório",
+        userIdRequired: "userId é obrigatório",
+        invitationIdRequired: "invitationId é obrigatório",
+        personIdRequired: "personId é obrigatório",
+        personNotFound: "Entidade/Pessoa não encontrada.",
+        timeboardIdAndUserIdRequired: "timeboardId e userId são obrigatórios.",
+        timeboardIdAndEmailRequired: "timeboardId e email são obrigatórios para envio de convite.",
+        timeboardNotFound: "Timeboard não encontrado.",
+        timelineNotFound: "Timeline não encontrada",
+        timelineSystemCannotBeDeleted: "Timeline do sistema não pode ser eliminada",
+        eventNotFound: "Evento não encontrado",
+        loanNotFound: "Empréstimo não encontrado",
+        personNameRequired: "personName é obrigatório",
+        obligatorIdentificationRequired: "obligatorIdentification é obrigatório",
+        timeboardNameRequired: "Nome do Timeboard é obrigatório",
+        timelineNameRequired: "Nome da Timeline é obrigatório",
+        invalidTimelineStatus: "Estado inválido: {status}",
+        eventDateRequired: "Data válida do evento (AAAA-MM-DD) é obrigatória",
+        eventTitleRequired: "Título do evento é obrigatório",
+        obligationPersonIdRequired: "ID da pessoa responsável é obrigatório quando isObligation é verdadeiro",
+        breakdownNameRequired: "Nome do desmembramento é obrigatório",
+        breakdownAmountRequired: "Valor válido do desmembramento é obrigatório",
+        timeboardIdQueryParamRequired: "Parâmetro de consulta timeboardId é obrigatório"
+      },
+      service: {
+        googleUserFallback: "Utilizador Google",
+        timeboardAdmin: "Administrador do Timeboard"
+      },
+      timeline: {
+        balance: "Saldo",
+        balanceDescription: "Visão consolidada do fluxo financeiro",
+        income: "Entradas / Rendimentos",
+        incomeDescription: "Gestão de salários, ganhos e receitas",
+        expenses: "Gastos / Despesas",
+        expensesDescription: "Gestão de despesas fixas, recorrentes e variáveis",
+        savings: "Poupança / Investimentos",
+        savingsDescription: "Gestão de poupança, património e aportes",
+        projects: "Meus Projetos",
+        projectsDescription: "Planeamento de projetos, marcos e cronograma de tarefas",
+        reminders: "Meus Lembretes",
+        remindersDescription: "Agendar lembretes, alertas e notas"
+      },
+      loan: {
+        amortizationTitle: "Amortização Extraordinária ({name})",
+        amortizationDescription: "Amortização antecipada de {amount} €. Saldo restante: {remaining} €."
+      },
+      event: {
+        seriesClosed: "Série Encerrada",
+        seriesClosedSuffix: "(Encerrada)",
+        occurrenceDeleted: "Ocorrência Excluída",
+        occurrenceDeletedSuffix: "(Excluído)",
+        defaultName: "Evento Financeiro",
+        abated: "Abatida",
+        partiallyAbated: "Abatida Parcial"
+      },
+      email: {
+        invitationSubject: "Convite para colaborar no Timeboard: {name}",
+        invitationTextGreeting: "Olá {name},",
+        invitationTextBody: "{inviter} convidou-te para aceder e colaborar no Timeboard \"{name}\" com a função de {role}.\n\nPara aceitar o convite e aceder ao dashboard, clica no link abaixo:\n{url}\n\nCumprimentos,\nEquipa Timeboard",
+        brandSubtitle: "Gestão Financeira & Linhas Temporais",
+        greeting: "Olá {name},",
+        invitationHtmlBody: "convidou-te para colaborar no Timeboard",
+        timeboardLabel: "Timeboard",
+        accessPermissionLabel: "Permissão de Acesso",
+        acceptButton: "Aceitar Convite & Aceder",
+        fallbackInstruction: "Se o botão acima não funcionar, copie e cole o seguinte link no seu navegador:",
+        copyright: "Todos os direitos reservados.",
+        roleAdmin: "Administrador",
+        roleContributor: "Colaborador",
+        defaultInviter: "Um membro da equipa",
+        emailSendError: "Erro ao enviar email de convite via Brevo: {error}"
+      }
     }
   }
 };

@@ -1,4 +1,7 @@
 import { TimelineAssociationType, EventType, EventStatus, EventPriority, AmortizationStrategy, EventAggregation, LoanEventCategory } from '../../../shared/enums/index.js';
+import { createT } from '../../../shared/i18n/index.js';
+
+const t = createT('en');
 
 /**
  * Entity: TimelineEvent
@@ -115,7 +118,7 @@ export class TimelineEvent {
     this.dayOfMonth = dayOfMonth !== undefined ? dayOfMonth : (day_of_month !== undefined ? day_of_month : null);
     this.date = date;
     this.time = time;
-    this.name = title || name || 'Evento Financeiro';
+    this.name = title || name || t('backend.event.defaultName');
     this.title = this.name;
     this.description = description || '';
     this.category = category;
@@ -233,13 +236,13 @@ export class TimelineEvent {
 
   static validate(data) {
     if (!data.date || typeof data.date !== 'string') {
-      throw new Error('Valid event date (YYYY-MM-DD) is required');
+      throw new Error(t('backend.validation.eventDateRequired'));
     }
     if (!data.title || typeof data.title !== 'string' || data.title.trim() === '') {
-      throw new Error('Event title is required');
+      throw new Error(t('backend.validation.eventTitleRequired'));
     }
     if ((data.isObligation || data.is_obligation) && !(data.obligationPersonId || data.obligation_person_id)) {
-      throw new Error('Obligation person ID is required when isObligation is true');
+      throw new Error(t('backend.validation.obligationPersonIdRequired'));
     }
     return true;
   }

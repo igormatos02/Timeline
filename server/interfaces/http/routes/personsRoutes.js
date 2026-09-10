@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { personService } from '../../../application/services/PersonService.js';
+import { createT } from '../../../../shared/i18n/index.js';
+
+const t = createT('en');
 
 export const personsRouter = Router();
 
@@ -8,7 +11,7 @@ personsRouter.get('/', async (req, res) => {
   try {
     const { timeboardId } = req.query;
     if (!timeboardId) {
-      return res.status(400).json({ error: 'timeboardId query parameter is required' });
+      return res.status(400).json({ error: t('backend.validation.timeboardIdQueryParamRequired') });
     }
     const persons = await personService.getPersonsByTimeboard(timeboardId);
     res.json(persons);
@@ -22,7 +25,7 @@ personsRouter.get('/', async (req, res) => {
 personsRouter.get('/:id', async (req, res) => {
   try {
     const person = await personService.getPersonById(req.params.id);
-    if (!person) return res.status(404).json({ error: 'Person not found' });
+    if (!person) return res.status(404).json({ error: t('backend.validation.personNotFound') });
     res.json(person);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -43,7 +46,7 @@ personsRouter.post('/', async (req, res) => {
 personsRouter.put('/:id', async (req, res) => {
   try {
     const updated = await personService.updatePerson(req.params.id, req.body);
-    if (!updated) return res.status(404).json({ error: 'Person not found' });
+    if (!updated) return res.status(404).json({ error: t('backend.validation.personNotFound') });
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: err.message });

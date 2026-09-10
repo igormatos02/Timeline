@@ -1,3 +1,7 @@
+import { createT } from '../../../shared/i18n/index.js';
+
+const t = createT('en');
+
 /**
  * Entity: TimeboardMember
  * Represents a member relation between a User and a Timeboard (Shared Dashboards).
@@ -19,10 +23,10 @@ export class TimeboardMember {
 
   static validate(data) {
     if (!data.timeboardId && !data.timeboard_id) {
-      throw new Error('timeboardId is required');
+      throw new Error(t('backend.validation.timeboardIdRequired'));
     }
     if (!data.userId && !data.user_id) {
-      throw new Error('userId is required');
+      throw new Error(t('backend.validation.userIdRequired'));
     }
     return true;
   }

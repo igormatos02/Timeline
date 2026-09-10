@@ -12,6 +12,9 @@ import {
   balanceDomainService
 } from '../../domain/services/timelines/financial/index.js';
 import { TimelineType } from '../../../shared/enums/index.js';
+import { createT } from '../../../shared/i18n/index.js';
+
+const t = createT('en');
 
 export class TimelineService {
   /**
@@ -187,9 +190,9 @@ export class TimelineService {
 
   async deleteTimeline(id) {
     const timeline = await timelineRepository.getById(id);
-    if (!timeline) throw new Error('Timeline not found');
+    if (!timeline) throw new Error(t('backend.validation.timelineNotFound'));
     if (!timeline.canDelete) {
-      throw new Error('Timeline do sistema não pode ser eliminada');
+      throw new Error(t('backend.validation.timelineSystemCannotBeDeleted'));
     }
 
     // 1. Excluir todos os status associados à timeline
@@ -207,7 +210,7 @@ export class TimelineService {
 
   async resetTimeline(timelineId) {
     const timeline = await timelineRepository.getById(timelineId);
-    if (!timeline) throw new Error('Timeline não encontrada');
+    if (!timeline) throw new Error(t('backend.validation.timelineNotFound'));
 
     const events = await eventRepository.getAll((ev) => ev.timelineId === timelineId);
     for (const ev of events) {

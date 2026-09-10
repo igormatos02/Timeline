@@ -5,6 +5,9 @@ import { timelineRepository } from '../../infrastructure/database/supabase/Supab
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
 import { calcToggledStatus } from '../../domain/entities/TimelineEvent.js';
 import { EventType, EventStatus, EventPeriodicity, EventDeletionMode, EventUpdateMode, AmortizationStrategy, LoanEventCategory, AmortizationEventCategory, isPositiveStatus, isNegativeStatus } from '../../../shared/enums/index.js';
+import { createT } from '../../../shared/i18n/index.js';
+
+const t = createT('en');
 
 export class FinancialEventService {
   async _syncStatus(date, eventId, status, options = {}) {
@@ -440,7 +443,7 @@ export class FinancialEventService {
     const targetEvent = allEvents.find((e) => e.id === id || e.eventId === id || e.sobrepositionOver === id);
 
     if (!targetEvent) {
-      throw new Error(`Event not found: ${id}`);
+      throw new Error(`${t('backend.validation.eventNotFound')}: ${id}`);
     }
 
     const toggled = calcToggledStatus(targetEvent, explicitStatus);
@@ -548,8 +551,8 @@ export class FinancialEventService {
         timeboardId: rootEvent?.timeboardId || rootEvent?.timeboard_id,
         timelineId: rootEvent?.timelineId || rootEvent?.timeline_id,
         timelineOriginId: rootEvent?.timelineOriginId || rootEvent?.timelineId || rootEvent?.timeline_id,
-        name: rootEvent?.name || rootEvent?.title ? `${rootEvent?.name || rootEvent?.title} (Encerrada)` : 'Série Encerrada',
-        title: rootEvent?.title || rootEvent?.name ? `${rootEvent?.title || rootEvent?.name} (Encerrada)` : 'Série Encerrada',
+        name: rootEvent?.name || rootEvent?.title ? `${rootEvent?.name || rootEvent?.title} ${t('backend.event.seriesClosedSuffix')}` : t('backend.event.seriesClosed'),
+        title: rootEvent?.title || rootEvent?.name ? `${rootEvent?.title || rootEvent?.name} ${t('backend.event.seriesClosedSuffix')}` : t('backend.event.seriesClosed'),
         description: rootEvent?.description || '',
         eventType: rootEvent?.eventType || rootEvent?.event_type || EventType.EXPENSE,
         category: rootEvent?.category,
@@ -609,8 +612,8 @@ export class FinancialEventService {
           timeboardId: rootEvent?.timeboardId || rootEvent?.timeboard_id,
           timelineId: rootEvent?.timelineId || rootEvent?.timeline_id,
           timelineOriginId: rootEvent?.timelineOriginId || rootEvent?.timelineId || rootEvent?.timeline_id,
-          name: rootEvent?.name || rootEvent?.title ? `${rootEvent?.name || rootEvent?.title} (Excluído)` : 'Ocorrência Excluída',
-          title: rootEvent?.title || rootEvent?.name ? `${rootEvent?.title || rootEvent?.name} (Excluído)` : 'Ocorrência Excluída',
+          name: rootEvent?.name || rootEvent?.title ? `${rootEvent?.name || rootEvent?.title} ${t('backend.event.occurrenceDeletedSuffix')}` : t('backend.event.occurrenceDeleted'),
+          title: rootEvent?.title || rootEvent?.name ? `${rootEvent?.title || rootEvent?.name} ${t('backend.event.occurrenceDeletedSuffix')}` : t('backend.event.occurrenceDeleted'),
           description: rootEvent?.description || '',
           eventType: rootEvent?.eventType || rootEvent?.event_type || EventType.EXPENSE,
           category: rootEvent?.category,
@@ -708,7 +711,7 @@ export class FinancialEventService {
               installmentCapital: 0,
               installmentInterest: 0,
               installmentFee: 0,
-              labels: Array.from(new Set([...(inst.labels || []), 'Abated'])),
+              labels: Array.from(new Set([...(inst.labels || []), t('backend.event.abated')])),
               updatedAt: now
             }
           });
@@ -722,7 +725,7 @@ export class FinancialEventService {
             data: {
               installmentAmount: Math.round((newPrincipal + interestPortion + fee) * 100) / 100,
               installmentCapital: newPrincipal,
-              labels: Array.from(new Set([...(inst.labels || []), 'Partially Abated'])),
+              labels: Array.from(new Set([...(inst.labels || []), t('backend.event.partiallyAbated')])),
               updatedAt: now
             }
           });
@@ -760,7 +763,7 @@ export class FinancialEventService {
 
           const labels = Array.from(new Set([
             ...(ev.labels || []),
-            isFullyAmortized ? 'Abated' : 'Partially Abated'
+            isFullyAmortized ? t('backend.event.abated') : t('backend.event.partiallyAbated')
           ]));
 
           return {

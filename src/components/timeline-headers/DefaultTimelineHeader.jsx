@@ -2,13 +2,11 @@ import React, { useState } from 'react';
 import {
   Layers,
   Plus,
-  Edit3,
   Trash2,
-  ChevronDown,
-  ChevronUp,
   Settings
 } from 'lucide-react';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
+import HeaderShell from '../ui/HeaderShell.jsx';
 
 export default function DefaultTimelineHeader({
   timeline,
@@ -25,62 +23,21 @@ export default function DefaultTimelineHeader({
   const headerColor = timeline.color || '#6366f1';
 
   return (
-    <div
-      className={`timeline-hero glass-panel ${collapsed ? 'hero-collapsed' : ''}`}
-      style={{
-        borderLeft: `4px solid ${headerColor}`,
-        '--active-timeline-color': headerColor,
-        padding: collapsed ? '12px 18px' : '16px 20px',
-        marginBottom: '10px',
-        transition: 'padding 0.2s ease, box-shadow 0.2s ease',
-        boxShadow: 'var(--shadow-sm)'
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          paddingBottom: collapsed ? '0' : '12px',
-          borderBottom: collapsed ? 'none' : '1px solid var(--border-glass)'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            type="button"
-            onClick={() => setIsCollapsed(!collapsed)}
-            aria-label={collapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
-            title={collapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
-            style={{
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'var(--bg-glass)',
-              border: '1px solid var(--border-glass)',
-              color: 'var(--text-main)',
-              cursor: 'pointer',
-              transition: 'background-color 0.15s ease, transform 0.2s ease',
-              flexShrink: 0
-            }}
-          >
-            {collapsed ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
-          </button>
-
-          <HeaderTitleBlock
-            color={headerColor}
-            icon={<Layers size={18} />}
-            name={timeline.name}
-            description={timeline.description}
-            id={timeline.id}
-          />
-        </div>
-
-        {/* Botões de Ação */}
+    <HeaderShell
+      timeline={timeline}
+      collapsed={collapsed}
+      onToggle={() => setIsCollapsed(!collapsed)}
+      headerColor={headerColor}
+      left={
+        <HeaderTitleBlock
+          color={headerColor}
+          icon={<Layers size={18} />}
+          name={timeline.name}
+          description={timeline.description}
+          id={timeline.id}
+        />
+      }
+      right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {onAddEvent && (
             <button
@@ -143,7 +100,7 @@ export default function DefaultTimelineHeader({
             </button>
           )}
         </div>
-      </div>
-    </div>
+      }
+    />
   );
 }

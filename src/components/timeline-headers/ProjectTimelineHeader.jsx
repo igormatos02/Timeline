@@ -2,16 +2,14 @@ import React, { useState } from 'react';
 import {
   FolderKanban,
   Plus,
-  Edit3,
   Trash2,
-  ChevronDown,
-  ChevronUp,
   CheckCircle2,
   Clock,
   Sparkles,
   Settings
 } from 'lucide-react';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
+import HeaderShell from '../ui/HeaderShell.jsx';
 
 export default function ProjectTimelineHeader({
   timeline,
@@ -31,63 +29,22 @@ export default function ProjectTimelineHeader({
   const pendingTasks = totalTasks - completedTasks;
 
   return (
-    <div
-      className={`timeline-hero glass-panel ${collapsed ? 'hero-collapsed' : ''}`}
-      style={{
-        borderLeft: `4px solid ${headerColor}`,
-        '--active-timeline-color': headerColor,
-        padding: collapsed ? '12px 18px' : '16px 20px',
-        marginBottom: '10px',
-        transition: 'padding 0.2s ease, box-shadow 0.2s ease',
-        boxShadow: 'var(--shadow-sm)'
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          paddingBottom: collapsed ? '0' : '12px',
-          borderBottom: collapsed ? 'none' : '1px solid var(--border-glass)'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            type="button"
-            onClick={() => setIsCollapsed(!collapsed)}
-            aria-label={collapsed ? 'Expand header' : 'Collapse header'}
-            title={collapsed ? 'Expand header' : 'Collapse header'}
-            style={{
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'var(--bg-glass)',
-              border: '1px solid var(--border-glass)',
-              color: 'var(--text-main)',
-              cursor: 'pointer',
-              transition: 'background-color 0.15s ease, transform 0.2s ease',
-              flexShrink: 0
-            }}
-          >
-            {collapsed ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
-          </button>
-
-          <HeaderTitleBlock
-            color={headerColor}
-            icon={<FolderKanban size={18} />}
-            name={timeline.name}
-            badge="Project Roadmap"
-            description={timeline.description}
-            id={timeline.id}
-          />
-        </div>
-
-        {/* Action Buttons */}
+    <HeaderShell
+      timeline={timeline}
+      collapsed={collapsed}
+      onToggle={() => setIsCollapsed(!collapsed)}
+      headerColor={headerColor}
+      left={
+        <HeaderTitleBlock
+          color={headerColor}
+          icon={<FolderKanban size={18} />}
+          name={timeline.name}
+          badge="Project Roadmap"
+          description={timeline.description}
+          id={timeline.id}
+        />
+      }
+      right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {onAddEvent && (
             <button
@@ -150,37 +107,35 @@ export default function ProjectTimelineHeader({
             </button>
           )}
         </div>
-      </div>
-
+      }
+    >
       {/* Metrics Summary Strip */}
-      {!collapsed && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            paddingTop: '12px',
-            marginTop: '8px',
-            flexWrap: 'wrap'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--text-main)' }}>
-            <Sparkles size={14} style={{ color: headerColor }} />
-            <span>Total Tasks:</span>
-            <strong>{totalTasks}</strong>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#10b981' }}>
-            <CheckCircle2 size={14} />
-            <span>Completed:</span>
-            <strong>{completedTasks}</strong>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#8b5cf6' }}>
-            <Clock size={14} />
-            <span>In Progress / Pending:</span>
-            <strong>{pendingTasks}</strong>
-          </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          paddingTop: '12px',
+          marginTop: '8px',
+          flexWrap: 'wrap'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--text-main)' }}>
+          <Sparkles size={14} style={{ color: headerColor }} />
+          <span>Total Tasks:</span>
+          <strong>{totalTasks}</strong>
         </div>
-      )}
-    </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#10b981' }}>
+          <CheckCircle2 size={14} />
+          <span>Completed:</span>
+          <strong>{completedTasks}</strong>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#8b5cf6' }}>
+          <Clock size={14} />
+          <span>In Progress / Pending:</span>
+          <strong>{pendingTasks}</strong>
+        </div>
+      </div>
+    </HeaderShell>
   );
 }

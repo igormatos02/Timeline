@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import {
   CreditCard,
-  ChevronDown,
-  ChevronUp,
   Wallet,
   PieChart,
   TrendingUp,
@@ -17,6 +15,7 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { DonutChart } from '../ui/DonutChart.jsx';
 import CopyIdButton from '../ui/CopyIdButton.jsx';
+import HeaderShell from '../ui/HeaderShell.jsx';
 
 export default function LoanTimelineHeader({
   timeline,
@@ -199,90 +198,21 @@ export default function LoanTimelineHeader({
     : 'var(--text-muted)';
 
   return (
-    <div
-      className={`timeline-hero glass-panel ${collapsed ? 'hero-collapsed' : ''
-        }`}
-      style={{
-        borderLeft: `4px solid ${headerColor}`,
-        '--active-timeline-color': headerColor,
-        padding: collapsed
-          ? '12px 18px'
-          : '16px 20px',
-        marginBottom: '10px',
+    <HeaderShell
+      timeline={timeline}
+      collapsed={collapsed}
+      onToggle={() => setIsCollapsed(!collapsed)}
+      headerColor={headerColor}
+      toggleColor={textColorMain}
+      containerStyle={{
         transition:
           'padding 0.2s ease, box-shadow 0.2s ease, filter 0.3s ease',
-        boxShadow: 'var(--shadow-sm)',
         filter: isInactive
           ? 'grayscale(85%) opacity(0.85)'
           : 'none'
       }}
-    >
-      {/* =========================================================
-          HEADER
-          ========================================================= */}
-
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          paddingBottom: collapsed
-            ? '0'
-            : '12px',
-          borderBottom: collapsed
-            ? 'none'
-            : '1px solid var(--border-glass)'
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px'
-          }}
-        >
-          {/* Collapse */}
-          <button
-            type="button"
-            onClick={() =>
-              setIsCollapsed(!collapsed)
-            }
-            aria-label={
-              collapsed
-                ? 'Expandir cabeçalho'
-                : 'Recolher cabeçalho'
-            }
-            title={
-              collapsed
-                ? 'Expandir cabeçalho'
-                : 'Recolher cabeçalho'
-            }
-            style={{
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'var(--bg-glass)',
-              border:
-                '1px solid var(--border-glass)',
-              color: textColorMain,
-              cursor: 'pointer',
-              transition:
-                'background-color 0.15s ease, transform 0.2s ease',
-              flexShrink: 0
-            }}
-          >
-            {collapsed ? (
-              <ChevronDown size={17} />
-            ) : (
-              <ChevronUp size={17} />
-            )}
-          </button>
-
+      left={
+        <>
           {/* Loan icon */}
           <div
             style={{
@@ -542,9 +472,9 @@ export default function LoanTimelineHeader({
               )}
             </div>
           </div>
-        </div>
-
-        {/* Actions */}
+        </>
+      }
+      right={
         <div
           style={{
             display: 'flex',
@@ -613,8 +543,8 @@ export default function LoanTimelineHeader({
               </button>
             )}
         </div>
-      </div>
-
+      }
+    >
       {/* =========================================================
           METRICS
           ========================================================= */}
@@ -1666,6 +1596,6 @@ export default function LoanTimelineHeader({
           </div>
         </div>
       )}
-    </div>
+    </HeaderShell>
   );
 }

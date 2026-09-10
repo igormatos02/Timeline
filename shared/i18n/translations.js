@@ -23,7 +23,9 @@ export const translations = {
       newTimeboard: "New Timeboard",
       createTimeboardTitle: "Create new Timeboard",
       toggleThemeDark: "Switch to dark theme",
-      toggleThemeLight: "Switch to light theme"
+      toggleThemeLight: "Switch to light theme",
+      expandHeader: "Expand header",
+      collapseHeader: "Collapse header"
     },
 
     // Buttons
@@ -769,7 +771,9 @@ export const translations = {
       newTimeboard: "Novo Timeboard",
       createTimeboardTitle: "Criar novo Timeboard",
       toggleThemeDark: "Mudar para tema escuro",
-      toggleThemeLight: "Mudar para tema claro"
+      toggleThemeLight: "Mudar para tema claro",
+      expandHeader: "Expandir cabeçalho",
+      collapseHeader: "Recolher cabeçalho"
     },
 
     // Buttons

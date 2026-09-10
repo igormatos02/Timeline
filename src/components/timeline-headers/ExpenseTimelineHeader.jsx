@@ -3,8 +3,6 @@ import {
   ShoppingCart,
   Plus,
   Trash2,
-  ChevronDown,
-  ChevronUp,
   Settings,
   RotateCcw
 } from 'lucide-react';
@@ -13,6 +11,7 @@ import { ExpenseEventCategory } from '../../../shared/enums/ExpensesEventCategor
 import { EventType } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
+import HeaderShell from '../ui/HeaderShell.jsx';
 import { DonutChart, PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
 import BarChart7Months from '../ui/BarChart7Months.jsx';
 import { computeMonthDiff } from '../../utils/timelineCharts.js';
@@ -39,66 +38,24 @@ export default function ExpenseTimelineHeader({
   const metrics = timeline.metrics || {};
 
   return (
-    <div
-      className={`timeline-hero glass-panel ${collapsed ? 'hero-collapsed' : ''}`}
-      style={{
-        borderLeft: `4px solid ${headerColor}`,
-        '--active-timeline-color': headerColor,
-        padding: collapsed ? '12px 18px' : '16px 20px',
-        marginBottom: '10px',
-        transition: 'padding 0.2s ease, box-shadow 0.2s ease',
-        boxShadow: 'var(--shadow-sm)'
-      }}
-    >
-      {/* 🏷️ Topo: Título, Ícone e Ações */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          paddingBottom: collapsed ? '0' : '12px',
-          borderBottom: collapsed ? 'none' : '1px solid var(--border-glass)'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            type="button"
-            onClick={() => setIsCollapsed(!collapsed)}
-            aria-label={collapsed ? (language === 'pt' ? 'Expandir cabeçalho' : 'Expand header') : (language === 'pt' ? 'Recolher cabeçalho' : 'Collapse header')}
-            title={collapsed ? (language === 'pt' ? 'Expandir cabeçalho' : 'Expand header') : (language === 'pt' ? 'Recolher cabeçalho' : 'Collapse header')}
-            style={{
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'var(--bg-glass)',
-              border: '1px solid var(--border-glass)',
-              color: 'var(--text-main)',
-              cursor: 'pointer',
-              transition: 'background-color 0.15s ease, transform 0.2s ease',
-              flexShrink: 0
-            }}
-          >
-            {collapsed ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
-          </button>
-
-          <HeaderTitleBlock
-            color={headerColor}
-            icon={<ShoppingCart size={18} />}
-            name={timeline.name}
-            badge={t('expenseHeader.badge')}
-            iconBackground="rgba(244, 63, 94, 0.12)"
-            badgeBackground="rgba(244, 63, 94, 0.12)"
-            description={timeline.description}
-            id={timeline.id}
-          />
-        </div>
-
-        {/* Botões de Ação */}
+    <HeaderShell
+      timeline={timeline}
+      collapsed={collapsed}
+      onToggle={() => setIsCollapsed(!collapsed)}
+      headerColor={headerColor}
+      left={
+        <HeaderTitleBlock
+          color={headerColor}
+          icon={<ShoppingCart size={18} />}
+          name={timeline.name}
+          badge={t('expenseHeader.badge')}
+          iconBackground="rgba(244, 63, 94, 0.12)"
+          badgeBackground="rgba(244, 63, 94, 0.12)"
+          description={timeline.description}
+          id={timeline.id}
+        />
+      }
+      right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {onAddEvent && (
             <button
@@ -227,8 +184,8 @@ export default function ExpenseTimelineHeader({
             </button>
           )}
         </div>
-      </div>
-
+      }
+    >
       {/* Conteúdo Expandido com Métricas de Despesas no Novo Layout */}
       {!collapsed && (() => {
         const isFiltered = (selectedExpenseCategories && selectedExpenseCategories.length > 0) || (filteredEvents !== undefined);
@@ -673,7 +630,7 @@ export default function ExpenseTimelineHeader({
             })()}
           </div>
         );
-      })()}
-    </div>
+        })()}
+    </HeaderShell>
   );
 }

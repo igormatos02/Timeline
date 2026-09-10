@@ -8,8 +8,6 @@ import {
   Clock,
   TrendingUp,
   Plus,
-  ChevronDown,
-  ChevronUp,
   X,
   Settings
 } from 'lucide-react';
@@ -17,6 +15,7 @@ import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/formatCurrency';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
+import HeaderShell from '../ui/HeaderShell.jsx';
 import { PieDonut } from '../ui/DonutChart.jsx';
 
 export default function BalanceTimelineHeader({
@@ -108,66 +107,24 @@ export default function BalanceTimelineHeader({
   };
 
   return (
-    <div
-      className={`timeline-hero glass-panel ${collapsed ? 'hero-collapsed' : ''}`}
-      style={{
-        borderLeft: `4px solid ${headerColor}`,
-        '--active-timeline-color': headerColor,
-        padding: collapsed ? '12px 18px' : '16px 20px',
-        marginBottom: '10px',
-        transition: 'padding 0.2s ease, box-shadow 0.2s ease',
-        boxShadow: 'var(--shadow-sm)'
-      }}
-    >
-      {/* 🏷️ Topo: Título, Ícone e Ações Globais */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          paddingBottom: collapsed ? '0' : '12px',
-          borderBottom: collapsed ? 'none' : '1px solid var(--border-glass)'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            type="button"
-            onClick={() => setIsCollapsed(!collapsed)}
-            aria-label={collapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
-            title={collapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
-            style={{
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'var(--bg-glass)',
-              border: '1px solid var(--border-glass)',
-              color: 'var(--text-main)',
-              cursor: 'pointer',
-              transition: 'background-color 0.15s ease, transform 0.2s ease',
-              flexShrink: 0
-            }}
-          >
-            {collapsed ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
-          </button>
-
-          <HeaderTitleBlock
-            color={headerColor}
-            icon={<Scale size={18} />}
-            name={timeline.name}
-            badge="Balanço Consolidado"
-            iconBackground="rgba(14, 165, 233, 0.12)"
-            badgeBackground="rgba(14, 165, 233, 0.12)"
-            description={timeline.description}
-            id={timeline.id}
-          />
-        </div>
-
-        {/* Botões de Ação */}
+    <HeaderShell
+      timeline={timeline}
+      collapsed={collapsed}
+      onToggle={() => setIsCollapsed(!collapsed)}
+      headerColor={headerColor}
+      left={
+        <HeaderTitleBlock
+          color={headerColor}
+          icon={<Scale size={18} />}
+          name={timeline.name}
+          badge="Balanço Consolidado"
+          iconBackground="rgba(14, 165, 233, 0.12)"
+          badgeBackground="rgba(14, 165, 233, 0.12)"
+          description={timeline.description}
+          id={timeline.id}
+        />
+      }
+      right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {onAddEvent && (
             <button
@@ -211,8 +168,8 @@ export default function BalanceTimelineHeader({
             </button>
           )}
         </div>
-      </div>
-
+      }
+    >
       {/* Conteúdo Expandido com Métricas e Gráficos */}
       {!collapsed && (
         <div style={{ paddingTop: '14px' }}>
@@ -901,6 +858,6 @@ export default function BalanceTimelineHeader({
         </div>,
         document.body
       )}
-    </div>
+    </HeaderShell>
   );
 }

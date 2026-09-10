@@ -32,7 +32,7 @@ import { useTranslation } from './i18n/LanguageContext.jsx';
 import { RotateCcw, X, Plus } from 'lucide-react';
 import LandingPage from './components/landing/LandingPage.jsx';
 import TimeboardsHub from './components/dashboard-hub/TimeboardsHub.jsx';
-import { supabase } from './services/supabaseClient.js';
+import useAuth from './hooks/useAuth.js';
 import './App.css';
 
 export default function App() {
@@ -40,7 +40,6 @@ export default function App() {
   const { language, setLanguage, t } = useTranslation();
 
   // Authentication & View State
-  const [currentUser, setCurrentUser] = useState(() => api.getCurrentUser());
   const [currentView, setCurrentView] = useState(() => {
     const user = api.getCurrentUser();
     if (!user) return 'landing';
@@ -48,60 +47,7 @@ export default function App() {
     return savedView === 'workspace' ? 'workspace' : 'hub';
   });
 
-  // Effect: Listen to Supabase Auth State (Google OAuth Callback)
-  useEffect(() => {
-    let isMounted = true;
-
-    // Check existing session on mount
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user && isMounted) {
-        const gUser = session.user;
-        const gPayload = {
-          googleId: gUser.id,
-          email: gUser.email,
-          name: gUser.user_metadata?.full_name || gUser.user_metadata?.name || (gUser.email ? gUser.email.split('@')[0] : 'Utilizador Google'),
-          avatarUrl: gUser.user_metadata?.avatar_url || gUser.user_metadata?.picture || null
-        };
-        try {
-          const appUser = await api.syncGoogleUser(gPayload);
-          if (!isMounted) return;
-          setCurrentUser(appUser);
-          setCurrentView((prev) => (prev === 'landing' ? 'hub' : prev));
-        } catch (err) {
-          console.error('[App] Failed to sync Google OAuth session:', err);
-        }
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user && isMounted) {
-        const gUser = session.user;
-        const gPayload = {
-          googleId: gUser.id,
-          email: gUser.email,
-          name: gUser.user_metadata?.full_name || gUser.user_metadata?.name || (gUser.email ? gUser.email.split('@')[0] : 'Utilizador Google'),
-          avatarUrl: gUser.user_metadata?.avatar_url || gUser.user_metadata?.picture || null
-        };
-        try {
-          const appUser = await api.syncGoogleUser(gPayload);
-          if (!isMounted) return;
-          setCurrentUser(appUser);
-          setCurrentView((prev) => (prev === 'landing' ? 'hub' : prev));
-        } catch (err) {
-          console.error('[App] Failed to sync Google OAuth sign-in:', err);
-        }
-      } else if (event === 'SIGNED_OUT' && isMounted) {
-        setCurrentUser(null);
-        setCurrentView('landing');
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      subscription?.unsubscribe();
-    };
-  }, []);
+  const { currentUser, handleAuthSuccess, handleLogout } = useAuth(setCurrentView);
 
   // Timeboards State (Top Level Grouping)
   const [timeboards, setTimeboards] = useState(() => {
@@ -1735,21 +1681,6 @@ export default function App() {
         console.error('Error deleting timeboard:', e);
       }
     }
-  };
-
-  const handleAuthSuccess = (user) => {
-    setCurrentUser(user);
-    setCurrentView('hub');
-    localStorage.setItem('chrono_current_view', 'hub');
-    showToast(`Bem-vindo, ${user.name}!`);
-  };
-
-  const handleLogout = () => {
-    api.logoutUser();
-    setCurrentUser(null);
-    setCurrentView('landing');
-    localStorage.removeItem('chrono_current_view');
-    showToast('Sessão terminada com sucesso.');
   };
 
   const handleSelectTimeboardFromHub = (tbId) => {

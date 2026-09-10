@@ -51,7 +51,7 @@ import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { EventType, TimelineType, EventStatus, EventPeriodicity, PersonType, AmortizationEventCategory, LoanEventCategory, InvestmentEventCategory } from '../enums/index.js';
 import * as api from '../services/api.js';
 
-export default function TimelineEventCard({
+const TimelineEventCard = React.memo(function TimelineEventCard({
   event,
   allEvents = [],
   currentTimelineId,
@@ -3342,4 +3342,6 @@ export default function TimelineEventCard({
       </div>
     </div>
   );
-}
+});
+
+export default TimelineEventCard;

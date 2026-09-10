@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { format, parseISO, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import Navbar from './components/Navbar';
 import TimelineHeader from './components/TimelineHeader';
@@ -409,13 +409,13 @@ export default function App() {
   const [amortizationDefaultDate, setAmortizationDefaultDate] = useState('2026-08-21');
   const [editingInstallment, setEditingInstallment] = useState(null);
 
-  const handleOpenAmortizationModal = (dateStr, eventObj = null) => {
+  const handleOpenAmortizationModal = useCallback((dateStr, eventObj = null) => {
     if (dateStr) {
       setAmortizationDefaultDate(dateStr);
     }
     setEditingAmortization(eventObj || null);
     setIsAmortizationModalOpen(true);
-  };
+  }, []);
 
   // Theme (light is default)
   const [theme, setTheme] = useState(() => {
@@ -913,16 +913,16 @@ export default function App() {
   // ----------------------------------------------------
   const focusedMonthRef = React.useRef(null);
 
-  const handleOpenCreateEvent = (dateStr = '2026-08-21', nature = 'income') => {
+  const handleOpenCreateEvent = useCallback((dateStr = '2026-08-21', nature = 'income') => {
     focusedMonthRef.current = dateStr ? dateStr.substring(0, 7) : null;
     scrollYBeforeModalRef.current = window.scrollY;
     setEditingEvent(null);
     setSelectedDateForNewEvent(dateStr);
     setEventModalDefaultNature(nature);
     setIsEventModalOpen(true);
-  };
+  }, []);
 
-  const handleOpenEditEvent = (eventObj) => {
+  const handleOpenEditEvent = useCallback((eventObj) => {
     focusedMonthRef.current = eventObj?.date ? eventObj.date.substring(0, 7) : null;
     scrollYBeforeModalRef.current = window.scrollY;
     if (
@@ -938,7 +938,7 @@ export default function App() {
     const nature = eventObj?.isExpense ? 'expense' : eventObj?.isInvestment ? 'investment' : 'income';
     setEventModalDefaultNature(nature);
     setIsEventModalOpen(true);
-  };
+  }, [handleOpenAmortizationModal]);
 
   const handleSaveEvent = (eventData) => {
     const savedScrollPos = scrollYBeforeModalRef.current || window.scrollY;
@@ -1024,7 +1024,7 @@ export default function App() {
     saveAsync();
   };
 
-  const handleUpdateEventDirect = async (updatedEvent) => {
+  const handleUpdateEventDirect = useCallback(async (updatedEvent) => {
     if (!updatedEvent || !updatedEvent.id) return;
 
     const targetSeriesId = updatedEvent.seriesId || updatedEvent.eventId;
@@ -1103,9 +1103,9 @@ export default function App() {
     } catch (err) {
       console.error('Error updating event directly:', err);
     }
-  };
+  }, [refreshTimelines]);
 
-  const handleRequestDeleteEvent = (eventOrId) => {
+  const handleRequestDeleteEvent = useCallback((eventOrId) => {
     scrollYBeforeModalRef.current = window.scrollY;
     if (!eventOrId) return;
     let targetObj = eventOrId;
@@ -1119,7 +1119,7 @@ export default function App() {
     if (targetObj && targetObj.id) {
       setDeletingEvent(targetObj);
     }
-  };
+  }, [activeTimeline]);
 
   const handleConfirmDeleteEvent = (eventId, deleteScope = EventDeletionMode.EVERYTHING) => {
     let targetEvent = deletingEvent && (deletingEvent.id === eventId || String(deletingEvent.id) === String(eventId)) ? deletingEvent : null;
@@ -1207,7 +1207,7 @@ export default function App() {
     setIsResetConfirmOpen(false);
   };
 
-  const handleToggleTask = (eventId, taskIdx) => {
+  const handleToggleTask = useCallback((eventId, taskIdx) => {
     if (!activeTimeline) return;
     const updatedEvents = (activeTimeline.events || []).map((ev) => {
       if (ev.id === eventId && ev.tasks) {
@@ -1222,7 +1222,7 @@ export default function App() {
     setTimelines((prev) =>
       prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
     );
-  };
+  }, [activeTimeline]);
 
   // Add a new checklist item to any event/task
   const handleAddChecklistItem = (eventId, itemText) => {
@@ -1309,7 +1309,7 @@ export default function App() {
   // ----------------------------------------------------
 
   // Toggle installment payment / income / expense / investment status (3-state: Negative -> Positive -> Cancelled -> Negative)
-  const handleToggleLoanPayment = async (installmentId, explicitStatus = null) => {
+  const handleToggleLoanPayment = useCallback(async (installmentId, explicitStatus = null) => {
     if (!installmentId) return;
 
     const clickTimeStr = format(new Date(), 'HH:mm');
@@ -1399,10 +1399,10 @@ export default function App() {
     } catch (err) {
       console.error('Error toggling payment status:', err);
     }
-  };
+  }, [refreshTimelines]);
 
   // Pay all prior loan installments up to (and including) target event
-  const handlePayUpToHere = async (targetEv) => {
+  const handlePayUpToHere = useCallback(async (targetEv) => {
     if (!targetEv || !activeTimeline) return;
     const targetInstNum = Number(targetEv.installmentNumber || targetEv.installment_number || 0);
     const targetDate = targetEv.date || '';
@@ -1465,7 +1465,7 @@ export default function App() {
     } finally {
       setIsUpdatingInstallments(false);
     }
-  };
+  }, [activeTimeline, rawEvents, refreshTimelines]);
 
   // Save changes from EditInstallmentModal (amount, principalAmount, interestPortion, interestAmount, propagateForward)
   const handleSaveEditInstallment = async (installmentId, { status, amount, principalAmount, interestPortion, interestAmount, propagateForward }) => {
@@ -1765,6 +1765,18 @@ export default function App() {
     localStorage.setItem('chrono_current_view', 'hub');
   };
 
+  const handleAddEventForDate = useCallback(
+    (dateStr, nature) => handleOpenCreateEvent(dateStr, nature || (activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income')),
+    [handleOpenCreateEvent, activeFinancialTab]
+  );
+
+  const handleOpenEditInstallment = useCallback((inst) => setEditingInstallment(inst), []);
+
+  const handleNavigateToTimeline = useCallback((timelineId, tab) => {
+    if (timelineId) setActiveTimelineId(timelineId);
+    if (tab) setActiveFinancialTab(tab);
+  }, []);
+
   // 1. Landing Page View (When not logged in or explicitly at landing)
   if (!currentUser || currentView === 'landing') {
     return (
@@ -1877,7 +1889,7 @@ export default function App() {
             onUpdateEventDirect={handleUpdateEventDirect}
             onDeleteEvent={handleRequestDeleteEvent}
             onToggleTask={handleToggleTask}
-            onAddEventForDate={(dateStr, nature) => handleOpenCreateEvent(dateStr, nature || (activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income'))}
+            onAddEventForDate={handleAddEventForDate}
             onCompleteFloatingTask={handleCompleteFloatingTask}
             onAddFloatingTask={handleAddFloatingTask}
             onUpdateFloatingTaskPriority={handleUpdateFloatingTaskPriority}
@@ -1885,12 +1897,9 @@ export default function App() {
             onDeleteChecklistItem={handleDeleteChecklistItem}
             onToggleLoanPayment={handleToggleLoanPayment}
             onPayUpToHere={handlePayUpToHere}
-            onOpenEditInstallment={(inst) => setEditingInstallment(inst)}
+            onOpenEditInstallment={handleOpenEditInstallment}
             onOpenAmortizationModal={handleOpenAmortizationModal}
-            onNavigateToTimeline={(timelineId, tab) => {
-              if (timelineId) setActiveTimelineId(timelineId);
-              if (tab) setActiveFinancialTab(tab);
-            }}
+            onNavigateToTimeline={handleNavigateToTimeline}
             headerComponent={
               <TimelineHeader
                 timeline={activeTimeline}

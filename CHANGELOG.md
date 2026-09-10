@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.1](https://github.com/igormatos02/Timeline/compare/v0.1.0...v0.1.1) (2026-09-10)
+
+
+### Features
+
+* sort same-day events by title and obligator identifier, fix timeline auto-scroll ([d82a92e](https://github.com/igormatos02/Timeline/commit/d82a92ec9835ec12ecc732e6fc72d8472192d88a))
+
+
+### Bug Fixes
+
+* move version badge from timeline header to app navbar ([090d756](https://github.com/igormatos02/Timeline/commit/090d7563196368beb9c4a43be0909c08a72f7c4d))
+
 ## 0.1.0 (2026-09-10)
 
 

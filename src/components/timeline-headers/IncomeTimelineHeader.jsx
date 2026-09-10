@@ -2,24 +2,23 @@ import React, { useState } from 'react';
 import {
   DollarSign,
   Sparkles,
-  Clock,
-  TrendingUp,
   Plus,
-  Edit3,
   Trash2,
   ChevronDown,
   ChevronUp,
   Layers,
   Settings,
-  RotateCcw,
-  Copy,
-  Check
+  RotateCcw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency } from '../../utils/loanCalculations';
 import { IncomeEventCategory } from '../../../shared/enums/IncomeEventCategory.js';
 import { EventType } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
+import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
+import { DonutChart, PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
+import BarChart7Months from '../ui/BarChart7Months.jsx';
+import { computeMonthDiff } from '../../utils/timelineCharts.js';
 
 export default function IncomeTimelineHeader({
   timeline,
@@ -34,16 +33,6 @@ export default function IncomeTimelineHeader({
 }) {
   const { t, language, dateLocale } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
-  const [copiedId, setCopiedId] = useState(false);
-
-  const handleCopyId = (e) => {
-    e.stopPropagation();
-    if (timeline?.id) {
-      navigator.clipboard.writeText(String(timeline.id));
-      setCopiedId(true);
-      setTimeout(() => setCopiedId(false), 1800);
-    }
-  };
 
   if (!timeline) return null;
 
@@ -226,96 +215,16 @@ export default function IncomeTimelineHeader({
             {collapsed ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
           </button>
 
-          <div
-            style={{
-              width: '34px',
-              height: '34px',
-              borderRadius: '10px',
-              background: 'rgba(16, 185, 129, 0.12)',
-              color: headerColor,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: `1px solid ${headerColor}33`,
-              flexShrink: 0
-            }}
-          >
-            <DollarSign size={18} />
-          </div>
-
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h1 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                {timeline.name}
-              </h1>
-              <span
-                style={{
-                  fontSize: '0.68rem',
-                  fontWeight: '700',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  background: 'rgba(16, 185, 129, 0.12)',
-                  color: headerColor,
-                  border: `1px solid ${headerColor}44`,
-                  textTransform: 'uppercase'
-                }}
-              >
-                {t('incomeHeader.badge') || 'Inflows & Income'}
-              </span>
-            </div>
-            <p
-              style={{
-                margin: '2px 0 0',
-                fontSize: '0.78rem',
-                color: 'var(--text-muted)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                flexWrap: 'wrap'
-              }}
-            >
-              {timeline.description && (
-                <span>{timeline.description}</span>
-              )}
-              {timeline.id && (
-                <span
-                  style={{
-                    fontSize: '0.68rem',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    background: 'rgba(255, 255, 255, 0.06)',
-                    border: '1px solid var(--border-glass)',
-                    color: 'var(--text-dim)',
-                    fontFamily: 'monospace',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <span style={{ userSelect: 'all' }}>ID: {timeline.id}</span>
-                  <button
-                    type="button"
-                    onClick={handleCopyId}
-                    title={copiedId ? 'Copiado!' : 'Copiar ID'}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      padding: '1px 2px',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: copiedId ? '#10b981' : 'var(--text-muted)',
-                      borderRadius: '3px',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {copiedId ? <Check size={11} strokeWidth={2.5} /> : <Copy size={11} />}
-                  </button>
-                </span>
-              )}
-            </p>
-          </div>
+          <HeaderTitleBlock
+            color={headerColor}
+            icon={<DollarSign size={18} />}
+            name={timeline.name}
+            badge={t('incomeHeader.badge') || 'Inflows & Income'}
+            iconBackground="rgba(16, 185, 129, 0.12)"
+            badgeBackground="rgba(16, 185, 129, 0.12)"
+            description={timeline.description}
+            id={timeline.id}
+          />
         </div>
 
         {/* Botões de Ação */}
@@ -529,84 +438,10 @@ export default function IncomeTimelineHeader({
                   color: categoryColors[i % categoryColors.length]
                 }));
 
-                let cumulativePercent = 0;
-                const getCoordinatesForPercent = (percent) => {
-                  const x = Math.cos(2 * Math.PI * percent);
-                  const y = Math.sin(2 * Math.PI * percent);
-                  return [x, y];
-                };
-
-                const slices = items.map((slice) => {
-                  const startPercent = cumulativePercent;
-                  cumulativePercent += slice.percent / 100;
-                  const endPercent = cumulativePercent;
-
-                  const [startX, startY] = getCoordinatesForPercent(startPercent);
-                  const [endX, endY] = getCoordinatesForPercent(endPercent);
-                  const largeArcFlag = slice.percent / 100 > 0.5 ? 1 : 0;
-
-                  const pathData = [
-                    `M ${startX} ${startY}`,
-                    `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
-                    `L 0 0`
-                  ].join(' ');
-
-                  return { ...slice, pathData };
-                });
-
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                    <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
-                      <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
-                        {slices.map((s, idx) => (
-                          <path
-                            key={idx}
-                            d={s.pathData}
-                            fill={s.color}
-                            style={{ transition: 'all 0.2s ease', cursor: 'pointer' }}
-                          >
-                            <title>{`${s.name}: ${s.percent}%`}</title>
-                          </path>
-                        ))}
-                      </svg>
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          width: '46px',
-                          height: '46px',
-                          borderRadius: '50%',
-                          background: 'var(--bg-card, #0f172a)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: '1px solid var(--border-glass)',
-                          fontSize: '0.74rem',
-                          fontWeight: '800',
-                          color: 'var(--text-main)'
-                        }}
-                      >
-                        100%
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflowY: 'auto', maxHeight: '110px' }}>
-                      {items.map((item, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color, flexShrink: 0 }} />
-                            <span style={{ color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {item.name}
-                            </span>
-                          </div>
-                          <span style={{ color: 'var(--text-muted)', fontWeight: '700', marginLeft: '6px' }}>
-                            {item.percent}%
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                    <PieDonut items={items} />
+                    <DonutLegend items={items} />
                   </div>
                 );
               })()}
@@ -618,51 +453,16 @@ export default function IncomeTimelineHeader({
                 {t('incomeHeader.annualProjectionTitle') || 'ANNUAL PROJECTION'}
               </div>
               {(() => {
-                const usedFraction = Math.min(1, Math.max(0, annualAchievementPercent / 100));
-                const sliceX = Math.cos(2 * Math.PI * usedFraction);
-                const sliceY = Math.sin(2 * Math.PI * usedFraction);
-                const largeArcFlag = usedFraction > 0.5 ? 1 : 0;
-
-                const sliceColor = '#10b981';
-                const remainingColor = 'rgba(255, 255, 255, 0.08)';
-
-                const pathData = usedFraction >= 0.999
-                  ? `M 1 0 A 1 1 0 1 1 -0.999 0 L 0 0`
-                  : `M 1 0 A 1 1 0 ${largeArcFlag} 1 ${sliceX} ${sliceY} L 0 0`;
-
+                const annualProjectionTitle = t('incomeHeader.annualProjectionTitle') || 'Annual Projection';
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                    <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
-                      <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
-                        <circle cx="0" cy="0" r="1" fill={remainingColor} />
-                        {usedFraction > 0 && (
-                          <path d={pathData} fill={sliceColor} style={{ transition: 'all 0.3s ease' }}>
-                            <title>{`${t('incomeHeader.annualProjectionTitle') || 'Annual Projection'}: ${annualAchievementPercent}%`}</title>
-                          </path>
-                        )}
-                      </svg>
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          width: '46px',
-                          height: '46px',
-                          borderRadius: '50%',
-                          background: 'var(--bg-card, #0f172a)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: '1px solid var(--border-glass)',
-                          fontSize: '0.74rem',
-                          fontWeight: '800',
-                          color: sliceColor
-                        }}
-                      >
-                        {annualAchievementPercent}%
-                      </div>
-                    </div>
+                    <DonutChart
+                      percent={annualAchievementPercent}
+                      sliceColor="#10b981"
+                      remainingColor="rgba(255, 255, 255, 0.08)"
+                      title={`${annualProjectionTitle}: ${annualAchievementPercent}%`}
+                      label={`${annualAchievementPercent}%`}
+                    />
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                       <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
@@ -686,52 +486,16 @@ export default function IncomeTimelineHeader({
                 {t('incomeHeader.currentTitle') || 'ATUAL'}
               </div>
               {(() => {
-                const targetFraction = Math.min(1, Math.max(0, targetPercent / 100));
-
-                const sliceX = Math.cos(2 * Math.PI * targetFraction);
-                const sliceY = Math.sin(2 * Math.PI * targetFraction);
-                const largeArcFlag = targetFraction > 0.5 ? 1 : 0;
-
-                const sliceColor = '#10b981'; // Verde para Recebido
-                const remainingColor = 'rgba(16, 185, 129, 0.2)';
-
-                const pathData = targetFraction >= 0.999
-                  ? `M 1 0 A 1 1 0 1 1 -0.999 0 L 0 0`
-                  : `M 1 0 A 1 1 0 ${largeArcFlag} 1 ${sliceX} ${sliceY} L 0 0`;
-
+                const targetReachedLabel = t('incomeHeader.targetReached', { percent: targetPercent }) || `${targetPercent}% do target`;
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                    <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
-                      <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
-                        <circle cx="0" cy="0" r="1" fill={remainingColor} />
-                        {targetFraction > 0 && (
-                          <path d={pathData} fill={sliceColor} style={{ transition: 'all 0.3s ease' }}>
-                            <title>{`${t('incomeHeader.targetReached', { percent: targetPercent }) || `${targetPercent}% do target`}`}</title>
-                          </path>
-                        )}
-                      </svg>
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          width: '46px',
-                          height: '46px',
-                          borderRadius: '50%',
-                          background: 'var(--bg-card, #0f172a)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: '1px solid var(--border-glass)',
-                          fontSize: '0.74rem',
-                          fontWeight: '800',
-                          color: sliceColor
-                        }}
-                      >
-                        {targetPercent}%
-                      </div>
-                    </div>
+                    <DonutChart
+                      percent={targetPercent}
+                      sliceColor="#10b981"
+                      remainingColor="rgba(16, 185, 129, 0.2)"
+                      title={targetReachedLabel}
+                      label={`${targetPercent}%`}
+                    />
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                       <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -779,90 +543,26 @@ export default function IncomeTimelineHeader({
               }
             });
 
-            const currentMonthTotal = last7Months[last7Months.length - 1]?.total || 0;
-            const prevMonthTotal = last7Months[last7Months.length - 2]?.total || 0;
-            let diffPercentStr = '0,0%';
-            let isDiffPositive = true;
-
-            if (prevMonthTotal > 0) {
-              const diffPct = ((currentMonthTotal - prevMonthTotal) / prevMonthTotal) * 100;
-              isDiffPositive = diffPct >= 0;
-              diffPercentStr = `${diffPct > 0 ? '+' : ''}${diffPct.toFixed(1).replace('.', ',')}%`;
-            } else if (currentMonthTotal > 0) {
-              diffPercentStr = '+100%';
-            }
-
+            const { diffPercentStr, isDiffPositive, currentMonthTotal } = computeMonthDiff(last7Months);
             const annualProj = (currentMonthTotal > 0 ? currentMonthTotal : monthTotalIncome) * 12;
-            const maxMonthTotal = Math.max(...last7Months.map((m) => m.total), 1);
 
             return (
-              <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px', fontSize: '0.82rem', fontWeight: '700' }}>
-                  <div style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <TrendingUp size={15} style={{ color: isDiffPositive ? '#10b981' : '#f43f5e' }} />
-                    <span>{t('incomeHeader.monthVsPrevMonth') || 'This month vs previous month:'}</span>
-                    <span style={{ color: isDiffPositive ? '#10b981' : '#f43f5e', background: isDiffPositive ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)', padding: '2px 6px', borderRadius: '6px' }}>
-                      {diffPercentStr}
-                    </span>
-                  </div>
-                  <div style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Sparkles size={15} style={{ color: '#10b981' }} />
-                    <span>{t('incomeHeader.annualProjectionLabel') || 'Annual projection:'}</span>
-                    <span style={{ color: '#10b981' }}>{formatCurrency(annualProj)}</span>
-                  </div>
-                </div>
-
-                {/* Gráfico de Colunas: Volume de Entradas */}
-                <div style={{ background: 'rgba(255, 255, 255, 0.015)', border: '1px solid var(--border-glass)', borderRadius: '8px', padding: '12px 14px 10px 14px' }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.5px' }}>
-                    {t('incomeHeader.chartTitle') || 'INCOME VOLUME EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)'}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', height: '90px' }}>
-                    {last7Months.map((m, idx) => {
-                      const heightPct = Math.max(8, Math.min(100, Math.round((m.total / maxMonthTotal) * 100)));
-                      const isCurrentMonth = idx === last7Months.length - 1;
-
-                      return (
-                        <div
-                          key={`${m.key}-${idx}`}
-                          style={{
-                            flex: 1,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '6px',
-                            height: '100%',
-                            justifyContent: 'flex-end'
-                          }}
-                        >
-                          <div style={{ fontSize: '0.66rem', fontWeight: '800', color: isCurrentMonth ? '#10b981' : 'var(--text-muted)' }}>
-                            {formatCurrency(m.total).replace(',00', '')}
-                          </div>
-
-                          <div style={{ width: '100%', height: '54px', display: 'flex', alignItems: 'flex-end', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div
-                              style={{
-                                width: '100%',
-                                height: `${heightPct}%`,
-                                background: isCurrentMonth
-                                  ? 'linear-gradient(180deg, #10b981 0%, #059669 100%)'
-                                  : 'linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(16, 185, 129, 0.3) 100%)',
-                                borderRadius: '4px',
-                                transition: 'height 0.3s ease'
-                              }}
-                              title={`${m.label}: ${formatCurrency(m.total)}`}
-                            />
-                          </div>
-
-                          <div style={{ fontSize: '0.66rem', fontWeight: isCurrentMonth ? '800' : '600', color: isCurrentMonth ? '#10b981' : 'var(--text-dim)' }}>
-                            {m.label}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
+              <BarChart7Months
+                months={last7Months}
+                chartTitle={t('incomeHeader.chartTitle') || 'INCOME VOLUME EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)'}
+                monthVsPrevLabel={t('incomeHeader.monthVsPrevMonth') || 'This month vs previous month:'}
+                diffPercentStr={diffPercentStr}
+                isGoodChange={isDiffPositive}
+                goodColor="#10b981"
+                sparklesLabel={t('incomeHeader.annualProjectionLabel') || 'Annual projection:'}
+                projection={annualProj}
+                sparklesColor="#10b981"
+                projectionColor="#10b981"
+                currentGradient="linear-gradient(180deg, #10b981 0%, #059669 100%)"
+                mutedGradientTop="rgba(16, 185, 129, 0.6)"
+                mutedGradientBottom="rgba(16, 185, 129, 0.3)"
+                currentTextColor="#10b981"
+              />
             );
           })()}
         </div>

@@ -8,8 +8,6 @@ import {
   TrendingUp,
   Settings,
   Trash2,
-  Copy,
-  Check,
   Building2,
   FileText
 } from 'lucide-react';
@@ -17,6 +15,8 @@ import { format, parseISO, differenceInCalendarDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/loanCalculations';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
+import { DonutChart } from '../ui/DonutChart.jsx';
+import CopyIdButton from '../ui/CopyIdButton.jsx';
 
 export default function LoanTimelineHeader({
   timeline,
@@ -30,16 +30,6 @@ export default function LoanTimelineHeader({
 }) {
   const { t } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
-  const [copiedId, setCopiedId] = useState(false);
-
-  const handleCopyId = (e) => {
-    e.stopPropagation();
-    if (timeline?.id) {
-      navigator.clipboard.writeText(String(timeline.id));
-      setCopiedId(true);
-      setTimeout(() => setCopiedId(false), 1800);
-    }
-  };
 
   if (!timeline) return null;
 
@@ -547,25 +537,7 @@ export default function LoanTimelineHeader({
                   }}
                 >
                   <span style={{ userSelect: 'all' }}>ID: {timeline.id}</span>
-                  <button
-                    type="button"
-                    onClick={handleCopyId}
-                    title={copiedId ? 'Copiado!' : 'Copiar ID'}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      padding: '1px 2px',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: copiedId ? '#10b981' : 'var(--text-muted)',
-                      borderRadius: '3px',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {copiedId ? <Check size={11} strokeWidth={2.5} /> : <Copy size={11} />}
-                  </button>
+                  <CopyIdButton id={timeline.id} />
                 </span>
               )}
             </div>
@@ -814,55 +786,17 @@ export default function LoanTimelineHeader({
                   );
                 }
 
-                const usedFraction = Math.min(1, Math.max(0, annualCommitmentPct / 100));
-                const sliceX = Math.cos(2 * Math.PI * usedFraction);
-                const sliceY = Math.sin(2 * Math.PI * usedFraction);
-                const largeArcFlag = usedFraction > 0.5 ? 1 : 0;
-
                 const sliceColor = isInactive ? '#94a3b8' : annualCommitmentPct >= 80 ? '#f43f5e' : '#f59e0b';
-                const remainingColor = 'rgba(255, 255, 255, 0.08)';
-
-                const pathData = usedFraction >= 0.999
-                  ? `M 1 0 A 1 1 0 1 1 -0.999 0 L 0 0`
-                  : `M 1 0 A 1 1 0 ${largeArcFlag} 1 ${sliceX} ${sliceY} L 0 0`;
 
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                    {/* PieChart Donut SVG para % Anual */}
-                    <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
-                      <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
-                        {/* Fundo (Restante / Livre) */}
-                        <circle cx="0" cy="0" r="1" fill={remainingColor} />
-                        {/* Fatia Comprometida */}
-                        {usedFraction > 0 && (
-                          <path d={pathData} fill={sliceColor} style={{ transition: 'all 0.3s ease' }}>
-                            <title>{`${t('loanHeader.annualCommitmentLabel') || 'Comprometimento Anual'} ${annualCommitmentPct}%`}</title>
-                          </path>
-                        )}
-                      </svg>
-                      {/* Miolo Donut com % Anual */}
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          width: '46px',
-                          height: '46px',
-                          borderRadius: '50%',
-                          background: 'var(--bg-card, #0f172a)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: '1px solid var(--border-glass)',
-                          fontSize: '0.74rem',
-                          fontWeight: '800',
-                          color: sliceColor
-                        }}
-                      >
-                        {annualCommitmentPct}%
-                      </div>
-                    </div>
+                    <DonutChart
+                      percent={annualCommitmentPct}
+                      sliceColor={sliceColor}
+                      remainingColor="rgba(255, 255, 255, 0.08)"
+                      title={`${t('loanHeader.annualCommitmentLabel') || 'Comprometimento Anual'} ${annualCommitmentPct}%`}
+                      label={`${annualCommitmentPct}%`}
+                    />
 
                     {/* Informações Numéricas de Dívidas vs Entradas Anuais */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
@@ -957,55 +891,17 @@ export default function LoanTimelineHeader({
                   );
                 }
 
-                const usedFraction = Math.min(1, Math.max(0, progressPercent / 100));
-                const sliceX = Math.cos(2 * Math.PI * usedFraction);
-                const sliceY = Math.sin(2 * Math.PI * usedFraction);
-                const largeArcFlag = usedFraction > 0.5 ? 1 : 0;
-
                 const sliceColor = isInactive ? '#94a3b8' : textColorGreen;
-                const remainingColor = 'rgba(255, 255, 255, 0.08)';
-
-                const pathData = usedFraction >= 0.999
-                  ? `M 1 0 A 1 1 0 1 1 -0.999 0 L 0 0`
-                  : `M 1 0 A 1 1 0 ${largeArcFlag} 1 ${sliceX} ${sliceY} L 0 0`;
 
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                    {/* PieChart Donut SVG para % Amortizado */}
-                    <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
-                      <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
-                        {/* Fundo (Restante / Devido) */}
-                        <circle cx="0" cy="0" r="1" fill={remainingColor} />
-                        {/* Fatia Amortizada */}
-                        {usedFraction > 0 && (
-                          <path d={pathData} fill={sliceColor} style={{ transition: 'all 0.3s ease' }}>
-                            <title>{`${t('loanHeader.amortizedCapital') || 'Capital Amortizado'} ${progressPercent}%`}</title>
-                          </path>
-                        )}
-                      </svg>
-                      {/* Miolo Donut com % */}
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          width: '46px',
-                          height: '46px',
-                          borderRadius: '50%',
-                          background: 'var(--bg-card, #0f172a)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: '1px solid var(--border-glass)',
-                          fontSize: '0.74rem',
-                          fontWeight: '800',
-                          color: sliceColor
-                        }}
-                      >
-                        {progressPercent}%
-                      </div>
-                    </div>
+                    <DonutChart
+                      percent={progressPercent}
+                      sliceColor={sliceColor}
+                      remainingColor="rgba(255, 255, 255, 0.08)"
+                      title={`${t('loanHeader.amortizedCapital') || 'Capital Amortizado'} ${progressPercent}%`}
+                      label={`${progressPercent}%`}
+                    />
 
                     {/* Informações Numéricas de Capital Amortizado */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>

@@ -5,22 +5,19 @@ import {
   Calendar,
   Layers,
   Sparkles,
-  RotateCcw,
   Clock,
   TrendingUp,
-  PiggyBank,
-  CreditCard,
   Plus,
   ChevronDown,
   ChevronUp,
   X,
-  Settings,
-  Copy,
-  Check
+  Settings
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/loanCalculations';
+import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
+import { PieDonut } from '../ui/DonutChart.jsx';
 
 export default function BalanceTimelineHeader({
   timeline,
@@ -39,16 +36,6 @@ export default function BalanceTimelineHeader({
   const [projectionMonthsAhead, setProjectionMonthsAhead] = useState(0);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [tempComputeMonth, setTempComputeMonth] = useState('2026-08');
-  const [copiedId, setCopiedId] = useState(false);
-
-  const handleCopyId = (e) => {
-    e.stopPropagation();
-    if (timeline?.id) {
-      navigator.clipboard.writeText(String(timeline.id));
-      setCopiedId(true);
-      setTimeout(() => setCopiedId(false), 1800);
-    }
-  };
 
   if (!timeline) return null;
 
@@ -168,96 +155,16 @@ export default function BalanceTimelineHeader({
             {collapsed ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
           </button>
 
-          <div
-            style={{
-              width: '34px',
-              height: '34px',
-              borderRadius: '10px',
-              background: 'rgba(14, 165, 233, 0.12)',
-              color: headerColor,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: `1px solid ${headerColor}33`,
-              flexShrink: 0
-            }}
-          >
-            <Scale size={18} />
-          </div>
-
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h1 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                {timeline.name}
-              </h1>
-              <span
-                style={{
-                  fontSize: '0.68rem',
-                  fontWeight: '700',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  background: 'rgba(14, 165, 233, 0.12)',
-                  color: headerColor,
-                  border: `1px solid ${headerColor}44`,
-                  textTransform: 'uppercase'
-                }}
-              >
-                Balanço Consolidado
-              </span>
-            </div>
-            <p
-              style={{
-                margin: '2px 0 0',
-                fontSize: '0.78rem',
-                color: 'var(--text-muted)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                flexWrap: 'wrap'
-              }}
-            >
-              {timeline.description && (
-                <span>{timeline.description}</span>
-              )}
-              {timeline.id && (
-                <span
-                  style={{
-                    fontSize: '0.68rem',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    background: 'rgba(255, 255, 255, 0.06)',
-                    border: '1px solid var(--border-glass)',
-                    color: 'var(--text-dim)',
-                    fontFamily: 'monospace',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <span style={{ userSelect: 'all' }}>ID: {timeline.id}</span>
-                  <button
-                    type="button"
-                    onClick={handleCopyId}
-                    title={copiedId ? 'Copiado!' : 'Copiar ID'}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      padding: '1px 2px',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: copiedId ? '#10b981' : 'var(--text-muted)',
-                      borderRadius: '3px',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {copiedId ? <Check size={11} strokeWidth={2.5} /> : <Copy size={11} />}
-                  </button>
-                </span>
-              )}
-            </p>
-          </div>
+          <HeaderTitleBlock
+            color={headerColor}
+            icon={<Scale size={18} />}
+            name={timeline.name}
+            badge="Balanço Consolidado"
+            iconBackground="rgba(14, 165, 233, 0.12)"
+            badgeBackground="rgba(14, 165, 233, 0.12)"
+            description={timeline.description}
+            id={timeline.id}
+          />
         </div>
 
         {/* Botões de Ação */}
@@ -556,37 +463,15 @@ export default function BalanceTimelineHeader({
                   { label: 'Disponível', pct: freePct, amount: Math.max(0, annualIncome - annualExpense - annualInvestment - annualLoan), color: '#10b981' }
                 ].filter((s) => s.pct > 0);
 
-                let cumPct = 0;
-                const slices = segments.map((seg) => {
-                  const start = cumPct;
-                  cumPct += seg.pct / 100;
-                  const end = cumPct;
-                  const sx = Math.cos(2 * Math.PI * start);
-                  const sy2 = Math.sin(2 * Math.PI * start);
-                  const ex = Math.cos(2 * Math.PI * end);
-                  const ey2 = Math.sin(2 * Math.PI * end);
-                  const large = seg.pct / 100 > 0.5 ? 1 : 0;
-                  const path = seg.pct >= 99.9
-                    ? `M 1 0 A 1 1 0 1 1 -0.999 0 L 0 0`
-                    : `M ${sx} ${sy2} A 1 1 0 ${large} 1 ${ex} ${ey2} L 0 0`;
-                  return { ...seg, path };
-                });
-
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                      <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
-                        <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
-                          {slices.map((s, i) => (
-                            <path key={i} d={s.path} fill={s.color} style={{ transition: 'all 0.2s ease' }}>
-                              <title>{`${s.label}: ${s.pct}% (${formatCurrency(s.amount)})`}</title>
-                            </path>
-                          ))}
-                        </svg>
-                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '46px', height: '46px', borderRadius: '50%', background: 'var(--bg-card, #0f172a)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-glass)', fontSize: '0.74rem', fontWeight: '800', color: totalCommitted > 85 ? '#f43f5e' : '#0ea5e9' }}>
-                          {totalCommitted}%
-                        </div>
-                      </div>
+                      <PieDonut
+                        items={segments}
+                        centerColor={totalCommitted > 85 ? '#f43f5e' : '#0ea5e9'}
+                        centerLabel={`${totalCommitted}%`}
+                        centerFontSize="0.74rem"
+                      />
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
                         {segments.filter(s => s.label !== 'Disponível').map((seg, i) => (
@@ -682,31 +567,6 @@ export default function BalanceTimelineHeader({
                   percent: i.percent ?? (totalDebtSum > 0 ? Math.round((i.amount / totalDebtSum) * 100) : 0)
                 }));
 
-                let cumulativePercent = 0;
-                const getCoordinatesForPercent = (percent) => {
-                  const x = Math.cos(2 * Math.PI * percent);
-                  const y = Math.sin(2 * Math.PI * percent);
-                  return [x, y];
-                };
-
-                const slices = itemsWithPct.map((slice) => {
-                  const startPercent = cumulativePercent;
-                  cumulativePercent += slice.percent / 100;
-                  const endPercent = cumulativePercent;
-
-                  const [startX, startY] = getCoordinatesForPercent(startPercent);
-                  const [endX, endY] = getCoordinatesForPercent(endPercent);
-                  const largeArcFlag = slice.percent / 100 > 0.5 ? 1 : 0;
-
-                  const pathData = [
-                    `M ${startX} ${startY}`,
-                    `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
-                    `L 0 0`
-                  ].join(' ');
-
-                  return { ...slice, pathData };
-                });
-
                 const totalAmortizedVal = activeLoanTimelines.length > 0 ? computedActiveAmortized : (finMetrics.totalAmortized ?? 0);
                 const totalRemainingDebtVal = activeLoanTimelines.length > 0 ? computedActiveRemainingDebt : (finMetrics.totalRemainingDebt ?? 0);
                 const totalRealCostVal = activeLoanTimelines.length > 0
@@ -716,41 +576,7 @@ export default function BalanceTimelineHeader({
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                      <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
-                        <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}>
-                          {slices.map((s, idx) => (
-                            <path
-                              key={idx}
-                              d={s.pathData}
-                              fill={s.color}
-                              style={{ transition: 'all 0.2s ease', cursor: 'pointer' }}
-                            >
-                              <title>{`${s.name}: ${s.percent}% (${formatCurrency(s.amount)})`}</title>
-                            </path>
-                          ))}
-                        </svg>
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            width: '46px',
-                            height: '46px',
-                            borderRadius: '50%',
-                            background: 'var(--bg-card, #0f172a)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            border: '1px solid var(--border-glass)',
-                            fontSize: '0.64rem',
-                            fontWeight: '800',
-                            color: '#0ea5e9'
-                          }}
-                        >
-                          100%
-                        </div>
-                      </div>
+                      <PieDonut items={itemsWithPct} centerFontSize="0.64rem" centerColor="#0ea5e9" />
 
                       {/* Lista com percentagem de cada financiamento */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, maxHeight: '90px', overflowY: 'auto' }}>

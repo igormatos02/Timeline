@@ -157,6 +157,8 @@ export default function BalanceTimelineHeader({
   let calculatedIncome = 0;
   let calculatedExpenses = 0;
   let calculatedInvestments = 0;
+  let calculatedLoanPaid = 0;
+  let calculatedLoanDue = 0;
 
   eventsList.forEach((ev) => {
     if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
@@ -166,9 +168,6 @@ export default function BalanceTimelineHeader({
     const isUpToCurrentMonth = eventMonthStr <= currentMonthStr;
 
     if (!isAfterStart || !isUpToCurrentMonth) return;
-
-    const isRealized = isPositiveStatus(ev.status) || isPositiveStatus(ev.status?.toLowerCase()) || Boolean(ev.isCompleted);
-    if (!isRealized) return;
 
     const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timeline_id || ''));
 
@@ -195,6 +194,19 @@ export default function BalanceTimelineHeader({
 
     if (amt <= 0) return;
 
+    const isRealized = isPositiveStatus(ev.status) || isPositiveStatus(ev.status?.toLowerCase()) || Boolean(ev.isCompleted);
+
+    if (isLoan) {
+      if (isRealized) {
+        calculatedLoanPaid += amt;
+      } else {
+        calculatedLoanDue += amt;
+      }
+      return;
+    }
+
+    if (!isRealized) return;
+
     const isIncome = (
       ev.eventType === EventType.INCOME ||
       ev.eventType === 'income' ||
@@ -202,7 +214,7 @@ export default function BalanceTimelineHeader({
       ev.category === 'entrada_recorrente' ||
       ev.category === IncomeEventCategory.RECURRING_INCOME ||
       Boolean(ev.isIncome)
-    ) && !isLoan;
+    );
 
     const isInvestment = (
       ev.eventType === EventType.INVESTMENT ||
@@ -210,7 +222,7 @@ export default function BalanceTimelineHeader({
       ev.eventType === 'investimento' ||
       tlType === TimelineType.INVESTMENT ||
       Boolean(ev.isInvestment)
-    ) && !isLoan;
+    );
 
     const isExpense = (
       ev.eventType === EventType.EXPENSE ||
@@ -218,8 +230,7 @@ export default function BalanceTimelineHeader({
       tlType === TimelineType.EXPENSE ||
       ev.category === 'saida_recorrente' ||
       ev.category === ExpenseEventCategory.RECURRING_EXPENSE ||
-      Boolean(ev.isExpense) ||
-      isLoan
+      Boolean(ev.isExpense)
     ) && !isIncome && !isInvestment;
 
     if (isIncome) {
@@ -240,11 +251,12 @@ export default function BalanceTimelineHeader({
   const computedRemainingDebt = activeLoanTimelinesSum > 0 ? activeLoanTimelinesSum : rawRemainingDebt;
 
   const totalReceived = calculatedIncome;
-  const totalPaidExpenses = calculatedExpenses;
+  const totalPaidExpenses = calculatedExpenses + calculatedLoanPaid;
   const totalInvested = calculatedInvestments;
+  const totalPeriodDueDebt = calculatedLoanDue;
   const totalRemainingDebt = computedRemainingDebt;
-  // Fórmula: Entradas - Saídas - Dívidas - Investimentos (que não sejam depósitos externos)
-  const netRealized = totalReceived - totalPaidExpenses - (hasLoanTimeline ? totalRemainingDebt : 0) - totalInvested;
+  // Saldo Líquido do período: Entradas Realizadas - Saídas Realizadas (incluindo parcelas pagas) - Investimentos Realizados
+  const netRealized = totalReceived - totalPaidExpenses - totalInvested;
 
   const finMetrics = {
     ...rawMetrics,
@@ -252,6 +264,8 @@ export default function BalanceTimelineHeader({
     totalReceived,
     totalPaidExpenses,
     totalInvested,
+    totalPeriodDueDebt,
+    totalLoanPaid: calculatedLoanPaid,
     totalRemainingDebt: computedRemainingDebt,
     totalAmortized: rawMetrics.total_amortized ?? rawMetrics.totalAmortized ?? 0,
     totalLoanDebt: rawMetrics.total_loan_debt ?? rawMetrics.totalLoanDebt ?? 0,
@@ -457,10 +471,10 @@ export default function BalanceTimelineHeader({
                             <strong style={{ color: '#6366f1' }}>-{formatCurrency(totalInvested).replace(',00', '')}</strong>
                           </div>
                         )}
-                        {(hasLoanTimeline && totalRemainingDebt > 0) && (
+                        {(hasLoanTimeline && totalPeriodDueDebt > 0) && (
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
                             <span style={{ color: 'var(--text-dim)' }}>Devido:</span>
-                            <strong style={{ color: '#f59e0b' }}>{formatCurrency(totalRemainingDebt).replace(',00', '')}</strong>
+                            <strong style={{ color: '#f59e0b' }}>{formatCurrency(totalPeriodDueDebt).replace(',00', '')}</strong>
                           </div>
                         )}
                       </div>

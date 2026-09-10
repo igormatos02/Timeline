@@ -222,8 +222,20 @@ export const translations = {
       settledAt: "Liquidado"
     },
 
+    // Recurrence
+    recurrence: {
+      once: "One-time",
+      recurring: "Recurring",
+      limited: "Period"
+    },
+
     // Periodicities
     periodicity: {
+      monthly: "Monthly",
+      biweekly: "Biweekly",
+      bimonthly: "Bimonthly",
+      biannual: "Semiannual",
+      annual: "Annual",
       recurring: "Recurring",
       once: "One-time",
       period: "Period"
@@ -1020,8 +1032,20 @@ export const translations = {
       settledAt: "Liquidado"
     },
 
+    // Recurrence
+    recurrence: {
+      once: "Única",
+      recurring: "Recorrente",
+      limited: "Período"
+    },
+
     // Periodicities
     periodicity: {
+      monthly: "Mensal",
+      biweekly: "Quinzenal",
+      bimonthly: "Bimestral",
+      biannual: "Semestral",
+      annual: "Anual",
       recurring: "Recorrente",
       once: "Único",
       period: "Período"

@@ -3,7 +3,7 @@ import { X, Sparkles, FolderPlus, Edit2, CreditCard, DollarSign, Calendar, Shiel
 import { format, parseISO, setMonth, setYear } from 'date-fns';
 import { generateLoanInstallments } from '../utils/loanCalculations';
 import { formatCurrency } from '../utils/formatCurrency';
-import { TimelineType, TimelineStatus, EventPeriodicity, EventAggregation, isLoanTimelineType } from '../enums/index.js';
+import { TimelineType, TimelineStatus, EventPeriodicity, isLoanTimelineType } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 export default function CreateTimelineModal({
@@ -32,7 +32,7 @@ export default function CreateTimelineModal({
     color: '#6366f1',
     totalDebt: '',
     installmentAmount: '',
-    periodicity: EventAggregation.MONTHLY,
+    periodicity: EventPeriodicity.MONTHLY,
     dueDay: '10',
     contractNumber: '',
     bankName: '',
@@ -75,7 +75,7 @@ export default function CreateTimelineModal({
         color: initialData.color || '#6366f1',
         totalDebt: getVal('totalDebt', 'originalCapital', 'original_capital'),
         installmentAmount: getVal('installmentAmount', 'installment_amount'),
-        periodicity: initialData.periodicity || initialData.aggregation || EventAggregation.MONTHLY,
+        periodicity: initialData.periodicity || initialData.aggregation || EventPeriodicity.MONTHLY,
         dueDay: getVal('dueDay', 'due_day') || '10',
         contractNumber: getVal('contractNumber', 'contract_number'),
         bankName: getVal('bankName', 'bank_name'),
@@ -96,7 +96,7 @@ export default function CreateTimelineModal({
         color: '#6366f1',
         totalDebt: '',
         installmentAmount: '',
-        periodicity: EventAggregation.MONTHLY,
+        periodicity: EventPeriodicity.MONTHLY,
         dueDay: '10',
         contractNumber: '',
         bankName: '',
@@ -147,8 +147,8 @@ export default function CreateTimelineModal({
       interestStampTaxRate: parseFloat(formData.interestStampTaxRate) || 0,
       taxaImpostoSeloJuros: parseFloat(formData.interestStampTaxRate) || 0,
       type: TimelineType.LOAN,
-      aggregation: formData.aggregation || formData.periodicity || EventAggregation.MONTHLY,
-      periodicity: formData.aggregation || formData.periodicity || EventAggregation.MONTHLY,
+      aggregation: formData.aggregation || formData.periodicity || EventPeriodicity.MONTHLY,
+      periodicity: formData.aggregation || formData.periodicity || EventPeriodicity.MONTHLY,
       status: isInactive ? TimelineStatus.INACTIVE : TimelineStatus.ACTIVE
     };
 
@@ -161,7 +161,7 @@ export default function CreateTimelineModal({
         interestStampTaxRate: finalData.interestStampTaxRate,
         startDate: fullStartDate,
         dueDay: dueDayNum,
-        periodicity: EventAggregation.MONTHLY
+        periodicity: EventPeriodicity.MONTHLY
       });
       finalData.events = generatedEvents;
       if (generatedEvents.length > 0) {
@@ -210,7 +210,7 @@ export default function CreateTimelineModal({
         interestStampTaxRate: parseFloat(formData.interestStampTaxRate || formData.taxaImpostoSeloJuros || formData.installmentStampTax) || 0,
         startDate: fullStartDate,
         dueDay: dueDayNum,
-        periodicity: EventAggregation.MONTHLY
+        periodicity: EventPeriodicity.MONTHLY
       });
 
       setSimulationEvents(events);

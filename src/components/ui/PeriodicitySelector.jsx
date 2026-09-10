@@ -1,14 +1,21 @@
 import React from 'react';
-import { Repeat, Zap, Calendar } from 'lucide-react';
+import { EventPeriodicity } from '../../enums/index.js';
 
 export default function PeriodicitySelector({
-  value, onChange, accent = '#10b981', t,
-  options, layout = 'column', disabled = false
+  value = EventPeriodicity.MONTHLY,
+  onChange,
+  accent = '#10b981',
+  t,
+  options,
+  disabled = false,
+  label
 }) {
   const defaultOptions = [
-    { id: 'recurring', label: t('modal.recurrent') || 'Recorrente', icon: <Repeat size={14} /> },
-    { id: 'once', label: t('modal.unique') || 'Única', icon: <Zap size={14} /> },
-    { id: 'period', label: t('modal.period') || 'Período', icon: <Calendar size={14} /> }
+    { id: EventPeriodicity.MONTHLY, label: t('periodicity.monthly') || 'Mensal' },
+    { id: EventPeriodicity.BIWEEKLY, label: t('periodicity.biweekly') || 'Quinzenal' },
+    { id: EventPeriodicity.BIMONTHLY, label: t('periodicity.bimonthly') || 'Bimestral' },
+    { id: EventPeriodicity.SEMIANNUAL, label: t('periodicity.biannual') || 'Semestral' },
+    { id: EventPeriodicity.ANNUAL, label: t('periodicity.annual') || 'Anual' }
   ];
 
   const items = options || defaultOptions;
@@ -18,34 +25,42 @@ export default function PeriodicitySelector({
   return (
     <div style={{ marginBottom: '14px' }}>
       <label style={{
-        display: 'block', fontSize: '0.78rem', fontWeight: '700',
-        marginBottom: '6px', color: 'var(--text-main)'
+        display: 'block',
+        fontSize: '0.78rem',
+        fontWeight: '700',
+        marginBottom: '6px',
+        color: 'var(--text-main)'
       }}>
-        {t('modal.periodicity') || 'Periodicidade'}
+        {label || t('modal.periodicity') || 'Periodicidade'}
       </label>
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px'
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '6px'
       }}>
         {items.map((p) => {
           const isSelected = value === p.id;
           return (
-            <button key={p.id} type="button"
+            <button
+              key={p.id}
+              type="button"
               onClick={() => onChange(p.id)}
               style={{
-                display: 'flex', flexDirection: layout,
-                alignItems: 'center', justifyContent: 'center',
-                gap: layout === 'column' ? '4px' : '5px',
-                padding: layout === 'column' ? '10px 8px' : '8px',
+                flex: '1 1 auto',
+                minWidth: '70px',
+                padding: '7px 10px',
                 borderRadius: '8px',
                 border: isSelected ? `2px solid ${accent}` : '1px solid var(--border-glass)',
-                background: isSelected ? `${accent}2e` : 'var(--bg-glass, rgba(255,255,255,0.03))',
+                background: isSelected ? `${accent}25` : 'var(--bg-glass, rgba(255,255,255,0.03))',
                 color: isSelected ? accent : 'var(--text-muted)',
-                fontSize: layout === 'column' ? '0.8rem' : '0.78rem',
+                fontSize: '0.78rem',
                 fontWeight: isSelected ? '800' : '600',
-                cursor: 'pointer', transition: 'all 0.15s ease'
-              }}>
-              {p.icon}
-              <span>{p.label}</span>
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {p.label}
             </button>
           );
         })}

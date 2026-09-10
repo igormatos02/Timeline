@@ -15,7 +15,7 @@ import {
   EventStatus,
   LoanEventCategory,
   EventPriority,
-  EventAggregation,
+  EventPeriodicity,
   TimelineType,
   isPositiveStatus,
   isCancelledStatus,
@@ -34,20 +34,26 @@ function todayISO() {
 
 /** Returns the number of periods per year for a given periodicity. */
 function periodsPerYear(periodicity) {
-  switch ((periodicity || EventAggregation.MONTHLY).toLowerCase()) {
-    case EventAggregation.DAILY:
+  switch ((periodicity || EventPeriodicity.MONTHLY).toLowerCase()) {
+    case 'daily':
       return 365;
 
-    case EventAggregation.BIWEEKLY:
+    case EventPeriodicity.BIWEEKLY:
+    case 'biweekly':
       return 26;
 
-    case EventAggregation.BIMONTHLY:
+    case EventPeriodicity.BIMONTHLY:
+    case 'bimonthly':
+    case 'bimounthly':
       return 6;
 
-    case EventAggregation.SEMIANNUAL:
+    case EventPeriodicity.SEMIANNUAL:
+    case 'biannual':
+    case 'semiannual':
       return 2;
 
-    case EventAggregation.ANNUAL:
+    case EventPeriodicity.ANNUAL:
+    case 'annual':
       return 1;
 
     default:
@@ -57,14 +63,16 @@ function periodsPerYear(periodicity) {
 
 /** Returns the timeline grouping key. */
 export function getGroupingForPeriodicity(periodicity) {
-  switch ((periodicity || EventAggregation.MONTHLY).toLowerCase()) {
-    case EventAggregation.DAILY:
+  switch ((periodicity || EventPeriodicity.MONTHLY).toLowerCase()) {
+    case 'daily':
       return 'dia';
 
-    case EventAggregation.BIWEEKLY:
+    case EventPeriodicity.BIWEEKLY:
+    case 'biweekly':
       return 'semana';
 
-    case EventAggregation.ANNUAL:
+    case EventPeriodicity.ANNUAL:
+    case 'annual':
       return 'ano';
 
     default:
@@ -74,23 +82,30 @@ export function getGroupingForPeriodicity(periodicity) {
 
 /** Returns a human-readable label for a periodicity. */
 export function getPeriodicityLabel(periodicity) {
-  switch ((periodicity || EventAggregation.MONTHLY).toLowerCase()) {
-    case EventAggregation.DAILY:
+  switch ((periodicity || EventPeriodicity.MONTHLY).toLowerCase()) {
+    case 'daily':
       return 'Daily';
 
-    case EventAggregation.BIWEEKLY:
+    case EventPeriodicity.BIWEEKLY:
+    case 'biweekly':
       return 'Biweekly';
 
-    case EventAggregation.MONTHLY:
+    case EventPeriodicity.MONTHLY:
+    case 'monthly':
       return 'Monthly';
 
-    case EventAggregation.BIMONTHLY:
+    case EventPeriodicity.BIMONTHLY:
+    case 'bimonthly':
+    case 'bimounthly':
       return 'Bimonthly';
 
-    case EventAggregation.SEMIANNUAL:
+    case EventPeriodicity.SEMIANNUAL:
+    case 'biannual':
+    case 'semiannual':
       return 'Semiannual';
 
-    case EventAggregation.ANNUAL:
+    case EventPeriodicity.ANNUAL:
+    case 'annual':
       return 'Yearly';
 
     default:
@@ -229,14 +244,17 @@ function computeDueDate(
   periodicity,
   preferredDueDay
 ) {
-  switch (periodicity.toLowerCase()) {
-    case EventAggregation.DAILY:
+  const p = (periodicity || EventPeriodicity.MONTHLY).toLowerCase();
+  switch (p) {
+    case 'daily':
       return addDays(baseDate, k - 1);
 
-    case EventAggregation.BIWEEKLY:
+    case EventPeriodicity.BIWEEKLY:
+    case 'biweekly':
       return addWeeks(baseDate, (k - 1) * 2);
 
-    case EventAggregation.ANNUAL:
+    case EventPeriodicity.ANNUAL:
+    case 'annual':
       return addYears(baseDate, k - 1);
 
     default: {
@@ -276,7 +294,7 @@ export function generateLoanInstallments({
   startDate,
   debtStartDate,
   dueDay,
-  periodicity = EventAggregation.MONTHLY
+  periodicity = EventPeriodicity.MONTHLY
 }) {
   const pv = Number(
     totalAmountFinanced ?? totalDebt ?? 0
@@ -289,7 +307,7 @@ export function generateLoanInstallments({
     ) || 1;
 
   const pLower = (
-    periodicity || EventAggregation.MONTHLY
+    periodicity || EventPeriodicity.MONTHLY
   ).toLowerCase();
 
   const tan =

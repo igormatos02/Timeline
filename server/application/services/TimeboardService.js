@@ -8,8 +8,7 @@ import { financialEventStatusRepository } from '../../infrastructure/database/su
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
 import { userRepository } from '../../infrastructure/database/supabase/SupabaseUserRepository.js';
 import { emailService } from './EmailService.js';
-import { getAppUrl } from '../../../shared/config/appConfig.js';
-import { TimeboardType, TimelineType, TimelineStatus, EventAggregation, InvitationStatus } from '../../../shared/enums/index.js';
+import { TimeboardType, TimelineType, TimelineStatus, EventPeriodicity, InvitationStatus } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -268,7 +267,7 @@ export class TimeboardService {
           isSystemDefault: true,
           canDelete: false,
           status: TimelineStatus.ACTIVE,
-          periodicity: EventAggregation.MONTHLY,
+          periodicity: EventPeriodicity.MONTHLY,
           startDate: '2026-01-01',
           endDate: '2027-04-30',
           tenantId: defaultTenantId
@@ -282,7 +281,7 @@ export class TimeboardService {
           isSystemDefault: false,
           canDelete: true,
           status: TimelineStatus.ACTIVE,
-          periodicity: EventAggregation.MONTHLY,
+          periodicity: EventPeriodicity.MONTHLY,
           startDate: '2026-01-01',
           endDate: '2027-04-30',
           tenantId: defaultTenantId
@@ -296,7 +295,7 @@ export class TimeboardService {
           isSystemDefault: false,
           canDelete: true,
           status: TimelineStatus.ACTIVE,
-          periodicity: EventAggregation.MONTHLY,
+          periodicity: EventPeriodicity.MONTHLY,
           startDate: '2026-01-01',
           endDate: '2027-04-30',
           tenantId: defaultTenantId
@@ -310,7 +309,7 @@ export class TimeboardService {
           isSystemDefault: false,
           canDelete: true,
           status: TimelineStatus.ACTIVE,
-          periodicity: EventAggregation.MONTHLY,
+          periodicity: EventPeriodicity.MONTHLY,
           startDate: '2026-01-01',
           endDate: '2027-04-30',
           tenantId: defaultTenantId
@@ -327,7 +326,7 @@ export class TimeboardService {
           isSystemDefault: true,
           canDelete: false,
           status: TimelineStatus.ACTIVE,
-          periodicity: EventAggregation.MONTHLY,
+          periodicity: EventPeriodicity.MONTHLY,
           startDate: '2026-01-01',
           endDate: '2027-04-30',
           tenantId: defaultTenantId
@@ -344,7 +343,7 @@ export class TimeboardService {
           isSystemDefault: true,
           canDelete: false,
           status: TimelineStatus.ACTIVE,
-          periodicity: EventAggregation.MONTHLY,
+          periodicity: EventPeriodicity.MONTHLY,
           startDate: '2026-01-01',
           endDate: '2027-04-30',
           tenantId: defaultTenantId

@@ -1,4 +1,4 @@
-import { EventType, EventStatus, EventPriority, EventAggregation, LoanEventCategory, isPositiveStatus } from '../../../shared/enums/index.js';
+import { EventType, EventStatus, EventPriority, EventPeriodicity, EventRecurrence, LoanEventCategory, isPositiveStatus } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -31,6 +31,9 @@ export class TimelineEvent {
     category = LoanEventCategory.LOAN_INSTALLMENT,
     eventType = EventType.EXPENSE,
     event_type,
+    recurrence = null,
+    periodicity = null,
+    aggregation = null,
     recurrenceEndDate = null,
     endDate = null,
     dueDate = null,
@@ -47,7 +50,6 @@ export class TimelineEvent {
     installment_interest,
     installmentFee,
     installment_fee,
-    aggregation = EventAggregation.MONTHLY,
     amount = 0,
     principalAmount,
     interestPortion,
@@ -109,7 +111,35 @@ export class TimelineEvent {
     this.category = category;
     this.eventType = event_type || eventType;
 
-    this.aggregation = aggregation || EventAggregation.MONTHLY;
+    // Periodicity & Recurrence mapping
+    const rawPeriodicity = periodicity || aggregation;
+    let mappedPeriodicity = EventPeriodicity.MONTHLY;
+    if (rawPeriodicity && Object.values(EventPeriodicity).includes(rawPeriodicity)) {
+      mappedPeriodicity = rawPeriodicity;
+    } else if (rawPeriodicity === 'mensal' || rawPeriodicity === 'monthly') {
+      mappedPeriodicity = EventPeriodicity.MONTHLY;
+    } else if (rawPeriodicity === 'quinzenal' || rawPeriodicity === 'biweekly') {
+      mappedPeriodicity = EventPeriodicity.BIWEEKLY;
+    } else if (rawPeriodicity === 'bimestral' || rawPeriodicity === 'bimonthly' || rawPeriodicity === 'bimounthly') {
+      mappedPeriodicity = EventPeriodicity.BIMONTHLY;
+    } else if (rawPeriodicity === 'semestral' || rawPeriodicity === 'biannual' || rawPeriodicity === 'semiannual') {
+      mappedPeriodicity = EventPeriodicity.SEMIANNUAL;
+    } else if (rawPeriodicity === 'anual' || rawPeriodicity === 'annual') {
+      mappedPeriodicity = EventPeriodicity.ANNUAL;
+    }
+    this.periodicity = mappedPeriodicity;
+    this.aggregation = this.periodicity;
+
+    let mappedRecurrence = EventRecurrence.ONCE;
+    if (recurrence && Object.values(EventRecurrence).includes(recurrence)) {
+      mappedRecurrence = recurrence;
+    } else if (rawPeriodicity === 'recorrente' || rawPeriodicity === 'recurring' || Boolean(is_recurring !== undefined ? is_recurring : isRecurring)) {
+      mappedRecurrence = EventRecurrence.RECURRING;
+    } else if (rawPeriodicity === 'period' || rawPeriodicity === 'periodo' || rawPeriodicity === 'limited' || recurrenceEndDate || endDate) {
+      mappedRecurrence = EventRecurrence.LIMITED;
+    }
+    this.recurrence = mappedRecurrence;
+    this.isRecurring = this.recurrence === EventRecurrence.RECURRING || this.recurrence === EventRecurrence.LIMITED;
 
     this.recurrenceEndDate = recurrenceEndDate || endDate || null;
     this.endDate = this.recurrenceEndDate;

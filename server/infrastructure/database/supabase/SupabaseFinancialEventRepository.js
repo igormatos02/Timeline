@@ -1,7 +1,7 @@
 import { IRepository } from '../../../domain/repositories/IRepository.js';
 import { TimelineEvent } from '../../../domain/entities/TimelineEvent.js';
 import { supabase } from './supabaseClient.js';
-import { EventType, EventStatus, AmortizationEventCategory, AmortizationStrategy } from '../../../../shared/enums/index.js';
+import { EventType, EventStatus, EventPeriodicity, EventRecurrence, AmortizationEventCategory, AmortizationStrategy } from '../../../../shared/enums/index.js';
 
 /**
  * Infrastructure Adapter: SupabaseFinancialEventRepository
@@ -72,7 +72,19 @@ export class SupabaseFinancialEventRepository extends IRepository {
           ? Number(row.installment_fee)
           : null,
 
-      aggregation: row.aggregation || 'monthly',
+      recurrence:
+        row.recurrence ||
+        (row.is_recurring ? EventRecurrence.RECURRING : EventRecurrence.ONCE),
+
+      periodicity:
+        row.periodicity ||
+        row.aggregation ||
+        EventPeriodicity.MONTHLY,
+
+      aggregation:
+        row.periodicity ||
+        row.aggregation ||
+        EventPeriodicity.MONTHLY,
 
       date: row.date,
       dueDate: row.due_date,
@@ -88,13 +100,12 @@ export class SupabaseFinancialEventRepository extends IRepository {
       automatic: row.automatic,
       isAutomatic: row.automatic,
 
-      isRecurring: row.is_recurring,
+      isRecurring:
+        row.recurrence === EventRecurrence.RECURRING ||
+        row.recurrence === EventRecurrence.LIMITED ||
+        Boolean(row.is_recurring),
       isExternal: Boolean(row.is_external),
       is_external: Boolean(row.is_external),
-
-      periodicity:
-        row.aggregation ||
-        (row.is_recurring ? 'recorrente' : 'unica'),
 
       eventId: row.event_id || null,
 
@@ -379,12 +390,14 @@ export class SupabaseFinancialEventRepository extends IRepository {
           ? Number(data.amortizationAmount)
           : null,
 
-      //status: data.status || EventStatus.PENDING,
+      recurrence:
+        data.recurrence ||
+        (data.isRecurring ? EventRecurrence.RECURRING : EventRecurrence.ONCE),
 
-      aggregation:
-        data.aggregation ||
+      periodicity:
         data.periodicity ||
-        'monthly',
+        data.aggregation ||
+        EventPeriodicity.MONTHLY,
 
       date: data.date,
 
@@ -403,13 +416,6 @@ export class SupabaseFinancialEventRepository extends IRepository {
           data.automatic !== undefined
             ? data.automatic
             : data.isAutomatic
-        ),
-
-      is_recurring:
-        Boolean(
-          data.isRecurring !== undefined
-            ? data.isRecurring
-            : false
         ),
 
       is_external:
@@ -617,12 +623,16 @@ export class SupabaseFinancialEventRepository extends IRepository {
           : null;
     }
 
-    if (data.aggregation !== undefined) {
-      row.aggregation = data.aggregation;
+    if (data.recurrence !== undefined) {
+      row.recurrence = data.recurrence;
+    } else if (data.isRecurring !== undefined) {
+      row.recurrence = data.isRecurring ? EventRecurrence.RECURRING : EventRecurrence.ONCE;
     }
 
-    if (data.periodicity !== undefined && row.aggregation === undefined) {
-      row.aggregation = data.periodicity;
+    if (data.periodicity !== undefined) {
+      row.periodicity = data.periodicity;
+    } else if (data.aggregation !== undefined) {
+      row.periodicity = data.aggregation;
     }
 
     if (data.date !== undefined) {
@@ -643,10 +653,6 @@ export class SupabaseFinancialEventRepository extends IRepository {
 
     if (data.isAutomatic !== undefined) {
       row.automatic = Boolean(data.isAutomatic);
-    }
-
-    if (data.isRecurring !== undefined) {
-      row.is_recurring = Boolean(data.isRecurring);
     }
 
     if (data.isExternal !== undefined || data.is_external !== undefined) {

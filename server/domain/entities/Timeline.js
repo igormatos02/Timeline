@@ -1,4 +1,4 @@
-import { TimelineType, TimelineStatus, EventAggregation } from '../../../shared/enums/index.js';
+import { TimelineType, TimelineStatus, EventPeriodicity } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -21,8 +21,8 @@ export class Timeline {
     startDate = null,
     endDate = null,
     status = TimelineStatus.ACTIVE,
-    aggregation = EventAggregation.MONTHLY,
-    periodicity = null,
+    periodicity = EventPeriodicity.MONTHLY,
+    aggregation = null,
     monthlySalary = 0,
     contractNumber = '',
     totalDebt = 0,
@@ -46,8 +46,8 @@ export class Timeline {
     this.startDate = startDate;
     this.endDate = endDate;
     this.status = status;
-    this.aggregation = aggregation || periodicity || EventAggregation.MONTHLY;
-    this.periodicity = this.aggregation;
+    this.periodicity = periodicity || aggregation || EventPeriodicity.MONTHLY;
+    this.aggregation = this.periodicity;
     this.monthlySalary = Number(monthlySalary) || 0;
     this.contractNumber = contractNumber;
     this.totalDebt = Number(totalDebt) || 0;

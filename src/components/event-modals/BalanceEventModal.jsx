@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Scale, DollarSign, ShoppingCart, PiggyBank, Repeat, Zap, Calendar } from 'lucide-react';
+import { Scale, DollarSign, ShoppingCart, PiggyBank } from 'lucide-react';
 import { format, parseISO, addMonths } from 'date-fns';
-import { TimelineType, EventStatus, EventPeriodicity, EventType } from '../../enums/index.js';
+import { TimelineType, EventStatus, EventRecurrence, EventPeriodicity, EventType } from '../../enums/index.js';
+import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { useModalEscape } from '../../hooks/useModalEscape.js';
 import ModalShell from '../ui/ModalShell.jsx';
 import EuroInput from '../ui/EuroInput.jsx';
+import RecurrenceSelector from '../ui/RecurrenceSelector.jsx';
+import PeriodicitySelector from '../ui/PeriodicitySelector.jsx';
+import MonthPickerPopover from '../ui/MonthPickerPopover.jsx';
 import ObligationSelector from '../ObligationSelector.jsx';
 
 const MOVEMENT_TYPES = [
@@ -17,17 +21,25 @@ export default function BalanceEventModal({
   isOpen, onClose, onSave, initialData, defaultDate, timeline,
   allTimelines = [], timeboardId
 }) {
+  const { t, dateLocale } = useTranslation();
   const [movementType, setMovementType] = useState('entrada');
   const [targetTimelineId, setTargetTimelineId] = useState('');
   const [obligationError, setObligationError] = useState(false);
+  const [isEndMonthPickerOpen, setIsEndMonthPickerOpen] = useState(false);
+  const [endMonthPickerYear, setEndMonthPickerYear] = useState(new Date().getFullYear());
+
   const [formData, setFormData] = useState({
     title: '', date: defaultDate || format(new Date(), 'yyyy-MM-dd'),
     dayOfMonth: 1, time: '09:00', status: EventStatus.PENDING,
-    periodicity: EventPeriodicity.RECURRENT, recurrenceEndDate: '',
+    recurrence: EventRecurrence.RECURRING,
+    periodicity: EventPeriodicity.MONTHLY,
+    recurrenceEndDate: '',
     amount: '', labelsInput: '', isObligation: false, obligationPersonId: ''
   });
 
-  useModalEscape(isOpen, onClose);
+  useModalEscape(isOpen, onClose, [
+    [isEndMonthPickerOpen, setIsEndMonthPickerOpen]
+  ]);
 
   const relevantTimelines = React.useMemo(() => {
     const targetType = movementType === 'saida'
@@ -60,12 +72,48 @@ export default function BalanceEventModal({
       if (initialData.isExpense || initialData.eventType === EventType.EXPENSE) initType = 'saida';
       else if (initialData.isInvestment || initialData.eventType === EventType.INVESTMENT) initType = 'investimento';
 
+      let initRecurrence = EventRecurrence.RECURRING;
+      if (
+        initialData.recurrence === EventRecurrence.LIMITED ||
+        initialData.recurrence === 'limited' ||
+        initialData.periodicity === 'period' ||
+        initialData.periodicity === 'periodo' ||
+        initialData.recurrenceEndDate ||
+        initialData.endDate
+      ) {
+        initRecurrence = EventRecurrence.LIMITED;
+      } else if (
+        initialData.recurrence === EventRecurrence.ONCE ||
+        initialData.recurrence === 'once' ||
+        initialData.periodicity === 'once' ||
+        initialData.periodicity === 'unica' ||
+        initialData.periodicity === 'unico'
+      ) {
+        initRecurrence = EventRecurrence.ONCE;
+      }
+
+      let initPeriodicity = EventPeriodicity.MONTHLY;
+      if (initialData.periodicity && Object.values(EventPeriodicity).includes(initialData.periodicity)) {
+        initPeriodicity = initialData.periodicity;
+      } else if (initialData.aggregation && Object.values(EventPeriodicity).includes(initialData.aggregation)) {
+        initPeriodicity = initialData.aggregation;
+      }
+
+      const endRecDate = initialData.recurrenceEndDate || initialData.endDate || '';
+      if (endRecDate) {
+        try {
+          const ey = parseInt(endRecDate.split('-')[0], 10);
+          if (!isNaN(ey)) setEndMonthPickerYear(ey);
+        } catch { }
+      }
+
       setMovementType(initType);
       setFormData({
         title: initialData.title || '', date: targetDate, dayOfMonth: parsedDay,
         time: initialData.time || '09:00', status: initialData.status || EventStatus.PENDING,
-        periodicity: initialData.periodicity || EventPeriodicity.RECURRENT,
-        recurrenceEndDate: initialData.recurrenceEndDate || initialData.endDate || '',
+        recurrence: initRecurrence,
+        periodicity: initPeriodicity,
+        recurrenceEndDate: endRecDate,
         amount: initialData.amount !== undefined ? initialData.amount : '',
         labelsInput: Array.isArray(initialData.labels) ? initialData.labels.join(', ') : '',
         isObligation: Boolean(initialData.isObligation || initialData.is_obligation),
@@ -74,9 +122,17 @@ export default function BalanceEventModal({
       setTargetTimelineId(initialData.timelineId || '');
     } else {
       let defaultEndMonth = format(addMonths(parseISO(targetDate), 6), 'yyyy-MM');
+      try {
+        const d6 = addMonths(parseISO(targetDate), 6);
+        defaultEndMonth = format(d6, 'yyyy-MM');
+        setEndMonthPickerYear(d6.getFullYear());
+      } catch { }
+
       setFormData({
         title: '', date: targetDate, dayOfMonth: parsedDay, time: '09:00',
-        status: EventStatus.PENDING, periodicity: EventPeriodicity.RECURRENT,
+        status: EventStatus.PENDING,
+        recurrence: EventRecurrence.RECURRING,
+        periodicity: EventPeriodicity.MONTHLY,
         recurrenceEndDate: defaultEndMonth, amount: '', labelsInput: '',
         isObligation: false, obligationPersonId: ''
       });
@@ -106,12 +162,18 @@ export default function BalanceEventModal({
     const isInv = movementType === 'investimento';
     const defaultInitialStatus = isInv ? EventStatus.PLANNED : EventStatus.PENDING;
 
+    const isRecurring = formData.recurrence === EventRecurrence.RECURRING || formData.recurrence === EventRecurrence.LIMITED;
+    const recurrenceEndDate = formData.recurrence === EventRecurrence.LIMITED ? formData.recurrenceEndDate : null;
+
     onSave({
       ...(initialData || {}),
       title: formData.title.trim(), date: finalDate, time: formData.time,
       status: initialData ? (initialData.status || defaultInitialStatus) : defaultInitialStatus,
+      recurrence: formData.recurrence,
       periodicity: formData.periodicity,
-      recurrenceEndDate: formData.periodicity === EventPeriodicity.PERIOD ? formData.recurrenceEndDate : null,
+      isRecurring,
+      recurrenceEndDate,
+      endDate: recurrenceEndDate,
       amount: numAmount,
       eventType: isExp ? EventType.EXPENSE : isInv ? EventType.INVESTMENT : EventType.INCOME,
       timelineId: targetTimelineId || timeline?.id,
@@ -148,19 +210,26 @@ export default function BalanceEventModal({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
           {MOVEMENT_TYPES.map((m) => {
             const isSelected = movementType === m.id;
-            const MIcon = m.icon;
+            const Icon = m.icon;
             return (
-              <button key={m.id} type="button"
-                onClick={() => { setMovementType(m.id); setTargetTimelineId(''); }}
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => {
+                  setMovementType(m.id);
+                  setTargetTimelineId('');
+                }}
                 style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                  padding: '8px', borderRadius: '8px',
-                  border: isSelected ? `1px solid ${m.color}` : '1px solid var(--border-glass)',
-                  background: isSelected ? `${m.color}22` : 'var(--bg-app)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: '6px', padding: '12px 8px', borderRadius: '10px',
+                  border: isSelected ? `2px solid ${m.color}` : '1px solid var(--border-glass)',
+                  background: isSelected ? `${m.color}20` : 'var(--bg-card)',
                   color: isSelected ? m.color : 'var(--text-muted)',
-                  fontSize: '0.78rem', fontWeight: isSelected ? '800' : '600', cursor: 'pointer'
-                }}>
-                <MIcon size={14} /><span>{m.label}</span>
+                  cursor: 'pointer', transition: 'all 0.15s ease'
+                }}
+              >
+                <Icon size={18} />
+                <span style={{ fontSize: '0.78rem', fontWeight: isSelected ? '800' : '600' }}>{m.label}</span>
               </button>
             );
           })}
@@ -168,91 +237,127 @@ export default function BalanceEventModal({
       </div>
 
       {relevantTimelines.length > 0 && (
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-              Timeline de Destino
-            </label>
-            <select value={targetTimelineId}
-              onChange={(e) => setTargetTimelineId(e.target.value)}
-              className="form-select"
-              style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', boxSizing: 'border-box' }}>
-              {relevantTimelines.map((tl) => (
-                <option key={tl.id} value={tl.id}>{tl.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
         <div style={{ marginBottom: '14px' }}>
           <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-            Título do Movimento *
+            Destino do Movimento (Timeline)
           </label>
-          <input type="text" required placeholder="Ex: Salário, Aluguel, Aporte Poupança..."
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          <select
+            value={targetTimelineId}
+            onChange={(e) => setTargetTimelineId(e.target.value)}
             className="form-input"
-            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', boxSizing: 'border-box' }} />
+            style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', boxSizing: 'border-box' }}
+          >
+            {relevantTimelines.map((tl) => (
+              <option key={tl.id} value={tl.id}>{tl.name}</option>
+            ))}
+          </select>
         </div>
+      )}
 
-        <EuroInput label="Valor (€) *" value={formData.amount} accent={accentColor}
-          onChange={(e) => setFormData({ ...formData, amount: e.target.value })} />
-
-        {!initialData && (
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-              Periodicidade
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-              {[
-                { id: EventPeriodicity.RECURRENT, label: 'Recorrente', icon: <Repeat size={13} /> },
-                { id: EventPeriodicity.UNIQUE, label: 'Pontual', icon: <Zap size={13} /> },
-                { id: EventPeriodicity.PERIOD, label: 'Período', icon: <Calendar size={13} /> }
-              ].map((p) => {
-                const isSelected = formData.periodicity === p.id;
-                return (
-                  <button key={p.id} type="button"
-                    onClick={() => setFormData({ ...formData, periodicity: p.id })}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                      padding: '8px', borderRadius: '8px',
-                      border: isSelected ? `1px solid ${accentColor}` : '1px solid var(--border-glass)',
-                      background: isSelected ? `${accentColor}22` : 'var(--bg-app)',
-                      color: isSelected ? accentColor : 'var(--text-muted)',
-                      fontSize: '0.78rem', fontWeight: isSelected ? '800' : '600', cursor: 'pointer'
-                    }}>
-                    {p.icon}<span>{p.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        <div style={{ marginBottom: '14px' }}>
-          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-            Dia do Mês
-          </label>
-          <input type="number" min="1" max="31" value={formData.dayOfMonth}
-            onChange={(e) => setFormData({ ...formData, dayOfMonth: Number(e.target.value) })}
-            className="form-input"
-            style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', boxSizing: 'border-box' }} />
-        </div>
-
-        <ObligationSelector
-          isObligation={formData.isObligation}
-          obligationPersonId={formData.obligationPersonId}
-          onToggleObligation={(val) => {
-            setFormData((prev) => ({ ...prev, isObligation: val, obligationPersonId: val ? prev.obligationPersonId : '' }));
-            if (!val) setObligationError(false);
-          }}
-          onSelectPerson={(personId) => {
-            setFormData((prev) => ({ ...prev, obligationPersonId: personId }));
-            if (personId) setObligationError(false);
-          }}
-          timeboardId={timeboardId || timeline?.timeboardId || timeline?.timeboard_id}
-          accentColor={accentColor}
-          showError={obligationError}
+      <div style={{ marginBottom: '14px' }}>
+        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
+          Título do Movimento *
+        </label>
+        <input
+          type="text"
+          required
+          placeholder="Ex: Salário, Aluguel, Aporte Poupança..."
+          value={formData.title}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          className="form-input"
+          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', boxSizing: 'border-box' }}
         />
+      </div>
+
+      <EuroInput
+        label="Valor (€) *"
+        value={formData.amount}
+        accent={accentColor}
+        onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+      />
+
+      {!initialData && (
+        <>
+          <RecurrenceSelector
+            value={formData.recurrence}
+            onChange={(id) => {
+              setFormData((prev) => {
+                if (id === EventRecurrence.LIMITED && !prev.recurrenceEndDate) {
+                  return {
+                    ...prev,
+                    recurrence: id,
+                    recurrenceEndDate: format(addMonths(parseISO(prev.date || format(new Date(), 'yyyy-MM-dd')), 6), 'yyyy-MM')
+                  };
+                }
+                return { ...prev, recurrence: id };
+              });
+            }}
+            accent={accentColor}
+            t={t}
+          />
+
+          {(formData.recurrence === EventRecurrence.RECURRING || formData.recurrence === EventRecurrence.LIMITED) && (
+            <PeriodicitySelector
+              value={formData.periodicity}
+              onChange={(pId) => setFormData((prev) => ({ ...prev, periodicity: pId }))}
+              accent={accentColor}
+              t={t}
+            />
+          )}
+
+          {formData.recurrence === EventRecurrence.LIMITED && (
+            <MonthPickerPopover
+              value={formData.recurrenceEndDate}
+              onChange={(month) => setFormData({ ...formData, recurrenceEndDate: month })}
+              accent={accentColor}
+              dateLocale={dateLocale}
+              label={t('modal.endMonth') || 'Mês Final'}
+              isOpen={isEndMonthPickerOpen}
+              onToggle={() => setIsEndMonthPickerOpen(!isEndMonthPickerOpen)}
+              year={endMonthPickerYear}
+              onYearChange={setEndMonthPickerYear}
+              baseDate={formData.date}
+              explanation={t('modal.periodExplanation', {
+                start: format(parseISO(formData.date), 'MMMM yyyy', { locale: dateLocale }),
+                end: formData.recurrenceEndDate
+                  ? format(parseISO(`${formData.recurrenceEndDate}-01`), 'MMMM yyyy', { locale: dateLocale })
+                  : '...'
+              })}
+            />
+          )}
+        </>
+      )}
+
+      <div style={{ marginBottom: '14px' }}>
+        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
+          Dia do Mês
+        </label>
+        <input
+          type="number"
+          min="1"
+          max="31"
+          value={formData.dayOfMonth}
+          onChange={(e) => setFormData({ ...formData, dayOfMonth: Number(e.target.value) })}
+          className="form-input"
+          style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', boxSizing: 'border-box' }}
+        />
+      </div>
+
+      <ObligationSelector
+        isObligation={formData.isObligation}
+        obligationPersonId={formData.obligationPersonId}
+        onToggleObligation={(val) => {
+          setFormData((prev) => ({ ...prev, isObligation: val, obligationPersonId: val ? prev.obligationPersonId : '' }));
+          if (!val) setObligationError(false);
+        }}
+        onSelectPerson={(personId) => {
+          setFormData((prev) => ({ ...prev, obligationPersonId: personId }));
+          if (personId) setObligationError(false);
+        }}
+        timeboardId={timeboardId || timeline?.timeboardId || timeline?.timeboard_id}
+        accentColor={accentColor}
+        showError={obligationError}
+      />
     </ModalShell>
   );
 }

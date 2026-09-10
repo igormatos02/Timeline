@@ -4,7 +4,7 @@ import { loanContractRepository } from '../../infrastructure/database/supabase/S
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
 import { calcToggledStatus } from '../../domain/entities/TimelineEvent.js';
-import { EventType, EventStatus, EventPeriodicity, EventDeletionMode, EventUpdateMode, AmortizationStrategy, LoanEventCategory, AmortizationEventCategory, isPositiveStatus, isNegativeStatus } from '../../../shared/enums/index.js';
+import { EventType, EventStatus, EventPeriodicity, EventRecurrence, EventDeletionMode, EventUpdateMode, AmortizationStrategy, LoanEventCategory, AmortizationEventCategory, isPositiveStatus, isNegativeStatus } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -169,7 +169,11 @@ export class FinancialEventService {
   }
 
   async createEvent(eventData) {
-    const isRecurring = eventData.periodicity === EventPeriodicity.RECURRING || eventData.isRecurring;
+    const isRecurring =
+      eventData.recurrence === EventRecurrence.RECURRING ||
+      eventData.recurrence === EventRecurrence.LIMITED ||
+      eventData.periodicity === EventPeriodicity.RECURRING ||
+      eventData.isRecurring;
     const eventId = eventData.eventId || eventData.event_id || (isRecurring ? `series-${Date.now()}` : null);
 
     const isLoanInstallment = (
@@ -187,6 +191,8 @@ export class FinancialEventService {
       version: isLoanInstallment ? 0 : (eventData.version !== undefined ? Number(eventData.version) : 0),
       eventVersion: isLoanInstallment ? 0 : (eventData.eventVersion !== undefined ? Number(eventData.eventVersion) : 0),
       event_version: isLoanInstallment ? 0 : (eventData.event_version !== undefined ? Number(eventData.event_version) : 0),
+      recurrence: isLoanInstallment ? EventRecurrence.ONCE : (eventData.recurrence || (isRecurring ? EventRecurrence.RECURRING : EventRecurrence.ONCE)),
+      periodicity: eventData.periodicity || EventPeriodicity.MONTHLY,
       isRecurring: isLoanInstallment ? false : Boolean(isRecurring)
     };
 
@@ -241,7 +247,10 @@ export class FinancialEventService {
 
     const isRecurring = Boolean(
       directUpdates.isRecurring !== undefined ? directUpdates.isRecurring :
-      (existing?.isRecurring !== undefined ? existing.isRecurring : (directUpdates.periodicity === EventPeriodicity.RECURRING || directUpdates.periodicity === EventPeriodicity.PERIOD))
+      (directUpdates.recurrence !== undefined ? (directUpdates.recurrence === EventRecurrence.RECURRING || directUpdates.recurrence === EventRecurrence.LIMITED) :
+      (existing?.isRecurring !== undefined ? existing.isRecurring :
+      (existing?.recurrence !== undefined ? (existing.recurrence === EventRecurrence.RECURRING || existing.recurrence === EventRecurrence.LIMITED) :
+      (directUpdates.periodicity === EventPeriodicity.RECURRING || directUpdates.periodicity === EventPeriodicity.PERIOD))))
     );
 
     const isSubsequentUpdate = (
@@ -494,6 +503,10 @@ export class FinancialEventService {
 
     const isRecurringSeries =
       rootEvent.isRecurring === true ||
+      rootEvent.recurrence === EventRecurrence.RECURRING ||
+      rootEvent.recurrence === EventRecurrence.LIMITED ||
+      rootEvent.recurrence === 'recurring' ||
+      rootEvent.recurrence === 'limited' ||
       rootEvent.periodicity === EventPeriodicity.RECURRING ||
       rootEvent.periodicity === EventPeriodicity.PERIOD ||
       rootEvent.periodicity === 'recorrente' ||
@@ -502,7 +515,7 @@ export class FinancialEventService {
       rootEvent.aggregation === 'monthly' ||
       rootEvent.aggregation === 'mensal' ||
       Boolean(id && String(id).includes('_')) ||
-      allRawEvents.some((ev) => ((ev.eventId && ev.eventId === targetSeriesId) || ev.id === targetSeriesId) && (ev.isRecurring || ev.aggregation === 'recurring'));
+      allRawEvents.some((ev) => ((ev.eventId && ev.eventId === targetSeriesId) || ev.id === targetSeriesId) && (ev.isRecurring || ev.recurrence === EventRecurrence.RECURRING || ev.recurrence === EventRecurrence.LIMITED || ev.aggregation === 'recurring'));
 
     const isAll = deletionMode === EventDeletionMode.EVERYTHING || deletionMode === 'all' || options.deleteSeries;
     const isSubsequent = deletionMode === EventDeletionMode.FROM_NOW_ON || deletionMode === 'subsequent';
@@ -566,7 +579,8 @@ export class FinancialEventService {
         isTerminated: true,
         isDeleted: true,
         isRecurring: true,
-        periodicity: EventPeriodicity.RECURRING,
+        recurrence: EventRecurrence.RECURRING,
+        periodicity: rootEvent?.periodicity || EventPeriodicity.MONTHLY,
         status: EventStatus.DELETED
       };
 

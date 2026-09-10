@@ -50,7 +50,7 @@ import { format, parseISO, endOfMonth } from 'date-fns';
 import { pt, enUS } from 'date-fns/locale';
 import { generateUUID } from '../utils/uuid';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { EventType, TimelineType, EventStatus, EventPeriodicity, PersonType, AmortizationEventCategory, LoanEventCategory, InvestmentEventCategory } from '../enums/index.js';
+import { EventType, TimelineType, EventStatus, EventRecurrence, EventPeriodicity, PersonType, AmortizationEventCategory, LoanEventCategory, InvestmentEventCategory } from '../enums/index.js';
 import * as api from '../services/api.js';
 import { compareEventsWithinDay } from '../utils/eventSorting.js';
 
@@ -154,16 +154,21 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   );
 
   const isRecurringEvent = Boolean(
+    event.recurrence === EventRecurrence.RECURRING ||
+    event.recurrence === EventRecurrence.LIMITED ||
+    event.recurrence === 'recurring' ||
+    event.recurrence === 'limited' ||
     event.isRecurring === true ||
     event.is_recurring === true ||
-    event.periodicity === EventPeriodicity.RECURRING ||
-    event.periodicity === EventPeriodicity.RECURRENT ||
-    event.periodicity === EventPeriodicity.PERIOD ||
+    event.periodicity === 'recorrente' ||
+    event.periodicity === 'period' ||
     Boolean(event.seriesId) ||
     isLoanInstallment
   ) &&
-    event.periodicity !== EventPeriodicity.ONCE &&
-    event.periodicity !== EventPeriodicity.UNIQUE;
+    event.recurrence !== EventRecurrence.ONCE &&
+    event.recurrence !== 'once' &&
+    event.periodicity !== 'once' &&
+    event.periodicity !== 'unica';
 
   const isInertFuture = event.date > currentMonthEndStr;
 
@@ -562,14 +567,20 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const canEditAmount = true;
 
   const isRecurring = Boolean(
-    event.periodicity === EventPeriodicity.RECURRING ||
-    event.periodicity === EventPeriodicity.RECURRENT ||
+    event.recurrence === EventRecurrence.RECURRING ||
+    event.recurrence === EventRecurrence.LIMITED ||
+    event.recurrence === 'recurring' ||
+    event.recurrence === 'limited' ||
+    event.periodicity === 'recorrente' ||
+    event.periodicity === 'period' ||
     event.isRecurring === true ||
     event.is_recurring === true ||
     Boolean(event.seriesId)
   ) &&
-    event.periodicity !== EventPeriodicity.ONCE &&
-    event.periodicity !== EventPeriodicity.UNIQUE;
+    event.recurrence !== EventRecurrence.ONCE &&
+    event.recurrence !== 'once' &&
+    event.periodicity !== 'once' &&
+    event.periodicity !== 'unica';
 
   const handleSaveAmount = (e) => {
     if (e) {
@@ -1759,10 +1770,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 {(isBalanceView || (activeFinancialTab === 'gastos' && (isLoanInstallment || isInvestmentEvent))) && originInfo && (
                   <button
                     type="button"
-                    disabled={isInertFuture}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (!isInertFuture && onNavigateToTimeline) {
+                      if (onNavigateToTimeline) {
                         onNavigateToTimeline(originInfo.timelineId, originInfo.tab);
                       }
                     }}
@@ -1771,11 +1781,11 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       border: activeFinancialTab === 'gastos' ? '1px solid rgba(99, 102, 241, 0.25)' : '1px solid var(--border-glass)',
                       borderRadius: '5px',
                       padding: '2px 7px',
-                      color: isInertFuture ? 'var(--text-dim)' : originInfo.color,
+                      color: originInfo.color,
                       fontWeight: '700',
                       fontSize: '0.70rem',
-                      cursor: isInertFuture ? 'default' : (onNavigateToTimeline ? 'pointer' : 'default'),
-                      pointerEvents: isInertFuture ? 'none' : 'auto',
+                      cursor: onNavigateToTimeline ? 'pointer' : 'default',
+                      pointerEvents: 'auto',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '3px',
@@ -1784,7 +1794,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     title={`Ir para a timeline do ${originInfo.label}`}
                   >
                     <span>{originInfo.label}</span>
-                    <ArrowUpRight size={11} strokeWidth={2.5} style={{ opacity: isInertFuture ? 0.4 : 0.8 }} />
+                    <ArrowUpRight size={11} strokeWidth={2.5} style={{ opacity: 0.8 }} />
                   </button>
                 )}
               </div>
@@ -2154,98 +2164,76 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               {t('status.toReceive') || 'A Receber'}
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
-              {isInertFuture ? (
-                <div
-                  style={{
-                    background: 'rgba(148, 163, 184, 0.08)',
-                    color: 'var(--text-dim)',
-                    border: '1px solid rgba(148, 163, 184, 0.2)',
+              {renderStatusDropdownButton(
+                {
+                  className: 'btn btn-sm',
+                  title: t('timeline.clickToChangeStatus') || 'Clique para alterar o status',
+                  style: {
+                    background: isCancelled
+                      ? 'rgba(148, 163, 184, 0.15)'
+                      : isReceivedIncome
+                        ? 'rgba(16, 185, 129, 0.16)'
+                        : isOverdueIncome
+                          ? 'rgba(252, 191, 73, 0.16)'
+                          : isNextIncome
+                            ? 'rgba(245, 158, 11, 0.14)'
+                            : 'rgba(148, 163, 184, 0.1)',
+                    color: isCancelled
+                      ? '#94a3b8'
+                      : isReceivedIncome
+                        ? '#10b981'
+                        : isOverdueIncome
+                          ? '#fcbf49'
+                          : isNextIncome
+                            ? '#f59e0b'
+                            : '#94a3b8',
+                    border: isCancelled
+                      ? '1px solid rgba(148, 163, 184, 0.35)'
+                      : isReceivedIncome
+                        ? '1px solid rgba(16, 185, 129, 0.35)'
+                        : isOverdueIncome
+                          ? '1px solid rgba(252, 191, 73, 0.4)'
+                          : isNextIncome
+                            ? '1px solid rgba(245, 158, 11, 0.35)'
+                            : '1px solid rgba(148, 163, 184, 0.2)',
                     borderRadius: '9999px',
                     padding: '4px 12px',
                     fontSize: '0.76rem',
                     fontWeight: '700',
+                    cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
+                    opacity: isTogglingStatus ? 0.6 : 1,
+                    pointerEvents: isTogglingStatus ? 'none' : 'auto',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px',
-                    cursor: 'default',
-                    userSelect: 'none'
-                  }}
-                >
-                  <Clock size={12} />
-                  <span>{t('status.planned')}</span>
-                </div>
-              ) : (
-                renderStatusDropdownButton(
-                  {
-                    className: 'btn btn-sm',
-                    title: t('timeline.clickToChangeStatus') || 'Clique para alterar o status',
-                    style: {
-                      background: isCancelled
-                        ? 'rgba(148, 163, 184, 0.15)'
-                        : isReceivedIncome
-                          ? 'rgba(16, 185, 129, 0.16)'
-                          : isOverdueIncome
-                            ? 'rgba(252, 191, 73, 0.16)'
-                            : isNextIncome
-                              ? 'rgba(245, 158, 11, 0.14)'
-                              : 'rgba(148, 163, 184, 0.1)',
-                      color: isCancelled
-                        ? '#94a3b8'
-                        : isReceivedIncome
-                          ? '#10b981'
-                          : isOverdueIncome
-                            ? '#fcbf49'
-                            : isNextIncome
-                              ? '#f59e0b'
-                              : '#94a3b8',
-                      border: isCancelled
-                        ? '1px solid rgba(148, 163, 184, 0.35)'
-                        : isReceivedIncome
-                          ? '1px solid rgba(16, 185, 129, 0.35)'
-                          : isOverdueIncome
-                            ? '1px solid rgba(252, 191, 73, 0.4)'
-                            : isNextIncome
-                              ? '1px solid rgba(245, 158, 11, 0.35)'
-                              : '1px solid rgba(148, 163, 184, 0.2)',
-                      borderRadius: '9999px',
-                      padding: '4px 12px',
-                      fontSize: '0.76rem',
-                      fontWeight: '700',
-                      cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
-                      opacity: isTogglingStatus ? 0.6 : 1,
-                      pointerEvents: isTogglingStatus ? 'none' : 'auto',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      transition: 'all 0.15s ease',
-                      boxShadow: isOverdueIncome
-                        ? '0 2px 10px rgba(252, 191, 73, 0.25)'
-                        : isReceivedIncome
-                          ? '0 2px 8px rgba(16, 185, 129, 0.2)'
-                          : 'none'
-                    }
-                  },
-                  isCancelled ? (
-                    <>
-                      <Ban size={13} style={{ color: '#94a3b8' }} />
-                      <span>{t('status.cancelled')}</span>
-                    </>
-                  ) : isReceivedIncome ? (
-                    <>
-                      <CheckCircle2 size={13} style={{ color: '#10b981' }} />
-                      <span>{t('status.received')}</span>
-                    </>
-                  ) : isOverdueIncome ? (
-                    <>
-                      <AlertCircle size={13} style={{ color: '#fcbf49' }} />
-                      <span>{t('status.overdue')}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Clock size={13} style={{ color: isNextIncome ? '#f59e0b' : '#94a3b8' }} />
-                      <span>{t('status.toReceive')}</span>
-                    </>
-                  )
+                    transition: 'all 0.15s ease',
+                    boxShadow: isOverdueIncome
+                      ? '0 2px 10px rgba(252, 191, 73, 0.25)'
+                      : isReceivedIncome
+                        ? '0 2px 8px rgba(16, 185, 129, 0.2)'
+                        : 'none'
+                  }
+                },
+                isCancelled ? (
+                  <>
+                    <Ban size={13} style={{ color: '#94a3b8' }} />
+                    <span>{t('status.cancelled')}</span>
+                  </>
+                ) : isReceivedIncome ? (
+                  <>
+                    <CheckCircle2 size={13} style={{ color: '#10b981' }} />
+                    <span>{t('status.received')}</span>
+                  </>
+                ) : isOverdueIncome ? (
+                  <>
+                    <AlertCircle size={13} style={{ color: '#fcbf49' }} />
+                    <span>{t('status.overdue')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Clock size={13} style={{ color: isNextIncome ? '#f59e0b' : '#94a3b8' }} />
+                    <span>{t('status.toReceive')}</span>
+                  </>
                 )
               )}
             </div>
@@ -2309,87 +2297,65 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
-              {isInertFuture ? (
-                <div
-                  style={{
-                    background: 'rgba(148, 163, 184, 0.08)',
-                    color: 'var(--text-dim)',
-                    border: '1px solid rgba(148, 163, 184, 0.2)',
+              {renderStatusDropdownButton(
+                {
+                  className: 'btn btn-sm',
+                  title: t('timeline.clickToChangeStatus') || 'Clique para alterar o status',
+                  style: {
+                    background: isCancelled
+                      ? 'rgba(148, 163, 184, 0.15)'
+                      : isPaidExpense
+                        ? 'rgba(16, 185, 129, 0.16)'
+                        : isOverdueExpense
+                          ? 'rgba(252, 191, 73, 0.16)'
+                          : 'rgba(245, 158, 11, 0.14)',
+                    color: isCancelled
+                      ? '#94a3b8'
+                      : isPaidExpense
+                        ? '#10b981'
+                        : isOverdueExpense
+                          ? '#fcbf49'
+                          : '#f59e0b',
+                    border: isCancelled
+                      ? '1px solid rgba(148, 163, 184, 0.35)'
+                      : isPaidExpense
+                        ? '1px solid rgba(16, 185, 129, 0.35)'
+                        : isOverdueExpense
+                          ? '1px solid rgba(252, 191, 73, 0.4)'
+                          : '1px solid rgba(245, 158, 11, 0.35)',
                     borderRadius: '9999px',
                     padding: '4px 12px',
                     fontSize: '0.76rem',
                     fontWeight: '700',
+                    cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
+                    opacity: isTogglingStatus ? 0.6 : 1,
+                    pointerEvents: isTogglingStatus ? 'none' : 'auto',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px',
-                    cursor: 'default',
-                    userSelect: 'none'
-                  }}
-                >
-                  <Clock size={12} />
-                  <span>{t('status.pending')}</span>
-                </div>
-              ) : (
-                renderStatusDropdownButton(
-                  {
-                    className: 'btn btn-sm',
-                    title: t('timeline.clickToChangeStatus') || 'Clique para alterar o status',
-                    style: {
-                      background: isCancelled
-                        ? 'rgba(148, 163, 184, 0.15)'
-                        : isPaidExpense
-                          ? 'rgba(16, 185, 129, 0.16)'
-                          : isOverdueExpense
-                            ? 'rgba(252, 191, 73, 0.16)'
-                            : 'rgba(245, 158, 11, 0.14)',
-                      color: isCancelled
-                        ? '#94a3b8'
-                        : isPaidExpense
-                          ? '#10b981'
-                          : isOverdueExpense
-                            ? '#fcbf49'
-                            : '#f59e0b',
-                      border: isCancelled
-                        ? '1px solid rgba(148, 163, 184, 0.35)'
-                        : isPaidExpense
-                          ? '1px solid rgba(16, 185, 129, 0.35)'
-                          : isOverdueExpense
-                            ? '1px solid rgba(252, 191, 73, 0.4)'
-                            : '1px solid rgba(245, 158, 11, 0.35)',
-                      borderRadius: '9999px',
-                      padding: '4px 12px',
-                      fontSize: '0.76rem',
-                      fontWeight: '700',
-                      cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
-                      opacity: isTogglingStatus ? 0.6 : 1,
-                      pointerEvents: isTogglingStatus ? 'none' : 'auto',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      transition: 'all 0.15s ease'
-                    }
-                  },
-                  isCancelled ? (
-                    <>
-                      <Ban size={13} style={{ color: '#94a3b8' }} />
-                      <span>{t('status.cancelled')}</span>
-                    </>
-                  ) : isPaidExpense ? (
-                    <>
-                      <CheckCircle2 size={13} style={{ color: '#10b981' }} />
-                      <span>{t('status.paid')}</span>
-                    </>
-                  ) : isOverdueExpense ? (
-                    <>
-                      <AlertCircle size={13} style={{ color: '#fcbf49' }} />
-                      <span>{t('status.overdue')}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Clock size={13} style={{ color: '#f59e0b' }} />
-                      <span>{t('status.pending')}</span>
-                    </>
-                  )
+                    transition: 'all 0.15s ease'
+                  }
+                },
+                isCancelled ? (
+                  <>
+                    <Ban size={13} style={{ color: '#94a3b8' }} />
+                    <span>{t('status.cancelled')}</span>
+                  </>
+                ) : isPaidExpense ? (
+                  <>
+                    <CheckCircle2 size={13} style={{ color: '#10b981' }} />
+                    <span>{t('status.paid')}</span>
+                  </>
+                ) : isOverdueExpense ? (
+                  <>
+                    <AlertCircle size={13} style={{ color: '#fcbf49' }} />
+                    <span>{t('status.overdue')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Clock size={13} style={{ color: '#f59e0b' }} />
+                    <span>{t('status.pending')}</span>
+                  </>
                 )
               )}
             </div>
@@ -2555,105 +2521,83 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 </button>
               )}
 
-              {isInertFuture ? (
-                <div
-                  style={{
-                    background: 'rgba(148, 163, 184, 0.08)',
-                    color: 'var(--text-dim)',
-                    border: '1px solid rgba(148, 163, 184, 0.2)',
+              {renderStatusDropdownButton(
+                {
+                  className: 'btn btn-sm',
+                  title: t('timeline.clickToChangeStatus') || 'Clique para alterar o status',
+                  style: {
+                    background: isCancelled
+                      ? 'rgba(148, 163, 184, 0.15)'
+                      : event.category === 'investimento_patrimonio'
+                        ? (event.status === 'Financiado' ? 'rgba(2, 132, 199, 0.16)' : 'rgba(16, 185, 129, 0.16)')
+                        : isCompletedInvestment
+                          ? 'rgba(139, 92, 246, 0.16)'
+                          : isOverdueInvestment
+                            ? 'rgba(252, 191, 73, 0.16)'
+                            : 'rgba(148, 163, 184, 0.12)',
+                    color: isCancelled
+                      ? '#94a3b8'
+                      : event.category === 'investimento_patrimonio'
+                        ? (event.status === 'Financiado' ? '#38bdf8' : '#10b981')
+                        : isCompletedInvestment
+                          ? '#8b5cf6'
+                          : isOverdueInvestment
+                            ? '#fcbf49'
+                            : '#94a3b8',
+                    border: isCancelled
+                      ? '1px solid rgba(148, 163, 184, 0.35)'
+                      : event.category === 'investimento_patrimonio'
+                        ? (event.status === 'Financiado' ? '1px solid rgba(2, 132, 199, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)')
+                        : isCompletedInvestment
+                          ? '1px solid rgba(139, 92, 246, 0.35)'
+                          : isOverdueInvestment
+                            ? '1px solid rgba(252, 191, 73, 0.4)'
+                            : '1px solid rgba(148, 163, 184, 0.3)',
                     borderRadius: '9999px',
                     padding: '4px 12px',
                     fontSize: '0.76rem',
                     fontWeight: '700',
+                    cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
+                    opacity: isTogglingStatus ? 0.6 : 1,
+                    pointerEvents: isTogglingStatus ? 'none' : 'auto',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px',
-                    cursor: 'default',
-                    userSelect: 'none'
-                  }}
-                >
-                  <Clock size={12} />
-                  <span>{t('status.planned')}</span>
-                </div>
-              ) : (
-                renderStatusDropdownButton(
-                  {
-                    className: 'btn btn-sm',
-                    title: t('timeline.clickToChangeStatus') || 'Clique para alterar o status',
-                    style: {
-                      background: isCancelled
-                        ? 'rgba(148, 163, 184, 0.15)'
-                        : event.category === 'investimento_patrimonio'
-                          ? (event.status === 'Financiado' ? 'rgba(2, 132, 199, 0.16)' : 'rgba(16, 185, 129, 0.16)')
-                          : isCompletedInvestment
-                            ? 'rgba(139, 92, 246, 0.16)'
-                            : isOverdueInvestment
-                              ? 'rgba(252, 191, 73, 0.16)'
-                              : 'rgba(148, 163, 184, 0.12)',
-                      color: isCancelled
-                        ? '#94a3b8'
-                        : event.category === 'investimento_patrimonio'
-                          ? (event.status === 'Financiado' ? '#38bdf8' : '#10b981')
-                          : isCompletedInvestment
-                            ? '#8b5cf6'
-                            : isOverdueInvestment
-                              ? '#fcbf49'
-                              : '#94a3b8',
-                      border: isCancelled
-                        ? '1px solid rgba(148, 163, 184, 0.35)'
-                        : event.category === 'investimento_patrimonio'
-                          ? (event.status === 'Financiado' ? '1px solid rgba(2, 132, 199, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)')
-                          : isCompletedInvestment
-                            ? '1px solid rgba(139, 92, 246, 0.35)'
-                            : isOverdueInvestment
-                              ? '1px solid rgba(252, 191, 73, 0.4)'
-                              : '1px solid rgba(148, 163, 184, 0.3)',
-                      borderRadius: '9999px',
-                      padding: '4px 12px',
-                      fontSize: '0.76rem',
-                      fontWeight: '700',
-                      cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
-                      opacity: isTogglingStatus ? 0.6 : 1,
-                      pointerEvents: isTogglingStatus ? 'none' : 'auto',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      transition: 'all 0.15s ease'
-                    }
-                  },
-                  isCancelled ? (
+                    transition: 'all 0.15s ease'
+                  }
+                },
+                isCancelled ? (
+                  <>
+                    <Ban size={13} style={{ color: '#94a3b8' }} />
+                    <span>{t('status.cancelled')}</span>
+                  </>
+                ) : event.category === 'investimento_patrimonio' ? (
+                  event.status === 'Financiado' ? (
                     <>
-                      <Ban size={13} style={{ color: '#94a3b8' }} />
-                      <span>{t('status.cancelled')}</span>
-                    </>
-                  ) : event.category === 'investimento_patrimonio' ? (
-                    event.status === 'Financiado' ? (
-                      <>
-                        <CreditCard size={13} style={{ color: '#38bdf8' }} />
-                        <span>Financiado</span>
-                      </>
-                    ) : (
-                      <>
-                        <Landmark size={13} style={{ color: '#10b981' }} />
-                        <span>Quitado</span>
-                      </>
-                    )
-                  ) : isCompletedInvestment ? (
-                    <>
-                      <CheckCircle2 size={13} style={{ color: '#8b5cf6' }} />
-                      <span>{t('status.invested')}</span>
-                    </>
-                  ) : isOverdueInvestment ? (
-                    <>
-                      <AlertCircle size={13} style={{ color: '#fcbf49' }} />
-                      <span>{t('status.overdue')}</span>
+                      <CreditCard size={13} style={{ color: '#38bdf8' }} />
+                      <span>Financiado</span>
                     </>
                   ) : (
                     <>
-                      <Clock size={13} style={{ color: '#94a3b8' }} />
-                      <span>{t('status.planned')}</span>
+                      <Landmark size={13} style={{ color: '#10b981' }} />
+                      <span>Quitado</span>
                     </>
                   )
+                ) : isCompletedInvestment ? (
+                  <>
+                    <CheckCircle2 size={13} style={{ color: '#10b981' }} />
+                    <span>{t('status.invested')}</span>
+                  </>
+                ) : isOverdueInvestment ? (
+                  <>
+                    <AlertCircle size={13} style={{ color: '#fcbf49' }} />
+                    <span>{t('status.overdue')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Clock size={13} style={{ color: '#818cf8' }} />
+                    <span>{t('status.planned')}</span>
+                  </>
                 )
               )}
             </div>
@@ -3036,26 +2980,6 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 >
                   <CheckCircle2 size={13} style={{ color: '#94a3b8' }} />
                   <span>{t('status.abatida')}</span>
-                </div>
-              ) : isInertFuture ? (
-                <div
-                  style={{
-                    background: 'rgba(148, 163, 184, 0.08)',
-                    color: 'var(--text-dim)',
-                    border: '1px solid rgba(148, 163, 184, 0.2)',
-                    borderRadius: '9999px',
-                    padding: '4px 12px',
-                    fontSize: '0.76rem',
-                    fontWeight: '700',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    cursor: 'default',
-                    userSelect: 'none'
-                  }}
-                >
-                  <Clock size={12} />
-                  <span>Pendente</span>
                 </div>
               ) : (
                 renderStatusDropdownButton(

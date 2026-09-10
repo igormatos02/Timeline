@@ -1,5 +1,30 @@
-import { addMonths, format, parseISO } from 'date-fns';
-import { EventStatus, EventPeriodicity, EventType } from '../../../shared/enums/index.js';
+import { addDays, addMonths, addYears, format, parseISO } from 'date-fns';
+import { EventStatus, EventPeriodicity, EventRecurrence, EventType } from '../../../shared/enums/index.js';
+
+function advanceDateByPeriodicity(curDate, periodicity, dayOfMonth) {
+  const p = String(periodicity || EventPeriodicity.MONTHLY).toLowerCase();
+  let nextDate;
+  if (p === EventPeriodicity.BIWEEKLY || p === 'quinzenal' || p === 'biweekly') {
+    return addDays(curDate, 14);
+  } else if (p === EventPeriodicity.BIMONTHLY || p === 'bimestral' || p === 'bimonthly' || p === 'bimounthly') {
+    nextDate = addMonths(curDate, 2);
+  } else if (p === EventPeriodicity.SEMIANNUAL || p === 'semestral' || p === 'biannual' || p === 'semiannual') {
+    nextDate = addMonths(curDate, 6);
+  } else if (p === EventPeriodicity.ANNUAL || p === 'anual' || p === 'annual') {
+    nextDate = addYears(curDate, 1);
+  } else {
+    nextDate = addMonths(curDate, 1);
+  }
+
+  try {
+    const y = nextDate.getFullYear();
+    const m = nextDate.getMonth();
+    const lastDay = new Date(y, m + 1, 0).getDate();
+    nextDate = new Date(y, m, Math.min(dayOfMonth, lastDay));
+  } catch { }
+
+  return nextDate;
+}
 
 /**
  * Domain Service: ProjectionEngine
@@ -27,14 +52,22 @@ export function projectEvents(rawEvents = [], options = {}) {
     const isRecurringEvent =
       !isLoan &&
       (
+        ev.recurrence === EventRecurrence.RECURRING ||
+        ev.recurrence === EventRecurrence.LIMITED ||
+        ev.recurrence === 'recurring' ||
+        ev.recurrence === 'limited' ||
         ev.isRecurring === true ||
-        ev.periodicity === EventPeriodicity.RECURRING ||
-        ev.periodicity === EventPeriodicity.PERIOD
+        ev.is_recurring === true ||
+        ev.periodicity === 'recorrente' ||
+        ev.periodicity === 'period'
       ) &&
-      ev.periodicity !== EventPeriodicity.ONCE;
+      ev.recurrence !== EventRecurrence.ONCE &&
+      ev.recurrence !== 'once' &&
+      ev.periodicity !== 'once' &&
+      ev.periodicity !== 'unica';
 
     const seriesTargetId = ev.sobrepositionOver || (
-      !isRecurringEvent && ev.eventId && rawEvents.some(r => (r.isRecurring || r.periodicity === EventPeriodicity.RECURRING || r.periodicity === EventPeriodicity.PERIOD) && (r.eventId === ev.eventId || r.id === ev.eventId)) ? ev.eventId : null
+      !isRecurringEvent && ev.eventId && rawEvents.some(r => (r.isRecurring || r.recurrence === EventRecurrence.RECURRING || r.recurrence === EventRecurrence.LIMITED || r.periodicity === 'recorrente' || r.periodicity === 'period') && (r.eventId === ev.eventId || r.id === ev.eventId)) ? ev.eventId : null
     );
 
     if (seriesTargetId) {
@@ -141,6 +174,8 @@ export function projectEvents(rawEvents = [], options = {}) {
       const seriesEndDate =
         activeVersion.recurrenceEndDate || activeVersion.endDate || rootVersion.recurrenceEndDate || rootVersion.endDate;
       const isPeriod =
+        activeVersion.recurrence === EventRecurrence.LIMITED ||
+        rootVersion.recurrence === EventRecurrence.LIMITED ||
         activeVersion.periodicity === EventPeriodicity.PERIOD ||
         rootVersion.periodicity === EventPeriodicity.PERIOD ||
         Boolean(seriesEndDate);
@@ -153,13 +188,7 @@ export function projectEvents(rawEvents = [], options = {}) {
       }
 
       if (activeVersion.isTerminated || activeVersion.isDeleted) {
-        curDate = addMonths(curDate, 1);
-        try {
-          const y = curDate.getFullYear();
-          const m = curDate.getMonth();
-          const lastDay = new Date(y, m + 1, 0).getDate();
-          curDate = new Date(y, m, Math.min(dayOfMonth, lastDay));
-        } catch { }
+        curDate = advanceDateByPeriodicity(curDate, activeVersion.periodicity || rootVersion.periodicity, dayOfMonth);
         continue;
       }
 
@@ -210,13 +239,7 @@ export function projectEvents(rawEvents = [], options = {}) {
         });
       }
 
-      curDate = addMonths(curDate, 1);
-      try {
-        const y = curDate.getFullYear();
-        const m = curDate.getMonth();
-        const lastDay = new Date(y, m + 1, 0).getDate();
-        curDate = new Date(y, m, Math.min(dayOfMonth, lastDay));
-      } catch { }
+      curDate = advanceDateByPeriodicity(curDate, activeVersion.periodicity || rootVersion.periodicity, dayOfMonth);
     }
   }
 

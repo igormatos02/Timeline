@@ -5,12 +5,13 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { format, parseISO, addMonths, getDaysInMonth } from 'date-fns';
-import { EventPeriodicity, EventUpdateMode } from '../../../shared/enums/index.js';
+import { EventRecurrence, EventPeriodicity, EventUpdateMode } from '../../../shared/enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { useModalEscape } from '../../hooks/useModalEscape.js';
 import ModalShell from '../ui/ModalShell.jsx';
 import EuroInput from '../ui/EuroInput.jsx';
 import CategorySelector from '../ui/CategorySelector.jsx';
+import RecurrenceSelector from '../ui/RecurrenceSelector.jsx';
 import PeriodicitySelector from '../ui/PeriodicitySelector.jsx';
 import MonthPickerPopover from '../ui/MonthPickerPopover.jsx';
 import DayPickerPopover from '../ui/DayPickerPopover.jsx';
@@ -41,7 +42,8 @@ export default function FinancialEventModal({
     dayOfMonth: 1,
     time: '09:00',
     status: config.defaultStatus,
-    periodicity: EventPeriodicity.RECURRING,
+    recurrence: EventRecurrence.RECURRING,
+    periodicity: EventPeriodicity.MONTHLY,
     recurrenceEndDate: '',
     amount: '',
     initialInvestedAmount: '',
@@ -92,22 +94,31 @@ export default function FinancialEventModal({
     }
 
     if (initialData) {
-      let initPeriodicity = EventPeriodicity.RECURRING;
+      let initRecurrence = EventRecurrence.RECURRING;
       if (
-        initialData.periodicity === EventPeriodicity.PERIOD ||
+        initialData.recurrence === EventRecurrence.LIMITED ||
+        initialData.recurrence === 'limited' ||
         initialData.periodicity === 'period' ||
         initialData.periodicity === 'periodo' ||
         initialData.recurrenceEndDate ||
         initialData.endDate
       ) {
-        initPeriodicity = EventPeriodicity.PERIOD;
+        initRecurrence = EventRecurrence.LIMITED;
       } else if (
-        initialData.periodicity === EventPeriodicity.ONCE ||
+        initialData.recurrence === EventRecurrence.ONCE ||
+        initialData.recurrence === 'once' ||
         initialData.periodicity === 'once' ||
         initialData.periodicity === 'unica' ||
         initialData.periodicity === 'unico'
       ) {
-        initPeriodicity = EventPeriodicity.ONCE;
+        initRecurrence = EventRecurrence.ONCE;
+      }
+
+      let initPeriodicity = EventPeriodicity.MONTHLY;
+      if (initialData.periodicity && Object.values(EventPeriodicity).includes(initialData.periodicity)) {
+        initPeriodicity = initialData.periodicity;
+      } else if (initialData.aggregation && Object.values(EventPeriodicity).includes(initialData.aggregation)) {
+        initPeriodicity = initialData.aggregation;
       }
 
       const endRecDate = initialData.recurrenceEndDate || initialData.endDate || '';
@@ -129,6 +140,7 @@ export default function FinancialEventModal({
         dayOfMonth: parsedDay,
         time: initialData.time || '09:00',
         status: initialData.status || cfg.defaultStatus,
+        recurrence: initRecurrence,
         periodicity: initPeriodicity,
         recurrenceEndDate: endRecDate,
         amount: initialData.amount !== undefined
@@ -163,7 +175,8 @@ export default function FinancialEventModal({
         dayOfMonth: parsedDay,
         time: '09:00',
         status: cfg.defaultStatus,
-        periodicity: EventPeriodicity.RECURRING,
+        recurrence: EventRecurrence.RECURRING,
+        periodicity: EventPeriodicity.MONTHLY,
         recurrenceEndDate: defaultEndMonth,
         amount: '',
         initialInvestedAmount: '',
@@ -228,8 +241,8 @@ export default function FinancialEventModal({
       ? formData.labelsInput.split(',').map((l) => l.trim()).filter(Boolean)
       : [];
 
-    const isRecurring = formData.periodicity === EventPeriodicity.RECURRING || formData.periodicity === EventPeriodicity.PERIOD;
-    const recurrenceEndDate = formData.periodicity === EventPeriodicity.PERIOD && formData.recurrenceEndDate
+    const isRecurring = formData.recurrence === EventRecurrence.RECURRING || formData.recurrence === EventRecurrence.LIMITED;
+    const recurrenceEndDate = formData.recurrence === EventRecurrence.LIMITED && formData.recurrenceEndDate
       ? formData.recurrenceEndDate
       : null;
 
@@ -240,7 +253,8 @@ export default function FinancialEventModal({
       date: finalDate,
       time: formData.time,
       status: initialData ? (initialData.status || config.defaultStatus) : config.defaultStatus,
-      periodicity: formData.periodicity,
+      recurrence: formData.recurrence,
+      periodicity: formData.periodicity || EventPeriodicity.MONTHLY,
       isRecurring,
       recurrenceEndDate,
       endDate: recurrenceEndDate,
@@ -260,64 +274,83 @@ export default function FinancialEventModal({
       payload.breakdownItems = breakdownItems.length > 0 ? breakdownItems : undefined;
     }
 
-    if (config.includeSnakeObligation) {
-      payload.is_obligation = Boolean(formData.isObligation);
-      payload.obligation_person_id = formData.isObligation ? formData.obligationPersonId : null;
+    if (config.showInitialTarget) {
+      if (finalInitialAmount !== undefined) payload.initialInvestedAmount = finalInitialAmount;
+      if (finalTargetAmount !== undefined) payload.targetAmount = finalTargetAmount;
     }
 
     if (config.showIsExternal) {
-      payload.isExternal = Boolean(formData.isExternal);
-      payload.is_external = Boolean(formData.isExternal);
-    }
-
-    if (config.showInitialTarget) {
-      payload.initialInvestedAmount = finalInitialAmount;
-      payload.targetAmount = finalTargetAmount;
+      payload.isExternal = formData.isExternal;
+      payload.is_external = formData.isExternal;
     }
 
     onSave(payload);
     onClose();
   };
 
-  const subtitle = `${timeline?.name || t(config.subtitleKey) || config.subtitleFallback} • ${format(parseISO(formData.date), 'MMMM yyyy', { locale: dateLocale })}`;
-
   return (
     <ModalShell
-      isOpen={isOpen} onClose={onClose} onSubmit={handleSubmit} accent={ACCENT}
+      isOpen={isOpen}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      accent={ACCENT}
       icon={config.icon}
-      title={initialData ? (t(config.titleKeys.editKey) || config.titleKeys.editFallback) : (t(config.titleKeys.newKey) || config.titleKeys.newFallback)}
-      subtitle={subtitle}
+      title={
+        initialData
+          ? (t(config.titleKeys?.editKey) || config.titleKeys?.editFallback || 'Editar')
+          : (t(config.titleKeys?.newKey) || config.titleKeys?.newFallback || 'Novo')
+      }
+      subtitle={timeline?.name}
       footer={
         <>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}
-            style={{ padding: '8px 16px', borderRadius: '8px' }}>{t('modal.cancel') || 'Cancelar'}</button>
-          <button type="submit" className="btn btn-primary btn-sm"
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={onClose}
+            style={{ padding: '8px 16px', borderRadius: '8px' }}
+          >
+            {t('modal.cancel') || 'Cancelar'}
+          </button>
+          <button
+            type="submit"
+            className="btn btn-primary btn-sm"
             style={{
-              background: config.submitBg,
-              borderColor: config.submitBorder,
-              boxShadow: config.submitShadow,
-              padding: '8px 20px', borderRadius: '8px', fontWeight: '800',
-              color: config.submitText || undefined
-            }}>
-            {initialData ? (t('modal.saveChanges') || 'Salvar Alterações') : (t(config.titleKeys.addKey) || config.titleKeys.addFallback)}
+              background: ACCENT,
+              borderColor: ACCENT,
+              padding: '8px 20px',
+              borderRadius: '8px',
+              fontWeight: '800'
+            }}
+          >
+            {initialData
+              ? (t('modal.saveChanges') || 'Salvar Alterações')
+              : (t(config.titleKeys?.addKey) || config.titleKeys?.addFallback || 'Adicionar Evento')}
           </button>
         </>
       }
     >
       <div style={{ marginBottom: '14px' }}>
-        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-          {t(config.titleLabelKey) || config.titleLabelFallback}
+        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+          {t(config.titleLabelKey) || config.titleLabelFallback || 'Título / Descrição *'}
         </label>
         <input
           ref={titleInputRef}
           type="text"
-          required
-          autoFocus
-          placeholder={t(config.titlePlaceholderKey) || config.titlePlaceholderFallback}
           value={formData.title}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          className="form-input"
-          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', boxSizing: 'border-box' }}
+          placeholder={t(config.titlePlaceholderKey) || config.titlePlaceholderFallback || ''}
+          required
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            background: 'var(--bg-glass, rgba(255,255,255,0.03))',
+            border: '1px solid var(--border-glass)',
+            borderRadius: '8px',
+            color: 'var(--text-main)',
+            fontSize: '0.88rem',
+            outline: 'none',
+            boxSizing: 'border-box'
+          }}
         />
       </div>
 
@@ -339,41 +372,43 @@ export default function FinancialEventModal({
         />
       )}
 
-      <EuroInput
-        label={t(config.amountLabelKey) || config.amountLabelFallback}
-        value={displayedAmount}
-        accent={ACCENT}
-        readOnly={config.useBreakdown && breakdownItems.length > 0}
-        background={config.useBreakdown && breakdownItems.length > 0 ? config.amountBg : undefined}
-        onChange={(e) => {
-          if (!config.useBreakdown || breakdownItems.length === 0) {
-            setFormData((prev) => ({ ...prev, amount: e.target.value }));
-          }
-        }}
-        labelExtra={config.useBreakdown && breakdownItems.length > 0 ? (
-          <span style={{ fontSize: '0.72rem', color: ACCENT, fontWeight: '800' }}>
-            ({breakdownItems.length} {(t('modal.subparts') || 'Subpartes').toLowerCase()})
-          </span>
-        ) : null}
-      />
-
-      {config.useBreakdown && (
+      {config.useBreakdown ? (
         <BreakdownItems
           items={breakdownItems}
           onChange={setBreakdownItems}
+          singleAmount={formData.amount}
+          onSingleAmountChange={(val) => setFormData({ ...formData, amount: val })}
           accent={ACCENT}
           t={t}
-          initialAmount={formData.amount}
+          amountLabel={t(config.amountLabelKey)}
+        />
+      ) : (
+        <EuroInput
+          label={t(config.amountLabelKey)}
+          value={displayedAmount}
+          accent={ACCENT}
+          required={!config.showInitialTarget}
+          fontSize="1.1rem"
+          onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
         />
       )}
 
       {config.showInitialTarget && (
-        <div style={{ display: 'grid', gridTemplateColumns: isFirstEvent ? '1fr 1fr' : '1fr', gap: '10px', marginBottom: '16px' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isFirstEvent ? '1fr 1fr' : '1fr',
+          gap: '12px',
+          marginBottom: '14px',
+          background: 'rgba(255,255,255,0.02)',
+          padding: '12px',
+          borderRadius: '10px',
+          border: '1px solid var(--border-glass)'
+        }}>
           {isFirstEvent && (
             <EuroInput
               label={t('modal.initialInvestedAmount') || 'Aporte Inicial (€)'}
               value={formData.initialInvestedAmount}
-              accent="#64748b"
+              accent={ACCENT}
               required={false}
               fontSize="0.9rem"
               marginBottom="0"
@@ -383,7 +418,7 @@ export default function FinancialEventModal({
           <EuroInput
             label={t('modal.targetAmount') || 'Meta Final (€)'}
             value={formData.targetAmount}
-            accent="#64748b"
+            accent={ACCENT}
             required={false}
             fontSize="0.9rem"
             marginBottom="0"
@@ -394,24 +429,34 @@ export default function FinancialEventModal({
 
       {!initialData && (
         <>
-          <PeriodicitySelector
-            value={formData.periodicity}
+          <RecurrenceSelector
+            value={formData.recurrence}
             onChange={(id) => {
               setFormData((prev) => {
-                if (id === EventPeriodicity.PERIOD && !prev.recurrenceEndDate) {
+                if (id === EventRecurrence.LIMITED && !prev.recurrenceEndDate) {
                   return {
                     ...prev,
-                    periodicity: id,
+                    recurrence: id,
                     recurrenceEndDate: format(addMonths(parseISO(prev.date || format(new Date(), 'yyyy-MM-dd')), 6), 'yyyy-MM')
                   };
                 }
-                return { ...prev, periodicity: id };
+                return { ...prev, recurrence: id };
               });
             }}
             accent={ACCENT}
             t={t}
           />
-          {formData.periodicity === EventPeriodicity.PERIOD && (
+
+          {(formData.recurrence === EventRecurrence.RECURRING || formData.recurrence === EventRecurrence.LIMITED) && (
+            <PeriodicitySelector
+              value={formData.periodicity}
+              onChange={(pId) => setFormData((prev) => ({ ...prev, periodicity: pId }))}
+              accent={ACCENT}
+              t={t}
+            />
+          )}
+
+          {formData.recurrence === EventRecurrence.LIMITED && (
             <MonthPickerPopover
               value={formData.recurrenceEndDate}
               onChange={(month) => setFormData({ ...formData, recurrenceEndDate: month })}

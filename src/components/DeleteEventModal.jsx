@@ -3,9 +3,7 @@ import { Trash2, AlertTriangle, X, Calendar, DollarSign, Repeat } from 'lucide-r
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../utils/formatCurrency';
-import { EventPeriodicity } from '../../shared/enums/EventPeriodicity';
-import { EventType } from '../../shared/enums/EventType';
-import { EventDeletionMode } from '../../shared/enums/EventDeletionMode';
+import { EventRecurrence, EventPeriodicity, EventType, EventDeletionMode } from '../enums/index.js';
 
 export default function DeleteEventModal({
   isOpen,
@@ -38,10 +36,12 @@ export default function DeleteEventModal({
   const isFinancial = isIncome || isExpense || isInvestment;
 
   const isRecurring = Boolean(
-    event.periodicity === EventPeriodicity.RECURRING ||
-    event.periodicity === EventPeriodicity.RECURRENT ||
+    event.recurrence === EventRecurrence.RECURRING ||
+    event.recurrence === EventRecurrence.LIMITED ||
+    event.recurrence === 'recurring' ||
+    event.recurrence === 'limited' ||
     event.periodicity === 'recorrente' ||
-    event.periodicity === EventPeriodicity.PERIOD ||
+    event.periodicity === 'period' ||
     event.periodicity === 'periodo' ||
     event.isRecurring === true ||
     event.is_recurring === true ||
@@ -49,12 +49,12 @@ export default function DeleteEventModal({
     Boolean(
       event.category &&
       (event.category.includes('recorrente') ||
-       event.category === 'parcela_emprestimo' ||
-       event.category === 'repetitivo')
+        event.category === 'parcela_emprestimo' ||
+        event.category === 'repetitivo')
     )
   ) &&
-    event.periodicity !== EventPeriodicity.ONCE &&
-    event.periodicity !== EventPeriodicity.UNIQUE &&
+    event.recurrence !== EventRecurrence.ONCE &&
+    event.recurrence !== 'once' &&
     event.periodicity !== 'unico' &&
     event.periodicity !== 'unica' &&
     event.periodicity !== 'once' &&

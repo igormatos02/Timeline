@@ -1,9 +1,8 @@
 export const EventPeriodicity = Object.freeze({
-  RECURRING: 'recurring',
-  ONCE: 'once',
-  PERIOD: 'period',
-
-  // Aliases for compatibility
-  RECURRENT: 'recurring',
-  UNIQUE: 'once'
+  MONTHLY: 'monthly',
+  BIWEEKLY: 'biweekly',
+  BIMONTHLY: 'bimonthly',
+  SEMIANNUAL: 'biannual',
+  ANNUAL: 'annual'
 });
+

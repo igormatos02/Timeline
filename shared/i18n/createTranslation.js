@@ -2,6 +2,7 @@ import { translations } from './translations.js';
 
 export function createT(language = 'en') {
   return (path, params = {}) => {
+    if (!path || typeof path !== 'string') return '';
     const keys = path.split('.');
     let result = translations[language];
 

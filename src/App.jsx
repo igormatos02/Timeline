@@ -24,8 +24,7 @@ import {
 } from './utils/loanCalculations';
 import { formatCurrency } from './utils/formatCurrency';
 import * as api from './services/api';
-import { generateUUID } from './utils/uuid';
-import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType } from './enums/index.js';
+import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
@@ -594,7 +593,7 @@ export default function App() {
             startDate: fullStartDateStr,
             debtStartDate: fullStartDateStr,
             dueDay: dueDayNum,
-            periodicity: formData.periodicity || formData.aggregation || EventAggregation.MONTHLY
+            periodicity: formData.periodicity || formData.aggregation || EventPeriodicity.MONTHLY
           });
 
           // Obter eventos existentes desta timeline (garantindo que vêm da API se rawEvents estiver desatualizado)
@@ -774,7 +773,7 @@ export default function App() {
                 startDate: fullStartDateStr,
                 debtStartDate: fullStartDateStr,
                 dueDay: dueDayNum,
-                periodicity: formData.periodicity || formData.aggregation || EventAggregation.MONTHLY
+                periodicity: formData.periodicity || formData.aggregation || EventPeriodicity.MONTHLY
               }) : []);
 
           if (installmentEvents.length > 0) {
@@ -913,13 +912,14 @@ export default function App() {
           showToast(t('toast.eventUpdatedSuccess') || 'Evento atualizado com sucesso na base de dados!', 'success');
         } else {
           const isRecurring = Boolean(
+            eventData.recurrence === EventRecurrence.RECURRING ||
+            eventData.recurrence === EventRecurrence.LIMITED ||
+            eventData.recurrence === 'recurring' ||
+            eventData.recurrence === 'limited' ||
             eventData.periodicity === 'recorrente' ||
             eventData.periodicity === 'recurring' ||
-            eventData.periodicity === EventPeriodicity.RECURRING ||
-            eventData.periodicity === EventPeriodicity.PERIOD ||
             eventData.periodicity === 'period' ||
-            eventData.isRecurring ||
-            (eventData.category && eventData.category.includes('recorrente'))
+            eventData.isRecurring
           );
           const newEvent = {
             ...eventData,
@@ -929,6 +929,8 @@ export default function App() {
             timelineOriginId: targetTimelineId,
             eventId: isRecurring ? generateUUID() : null,
             version: 0,
+            recurrence: eventData.recurrence || (isRecurring ? EventRecurrence.RECURRING : EventRecurrence.ONCE),
+            periodicity: eventData.periodicity || EventPeriodicity.MONTHLY,
             isRecurring
           };
           await api.createEvent(newEvent);

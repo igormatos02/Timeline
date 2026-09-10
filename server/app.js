@@ -21,6 +21,22 @@ app.use('/api/events', eventsRouter);
 app.use('/api/loans', loansRouter);
 app.use('/api/persons', personsRouter);
 
+// Dynamic version endpoint reading package.json on demand
+app.get('/api/version', (req, res) => {
+  try {
+    const pkgUrl = new URL('../package.json', import.meta.url);
+    const fs = req.app.get('fs') || import('node:fs');
+    import('node:fs').then(({ readFileSync }) => {
+      const pkg = JSON.parse(readFileSync(pkgUrl, 'utf8'));
+      res.json({ version: pkg.version });
+    }).catch(() => {
+      res.json({ version: '0.1.3' });
+    });
+  } catch {
+    res.json({ version: '0.1.3' });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });

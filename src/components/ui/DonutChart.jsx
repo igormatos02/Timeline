@@ -3,7 +3,7 @@ import { computeDonutSlice, computePieSlices } from '../../utils/timelineCharts.
 
 export function DonutChart({
   percent,
-  sliceColor,
+  sliceColor = 'var(--primary-light)',
   remainingColor = 'rgba(255, 255, 255, 0.08)',
   title,
   label,
@@ -58,7 +58,15 @@ export function PieDonut({
   empty = false,
   emptyLabel = '0%'
 }) {
-  const slices = computePieSlices(items.filter((s) => (s.percent || 0) > 0));
+  const slices = computePieSlices(
+    (items || []).map((s) => ({
+      ...s,
+      percent: Number(s.percent ?? s.pct ?? 0),
+      name: s.name ?? s.label ?? ''
+    }))
+  );
+
+  const isEmpty = empty || !slices || slices.length === 0;
 
   return (
     <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
@@ -66,15 +74,16 @@ export function PieDonut({
         viewBox="-1 -1 2 2"
         style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%', overflow: 'visible' }}
       >
-        {empty ? (
+        <circle cx="0" cy="0" r="1" fill="rgba(255, 255, 255, 0.08)" />
+        {isEmpty ? (
           <circle
             cx="0"
             cy="0"
-            r="1"
+            r="0.95"
             fill="none"
-            stroke="rgba(255, 255, 255, 0.08)"
-            strokeWidth="0.1"
-            strokeDasharray="3 3"
+            stroke="rgba(255, 255, 255, 0.12)"
+            strokeWidth="0.08"
+            strokeDasharray="0.1 0.1"
           />
         ) : (
           slices.map((s, idx) => (
@@ -108,7 +117,7 @@ export function PieDonut({
           color: centerColor
         }}
       >
-        {empty ? emptyLabel : centerLabel}
+        {isEmpty ? emptyLabel : centerLabel}
       </div>
     </div>
   );

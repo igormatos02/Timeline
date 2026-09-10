@@ -14,6 +14,20 @@ import {
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/formatCurrency';
+import {
+  EventType,
+  EventStatus,
+  TimelineType,
+  TimelineStatus,
+  LoanEventCategory,
+  IncomeEventCategory,
+  ExpenseEventCategory,
+  AmortizationEventCategory,
+  AmortizationStrategy,
+  isPositiveStatus,
+  isCancelledStatus,
+  isLoanTimelineType
+} from '../../enums/index.js';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 import { PieDonut } from '../ui/DonutChart.jsx';
@@ -23,9 +37,9 @@ export default function BalanceTimelineHeader({
   allTimelines = [],
   events = [],
   onEdit,
-  onDelete,
+  _onDelete,
   onAddEvent,
-  onReset,
+  _onReset,
   activeViewMode = 'summary',
   setActiveViewMode,
   computeStartDate = null,
@@ -34,7 +48,54 @@ export default function BalanceTimelineHeader({
   const [collapsed, setIsCollapsed] = useState(false);
   const [projectionMonthsAhead, setProjectionMonthsAhead] = useState(0);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [tempComputeMonth, setTempComputeMonth] = useState('2026-08');
+  const [_tempComputeMonth, setTempComputeMonth] = useState('2026-08');
+
+  // Mapa de tipo por ID de timeline para resolução precisa de eventos
+  const timelineTypeMap = React.useMemo(() => {
+    const map = new Map();
+    (allTimelines || []).forEach((t) => {
+      if (t && t.id) map.set(String(t.id), t.type);
+    });
+    if (timeline && timeline.id) {
+      map.set(String(timeline.id), timeline.type);
+    }
+    return map;
+  }, [allTimelines, timeline]);
+
+  const validTimelineIds = React.useMemo(() => {
+    const set = new Set();
+    (allTimelines || []).forEach((t) => {
+      if (t && t.id) set.add(String(t.id));
+    });
+    if (timeline && timeline.id) {
+      set.add(String(timeline.id));
+    }
+    return set;
+  }, [allTimelines, timeline]);
+
+  const eventsList = React.useMemo(() => {
+    const map = new Map();
+    const addIfValid = (e) => {
+      if (!e || !e.id) return;
+      const tid = String(e.timelineId || e.timeline_id || e.timelineOriginId || '');
+      // Se conhecemos as timelines do timeboard, apenas incluir eventos pertencentes a elas
+      if (validTimelineIds.size > 0 && tid && !validTimelineIds.has(tid)) return;
+      map.set(e.id, e);
+    };
+
+    if (events && Array.isArray(events)) {
+      events.forEach(addIfValid);
+    }
+    if (timeline?.events && Array.isArray(timeline.events)) {
+      timeline.events.forEach(addIfValid);
+    }
+    (allTimelines || []).forEach((t) => {
+      if (t.events && Array.isArray(t.events)) {
+        t.events.forEach(addIfValid);
+      }
+    });
+    return Array.from(map.values());
+  }, [events, timeline?.events, allTimelines, validTimelineIds]);
 
   if (!timeline) return null;
 
@@ -80,26 +141,117 @@ export default function BalanceTimelineHeader({
   // Extrair métricas consolidadas seguras da Stored Procedure ou fallback
   const dto = timeline.balanceHeaderResult || timeline.procedureMetrics;
   const rawMetrics = dto || timeline.metrics || {};
+
   // Calcular saldo devedor vindo de todas as timelines de empréstimos ATIVAS
-  const activeLoanTimelinesSum = (allTimelines || []).filter((t) => {
-    const typeLower = (t.type || '').toLowerCase();
-    const isLoan = typeLower.includes('loan') || typeLower.includes('empr');
-    const isActive = t.status === 'active' || t.status === 'ACTIVE' || !t.status;
+  const activeLoanTimelines = (allTimelines || []).filter((t) => {
+    const isLoan = isLoanTimelineType(t.type);
+    const isActive = t.status === TimelineStatus.ACTIVE || !t.status;
     return isLoan && isActive;
-  }).reduce((sum, t) => {
+  });
+  const hasLoanTimeline = activeLoanTimelines.length > 0;
+  const hasInvestmentTimeline = (allTimelines || []).some((t) => t.type === TimelineType.INVESTMENT || t.type === 'investments' || t.type === 'investment');
+
+  const todayDate = new Date();
+  const currentMonthStr = format(todayDate, 'yyyy-MM');
+
+  let calculatedIncome = 0;
+  let calculatedExpenses = 0;
+  let calculatedInvestments = 0;
+
+  eventsList.forEach((ev) => {
+    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+
+    const eventMonthStr = ev.date.substring(0, 7);
+    const isAfterStart = !computeFromMonth || computeFromMonth === '1900-01' || eventMonthStr >= computeFromMonth;
+    const isUpToCurrentMonth = eventMonthStr <= currentMonthStr;
+
+    if (!isAfterStart || !isUpToCurrentMonth) return;
+
+    const isRealized = isPositiveStatus(ev.status) || isPositiveStatus(ev.status?.toLowerCase()) || Boolean(ev.isCompleted);
+    if (!isRealized) return;
+
+    const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timeline_id || ''));
+
+    const isLoanInst = ev.eventType === EventType.LOAN_INSTALLMENT ||
+      ev.eventType === 'loan_installment' ||
+      ev.category === 'parcela_emprestimo' ||
+      ev.category === LoanEventCategory.LOAN_INSTALLMENT ||
+      (Boolean(ev.isSystemLoanEvent) && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
+
+    const isAmortization = ev.eventType === EventType.AMORTIZATION ||
+      ev.eventType === 'amortization' ||
+      ev.category === 'amortizacao' ||
+      ev.category === 'amortization' ||
+      ev.category === AmortizationEventCategory.REDUCE_TERM ||
+      ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
+      ev.category === AmortizationStrategy.REDUCE_TERM ||
+      ev.category === AmortizationStrategy.REDUCE_INSTALLMENT;
+
+    const isLoan = isLoanInst || isAmortization || isLoanTimelineType(tlType);
+
+    const amt = isLoanInst
+      ? Number(ev.installmentAmount !== undefined ? ev.installmentAmount : (ev.amount || 0))
+      : Number(ev.amount || 0);
+
+    if (amt <= 0) return;
+
+    const isIncome = (
+      ev.eventType === EventType.INCOME ||
+      ev.eventType === 'income' ||
+      tlType === TimelineType.INCOME ||
+      ev.category === 'entrada_recorrente' ||
+      ev.category === IncomeEventCategory.RECURRING_INCOME ||
+      Boolean(ev.isIncome)
+    ) && !isLoan;
+
+    const isInvestment = (
+      ev.eventType === EventType.INVESTMENT ||
+      ev.eventType === 'investment' ||
+      ev.eventType === 'investimento' ||
+      tlType === TimelineType.INVESTMENT ||
+      Boolean(ev.isInvestment)
+    ) && !isLoan;
+
+    const isExpense = (
+      ev.eventType === EventType.EXPENSE ||
+      ev.eventType === 'expense' ||
+      tlType === TimelineType.EXPENSE ||
+      ev.category === 'saida_recorrente' ||
+      ev.category === ExpenseEventCategory.RECURRING_EXPENSE ||
+      Boolean(ev.isExpense) ||
+      isLoan
+    ) && !isIncome && !isInvestment;
+
+    if (isIncome) {
+      calculatedIncome += amt;
+    } else if (isInvestment && !ev.isExternal && !ev.is_external && !ev.isFirstOccurrence) {
+      calculatedInvestments += amt;
+    } else if (isExpense) {
+      calculatedExpenses += amt;
+    }
+  });
+
+  const activeLoanTimelinesSum = activeLoanTimelines.reduce((sum, t) => {
     const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
-    return sum + Number(m.remaining_debt ?? m.remainingDebt ?? m.total_debt ?? m.totalDebt ?? 0);
+    return sum + Number(m.remaining_debt ?? m.remainingDebt ?? m.total_debt ?? m.totalDebt ?? t.totalDebt ?? 0);
   }, 0);
 
-  const rawRemainingDebt = rawMetrics.total_remaining_debt ?? rawMetrics.totalRemainingDebt ?? 0;
+  const rawRemainingDebt = rawMetrics.total_remaining_debt ?? rawMetrics.totalRemainingDebt ?? rawMetrics.totalActiveDebt ?? 0;
   const computedRemainingDebt = activeLoanTimelinesSum > 0 ? activeLoanTimelinesSum : rawRemainingDebt;
+
+  const totalReceived = calculatedIncome;
+  const totalPaidExpenses = calculatedExpenses;
+  const totalInvested = calculatedInvestments;
+  const totalRemainingDebt = computedRemainingDebt;
+  // Fórmula: Entradas - Saídas - Dívidas - Investimentos (que não sejam depósitos externos)
+  const netRealized = totalReceived - totalPaidExpenses - (hasLoanTimeline ? totalRemainingDebt : 0) - totalInvested;
 
   const finMetrics = {
     ...rawMetrics,
-    netRealized: rawMetrics.net_realized ?? rawMetrics.netRealized ?? 0,
-    totalReceived: rawMetrics.total_received ?? rawMetrics.totalReceived ?? 0,
-    totalPaidExpenses: rawMetrics.total_paid_expenses ?? rawMetrics.totalPaidExpenses ?? 0,
-    totalInvested: rawMetrics.total_invested ?? rawMetrics.totalInvested ?? 0,
+    netRealized,
+    totalReceived,
+    totalPaidExpenses,
+    totalInvested,
     totalRemainingDebt: computedRemainingDebt,
     totalAmortized: rawMetrics.total_amortized ?? rawMetrics.totalAmortized ?? 0,
     totalLoanDebt: rawMetrics.total_loan_debt ?? rawMetrics.totalLoanDebt ?? 0,
@@ -299,14 +451,18 @@ export default function BalanceTimelineHeader({
                           <span style={{ color: 'var(--text-dim)' }}>Saídas:</span>
                           <strong style={{ color: '#f43f5e' }}>-{formatCurrency(totalPaidExpenses).replace(',00', '')}</strong>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
-                          <span style={{ color: 'var(--text-dim)' }}>Investido:</span>
-                          <strong style={{ color: '#6366f1' }}>-{formatCurrency(totalInvested).replace(',00', '')}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
-                          <span style={{ color: 'var(--text-dim)' }}>Devido:</span>
-                          <strong style={{ color: '#f59e0b' }}>{formatCurrency(totalRemainingDebt).replace(',00', '')}</strong>
-                        </div>
+                        {(hasInvestmentTimeline && totalInvested > 0) && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+                            <span style={{ color: 'var(--text-dim)' }}>Em conta:</span>
+                            <strong style={{ color: '#6366f1' }}>-{formatCurrency(totalInvested).replace(',00', '')}</strong>
+                          </div>
+                        )}
+                        {(hasLoanTimeline && totalRemainingDebt > 0) && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+                            <span style={{ color: 'var(--text-dim)' }}>Devido:</span>
+                            <strong style={{ color: '#f59e0b' }}>{formatCurrency(totalRemainingDebt).replace(',00', '')}</strong>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -314,33 +470,36 @@ export default function BalanceTimelineHeader({
               })()}
             </div>
 
-            {/* Quadrante 2: ANNUAL INCOME BREAKDOWN (Despesas + Investimentos + Empréstimos vs Renda) */}
+            {/* Quadrante 2: ANNUAL INCOME BREAKDOWN (Despesas + Em conta + Devido vs Renda) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 ANNUAL INCOME BREAKDOWN
               </div>
               {(() => {
-                const eventsList = (events && events.length > 0 ? events : timeline.events) || [];
+                // Janela de 12 meses a partir do mês de início de computação configurado (Computar: ...)
+                let baseYear, baseMonth;
+                if (computeFromMonth && computeFromMonth !== '1900-01') {
+                  const [y, m] = computeFromMonth.split('-').map(Number);
+                  baseYear = y;
+                  baseMonth = m - 1;
+                } else {
+                  const now = new Date();
+                  baseYear = now.getFullYear();
+                  baseMonth = now.getMonth();
+                }
 
-                // Timezone-safe 12-month window
-                const now = new Date();
-                const sy = now.getFullYear();
-                const sm = now.getMonth(); // 0-indexed
-                const startMK = `${sy}-${String(sm + 1).padStart(2, '0')}`;
-                const etm = sm + 12;
-                const ey = sy + Math.floor(etm / 12);
+                const startMK = `${baseYear}-${String(baseMonth + 1).padStart(2, '0')}`;
+                const etm = baseMonth + 12;
+                const ey = baseYear + Math.floor(etm / 12);
                 const em = etm % 12;
                 const endMK = `${ey}-${String(em + 1).padStart(2, '0')}`;
 
-                // Use the same active loan filter as Quadrant 3 (which already works)
                 const activeLoanTimelines = (allTimelines || []).filter((t) => {
-                  const typeLower = (t.type || '').toLowerCase();
-                  const isLoanType = typeLower.includes('loan') || typeLower.includes('empr');
-                  const isActive = (t.status || '').toLowerCase() === 'active';
-                  return isLoanType && isActive;
+                  const isLoan = isLoanTimelineType(t.type);
+                  const isActive = t.status === TimelineStatus.ACTIVE || !t.status;
+                  return isLoan && isActive;
                 });
-
-                // Build active loan ID set for event-based fallback
+                const hasLoanTimeline = activeLoanTimelines.length > 0;
                 const activeLoanIds = new Set(activeLoanTimelines.map((t) => String(t.id)));
 
                 let annualIncome = 0;
@@ -348,39 +507,88 @@ export default function BalanceTimelineHeader({
                 let annualInvestment = 0;
                 let annualLoan = 0;
 
-                // Calculate annual loan cost from active loan timeline metrics (monthly installment × 12)
-                // This is reliable because it comes from stored metrics, not event timelineId
-                activeLoanTimelines.forEach((t) => {
-                  const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
-                  const monthly = Number(
-                    m.monthly_installment ?? m.monthlyInstallment ??
-                    m.monthly_payment ?? m.monthlyPayment ??
-                    m.installment ?? 0
-                  );
-                  if (monthly > 0) {
-                    annualLoan += monthly * 12;
-                  }
-                });
+                // Calcular custo anual de empréstimos das timelines ativas (mensalidade × 12)
+                if (hasLoanTimeline) {
+                  activeLoanTimelines.forEach((t) => {
+                    const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
+                    const monthly = Number(
+                      m.monthly_installment ?? m.monthlyInstallment ??
+                      m.monthly_payment ?? m.monthlyPayment ??
+                      m.installment ?? 0
+                    );
+                    if (monthly > 0) {
+                      annualLoan += monthly * 12;
+                    }
+                  });
+                }
 
                 eventsList.forEach((ev) => {
-                  if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
+                  if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
                   const mk = ev.date.substring(0, 7);
                   if (mk < startMK || mk >= endMK) return;
 
-                  const isIncome = ev.eventType === 'income' || ev.isIncome;
-                  const isExpense = ev.eventType === 'expense' || ev.isExpense;
-                  const isInvestment = ev.eventType === 'investment' || ev.isInvestment;
-                  const amt = Number(ev.amount || 0);
+                  const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timeline_id || ''));
 
-                  if (isIncome) annualIncome += amt;
-                  else if (isExpense) annualExpense += amt;
-                  else if (isInvestment && !ev.isFirstOccurrence && !ev.isExternal && !ev.is_external) annualInvestment += amt;
-                  // Loan: only use event-based if no metrics were found on active timelines
-                  else if (
+                  const isLoanInst = ev.eventType === EventType.LOAN_INSTALLMENT ||
+                    ev.eventType === 'loan_installment' ||
+                    ev.category === 'parcela_emprestimo' ||
+                    ev.category === LoanEventCategory.LOAN_INSTALLMENT ||
+                    (Boolean(ev.isSystemLoanEvent) && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
+
+                  const isAmortization = ev.eventType === EventType.AMORTIZATION ||
+                    ev.eventType === 'amortization' ||
+                    ev.category === 'amortizacao' ||
+                    ev.category === 'amortization' ||
+                    ev.category === AmortizationEventCategory.REDUCE_TERM ||
+                    ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
+                    ev.category === AmortizationStrategy.REDUCE_TERM ||
+                    ev.category === AmortizationStrategy.REDUCE_INSTALLMENT;
+
+                  const isLoan = isLoanInst || isAmortization || isLoanTimelineType(tlType);
+
+                  const amt = isLoanInst
+                    ? Number(ev.installmentAmount !== undefined ? ev.installmentAmount : (ev.amount || 0))
+                    : Number(ev.amount || 0);
+
+                  if (amt <= 0) return;
+
+                  const isIncome = (
+                    ev.eventType === EventType.INCOME ||
+                    ev.eventType === 'income' ||
+                    tlType === TimelineType.INCOME ||
+                    ev.category === 'entrada_recorrente' ||
+                    ev.category === IncomeEventCategory.RECURRING_INCOME ||
+                    Boolean(ev.isIncome)
+                  ) && !isLoan;
+
+                  const isInvestment = (
+                    ev.eventType === EventType.INVESTMENT ||
+                    ev.eventType === 'investment' ||
+                    ev.eventType === 'investimento' ||
+                    tlType === TimelineType.INVESTMENT ||
+                    Boolean(ev.isInvestment)
+                  ) && !isLoan;
+
+                  const isExpense = (
+                    ev.eventType === EventType.EXPENSE ||
+                    ev.eventType === 'expense' ||
+                    tlType === TimelineType.EXPENSE ||
+                    ev.category === 'saida_recorrente' ||
+                    ev.category === ExpenseEventCategory.RECURRING_EXPENSE ||
+                    Boolean(ev.isExpense)
+                  ) && !isIncome && !isInvestment && !isLoan;
+
+                  if (isIncome) {
+                    annualIncome += amt;
+                  } else if (isExpense) {
+                    annualExpense += amt;
+                  } else if (isInvestment && !ev.isFirstOccurrence && !ev.isExternal && !ev.is_external) {
+                    annualInvestment += amt;
+                  } else if (
+                    hasLoanTimeline &&
                     annualLoan === 0 &&
-                    (ev.eventType === 'loan_installment' || ev.isSystemLoanEvent) &&
-                    ev.eventType !== 'amortization' &&
-                    ev.category !== 'amortizacao' &&
+                    isLoanInst &&
+                    !isAmortization &&
                     activeLoanIds.has(String(ev.timelineId || ev.timeline_id || ''))
                   ) {
                     annualLoan += amt;
@@ -389,36 +597,56 @@ export default function BalanceTimelineHeader({
 
                 const expPct = annualIncome > 0 ? Math.round((annualExpense / annualIncome) * 100) : 0;
                 const invPct = annualIncome > 0 ? Math.round((annualInvestment / annualIncome) * 100) : 0;
-                const loanPct = annualIncome > 0 ? Math.round((annualLoan / annualIncome) * 100) : 0;
+                const loanPct = (hasLoanTimeline && annualIncome > 0) ? Math.round((annualLoan / annualIncome) * 100) : 0;
                 const freePct = Math.max(0, 100 - expPct - invPct - loanPct);
                 const totalCommitted = expPct + invPct + loanPct;
 
+                // Mesma fórmula do Balanço: Entradas - Saídas - Dívidas - Em conta
+                const annualNet = annualIncome - annualExpense - (hasLoanTimeline ? annualLoan : 0) - annualInvestment;
+
                 if (annualIncome === 0) {
                   return (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
-                      <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
-                        <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                          <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
-                        </svg>
-                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '42px', height: '42px', borderRadius: '50%', background: 'var(--bg-card, #0f172a)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-glass)', fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-dim)' }}>
-                          0%
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
+                        <PieDonut items={[]} empty={true} emptyLabel="0%" centerColor="var(--text-dim)" />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>Sem rendimentos projetados</span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>Adicione entradas para visualizar a distribuição anual.</span>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>Sem rendimentos projetados</span>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>Adicione entradas para visualizar a distribuição anual.</span>
+
+                      <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                          Total Anual Projetado
+                        </span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', background: 'rgba(255, 255, 255, 0.02)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-glass)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ color: 'var(--text-dim)' }}>Saldo:</span>
+                            <strong style={{ color: annualNet >= 0 ? '#10b981' : '#f43f5e' }}>
+                              {annualNet >= 0 ? '+' : ''}{formatCurrency(annualNet)}
+                            </strong>
+                          </div>
+                          {(hasInvestmentTimeline || annualInvestment > 0) && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ color: 'var(--text-dim)' }}>Em conta:</span>
+                              <strong style={{ color: '#6366f1' }}>
+                                +{formatCurrency(annualInvestment)}
+                              </strong>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
                 }
 
-                // Build pie slices
+                // Fatias do Donut
                 const segments = [
-                  { label: 'Gastos', pct: expPct, amount: annualExpense, color: '#f43f5e' },
-                  { label: 'Investimentos', pct: invPct, amount: annualInvestment, color: '#6366f1' },
-                  { label: 'Empréstimos', pct: loanPct, amount: annualLoan, color: '#f59e0b' },
-                  { label: 'Disponível', pct: freePct, amount: Math.max(0, annualIncome - annualExpense - annualInvestment - annualLoan), color: '#10b981' }
-                ].filter((s) => s.pct > 0);
+                  { name: 'Gastos', label: 'Gastos', percent: expPct, pct: expPct, amount: annualExpense, color: '#f43f5e' },
+                  ...((hasInvestmentTimeline && invPct > 0) ? [{ name: 'Em conta', label: 'Em conta', percent: invPct, pct: invPct, amount: annualInvestment, color: '#6366f1' }] : []),
+                  ...((hasLoanTimeline && loanPct > 0) ? [{ name: 'Devido', label: 'Devido', percent: loanPct, pct: loanPct, amount: annualLoan, color: '#f59e0b' }] : []),
+                  ...(freePct > 0 ? [{ name: 'Disponível', label: 'Disponível', percent: freePct, pct: freePct, amount: Math.max(0, annualNet), color: '#10b981' }] : [])
+                ].filter((s) => s.percent > 0);
 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -431,153 +659,199 @@ export default function BalanceTimelineHeader({
                       />
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
-                        {segments.filter(s => s.label !== 'Disponível').map((seg, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: seg.color, flexShrink: 0 }} />
-                              <span style={{ color: 'var(--text-dim)' }}>{seg.label}</span>
-                            </div>
-                            <strong style={{ color: 'var(--text-main)' }}>{seg.pct}%</strong>
-                          </div>
-                        ))}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }} />
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f43f5e', flexShrink: 0 }} />
+                            <span style={{ color: 'var(--text-dim)' }}>Gastos</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ color: 'var(--text-dim)', fontSize: '0.66rem' }}>-{formatCurrency(annualExpense)}</span>
+                            <strong style={{ color: '#f43f5e' }}>{expPct}%</strong>
+                          </div>
+                        </div>
+
+                        {(hasInvestmentTimeline && invPct > 0) && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6366f1', flexShrink: 0 }} />
+                              <span style={{ color: 'var(--text-dim)' }}>Em conta</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ color: 'var(--text-dim)', fontSize: '0.66rem' }}>-{formatCurrency(annualInvestment)}</span>
+                              <strong style={{ color: '#6366f1' }}>{invPct}%</strong>
+                            </div>
+                          </div>
+                        )}
+
+                        {(hasLoanTimeline && loanPct > 0) && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
+                              <span style={{ color: 'var(--text-dim)' }}>Devido</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ color: 'var(--text-dim)', fontSize: '0.66rem' }}>-{formatCurrency(annualLoan)}</span>
+                              <strong style={{ color: '#f59e0b' }}>{loanPct}%</strong>
+                            </div>
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />
                             <span style={{ color: 'var(--text-dim)' }}>Disponível</span>
                           </div>
-                          <strong style={{ color: '#10b981' }}>{freePct}%</strong>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ color: 'var(--text-dim)', fontSize: '0.66rem' }}>+{formatCurrency(Math.max(0, annualNet))}</span>
+                            <strong style={{ color: '#10b981' }}>{freePct}%</strong>
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '600' }}>Total Anual Projetado</span>
-                      <strong style={{ color: '#0ea5e9', fontSize: '0.86rem', fontWeight: '800' }}>
-                        {formatCurrency(annualIncome)}
-                      </strong>
+                    <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                        Total Anual Projetado
+                      </span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', background: 'rgba(255, 255, 255, 0.02)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-glass)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ color: 'var(--text-dim)' }}>Saldo:</span>
+                          <strong style={{ color: annualNet >= 0 ? '#10b981' : '#f43f5e' }}>
+                            {annualNet >= 0 ? '+' : ''}{formatCurrency(annualNet)}
+                          </strong>
+                        </div>
+                        {(hasInvestmentTimeline && annualInvestment > 0) && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ color: 'var(--text-dim)' }}>Em conta:</span>
+                            <strong style={{ color: '#6366f1' }}>
+                              +{formatCurrency(annualInvestment)}
+                            </strong>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
               })()}
             </div>
 
+            {/* Quadrante 3: EMPRÉSTIMOS E FINANCIAMENTOS (Apenas exibido se houver timelines de dívida ativas) */}
+            {hasLoanTimeline && (
+              <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  EMPRÉSTIMOS E FINANCIAMENTOS
+                </div>
+                {(() => {
+                  const loanColors = ['#8b5cf6', '#0ea5e9', '#14b8a6', '#6366f1', '#f59e0b', '#ec4899'];
 
-            {/* Quadrante 3: EMPRÉSTIMOS E FINANCIAMENTOS (Donut SVG por Financiamento) */}
-            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                EMPRÉSTIMOS E FINANCIAMENTOS
-              </div>
-              {(() => {
-                const loanColors = ['#8b5cf6', '#0ea5e9', '#14b8a6', '#6366f1', '#f59e0b', '#ec4899'];
+                  let loanItems = (finMetrics.loans_breakdown || []).map((l, idx) => ({
+                    id: l.timeline_id,
+                    name: l.name,
+                    amount: Number(l.amount || l.remaining_principal || 0),
+                    percent: Number(l.percentage || l.percent || 0),
+                    color: loanColors[idx % loanColors.length]
+                  })).filter((item) => item.amount > 0 || item.percent > 0);
 
-                let loanItems = (finMetrics.loans_breakdown || []).map((l, idx) => ({
-                  id: l.timeline_id,
-                  name: l.name,
-                  amount: Number(l.amount || l.remaining_principal || 0),
-                  percent: Number(l.percentage || l.percent || 0),
-                  color: loanColors[idx % loanColors.length]
-                })).filter((item) => item.amount > 0 || item.percent > 0);
+                  const activeLoanTimelines = (allTimelines || []).filter((t) => {
+                    const isLoan = isLoanTimelineType(t.type);
+                    const isActive = t.status === TimelineStatus.ACTIVE || !t.status;
+                    return isLoan && isActive;
+                  });
 
-                const activeLoanTimelines = (allTimelines || []).filter((t) => {
-                  const typeLower = (t.type || '').toLowerCase();
-                  const isLoan = typeLower.includes('loan') || typeLower.includes('empr');
-                  const isActive = t.status === 'active' || t.status === 'ACTIVE' || !t.status;
-                  return isLoan && isActive;
-                });
+                  if (loanItems.length === 0) {
+                    loanItems = activeLoanTimelines.map((t, idx) => {
+                      const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
+                      const debt = Number(m.remaining_debt ?? m.remainingDebt ?? m.total_debt ?? m.totalDebt ?? 0);
+                      return {
+                        id: t.id,
+                        name: t.name,
+                        amount: debt,
+                        color: t.color || loanColors[idx % loanColors.length]
+                      };
+                    }).filter((item) => item.amount > 0);
+                  }
 
-                if (loanItems.length === 0) {
-                  loanItems = activeLoanTimelines.map((t, idx) => {
+                  const computedActiveAmortized = activeLoanTimelines.reduce((sum, t) => {
                     const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
-                    const debt = Number(m.remaining_debt ?? m.remainingDebt ?? m.total_debt ?? m.totalDebt ?? 0);
-                    return {
-                      id: t.id,
-                      name: t.name,
-                      amount: debt,
-                      color: t.color || loanColors[idx % loanColors.length]
-                    };
-                  }).filter((item) => item.amount > 0);
-                }
+                    return sum + Number(m.amortized_capital ?? m.amortizedCapital ?? m.paid_capital ?? 0);
+                  }, 0);
 
-                const computedActiveAmortized = activeLoanTimelines.reduce((sum, t) => {
-                  const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
-                  return sum + Number(m.amortized_capital ?? m.amortizedCapital ?? m.paid_capital ?? 0);
-                }, 0);
+                  const computedActiveRemainingDebt = activeLoanTimelines.reduce((sum, t) => {
+                    const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
+                    return sum + Number(m.remaining_debt ?? m.remainingDebt ?? m.total_debt ?? m.totalDebt ?? 0);
+                  }, 0);
 
-                const computedActiveRemainingDebt = activeLoanTimelines.reduce((sum, t) => {
-                  const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
-                  return sum + Number(m.remaining_debt ?? m.remainingDebt ?? m.total_debt ?? m.totalDebt ?? 0);
-                }, 0);
+                  const computedActiveTotalLoanCost = activeLoanTimelines.reduce((sum, t) => {
+                    const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
+                    const totalCost = Number(m.total_loan_cost ?? m.totalLoanCost ?? m.totalCost ?? 0);
+                    if (totalCost > 0) return sum + totalCost;
+                    const originalCap = Number(m.original_capital ?? m.originalCapital ?? m.total_debt ?? m.totalDebt ?? t.totalDebt ?? 0);
+                    const estInt = Number(m.total_estimated_interest ?? m.totalEstimatedInterest ?? m.future_interest ?? m.futureInterest ?? 0);
+                    const estFee = Number(m.total_estimated_fee ?? m.totalEstimatedFee ?? m.future_fee ?? m.futureFee ?? 0);
+                    return sum + (originalCap + estInt + estFee);
+                  }, 0);
 
-                const computedActiveTotalLoanCost = activeLoanTimelines.reduce((sum, t) => {
-                  const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
-                  const totalCost = Number(m.total_loan_cost ?? m.totalLoanCost ?? m.totalCost ?? 0);
-                  if (totalCost > 0) return sum + totalCost;
-                  const originalCap = Number(m.original_capital ?? m.originalCapital ?? m.total_debt ?? m.totalDebt ?? t.totalDebt ?? 0);
-                  const estInt = Number(m.total_estimated_interest ?? m.totalEstimatedInterest ?? m.future_interest ?? m.futureInterest ?? 0);
-                  const estFee = Number(m.total_estimated_fee ?? m.totalEstimatedFee ?? m.future_fee ?? m.futureFee ?? 0);
-                  return sum + (originalCap + estInt + estFee);
-                }, 0);
+                  const totalDebtSum = loanItems.reduce((acc, i) => acc + (i.amount || 0), 0);
+                  const itemsWithPct = loanItems.map((i) => ({
+                    ...i,
+                    percent: i.percent ?? (totalDebtSum > 0 ? Math.round((i.amount / totalDebtSum) * 100) : 0)
+                  }));
 
-                const totalDebtSum = loanItems.reduce((acc, i) => acc + (i.amount || 0), 0);
-                const itemsWithPct = loanItems.map((i) => ({
-                  ...i,
-                  percent: i.percent ?? (totalDebtSum > 0 ? Math.round((i.amount / totalDebtSum) * 100) : 0)
-                }));
+                  const totalAmortizedVal = activeLoanTimelines.length > 0 ? computedActiveAmortized : (finMetrics.totalAmortized ?? 0);
+                  const totalRemainingDebtVal = activeLoanTimelines.length > 0 ? computedActiveRemainingDebt : (finMetrics.totalRemainingDebt ?? 0);
+                  const totalRealCostVal = activeLoanTimelines.length > 0
+                    ? computedActiveTotalLoanCost
+                    : Number(finMetrics.totalLoanCost ?? finMetrics.total_loan_cost ?? (totalRemainingDebtVal + totalAmortizedVal));
 
-                const totalAmortizedVal = activeLoanTimelines.length > 0 ? computedActiveAmortized : (finMetrics.totalAmortized ?? 0);
-                const totalRemainingDebtVal = activeLoanTimelines.length > 0 ? computedActiveRemainingDebt : (finMetrics.totalRemainingDebt ?? 0);
-                const totalRealCostVal = activeLoanTimelines.length > 0
-                  ? computedActiveTotalLoanCost
-                  : Number(finMetrics.totalLoanCost ?? finMetrics.total_loan_cost ?? (totalRemainingDebtVal + totalAmortizedVal));
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                        <PieDonut items={itemsWithPct} centerFontSize="0.64rem" centerColor="#0ea5e9" />
 
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                      <PieDonut items={itemsWithPct} centerFontSize="0.64rem" centerColor="#0ea5e9" />
-
-                      {/* Lista com percentagem de cada financiamento */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, maxHeight: '90px', overflowY: 'auto' }}>
-                        {itemsWithPct.map((item, idx) => (
-                          <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color, flexShrink: 0 }} />
-                              <span style={{ color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {item.name}
+                        {/* Lista com percentagem de cada financiamento */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, maxHeight: '90px', overflowY: 'auto' }}>
+                          {itemsWithPct.map((item, idx) => (
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color, flexShrink: 0 }} />
+                                <span style={{ color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {item.name}
+                                </span>
+                              </div>
+                              <span style={{ color: 'var(--text-muted)', fontWeight: '800', marginLeft: '6px' }}>
+                                {item.percent}%
                               </span>
                             </div>
-                            <span style={{ color: 'var(--text-muted)', fontWeight: '800', marginLeft: '6px' }}>
-                              {item.percent}%
-                            </span>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Resumo de Totais: Capital Amortizado vs Capital Devido vs Custo Real do Capital */}
-                    <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', alignItems: 'flex-start' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }}>Capital Amortizado</span>
-                        <strong style={{ color: '#10b981', fontSize: '0.84rem', fontWeight: '800' }}>
-                          {formatCurrency(totalAmortizedVal)}
-                        </strong>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                        <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }}>Capital Devido</span>
-                        <strong style={{ color: '#f43f5e', fontSize: '0.84rem', fontWeight: '800' }}>
-                          {formatCurrency(totalRemainingDebtVal)}
-                        </strong>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                        <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }} title="Custo total real estimado (Capital Financiado + Juros + Impostos)">Custo Real Capital</span>
-                        <strong style={{ color: 'var(--primary-light)', fontSize: '0.84rem', fontWeight: '800' }}>
-                          {formatCurrency(totalRealCostVal)}
-                        </strong>
+                      {/* Resumo de Totais: Capital Amortizado vs Capital Devido vs Custo Real do Capital */}
+                      <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }}>Capital Amortizado</span>
+                          <strong style={{ color: '#10b981', fontSize: '0.84rem', fontWeight: '800' }}>
+                            {formatCurrency(totalAmortizedVal)}
+                          </strong>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                          <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }}>Capital Devido</span>
+                          <strong style={{ color: '#f43f5e', fontSize: '0.84rem', fontWeight: '800' }}>
+                            {formatCurrency(totalRemainingDebtVal)}
+                          </strong>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                          <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }} title="Custo total real estimado (Capital Financiado + Juros + Impostos)">Custo Real Capital</span>
+                          <strong style={{ color: 'var(--primary-light)', fontSize: '0.84rem', fontWeight: '800' }}>
+                            {formatCurrency(totalRealCostVal)}
+                          </strong>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })()}
-            </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
 
           {/* 🔵 LINHA 2: PREVISTOS & PROJEÇÃO */}
@@ -723,18 +997,22 @@ export default function BalanceTimelineHeader({
                             -{formatCurrency(plannedExp)}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                          <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Investimentos:</span>
-                          <span style={{ color: '#6366f1', fontSize: '0.78rem', fontWeight: '700' }}>
-                            -{formatCurrency(plannedInv)}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                          <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Capital Amortizado:</span>
-                          <span style={{ color: '#10b981', fontSize: '0.78rem', fontWeight: '700' }}>
-                            +{formatCurrency(plannedAmort)}
-                          </span>
-                        </div>
+                        {(hasInvestmentTimeline && plannedInv > 0) && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                            <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Investimentos:</span>
+                            <span style={{ color: '#6366f1', fontSize: '0.78rem', fontWeight: '700' }}>
+                              -{formatCurrency(plannedInv)}
+                            </span>
+                          </div>
+                        )}
+                        {(hasLoanTimeline && plannedAmort > 0) && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                            <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Capital Amortizado:</span>
+                            <span style={{ color: '#10b981', fontSize: '0.78rem', fontWeight: '700' }}>
+                              +{formatCurrency(plannedAmort)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

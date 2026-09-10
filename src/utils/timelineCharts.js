@@ -6,30 +6,49 @@ export const getCoordinatesForPercent = (percent) => {
 
 export const computePieSlices = (items) => {
   let cumulativePercent = 0;
-  return items.map((slice) => {
+  const normalizedItems = (items || []).filter((s) => (Number(s.percent ?? s.pct) || 0) > 0);
+
+  if (normalizedItems.length === 1) {
+    const s = normalizedItems[0];
+    const pct = Number(s.percent ?? s.pct) || 0;
+    return [{
+      ...s,
+      percent: pct,
+      pathData: 'M 1 0 A 1 1 0 1 1 -0.999 0 A 1 1 0 1 1 1 0 L 0 0 Z'
+    }];
+  }
+
+  const total = normalizedItems.reduce((acc, s) => acc + (Number(s.percent ?? s.pct) || 0), 0);
+  const scale = total > 0 ? (total > 100 ? 1 / total : 1 / 100) : 1 / 100;
+
+  return normalizedItems.map((slice) => {
+    const percentVal = Number(slice.percent ?? slice.pct) || 0;
+    const fraction = percentVal * scale;
     const startPercent = cumulativePercent;
-    cumulativePercent += slice.percent / 100;
-    const endPercent = cumulativePercent;
+    cumulativePercent += fraction;
+    const endPercent = Math.min(0.99999, cumulativePercent);
     const [startX, startY] = getCoordinatesForPercent(startPercent);
     const [endX, endY] = getCoordinatesForPercent(endPercent);
-    const largeArcFlag = slice.percent / 100 > 0.5 ? 1 : 0;
-    const pathData = [
-      `M ${startX} ${startY}`,
-      `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
-      'L 0 0'
-    ].join(' ');
-    return { ...slice, pathData };
+    const largeArcFlag = fraction > 0.5 ? 1 : 0;
+    const pathData = fraction >= 0.999
+      ? 'M 1 0 A 1 1 0 1 1 -0.999 0 A 1 1 0 1 1 1 0 L 0 0 Z'
+      : [
+          `M ${startX} ${startY}`,
+          `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+          'L 0 0 Z'
+        ].join(' ');
+    return { ...slice, percent: percentVal, pathData };
   });
 };
 
 export const computeDonutSlice = (percent) => {
   const usedFraction = Math.min(1, Math.max(0, Number(percent) / 100));
-  const sliceX = Math.cos(2 * Math.PI * usedFraction);
-  const sliceY = Math.sin(2 * Math.PI * usedFraction);
+  const sliceX = Math.cos(2 * Math.PI * Math.min(0.99999, usedFraction));
+  const sliceY = Math.sin(2 * Math.PI * Math.min(0.99999, usedFraction));
   const largeArcFlag = usedFraction > 0.5 ? 1 : 0;
   const pathData = usedFraction >= 0.999
-    ? 'M 1 0 A 1 1 0 1 1 -0.999 0 L 0 0'
-    : `M 1 0 A 1 1 0 ${largeArcFlag} 1 ${sliceX} ${sliceY} L 0 0`;
+    ? 'M 1 0 A 1 1 0 1 1 -0.999 0 A 1 1 0 1 1 1 0 L 0 0 Z'
+    : `M 1 0 A 1 1 0 ${largeArcFlag} 1 ${sliceX} ${sliceY} L 0 0 Z`;
   return { pathData, usedFraction };
 };
 

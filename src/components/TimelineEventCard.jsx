@@ -76,6 +76,36 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const [newItemText, setNewItemText] = useState('');
   const [localAuto, setLocalAuto] = React.useState(Boolean(event.automatic || event.isAutomatic));
   const [localStatus, setLocalStatus] = React.useState(event.status);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+  const [isPayingUpToHere, setIsPayingUpToHere] = useState(false);
+
+  const handleStatusToggle = React.useCallback(async (e, explicitStatus = null) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (isTogglingStatus || !onToggleLoanPayment) return;
+
+    setIsTogglingStatus(true);
+    try {
+      await onToggleLoanPayment(event.id, explicitStatus);
+    } catch (err) {
+      console.error('Error toggling status:', err);
+    } finally {
+      setIsTogglingStatus(false);
+    }
+  }, [event.id, isTogglingStatus, onToggleLoanPayment]);
+
+  const handlePayUpToHereClick = React.useCallback(async (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (isPayingUpToHere || !onPayUpToHere) return;
+
+    setIsPayingUpToHere(true);
+    try {
+      await onPayUpToHere(event);
+    } catch (err) {
+      console.error('Error paying up to here:', err);
+    } finally {
+      setIsPayingUpToHere(false);
+    }
+  }, [event, isPayingUpToHere, onPayUpToHere]);
 
   const isObligationEvent = Boolean(event.isObligation || event.is_obligation);
   const obligationPersonId = event.obligationPersonId || event.obligation_person_id;
@@ -1662,11 +1692,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       {isLoanInstallment && !isPaidLoan && onPayUpToHere && (event.date <= currentMonthEndStr) && (
         <button
           type="button"
+          disabled={isPayingUpToHere}
           className="btn btn-secondary btn-sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onPayUpToHere(event);
-          }}
+          onClick={handlePayUpToHereClick}
           style={{
             padding: '3px 8px',
             fontSize: '0.72rem',
@@ -1675,7 +1703,11 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             color: '#10b981',
             border: '1px solid rgba(16, 185, 129, 0.35)',
             fontWeight: '700',
-            borderRadius: '5px'
+            borderRadius: '5px',
+            cursor: isPayingUpToHere ? 'not-allowed' : 'pointer',
+            opacity: isPayingUpToHere ? 0.6 : 1,
+            pointerEvents: isPayingUpToHere ? 'none' : 'auto',
+            transition: 'all 0.15s ease'
           }}
           title={t('buttons.payUpToHereTitle') || "Marcar como pagas todas as prestações deste empréstimo anteriores a esta parcela (inclusive)"}
         >
@@ -1914,10 +1946,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               ) : (
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onToggleLoanPayment) onToggleLoanPayment(event.id);
-                  }}
+                  disabled={isTogglingStatus}
+                  onClick={handleStatusToggle}
                   className="btn btn-sm"
                   title="Clique para alternar o status"
                   style={{
@@ -1952,11 +1982,13 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     padding: '4px 12px',
                     fontSize: '0.76rem',
                     fontWeight: '700',
-                    cursor: 'pointer',
+                    cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
+                    opacity: isTogglingStatus ? 0.6 : 1,
+                    pointerEvents: isTogglingStatus ? 'none' : 'auto',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px',
-                    transition: 'all 0.2s',
+                    transition: 'all 0.15s ease',
                     boxShadow: isOverdueIncome
                       ? '0 2px 10px rgba(252, 191, 73, 0.25)'
                       : isReceivedIncome
@@ -2071,10 +2103,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               ) : (
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onToggleLoanPayment) onToggleLoanPayment(event.id);
-                  }}
+                  disabled={isTogglingStatus}
+                  onClick={handleStatusToggle}
                   className="btn btn-sm"
                   title="Clique para alternar o status"
                   style={{
@@ -2103,10 +2133,13 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     padding: '4px 12px',
                     fontSize: '0.76rem',
                     fontWeight: '700',
-                    cursor: 'pointer',
+                    cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
+                    opacity: isTogglingStatus ? 0.6 : 1,
+                    pointerEvents: isTogglingStatus ? 'none' : 'auto',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '5px'
+                    gap: '5px',
+                    transition: 'all 0.15s ease'
                   }}
                 >
                   {isCancelled ? (
@@ -2318,10 +2351,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               ) : (
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onToggleLoanPayment) onToggleLoanPayment(event.id);
-                  }}
+                  disabled={isTogglingStatus}
+                  onClick={handleStatusToggle}
                   className="btn btn-sm"
                   title="Clique para alternar o status"
                   style={{
@@ -2356,10 +2387,13 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     padding: '4px 12px',
                     fontSize: '0.76rem',
                     fontWeight: '700',
-                    cursor: 'pointer',
+                    cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
+                    opacity: isTogglingStatus ? 0.6 : 1,
+                    pointerEvents: isTogglingStatus ? 'none' : 'auto',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '5px'
+                    gap: '5px',
+                    transition: 'all 0.15s ease'
                   }}
                 >
                   {isCancelled ? (
@@ -2601,24 +2635,22 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onToggleLoanPayment) onToggleLoanPayment(event.id);
-                }}
+                disabled={isTogglingStatus}
+                onClick={handleStatusToggle}
                 style={{
                   background: isCancelled
                     ? 'rgba(148, 163, 184, 0.15)'
-                    : (isCompleted || event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted)
+                    : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED)
                       ? 'rgba(16, 185, 129, 0.16)'
                       : 'rgba(245, 158, 11, 0.16)',
                   color: isCancelled
                     ? '#94a3b8'
-                    : (isCompleted || event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted)
+                    : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED)
                       ? '#10b981'
                       : '#f59e0b',
                   border: isCancelled
                     ? '1px solid rgba(148, 163, 184, 0.35)'
-                    : (isCompleted || event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted)
+                    : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED)
                       ? '1px solid rgba(16, 185, 129, 0.4)'
                       : '1px solid rgba(245, 158, 11, 0.4)',
                   borderRadius: '9999px',
@@ -2628,7 +2660,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '5px',
-                  cursor: 'pointer',
+                  cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
+                  opacity: isTogglingStatus ? 0.6 : 1,
+                  pointerEvents: isTogglingStatus ? 'none' : 'auto',
                   transition: 'all 0.15s ease'
                 }}
                 title="Clique para alternar o status"
@@ -2638,15 +2672,15 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     <Ban size={13} style={{ color: '#94a3b8' }} />
                     <span>{t('status.cancelled')}</span>
                   </>
-                ) : (isCompleted || event.status === EventStatus.AMORTIZED || event.status === 'amortized' || event.status === 'Amortizado' || event.status === EventStatus.COMPLETED || event.status === 'Concluído' || event.isCompleted) ? (
+                ) : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED) ? (
                   <>
-                    <CheckCircle2 size={13} style={{ color: '#10b981' }} />
-                    <span>{t('status.amortized')}</span>
+                    <CheckCircle2 size={12} />
+                    <span>{t('status.amortized') || 'Amortizado'}</span>
                   </>
                 ) : (
                   <>
-                    <Clock size={13} style={{ color: '#f59e0b' }} />
-                    <span>{t('status.pending')}</span>
+                    <Clock size={12} />
+                    <span>{t('status.planned') || 'Previsto'}</span>
                   </>
                 )}
               </button>
@@ -2803,10 +2837,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               ) : (
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onToggleLoanPayment) onToggleLoanPayment(event.id);
-                  }}
+                  disabled={isTogglingStatus}
+                  onClick={handleStatusToggle}
                   className="btn btn-sm"
                   title="Clique para alternar o status"
                   style={{
@@ -2835,11 +2867,13 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     padding: '4px 12px',
                     fontSize: '0.76rem',
                     fontWeight: '700',
-                    cursor: 'pointer',
+                    cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
+                    opacity: isTogglingStatus ? 0.6 : 1,
+                    pointerEvents: isTogglingStatus ? 'none' : 'auto',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px',
-                    transition: 'all 0.2s',
+                    transition: 'all 0.15s ease',
                     boxShadow: isPaidLoan
                       ? '0 2px 8px rgba(16, 185, 129, 0.2)'
                       : 'none'

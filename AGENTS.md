@@ -84,6 +84,7 @@ Commits MUST use Conventional Commits so `npm run release` bumps versions correc
 Version is stamped in the header via `VersionBadge` (Vite `define __APP_VERSION__` from package.json).
 
 ## Code Conventions
+- **ALWAYS USE ENUMS**: Never use hardcoded strings for types, statuses, periodicities, categories, or roles. Always import and use centralized enums and enum helper functions from `src/enums/index.js` / `shared/enums/index.js` (e.g., `EventType`, `EventStatus`, `TimelineType`, `TimelineStatus`, `isPositiveStatus`, `isCancelledStatus`, `isLoanTimelineType`).
 - Use ES modules (import/export)
 - Use `date-fns` for date operations (never native Date for formatting)
 - Use `generateUUID()` from `src/utils/uuid.js` for new IDs

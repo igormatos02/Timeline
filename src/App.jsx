@@ -1835,6 +1835,7 @@ export default function App() {
               <TimelineHeader
                 timeline={activeTimeline}
                 allTimelines={activeTimeboardTimelines}
+                events={activeTimeline?.events || rawEvents}
                 activeFinancialTab={activeFinancialTab}
                 onSelectFinancialTab={setActiveFinancialTab}
                 onEdit={handleOpenEditTimeline}

@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { format, parseISO, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import Navbar from './components/Navbar';
 import TimelineHeader from './components/TimelineHeader';
 import VerticalTimeline from './components/VerticalTimeline';
-import CreateTimelineModal from './components/CreateTimelineModal';
-import EditTimelineSettingsModal from './components/EditTimelineSettingsModal';
-import CreateTimeboardModal from './components/CreateTimeboardModal';
-import TimeboardSettingsModal from './components/TimeboardSettingsModal';
-import CreateEventModal from './components/CreateEventModal';
-import DeleteEventModal from './components/DeleteEventModal';
-import DeleteTimelineModal from './components/DeleteTimelineModal';
-import AmortizationModal from './components/AmortizationModal';
-import EditInstallmentModal from './components/EditInstallmentModal';
+
+// Heavy modals are lazy-loaded so they do not bloat the initial bundle
+const CreateTimelineModal = React.lazy(() => import('./components/CreateTimelineModal'));
+const EditTimelineSettingsModal = React.lazy(() => import('./components/EditTimelineSettingsModal'));
+const CreateTimeboardModal = React.lazy(() => import('./components/CreateTimeboardModal'));
+const TimeboardSettingsModal = React.lazy(() => import('./components/TimeboardSettingsModal'));
+const CreateEventModal = React.lazy(() => import('./components/CreateEventModal'));
+const DeleteEventModal = React.lazy(() => import('./components/DeleteEventModal'));
+const DeleteTimelineModal = React.lazy(() => import('./components/DeleteTimelineModal'));
+const AmortizationModal = React.lazy(() => import('./components/AmortizationModal'));
+const EditInstallmentModal = React.lazy(() => import('./components/EditInstallmentModal'));
 import {
   recalculateLoanState,
   propagateInstallmentAmountForward,
@@ -1803,24 +1805,26 @@ export default function App() {
         />
 
         {/* Global Modals for Timeboard management */}
-        <CreateTimeboardModal
-          isOpen={isTimeboardModalOpen}
-          onClose={() => setIsTimeboardModalOpen(false)}
-          onSave={handleSaveTimeboard}
-          onDelete={handleDeleteTimeboard}
-          initialData={null}
-        />
+        <Suspense fallback={null}>
+          <CreateTimeboardModal
+            isOpen={isTimeboardModalOpen}
+            onClose={() => setIsTimeboardModalOpen(false)}
+            onSave={handleSaveTimeboard}
+            onDelete={handleDeleteTimeboard}
+            initialData={null}
+          />
 
-        <TimeboardSettingsModal
-          isOpen={isTimeboardSettingsModalOpen}
-          onClose={() => {
-            setIsTimeboardSettingsModalOpen(false);
-            setEditingTimeboard(null);
-          }}
-          timeboard={editingTimeboard}
-          onSaveTimeboard={handleSaveTimeboard}
-          onDeleteTimeboard={handleDeleteTimeboard}
-        />
+          <TimeboardSettingsModal
+            isOpen={isTimeboardSettingsModalOpen}
+            onClose={() => {
+              setIsTimeboardSettingsModalOpen(false);
+              setEditingTimeboard(null);
+            }}
+            timeboard={editingTimeboard}
+            onSaveTimeboard={handleSaveTimeboard}
+            onDeleteTimeboard={handleDeleteTimeboard}
+          />
+        </Suspense>
       </div>
     );
   }
@@ -1925,88 +1929,90 @@ export default function App() {
       </main>
 
       {/* Modals */}
-      <CreateTimeboardModal
-        isOpen={isTimeboardModalOpen}
-        onClose={() => setIsTimeboardModalOpen(false)}
-        onSave={handleSaveTimeboard}
-        onDelete={handleDeleteTimeboard}
-        initialData={null}
-      />
+      <Suspense fallback={null}>
+        <CreateTimeboardModal
+          isOpen={isTimeboardModalOpen}
+          onClose={() => setIsTimeboardModalOpen(false)}
+          onSave={handleSaveTimeboard}
+          onDelete={handleDeleteTimeboard}
+          initialData={null}
+        />
 
-      <TimeboardSettingsModal
-        isOpen={isTimeboardSettingsModalOpen}
-        onClose={() => {
-          setIsTimeboardSettingsModalOpen(false);
-          setEditingTimeboard(null);
-        }}
-        timeboard={editingTimeboard}
-        onSaveTimeboard={handleSaveTimeboard}
-        onDeleteTimeboard={handleDeleteTimeboard}
-      />
+        <TimeboardSettingsModal
+          isOpen={isTimeboardSettingsModalOpen}
+          onClose={() => {
+            setIsTimeboardSettingsModalOpen(false);
+            setEditingTimeboard(null);
+          }}
+          timeboard={editingTimeboard}
+          onSaveTimeboard={handleSaveTimeboard}
+          onDeleteTimeboard={handleDeleteTimeboard}
+        />
 
-      <CreateTimelineModal
-        isOpen={isTimelineModalOpen}
-        onClose={() => setIsTimelineModalOpen(false)}
-        onSave={handleSaveTimeline}
-        initialData={editingTimeline}
-      />
+        <CreateTimelineModal
+          isOpen={isTimelineModalOpen}
+          onClose={() => setIsTimelineModalOpen(false)}
+          onSave={handleSaveTimeline}
+          initialData={editingTimeline}
+        />
 
-      <EditTimelineSettingsModal
-        isOpen={isTimelineSettingsModalOpen}
-        onClose={() => setIsTimelineSettingsModalOpen(false)}
-        onSave={handleSaveTimeline}
-        onDelete={handleRequestDeleteTimeline}
-        initialData={editingTimeline}
-      />
+        <EditTimelineSettingsModal
+          isOpen={isTimelineSettingsModalOpen}
+          onClose={() => setIsTimelineSettingsModalOpen(false)}
+          onSave={handleSaveTimeline}
+          onDelete={handleRequestDeleteTimeline}
+          initialData={editingTimeline}
+        />
 
-      <CreateEventModal
-        isOpen={isEventModalOpen}
-        onClose={() => setIsEventModalOpen(false)}
-        onSave={handleSaveEvent}
-        initialData={editingEvent}
-        defaultDate={selectedDateForNewEvent}
-        timeline={activeTimeline}
-        timeboardId={activeTimeboardId}
-        allTimelines={timelines}
-        defaultNature={eventModalDefaultNature}
-        activeFinancialTab={activeFinancialTab}
-      />
+        <CreateEventModal
+          isOpen={isEventModalOpen}
+          onClose={() => setIsEventModalOpen(false)}
+          onSave={handleSaveEvent}
+          initialData={editingEvent}
+          defaultDate={selectedDateForNewEvent}
+          timeline={activeTimeline}
+          timeboardId={activeTimeboardId}
+          allTimelines={timelines}
+          defaultNature={eventModalDefaultNature}
+          activeFinancialTab={activeFinancialTab}
+        />
 
-      {/* Loan Modals */}
-      <AmortizationModal
-        isOpen={isAmortizationModalOpen}
-        onClose={() => {
-          setIsAmortizationModalOpen(false);
-          setEditingAmortization(null);
-        }}
-        onSave={handleSaveAmortization}
-        initialEvent={editingAmortization}
-        defaultDate={amortizationDefaultDate}
-        remainingBalance={loanMetrics ? loanMetrics.remainingBalance : undefined}
-      />
+        {/* Loan Modals */}
+        <AmortizationModal
+          isOpen={isAmortizationModalOpen}
+          onClose={() => {
+            setIsAmortizationModalOpen(false);
+            setEditingAmortization(null);
+          }}
+          onSave={handleSaveAmortization}
+          initialEvent={editingAmortization}
+          defaultDate={amortizationDefaultDate}
+          remainingBalance={loanMetrics ? loanMetrics.remainingBalance : undefined}
+        />
 
-      <EditInstallmentModal
-        isOpen={Boolean(editingInstallment)}
-        onClose={() => setEditingInstallment(null)}
-        installment={editingInstallment}
-        onSave={handleSaveEditInstallment}
-      />
+        <EditInstallmentModal
+          isOpen={Boolean(editingInstallment)}
+          onClose={() => setEditingInstallment(null)}
+          installment={editingInstallment}
+          onSave={handleSaveEditInstallment}
+        />
 
-      {/* Delete Event Confirmation Modal */}
-      <DeleteEventModal
-        isOpen={Boolean(deletingEvent)}
-        onClose={() => setDeletingEvent(null)}
-        event={deletingEvent}
-        onConfirmDelete={handleConfirmDeleteEvent}
-      />
+        {/* Delete Event Confirmation Modal */}
+        <DeleteEventModal
+          isOpen={Boolean(deletingEvent)}
+          onClose={() => setDeletingEvent(null)}
+          event={deletingEvent}
+          onConfirmDelete={handleConfirmDeleteEvent}
+        />
 
-      {/* Delete Timeline Confirmation Modal */}
-      <DeleteTimelineModal
-        isOpen={Boolean(deletingTimeline)}
-        onClose={() => setDeletingTimeline(null)}
-        timeline={deletingTimeline}
-        onConfirmDelete={handleConfirmDeleteTimeline}
-      />
+        {/* Delete Timeline Confirmation Modal */}
+        <DeleteTimelineModal
+          isOpen={Boolean(deletingTimeline)}
+          onClose={() => setDeletingTimeline(null)}
+          timeline={deletingTimeline}
+          onConfirmDelete={handleConfirmDeleteTimeline}
+        />
+      </Suspense>
 
       {/* Reset Timeline Confirmation Modal */}
       {isResetConfirmOpen && (

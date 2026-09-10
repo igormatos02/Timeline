@@ -47,22 +47,15 @@ export default function MonthProjectionBadges({
 
       {/* 1. Entradas Projetadas */}
       <span
-        className="group-card-badge"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '5px',
-          height: '26px',
-          boxSizing: 'border-box',
-          background: isFutureMonth
-            ? 'rgba(148, 163, 184, 0.08)'
-            : (numIncome > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)'),
+          gap: '4px',
+          background: 'transparent',
+          border: 'none',
           color: isFutureMonth
             ? 'var(--text-dim)'
             : (numIncome > 0 ? '#10b981' : 'var(--text-dim)'),
-          borderColor: isFutureMonth
-            ? 'rgba(148, 163, 184, 0.2)'
-            : (numIncome > 0 ? 'rgba(16, 185, 129, 0.35)' : 'var(--border-glass)'),
           fontWeight: '800',
           fontSize: '0.76rem'
         }}
@@ -74,22 +67,15 @@ export default function MonthProjectionBadges({
 
       {/* 2. Gasto Projetado */}
       <span
-        className="group-card-badge"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '5px',
-          height: '26px',
-          boxSizing: 'border-box',
-          background: isFutureMonth
-            ? 'rgba(148, 163, 184, 0.08)'
-            : (numExpense > 0 ? 'rgba(244, 63, 94, 0.12)' : 'rgba(255, 255, 255, 0.04)'),
+          gap: '4px',
+          background: 'transparent',
+          border: 'none',
           color: isFutureMonth
             ? 'var(--text-dim)'
             : (numExpense > 0 ? '#f43f5e' : 'var(--text-dim)'),
-          borderColor: isFutureMonth
-            ? 'rgba(148, 163, 184, 0.2)'
-            : (numExpense > 0 ? 'rgba(244, 63, 94, 0.3)' : 'var(--border-glass)'),
           fontWeight: '800',
           fontSize: '0.76rem'
         }}
@@ -101,22 +87,15 @@ export default function MonthProjectionBadges({
 
       {/* 3. Investimento Projetado */}
       <span
-        className="group-card-badge"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '5px',
-          height: '26px',
-          boxSizing: 'border-box',
-          background: isFutureMonth
-            ? 'rgba(148, 163, 184, 0.08)'
-            : (numInvestment > 0 ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.04)'),
+          gap: '4px',
+          background: 'transparent',
+          border: 'none',
           color: isFutureMonth
             ? 'var(--text-dim)'
             : (numInvestment > 0 ? '#818cf8' : 'var(--text-dim)'),
-          borderColor: isFutureMonth
-            ? 'rgba(148, 163, 184, 0.2)'
-            : (numInvestment > 0 ? 'rgba(99, 102, 241, 0.3)' : 'var(--border-glass)'),
           fontWeight: '800',
           fontSize: '0.76rem'
         }}
@@ -128,22 +107,15 @@ export default function MonthProjectionBadges({
 
       {/* 4. Total em Empréstimos a Pagar */}
       <span
-        className="group-card-badge"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '5px',
-          height: '26px',
-          boxSizing: 'border-box',
-          background: isFutureMonth
-            ? 'rgba(148, 163, 184, 0.08)'
-            : (numLoan > 0 ? 'rgba(234, 179, 8, 0.14)' : 'rgba(255, 255, 255, 0.04)'),
+          gap: '4px',
+          background: 'transparent',
+          border: 'none',
           color: isFutureMonth
             ? 'var(--text-dim)'
             : (numLoan > 0 ? '#eab308' : 'var(--text-dim)'),
-          borderColor: isFutureMonth
-            ? 'rgba(148, 163, 184, 0.2)'
-            : (numLoan > 0 ? 'rgba(234, 179, 8, 0.35)' : 'var(--border-glass)'),
           fontWeight: '800',
           fontSize: '0.76rem'
         }}
@@ -155,22 +127,15 @@ export default function MonthProjectionBadges({
 
       {/* 5. Saldo Líquido Projetado */}
       <span
-        className="group-card-badge"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '5px',
-          height: '26px',
-          boxSizing: 'border-box',
-          background: isFutureMonth
-            ? 'rgba(148, 163, 184, 0.08)'
-            : (calculatedSaldo >= 0 ? 'rgba(56, 189, 248, 0.12)' : 'rgba(244, 63, 94, 0.12)'),
+          gap: '4px',
+          background: 'transparent',
+          border: 'none',
           color: isFutureMonth
             ? 'var(--text-dim)'
             : (calculatedSaldo >= 0 ? '#38bdf8' : '#f43f5e'),
-          borderColor: isFutureMonth
-            ? 'rgba(148, 163, 184, 0.2)'
-            : (calculatedSaldo >= 0 ? 'rgba(56, 189, 248, 0.35)' : 'rgba(244, 63, 94, 0.35)'),
           fontWeight: '800',
           fontSize: '0.76rem'
         }}

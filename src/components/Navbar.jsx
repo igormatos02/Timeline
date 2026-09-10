@@ -2,6 +2,7 @@ import React from 'react';
 import { Clock, Plus, LayoutGrid, Sparkles, Sun, Moon, LocateFixed, User, Shield, Settings, ChevronDown, LogOut } from 'lucide-react';
 import { getCurrentUser } from '../services/api';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
+import VersionBadge from './ui/VersionBadge.jsx';
 
 export default function Navbar({
   timeboards = [],
@@ -42,6 +43,7 @@ export default function Navbar({
               Timeboard <Sparkles size={16} style={{ color: '#818cf8' }} />
             </div>
           </div>
+          <VersionBadge style={{ marginLeft: '4px' }} />
         </div>
 
         {/* Custom Premium Timeboard Selector Dropdown & Settings Button */}

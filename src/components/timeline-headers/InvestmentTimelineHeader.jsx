@@ -10,7 +10,7 @@ import {
   Settings,
   RotateCcw
 } from 'lucide-react';
-import { formatCurrency } from '../../utils/loanCalculations';
+import { formatCurrency } from '../../utils/formatCurrency';
 import { InvestmentEventCategory } from '../../../shared/enums/InvestmentEventCategory.js';
 import { EventType } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';

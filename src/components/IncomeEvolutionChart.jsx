@@ -12,7 +12,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import { format, parseISO, addMonths } from 'date-fns';
-import { formatCurrency } from '../utils/loanCalculations';
+import { formatCurrency } from '../utils/formatCurrency';
 import { EventType, EventStatus, TimelineType } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 

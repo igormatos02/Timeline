@@ -11,7 +11,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { formatCurrency } from '../../utils/loanCalculations';
+import { formatCurrency } from '../../utils/formatCurrency';
 import { IncomeEventCategory } from '../../../shared/enums/IncomeEventCategory.js';
 import { EventType } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';

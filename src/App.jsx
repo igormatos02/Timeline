@@ -18,9 +18,9 @@ import {
   applyExtraordinaryAmortization,
   getLoanMetrics,
   generateLoanInstallments,
-  formatCurrency,
   isLoanInstallment
 } from './utils/loanCalculations';
+import { formatCurrency } from './utils/formatCurrency';
 import * as api from './services/api';
 import { generateUUID } from './utils/uuid';
 import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType } from './enums/index.js';

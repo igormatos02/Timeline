@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, DollarSign, Calendar, FileText, X, TrendingDown, Clock } from 'lucide-react';
-import { formatCurrency } from '../utils/loanCalculations';
+import { formatCurrency } from '../utils/formatCurrency';
 import { EventStatus, AmortizationStrategy, AmortizationEventCategory } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 

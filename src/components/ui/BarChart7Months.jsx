@@ -1,6 +1,6 @@
 import React from 'react';
 import { TrendingUp, Sparkles } from 'lucide-react';
-import { formatCurrency } from '../../utils/loanCalculations.js';
+import { formatCurrency } from '../../utils/formatCurrency.js';
 
 export default function BarChart7Months({
   months,

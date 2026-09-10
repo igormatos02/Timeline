@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Trash2, AlertTriangle, X, Calendar, DollarSign, Repeat } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
-import { formatCurrency } from '../utils/loanCalculations';
+import { formatCurrency } from '../utils/formatCurrency';
 import { EventPeriodicity } from '../../shared/enums/EventPeriodicity';
 import { EventType } from '../../shared/enums/EventType';
 import { EventDeletionMode } from '../../shared/enums/EventDeletionMode';

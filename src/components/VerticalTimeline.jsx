@@ -75,7 +75,8 @@ import {
 import TimelineEventCard from './TimelineEventCard';
 import MonthProjectionBadges from './MonthProjectionBadges.jsx';
 import FloatingTaskStack from './FloatingTaskStack';
-import { getGroupingForPeriodicity, formatCurrency } from '../utils/loanCalculations';
+import { getGroupingForPeriodicity } from '../utils/loanCalculations';
+import { formatCurrency } from '../utils/formatCurrency';
 import { EventType, EventStatus, EventStatusLabel, TimelineType, TimelineStatus, TimeboardType, IncomeEventCategory, ExpensesEventCategory, InvestmentEventCategory, LoanEventCategory, AmortizationEventCategory, AmortizationStrategy } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 

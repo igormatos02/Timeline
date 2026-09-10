@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
-import { formatCurrency } from '../../utils/loanCalculations';
+import { formatCurrency } from '../../utils/formatCurrency';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import { PieDonut } from '../ui/DonutChart.jsx';
 

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { format, parseISO, differenceInCalendarDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
-import { formatCurrency } from '../../utils/loanCalculations';
+import { formatCurrency } from '../../utils/formatCurrency';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { DonutChart } from '../ui/DonutChart.jsx';
 import CopyIdButton from '../ui/CopyIdButton.jsx';

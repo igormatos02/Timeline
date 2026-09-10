@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, FolderPlus, Edit2, CreditCard, DollarSign, Calendar, ShieldCheck, ShieldAlert, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, parseISO, setMonth, setYear } from 'date-fns';
-import { generateLoanInstallments, formatCurrency } from '../utils/loanCalculations';
+import { generateLoanInstallments } from '../utils/loanCalculations';
+import { formatCurrency } from '../utils/formatCurrency';
 import { TimelineType, TimelineStatus, EventPeriodicity, EventAggregation, isLoanTimelineType } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 

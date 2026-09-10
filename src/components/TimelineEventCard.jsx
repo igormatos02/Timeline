@@ -43,7 +43,8 @@ import {
   FileCheck2,
   Ban
 } from 'lucide-react';
-import { formatCurrency, isLoanInstallment as checkIsLoanInstallment, isAmortizationEvent as checkIsAmortizationEvent } from '../utils/loanCalculations';
+import { isLoanInstallment as checkIsLoanInstallment, isAmortizationEvent as checkIsAmortizationEvent } from '../utils/loanCalculations';
+import { formatCurrency } from '../utils/formatCurrency';
 import { format, endOfMonth } from 'date-fns';
 import { generateUUID } from '../utils/uuid';
 import { useTranslation } from '../i18n/LanguageContext.jsx';

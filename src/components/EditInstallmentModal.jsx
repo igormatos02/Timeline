@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Circle, AlertCircle, DollarSign, Calendar, X, ArrowRight, TrendingUp, CreditCard, Percent } from 'lucide-react';
-import { formatCurrency } from '../utils/loanCalculations';
+import { formatCurrency } from '../utils/formatCurrency';
 import { EventStatus } from '../../shared/enums/EventStatus.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 

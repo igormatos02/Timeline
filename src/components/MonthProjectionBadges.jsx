@@ -1,6 +1,6 @@
 import React from 'react';
 import { Sparkles, DollarSign, TrendingDown, PiggyBank, Landmark, Scale } from 'lucide-react';
-import { formatCurrency } from '../utils/loanCalculations.js';
+import { formatCurrency } from '../utils/formatCurrency.js';
 
 /**
  * MonthProjectionBadges

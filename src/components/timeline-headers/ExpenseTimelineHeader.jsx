@@ -8,7 +8,7 @@ import {
   Settings,
   RotateCcw
 } from 'lucide-react';
-import { formatCurrency } from '../../utils/loanCalculations';
+import { formatCurrency } from '../../utils/formatCurrency';
 import { ExpenseEventCategory } from '../../../shared/enums/ExpensesEventCategory.js';
 import { EventType } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';

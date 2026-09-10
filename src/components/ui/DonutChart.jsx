@@ -20,7 +20,7 @@ export function DonutChart({
       >
         <circle cx="0" cy="0" r="1" fill={remainingColor} />
         {usedFraction > 0 && (
-          <path d={pathData} fill={sliceColor} style={{ transition: 'all 0.3s ease' }}>
+          <path d={pathData} fill={sliceColor}>
             {title !== undefined && <title>{title}</title>}
           </path>
         )}
@@ -82,7 +82,7 @@ export function PieDonut({
               key={idx}
               d={s.pathData}
               fill={s.color}
-              style={{ transition: 'all 0.2s ease', cursor: 'pointer' }}
+              style={{ cursor: 'pointer' }}
             >
               <title>{s.title || `${s.name}: ${s.percent}%`}</title>
             </path>

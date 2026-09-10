@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.2](https://github.com/igormatos02/Timeline/compare/v0.1.1...v0.1.2) (2026-09-10)
+
+
+### Bug Fixes
+
+* **balance:** improve annual income breakdown calculations and hide loan section when absent ([9ce60e9](https://github.com/igormatos02/Timeline/commit/9ce60e90f3292c788a2357144a2100674857feaf))
+
 ### [0.1.1](https://github.com/igormatos02/Timeline/compare/v0.1.0...v0.1.1) (2026-09-10)
 
 

@@ -12,7 +12,8 @@ import {
   Settings
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { pt } from 'date-fns/locale';
+import { pt, enUS } from 'date-fns/locale';
+import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { formatCurrency } from '../../utils/formatCurrency';
 import {
   EventType,
@@ -45,6 +46,8 @@ export default function BalanceTimelineHeader({
   computeStartDate = null,
   onSaveComputeStartDate
 }) {
+  const { t, language } = useTranslation();
+  const dateLocale = language === 'en' ? enUS : pt;
   const [collapsed, setIsCollapsed] = useState(false);
   const [projectionMonthsAhead, setProjectionMonthsAhead] = useState(0);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -106,9 +109,9 @@ export default function BalanceTimelineHeader({
     try {
       const baseDate = parseISO('2026-08-01');
       const targetDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + projectionMonthsAhead, 1);
-      return format(targetDate, 'MMM yyyy', { locale: pt });
+      return format(targetDate, 'MMM yyyy', { locale: dateLocale });
     } catch {
-      return 'Ago 2026';
+      return language === 'en' ? 'Aug 2026' : 'Ago 2026';
     }
   })();
 
@@ -118,10 +121,10 @@ export default function BalanceTimelineHeader({
 
   const getFormattedMonthLabel = (mStr) => {
     try {
-      if (!mStr || mStr === '1900-01') return 'Todo o Histórico';
+      if (!mStr || mStr === '1900-01') return t('balanceHeader.allHistory');
       const [year, month] = mStr.split('-');
       const d = new Date(Number(year), Number(month) - 1, 1);
-      return format(d, 'MMM/yyyy', { locale: pt });
+      return format(d, 'MMM/yyyy', { locale: dateLocale });
     } catch {
       return mStr;
     }
@@ -155,7 +158,7 @@ export default function BalanceTimelineHeader({
   const currentMonthStr = format(todayDate, 'yyyy-MM');
   const currentMonthLabel = (() => {
     try {
-      return format(todayDate, 'MMMM yyyy', { locale: pt });
+      return format(todayDate, 'MMMM yyyy', { locale: dateLocale });
     } catch {
       return '';
     }
@@ -290,7 +293,7 @@ export default function BalanceTimelineHeader({
           color={headerColor}
           icon={<Scale size={18} />}
           name={timeline.name}
-          badge="Balanço Consolidado"
+          badge={t('balanceHeader.badge')}
           iconBackground="rgba(14, 165, 233, 0.12)"
           badgeBackground="rgba(14, 165, 233, 0.12)"
           description={timeline.description}
@@ -315,7 +318,7 @@ export default function BalanceTimelineHeader({
               }}
             >
               <Plus size={14} />
-              <span>Novo Movimento</span>
+              <span>{t('balanceHeader.newMovement')}</span>
             </button>
           )}
 
@@ -323,7 +326,7 @@ export default function BalanceTimelineHeader({
             <button
               type="button"
               onClick={onEdit}
-              title="Timeline Settings"
+              title={t('balanceHeader.settingsTitle')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -369,10 +372,10 @@ export default function BalanceTimelineHeader({
                   transition: 'all 0.2s ease',
                   whiteSpace: 'nowrap'
                 }}
-                title="Clique para alterar e salvar o mês inicial de computação do Balanço"
+                title={t('balanceHeader.computeBtnTitle')}
               >
                 <Calendar size={13} style={{ color: '#0ea5e9' }} />
-                <span style={{ color: 'var(--text-dim)', fontSize: '0.74rem', fontWeight: '600' }}>Computar:</span>
+                <span style={{ color: 'var(--text-dim)', fontSize: '0.74rem', fontWeight: '600' }}>{t('balanceHeader.computeLabel')}</span>
                 <span style={{ color: '#0ea5e9', fontSize: '0.78rem', fontWeight: '800' }}>
                   {getFormattedMonthLabel(computeFromMonth)}
                 </span>
@@ -412,7 +415,7 @@ export default function BalanceTimelineHeader({
                   }}
                 >
                   <Layers size={13} />
-                  <span>Resumo</span>
+                  <span>{t('balanceHeader.summaryView')}</span>
                 </button>
                 <button
                   type="button"
@@ -433,7 +436,7 @@ export default function BalanceTimelineHeader({
                   }}
                 >
                   <Sparkles size={13} />
-                  <span>Gráfico de Evolução</span>
+                  <span>{t('balanceHeader.evolutionView')}</span>
                 </button>
               </div>
             )}
@@ -444,7 +447,7 @@ export default function BalanceTimelineHeader({
             {/* Quadrante 1: BALANÇO ATÉ O MÊS ATUAL */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Balanço até o mês atual ({currentMonthLabel})
+                {t('balanceHeader.currentBalanceTitle', { month: currentMonthLabel })}
               </div>
               {(() => {
                 const totalReceived = finMetrics.totalReceived ?? 0;
@@ -458,29 +461,29 @@ export default function BalanceTimelineHeader({
                     {/* Detalhes Verticais em Lista */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: '600' }}>
-                        Saldo Líquido Acumulado:
+                        {t('balanceHeader.netRealizedAccumulated')}
                       </div>
                       <div style={{ fontSize: '0.92rem', fontWeight: '800', color: netRealized >= 0 ? '#10b981' : '#f43f5e', marginBottom: '2px' }}>
                         {netRealized >= 0 ? '+' : ''}{formatCurrency(netRealized)}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
-                          <span style={{ color: 'var(--text-dim)' }}>Entradas:</span>
+                          <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.inflows')}</span>
                           <strong style={{ color: '#10b981' }}>+{formatCurrency(totalReceived).replace(',00', '')}</strong>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
-                          <span style={{ color: 'var(--text-dim)' }}>Saídas:</span>
+                          <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.outflows')}</span>
                           <strong style={{ color: '#f43f5e' }}>-{formatCurrency(totalPaidExpenses).replace(',00', '')}</strong>
                         </div>
                         {(hasInvestmentTimeline && totalInvested > 0) && (
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
-                            <span style={{ color: 'var(--text-dim)' }}>Em conta:</span>
+                            <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.inAccount')}</span>
                             <strong style={{ color: '#6366f1' }}>-{formatCurrency(totalInvested).replace(',00', '')}</strong>
                           </div>
                         )}
                         {(hasLoanTimeline && totalPeriodDueDebt > 0) && (
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
-                            <span style={{ color: 'var(--text-dim)' }}>Devido:</span>
+                            <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.due')}</span>
                             <strong style={{ color: '#f59e0b' }}>{formatCurrency(totalPeriodDueDebt).replace(',00', '')}</strong>
                           </div>
                         )}
@@ -494,7 +497,7 @@ export default function BalanceTimelineHeader({
             {/* Quadrante 2: ANNUAL INCOME BREAKDOWN (Despesas + Em conta + Devido vs Renda) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                ANNUAL INCOME BREAKDOWN
+                {t('balanceHeader.annualIncomeBreakdown')}
               </div>
               {(() => {
                 // Janela de 12 meses a partir do mês de início de computação configurado (Computar: ...)
@@ -631,25 +634,25 @@ export default function BalanceTimelineHeader({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
                         <PieDonut items={[]} empty={true} emptyLabel="0%" centerColor="var(--text-dim)" />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                          <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>Sem rendimentos projetados</span>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>Adicione entradas para visualizar a distribuição anual.</span>
+                          <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>{t('balanceHeader.noProjectedIncome')}</span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>{t('balanceHeader.noProjectedIncomeHint')}</span>
                         </div>
                       </div>
 
                       <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                          Total Anual Projetado
+                          {t('balanceHeader.totalAnnualProjected')}
                         </span>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', background: 'rgba(255, 255, 255, 0.02)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-glass)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span style={{ color: 'var(--text-dim)' }}>Saldo:</span>
+                            <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.balanceLabel')}</span>
                             <strong style={{ color: annualNet >= 0 ? '#10b981' : '#f43f5e' }}>
                               {annualNet >= 0 ? '+' : ''}{formatCurrency(annualNet)}
                             </strong>
                           </div>
                           {(hasInvestmentTimeline || annualInvestment > 0) && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={{ color: 'var(--text-dim)' }}>Em conta:</span>
+                              <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.inAccount')}</span>
                               <strong style={{ color: '#6366f1' }}>
                                 +{formatCurrency(annualInvestment)}
                               </strong>
@@ -663,10 +666,10 @@ export default function BalanceTimelineHeader({
 
                 // Fatias do Donut
                 const segments = [
-                  { name: 'Gastos', label: 'Gastos', percent: expPct, pct: expPct, amount: annualExpense, color: '#f43f5e' },
-                  ...((hasInvestmentTimeline && invPct > 0) ? [{ name: 'Em conta', label: 'Em conta', percent: invPct, pct: invPct, amount: annualInvestment, color: '#6366f1' }] : []),
-                  ...((hasLoanTimeline && loanPct > 0) ? [{ name: 'Devido', label: 'Devido', percent: loanPct, pct: loanPct, amount: annualLoan, color: '#f59e0b' }] : []),
-                  ...(freePct > 0 ? [{ name: 'Disponível', label: 'Disponível', percent: freePct, pct: freePct, amount: Math.max(0, annualNet), color: '#10b981' }] : [])
+                  { name: t('balanceHeader.expensesLegend'), label: t('balanceHeader.expensesLegend'), percent: expPct, pct: expPct, amount: annualExpense, color: '#f43f5e' },
+                  ...((hasInvestmentTimeline && invPct > 0) ? [{ name: t('balanceHeader.inAccountLegend'), label: t('balanceHeader.inAccountLegend'), percent: invPct, pct: invPct, amount: annualInvestment, color: '#6366f1' }] : []),
+                  ...((hasLoanTimeline && loanPct > 0) ? [{ name: t('balanceHeader.dueLegend'), label: t('balanceHeader.dueLegend'), percent: loanPct, pct: loanPct, amount: annualLoan, color: '#f59e0b' }] : []),
+                  ...(freePct > 0 ? [{ name: t('balanceHeader.availableLegend'), label: t('balanceHeader.availableLegend'), percent: freePct, pct: freePct, amount: Math.max(0, annualNet), color: '#10b981' }] : [])
                 ].filter((s) => s.percent > 0);
 
                 return (
@@ -683,7 +686,7 @@ export default function BalanceTimelineHeader({
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f43f5e', flexShrink: 0 }} />
-                            <span style={{ color: 'var(--text-dim)' }}>Gastos</span>
+                            <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.expensesLegend')}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ color: 'var(--text-dim)', fontSize: '0.66rem' }}>-{formatCurrency(annualExpense)}</span>
@@ -695,7 +698,7 @@ export default function BalanceTimelineHeader({
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6366f1', flexShrink: 0 }} />
-                              <span style={{ color: 'var(--text-dim)' }}>Em conta</span>
+                              <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.inAccountLegend')}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{ color: 'var(--text-dim)', fontSize: '0.66rem' }}>-{formatCurrency(annualInvestment)}</span>
@@ -708,7 +711,7 @@ export default function BalanceTimelineHeader({
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
-                              <span style={{ color: 'var(--text-dim)' }}>Devido</span>
+                              <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.dueLegend')}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{ color: 'var(--text-dim)', fontSize: '0.66rem' }}>-{formatCurrency(annualLoan)}</span>
@@ -720,7 +723,7 @@ export default function BalanceTimelineHeader({
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />
-                            <span style={{ color: 'var(--text-dim)' }}>Disponível</span>
+                            <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.availableLegend')}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ color: 'var(--text-dim)', fontSize: '0.66rem' }}>+{formatCurrency(Math.max(0, annualNet))}</span>
@@ -732,18 +735,18 @@ export default function BalanceTimelineHeader({
 
                     <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                        Total Anual Projetado
+                        {t('balanceHeader.totalAnnualProjected')}
                       </span>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', background: 'rgba(255, 255, 255, 0.02)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-glass)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span style={{ color: 'var(--text-dim)' }}>Saldo:</span>
+                          <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.balanceLabel')}</span>
                           <strong style={{ color: annualNet >= 0 ? '#10b981' : '#f43f5e' }}>
                             {annualNet >= 0 ? '+' : ''}{formatCurrency(annualNet)}
                           </strong>
                         </div>
                         {(hasInvestmentTimeline && annualInvestment > 0) && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span style={{ color: 'var(--text-dim)' }}>Em conta:</span>
+                            <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.inAccount')}</span>
                             <strong style={{ color: '#6366f1' }}>
                               +{formatCurrency(annualInvestment)}
                             </strong>
@@ -760,7 +763,7 @@ export default function BalanceTimelineHeader({
             {hasLoanTimeline && (
               <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  EMPRÉSTIMOS E FINANCIAMENTOS
+                  {t('balanceHeader.loansAndFinancing')}
                 </div>
                 {(() => {
                   const loanColors = ['#8b5cf6', '#0ea5e9', '#14b8a6', '#6366f1', '#f59e0b', '#ec4899'];
@@ -850,19 +853,19 @@ export default function BalanceTimelineHeader({
                       {/* Resumo de Totais: Capital Amortizado vs Capital Devido vs Custo Real do Capital */}
                       <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', alignItems: 'flex-start' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }}>Capital Amortizado</span>
+                          <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }}>{t('balanceHeader.amortizedCapital')}</span>
                           <strong style={{ color: '#10b981', fontSize: '0.84rem', fontWeight: '800' }}>
                             {formatCurrency(totalAmortizedVal)}
                           </strong>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                          <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }}>Capital Devido</span>
+                          <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }}>{t('balanceHeader.debtCapital')}</span>
                           <strong style={{ color: '#f43f5e', fontSize: '0.84rem', fontWeight: '800' }}>
                             {formatCurrency(totalRemainingDebtVal)}
                           </strong>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                          <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }} title="Custo total real estimado (Capital Financiado + Juros + Impostos)">Custo Real Capital</span>
+                          <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }} title={t('balanceHeader.realCapitalCostTitle')}>{t('balanceHeader.realCapitalCost')}</span>
                           <strong style={{ color: 'var(--primary-light)', fontSize: '0.84rem', fontWeight: '800' }}>
                             {formatCurrency(totalRealCostVal)}
                           </strong>
@@ -880,7 +883,7 @@ export default function BalanceTimelineHeader({
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#38bdf8', display: 'inline-block' }} />
-                Projeção Futura
+                {t('balanceHeader.futureProjection')}
               </span>
             </div>
 
@@ -904,7 +907,7 @@ export default function BalanceTimelineHeader({
                     <Clock size={15} />
                   </div>
                   <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#1e293b' }}>
-                    Horizonte dos Previstos:
+                    {t('balanceHeader.forecastHorizon')}
                   </span>
                   <span
                     style={{
@@ -918,17 +921,17 @@ export default function BalanceTimelineHeader({
                       textTransform: 'capitalize'
                     }}
                   >
-                    {projectedHorizonLabel} {projectionMonthsAhead === 0 ? '(Mês Atual)' : `(+${projectionMonthsAhead}m)`}
+                    {projectedHorizonLabel} {projectionMonthsAhead === 0 ? t('balanceHeader.currentMonthParen') : `(+${projectionMonthsAhead}m)`}
                   </span>
                 </div>
 
                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
                   {[
-                    { label: 'Mês Atual', months: 0 },
-                    { label: '+6 Meses', months: 6 },
-                    { label: '+1 Ano', months: 12 },
-                    { label: '+2 Anos', months: 24 },
-                    { label: '+5 Anos', months: 60 }
+                    { label: t('balanceHeader.currentMonth'), months: 0 },
+                    { label: t('balanceHeader.plusMonths', { count: 6 }), months: 6 },
+                    { label: t('balanceHeader.plusYear', { count: 1 }), months: 12 },
+                    { label: t('balanceHeader.plusYears', { count: 2 }), months: 24 },
+                    { label: t('balanceHeader.plusYears', { count: 5 }), months: 60 }
                   ].map((preset) => {
                     const isSelected = projectionMonthsAhead === preset.months;
                     return (
@@ -957,7 +960,7 @@ export default function BalanceTimelineHeader({
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: '700', whiteSpace: 'nowrap' }}>
-                  Hoje (Ago 2026)
+                  {t('balanceHeader.today', { month: format(todayDate, 'MMM yyyy', { locale: dateLocale }) })}
                 </span>
                 <input
                   type="range"
@@ -972,10 +975,10 @@ export default function BalanceTimelineHeader({
                     cursor: 'pointer',
                     height: '6px'
                   }}
-                  title={`Projetar até ${projectedHorizonLabel}`}
+                  title={t('balanceHeader.projectToTitle', { date: projectedHorizonLabel })}
                 />
                 <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: '700', whiteSpace: 'nowrap' }}>
-                  +10 Anos
+                  {t('balanceHeader.plusYears', { count: 10 })}
                 </span>
               </div>
             </div>
@@ -1000,27 +1003,27 @@ export default function BalanceTimelineHeader({
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                        <span className="meta-label" style={{ fontSize: '0.7rem' }}>Balanço Projetado</span>
+                        <span className="meta-label" style={{ fontSize: '0.7rem' }}>{t('balanceHeader.projectedBalance')}</span>
                         <span style={{ color: netProj >= 0 ? '#38bdf8' : '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
                           {netProj >= 0 ? '+' : ''}{formatCurrency(netProj)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '4px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                          <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Entradas Previstas:</span>
+                          <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>{t('balanceHeader.forecastInflows')}</span>
                           <span style={{ color: '#38bdf8', fontSize: '0.78rem', fontWeight: '700' }}>
                             +{formatCurrency(forecastInc)}
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                          <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Saídas Previstas:</span>
+                          <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>{t('balanceHeader.forecastOutflows')}</span>
                           <span style={{ color: '#fb7185', fontSize: '0.78rem', fontWeight: '700' }}>
                             -{formatCurrency(plannedExp)}
                           </span>
                         </div>
                         {(hasInvestmentTimeline && plannedInv > 0) && (
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                            <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Investimentos:</span>
+                            <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>{t('balanceHeader.investments')}</span>
                             <span style={{ color: '#6366f1', fontSize: '0.78rem', fontWeight: '700' }}>
                               -{formatCurrency(plannedInv)}
                             </span>
@@ -1028,7 +1031,7 @@ export default function BalanceTimelineHeader({
                         )}
                         {(hasLoanTimeline && plannedAmort > 0) && (
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                            <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>Capital Amortizado:</span>
+                            <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>{t('balanceHeader.amortizedCapital')}:</span>
                             <span style={{ color: '#10b981', fontSize: '0.78rem', fontWeight: '700' }}>
                               +{formatCurrency(plannedAmort)}
                             </span>
@@ -1087,7 +1090,7 @@ export default function BalanceTimelineHeader({
                   <Calendar size={20} />
                 </div>
                 <h3 className="modal-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                  Computar a partir de
+                  {t('balanceHeader.computeModalTitle')}
                 </h3>
               </div>
               <button
@@ -1102,7 +1105,7 @@ export default function BalanceTimelineHeader({
 
             <div style={{ padding: '0 0 16px 0' }}>
               <p style={{ margin: '0 0 16px 0', fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
-                Defina a partir de qual mês/ano os resumos e gráficos do Balanço devem ser calculados.
+                {t('balanceHeader.computeModalDescription')}
               </p>
 
               <label
@@ -1114,7 +1117,7 @@ export default function BalanceTimelineHeader({
                   fontWeight: '700'
                 }}
               >
-                Selecione Mês e Ano:
+                {t('balanceHeader.selectMonthYear')}
               </label>
               <input
                 type="month"
@@ -1142,7 +1145,7 @@ export default function BalanceTimelineHeader({
                 onClick={() => setIsDatePickerOpen(false)}
                 style={{ padding: '8px 16px', borderRadius: '8px' }}
               >
-                Cancelar
+                {t('balanceHeader.cancel')}
               </button>
               <button
                 type="button"
@@ -1150,7 +1153,7 @@ export default function BalanceTimelineHeader({
                 onClick={() => handleSaveComputeMonth(tempComputeMonth)}
                 style={{ padding: '8px 20px', borderRadius: '8px', fontWeight: '800' }}
               >
-                Salvar e Aplicar
+                {t('balanceHeader.saveAndApply')}
               </button>
             </div>
           </div>

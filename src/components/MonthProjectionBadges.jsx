@@ -131,11 +131,12 @@ export default function MonthProjectionBadges({
           display: 'inline-flex',
           alignItems: 'center',
           gap: '4px',
-          background: 'transparent',
-          border: 'none',
-          color: isFutureMonth
-            ? 'var(--text-dim)'
-            : (calculatedSaldo >= 0 ? '#38bdf8' : '#f43f5e'),
+          marginLeft: 'auto',
+          padding: '2px 8px',
+          borderRadius: '6px',
+          background: calculatedSaldo >= 0 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
+          border: calculatedSaldo >= 0 ? '1px solid rgba(16, 185, 129, 0.28)' : '1px solid rgba(244, 63, 94, 0.28)',
+          color: calculatedSaldo >= 0 ? '#10b981' : '#f43f5e',
           fontWeight: '800',
           fontSize: '0.76rem'
         }}

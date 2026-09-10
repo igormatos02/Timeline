@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.7](https://github.com/igormatos02/Timeline/compare/v0.1.6...v0.1.7) (2026-09-10)
+
+
+### Bug Fixes
+
+* **balance:** update title to Balanço até o mês atual with current month name ([945bc9a](https://github.com/igormatos02/Timeline/commit/945bc9ab20274c91799af3bcaf1d52f733d6fa17))
+
 ### [0.1.6](https://github.com/igormatos02/Timeline/compare/v0.1.5...v0.1.6) (2026-09-10)
 
 

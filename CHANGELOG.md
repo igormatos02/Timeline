@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.3](https://github.com/igormatos02/Timeline/compare/v0.1.2...v0.1.3) (2026-09-10)
+
+
+### Bug Fixes
+
+* **version:** import version directly from package.json for reactive HMR updates ([b31a24f](https://github.com/igormatos02/Timeline/commit/b31a24fc4a1f55719fad6da5b8bcac2832eaff58))
+
 ### [0.1.2](https://github.com/igormatos02/Timeline/compare/v0.1.1...v0.1.2) (2026-09-10)
 
 

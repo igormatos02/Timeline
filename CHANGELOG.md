@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.8](https://github.com/igormatos02/Timeline/compare/v0.1.7...v0.1.8) (2026-09-10)
+
+
+### Features
+
+* **i18n:** internationalize BalanceTimelineHeader and refine month projection balance badge ([88bacce](https://github.com/igormatos02/Timeline/commit/88bacceda1a3704c60204e5bfae61367be2190ea))
+
 ### [0.1.7](https://github.com/igormatos02/Timeline/compare/v0.1.6...v0.1.7) (2026-09-10)
 
 

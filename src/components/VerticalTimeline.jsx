@@ -734,6 +734,91 @@ function VerticalTimeline({
     );
   };
 
+  // Pre-calculate total projected expenses per month across all events in timeboard scope (excluding loans)
+  const monthExpensesTotalMap = useMemo(() => {
+    const map = new Map();
+    (timelineEvents || []).forEach((ev) => {
+      if (!ev || !ev.date || ev.isDeleted) return;
+      if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
+      if (!isEventTimelineActive(ev)) return;
+      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
+        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
+      }
+      const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent || ev.category === 'parcela_emprestimo' || ev.category === 'amortizacao';
+      const isExpense = (ev.eventType === EventType.EXPENSE || ev.category === 'saida_recorrente' || ev.category === 'expense' || ev.isExpense) && !isLoan;
+
+      if (isExpense) {
+        const mKey = ev.date.substring(0, 7);
+        map.set(mKey, (map.get(mKey) || 0) + Number(ev.amount || 0));
+      }
+    });
+    return map;
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+
+  // Pre-calculate total projected loan payments per month across all events in timeboard scope
+  const monthLoansTotalMap = useMemo(() => {
+    const map = new Map();
+    (timelineEvents || []).forEach((ev) => {
+      if (!ev || !ev.date || ev.isDeleted) return;
+      if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida') return;
+      if (!isEventTimelineActive(ev)) return;
+      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
+        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
+      }
+      const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
+
+      if (isLoanInstallment) {
+        const mKey = ev.date.substring(0, 7);
+        const amt = Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0));
+        map.set(mKey, (map.get(mKey) || 0) + amt);
+      }
+    });
+    return map;
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+
+  // Pre-calculate total projected income per month across all events in timeboard scope
+  const monthIncomeTotalMap = useMemo(() => {
+    const map = new Map();
+    (timelineEvents || []).forEach((ev) => {
+      if (!ev || !ev.date || ev.isDeleted) return;
+      if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
+      if (!isEventTimelineActive(ev)) return;
+      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
+        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
+      }
+      const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent || ev.category === 'parcela_emprestimo' || ev.category === 'amortizacao';
+      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment;
+      const isIncome = (ev.eventType === EventType.INCOME || ev.category === 'entrada_recorrente' || ev.category === 'income' || ev.isIncome) && !isLoan && !isInvestment;
+
+      if (isIncome) {
+        const mKey = ev.date.substring(0, 7);
+        map.set(mKey, (map.get(mKey) || 0) + Number(ev.amount || 0));
+      }
+    });
+    return map;
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+
+  // Pre-calculate total projected investments per month across all events in timeboard scope
+  const monthInvestmentsTotalMap = useMemo(() => {
+    const map = new Map();
+    (timelineEvents || []).forEach((ev) => {
+      if (!ev || !ev.date || ev.isDeleted) return;
+      if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
+      if (!isEventTimelineActive(ev)) return;
+      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
+        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
+      }
+      if (ev.isExternal || ev.is_external) return;
+      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment;
+
+      if (isInvestment) {
+        const mKey = ev.date.substring(0, 7);
+        map.set(mKey, (map.get(mKey) || 0) + Number(ev.amount || 0));
+      }
+    });
+    return map;
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+
   const renderMonthView = () => {
     const monthMap = new Map();
 
@@ -801,91 +886,6 @@ function VerticalTimeline({
       }
       return ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id;
     };
-
-    // Pre-calculate total projected expenses per month across all events in timeboard scope (excluding loans)
-    const monthExpensesTotalMap = useMemo(() => {
-      const map = new Map();
-      (timelineEvents || []).forEach((ev) => {
-        if (!ev || !ev.date || ev.isDeleted) return;
-        if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-        if (!isEventTimelineActive(ev)) return;
-        if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-          if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-        }
-        const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent || ev.category === 'parcela_emprestimo' || ev.category === 'amortizacao';
-        const isExpense = (ev.eventType === EventType.EXPENSE || ev.category === 'saida_recorrente' || ev.category === 'expense' || ev.isExpense) && !isLoan;
-
-        if (isExpense) {
-          const mKey = ev.date.substring(0, 7);
-          map.set(mKey, (map.get(mKey) || 0) + Number(ev.amount || 0));
-        }
-      });
-      return map;
-    }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
-
-    // Pre-calculate total projected loan payments per month across all events in timeboard scope
-    const monthLoansTotalMap = useMemo(() => {
-      const map = new Map();
-      (timelineEvents || []).forEach((ev) => {
-        if (!ev || !ev.date || ev.isDeleted) return;
-        if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida') return;
-        if (!isEventTimelineActive(ev)) return;
-        if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-          if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-        }
-        const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
-
-        if (isLoanInstallment) {
-          const mKey = ev.date.substring(0, 7);
-          const amt = Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0));
-          map.set(mKey, (map.get(mKey) || 0) + amt);
-        }
-      });
-      return map;
-    }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
-
-    // Pre-calculate total projected income per month across all events in timeboard scope
-    const monthIncomeTotalMap = useMemo(() => {
-      const map = new Map();
-      (timelineEvents || []).forEach((ev) => {
-        if (!ev || !ev.date || ev.isDeleted) return;
-        if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-        if (!isEventTimelineActive(ev)) return;
-        if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-          if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-        }
-        const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent || ev.category === 'parcela_emprestimo' || ev.category === 'amortizacao';
-        const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment;
-        const isIncome = (ev.eventType === EventType.INCOME || ev.category === 'entrada_recorrente' || ev.category === 'income' || ev.isIncome) && !isLoan && !isInvestment;
-
-        if (isIncome) {
-          const mKey = ev.date.substring(0, 7);
-          map.set(mKey, (map.get(mKey) || 0) + Number(ev.amount || 0));
-        }
-      });
-      return map;
-    }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
-
-    // Pre-calculate total projected investments per month across all events in timeboard scope
-    const monthInvestmentsTotalMap = useMemo(() => {
-      const map = new Map();
-      (timelineEvents || []).forEach((ev) => {
-        if (!ev || !ev.date || ev.isDeleted) return;
-        if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-        if (!isEventTimelineActive(ev)) return;
-        if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-          if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-        }
-        if (ev.isExternal || ev.is_external) return;
-        const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment;
-
-        if (isInvestment) {
-          const mKey = ev.date.substring(0, 7);
-          map.set(mKey, (map.get(mKey) || 0) + Number(ev.amount || 0));
-        }
-      });
-      return map;
-    }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
 
     // Pre-calculate chronological running cumulative metrics
     const monthCumulativeMap = new Map();

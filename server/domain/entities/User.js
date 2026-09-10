@@ -10,8 +10,7 @@ export class User {
     password = null,
     googleId = null,
     avatarUrl = null,
-    createdAt = new Date().toISOString(),
-    updatedAt = new Date().toISOString()
+    createdAt = new Date().toISOString()
   }) {
     this.id = id;
     this.name = name;
@@ -20,7 +19,6 @@ export class User {
     this.googleId = googleId;
     this.avatarUrl = avatarUrl;
     this.createdAt = createdAt;
-    this.updatedAt = updatedAt;
   }
 
   toJSON() {
@@ -30,8 +28,7 @@ export class User {
       email: this.email,
       googleId: this.googleId,
       avatarUrl: this.avatarUrl,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt
+      createdAt: this.createdAt
     };
   }
 }

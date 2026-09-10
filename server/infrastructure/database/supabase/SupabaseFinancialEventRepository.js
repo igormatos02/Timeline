@@ -207,8 +207,6 @@ export class SupabaseFinancialEventRepository extends IRepository {
         row.status === 'settled'
       ),*/
 
-      isLocked: Boolean(row.is_locked),
-
       isSystemLoanEvent: Boolean(row.is_system_loan_event),
 
       amortizationAmount:

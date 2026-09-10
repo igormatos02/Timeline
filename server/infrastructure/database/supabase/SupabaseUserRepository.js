@@ -12,8 +12,7 @@ function rowToEntity(row) {
     password: row.password,
     googleId: row.google_id || row.googleId,
     avatarUrl: row.avatar_url || row.avatarUrl,
-    createdAt: row.created_at || row.createdAt,
-    updatedAt: row.updated_at || row.updatedAt
+    createdAt: row.created_at || row.createdAt
   });
 }
 
@@ -145,7 +144,6 @@ export class SupabaseUserRepository {
       if (error) {
         const safeRow = { ...row };
         if (error.message && error.message.includes('avatar_url')) delete safeRow.avatar_url;
-        if (error.message && error.message.includes('updated_at')) delete safeRow.updated_at;
 
         const { data: fallbackData, error: fallbackError } = await supabase
           .from(TABLE)

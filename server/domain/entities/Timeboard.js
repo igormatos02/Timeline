@@ -16,6 +16,7 @@ export class Timeboard {
     userId = null,
     ownerId = null,
     type = TimeboardType.FINANCIAL,
+    tenant = null,
     currency = 'EUR',
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
@@ -27,6 +28,7 @@ export class Timeboard {
     this.userId = userId || ownerId;
     this.ownerId = ownerId || userId;
     this.type = type;
+    this.tenant = tenant;
     this.currency = currency;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;

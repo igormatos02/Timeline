@@ -39,7 +39,6 @@ export class LoanService {
     const amortEvent = await eventRepository.create({
       timelineOriginId: loan.id,
       timelineOriginName: loan.name,
-      timelineOriginIcon: '📉',
       date: date || new Date().toISOString().substring(0, 10),
       time: '12:00',
       title: t('backend.loan.amortizationTitle', { name: loan.name }),

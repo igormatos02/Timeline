@@ -680,7 +680,7 @@ export class FinancialEventService {
 
     function extractInstallmentPrincipal(inst) {
       // Use canonical field names; fall back to legacy names for backward compat
-      const cap = inst.installmentCapital ?? inst.principalAmount ?? inst.principal_amount;
+      const cap = inst.installmentCapital ?? inst.principalAmount;
       if (cap != null && !isNaN(Number(cap))) return Math.max(0, Number(cap));
       const total = Number(inst.installmentAmount || inst.amount || 0);
       const interest = Number(inst.installmentInterest ?? inst.interestPortion ?? inst.interestAmount ?? 0);

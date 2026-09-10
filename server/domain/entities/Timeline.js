@@ -29,10 +29,7 @@ export class Timeline {
     remainingDebt = 0,
     amortizedCapital = 0,
     installmentAmount = 0,
-    tan = 0,
     totalInstallments = 0,
-    currentInstallmentNumber = 1,
-    remainingMonths = 0,
     dueDay = 1,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
@@ -57,10 +54,7 @@ export class Timeline {
     this.remainingDebt = Number(remainingDebt) || 0;
     this.amortizedCapital = Number(amortizedCapital) || 0;
     this.installmentAmount = Number(installmentAmount) || 0;
-    this.tan = Number(tan) || 0;
     this.totalInstallments = Number(totalInstallments) || 0;
-    this.currentInstallmentNumber = Number(currentInstallmentNumber) || 1;
-    this.remainingMonths = Number(remainingMonths) || 0;
     this.dueDay = Number(dueDay) || 1;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;

@@ -1,4 +1,4 @@
-import { TimelineAssociationType, EventType, EventStatus, EventPriority, AmortizationStrategy, EventAggregation, LoanEventCategory, isPositiveStatus } from '../../../shared/enums/index.js';
+import { EventType, EventStatus, EventPriority, EventAggregation, LoanEventCategory, isPositiveStatus } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -15,7 +15,6 @@ export class TimelineEvent {
     timelineId = null,
     timelineOriginId = null,
     timelineOriginName = '',
-    timelineOriginIcon = '💰',
     eventId = null,
     sobrepositionOver = null,
     version = 0,
@@ -32,8 +31,6 @@ export class TimelineEvent {
     category = LoanEventCategory.LOAN_INSTALLMENT,
     eventType = EventType.EXPENSE,
     event_type,
-    financialType,
-    financial_type,
     recurrenceEndDate = null,
     endDate = null,
     dueDate = null,
@@ -53,15 +50,11 @@ export class TimelineEvent {
     aggregation = EventAggregation.MONTHLY,
     amount = 0,
     principalAmount,
-    principal_amount,
     interestPortion,
     interestAmount,
-    interest_amount,
     taxAmount,
-    tax_amount,
     balanceAfter = 0,
     remainingDebtAfter = 0,
-    remaining_debt_after,
     installmentNumber = null,
     installment_number,
     totalInstallments = null,
@@ -74,12 +67,9 @@ export class TimelineEvent {
     targetAmount,
     strategy,
     amortizationStrategy,
-    amortization_strategy,
     notes,
     isCompleted,
-    isLocked,
     isSystemLoanEvent,
-    is_system_loan_event,
     isRecurring,
     is_recurring,
     isExternal = false,
@@ -103,12 +93,7 @@ export class TimelineEvent {
     this.timelineId = effectiveTimelineId || null;
     this.timelineOriginId = this.timelineId;
 
-    this.timelineAssociationType = this.timelineId
-      ? TimelineAssociationType.RECORD
-      : TimelineAssociationType.DYNAMIC;
-
     this.timelineOriginName = timelineOriginName;
-    this.timelineOriginIcon = timelineOriginIcon;
     this.eventId = eventId || id;
     this.eventVersion = Number(version !== undefined ? version : (event_version !== undefined ? event_version : 0));
     this.version = this.eventVersion;
@@ -122,7 +107,7 @@ export class TimelineEvent {
     this.title = this.name;
     this.description = description || '';
     this.category = category;
-    this.eventType = event_type || eventType || financial_type || financialType;
+    this.eventType = event_type || eventType;
 
     this.aggregation = aggregation || EventAggregation.MONTHLY;
 
@@ -147,43 +132,37 @@ export class TimelineEvent {
     const instCapRaw =
       installment_capital != null ? Number(installment_capital) :
       installmentCapital != null  ? Number(installmentCapital)  :
-      principal_amount   != null  ? Number(principal_amount)    :
       principalAmount    != null  ? Number(principalAmount)     :
       null;
     this.installmentCapital = instCapRaw;
     this.principalAmount    = instCapRaw;
-    this.principal_amount   = instCapRaw;
 
     // Installment Interest.
     // Returns null when not stored so getInstallmentInterest() can derive a fallback.
     const instIntRaw =
       installment_interest != null ? Number(installment_interest) :
       installmentInterest  != null ? Number(installmentInterest)  :
-      interest_amount      != null ? Number(interest_amount)      :
       interestAmount       != null ? Number(interestAmount)       :
       interestPortion      != null ? Number(interestPortion)      :
       null;
     this.installmentInterest = instIntRaw;
     this.interestAmount  = instIntRaw;
     this.interestPortion = instIntRaw;
-    this.interest_amount = instIntRaw;
 
     // Installment Fee / Stamp Tax.
     // Returns null when not stored — getInstallmentFee() defaults to 0.
     const instFeeRaw =
       installment_fee != null ? Number(installment_fee) :
       installmentFee  != null ? Number(installmentFee)  :
-      tax_amount      != null ? Number(tax_amount)      :
       taxAmount       != null ? Number(taxAmount)       :
       null;
     this.installmentFee = instFeeRaw;
     this.taxAmount   = instFeeRaw;
-    this.tax_amount  = instFeeRaw;
 
     this.amortizationAmount = Number(amortizationAmount) || Number(instAmtVal) || 0;
     this.initialInvestedAmount = Number(initialInvestedAmount) || 0;
     this.targetAmount = Number(targetAmount) || 0;
-    this.strategy = amortization_strategy || amortizationStrategy || strategy;
+    this.strategy = amortizationStrategy || strategy;
     this.amortizationStrategy = this.strategy;
     this.notes = notes || '';
     this.isIncome = this.eventType === EventType.INCOME;
@@ -196,9 +175,8 @@ export class TimelineEvent {
     this.automatic = Boolean(automatic || isAutomatic);
     this.isAutomatic = this.automatic;
     this.isCompleted = Boolean(isCompleted);
-    this.isLocked = Boolean(isLocked);
-    this.isSystemLoanEvent = Boolean(isSystemLoanEvent || is_system_loan_event);
-    this.balanceAfter = Number(remaining_debt_after !== undefined ? remaining_debt_after : (remainingDebtAfter || balanceAfter)) || 0;
+    this.isSystemLoanEvent = Boolean(isSystemLoanEvent);
+    this.balanceAfter = Number(remainingDebtAfter !== undefined ? remainingDebtAfter : balanceAfter) || 0;
     this.remainingDebtAfter = this.balanceAfter;
     this.installmentNumber = installment_number !== undefined ? installment_number : installmentNumber;
     this.totalInstallments = total_installments !== undefined ? total_installments : totalInstallments;
@@ -208,14 +186,6 @@ export class TimelineEvent {
     this.obligationPersonId = obligationPersonId || obligation_person_id || null;
     this.createdAt = created_at || createdAt;
     this.updatedAt = updated_at || updatedAt;
-  }
-
-  isDynamicTimeline() {
-    return this.timelineAssociationType === TimelineAssociationType.DYNAMIC;
-  }
-
-  isRecordTimeline() {
-    return this.timelineAssociationType === TimelineAssociationType.RECORD;
   }
 
   isLoanEvent() {

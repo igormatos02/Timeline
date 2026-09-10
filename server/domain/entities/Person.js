@@ -16,6 +16,7 @@ export class Person {
     obligatorIdentification = '',
     phone = '',
     email = '',
+    taxId = null,
     birthDate = null,
     observation = '',
     role = PersonRole.CONTRIBUTOR,
@@ -30,6 +31,7 @@ export class Person {
     this.obligatorIdentification = obligatorIdentification;
     this.phone = phone;
     this.email = email;
+    this.taxId = taxId;
     this.birthDate = birthDate;
     this.observation = observation;
     this.role = role;

@@ -18,6 +18,7 @@ function rowToEntity(row) {
     obligatorIdentification: row.obligator_identification || '',
     email: row.email || '',
     phone: row.phone || '',
+    taxId: row.tax_id || null,
     birthDate: row.birth_date || null,
     observation: row.observation || '',
     role: row.role || PersonRole.CONTRIBUTOR,
@@ -150,7 +151,6 @@ export class SupabasePersonRepository extends IRepository {
         if (error.message?.includes('person_name')) delete safeRow.person_name;
         if (error.message?.includes('name') && safeRow.person_name) delete safeRow.name;
         if (error.message?.includes('obligator_identification')) delete safeRow.obligator_identification;
-        if (error.message?.includes('tax_id') && safeRow.obligator_identification) delete safeRow.tax_id;
         if (error.message?.includes('birth_date')) delete safeRow.birth_date;
         if (error.message?.includes('observation')) delete safeRow.observation;
 
@@ -204,7 +204,6 @@ export class SupabasePersonRepository extends IRepository {
         if (error.message?.includes('person_name')) delete safeRow.person_name;
         if (error.message?.includes('name') && safeRow.person_name) delete safeRow.name;
         if (error.message?.includes('obligator_identification')) delete safeRow.obligator_identification;
-        if (error.message?.includes('tax_id') && safeRow.obligator_identification) delete safeRow.tax_id;
         if (error.message?.includes('birth_date')) delete safeRow.birth_date;
         if (error.message?.includes('observation')) delete safeRow.observation;
 

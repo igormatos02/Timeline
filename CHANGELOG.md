@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.4](https://github.com/igormatos02/Timeline/compare/v0.1.3...v0.1.4) (2026-09-10)
+
+
+### Features
+
+* **version:** add dynamic /api/version route and reactive fetch in VersionBadge ([26a14f6](https://github.com/igormatos02/Timeline/commit/26a14f68c34273efa92753d1f0bc30646ba04448))
+
 ### [0.1.3](https://github.com/igormatos02/Timeline/compare/v0.1.2...v0.1.3) (2026-09-10)
 
 

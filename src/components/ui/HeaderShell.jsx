@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
+import VersionBadge from './VersionBadge.jsx';
 
 export default function HeaderShell({
   collapsed,
@@ -65,7 +66,10 @@ export default function HeaderShell({
           {left}
         </div>
 
-        {right}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {right}
+          <VersionBadge />
+        </div>
       </div>
 
       {!collapsed && children}

@@ -22,6 +22,10 @@ export class EventService {
     return service.getAllEvents(filter);
   }
 
+  async getEventById(id) {
+    return financialEventService.getEventById(id);
+  }
+
   async createEvent(eventData) {
     const service = await this.getServiceForTimeboard(eventData.timeboardId);
     return service.createEvent(eventData);

@@ -19,4 +19,5 @@ export { EventUpdateMode } from './EventUpdateMode.js';
 export { PersonRole } from './PersonRole.js';
 export { PersonType } from './PersonType.js';
 export { InvitationStatus } from './InvitationStatus.js';
+export { DiaryMood, DiaryEventCategory } from './DiaryMood.js';
 

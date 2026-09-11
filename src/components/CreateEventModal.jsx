@@ -1,5 +1,5 @@
 import React from 'react';
-import { TimelineType, normalizeTimelineType } from '../enums/index.js';
+import { TimelineType, EventType, normalizeTimelineType } from '../enums/index.js';
 import {
   IncomeEventModal,
   ExpenseEventModal,
@@ -7,6 +7,7 @@ import {
   LoanEventModal,
   BalanceEventModal,
   ReminderEventModal,
+  DiaryEventModal,
   DefaultEventModal
 } from './event-modals/index.js';
 
@@ -15,11 +16,15 @@ import {
  * Roteia para o popup especializado de acordo com o tipo da timeline ativa (TimelineType).
  */
 export default function CreateEventModal(props) {
-  const { isOpen, timeline } = props;
+  const { isOpen, timeline, initialData } = props;
 
   if (!isOpen) return null;
 
   const normalizedType = normalizeTimelineType(timeline?.type);
+
+  if (initialData?.eventType === EventType.REGISTER || normalizedType === TimelineType.DIARY) {
+    return <DiaryEventModal {...props} />;
+  }
 
   switch (normalizedType) {
     case TimelineType.BALANCE:
@@ -39,6 +44,9 @@ export default function CreateEventModal(props) {
 
     case TimelineType.REMINDER:
       return <ReminderEventModal {...props} />;
+
+    case TimelineType.DIARY:
+      return <DiaryEventModal {...props} />;
 
     default:
       return <DefaultEventModal {...props} />;

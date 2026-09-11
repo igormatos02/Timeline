@@ -7,7 +7,11 @@ export const TimelineType = Object.freeze({
   CUSTOM: 'custom',
   REMINDER: 'reminder',
   PROJECT: 'project',
-  NOTE: 'note'
+  HISTORY: 'history',
+  DIARY: 'diary',
+  GOALS: 'goals',
+  PROSPECTS: 'prospects',
+
 });
 
 const VALID_TIMELINE_TYPES = new Set(Object.values(TimelineType));

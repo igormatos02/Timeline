@@ -155,6 +155,7 @@ export const translations = {
       loanTimeline: "Loan Timeline",
       projectTimeline: "Project Timeline",
       reminderTimeline: "Reminder Timeline",
+      diaryTimeline: "Diary Timeline",
       customTimeline: "Custom Timeline"
     },
 
@@ -848,6 +849,56 @@ export const translations = {
       save: "Save Reminder"
     },
 
+    // Diary Mood Categories
+    diaryMood: {
+      moodLabel: "Day Mood",
+      bad: "Bad Day",
+      normal: "Normal Day",
+      good: "Good Day",
+      unforgettable: "Unforgettable Day"
+    },
+
+    // Diary Timeline Header
+    diaryHeader: {
+      badge: "Personal Diary",
+      addEntry: "New Entry",
+      resetTitle: "Clear all entries in this diary",
+      settingsTitle: "Timeline Settings",
+      deleteTitle: "Delete this timeline",
+      moodDistributionTitle: "MOOD DISTRIBUTION",
+      noEntries: "No diary entries yet",
+      noEntriesHint: "Add daily entries to track your mood and reflections.",
+      annualEntriesTitle: "ANNUAL ENTRIES",
+      annualEntriesDesc: "Recorded in the last 12 months:",
+      annualCount: "{count} entries",
+      chartTitle: "DIARY ENTRIES EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)",
+      monthVsPrevMonth: "This month vs previous month:",
+      annualProjectionLabel: "Total recorded entries:"
+    },
+
+    // Diary Event Modal
+    diaryModal: {
+      newTitle: "New Diary Entry",
+      editTitle: "Edit Diary Entry",
+      titleLabel: "Title / Daily Highlight *",
+      nameLabel: "Title / Daily Highlight *",
+      titlePlaceholder: "How was your day?...",
+      namePlaceholder: "How was your day?...",
+      descriptionLabel: "Diary Entry",
+      descriptionPlaceholder: "Write about your day, moments, or reflections...",
+      moodLabel: "Mood",
+      dateLabel: "Date *",
+      duplicateDayError: "An entry already exists for this day in the diary.",
+      charCount: "{current}/{max} characters",
+      bold: "Bold",
+      italic: "Italic",
+      strikethrough: "Strikethrough",
+      normal: "Normal",
+      loadingDescription: "Loading entry details...",
+      cancel: "Cancel",
+      save: "Save Entry"
+    },
+
     // Evolution Chart
     evolutionChart: {
       monthlyVariation: "Monthly Variation",
@@ -1093,9 +1144,10 @@ export const translations = {
       expenseTimeline: "Linha de Saída / Despesas",
       investmentTimeline: "Linha de Investimentos",
       loanTimeline: "Linha de Crédito / Empréstimo",
-      projectTimeline: "Timeline de Projeto",
-      reminderTimeline: "Timeline de Lembretes",
-      customTimeline: "Timeline Personalizada"
+      projectTimeline: "Projetos",
+      reminderTimeline: "Lembretes",
+      diaryTimeline: "Diário",
+      customTimeline: "Personalizada"
     },
 
     // Action Hints / Tooltips
@@ -1786,6 +1838,56 @@ export const translations = {
       notesPlaceholder: "Adicione informações adicionais ou contexto...",
       cancel: "Cancelar",
       save: "Salvar Lembrete"
+    },
+
+    // Diary Mood Categories
+    diaryMood: {
+      moodLabel: "Mood do Dia",
+      bad: "Dia Ruim",
+      normal: "Dia Normal",
+      good: "Dia Bom",
+      unforgettable: "Dia Inesquecível"
+    },
+
+    // Diary Timeline Header
+    diaryHeader: {
+      badge: "Diário Pessoal",
+      addEntry: "Novo Registro",
+      resetTitle: "Limpar todos os registros deste diário",
+      settingsTitle: "Definições da Timeline",
+      deleteTitle: "Excluir esta timeline",
+      moodDistributionTitle: "DISTRIBUIÇÃO DE MOOD",
+      noEntries: "Sem registros no diário",
+      noEntriesHint: "Adicione registros diários para acompanhar seu humor e memórias.",
+      annualEntriesTitle: "REGISTROS NO ANO",
+      annualEntriesDesc: "Registrados nos últimos 12 meses:",
+      annualCount: "{count} registros",
+      chartTitle: "EVOLUÇÃO DOS REGISTROS (ÚLTIMOS 6 MESES + MÊS ATUAL)",
+      monthVsPrevMonth: "Este mês vs mês anterior:",
+      annualProjectionLabel: "Total de registros:"
+    },
+
+    // Diary Event Modal
+    diaryModal: {
+      newTitle: "Novo Registro no Diário",
+      editTitle: "Editar Registro no Diário",
+      titleLabel: "Título / Resumo do Dia *",
+      nameLabel: "Título / Resumo do Dia *",
+      titlePlaceholder: "Como foi o seu dia?...",
+      namePlaceholder: "Como foi o seu dia?...",
+      descriptionLabel: "Relato do Diário",
+      descriptionPlaceholder: "Escreva sobre o seu dia, reflexões ou momentos...",
+      moodLabel: "Mood",
+      dateLabel: "Data *",
+      duplicateDayError: "Já existe um registro para este dia no Diário.",
+      charCount: "{current}/{max} caracteres",
+      bold: "Negrito",
+      italic: "Itálico",
+      strikethrough: "Riscado",
+      normal: "Normal",
+      loadingDescription: "Carregando relato...",
+      cancel: "Cancelar",
+      save: "Salvar Registro"
     },
 
     // Evolution Chart

@@ -53,8 +53,9 @@ import { format, parseISO, endOfMonth } from 'date-fns';
 import { pt, enUS } from 'date-fns/locale';
 import { generateUUID } from '../utils/uuid';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { EventType, TimelineType, EventStatus, ReminderEventStatus, EventRecurrence, EventPeriodicity, PersonType, AmortizationEventCategory, LoanEventCategory, InvestmentEventCategory, ReminderEventCategory, normalizeRecurrence } from '../enums/index.js';
+import { EventType, TimelineType, EventStatus, ReminderEventStatus, EventRecurrence, EventPeriodicity, PersonType, AmortizationEventCategory, LoanEventCategory, InvestmentEventCategory, ReminderEventCategory, DiaryMood, normalizeRecurrence } from '../enums/index.js';
 import { INCOME_CATEGORY_META, EXPENSE_CATEGORY_META, INVESTMENT_CATEGORY_META, REMINDER_CATEGORY_META } from './event-modals/FinancialEventModalConfig.js';
+import { DIARY_MOOD_CONFIG } from './event-modals/DiaryEventModal.jsx';
 import * as api from '../services/api.js';
 import { compareEventsWithinDay } from '../utils/eventSorting.js';
 
@@ -151,6 +152,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const isInvestmentEvent = event.eventType === EventType.INVESTMENT;
   const isReminderTimeline = timelineType === TimelineType.REMINDER || timelineType === 'reminder' || timelineType === 'reminders';
   const isReminderEvent = isReminderTimeline || event.eventType === EventType.REMINDER || event.timelineType === TimelineType.REMINDER || event.timeline_type === TimelineType.REMINDER;
+  const isDiaryTimeline = timelineType === TimelineType.DIARY;
+  const isRegisterEvent = isDiaryTimeline || event.eventType === EventType.REGISTER;
   const isSavingsInvestment = isInvestmentEvent && (
     !event.category ||
     event.category === 'savings' ||
@@ -3373,8 +3376,74 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         </div>
       )}
 
+      {/* 📖 Diary Register Event Strip (Direct Click-to-Edit, Mood Badge) */}
+      {isRegisterEvent && (
+        <div
+          className="loan-breakdown-strip"
+          onClick={() => onEdit && onEdit(event)}
+          style={{
+            background: 'rgba(236, 72, 153, 0.03)',
+            border: '1px solid var(--border-glass)',
+            borderRadius: '8px',
+            padding: '8px 12px',
+            margin: '0',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(236, 72, 153, 0.4)';
+            e.currentTarget.style.background = 'rgba(236, 72, 153, 0.06)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border-glass)';
+            e.currentTarget.style.background = 'rgba(236, 72, 153, 0.03)';
+          }}
+        >
+          {/* Linha 1: [icone] [titulo do evento] [lables] */}
+          {renderCardInnerHeader()}
+
+          {/* Linha 2: Mood Badge (left) e Ações (right) */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginTop: '2px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {(() => {
+                const moodCfg = DIARY_MOOD_CONFIG[event.category] || DIARY_MOOD_CONFIG[DiaryMood.GOOD];
+                return (
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '3px 10px',
+                      borderRadius: '9999px',
+                      background: moodCfg.bgColor,
+                      border: `1px solid ${moodCfg.borderColor}`,
+                      color: moodCfg.color,
+                      fontSize: '0.74rem',
+                      fontWeight: '800'
+                    }}
+                  >
+                    <span>{moodCfg.emoji}</span>
+                    <span>{t(moodCfg.labelKey) || moodCfg.fallbackLabel}</span>
+                  </div>
+                );
+              })()}
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                {t('diaryModal.descriptionLabel') || 'Diário'}
+              </span>
+            </div>
+
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
+              {renderActionButtons()}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 📋 Default / Generic / Reminder Event Strip */}
-      {!isIncomeEvent && !isExpenseEvent && !isInvestmentEvent && !isAmortization && !isLoanInstallment && (
+      {!isIncomeEvent && !isExpenseEvent && !isInvestmentEvent && !isAmortization && !isLoanInstallment && !isRegisterEvent && (
         <div
           className="loan-breakdown-strip"
           style={{

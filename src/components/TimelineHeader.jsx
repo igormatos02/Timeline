@@ -7,6 +7,7 @@ import {
   InvestmentTimelineHeader,
   LoanTimelineHeader,
   ReminderTimelineHeader,
+  DiaryTimelineHeader,
   ProjectTimelineHeader,
   DefaultTimelineHeader
 } from './timeline-headers/index.js';
@@ -40,13 +41,12 @@ function TimelineHeader(props) {
       return <InvestmentTimelineHeader {...props} />;
 
     case TimelineType.REMINDER:
-    case 'reminder':
-    case 'reminders':
       return <ReminderTimelineHeader {...props} />;
 
+    case TimelineType.DIARY:
+      return <DiaryTimelineHeader {...props} />;
+
     case TimelineType.PROJECT:
-    case 'project':
-    case 'projects':
       return <ProjectTimelineHeader {...props} />;
 
     default:

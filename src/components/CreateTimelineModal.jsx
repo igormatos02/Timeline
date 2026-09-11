@@ -9,6 +9,7 @@ import {
   PiggyBank,
   FolderKanban,
   Bell,
+  BookOpen,
   Calendar,
   ShieldCheck,
   ShieldAlert,
@@ -90,6 +91,15 @@ const TIMELINE_TYPE_OPTIONS = [
     defaultName: 'Lembretes',
     defaultColor: '#f59e0b',
     icon: Bell,
+    singleInstance: false
+  },
+  {
+    type: TimelineType.DIARY,
+    labelKey: 'sidebar.diaryTimeline',
+    fallbackLabel: 'Diário',
+    defaultName: 'Diário Pessoal',
+    defaultColor: '#ec4899',
+    icon: BookOpen,
     singleInstance: false
   }
 ];

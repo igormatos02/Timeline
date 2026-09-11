@@ -4,7 +4,7 @@ import { loanContractRepository } from '../../infrastructure/database/supabase/S
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
 import { calcToggledStatus } from '../../domain/entities/TimelineEvent.js';
-import { EventType, EventStatus, EventPeriodicity, EventRecurrence, EventDeletionMode, EventUpdateMode, AmortizationStrategy, LoanEventCategory, AmortizationEventCategory, InvestmentEventCategory, IncomeEventCategory, ExpensesEventCategory, isPositiveStatus, isNegativeStatus, normalizeRecurrence } from '../../../shared/enums/index.js';
+import { EventType, TimelineType, EventStatus, EventPeriodicity, EventRecurrence, EventDeletionMode, EventUpdateMode, AmortizationStrategy, LoanEventCategory, AmortizationEventCategory, InvestmentEventCategory, IncomeEventCategory, ExpensesEventCategory, DiaryMood, isPositiveStatus, isNegativeStatus, normalizeRecurrence } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -156,7 +156,7 @@ export class FinancialEventService {
       }
     }
 
-    return projectedEvents.filter((ev) => {
+    const filteredEvents = projectedEvents.filter((ev) => {
       if (filter.timeboardId && ev.timeboardId && ev.timeboardId !== filter.timeboardId) return false;
       if (filter.timelineId && ev.timelineId !== filter.timelineId && ev.timelineOriginId !== filter.timelineId) return false;
       if (filter.timelineOriginId && ev.timelineOriginId !== filter.timelineOriginId) return false;
@@ -166,6 +166,25 @@ export class FinancialEventService {
       if (filter.endDate && ev.date > filter.endDate) return false;
       return true;
     });
+
+    // Lazy load: for REGISTER events or DIARY timelines, omit description from list payload to save memory
+    return filteredEvents.map((ev) => {
+      if (ev.eventType === EventType.REGISTER || ev.timelineType === TimelineType.DIARY) {
+        const { description, ...rest } = ev;
+        return { ...rest, hasDescription: Boolean(description) };
+      }
+      return ev;
+    });
+  }
+
+  async getEventById(id) {
+    if (!id) return null;
+    const directEvent = await eventRepository.getById(id);
+    if (directEvent) return directEvent;
+
+    const allEvents = await eventRepository.getAll();
+    const found = allEvents.find((e) => e.id === id || e.eventId === id || e.sobrepositionOver === id);
+    return found || null;
   }
 
   async createEvent(eventData) {
@@ -194,6 +213,21 @@ export class FinancialEventService {
       }
     }
 
+    const isRegister = eventData.eventType === EventType.REGISTER;
+    if (isRegister) {
+      const allRawEvents = await eventRepository.getAll();
+      const duplicate = allRawEvents.find((e) => {
+        if (e.isDeleted || e.status === EventStatus.DELETED) return false;
+        const sameTimeline = String(e.timelineId || e.timelineOriginId || e.timeline_id) === String(timelineId);
+        const sameDate = String(e.date) === String(eventData.date);
+        return sameTimeline && sameDate;
+      });
+
+      if (duplicate) {
+        throw new Error(t('diaryModal.duplicateDayError') || 'Já existe um registro para este dia no Diário.');
+      }
+    }
+
     const payload = {
       ...eventData,
       timelineId,
@@ -203,9 +237,9 @@ export class FinancialEventService {
       version: isLoanInstallment ? 0 : (eventData.version !== undefined ? Number(eventData.version) : 0),
       eventVersion: isLoanInstallment ? 0 : (eventData.eventVersion !== undefined ? Number(eventData.eventVersion) : 0),
       event_version: isLoanInstallment ? 0 : (eventData.event_version !== undefined ? Number(eventData.event_version) : 0),
-      recurrence: isLoanInstallment ? EventRecurrence.ONCE : (eventData.recurrence || (isRecurring ? EventRecurrence.RECURRING : EventRecurrence.ONCE)),
+      recurrence: isLoanInstallment || isRegister ? EventRecurrence.ONCE : (eventData.recurrence || (isRecurring ? EventRecurrence.RECURRING : EventRecurrence.ONCE)),
       periodicity: eventData.periodicity || EventPeriodicity.MONTHLY,
-      isRecurring: isLoanInstallment ? false : Boolean(isRecurring)
+      isRecurring: isLoanInstallment || isRegister ? false : Boolean(isRecurring)
     };
 
     const created = await eventRepository.create(payload);
@@ -226,6 +260,20 @@ export class FinancialEventService {
 
     const allRawEvents = await eventRepository.getAll();
     const existingDirect = (await eventRepository.getById(id)) || allRawEvents.find((e) => e.id === id);
+
+    const isRegister = directUpdates.eventType === EventType.REGISTER || existingDirect?.eventType === EventType.REGISTER;
+    if (isRegister && directUpdates.date && directUpdates.date !== existingDirect?.date) {
+      const duplicate = allRawEvents.find((e) => {
+        if (e.id === id || e.eventId === id || e.isDeleted || e.status === EventStatus.DELETED) return false;
+        const sameTimeline = String(e.timelineId || e.timelineOriginId || e.timeline_id) === String(existingDirect?.timelineId || directUpdates.timelineId);
+        const sameDate = String(e.date) === String(directUpdates.date);
+        return sameTimeline && sameDate;
+      });
+
+      if (duplicate) {
+        throw new Error(t('diaryModal.duplicateDayError') || 'Já existe um registro para este dia no Diário.');
+      }
+    }
 
     const loanTlId = directUpdates.timelineId || directUpdates.timelineOriginId || existingDirect?.timelineId || existingDirect?.timelineOriginId;
     const isLoan = Boolean(loanTlId && (directUpdates.isLoanEvent?.() || existingDirect?.isLoanEvent?.() || directUpdates.isSystemLoanEvent || existingDirect?.isSystemLoanEvent || directUpdates.eventType === EventType.AMORTIZATION || existingDirect?.eventType === EventType.AMORTIZATION));

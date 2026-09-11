@@ -600,6 +600,14 @@ export async function fetchEvents(params = {}) {
   return res.json();
 }
 
+export async function fetchEventById(id) {
+  const res = await fetch(`${API_BASE}/events/${id}`, {
+    headers: getHeaders()
+  });
+  if (!res.ok) throw new Error(`Failed to fetch event ${id}: ${res.statusText}`);
+  return res.json();
+}
+
 export async function createEvent(eventData) {
   const res = await fetch(`${API_BASE}/events`, {
     method: 'POST',

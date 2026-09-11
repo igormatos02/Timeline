@@ -55,7 +55,7 @@ import { generateUUID } from '../utils/uuid';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { EventType, TimelineType, EventStatus, ReminderEventStatus, EventRecurrence, EventPeriodicity, PersonType, AmortizationEventCategory, LoanEventCategory, InvestmentEventCategory, ReminderEventCategory, DiaryMood, normalizeRecurrence } from '../enums/index.js';
 import { INCOME_CATEGORY_META, EXPENSE_CATEGORY_META, INVESTMENT_CATEGORY_META, REMINDER_CATEGORY_META } from './event-modals/FinancialEventModalConfig.js';
-import { DIARY_MOOD_CONFIG } from './event-modals/DiaryEventModal.jsx';
+import { DIARY_MOOD_CONFIG, renderFormattedMarkdown } from './event-modals/DiaryEventModal.jsx';
 import * as api from '../services/api.js';
 import { compareEventsWithinDay } from '../utils/eventSorting.js';
 
@@ -1775,7 +1775,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             marginTop: '2px'
           }}
         >
-          {isRecurring ? <Repeat size={14} strokeWidth={2.2} /> : <Zap size={14} strokeWidth={2.2} />}
+          {isRecurring ? <Repeat size={14} strokeWidth={2.2} /> : (isRegisterEvent ? <BookOpen size={14} strokeWidth={2.2} /> : <Zap size={14} strokeWidth={2.2} />)}
         </span>
 
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, gap: '2px' }}>
@@ -2079,7 +2079,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           </div>
 
           {/* Categoria do Evento debaixo do título (com opção de troca rápida) */}
-          {event.category && (
+          {event.category && !isRegisterEvent && (
             <div
               ref={categoryDropdownRef}
               style={{ position: 'relative', display: 'inline-flex' }}
@@ -3416,23 +3416,20 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '5px',
-                      padding: '3px 10px',
-                      borderRadius: '9999px',
-                      background: moodCfg.bgColor,
-                      border: `1px solid ${moodCfg.borderColor}`,
-                      color: moodCfg.color,
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid var(--border-glass)',
+                      color: 'var(--text-main)',
                       fontSize: '0.74rem',
-                      fontWeight: '800'
+                      fontWeight: '600'
                     }}
                   >
-                    <span>{moodCfg.emoji}</span>
+                    <span style={{ fontSize: '0.85rem', lineHeight: 1 }}>{moodCfg.emoji}</span>
                     <span>{t(moodCfg.labelKey) || moodCfg.fallbackLabel}</span>
                   </div>
                 );
               })()}
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-                {t('diaryModal.descriptionLabel') || 'Diário'}
-              </span>
             </div>
 
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
@@ -3633,7 +3630,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       borderLeft: '3px solid #f59e0b'
                     }}
                   >
-                    <span style={{ flex: 1, lineHeight: '1.45' }}>{note}</span>
+                    <span style={{ flex: 1, lineHeight: '1.45' }}>{renderFormattedMarkdown(note)}</span>
                     {(onUpdateEventDirect || onEdit) && (
                       <button
                         type="button"

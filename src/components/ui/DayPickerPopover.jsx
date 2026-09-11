@@ -4,14 +4,19 @@ import { format, parseISO, getDaysInMonth } from 'date-fns';
 
 export default function DayPickerPopover({
   value, onChange, accent = '#10b981', dateLocale,
-  baseDate, label = 'Dia de vencimento', isOpen, onToggle
+  baseDate, label = 'Dia de vencimento', isOpen, onToggle,
+  takenDays = null
 }) {
   const dateObj = baseDate ? parseISO(baseDate) : new Date();
   const totalDays = getDaysInMonth(dateObj);
   const daysArray = Array.from({ length: totalDays }, (_, i) => i + 1);
 
-  const baseYearStr = format(dateObj, 'yyyy');
-  const baseMonthStr = format(dateObj, 'MM');
+  const isDayTaken = (d) => {
+    if (!takenDays) return false;
+    if (takenDays instanceof Set) return takenDays.has(d);
+    if (Array.isArray(takenDays)) return takenDays.includes(d);
+    return false;
+  };
 
   return (
     <div style={{ marginBottom: '14px' }}>
@@ -69,21 +74,46 @@ export default function DayPickerPopover({
           }}>
             {daysArray.map((d) => {
               const isSelected = Number(value) === d;
+              const taken = isDayTaken(d);
               return (
                 <button
                   key={d}
                   type="button"
                   onClick={() => { onChange(d); onToggle(); }}
                   style={{
+                    position: 'relative',
                     padding: '7px 0', fontSize: '0.82rem',
                     fontWeight: isSelected ? '800' : '600',
                     borderRadius: '6px',
-                    border: isSelected ? `2px solid ${accent}` : '1px solid var(--border-glass)',
-                    background: isSelected ? `${accent}38` : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                    color: isSelected ? accent : 'var(--text-main)',
+                    border: isSelected
+                      ? `2px solid ${accent}`
+                      : taken
+                      ? '1px dashed rgba(244, 63, 94, 0.45)'
+                      : '1px solid var(--border-glass)',
+                    background: isSelected
+                      ? `${accent}38`
+                      : taken
+                      ? 'rgba(244, 63, 94, 0.08)'
+                      : 'var(--bg-glass, rgba(255,255,255,0.03))',
+                    color: isSelected ? accent : taken ? '#f43f5e' : 'var(--text-main)',
                     cursor: 'pointer', transition: 'all 0.15s ease'
                   }}
-                >{d}</button>
+                >
+                  {d}
+                  {taken && !isSelected && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '2px',
+                        right: '3px',
+                        width: '4px',
+                        height: '4px',
+                        borderRadius: '50%',
+                        backgroundColor: '#f43f5e'
+                      }}
+                    />
+                  )}
+                </button>
               );
             })}
           </div>

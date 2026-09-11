@@ -617,7 +617,10 @@ export async function createEvent(eventData) {
       ...eventData
     })
   });
-  if (!res.ok) throw new Error('Failed to create event');
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || 'Failed to create event');
+  }
   return res.json();
 }
 
@@ -627,7 +630,10 @@ export async function updateEvent(id, updates) {
     headers: getHeaders(),
     body: JSON.stringify(updates)
   });
-  if (!res.ok) throw new Error('Failed to update event');
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || 'Failed to update event');
+  }
   return res.json();
 }
 

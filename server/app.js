@@ -37,7 +37,29 @@ app.get('/api/version', (req, res) => {
   }
 });
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
+import { pingSupabase } from './infrastructure/database/supabase/supabaseHealthService.js';
+
+// Health check endpoint with Supabase keep-alive ping
+app.get('/api/health', async (req, res) => {
+  const checkSupabase = req.query.skipDb !== 'true';
+  let supabaseResult = null;
+
+  if (checkSupabase) {
+    supabaseResult = await pingSupabase();
+  }
+
+  const isHealthy = !supabaseResult || supabaseResult.success;
+
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'ok' : 'degraded',
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime()),
+    supabase: supabaseResult
+  });
+});
+
+// Dedicated lightweight ping endpoint for external cron jobs
+app.get('/api/health/ping', async (req, res) => {
+  const result = await pingSupabase();
+  res.status(result.success ? 200 : 503).json(result);
 });

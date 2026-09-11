@@ -427,8 +427,10 @@ export default function App() {
       [TimelineType.INVESTMENT]: 4,
       [TimelineType.PROJECT]: 5,
       [TimelineType.REMINDER]: 6,
+      [TimelineType.DIARY]: 7,
       project: 5,
-      reminder: 6
+      reminder: 6,
+      diary: 7
     };
 
     return [...filtered].sort((a, b) => {
@@ -960,7 +962,7 @@ export default function App() {
         });
       } catch (err) {
         console.error('Error saving event:', err);
-        showToast(t('toast.eventSaveError') || 'Erro ao guardar evento na base de dados.', 'error');
+        showToast(err.message || t('toast.eventSaveError') || 'Erro ao guardar evento na base de dados.', 'error');
       }
     };
 
@@ -1915,6 +1917,8 @@ export default function App() {
           timeline={activeTimeline}
           timeboardId={activeTimeboardId}
           allTimelines={timelines}
+          events={activeTimeline?.events || rawEvents || []}
+          allEvents={rawEvents || activeTimeline?.events || []}
           defaultNature={eventModalDefaultNature}
           activeFinancialTab={activeFinancialTab}
         />

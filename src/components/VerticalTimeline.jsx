@@ -263,6 +263,14 @@ function VerticalTimeline({
       icon: <Bell size={14} style={{ color: '#f59e0b' }} />
     });
 
+    // Diary (allowed multiple times)
+    list.push({
+      key: 'diary',
+      type: TimelineType.DIARY,
+      label: t('sidebar.diaryTimeline') || 'Timeline de Diário',
+      icon: <BookOpen size={14} style={{ color: '#ec4899' }} />
+    });
+
     return list;
   }, [timelines, t]);
 
@@ -1688,6 +1696,9 @@ function VerticalTimeline({
                     case 'project':
                     case 'projects':
                       return <FolderKanban size={14} style={{ color: tlColor }} />;
+                    case TimelineType.DIARY:
+                    case 'diary':
+                      return <BookOpen size={14} style={{ color: tlColor }} />;
                     default:
                       return <Layers size={14} style={{ color: tlColor }} />;
                   }

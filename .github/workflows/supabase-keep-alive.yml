@@ -1,0 +1,22 @@
+name: Supabase Keep-Alive Health Check
+
+on:
+  schedule:
+    # Runs daily at 05:00 UTC (keeps Supabase active and prevents 7-day inactivity pause)
+    - cron: '0 5 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  ping-supabase:
+    name: Ping Supabase & API Health
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Application Health Endpoint
+        run: |
+          APP_URL="${{ secrets.APP_URL }}"
+          if [ -n "$APP_URL" ]; then
+            echo "Pinging $APP_URL/api/health..."
+            curl -s -f -m 30 "$APP_URL/api/health" || echo "App ping completed with non-zero exit or timeout"
+          else
+            echo "APP_URL secret not set. Skipping URL ping."
+          fi

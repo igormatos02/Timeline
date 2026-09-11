@@ -3,7 +3,7 @@ import { Trash2, AlertTriangle, X, Calendar, DollarSign, Repeat } from 'lucide-r
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../utils/formatCurrency';
-import { EventRecurrence, EventPeriodicity, EventType, EventDeletionMode } from '../enums/index.js';
+import { EventRecurrence, EventPeriodicity, EventType, EventDeletionMode, normalizeRecurrence } from '../enums/index.js';
 
 export default function DeleteEventModal({
   isOpen,
@@ -35,30 +35,10 @@ export default function DeleteEventModal({
   const isInvestment = event.eventType === EventType.INVESTMENT;
   const isFinancial = isIncome || isExpense || isInvestment;
 
-  const isRecurring = Boolean(
-    event.recurrence === EventRecurrence.RECURRING ||
-    event.recurrence === EventRecurrence.LIMITED ||
-    event.recurrence === 'recurring' ||
-    event.recurrence === 'limited' ||
-    event.periodicity === 'recorrente' ||
-    event.periodicity === 'period' ||
-    event.periodicity === 'periodo' ||
-    event.isRecurring === true ||
-    event.is_recurring === true ||
-    Boolean(event.seriesId) ||
-    Boolean(
-      event.category &&
-      (event.category.includes('recorrente') ||
-        event.category === 'parcela_emprestimo' ||
-        event.category === 'repetitivo')
-    )
-  ) &&
-    event.recurrence !== EventRecurrence.ONCE &&
-    event.recurrence !== 'once' &&
-    event.periodicity !== 'unico' &&
-    event.periodicity !== 'unica' &&
-    event.periodicity !== 'once' &&
-    event.periodicity !== 'pontual' &&
+  const normRec = normalizeRecurrence(event);
+  const isRecurring =
+    (normRec === EventRecurrence.RECURRING || normRec === EventRecurrence.LIMITED || Boolean(event.seriesId)) &&
+    normRec !== EventRecurrence.ONCE &&
     event.category !== 'saida_esporadica' &&
     event.category !== 'entrada_esporadica' &&
     event.category !== 'amortizacao' &&

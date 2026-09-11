@@ -5,6 +5,7 @@ export const EventType = Object.freeze({
   LOAN_INSTALLMENT: 'loan_installment',
   AMORTIZATION: 'amortization',
   WITHDRAWAL: 'withdrawal',
-  GENERIC: 'generic'
+  GENERIC: 'generic',
+  REMINDER: 'generic'
 });
 

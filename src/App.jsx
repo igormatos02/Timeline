@@ -25,7 +25,7 @@ import {
 import { formatCurrency } from './utils/formatCurrency';
 import { generateUUID } from './utils/uuid.js';
 import * as api from './services/api';
-import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType } from './enums/index.js';
+import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
@@ -914,16 +914,8 @@ export default function App() {
           await refreshTimelines();
           showToast(t('toast.eventUpdatedSuccess') || 'Evento atualizado com sucesso na base de dados!', 'success');
         } else {
-          const isRecurring = Boolean(
-            eventData.recurrence === EventRecurrence.RECURRING ||
-            eventData.recurrence === EventRecurrence.LIMITED ||
-            eventData.recurrence === 'recurring' ||
-            eventData.recurrence === 'limited' ||
-            eventData.periodicity === 'recorrente' ||
-            eventData.periodicity === 'recurring' ||
-            eventData.periodicity === 'period' ||
-            eventData.isRecurring
-          );
+          const normRec = normalizeRecurrence(eventData);
+          const isRecurring = normRec === EventRecurrence.RECURRING || normRec === EventRecurrence.LIMITED;
           const newEvent = {
             ...eventData,
             id: generateUUID(),
@@ -932,8 +924,8 @@ export default function App() {
             timelineOriginId: targetTimelineId,
             eventId: isRecurring ? generateUUID() : null,
             version: 0,
-            recurrence: eventData.recurrence || (isRecurring ? EventRecurrence.RECURRING : EventRecurrence.ONCE),
-            periodicity: eventData.periodicity || EventPeriodicity.MONTHLY,
+            recurrence: normRec,
+            periodicity: normalizePeriodicity(eventData.periodicity || eventData.aggregation),
             isRecurring
           };
           await api.createEvent(newEvent);
@@ -1005,16 +997,16 @@ export default function App() {
             const isAmortization = ev.eventType === EventType.AMORTIZATION;
 
             if (isIncome) {
-              newStatus = 'received';
+              newStatus = EventStatus.RECEIVED;
               newIsCompleted = true;
             } else if (isInvestment) {
-              newStatus = 'invested';
+              newStatus = EventStatus.INVESTED;
               newIsCompleted = true;
             } else if (isAmortization) {
-              newStatus = 'amortized';
+              newStatus = EventStatus.AMORTIZED;
               newIsCompleted = true;
             } else {
-              newStatus = 'paid';
+              newStatus = EventStatus.PAID;
               newIsCompleted = true;
             }
           }
@@ -1276,13 +1268,14 @@ export default function App() {
       const isIncome = ev.eventType === EventType.INCOME;
       const isInvestment = ev.eventType === EventType.INVESTMENT;
       const isAmortization = ev.eventType === EventType.AMORTIZATION;
+      const isReminder = ev.eventType === EventType.REMINDER || ev.timelineType === TimelineType.REMINDER || ev.timeline_type === TimelineType.REMINDER;
 
       const isCurrCancelled = ev.status === EventStatus.CANCELLED || ev.status === 'cancelled' || ev.status === 'cancelado';
       const isCurrPositive = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
 
       if (isCurrCancelled) {
         return {
-          nextStatus: isInvestment ? EventStatus.PLANNED : EventStatus.PENDING,
+          nextStatus: isReminder ? EventStatus.OPEN : isInvestment ? EventStatus.PLANNED : EventStatus.PENDING,
           nextCompleted: false
         };
       }
@@ -1295,7 +1288,8 @@ export default function App() {
       }
 
       let positiveStatus = EventStatus.PAID;
-      if (isIncome) positiveStatus = EventStatus.RECEIVED;
+      if (isReminder) positiveStatus = EventStatus.CLOSED;
+      else if (isIncome) positiveStatus = EventStatus.RECEIVED;
       else if (isInvestment) positiveStatus = EventStatus.INVESTED;
       else if (isAmortization) positiveStatus = EventStatus.AMORTIZED;
 

@@ -1,4 +1,4 @@
-import { EventType, EventStatus, EventPriority, EventPeriodicity, EventRecurrence, LoanEventCategory, isPositiveStatus } from '../../../shared/enums/index.js';
+import { EventType, TimelineType, EventStatus, EventPriority, EventPeriodicity, EventRecurrence, LoanEventCategory, isPositiveStatus, normalizePeriodicity, normalizeRecurrence } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -34,6 +34,8 @@ export class TimelineEvent {
     recurrence = null,
     periodicity = null,
     aggregation = null,
+    limitDate = null,
+    limit_date = null,
     recurrenceEndDate = null,
     endDate = null,
     dueDate = null,
@@ -112,37 +114,23 @@ export class TimelineEvent {
     this.eventType = event_type || eventType;
 
     // Periodicity & Recurrence mapping
-    const rawPeriodicity = periodicity || aggregation;
-    let mappedPeriodicity = EventPeriodicity.MONTHLY;
-    if (rawPeriodicity && Object.values(EventPeriodicity).includes(rawPeriodicity)) {
-      mappedPeriodicity = rawPeriodicity;
-    } else if (rawPeriodicity === 'mensal' || rawPeriodicity === 'monthly') {
-      mappedPeriodicity = EventPeriodicity.MONTHLY;
-    } else if (rawPeriodicity === 'quinzenal' || rawPeriodicity === 'biweekly') {
-      mappedPeriodicity = EventPeriodicity.BIWEEKLY;
-    } else if (rawPeriodicity === 'bimestral' || rawPeriodicity === 'bimonthly' || rawPeriodicity === 'bimounthly') {
-      mappedPeriodicity = EventPeriodicity.BIMONTHLY;
-    } else if (rawPeriodicity === 'semestral' || rawPeriodicity === 'biannual' || rawPeriodicity === 'semiannual') {
-      mappedPeriodicity = EventPeriodicity.SEMIANNUAL;
-    } else if (rawPeriodicity === 'anual' || rawPeriodicity === 'annual') {
-      mappedPeriodicity = EventPeriodicity.ANNUAL;
-    }
-    this.periodicity = mappedPeriodicity;
+    this.periodicity = normalizePeriodicity(periodicity || aggregation);
     this.aggregation = this.periodicity;
 
-    let mappedRecurrence = EventRecurrence.ONCE;
-    if (recurrence && Object.values(EventRecurrence).includes(recurrence)) {
-      mappedRecurrence = recurrence;
-    } else if (rawPeriodicity === 'recorrente' || rawPeriodicity === 'recurring' || Boolean(is_recurring !== undefined ? is_recurring : isRecurring)) {
-      mappedRecurrence = EventRecurrence.RECURRING;
-    } else if (rawPeriodicity === 'period' || rawPeriodicity === 'periodo' || rawPeriodicity === 'limited' || recurrenceEndDate || endDate) {
-      mappedRecurrence = EventRecurrence.LIMITED;
-    }
-    this.recurrence = mappedRecurrence;
+    const effectiveLimitDate = limitDate || limit_date || recurrenceEndDate || endDate || null;
+    this.limitDate = effectiveLimitDate;
+    this.limit_date = effectiveLimitDate;
+    this.recurrenceEndDate = effectiveLimitDate;
+    this.endDate = effectiveLimitDate;
+
+    this.recurrence = normalizeRecurrence({
+      recurrence,
+      periodicity: this.periodicity,
+      limitDate: effectiveLimitDate,
+      isRecurring: is_recurring !== undefined ? is_recurring : isRecurring
+    });
     this.isRecurring = this.recurrence === EventRecurrence.RECURRING || this.recurrence === EventRecurrence.LIMITED;
 
-    this.recurrenceEndDate = recurrenceEndDate || endDate || null;
-    this.endDate = this.recurrenceEndDate;
     this.dueDate = due_date || dueDate || null;
     this.paidDate = paid_date || paidDate || null;
     this.status = status;
@@ -259,6 +247,7 @@ export function calcToggledStatus(event, explicitStatus = null) {
   const isAmortization = event.eventType === EventType.AMORTIZATION || (typeof event.isAmortizationEvent === 'function' && event.isAmortizationEvent());
   const isInvestment = event.eventType === EventType.INVESTMENT;
   const isIncome = event.eventType === EventType.INCOME;
+  const isReminder = event.eventType === EventType.REMINDER || event.eventType === 'reminder' || event.timelineType === TimelineType.REMINDER || event.timeline_type === TimelineType.REMINDER;
 
   const currentStatus = String(event.status || '').toLowerCase();
 
@@ -269,6 +258,7 @@ export function calcToggledStatus(event, explicitStatus = null) {
     currentStatus === EventStatus.INVESTED ||
     currentStatus === EventStatus.AMORTIZED ||
     currentStatus === EventStatus.COMPLETED ||
+    currentStatus === EventStatus.CLOSED ||
     Boolean(event.isCompleted);
 
   const isCancelled =
@@ -277,9 +267,10 @@ export function calcToggledStatus(event, explicitStatus = null) {
     currentStatus === 'cancelado';
 
   // 3-state cycle:
-  // 1. Negative (pending/planned) -> 2. Positive (paid/received/invested/amortized) -> 3. Cancelled (cancelled) -> 1. Negative
+  // 1. Negative (pending/planned/open) -> 2. Positive (paid/received/invested/amortized/closed) -> 3. Cancelled (cancelled) -> 1. Negative
   if (isCancelled) {
-    const nextNeg = isInvestment ? EventStatus.PLANNED : EventStatus.PENDING;
+    let nextNeg = isInvestment ? EventStatus.PLANNED : EventStatus.PENDING;
+    if (isReminder) nextNeg = EventStatus.OPEN;
     return {
       status: nextNeg,
       isCompleted: false
@@ -294,7 +285,8 @@ export function calcToggledStatus(event, explicitStatus = null) {
   }
 
   let positiveStatus = EventStatus.PAID;
-  if (isIncome) positiveStatus = EventStatus.RECEIVED;
+  if (isReminder) positiveStatus = EventStatus.CLOSED;
+  else if (isIncome) positiveStatus = EventStatus.RECEIVED;
   else if (isInvestment) positiveStatus = EventStatus.INVESTED;
   else if (isAmortization) positiveStatus = EventStatus.AMORTIZED;
 

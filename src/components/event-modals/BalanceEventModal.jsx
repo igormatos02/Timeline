@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Scale, DollarSign, ShoppingCart, PiggyBank } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Scale } from 'lucide-react';
 import { format, parseISO, addMonths } from 'date-fns';
-import { TimelineType, EventStatus, EventRecurrence, EventPeriodicity, EventType } from '../../enums/index.js';
+import { TimelineType, EventStatus, EventRecurrence, EventPeriodicity, EventType, normalizeRecurrence, normalizePeriodicity } from '../../enums/index.js';
+import { EVENT_MODAL_CONFIG } from './FinancialEventModalConfig.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { useModalEscape } from '../../hooks/useModalEscape.js';
 import ModalShell from '../ui/ModalShell.jsx';
@@ -11,22 +12,37 @@ import PeriodicitySelector from '../ui/PeriodicitySelector.jsx';
 import MonthPickerPopover from '../ui/MonthPickerPopover.jsx';
 import ObligationSelector from '../ObligationSelector.jsx';
 
-const MOVEMENT_TYPES = [
-  { id: 'entrada', label: 'Entrada', color: '#10b981', icon: DollarSign },
-  { id: 'saida', label: 'Gasto / Saída', color: '#f43f5e', icon: ShoppingCart },
-  { id: 'investimento', label: 'Investimento', color: '#6366f1', icon: PiggyBank }
-];
-
 export default function BalanceEventModal({
   isOpen, onClose, onSave, initialData, defaultDate, timeline,
   allTimelines = [], timeboardId
 }) {
   const { t, dateLocale } = useTranslation();
-  const [movementType, setMovementType] = useState('entrada');
+  const [movementType, setMovementType] = useState(EventType.INCOME);
   const [targetTimelineId, setTargetTimelineId] = useState('');
   const [obligationError, setObligationError] = useState(false);
   const [isEndMonthPickerOpen, setIsEndMonthPickerOpen] = useState(false);
   const [endMonthPickerYear, setEndMonthPickerYear] = useState(new Date().getFullYear());
+
+  const movementTypes = useMemo(() => [
+    {
+      id: EventType.INCOME,
+      label: t(EVENT_MODAL_CONFIG[EventType.INCOME].subtitleKey) || t('modal.income'),
+      color: EVENT_MODAL_CONFIG[EventType.INCOME].accent,
+      icon: EVENT_MODAL_CONFIG[EventType.INCOME].icon
+    },
+    {
+      id: EventType.EXPENSE,
+      label: t(EVENT_MODAL_CONFIG[EventType.EXPENSE].subtitleKey) || t('modal.expense'),
+      color: EVENT_MODAL_CONFIG[EventType.EXPENSE].accent,
+      icon: EVENT_MODAL_CONFIG[EventType.EXPENSE].icon
+    },
+    {
+      id: EventType.INVESTMENT,
+      label: t(EVENT_MODAL_CONFIG[EventType.INVESTMENT].subtitleKey) || t('modal.investment'),
+      color: EVENT_MODAL_CONFIG[EventType.INVESTMENT].accent,
+      icon: EVENT_MODAL_CONFIG[EventType.INVESTMENT].icon
+    }
+  ], [t]);
 
   const [formData, setFormData] = useState({
     title: '', date: defaultDate || format(new Date(), 'yyyy-MM-dd'),
@@ -42,9 +58,9 @@ export default function BalanceEventModal({
   ]);
 
   const relevantTimelines = React.useMemo(() => {
-    const targetType = movementType === 'saida'
+    const targetType = movementType === EventType.EXPENSE
       ? TimelineType.EXPENSE
-      : movementType === 'investimento'
+      : movementType === EventType.INVESTMENT
         ? TimelineType.INVESTMENT
         : TimelineType.INCOME;
     return allTimelines.filter((tl) => tl.type === targetType);
@@ -68,38 +84,13 @@ export default function BalanceEventModal({
     } catch { parsedDay = 1; }
 
     if (initialData) {
-      let initType = 'entrada';
-      if (initialData.isExpense || initialData.eventType === EventType.EXPENSE) initType = 'saida';
-      else if (initialData.isInvestment || initialData.eventType === EventType.INVESTMENT) initType = 'investimento';
+      let initType = EventType.INCOME;
+      if (initialData.isExpense || initialData.eventType === EventType.EXPENSE) initType = EventType.EXPENSE;
+      else if (initialData.isInvestment || initialData.eventType === EventType.INVESTMENT) initType = EventType.INVESTMENT;
 
-      let initRecurrence = EventRecurrence.RECURRING;
-      if (
-        initialData.recurrence === EventRecurrence.LIMITED ||
-        initialData.recurrence === 'limited' ||
-        initialData.periodicity === 'period' ||
-        initialData.periodicity === 'periodo' ||
-        initialData.recurrenceEndDate ||
-        initialData.endDate
-      ) {
-        initRecurrence = EventRecurrence.LIMITED;
-      } else if (
-        initialData.recurrence === EventRecurrence.ONCE ||
-        initialData.recurrence === 'once' ||
-        initialData.periodicity === 'once' ||
-        initialData.periodicity === 'unica' ||
-        initialData.periodicity === 'unico'
-      ) {
-        initRecurrence = EventRecurrence.ONCE;
-      }
-
-      let initPeriodicity = EventPeriodicity.MONTHLY;
-      if (initialData.periodicity && Object.values(EventPeriodicity).includes(initialData.periodicity)) {
-        initPeriodicity = initialData.periodicity;
-      } else if (initialData.aggregation && Object.values(EventPeriodicity).includes(initialData.aggregation)) {
-        initPeriodicity = initialData.aggregation;
-      }
-
-      const endRecDate = initialData.recurrenceEndDate || initialData.endDate || '';
+      const initRecurrence = normalizeRecurrence(initialData);
+      const initPeriodicity = normalizePeriodicity(initialData.periodicity || initialData.aggregation);
+      const endRecDate = initialData.limitDate || initialData.limit_date || initialData.recurrenceEndDate || initialData.endDate || '';
       if (endRecDate) {
         try {
           const ey = parseInt(endRecDate.split('-')[0], 10);
@@ -158,8 +149,8 @@ export default function BalanceEventModal({
       ? formData.labelsInput.split(',').map((l) => l.trim()).filter(Boolean)
       : [];
 
-    const isExp = movementType === 'saida';
-    const isInv = movementType === 'investimento';
+    const isExp = movementType === EventType.EXPENSE;
+    const isInv = movementType === EventType.INVESTMENT;
     const defaultInitialStatus = isInv ? EventStatus.PLANNED : EventStatus.PENDING;
 
     const isRecurring = formData.recurrence === EventRecurrence.RECURRING || formData.recurrence === EventRecurrence.LIMITED;
@@ -174,6 +165,8 @@ export default function BalanceEventModal({
       isRecurring,
       recurrenceEndDate,
       endDate: recurrenceEndDate,
+      limitDate: recurrenceEndDate,
+      limit_date: recurrenceEndDate,
       amount: numAmount,
       eventType: isExp ? EventType.EXPENSE : isInv ? EventType.INVESTMENT : EventType.INCOME,
       timelineId: targetTimelineId || timeline?.id,
@@ -185,30 +178,34 @@ export default function BalanceEventModal({
     onClose();
   };
 
-  const accentColor = movementType === 'saida' ? '#f43f5e' : movementType === 'investimento' ? '#6366f1' : '#10b981';
+  const currentConfig = EVENT_MODAL_CONFIG[movementType] || EVENT_MODAL_CONFIG[EventType.INCOME];
+  const accentColor = currentConfig.accent;
 
   return (
     <ModalShell
       isOpen={isOpen} onClose={onClose} onSubmit={handleSubmit} accent={accentColor}
-      icon={Scale} title={initialData ? 'Editar Movimento' : 'Novo Movimento Financeiro'}
-      subtitle="Balanço Consolidado"
+      icon={Scale}
+      title={initialData ? t('modal.editMovement') : t('modal.newMovement')}
+      subtitle={t('timeline.balance')}
       footer={
         <>
           <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}
-            style={{ padding: '8px 16px', borderRadius: '8px' }}>Cancelar</button>
+            style={{ padding: '8px 16px', borderRadius: '8px' }}>
+            {t('buttons.cancel')}
+          </button>
           <button type="submit" className="btn btn-primary btn-sm"
             style={{ background: accentColor, borderColor: accentColor, padding: '8px 20px', borderRadius: '8px', fontWeight: '800' }}>
-            {initialData ? 'Salvar Alterações' : 'Adicionar Movimento'}
+            {initialData ? t('modal.saveChanges') : t('modal.addMovement')}
           </button>
         </>
       }
     >
       <div style={{ marginBottom: '16px' }}>
         <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-          Tipo de Movimento
+          {t('modal.movementType')}
         </label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-          {MOVEMENT_TYPES.map((m) => {
+          {movementTypes.map((m) => {
             const isSelected = movementType === m.id;
             const Icon = m.icon;
             return (
@@ -239,7 +236,7 @@ export default function BalanceEventModal({
       {relevantTimelines.length > 0 && (
         <div style={{ marginBottom: '14px' }}>
           <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-            Destino do Movimento (Timeline)
+            {t('modal.targetTimeline')}
           </label>
           <select
             value={targetTimelineId}
@@ -256,12 +253,12 @@ export default function BalanceEventModal({
 
       <div style={{ marginBottom: '14px' }}>
         <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-          Título do Movimento *
+          {t('modal.movementTitleLabel')}
         </label>
         <input
           type="text"
           required
-          placeholder="Ex: Salário, Aluguel, Aporte Poupança..."
+          placeholder={t('modal.movementTitlePlaceholder')}
           value={formData.title}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
           className="form-input"
@@ -270,7 +267,7 @@ export default function BalanceEventModal({
       </div>
 
       <EuroInput
-        label="Valor (€) *"
+        label={t('modal.amountLabel')}
         value={formData.amount}
         accent={accentColor}
         onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
@@ -311,7 +308,7 @@ export default function BalanceEventModal({
               onChange={(month) => setFormData({ ...formData, recurrenceEndDate: month })}
               accent={accentColor}
               dateLocale={dateLocale}
-              label={t('modal.endMonth') || 'Mês Final'}
+              label={t('modal.endMonth')}
               isOpen={isEndMonthPickerOpen}
               onToggle={() => setIsEndMonthPickerOpen(!isEndMonthPickerOpen)}
               year={endMonthPickerYear}
@@ -330,7 +327,7 @@ export default function BalanceEventModal({
 
       <div style={{ marginBottom: '14px' }}>
         <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' }}>
-          Dia do Mês
+          {t('modal.dayOfMonth')}
         </label>
         <input
           type="number"

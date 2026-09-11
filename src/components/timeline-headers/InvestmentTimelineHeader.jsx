@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { InvestmentEventCategory } from '../../../shared/enums/InvestmentEventCategory.js';
-import { EventType } from '../../enums/index.js';
+import { EventType, isCancelledStatus } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
@@ -48,8 +48,8 @@ export default function InvestmentTimelineHeader({
 
   let uiTotalInv = 0;
   eventsList.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
-    const isInvestment = ev.eventType === 'investment' || ev.eventType === EventType.INVESTMENT || ev.isInvestment;
+    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
+    const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment;
     if (isInvestment && ev.date.startsWith(currentMonthStr)) {
       uiTotalInv += Number(ev.amount || 0);
     }
@@ -73,8 +73,8 @@ export default function InvestmentTimelineHeader({
   if (categoryList.length === 0) {
     const categoryTotals = {};
     eventsList.forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
-      const isInvestment = ev.eventType === 'investment' || ev.eventType === EventType.INVESTMENT || ev.isInvestment;
+      if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
+      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment;
       if (isInvestment && ev.date.startsWith(currentMonthStr)) {
         const amt = Number(ev.amount || 0);
         let cat = (ev.category || '').toLowerCase();
@@ -146,7 +146,7 @@ export default function InvestmentTimelineHeader({
       if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
         if (isExternal) {
           annualExternalInvested += amt;
-        } else if (!ev.isFirstOccurrence) {
+        } else {
           annualRegularInvested += amt;
           annualTotalInvested += amt;
         }
@@ -158,11 +158,6 @@ export default function InvestmentTimelineHeader({
   if (annualTotalIncome === 0) {
     const monthlyFallback = timeline.monthlySalary || timeline.monthlyBudget || timeline.monthlyIncome || 0;
     annualTotalIncome = monthlyFallback * 12;
-  }
-
-  if (annualTotalInvested === 0) {
-    annualTotalInvested = (currentMonthRegularInvested > 0 ? currentMonthRegularInvested : monthTotalInvested) * 12;
-    annualRegularInvested = annualTotalInvested;
   }
 
   const annualCommitmentPercent = annualTotalIncome > 0
@@ -580,8 +575,7 @@ export default function InvestmentTimelineHeader({
 
             const { diffPercentStr, isDiffPositive } = computeMonthDiff(last7Months);
 
-            const baseRegularAnnual = annualRegularInvested > 0 ? annualRegularInvested : ((currentMonthRegularInvested > 0 ? currentMonthRegularInvested : monthTotalInvested) * 12);
-            const annualProj = baseRegularAnnual + annualExternalInvested;
+            const annualProj = annualRegularInvested + annualExternalInvested;
 
             return (
               <BarChart7Months

@@ -5,7 +5,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { format, parseISO, addMonths, getDaysInMonth } from 'date-fns';
-import { EventRecurrence, EventPeriodicity, EventUpdateMode } from '../../../shared/enums/index.js';
+import { EventRecurrence, EventPeriodicity, EventUpdateMode, normalizeRecurrence, normalizePeriodicity } from '../../../shared/enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { useModalEscape } from '../../hooks/useModalEscape.js';
 import ModalShell from '../ui/ModalShell.jsx';
@@ -38,6 +38,7 @@ export default function FinancialEventModal({
 
   const [formData, setFormData] = useState({
     title: '',
+    description: '',
     date: defaultDate || format(new Date(), 'yyyy-MM-dd'),
     dayOfMonth: 1,
     time: '09:00',
@@ -94,34 +95,9 @@ export default function FinancialEventModal({
     }
 
     if (initialData) {
-      let initRecurrence = EventRecurrence.RECURRING;
-      if (
-        initialData.recurrence === EventRecurrence.LIMITED ||
-        initialData.recurrence === 'limited' ||
-        initialData.periodicity === 'period' ||
-        initialData.periodicity === 'periodo' ||
-        initialData.recurrenceEndDate ||
-        initialData.endDate
-      ) {
-        initRecurrence = EventRecurrence.LIMITED;
-      } else if (
-        initialData.recurrence === EventRecurrence.ONCE ||
-        initialData.recurrence === 'once' ||
-        initialData.periodicity === 'once' ||
-        initialData.periodicity === 'unica' ||
-        initialData.periodicity === 'unico'
-      ) {
-        initRecurrence = EventRecurrence.ONCE;
-      }
-
-      let initPeriodicity = EventPeriodicity.MONTHLY;
-      if (initialData.periodicity && Object.values(EventPeriodicity).includes(initialData.periodicity)) {
-        initPeriodicity = initialData.periodicity;
-      } else if (initialData.aggregation && Object.values(EventPeriodicity).includes(initialData.aggregation)) {
-        initPeriodicity = initialData.aggregation;
-      }
-
-      const endRecDate = initialData.recurrenceEndDate || initialData.endDate || '';
+      const initRecurrence = normalizeRecurrence(initialData);
+      const initPeriodicity = normalizePeriodicity(initialData.periodicity || initialData.aggregation);
+      const endRecDate = initialData.limitDate || initialData.limit_date || initialData.recurrenceEndDate || initialData.endDate || '';
       if (endRecDate) {
         try {
           const ey = parseInt(endRecDate.split('-')[0], 10);
@@ -135,7 +111,8 @@ export default function FinancialEventModal({
       }
 
       setFormData({
-        title: initialData.title || '',
+        title: initialData.title || initialData.name || '',
+        description: initialData.description || initialData.notes || '',
         date: targetDate,
         dayOfMonth: parsedDay,
         time: initialData.time || '09:00',
@@ -171,6 +148,7 @@ export default function FinancialEventModal({
 
       setFormData({
         title: '',
+        description: '',
         date: targetDate,
         dayOfMonth: parsedDay,
         time: '09:00',
@@ -223,9 +201,11 @@ export default function FinancialEventModal({
     const safeDayStr = safeDay.toString().padStart(2, '0');
     const finalDate = `${baseYearStr}-${baseMonthStr}-${safeDayStr}`;
 
-    const finalAmount = config.useBreakdown && breakdownItems.length > 0
-      ? totalBreakdownAmount
-      : (parseFloat(formData.amount) || 0);
+    const finalAmount = config.showAmount === false
+      ? 0
+      : (config.useBreakdown && breakdownItems.length > 0
+          ? totalBreakdownAmount
+          : (parseFloat(formData.amount) || 0));
 
     const finalInitialAmount = config.showInitialTarget
       ? (isFirstEvent
@@ -250,6 +230,8 @@ export default function FinancialEventModal({
       ...(initialData || {}),
       name: formData.title.trim(),
       title: formData.title.trim(),
+      description: formData.description ? formData.description.trim() : '',
+      notes: formData.description ? formData.description.trim() : '',
       date: finalDate,
       time: formData.time,
       status: initialData ? (initialData.status || config.defaultStatus) : config.defaultStatus,
@@ -258,13 +240,16 @@ export default function FinancialEventModal({
       isRecurring,
       recurrenceEndDate,
       endDate: recurrenceEndDate,
+      limitDate: recurrenceEndDate,
+      limit_date: recurrenceEndDate,
       amount: finalAmount,
       eventType: config.eventType,
       timelineId: timeline?.id,
       timelineOriginId: timeline?.id,
+      timeboardId: timeboardId || timeline?.timeboardId || timeline?.timeboard_id || null,
       labels,
       category: formData.category || config.categoryDefault,
-      isAutomatic: formData.isAutomatic,
+      isAutomatic: config.showAutomatic !== false ? Boolean(formData.isAutomatic) : false,
       isObligation: Boolean(formData.isObligation),
       obligationPersonId: formData.isObligation ? formData.obligationPersonId : null,
       updateScope: (initialData?.seriesId || initialData?.eventId || initialData?.isRecurring || isRecurring) ? updateScope : undefined
@@ -354,43 +339,79 @@ export default function FinancialEventModal({
         />
       </div>
 
-      {!initialData && (
-        <CategorySelector
-          value={formData.category}
-          onChange={(category) => setFormData((prev) => ({ ...prev, category }))}
-          categoryMeta={config.categoryMeta}
-          accent={ACCENT}
-          translationPrefix={config.translationPrefix}
-          t={t}
-          label={t('modal.categoryLabel') || t('sidebar.categoryType') || 'Categoria'}
-          isOpen={isCategoryDropdownOpen}
-          onToggle={() => {
-            setIsCategoryDropdownOpen(!isCategoryDropdownOpen);
-            setIsDayPickerOpen(false);
-            setIsEndMonthPickerOpen(false);
-          }}
-        />
+      {config.showDescription && (
+        <div style={{ marginBottom: '14px' }}>
+          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+            {t(config.descriptionLabelKey) || config.descriptionLabelFallback || 'Descrição / Notas'}
+          </label>
+          <textarea
+            rows={2}
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            placeholder={t(config.descriptionPlaceholderKey) || config.descriptionPlaceholderFallback || 'Adicione informações adicionais ou contexto...'}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              background: 'var(--bg-glass, rgba(255,255,255,0.03))',
+              border: '1px solid var(--border-glass)',
+              borderRadius: '8px',
+              color: 'var(--text-main)',
+              fontSize: '0.88rem',
+              outline: 'none',
+              boxSizing: 'border-box',
+              resize: 'vertical',
+              fontFamily: 'inherit'
+            }}
+          />
+        </div>
       )}
 
-      {config.useBreakdown ? (
-        <BreakdownItems
-          items={breakdownItems}
-          onChange={setBreakdownItems}
-          singleAmount={formData.amount}
-          onSingleAmountChange={(val) => setFormData({ ...formData, amount: val })}
-          accent={ACCENT}
-          t={t}
-          amountLabel={t(config.amountLabelKey)}
-        />
-      ) : (
-        <EuroInput
-          label={t(config.amountLabelKey)}
-          value={displayedAmount}
-          accent={ACCENT}
-          required={!config.showInitialTarget}
-          fontSize="1.1rem"
-          onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-        />
+      <CategorySelector
+        value={formData.category}
+        onChange={(category) => setFormData((prev) => ({ ...prev, category }))}
+        categoryMeta={config.categoryMeta}
+        accent={ACCENT}
+        translationPrefix={config.translationPrefix}
+        t={t}
+        label={t('modal.categoryLabel') || t('sidebar.categoryType') || 'Categoria'}
+        isOpen={isCategoryDropdownOpen}
+        onToggle={() => {
+          setIsCategoryDropdownOpen(!isCategoryDropdownOpen);
+          setIsDayPickerOpen(false);
+          setIsEndMonthPickerOpen(false);
+        }}
+      />
+
+      {config.showAmount !== false && (
+        <>
+          <EuroInput
+            label={t(config.amountLabelKey) || config.amountLabelFallback}
+            value={displayedAmount}
+            accent={ACCENT}
+            readOnly={config.useBreakdown && breakdownItems.length > 0}
+            background={config.useBreakdown && breakdownItems.length > 0 ? config.amountBg : undefined}
+            onChange={(e) => {
+              if (!config.useBreakdown || breakdownItems.length === 0) {
+                setFormData((prev) => ({ ...prev, amount: e.target.value }));
+              }
+            }}
+            labelExtra={config.useBreakdown && breakdownItems.length > 0 ? (
+              <span style={{ fontSize: '0.72rem', color: ACCENT, fontWeight: '800' }}>
+                ({breakdownItems.length} {(t('modal.subparts') || 'Subpartes').toLowerCase()})
+              </span>
+            ) : null}
+          />
+
+          {config.useBreakdown && (
+            <BreakdownItems
+              items={breakdownItems}
+              onChange={setBreakdownItems}
+              accent={ACCENT}
+              t={t}
+              initialAmount={formData.amount}
+            />
+          )}
+        </>
       )}
 
       {config.showInitialTarget && (
@@ -498,13 +519,15 @@ export default function FinancialEventModal({
         }}
       />
 
-      <ToggleSwitch
-        checked={formData.isAutomatic}
-        onChange={(val) => setFormData({ ...formData, isAutomatic: val })}
-        label={t('modal.automatic') || config.automaticLabelFallback}
-        icon={Zap}
-        accent={ACCENT}
-      />
+      {config.showAutomatic !== false && (
+        <ToggleSwitch
+          checked={formData.isAutomatic}
+          onChange={(val) => setFormData({ ...formData, isAutomatic: val })}
+          label={t('modal.automatic') || config.automaticLabelFallback}
+          icon={Zap}
+          accent={ACCENT}
+        />
+      )}
 
       {config.showIsExternal && (
         <ToggleSwitch
@@ -521,31 +544,33 @@ export default function FinancialEventModal({
         <ToggleSwitch
           checked={updateScope === EventUpdateMode.SUBSEQUENT}
           onChange={(val) => setUpdateScope(val ? EventUpdateMode.SUBSEQUENT : EventUpdateMode.SINGLE)}
-          label={t('modal.changeSubsequent') || 'Aplicar alterações aos meses futuros'}
+          label={t('modal.changeSubsequent')}
           icon={Repeat}
           accent={ACCENT}
         />
       )}
 
-      <ObligationSelector
-        isObligation={formData.isObligation}
-        obligationPersonId={formData.obligationPersonId}
-        onToggleObligation={(val) => {
-          setFormData((prev) => ({
-            ...prev,
-            isObligation: val,
-            obligationPersonId: val ? prev.obligationPersonId : ''
-          }));
-          if (!val) setObligationError(false);
-        }}
-        onSelectPerson={(personId) => {
-          setFormData((prev) => ({ ...prev, obligationPersonId: personId }));
-          if (personId) setObligationError(false);
-        }}
-        timeboardId={timeboardId || timeline?.timeboardId || timeline?.timeboard_id}
-        accentColor={ACCENT}
-        showError={obligationError}
-      />
+      {config.showObligations !== false && (
+        <ObligationSelector
+          isObligation={formData.isObligation}
+          obligationPersonId={formData.obligationPersonId}
+          onToggleObligation={(val) => {
+            setFormData((prev) => ({
+              ...prev,
+              isObligation: val,
+              obligationPersonId: val ? prev.obligationPersonId : ''
+            }));
+            if (!val) setObligationError(false);
+          }}
+          onSelectPerson={(personId) => {
+            setFormData((prev) => ({ ...prev, obligationPersonId: personId }));
+            if (personId) setObligationError(false);
+          }}
+          timeboardId={timeboardId || timeline?.timeboardId || timeline?.timeboard_id}
+          accentColor={ACCENT}
+          showError={obligationError}
+        />
+      )}
     </ModalShell>
   );
 }

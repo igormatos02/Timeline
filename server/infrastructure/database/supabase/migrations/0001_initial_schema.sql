@@ -135,6 +135,7 @@ CREATE TABLE IF NOT EXISTS financial_events (
   installment_amount NUMERIC NOT NULL DEFAULT 0,
   date DATE NOT NULL,
   due_date DATE,
+  limit_date DATE,
   paid_date DATE,
   automatic BOOLEAN NOT NULL DEFAULT FALSE,
   --is_recurring BOOLEAN NOT NULL DEFAULT FALSE,

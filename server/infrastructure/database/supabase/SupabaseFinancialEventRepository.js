@@ -86,6 +86,11 @@ export class SupabaseFinancialEventRepository extends IRepository {
         row.aggregation ||
         EventPeriodicity.MONTHLY,
 
+      limitDate: row.limit_date || row.recurrence_end_date || row.end_date || null,
+      limit_date: row.limit_date || row.recurrence_end_date || row.end_date || null,
+      recurrenceEndDate: row.limit_date || row.recurrence_end_date || row.end_date || null,
+      endDate: row.limit_date || row.recurrence_end_date || row.end_date || null,
+
       date: row.date,
       dueDate: row.due_date,
       paidDate: row.paid_date,
@@ -399,6 +404,26 @@ export class SupabaseFinancialEventRepository extends IRepository {
         data.aggregation ||
         EventPeriodicity.MONTHLY,
 
+      limit_date: (() => {
+        const raw =
+          data.limitDate ||
+          data.limit_date ||
+          data.recurrenceEndDate ||
+          data.endDate ||
+          null;
+        if (!raw) return null;
+        const str = String(raw).trim();
+        if (/^\d{4}-\d{2}$/.test(str)) {
+          const [y, m] = str.split('-').map(Number);
+          const lastDay = new Date(y, m, 0).getDate();
+          return `${str}-${String(lastDay).padStart(2, '0')}`;
+        }
+        if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+          return str.substring(0, 10);
+        }
+        return null;
+      })(),
+
       date: data.date,
 
       due_date:
@@ -473,9 +498,11 @@ export class SupabaseFinancialEventRepository extends IRepository {
       ),
 
       obligation_person_id:
-        data.obligationPersonId ||
-        data.obligation_person_id ||
-        null,
+        (data.isObligation || data.is_obligation) &&
+        (data.obligationPersonId || data.obligation_person_id) &&
+        uuidRegex.test(data.obligationPersonId || data.obligation_person_id)
+          ? (data.obligationPersonId || data.obligation_person_id)
+          : null,
 
       created_at:
         data.createdAt ||
@@ -719,6 +746,33 @@ export class SupabaseFinancialEventRepository extends IRepository {
         data.amortizationAmount != null
           ? Number(data.amortizationAmount)
           : null;
+    }
+
+    if (data.limitDate !== undefined || data.limit_date !== undefined || data.recurrenceEndDate !== undefined || data.endDate !== undefined) {
+      const raw = data.limitDate || data.limit_date || data.recurrenceEndDate || data.endDate || null;
+      if (!raw) {
+        row.limit_date = null;
+      } else {
+        const str = String(raw).trim();
+        if (/^\d{4}-\d{2}$/.test(str)) {
+          const [y, m] = str.split('-').map(Number);
+          const lastDay = new Date(y, m, 0).getDate();
+          row.limit_date = `${str}-${String(lastDay).padStart(2, '0')}`;
+        } else if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+          row.limit_date = str.substring(0, 10);
+        } else {
+          row.limit_date = null;
+        }
+      }
+    }
+
+    if (data.isObligation !== undefined || data.is_obligation !== undefined) {
+      row.is_obligation = Boolean(data.isObligation !== undefined ? data.isObligation : data.is_obligation);
+    }
+
+    if (data.obligationPersonId !== undefined || data.obligation_person_id !== undefined) {
+      const rawId = data.obligationPersonId || data.obligation_person_id;
+      row.obligation_person_id = rawId && uuidRegex.test(rawId) ? rawId : null;
     }
 
     return row;

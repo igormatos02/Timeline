@@ -12,7 +12,15 @@ export const EventStatus = Object.freeze({
   DELETED: 'deleted',
   IN_PROGRESS: 'in_progress',
   SETTLED: 'settled',
-  ABATED: 'abated'
+  ABATED: 'abated',
+  OPEN: 'open',
+  CLOSED: 'closed'
+});
+
+export const ReminderEventStatus = Object.freeze({
+  OPEN: EventStatus.OPEN,
+  CLOSED: EventStatus.CLOSED,
+  CANCELLED: EventStatus.CANCELLED
 });
 
 export const EventStatusLabel = Object.freeze({
@@ -29,7 +37,9 @@ export const EventStatusLabel = Object.freeze({
   [EventStatus.DELETED]: 'Deleted',
   [EventStatus.IN_PROGRESS]: 'In Progress',
   [EventStatus.SETTLED]: 'Settled',
-  [EventStatus.ABATED]: 'Abated'
+  [EventStatus.ABATED]: 'Abated',
+  [EventStatus.OPEN]: 'Open',
+  [EventStatus.CLOSED]: 'Closed'
 });
 
 export const getEventStatusLabel = (status) => EventStatusLabel[status] || status;
@@ -41,7 +51,8 @@ export const POSITIVE_EVENT_STATUSES = new Set([
   EventStatus.COMPLETED,
   EventStatus.AMORTIZED,
   EventStatus.SETTLED,
-  EventStatus.ABATED
+  EventStatus.ABATED,
+  EventStatus.CLOSED
 ]);
 
 export const isPositiveStatus = (status) => POSITIVE_EVENT_STATUSES.has(status);
@@ -51,4 +62,5 @@ export const isCancelledStatus = (status) => {
   return s === EventStatus.CANCELLED || s === 'cancelled' || s === 'cancelado';
 };
 export const isNegativeStatus = (status) => !status || (!isPositiveStatus(status) && !isCancelledStatus(status));
+
 

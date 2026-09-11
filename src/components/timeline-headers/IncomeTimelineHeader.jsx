@@ -11,7 +11,7 @@ import {
 import { format } from 'date-fns';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { IncomeEventCategory } from '../../../shared/enums/IncomeEventCategory.js';
-import { EventType } from '../../enums/index.js';
+import { EventType, isCancelledStatus } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
@@ -52,8 +52,8 @@ export default function IncomeTimelineHeader({
 
   let uiTotalInc = 0;
   eventsList.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
-    const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME || ev.isIncome;
+    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
+    const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
     if (isIncome && ev.date.startsWith(currentMonthStr)) {
       uiTotalInc += Number(ev.amount || 0);
     }
@@ -124,10 +124,6 @@ export default function IncomeTimelineHeader({
       }
     }
   });
-
-  if (annualTotalIncome === 0) {
-    annualTotalIncome = monthTotalIncome * 12;
-  }
 
   const annualTarget = dto?.annual_target || (metrics.monthlyBaseSalary ? metrics.monthlyBaseSalary * 12 : 36000);
   const annualAchievementPercent = annualTarget > 0 ? Math.min(100, Math.round((annualTotalIncome / annualTarget) * 100)) : 0;
@@ -500,8 +496,8 @@ export default function IncomeTimelineHeader({
               }
             });
 
-            const { diffPercentStr, isDiffPositive, currentMonthTotal } = computeMonthDiff(last7Months);
-            const annualProj = (currentMonthTotal > 0 ? currentMonthTotal : monthTotalIncome) * 12;
+            const { diffPercentStr, isDiffPositive } = computeMonthDiff(last7Months);
+            const annualProj = annualTotalIncome;
 
             return (
               <BarChart7Months

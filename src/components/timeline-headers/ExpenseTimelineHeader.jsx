@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { ExpenseEventCategory } from '../../../shared/enums/ExpensesEventCategory.js';
-import { EventType } from '../../enums/index.js';
+import { EventType, isCancelledStatus } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
@@ -203,9 +203,9 @@ export default function ExpenseTimelineHeader({
         const allCategoryTotals = {};
 
         eventsList.forEach((ev) => {
-          if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
-          const isExpense = ev.eventType === 'expense' || ev.eventType === EventType.EXPENSE || ev.isExpense;
-          const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME || ev.isIncome;
+          if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
+          const isExpense = ev.eventType === EventType.EXPENSE || ev.isExpense;
+          const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
 
           if (isExpense) {
             const amt = Number(ev.amount || 0);
@@ -606,8 +606,8 @@ export default function ExpenseTimelineHeader({
               const { diffPercentStr, isDiffPositive, currentMonthTotal } = computeMonthDiff(last7Months);
               const isDiffNegative = diffPercentStr === '0,0%' || !isDiffPositive;
 
-              // Projeção anual calculada diretamente a partir dos eventos de despesas visíveis na UI (mês atual * 12)
-              const annualProj = (currentMonthTotal > 0 ? currentMonthTotal : monthTotalExpense) * 12;
+              // Projeção anual calculada a partir da soma real dos eventos projetados nos próximos 12 meses
+              const annualProj = annualTotalExpense;
 
               return (
                 <BarChart7Months

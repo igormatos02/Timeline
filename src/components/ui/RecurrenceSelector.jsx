@@ -33,7 +33,7 @@ export default function RecurrenceSelector({
         display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px'
       }}>
         {items.map((p) => {
-          const isSelected = value === p.id || (p.id === EventRecurrence.LIMITED && value === 'period');
+          const isSelected = value === p.id;
           return (
             <button
               key={p.id}

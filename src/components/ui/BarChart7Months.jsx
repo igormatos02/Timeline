@@ -17,7 +17,9 @@ export default function BarChart7Months({
   currentGradient,
   mutedGradientTop,
   mutedGradientBottom,
-  currentTextColor
+  currentTextColor,
+  formatValue = (val) => formatCurrency(val).replace(',00', ''),
+  formatProjection = (val) => formatCurrency(val)
 }) {
   const maxMonthTotal = Math.max(...months.map((m) => m.total), 1);
 
@@ -59,7 +61,7 @@ export default function BarChart7Months({
         <div style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Sparkles size={15} style={{ color: sparklesColor }} />
           <span>{sparklesLabel}</span>
-          <span style={{ color: projectionColor }}>{formatCurrency(projection)}</span>
+          <span style={{ color: projectionColor }}>{formatProjection(projection)}</span>
         </div>
       </div>
 
@@ -116,7 +118,7 @@ export default function BarChart7Months({
                     color: isCurrentMonth ? currentTextColor : 'var(--text-muted)'
                   }}
                 >
-                  {formatCurrency(m.total).replace(',00', '')}
+                  {formatValue(m.total)}
                 </div>
 
                 <div
@@ -140,7 +142,7 @@ export default function BarChart7Months({
                       borderRadius: '4px',
                       transition: 'height 0.3s ease'
                     }}
-                    title={`${m.label}: ${formatCurrency(m.total)}`}
+                    title={`${m.label}: ${formatValue(m.total)}`}
                   />
                 </div>
 

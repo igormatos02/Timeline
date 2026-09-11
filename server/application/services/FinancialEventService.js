@@ -4,7 +4,7 @@ import { loanContractRepository } from '../../infrastructure/database/supabase/S
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
 import { calcToggledStatus } from '../../domain/entities/TimelineEvent.js';
-import { EventType, EventStatus, EventPeriodicity, EventRecurrence, EventDeletionMode, EventUpdateMode, AmortizationStrategy, LoanEventCategory, AmortizationEventCategory, isPositiveStatus, isNegativeStatus } from '../../../shared/enums/index.js';
+import { EventType, EventStatus, EventPeriodicity, EventRecurrence, EventDeletionMode, EventUpdateMode, AmortizationStrategy, LoanEventCategory, AmortizationEventCategory, InvestmentEventCategory, IncomeEventCategory, ExpensesEventCategory, isPositiveStatus, isNegativeStatus, normalizeRecurrence } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -182,11 +182,23 @@ export class FinancialEventService {
       eventData.isSystemLoanEvent
     );
 
+    let timeboardId = eventData.timeboardId || eventData.timeboard_id || null;
+    const timelineId = eventData.timelineId || eventData.timelineOriginId || eventData.timeline_id || null;
+
+    if (!timeboardId && timelineId) {
+      try {
+        const tl = await timelineRepository.getById(timelineId);
+        if (tl) timeboardId = tl.timeboardId || tl.timeboard_id;
+      } catch (e) {
+        console.warn('Could not resolve timeboardId from timeline in createEvent:', e.message);
+      }
+    }
+
     const payload = {
       ...eventData,
-      timelineId: eventData.timelineId || eventData.timelineOriginId || null,
-      timelineOriginId: eventData.timelineId || eventData.timelineOriginId || null,
-      timeboardId: eventData.timeboardId || null,
+      timelineId,
+      timelineOriginId: timelineId,
+      timeboardId,
       eventId,
       version: isLoanInstallment ? 0 : (eventData.version !== undefined ? Number(eventData.version) : 0),
       eventVersion: isLoanInstallment ? 0 : (eventData.eventVersion !== undefined ? Number(eventData.eventVersion) : 0),
@@ -294,35 +306,49 @@ export class FinancialEventService {
       existing?.category === InvestmentEventCategory.OTHER
     );
 
-    // Sincronizar targetAmount, initialInvestedAmount e isExternal em todos os registos existentes da série de investimento
-    if (seriesVersions.length > 0 && (directUpdates.targetAmount !== undefined || directUpdates.initialInvestedAmount !== undefined || directUpdates.isExternal !== undefined || directUpdates.is_external !== undefined)) {
+    // Sincronizar category, title/name, targetAmount, initialInvestedAmount e isExternal em todos os registos existentes da série
+    if (seriesVersions.length > 0 && (
+      directUpdates.category !== undefined ||
+      directUpdates.title !== undefined ||
+      directUpdates.name !== undefined ||
+      directUpdates.targetAmount !== undefined ||
+      directUpdates.initialInvestedAmount !== undefined ||
+      directUpdates.isExternal !== undefined ||
+      directUpdates.is_external !== undefined
+    )) {
       for (const sv of seriesVersions) {
         if (sv.id) {
           const syncPatch = {};
+          if (directUpdates.category !== undefined) syncPatch.category = directUpdates.category;
+          if (directUpdates.title || directUpdates.name) {
+            syncPatch.title = directUpdates.title || directUpdates.name;
+            syncPatch.name = directUpdates.name || directUpdates.title;
+          }
           if (directUpdates.targetAmount !== undefined) syncPatch.targetAmount = directUpdates.targetAmount;
           if (directUpdates.initialInvestedAmount !== undefined) syncPatch.initialInvestedAmount = directUpdates.initialInvestedAmount;
           if (directUpdates.isExternal !== undefined || directUpdates.is_external !== undefined) {
             syncPatch.isExternal = Boolean(directUpdates.isExternal !== undefined ? directUpdates.isExternal : directUpdates.is_external);
             syncPatch.is_external = syncPatch.isExternal;
           }
-          if (directUpdates.title || directUpdates.name) {
-            syncPatch.title = directUpdates.title || directUpdates.name;
-            syncPatch.name = directUpdates.name || directUpdates.title;
-          }
-          if (directUpdates.category) syncPatch.category = directUpdates.category;
           await eventRepository.update(sv.id, syncPatch);
         }
       }
     }
 
-    // Para investimentos: alterar a meta ou propriedades sem mudança de prestação/valor do mês não cria nova versão
+    // Alteração de propriedades (como categoria, título, notas, prioridade, etc.) sem alteração de valor monetário ou data não cria nova versão
     const isAmountChanged = (
       directUpdates.amount !== undefined &&
       existing?.amount !== undefined &&
       Number(directUpdates.amount) !== Number(existing?.amount)
     );
 
-    if (isInvestment && !isAmountChanged) {
+    const isDateChanged = (
+      directUpdates.date !== undefined &&
+      existing?.date !== undefined &&
+      directUpdates.date !== existing.date
+    );
+
+    if (!isAmountChanged && !isDateChanged) {
       const targetRecordId = existingDirect?.id || seriesRootEvent?.id || (id && !id.includes('_') ? id : null);
       if (targetRecordId) {
         const updatePayload = {
@@ -501,21 +527,15 @@ export class FinancialEventService {
 
     const rootEvent = directEvent || allRawEvents.find((ev) => (ev.eventId && ev.eventId === targetSeriesId) || ev.id === targetSeriesId || ev.id === id) || {};
 
+    const rootNormRec = normalizeRecurrence(rootEvent);
     const isRecurringSeries =
-      rootEvent.isRecurring === true ||
-      rootEvent.recurrence === EventRecurrence.RECURRING ||
-      rootEvent.recurrence === EventRecurrence.LIMITED ||
-      rootEvent.recurrence === 'recurring' ||
-      rootEvent.recurrence === 'limited' ||
-      rootEvent.periodicity === EventPeriodicity.RECURRING ||
-      rootEvent.periodicity === EventPeriodicity.PERIOD ||
-      rootEvent.periodicity === 'recorrente' ||
-      rootEvent.periodicity === 'recurring' ||
-      rootEvent.aggregation === 'recurring' ||
-      rootEvent.aggregation === 'monthly' ||
-      rootEvent.aggregation === 'mensal' ||
+      rootNormRec === EventRecurrence.RECURRING ||
+      rootNormRec === EventRecurrence.LIMITED ||
       Boolean(id && String(id).includes('_')) ||
-      allRawEvents.some((ev) => ((ev.eventId && ev.eventId === targetSeriesId) || ev.id === targetSeriesId) && (ev.isRecurring || ev.recurrence === EventRecurrence.RECURRING || ev.recurrence === EventRecurrence.LIMITED || ev.aggregation === 'recurring'));
+      allRawEvents.some((ev) => {
+        const evRec = normalizeRecurrence(ev);
+        return ((ev.eventId && ev.eventId === targetSeriesId) || ev.id === targetSeriesId) && (evRec === EventRecurrence.RECURRING || evRec === EventRecurrence.LIMITED);
+      });
 
     const isAll = deletionMode === EventDeletionMode.EVERYTHING || deletionMode === 'all' || options.deleteSeries;
     const isSubsequent = deletionMode === EventDeletionMode.FROM_NOW_ON || deletionMode === 'subsequent';

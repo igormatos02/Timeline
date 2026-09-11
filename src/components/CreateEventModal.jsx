@@ -1,11 +1,12 @@
 import React from 'react';
-import { TimelineType } from '../enums/index.js';
+import { TimelineType, normalizeTimelineType } from '../enums/index.js';
 import {
   IncomeEventModal,
   ExpenseEventModal,
   InvestmentEventModal,
   LoanEventModal,
   BalanceEventModal,
+  ReminderEventModal,
   DefaultEventModal
 } from './event-modals/index.js';
 
@@ -18,7 +19,9 @@ export default function CreateEventModal(props) {
 
   if (!isOpen) return null;
 
-  switch (timeline?.type) {
+  const normalizedType = normalizeTimelineType(timeline?.type);
+
+  switch (normalizedType) {
     case TimelineType.BALANCE:
       return <BalanceEventModal {...props} />;
 
@@ -34,7 +37,11 @@ export default function CreateEventModal(props) {
     case TimelineType.LOAN:
       return <LoanEventModal {...props} />;
 
+    case TimelineType.REMINDER:
+      return <ReminderEventModal {...props} />;
+
     default:
       return <DefaultEventModal {...props} />;
   }
 }
+

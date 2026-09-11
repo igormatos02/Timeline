@@ -78,7 +78,7 @@ import MonthProjectionBadges from './MonthProjectionBadges.jsx';
 import FloatingTaskStack from './FloatingTaskStack';
 import { getGroupingForPeriodicity } from '../utils/loanCalculations';
 import { formatCurrency } from '../utils/formatCurrency';
-import { EventType, EventStatus, EventStatusLabel, TimelineType, TimelineStatus, TimeboardType, IncomeEventCategory, ExpensesEventCategory, InvestmentEventCategory, LoanEventCategory, AmortizationEventCategory, AmortizationStrategy, normalizeTimelineType } from '../enums/index.js';
+import { EventType, EventStatus, EventStatusLabel, TimelineType, TimelineStatus, TimeboardType, IncomeEventCategory, ExpensesEventCategory, InvestmentEventCategory, LoanEventCategory, AmortizationEventCategory, AmortizationStrategy, normalizeTimelineType, isLoanTimelineType } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 const EXPENSE_CATEGORY_ITEMS = [
@@ -189,9 +189,9 @@ function VerticalTimeline({
     setSelectedExpenseCategories([]);
   }, [timeline?.id]);
 
-  const isFinancial = activeTimeboard?.type === TimeboardType.FINANCIAL || activeTimeboard?.type === 'financial' || isFinancialTimeline;
-  const isProjects = activeTimeboard?.type === TimeboardType.PROJECTS || activeTimeboard?.type === 'projects' || timeline?.type === 'project';
-  const isReminders = activeTimeboard?.type === TimeboardType.REMINDERS || activeTimeboard?.type === 'reminders' || timeline?.type === 'reminder';
+  const isFinancial = activeTimeboard?.type === TimeboardType.FINANCIAL || isFinancialTimeline;
+  const isProjects = activeTimeboard?.type === TimeboardType.PROJECTS || normalizeTimelineType(timeline?.type) === TimelineType.PROJECT;
+  const isReminders = activeTimeboard?.type === TimeboardType.REMINDERS || normalizeTimelineType(timeline?.type) === TimelineType.REMINDER;
 
   const timelineOptions = useMemo(() => {
     const list = [];
@@ -280,10 +280,52 @@ function VerticalTimeline({
   const inactiveTimelineIdSet = useMemo(() => {
     return new Set(
       (timelines || [])
-        .filter((t) => t.status === TimelineStatus.INACTIVE || t.status === 'inactive' || t.status === 'Inativo' || t.isActive === false)
+        .filter((t) => t.status === TimelineStatus.INACTIVE || t.isActive === false)
         .map((t) => t.id)
     );
   }, [timelines]);
+
+  const effectiveTimelines = useMemo(() => {
+    if (Array.isArray(timelines) && timelines.length > 0) return timelines;
+    if (Array.isArray(timeline?.timelines) && timeline.timelines.length > 0) return timeline.timelines;
+    if (timeline) return [timeline];
+    return [];
+  }, [timelines, timeline]);
+
+  const hasBalanceTimeline = useMemo(() => {
+    return effectiveTimelines.some(
+      (t) => normalizeTimelineType(t.type) === TimelineType.BALANCE &&
+             t.status !== TimelineStatus.INACTIVE && t.isActive !== false
+    );
+  }, [effectiveTimelines]);
+
+  const hasIncomeTimeline = useMemo(() => {
+    return effectiveTimelines.some(
+      (t) => normalizeTimelineType(t.type) === TimelineType.INCOME &&
+             t.status !== TimelineStatus.INACTIVE && t.isActive !== false
+    );
+  }, [effectiveTimelines]);
+
+  const hasExpenseTimeline = useMemo(() => {
+    return effectiveTimelines.some(
+      (t) => normalizeTimelineType(t.type) === TimelineType.EXPENSE &&
+             t.status !== TimelineStatus.INACTIVE && t.isActive !== false
+    );
+  }, [effectiveTimelines]);
+
+  const hasInvestmentTimeline = useMemo(() => {
+    return effectiveTimelines.some(
+      (t) => normalizeTimelineType(t.type) === TimelineType.INVESTMENT &&
+             t.status !== TimelineStatus.INACTIVE && t.isActive !== false
+    );
+  }, [effectiveTimelines]);
+
+  const hasLoanTimeline = useMemo(() => {
+    return effectiveTimelines.some(
+      (t) => isLoanTimelineType(t.type) &&
+             t.status !== TimelineStatus.INACTIVE && t.isActive !== false
+    );
+  }, [effectiveTimelines]);
 
   const isEventTimelineActive = (ev) => {
     if (!ev) return false;
@@ -1025,10 +1067,10 @@ function VerticalTimeline({
           const monthTitleStr = format(mGroup.monthDate, 'MMMM yyyy', { locale: dateLocale });
           const hasEvents = mGroup.events.length > 0;
 
-          const mMonthProjectedExpense = monthExpensesTotalMap.get(monthKeyStr) || 0;
-          const mMonthProjectedLoan = monthLoansTotalMap.get(monthKeyStr) || 0;
-          const mMonthProjectedIncome = monthIncomeTotalMap.get(monthKeyStr) || 0;
-          const mMonthProjectedInvestment = monthInvestmentsTotalMap.get(monthKeyStr) || 0;
+          const mMonthProjectedExpense = hasExpenseTimeline ? (monthExpensesTotalMap.get(monthKeyStr) || 0) : 0;
+          const mMonthProjectedLoan = hasLoanTimeline ? (monthLoansTotalMap.get(monthKeyStr) || 0) : 0;
+          const mMonthProjectedIncome = hasIncomeTimeline ? (monthIncomeTotalMap.get(monthKeyStr) || 0) : 0;
+          const mMonthProjectedInvestment = hasInvestmentTimeline ? (monthInvestmentsTotalMap.get(monthKeyStr) || 0) : 0;
           const mMonthProjectedSaldo = mMonthProjectedIncome - (mMonthProjectedExpense + mMonthProjectedInvestment + mMonthProjectedLoan);
 
           if (!showEmptyDays && !hasEvents && !isCurrentMonth) return null;
@@ -1146,7 +1188,13 @@ function VerticalTimeline({
                               const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
                               onAddEventForDate(
                                 targetDayStr,
-                                timeline.type === TimelineType.EXPENSE ? 'expense' : timeline.type === TimelineType.INVESTMENT ? 'investment' : 'income'
+                                timeline.type === TimelineType.EXPENSE
+                                  ? 'expense'
+                                  : timeline.type === TimelineType.INVESTMENT
+                                  ? 'investment'
+                                  : isReminders
+                                  ? 'reminder'
+                                  : 'income'
                               );
                             }}
                             title={t('timeline.addEventMonthTitle', { month: monthTitleStr })}
@@ -1158,7 +1206,7 @@ function VerticalTimeline({
                       </div>
                     </div>
 
-                    {!isLoanTimelineOrTab && (
+                    {isFinancialTimeline && !isLoanTimelineOrTab && !isReminders && !isProjects && (
                       <MonthProjectionBadges
                         income={mMonthProjectedIncome}
                         expense={mMonthProjectedExpense}
@@ -1166,6 +1214,11 @@ function VerticalTimeline({
                         loan={mMonthProjectedLoan}
                         saldo={mMonthProjectedSaldo}
                         isFutureMonth={isFutureMonth}
+                        showIncome={hasIncomeTimeline}
+                        showExpense={hasExpenseTimeline}
+                        showInvestment={hasInvestmentTimeline}
+                        showLoan={hasLoanTimeline}
+                        showBalance={hasBalanceTimeline}
                         t={t}
                       />
                     )}
@@ -1202,7 +1255,13 @@ function VerticalTimeline({
                       className="empty-day-row"
                       onClick={() => {
                         if (isLoanTimelineOrTab) return;
-                        const nature = timeline.type === TimelineType.EXPENSE ? 'expense' : timeline.type === TimelineType.INVESTMENT ? 'investment' : 'income';
+                        const nature = timeline.type === TimelineType.EXPENSE
+                          ? 'expense'
+                          : timeline.type === TimelineType.INVESTMENT
+                          ? 'investment'
+                          : isReminders
+                          ? 'reminder'
+                          : 'income';
                         onAddEventForDate(format(mGroup.monthDate, 'yyyy-MM-01'), nature);
                       }}
                       style={{
@@ -1216,7 +1275,7 @@ function VerticalTimeline({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
                         <span className="empty-day-text">
-                          {isLoanTimelineOrTab ? t('timeline.noLoanMonth') : t('timeline.noTabRecords')}
+                          {isLoanTimelineOrTab ? t('timeline.noLoanMonth') : isReminders ? (t('reminderHeader.noReminders') || 'Sem lembretes registados') : t('timeline.noTabRecords')}
                         </span>
                       </div>
                     </div>
@@ -1542,7 +1601,7 @@ function VerticalTimeline({
                     }}
                   >
                     <Plus size={13} />
-                    <span>New</span>
+                    <span>{t('buttons.new') || t('buttons.add') || 'New'}</span>
                   </button>
 
                   {isTimelineDropdownOpen && (
@@ -1553,10 +1612,12 @@ function VerticalTimeline({
                         right: 0,
                         marginTop: '6px',
                         minWidth: '180px',
-                        backgroundColor: '#1e1b4b',
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
-                        borderRadius: '8px',
-                        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.6)',
+                        background: 'var(--bg-card)',
+                        backdropFilter: 'blur(16px)',
+                        WebkitBackdropFilter: 'blur(16px)',
+                        border: '1px solid var(--border-glass)',
+                        borderRadius: '10px',
+                        boxShadow: 'var(--shadow-glow), 0 10px 25px rgba(0, 0, 0, 0.2)',
                         padding: '6px',
                         zIndex: 100
                       }}
@@ -1580,7 +1641,7 @@ function VerticalTimeline({
                             borderRadius: '6px',
                             border: 'none',
                             background: 'transparent',
-                            color: '#ffffff',
+                            color: 'var(--text-main)',
                             fontSize: '0.8rem',
                             fontWeight: '600',
                             cursor: 'pointer',
@@ -1588,7 +1649,7 @@ function VerticalTimeline({
                             transition: 'background 0.15s ease'
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(99, 102, 241, 0.25)';
+                            e.currentTarget.style.background = 'var(--bg-card-hover, rgba(99, 102, 241, 0.12))';
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.background = 'transparent';

@@ -1,10 +1,10 @@
 export { TimelineAssociationType } from './TimelineAssociationType.js';
 export { EventType } from './EventType.js';
 export { TimelineType, isLoanTimelineType, normalizeTimelineType } from './TimelineType.js';
-export { EventStatus, EventStatusLabel, getEventStatusLabel, isPositiveStatus, isNegativeStatus, isCancelledStatus } from './EventStatus.js';
-export { EventPeriodicity } from './EventPeriodicity.js';
+export { EventStatus, EventStatusLabel, getEventStatusLabel, isPositiveStatus, isNegativeStatus, isCancelledStatus, ReminderEventStatus } from './EventStatus.js';
+export { EventPeriodicity, normalizePeriodicity } from './EventPeriodicity.js';
 export { EventPeriodicity as EventAggregation } from './EventPeriodicity.js';
-export { EventRecurrence } from './EventRecurrence.js';
+export { EventRecurrence, isLimitedRecurrence, isOnceRecurrence, normalizeRecurrence } from './EventRecurrence.js';
 export { EventPriority } from './EventPriority.js';
 export { TimeboardType } from './TimeboardType.js';
 export { TimelineStatus } from './TimelineStatus.js';
@@ -12,9 +12,11 @@ export { IncomeEventCategory } from './IncomeEventCategory.js';
 export { ExpensesEventCategory, ExpenseEventCategory } from './ExpensesEventCategory.js';
 export { InvestmentEventCategory, InvestimentEventCategory } from './InvestmentEventCategory.js';
 export { LoanEventCategory } from './LoanEventCategory.js';
+export { ReminderEventCategory } from './ReminderEventCategory.js';
 export { AmortizationEventCategory, AmortizationStrategy } from './AmortizationEventCategory.js';
 export { EventDeletionMode } from './EventDeletionMode.js';
 export { EventUpdateMode } from './EventUpdateMode.js';
 export { PersonRole } from './PersonRole.js';
 export { PersonType } from './PersonType.js';
 export { InvitationStatus } from './InvitationStatus.js';
+

@@ -41,6 +41,7 @@ export const translations = {
       all: "All",
       deselectAll: "Deselect",
       add: "Add",
+      new: "New",
       reset: "Reset",
       payUpToHere: "Pay up to here",
       payUpToHereTitle: "Mark all previous installments of this loan up to this one as paid",
@@ -218,6 +219,8 @@ export const translations = {
       inProgress: "In Progress",
       settled: "Settled",
       abated: "Abated",
+      open: "Open",
+      closed: "Closed",
       toReceive: "To Receive",
       toPay: "To Pay",
       receivedAt: "Recebido",
@@ -280,6 +283,14 @@ export const translations = {
       targetAmount: "Target Amount (€)",
       addInvestment: "Add Investment",
 
+      editMovement: "Edit Movement",
+      newMovement: "New Financial Movement",
+      addMovement: "Add Movement",
+      movementType: "Movement Type",
+      targetTimeline: "Movement Destination (Timeline)",
+      movementTitleLabel: "Movement Title *",
+      movementTitlePlaceholder: "e.g., Salary, Rent, Savings...",
+
       titleLabel: "Title / Description *",
       amountLabel: "Amount (€) *",
       categoryLabel: "Category",
@@ -303,6 +314,9 @@ export const translations = {
       statusPaid: "Paid",
       statusInvested: "Invested",
       statusPlanned: "Planned",
+      statusOpen: "Open",
+      statusClosed: "Closed",
+      statusCancelled: "Cancelled",
       automatic: "Automatic Payment / Debit",
       isExternalDeposit: "Is external deposit?",
       isExternalDepositHint: "External deposits do not commit regular monthly income and are excluded from outflow deductions.",
@@ -316,7 +330,7 @@ export const translations = {
       noPersonsAvailable: "No entities found for this timeboard. Please add a person or organization in Timeboard Settings.",
       cancel: "Cancel",
       saveChanges: "Save Changes",
-      changeSubsequent: "Apply to subsequent months"
+      changeSubsequent: "Apply to subsequent events"
     },
 
     // Expense Categories
@@ -365,6 +379,15 @@ export const translations = {
       crypto: "Crypto & Digital Assets",
       assets: "Assets & Equity",
       other: "Other Investments"
+    },
+
+    // Reminder Categories
+    reminderCategories: {
+      birthday: "Birthday / Anniversary",
+      maintenance: "Maintenance",
+      random_event: "Random Event",
+      appointment: "Appointment / Commitment",
+      other: "Other Reminders"
     },
 
     // Timeboard Modal
@@ -620,6 +643,56 @@ export const translations = {
       chartTitle: "EXPENSE VOLUME EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)"
     },
 
+    expenseCategories: {
+      food: "Food & Groceries",
+      rent: "Rent & Housing",
+      electricity: "Electricity",
+      water: "Water",
+      gas: "Gas",
+      communications: "Communications & TV",
+      transportation: "Transportation",
+      health: "Health",
+      education: "Education",
+      entertainment: "Entertainment",
+      shopping: "Shopping",
+      clothing: "Clothing",
+      car_maintenance: "Car Maintenance",
+      house: "Home Improvement",
+      insurance: "Insurance",
+      pets: "Pets",
+      travel: "Travel",
+      personal_care: "Personal Care",
+      services: "Services",
+      condominium: "Condominium",
+      reserve: "Reserve Fund",
+      other: "Other"
+    },
+    incomeCategories: {
+      salary: "Salary",
+      meal_allowance: "Meal Allowance",
+      bonus: "Bonus",
+      freelance: "Freelance",
+      investment_return: "Investment Return",
+      recurring_income: "Recurring Income",
+      other: "Other"
+    },
+    investmentCategories: {
+      savings: "Savings",
+      stocks: "Stocks",
+      funds: "Funds & ETFs",
+      real_estate: "Real Estate",
+      crypto: "Crypto",
+      assets: "Assets & Wealth",
+      other: "Other"
+    },
+    reminderCategories: {
+      birthday: "Birthday",
+      maintenance: "Maintenance",
+      random_event: "Random Event",
+      appointment: "Appointment",
+      other: "Other"
+    },
+
     // Income Timeline Header
     incomeHeader: {
       badge: "Inflows & Income",
@@ -724,6 +797,55 @@ export const translations = {
       selectMonthYear: "Select Month and Year:",
       cancel: "Cancel",
       saveAndApply: "Save and Apply"
+    },
+
+    // Reminder Timeline Header
+    reminderHeader: {
+      badge: "Reminders & Alerts",
+      addReminder: "New Reminder",
+      resetTitle: "Clear all movements in this timeline",
+      settingsTitle: "Timeline Settings",
+      deleteTitle: "Delete this timeline",
+      categoriesTitle: "REMINDERS BY CATEGORY",
+      noReminders: "No reminders recorded",
+      noRemindersHint: "Add reminders to view the category breakdown.",
+      annualRemindersTitle: "ANNUAL REMINDERS",
+      annualRemindersDesc: "Scheduled (Next 12 months):",
+      annualCount: "{count} reminders",
+      statusRatioTitle: "UNSEEN VS SEEN",
+      seenLabel: "Seen (Closed):",
+      unseenLabel: "Unseen (Open):",
+      seenPercentage: "{percent}% seen / closed",
+      seenRatioTitleDonut: "{percent}% seen / closed",
+      next30DaysTitle: "NEXT 30 DAYS",
+      next30DaysDesc: "Scheduled for next 30 days:",
+      next30DaysCount: "{count} reminders",
+      next30DaysTitleDonut: "{count} reminders in next 30 days",
+      remindersCountOne: "{count} reminder",
+      remindersCountOther: "{count} reminders",
+      statusPendingAndClosed: "{open} open • {closed} closed",
+      chartTitle: "REMINDERS VOLUME EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)",
+      monthVsPrevMonth: "This month vs previous month:",
+      annualProjectionLabel: "Projected annual total:"
+    },
+
+    // Reminder Event Modal
+    reminderModal: {
+      newTitle: "New Reminder",
+      editTitle: "Edit Reminder",
+      titleLabel: "Name / Title *",
+      nameLabel: "Name / Title *",
+      titlePlaceholder: "e.g., Doctor appointment, Car maintenance, Birthday...",
+      namePlaceholder: "e.g., Doctor appointment, Car maintenance, Birthday...",
+      descriptionLabel: "Description / Notes",
+      descriptionPlaceholder: "Add any additional context or details...",
+      dateLabel: "Date *",
+      categoryLabel: "Category *",
+      statusLabel: "Status *",
+      notesLabel: "Notes / Details (Optional)",
+      notesPlaceholder: "Add any additional context or reminders...",
+      cancel: "Cancel",
+      save: "Save Reminder"
     },
 
     // Evolution Chart
@@ -859,6 +981,7 @@ export const translations = {
       all: "Todos",
       deselectAll: "Desmarcar",
       add: "Adicionar",
+      new: "Novo",
       reset: "Reset",
       payUpToHere: "Pagar até aqui",
       payUpToHereTitle: "Marcar como pagas todas as prestações deste empréstimo anteriores a esta parcela (inclusive)",
@@ -1036,6 +1159,8 @@ export const translations = {
       inProgress: "Em Progresso",
       settled: "Liquidado",
       abated: "Abatida",
+      open: "Em Aberto",
+      closed: "Concluído",
       toReceive: "A Receber",
       toPay: "A Pagar",
       receivedAt: "Recebido",
@@ -1098,6 +1223,14 @@ export const translations = {
       targetAmount: "Meta Final (€)",
       addInvestment: "Adicionar Investimento",
 
+      editMovement: "Editar Movimento",
+      newMovement: "Novo Movimento Financeiro",
+      addMovement: "Adicionar Movimento",
+      movementType: "Tipo de Movimento",
+      targetTimeline: "Destino do Movimento (Timeline)",
+      movementTitleLabel: "Título do Movimento *",
+      movementTitlePlaceholder: "Ex: Salário, Aluguel, Aporte Poupança...",
+
       titleLabel: "Título / Descrição *",
       amountLabel: "Valor (€) *",
       categoryLabel: "Categoria",
@@ -1120,7 +1253,10 @@ export const translations = {
       statusReceived: "Recebido",
       statusPaid: "Pago",
       statusInvested: "Investido",
-      statusPlanned: "Previsto",
+      statusPlanned: "Planeado",
+      statusOpen: "Aberto",
+      statusClosed: "Fechado",
+      statusCancelled: "Cancelado",
       automatic: "Débito / Pagamento Automático",
       isExternalDeposit: "É depósito externo?",
       isExternalDepositHint: "Depósitos externos não abatem das entradas e não entram no cálculo de comprometimento da renda.",
@@ -1134,7 +1270,7 @@ export const translations = {
       noPersonsAvailable: "Nenhuma entidade cadastrada neste timeboard. Adicione uma entidade nas Definições do Timeboard.",
       cancel: "Cancelar",
       saveChanges: "Salvar Alterações",
-      changeSubsequent: "Aplicar aos meses futuros"
+      changeSubsequent: "Aplicar aos eventos futuros"
     },
 
     // Expense Categories
@@ -1183,6 +1319,15 @@ export const translations = {
       crypto: "Criptoativos",
       assets: "Património & Bens",
       other: "Outros Investimentos"
+    },
+
+    // Reminder Categories
+    reminderCategories: {
+      birthday: "Aniversário",
+      maintenance: "Manutenção",
+      random_event: "Evento Aleatório",
+      appointment: "Compromisso",
+      other: "Outros Lembretes"
     },
 
     // Timeboard Modal
@@ -1438,6 +1583,56 @@ export const translations = {
       chartTitle: "EVOLUÇÃO DO VOLUME DE GASTOS (ÚLTIMOS 6 MESES + MÊS ATUAL)"
     },
 
+    expenseCategories: {
+      food: "Alimentação / Mercado",
+      rent: "Renda / Habitação",
+      electricity: "Eletricidade",
+      water: "Água",
+      gas: "Gás",
+      communications: "Comunicações / TV",
+      transportation: "Transporte / Combustível",
+      health: "Saúde / Farmácia",
+      education: "Educação / Cursos",
+      entertainment: "Lazer / Entretenimento",
+      shopping: "Compras",
+      clothing: "Vestuário",
+      car_maintenance: "Manutenção do Carro",
+      house: "Obras / Casa",
+      insurance: "Seguros",
+      pets: "Animais de Estimação",
+      travel: "Viagens",
+      personal_care: "Cuidados Pessoais",
+      services: "Serviços / Assinaturas",
+      condominium: "Condomínio",
+      reserve: "Fundo de Reserva",
+      other: "Outros Gastos"
+    },
+    incomeCategories: {
+      salary: "Salário",
+      meal_allowance: "Subsídio de Alimentação",
+      bonus: "Bónus / Gratificação",
+      freelance: "Freelance / Extra",
+      investment_return: "Retorno de Investimento",
+      recurring_income: "Entrada Recorrente",
+      other: "Outras Entradas"
+    },
+    investmentCategories: {
+      savings: "Poupança",
+      stocks: "Ações",
+      funds: "Fundos / ETFs",
+      real_estate: "Imobiliário",
+      crypto: "Criptoativos",
+      assets: "Património / Bens",
+      other: "Outros Investimentos"
+    },
+    reminderCategories: {
+      birthday: "Aniversário",
+      maintenance: "Manutenção",
+      random_event: "Evento Aleatório",
+      appointment: "Compromisso",
+      other: "Outro"
+    },
+
     // Income Timeline Header
     incomeHeader: {
       badge: "Entradas e Rendimentos",
@@ -1538,10 +1733,59 @@ export const translations = {
       forecastOutflows: "Saídas Previstas:",
       investments: "Investimentos:",
       computeModalTitle: "Computar a partir de",
-      computeModalDescription: "Defina a partir de qual mês/ano os resumos e gráficos do Balanço devem ser calculados.",
+      computeModalDescription: "Defina o mês/ano inicial para o cálculo dos resumos e gráficos do Balanço.",
       selectMonthYear: "Selecione Mês e Ano:",
       cancel: "Cancelar",
       saveAndApply: "Salvar e Aplicar"
+    },
+
+    // Reminder Timeline Header
+    reminderHeader: {
+      badge: "Lembretes & Alertas",
+      addReminder: "Novo Lembrete",
+      resetTitle: "Limpar todos os movimentos desta timeline",
+      settingsTitle: "Definições da Timeline",
+      deleteTitle: "Excluir esta timeline",
+      categoriesTitle: "LEMBRETES POR CATEGORIA",
+      noReminders: "Sem lembretes registados",
+      noRemindersHint: "Adicione lembretes para visualizar a distribuição por categoria.",
+      annualRemindersTitle: "LEMBRETES ANUAIS",
+      annualRemindersDesc: "Agendados (Próximos 12 meses):",
+      annualCount: "{count} lembretes",
+      statusRatioTitle: "NÃO VISTOS VS VISTOS",
+      seenLabel: "Vistos (Fechados):",
+      unseenLabel: "Não Vistos (Abertos):",
+      seenPercentage: "{percent}% vistos / concluídos",
+      seenRatioTitleDonut: "{percent}% vistos / fechados",
+      next30DaysTitle: "PRÓXIMOS 30 DIAS",
+      next30DaysDesc: "Agendados para os próximos 30 dias:",
+      next30DaysCount: "{count} lembretes",
+      next30DaysTitleDonut: "{count} lembretes nos próximos 30 dias",
+      remindersCountOne: "{count} lembrete",
+      remindersCountOther: "{count} lembretes",
+      statusPendingAndClosed: "{open} pendentes • {closed} concluídos",
+      chartTitle: "REMINDERS VOLUME EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)",
+      monthVsPrevMonth: "Este mês vs mês anterior:",
+      annualProjectionLabel: "Total anual projetado:"
+    },
+
+    // Reminder Event Modal
+    reminderModal: {
+      newTitle: "Novo Lembrete",
+      editTitle: "Editar Lembrete",
+      titleLabel: "Nome / Título *",
+      nameLabel: "Nome / Título *",
+      titlePlaceholder: "Ex: Consulta médica, Manutenção do carro, Aniversário...",
+      namePlaceholder: "Ex: Consulta médica, Manutenção do carro, Aniversário...",
+      descriptionLabel: "Descrição / Notas",
+      descriptionPlaceholder: "Adicione informações adicionais ou contexto...",
+      dateLabel: "Data *",
+      categoryLabel: "Categoria *",
+      statusLabel: "Estado *",
+      notesLabel: "Notas / Detalhes (Opcional)",
+      notesPlaceholder: "Adicione informações adicionais ou contexto...",
+      cancel: "Cancelar",
+      save: "Salvar Lembrete"
     },
 
     // Evolution Chart

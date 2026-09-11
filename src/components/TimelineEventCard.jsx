@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Clock,
   CheckSquare,
@@ -42,7 +42,10 @@ import {
   UserCheck,
   FileCheck2,
   Ban,
-  Utensils
+  Utensils,
+  Cake,
+  Wrench,
+  Bell
 } from 'lucide-react';
 import { isLoanInstallment as checkIsLoanInstallment, isAmortizationEvent as checkIsAmortizationEvent } from '../utils/loanCalculations';
 import { formatCurrency } from '../utils/formatCurrency';
@@ -50,7 +53,8 @@ import { format, parseISO, endOfMonth } from 'date-fns';
 import { pt, enUS } from 'date-fns/locale';
 import { generateUUID } from '../utils/uuid';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { EventType, TimelineType, EventStatus, EventRecurrence, EventPeriodicity, PersonType, AmortizationEventCategory, LoanEventCategory, InvestmentEventCategory } from '../enums/index.js';
+import { EventType, TimelineType, EventStatus, ReminderEventStatus, EventRecurrence, EventPeriodicity, PersonType, AmortizationEventCategory, LoanEventCategory, InvestmentEventCategory, ReminderEventCategory, normalizeRecurrence } from '../enums/index.js';
+import { INCOME_CATEGORY_META, EXPENSE_CATEGORY_META, INVESTMENT_CATEGORY_META, REMINDER_CATEGORY_META } from './event-modals/FinancialEventModalConfig.js';
 import * as api from '../services/api.js';
 import { compareEventsWithinDay } from '../utils/eventSorting.js';
 
@@ -145,6 +149,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const isIncomeEvent = event.eventType === EventType.INCOME;
   const isExpenseEvent = event.eventType === EventType.EXPENSE;
   const isInvestmentEvent = event.eventType === EventType.INVESTMENT;
+  const isReminderTimeline = timelineType === TimelineType.REMINDER || timelineType === 'reminder' || timelineType === 'reminders';
+  const isReminderEvent = isReminderTimeline || event.eventType === EventType.REMINDER || event.timelineType === TimelineType.REMINDER || event.timeline_type === TimelineType.REMINDER;
   const isSavingsInvestment = isInvestmentEvent && (
     !event.category ||
     event.category === 'savings' ||
@@ -153,22 +159,13 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     event.category === 'poupanca'
   );
 
-  const isRecurringEvent = Boolean(
-    event.recurrence === EventRecurrence.RECURRING ||
-    event.recurrence === EventRecurrence.LIMITED ||
-    event.recurrence === 'recurring' ||
-    event.recurrence === 'limited' ||
-    event.isRecurring === true ||
-    event.is_recurring === true ||
-    event.periodicity === 'recorrente' ||
-    event.periodicity === 'period' ||
+  const normRec = normalizeRecurrence(event);
+  const isRecurringEvent = (
+    normRec === EventRecurrence.RECURRING ||
+    normRec === EventRecurrence.LIMITED ||
     Boolean(event.seriesId) ||
     isLoanInstallment
-  ) &&
-    event.recurrence !== EventRecurrence.ONCE &&
-    event.recurrence !== 'once' &&
-    event.periodicity !== 'once' &&
-    event.periodicity !== 'unica';
+  ) && normRec !== EventRecurrence.ONCE;
 
   const isInertFuture = event.date > currentMonthEndStr;
 
@@ -186,7 +183,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     effectiveStatus === EventStatus.INVESTED ||
     effectiveStatus === EventStatus.SETTLED ||
     effectiveStatus === EventStatus.COMPLETED ||
-    effectiveStatus === EventStatus.AMORTIZED
+    effectiveStatus === EventStatus.AMORTIZED ||
+    effectiveStatus === EventStatus.CLOSED
   );
 
   const isOverdue = Boolean(
@@ -196,6 +194,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     !isCancelled &&
     effectiveStatus !== EventStatus.DELETED
   );
+
+  const isClosedReminder = isReminderEvent && isCompleted && !isCancelled;
+  const isOverdueReminder = isReminderEvent && isOverdue && !isCancelled;
 
   const isReceivedIncome = isIncomeEvent && isCompleted && !isCancelled;
   const isOverdueIncome = isIncomeEvent && isOverdue && !isCancelled;
@@ -213,10 +214,20 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const isAmortized = isLoanInstallment && !isCancelled && effectiveStatus === EventStatus.AMORTIZED;
 
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
+  const [openUpwards, setOpenUpwards] = useState(false);
   const statusMenuRef = React.useRef(null);
 
   React.useEffect(() => {
     if (!isStatusMenuOpen) return;
+    if (statusMenuRef.current) {
+      const rect = statusMenuRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (spaceBelow < 220 && rect.top > 220) {
+        setOpenUpwards(true);
+      } else {
+        setOpenUpwards(false);
+      }
+    }
     const handleClickOutside = (e) => {
       if (statusMenuRef.current && !statusMenuRef.current.contains(e.target)) {
         setIsStatusMenuOpen(false);
@@ -236,7 +247,23 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const statusMenuOptions = React.useMemo(() => {
     // 1. Positive or Pending Option ("A outra opção")
     let primaryOption;
-    if (isIncomeEvent) {
+    if (isReminderEvent) {
+      if (isClosedReminder) {
+        primaryOption = {
+          label: t('status.open') || 'Em Aberto',
+          targetStatus: EventStatus.OPEN,
+          icon: <Clock size={13} style={{ color: '#06b6d4' }} />,
+          color: '#06b6d4'
+        };
+      } else {
+        primaryOption = {
+          label: t('status.closed') || 'Concluído',
+          targetStatus: EventStatus.CLOSED,
+          icon: <CheckCircle2 size={13} style={{ color: '#10b981' }} />,
+          color: '#10b981'
+        };
+      }
+    } else if (isIncomeEvent) {
       if (isReceivedIncome) {
         primaryOption = {
           label: t('status.toReceive') || 'A Receber',
@@ -338,9 +365,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     let cancelOption;
     if (isCancelled) {
       const isInv = isInvestmentEvent;
+      const isRem = isReminderEvent;
       cancelOption = {
-        label: isInv ? (t('status.planned') || 'Reativar (Previsto)') : (t('status.pending') || 'Reativar (Pendente)'),
-        targetStatus: isInv ? EventStatus.PLANNED : EventStatus.PENDING,
+        label: isRem ? (t('status.open') || 'Reativar (Em Aberto)') : isInv ? (t('status.planned') || 'Reativar (Previsto)') : (t('status.pending') || 'Reativar (Pendente)'),
+        targetStatus: isRem ? EventStatus.OPEN : isInv ? EventStatus.PLANNED : EventStatus.PENDING,
         icon: <Clock size={13} style={{ color: '#38bdf8' }} />,
         color: '#38bdf8'
       };
@@ -355,6 +383,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
     return [primaryOption, cancelOption];
   }, [
+    isReminderEvent,
+    isClosedReminder,
     isIncomeEvent,
     isExpenseEvent,
     isInvestmentEvent,
@@ -389,9 +419,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         <div
           style={{
             position: 'absolute',
-            top: 'calc(100% + 4px)',
+            top: openUpwards ? undefined : 'calc(100% + 4px)',
+            bottom: openUpwards ? 'calc(100% + 4px)' : undefined,
             right: 0,
-            zIndex: 99999,
+            zIndex: 999999,
             background: 'var(--bg-card, #131722)',
             border: '1px solid var(--border-glass-glow, rgba(99, 102, 241, 0.35))',
             boxShadow: '0 10px 30px rgba(0, 0, 0, 0.75), 0 0 15px rgba(99, 102, 241, 0.15)',
@@ -554,6 +585,76 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const [newSubpartAmount, setNewSubpartAmount] = useState('');
   const [editingSubpartIdx, setEditingSubpartIdx] = useState(null);
 
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const [catOpenUpwards, setCatOpenUpwards] = useState(false);
+  const categoryDropdownRef = useRef(null);
+
+  useEffect(() => {
+    if (!isCategoryDropdownOpen) return;
+    if (categoryDropdownRef.current) {
+      const rect = categoryDropdownRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (spaceBelow < 260 && rect.top > 260) {
+        setCatOpenUpwards(true);
+      } else {
+        setCatOpenUpwards(false);
+      }
+    }
+    const handleClickOutside = (e) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target)) {
+        setIsCategoryDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isCategoryDropdownOpen]);
+
+  const handleSelectCategory = (newCat) => {
+    if (newCat && newCat !== event.category && onUpdateEventDirect) {
+      onUpdateEventDirect({
+        ...event,
+        category: newCat
+      });
+    }
+    setIsCategoryDropdownOpen(false);
+  };
+
+  const getCategoryOptionsForEvent = () => {
+    const isIncome = event.eventType === EventType.INCOME || timelineType === TimelineType.INCOME || event.isIncome;
+    const isInvestment = event.eventType === EventType.INVESTMENT || timelineType === TimelineType.INVESTMENT || event.isInvestment;
+    const isReminder = timelineType === TimelineType.REMINDER || timelineType === 'reminder' || timelineType === 'reminders';
+    if (isReminder) {
+      return Object.values(ReminderEventCategory).map((key) => ({
+        key,
+        meta: REMINDER_CATEGORY_META[key] || {
+          icon: Tag,
+          color: '#f59e0b',
+          bg: 'rgba(245, 158, 11, 0.15)'
+        },
+        label: t(`reminderCategories.${key}`) || key
+      }));
+    }
+    if (isIncome) {
+      return Object.keys(INCOME_CATEGORY_META).map((key) => ({
+        key,
+        meta: INCOME_CATEGORY_META[key],
+        label: t(`incomeCategories.${key}`) || key
+      }));
+    }
+    if (isInvestment) {
+      return Object.keys(INVESTMENT_CATEGORY_META).map((key) => ({
+        key,
+        meta: INVESTMENT_CATEGORY_META[key],
+        label: t(`investmentCategories.${key}`) || key
+      }));
+    }
+    return Object.keys(EXPENSE_CATEGORY_META).map((key) => ({
+      key,
+      meta: EXPENSE_CATEGORY_META[key],
+      label: t(`expenseCategories.${key}`) || key
+    }));
+  };
+
   const hasBreakdown = Array.isArray(event.breakdownItems) && event.breakdownItems.length > 0;
 
   React.useEffect(() => {
@@ -566,21 +667,11 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
   const canEditAmount = true;
 
-  const isRecurring = Boolean(
-    event.recurrence === EventRecurrence.RECURRING ||
-    event.recurrence === EventRecurrence.LIMITED ||
-    event.recurrence === 'recurring' ||
-    event.recurrence === 'limited' ||
-    event.periodicity === 'recorrente' ||
-    event.periodicity === 'period' ||
-    event.isRecurring === true ||
-    event.is_recurring === true ||
+  const isRecurring = (
+    normRec === EventRecurrence.RECURRING ||
+    normRec === EventRecurrence.LIMITED ||
     Boolean(event.seriesId)
-  ) &&
-    event.recurrence !== EventRecurrence.ONCE &&
-    event.recurrence !== 'once' &&
-    event.periodicity !== 'once' &&
-    event.periodicity !== 'unica';
+  ) && normRec !== EventRecurrence.ONCE;
 
   const handleSaveAmount = (e) => {
     if (e) {
@@ -970,6 +1061,69 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   // Category Info & Styles
   const getCategoryMeta = (cat) => {
     const normalizedCat = (cat || '').toLowerCase().trim();
+    if (!normalizedCat) {
+      return {
+        label: t('categories.default') || 'Agendamento',
+        icon: <Tag size={12} />,
+        bg: 'rgba(6, 182, 212, 0.15)',
+        color: '#67e8f9',
+        border: 'rgba(6, 182, 212, 0.3)'
+      };
+    }
+
+    if (EXPENSE_CATEGORY_META[normalizedCat]) {
+      const meta = EXPENSE_CATEGORY_META[normalizedCat];
+      const IconComp = meta.icon;
+      return {
+        label: t(`expenseCategories.${normalizedCat}`) || normalizedCat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        icon: IconComp ? <IconComp size={12} /> : <Tag size={12} />,
+        bg: meta.bg || 'rgba(244, 63, 94, 0.15)',
+        color: meta.color || '#f43f5e',
+        border: 'rgba(244, 63, 94, 0.3)'
+      };
+    }
+
+    if (INCOME_CATEGORY_META[normalizedCat]) {
+      const meta = INCOME_CATEGORY_META[normalizedCat];
+      const IconComp = meta.icon;
+      return {
+        label: t(`incomeCategories.${normalizedCat}`) || normalizedCat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        icon: IconComp ? <IconComp size={12} /> : <DollarSign size={12} />,
+        bg: meta.bg || 'rgba(16, 185, 129, 0.15)',
+        color: meta.color || '#10b981',
+        border: 'rgba(16, 185, 129, 0.3)'
+      };
+    }
+
+    if (INVESTMENT_CATEGORY_META[normalizedCat]) {
+      const meta = INVESTMENT_CATEGORY_META[normalizedCat];
+      const IconComp = meta.icon;
+      return {
+        label: t(`investmentCategories.${normalizedCat}`) || normalizedCat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        icon: IconComp ? <IconComp size={12} /> : <TrendingUp size={12} />,
+        bg: meta.bg || 'rgba(139, 92, 246, 0.15)',
+        color: meta.color || '#8b5cf6',
+        border: 'rgba(139, 92, 246, 0.3)'
+      };
+    }
+
+    if (REMINDER_CATEGORY_META[normalizedCat] || Object.values(ReminderEventCategory).includes(normalizedCat)) {
+      const meta = REMINDER_CATEGORY_META[normalizedCat] || {
+        icon: Tag,
+        color: '#f59e0b',
+        bg: 'rgba(245, 158, 11, 0.15)'
+      };
+      const IconComp = meta.icon || Tag;
+      const color = meta.color || '#f59e0b';
+      return {
+        label: t(`reminderCategories.${normalizedCat}`) || normalizedCat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        icon: <IconComp size={12} />,
+        bg: meta.bg || `${color}26`,
+        color,
+        border: `${color}4d`
+      };
+    }
+
     switch (normalizedCat) {
       case 'meal_allowance':
       case 'mealallowance':
@@ -977,7 +1131,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       case 'subsidio_refeicao':
         return {
           label: t('incomeCategories.meal_allowance') || 'Meal Allowance',
-          icon: <Utensils size={11} />,
+          icon: <Utensils size={12} />,
           bg: 'rgba(245, 158, 11, 0.15)',
           color: '#f59e0b',
           border: 'rgba(245, 158, 11, 0.3)'
@@ -986,7 +1140,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       case 'entrada_recorrente':
         return {
           label: t('incomeCategories.salary') || 'Salário',
-          icon: <DollarSign size={11} />,
+          icon: <DollarSign size={12} />,
           bg: 'rgba(16, 185, 129, 0.15)',
           color: '#10b981',
           border: 'rgba(16, 185, 129, 0.3)'
@@ -995,7 +1149,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       case 'entrada_esporadica':
         return {
           label: t('incomeCategories.bonus') || 'Bónus',
-          icon: <Gift size={11} />,
+          icon: <Gift size={12} />,
           bg: 'rgba(6, 182, 212, 0.15)',
           color: '#06b6d4',
           border: 'rgba(6, 182, 212, 0.3)'
@@ -1003,7 +1157,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       case 'freelance':
         return {
           label: t('incomeCategories.freelance') || 'Freelance',
-          icon: <Zap size={11} />,
+          icon: <Zap size={12} />,
           bg: 'rgba(6, 182, 212, 0.15)',
           color: '#06b6d4',
           border: 'rgba(6, 182, 212, 0.3)'
@@ -1011,7 +1165,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       case 'investment_return':
         return {
           label: t('incomeCategories.investment_return') || 'Retorno de Investimento',
-          icon: <TrendingUp size={11} />,
+          icon: <TrendingUp size={12} />,
           bg: 'rgba(59, 130, 246, 0.15)',
           color: '#3b82f6',
           border: 'rgba(59, 130, 246, 0.3)'
@@ -1019,7 +1173,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       case 'recurring_income':
         return {
           label: t('incomeCategories.recurring_income') || 'Entrada Recorrente',
-          icon: <Repeat size={11} />,
+          icon: <Repeat size={12} />,
           bg: 'rgba(20, 184, 166, 0.15)',
           color: '#14b8a6',
           border: 'rgba(20, 184, 166, 0.3)'
@@ -1112,48 +1266,48 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         return {
           label: 'Eletricidade',
           icon: <Zap size={12} />,
-          bg: 'rgba(99, 102, 241, 0.15)',
-          color: '#818cf8',
-          border: 'rgba(99, 102, 241, 0.3)'
+          bg: 'rgba(244, 63, 94, 0.15)',
+          color: '#f43f5e',
+          border: 'rgba(244, 63, 94, 0.3)'
         };
       case 'water':
         return {
           label: 'Água',
           icon: <Tag size={12} />,
-          bg: 'rgba(16, 185, 129, 0.15)',
-          color: '#34d399',
-          border: 'rgba(16, 185, 129, 0.3)'
+          bg: 'rgba(244, 63, 94, 0.15)',
+          color: '#f43f5e',
+          border: 'rgba(244, 63, 94, 0.3)'
         };
       case 'gas':
         return {
           label: 'Gás',
           icon: <Tag size={12} />,
-          bg: 'rgba(245, 158, 11, 0.15)',
-          color: '#fbbf24',
-          border: 'rgba(245, 158, 11, 0.3)'
+          bg: 'rgba(244, 63, 94, 0.15)',
+          color: '#f43f5e',
+          border: 'rgba(244, 63, 94, 0.3)'
         };
       case 'communications':
         return {
           label: 'Comunicações / TV',
           icon: <CreditCard size={12} />,
-          bg: 'rgba(6, 182, 212, 0.15)',
-          color: '#22d3ee',
-          border: 'rgba(6, 182, 212, 0.3)'
+          bg: 'rgba(244, 63, 94, 0.15)',
+          color: '#f43f5e',
+          border: 'rgba(244, 63, 94, 0.3)'
         };
       case 'rent':
         return {
           label: 'Renda / Habitação',
           icon: <Home size={12} />,
-          bg: 'rgba(168, 85, 247, 0.15)',
-          color: '#c084fc',
-          border: 'rgba(168, 85, 247, 0.3)'
+          bg: 'rgba(244, 63, 94, 0.15)',
+          color: '#f43f5e',
+          border: 'rgba(244, 63, 94, 0.3)'
         };
       case 'health':
         return {
           label: 'Saúde',
           icon: <Tag size={12} />,
           bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#fb7185',
+          color: '#f43f5e',
           border: 'rgba(244, 63, 94, 0.3)'
         };
       case 'food':
@@ -1168,43 +1322,43 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         return {
           label: 'Transporte / Combustível',
           icon: <Car size={12} />,
-          bg: 'rgba(59, 130, 246, 0.15)',
-          color: '#60a5fa',
-          border: 'rgba(59, 130, 246, 0.3)'
+          bg: 'rgba(244, 63, 94, 0.15)',
+          color: '#f43f5e',
+          border: 'rgba(244, 63, 94, 0.3)'
         };
       case 'carmaintenance':
         return {
           label: 'Manutenção Auto',
           icon: <Car size={12} />,
-          bg: 'rgba(245, 158, 11, 0.15)',
-          color: '#fbbf24',
-          border: 'rgba(245, 158, 11, 0.3)'
+          bg: 'rgba(244, 63, 94, 0.15)',
+          color: '#f43f5e',
+          border: 'rgba(244, 63, 94, 0.3)'
         };
       case 'house':
       case 'housemaintenance':
         return {
           label: 'Casa / Habitação',
           icon: <Home size={12} />,
-          bg: 'rgba(168, 85, 247, 0.15)',
-          color: '#c084fc',
-          border: 'rgba(168, 85, 247, 0.3)'
+          bg: 'rgba(244, 63, 94, 0.15)',
+          color: '#f43f5e',
+          border: 'rgba(244, 63, 94, 0.3)'
         };
       case 'services':
       case 'fixed_expense':
         return {
           label: 'Serviços',
           icon: <Sliders size={12} />,
-          bg: 'rgba(100, 116, 139, 0.15)',
-          color: '#94a3b8',
-          border: 'rgba(100, 116, 139, 0.3)'
+          bg: 'rgba(244, 63, 94, 0.15)',
+          color: '#f43f5e',
+          border: 'rgba(244, 63, 94, 0.3)'
         };
       case 'ensurance':
         return {
           label: 'Seguros',
           icon: <FileText size={12} />,
-          bg: 'rgba(99, 102, 241, 0.15)',
-          color: '#818cf8',
-          border: 'rgba(99, 102, 241, 0.3)'
+          bg: 'rgba(244, 63, 94, 0.15)',
+          color: '#f43f5e',
+          border: 'rgba(244, 63, 94, 0.3)'
         };
       default: {
         const cleaned = cat
@@ -1212,7 +1366,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           : 'Agendamento';
         return {
           label: cleaned,
-          icon: <Tag size={11} />,
+          icon: <Tag size={12} />,
           bg: 'rgba(6, 182, 212, 0.15)',
           color: '#67e8f9',
           border: 'rgba(6, 182, 212, 0.3)'
@@ -1229,6 +1383,35 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
   // Custom Status Badges
   const getCustomStatusBadge = () => {
+    if (isReminderEvent) {
+      if (isClosedReminder) {
+        return {
+          label: t('status.closed'),
+          icon: <CheckCircle2 size={11} />,
+          bg: 'rgba(16, 185, 129, 0.15)',
+          color: '#10b981',
+          border: 'rgba(16, 185, 129, 0.3)'
+        };
+      }
+      if (isOverdueReminder) {
+        return {
+          label: t('status.overdue'),
+          icon: <AlertCircle size={11} />,
+          bg: 'rgba(252, 191, 73, 0.18)',
+          color: '#fcbf49',
+          border: 'rgba(252, 191, 73, 0.4)',
+          pulsing: true
+        };
+      }
+      return {
+        label: t('status.open'),
+        icon: <Clock size={11} />,
+        bg: 'rgba(6, 182, 212, 0.15)',
+        color: '#06b6d4',
+        border: 'rgba(6, 182, 212, 0.3)'
+      };
+    }
+
     if (isIncomeEvent) {
       if (isReceivedIncome) {
         return {
@@ -1241,7 +1424,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       }
       if (isOverdueIncome) {
         return {
-          label: 'Atrasada',
+          label: t('status.overdue'),
           icon: <AlertCircle size={11} />,
           bg: 'rgba(252, 191, 73, 0.18)',
           color: '#fcbf49',
@@ -1251,7 +1434,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       }
       if (isNextIncome) {
         return {
-          label: 'Próxima Entrada',
+          label: t('status.nextIncome') || 'Próxima Entrada',
           icon: <Clock size={11} />,
           bg: 'rgba(59, 130, 246, 0.15)',
           color: '#60a5fa',
@@ -1259,7 +1442,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         };
       }
       return {
-        label: 'A Receber',
+        label: t('status.toReceive') || 'A Receber',
         icon: <Clock size={11} />,
         bg: 'rgba(148, 163, 184, 0.1)',
         color: '#94a3b8',
@@ -1892,34 +2075,133 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             })()}
           </div>
 
-          {/* Categoria do Evento debaixo do título (com ícone da categoria e texto sem _) */}
+          {/* Categoria do Evento debaixo do título (com opção de troca rápida) */}
           {event.category && (
             <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '0.74rem',
-                color: 'var(--text-dim, #94a3b8)',
-                fontWeight: '500',
-                lineHeight: '1.2'
-              }}
+              ref={categoryDropdownRef}
+              style={{ position: 'relative', display: 'inline-flex' }}
             >
-              {catMeta?.icon && (
-                <span
+              <div
+                onClick={(e) => {
+                  if (isLoanInstallment) return;
+                  e.stopPropagation();
+                  setIsCategoryDropdownOpen((prev) => !prev);
+                }}
+                title={!isLoanInstallment ? (t('timeline.changeCategory') || 'Clique para alterar a categoria') : undefined}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.76rem',
+                  color: 'var(--text-main, #ffffff)',
+                  fontWeight: '600',
+                  lineHeight: '1.2',
+                  cursor: !isLoanInstallment ? 'pointer' : 'default',
+                  padding: '2px 5px',
+                  borderRadius: '4px',
+                  background: isCategoryDropdownOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                  transition: 'background var(--transition-fast)'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isLoanInstallment) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!isLoanInstallment) e.currentTarget.style.background = isCategoryDropdownOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent';
+                }}
+              >
+                {catMeta?.icon && (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      color: catMeta.color || '#818cf8'
+                    }}
+                  >
+                    {catMeta.icon}
+                  </span>
+                )}
+                <span style={{ color: 'var(--text-main, #ffffff)', fontWeight: '600' }}>
+                  {catMeta?.label || event.category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                </span>
+                {!isLoanInstallment && (
+                  <ChevronDown size={10} style={{ opacity: 0.7, marginLeft: '1px' }} />
+                )}
+              </div>
+
+              {isCategoryDropdownOpen && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    opacity: 0.85,
-                    color: catMeta.color || 'inherit'
+                    position: 'absolute',
+                    top: catOpenUpwards ? undefined : 'calc(100% + 4px)',
+                    bottom: catOpenUpwards ? 'calc(100% + 4px)' : undefined,
+                    left: 0,
+                    zIndex: 999999,
+                    background: 'var(--bg-card, #1e2230)',
+                    border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.12))',
+                    borderRadius: '8px',
+                    boxShadow: '0 10px 28px rgba(0, 0, 0, 0.5)',
+                    padding: '6px',
+                    minWidth: '190px',
+                    maxHeight: '260px',
+                    overflowY: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px'
                   }}
                 >
-                  {catMeta.icon}
-                </span>
+                  {getCategoryOptionsForEvent().map((opt) => {
+                    const isSelected = event.category === opt.key;
+                    const IconComponent = opt.meta?.icon;
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectCategory(opt.key);
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          background: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                          color: isSelected ? 'var(--primary-light, #818cf8)' : 'var(--text-main, #ffffff)',
+                          border: isSelected ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
+                          fontSize: '0.80rem',
+                          fontWeight: isSelected ? '700' : '600',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          width: '100%',
+                          transition: 'all var(--transition-fast)'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.background = 'transparent';
+                          }
+                        }}
+                      >
+                        {IconComponent && (
+                          <span style={{ color: opt.meta?.color || '#818cf8', display: 'flex', alignItems: 'center' }}>
+                            <IconComponent size={13} />
+                          </span>
+                        )}
+                        <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isSelected ? 'var(--primary-light, #818cf8)' : 'var(--text-main, #ffffff)', fontWeight: '600' }}>
+                          {opt.label}
+                        </span>
+                        {isSelected && <Check size={12} style={{ color: 'var(--primary-light, #818cf8)' }} />}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
-              <span>
-                {catMeta?.label || event.category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-              </span>
             </div>
           )}
         </div>
@@ -3091,7 +3373,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         </div>
       )}
 
-      {/* 📋 Default / Generic Event Strip (boc in) */}
+      {/* 📋 Default / Generic / Reminder Event Strip */}
       {!isIncomeEvent && !isExpenseEvent && !isInvestmentEvent && !isAmortization && !isLoanInstallment && (
         <div
           className="loan-breakdown-strip"
@@ -3109,7 +3391,90 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           {/* Linha 1: [icone] [titulo do evento] [lables] */}
           {renderCardInnerHeader()}
 
-          {/* Linha 2 & 3: [Valor] & [event action buttons] */}
+          {/* Linha 2: [motivo/tipo] (left) e [b status] (right) */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', paddingBottom: '0px' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1 }}>
+                {isReminderEvent ? (t('timeline.reminders') || 'Lembretes') : (t('common.event') || 'Evento')}
+              </span>
+              {event.priority && !isInertFuture && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid var(--border-glass)', paddingLeft: '10px' }}>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                    {t('common.priority') || 'Prioridade'}:
+                  </span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                    {event.priority}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+              {renderStatusDropdownButton(
+                {
+                  className: 'btn btn-sm',
+                  title: t('timeline.clickToChangeStatus') || 'Clique para alterar o status',
+                  style: {
+                    background: isCancelled
+                      ? 'rgba(148, 163, 184, 0.15)'
+                      : isClosedReminder
+                        ? 'rgba(16, 185, 129, 0.16)'
+                        : isOverdueReminder
+                          ? 'rgba(252, 191, 73, 0.16)'
+                          : 'rgba(6, 182, 212, 0.14)',
+                    color: isCancelled
+                      ? '#94a3b8'
+                      : isClosedReminder
+                        ? '#10b981'
+                        : isOverdueReminder
+                          ? '#fcbf49'
+                          : '#06b6d4',
+                    border: isCancelled
+                      ? '1px solid rgba(148, 163, 184, 0.35)'
+                      : isClosedReminder
+                        ? '1px solid rgba(16, 185, 129, 0.35)'
+                        : isOverdueReminder
+                          ? '1px solid rgba(252, 191, 73, 0.4)'
+                          : '1px solid rgba(6, 182, 212, 0.35)',
+                    borderRadius: '9999px',
+                    padding: '4px 12px',
+                    fontSize: '0.76rem',
+                    fontWeight: '700',
+                    cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
+                    opacity: isTogglingStatus ? 0.6 : 1,
+                    pointerEvents: isTogglingStatus ? 'none' : 'auto',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    transition: 'all 0.15s ease'
+                  }
+                },
+                isCancelled ? (
+                  <>
+                    <Ban size={13} style={{ color: '#94a3b8' }} />
+                    <span>{t('status.cancelled')}</span>
+                  </>
+                ) : isClosedReminder ? (
+                  <>
+                    <CheckCircle2 size={13} style={{ color: '#10b981' }} />
+                    <span>{t('status.closed')}</span>
+                  </>
+                ) : isOverdueReminder ? (
+                  <>
+                    <AlertCircle size={13} style={{ color: '#fcbf49' }} />
+                    <span>{t('status.overdue')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Clock size={13} style={{ color: '#06b6d4' }} />
+                    <span>{t('status.open')}</span>
+                  </>
+                )
+              )}
+            </div>
+          </div>
+
+          {/* Linha 3: [Valor] & [event action buttons] */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -3728,7 +4093,9 @@ export const TimelineEventCard = React.memo(function TimelineEventCard({
         padding: '8px 10px 8px 10px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '6px'
+        gap: '6px',
+        overflow: 'visible',
+        position: 'relative'
       }}
     >
       {/* Top Header (box ex) */}

@@ -1,16 +1,16 @@
 import { addDays, addMonths, addYears, format, parseISO } from 'date-fns';
-import { EventStatus, EventPeriodicity, EventRecurrence, EventType } from '../../../shared/enums/index.js';
+import { EventStatus, EventPeriodicity, EventRecurrence, EventType, normalizePeriodicity, normalizeRecurrence } from '../../../shared/enums/index.js';
 
 function advanceDateByPeriodicity(curDate, periodicity, dayOfMonth) {
-  const p = String(periodicity || EventPeriodicity.MONTHLY).toLowerCase();
+  const p = normalizePeriodicity(periodicity);
   let nextDate;
-  if (p === EventPeriodicity.BIWEEKLY || p === 'quinzenal' || p === 'biweekly') {
+  if (p === EventPeriodicity.BIWEEKLY) {
     return addDays(curDate, 14);
-  } else if (p === EventPeriodicity.BIMONTHLY || p === 'bimestral' || p === 'bimonthly' || p === 'bimounthly') {
+  } else if (p === EventPeriodicity.BIMONTHLY) {
     nextDate = addMonths(curDate, 2);
-  } else if (p === EventPeriodicity.SEMIANNUAL || p === 'semestral' || p === 'biannual' || p === 'semiannual') {
+  } else if (p === EventPeriodicity.SEMIANNUAL) {
     nextDate = addMonths(curDate, 6);
-  } else if (p === EventPeriodicity.ANNUAL || p === 'anual' || p === 'annual') {
+  } else if (p === EventPeriodicity.ANNUAL) {
     nextDate = addYears(curDate, 1);
   } else {
     nextDate = addMonths(curDate, 1);
@@ -49,25 +49,16 @@ export function projectEvents(rawEvents = [], options = {}) {
       (ev.timelineId && String(ev.timelineId).startsWith('tl-loan-')) ||
       (ev.timelineOriginId && String(ev.timelineOriginId).startsWith('tl-loan-'));
 
+    const normalizedRec = normalizeRecurrence(ev);
     const isRecurringEvent =
       !isLoan &&
-      (
-        ev.recurrence === EventRecurrence.RECURRING ||
-        ev.recurrence === EventRecurrence.LIMITED ||
-        ev.recurrence === 'recurring' ||
-        ev.recurrence === 'limited' ||
-        ev.isRecurring === true ||
-        ev.is_recurring === true ||
-        ev.periodicity === 'recorrente' ||
-        ev.periodicity === 'period'
-      ) &&
-      ev.recurrence !== EventRecurrence.ONCE &&
-      ev.recurrence !== 'once' &&
-      ev.periodicity !== 'once' &&
-      ev.periodicity !== 'unica';
+      (normalizedRec === EventRecurrence.RECURRING || normalizedRec === EventRecurrence.LIMITED);
 
     const seriesTargetId = ev.sobrepositionOver || (
-      !isRecurringEvent && ev.eventId && rawEvents.some(r => (r.isRecurring || r.recurrence === EventRecurrence.RECURRING || r.recurrence === EventRecurrence.LIMITED || r.periodicity === 'recorrente' || r.periodicity === 'period') && (r.eventId === ev.eventId || r.id === ev.eventId)) ? ev.eventId : null
+      !isRecurringEvent && ev.eventId && rawEvents.some(r => {
+        const rRec = normalizeRecurrence(r);
+        return (rRec === EventRecurrence.RECURRING || rRec === EventRecurrence.LIMITED) && (r.eventId === ev.eventId || r.id === ev.eventId);
+      }) ? ev.eventId : null
     );
 
     if (seriesTargetId) {
@@ -171,18 +162,33 @@ export function projectEvents(rawEvents = [], options = {}) {
         }
       }
 
-      const seriesEndDate =
-        activeVersion.recurrenceEndDate || activeVersion.endDate || rootVersion.recurrenceEndDate || rootVersion.endDate;
-      const isPeriod =
-        activeVersion.recurrence === EventRecurrence.LIMITED ||
-        rootVersion.recurrence === EventRecurrence.LIMITED ||
-        activeVersion.periodicity === EventPeriodicity.PERIOD ||
-        rootVersion.periodicity === EventPeriodicity.PERIOD ||
-        Boolean(seriesEndDate);
+      const rawLimitDate =
+        activeVersion.limitDate ||
+        activeVersion.limit_date ||
+        rootVersion.limitDate ||
+        rootVersion.limit_date ||
+        activeVersion.recurrenceEndDate ||
+        activeVersion.endDate ||
+        rootVersion.recurrenceEndDate ||
+        rootVersion.endDate;
 
-      if (isPeriod && seriesEndDate) {
-        const endMonthKey = seriesEndDate.length === 7 ? seriesEndDate : seriesEndDate.substring(0, 7);
-        if (curMonthKey > endMonthKey) {
+      const isPeriod =
+        normalizeRecurrence(activeVersion) === EventRecurrence.LIMITED ||
+        normalizeRecurrence(rootVersion) === EventRecurrence.LIMITED ||
+        Boolean(rawLimitDate);
+
+      if (isPeriod && rawLimitDate) {
+        const limitStr = String(rawLimitDate).trim();
+        if (limitStr.length === 7) {
+          if (curMonthKey > limitStr) {
+            break;
+          }
+        } else if (limitStr.length >= 10) {
+          const limitDayStr = limitStr.substring(0, 10);
+          if (curDateStr > limitDayStr) {
+            break;
+          }
+        } else if (curMonthKey > limitStr.substring(0, 7)) {
           break;
         }
       }

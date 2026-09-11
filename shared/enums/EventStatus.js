@@ -58,8 +58,7 @@ export const POSITIVE_EVENT_STATUSES = new Set([
 export const isPositiveStatus = (status) => POSITIVE_EVENT_STATUSES.has(status);
 export const isCancelledStatus = (status) => {
   if (!status) return false;
-  const s = String(status).toLowerCase();
-  return s === EventStatus.CANCELLED || s === 'cancelled' || s === 'cancelado';
+  return String(status).toLowerCase() === EventStatus.CANCELLED;
 };
 export const isNegativeStatus = (status) => !status || (!isPositiveStatus(status) && !isCancelledStatus(status));
 

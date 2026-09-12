@@ -489,14 +489,6 @@ export function applyAmortizationReduceInstallment(
     return currentEvents;
   }
 
-  // Ordenar as parcelas restantes cronologicamente
-  future.sort((a, b) => {
-    const na = Number(a.installmentNumber || 0);
-    const nb = Number(b.installmentNumber || 0);
-    if (na && nb) return na - nb;
-    return (a.date || '').localeCompare(b.date || '');
-  });
-
   const totalPrincipalBefore = future.reduce(
     (sum, ev) => sum + (ev.originalInstallmentCapital ?? getPrincipal(ev)),
     0
@@ -506,54 +498,14 @@ export function applyAmortizationReduceInstallment(
     return currentEvents;
   }
 
-  const newPrincipal = Math.max(
-    0,
-    Math.round((totalPrincipalBefore - amortVal) * 100) / 100
-  );
-  const n = future.length;
+  const futureIds = new Set(future.map((f) => f.id));
+  const ratio =
+    Math.max(0, totalPrincipalBefore - amortVal) / totalPrincipalBefore;
 
-  // Extrair a taxa de juros mensal do contrato (i)
-  const firstEv = future[0];
-  const firstOrigInt =
-    firstEv.originalInstallmentInterest ??
-    firstEv.installmentInterest ??
-    getInstallmentInterest(firstEv);
-
-  let monthlyRate = 0;
-  const tan =
-    Number(timeline?.tanRate || 0) + Number(timeline?.spread || 0) ||
-    Number(
-      timeline?.interestRate ||
-      timeline?.annualInterestRate ||
-      timeline?.loanContract?.annualInterestRate ||
-      0
-    );
-
-  if (tan > 0) {
-    monthlyRate = (tan / 100) / 12;
-  } else if (totalPrincipalBefore > 0 && firstOrigInt > 0) {
-    monthlyRate = firstOrigInt / totalPrincipalBefore;
-  }
-
-  // Recalcular prestação base Price (PMT) sobre o novo saldo devedor
-  let pmt = 0;
-  if (newPrincipal > 0 && n > 0) {
-    if (monthlyRate > 0) {
-      const compound = Math.pow(1 + monthlyRate, n);
-      pmt = (newPrincipal * (monthlyRate * compound)) / (compound - 1);
-    } else {
-      pmt = newPrincipal / n;
+  return currentEvents.map((ev) => {
+    if (!futureIds.has(ev.id)) {
+      return ev;
     }
-  }
-  pmt = Math.round(pmt * 100) / 100;
-
-  // Simular mês a mês no sistema Price a partir do novo saldo
-  let runningBalance = newPrincipal;
-  const patch = new Map();
-
-  for (let k = 0; k < future.length; k++) {
-    const ev = future[k];
-    const isLast = k === future.length - 1;
 
     const origCap =
       ev.originalInstallmentCapital ??
@@ -572,32 +524,27 @@ export function applyAmortizationReduceInstallment(
       ev.installmentAmount ??
       getInstallmentAmount(ev);
 
-    let interest = Math.round(runningBalance * monthlyRate * 100) / 100;
-    let capital = Math.round((pmt - interest) * 100) / 100;
+    const capital =
+      Math.round(origCap * ratio * 100) / 100;
+    const interest =
+      Math.round(origInt * ratio * 100) / 100;
+    const fee =
+      Math.round(origFee * ratio * 100) / 100;
+    const amount =
+      Math.round((capital + interest + fee) * 100) / 100;
 
-    if (isLast || runningBalance <= capital) {
-      capital = runningBalance;
-    }
-
-    runningBalance = Math.max(
-      0,
-      Math.round((runningBalance - capital) * 100) / 100
-    );
-
-    const fee = origFee;
-    const amount = Math.round((capital + interest + fee) * 100) / 100;
     const isFullyAmortized =
-      newPrincipal === 0 || (capital === 0 && interest === 0 && amount === 0);
+      ratio === 0 || (capital === 0 && interest === 0 && amount === 0);
 
-    patch.set(ev.id, {
+    return {
+      ...ev,
       originalInstallmentAmount: origTotal,
       originalInstallmentCapital: origCap,
       originalInstallmentInterest: origInt,
       originalInstallmentFee: origFee,
-      savedInterest: Math.max(
-        0,
-        Math.round((origInt - interest) * 100) / 100
-      ),
+      savedInterest: isFullyAmortized
+        ? origInt
+        : Math.max(0, Math.round((origInt - interest) * 100) / 100),
       amount: amount,
       installmentAmount: amount,
       installmentCapital: capital,
@@ -606,17 +553,8 @@ export function applyAmortizationReduceInstallment(
       status: isFullyAmortized ? EventStatus.ABATED : ev.status,
       isAbated: isFullyAmortized ? true : Boolean(ev.isAbated),
       isCompleted: isFullyAmortized ? true : Boolean(ev.isCompleted)
-    });
-  }
-
-  return currentEvents.map((ev) =>
-    patch.has(ev.id)
-      ? {
-        ...ev,
-        ...patch.get(ev.id)
-      }
-      : ev
-  );
+    };
+  });
 }
 
 /**

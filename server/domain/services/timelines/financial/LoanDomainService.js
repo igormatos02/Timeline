@@ -252,8 +252,7 @@ export class LoanDomainService {
           processedEvents = this.#applyAmortizationReduceInstallment(
             processedEvents,
             amortEv,
-            amortVal,
-            loanTimeline
+            amortVal
           );
         } else {
           processedEvents = this.#applyAmortizationReduceTerm(
@@ -475,7 +474,7 @@ export class LoanDomainService {
    * REDUCE_INSTALLMENT: scale open installments down proportionally starting from the amortization date.
    * Isolated calculation logic.
    */
-  #applyAmortizationReduceInstallment(processedEvents, amortEv, amortVal, timeline = null) {
+  #applyAmortizationReduceInstallment(processedEvents, amortEv, amortVal) {
     const amortDateStr = (amortEv.date || '1900-01-01').substring(0, 10);
     const subsequentList = processedEvents.filter(
       (ev) =>
@@ -485,92 +484,40 @@ export class LoanDomainService {
     );
     if (!subsequentList || subsequentList.length === 0) return processedEvents;
 
-    subsequentList.sort((a, b) => {
-      const na = Number(a.installmentNumber || 0);
-      const nb = Number(b.installmentNumber || 0);
-      if (na && nb) return na - nb;
-      return (a.date || '').localeCompare(b.date || '');
-    });
-
     const totalOpenCapital = subsequentList.reduce(
       (sum, ev) => sum + Number(ev.originalInstallmentCapital ?? ev.installmentCapital ?? 0),
       0
     );
     if (totalOpenCapital <= 0) return processedEvents;
 
-    const newPrincipal = Math.max(0, Math.round((totalOpenCapital - amortVal) * 100) / 100);
-    const n = subsequentList.length;
+    const ratio = Math.max(0, totalOpenCapital - amortVal) / totalOpenCapital;
+    const subsequentIds = new Set(subsequentList.map((ev) => ev.id));
 
-    const firstEv = subsequentList[0];
-    const firstOrigInt = Number(firstEv.originalInstallmentInterest ?? firstEv.installmentInterest ?? 0);
-    let monthlyRate = 0;
-    const tan =
-      Number(timeline?.tanRate || 0) + Number(timeline?.spread || 0) ||
-      Number(
-        timeline?.interestRate ||
-        timeline?.annualInterestRate ||
-        timeline?.loanContract?.annualInterestRate ||
-        0
-      );
-
-    if (tan > 0) {
-      monthlyRate = (tan / 100) / 12;
-    } else if (totalOpenCapital > 0 && firstOrigInt > 0) {
-      monthlyRate = firstOrigInt / totalOpenCapital;
-    }
-
-    let pmt = 0;
-    if (newPrincipal > 0 && n > 0) {
-      if (monthlyRate > 0) {
-        const compound = Math.pow(1 + monthlyRate, n);
-        pmt = (newPrincipal * (monthlyRate * compound)) / (compound - 1);
-      } else {
-        pmt = newPrincipal / n;
-      }
-    }
-    pmt = Math.round(pmt * 100) / 100;
-
-    let runningBalance = newPrincipal;
-    const patch = new Map();
-
-    for (let k = 0; k < subsequentList.length; k++) {
-      const ev = subsequentList[k];
-      const isLast = k === subsequentList.length - 1;
-
+    return processedEvents.map((ev) => {
+      if (!subsequentIds.has(ev.id)) return ev;
       const baseCap = Number(ev.originalInstallmentCapital ?? ev.installmentCapital ?? 0);
       const baseInt = Number(ev.originalInstallmentInterest ?? ev.installmentInterest ?? 0);
       const baseFee = Number(ev.originalInstallmentFee ?? ev.installmentFee ?? 0);
-      const baseTotal = Number(ev.originalInstallmentAmount ?? ev.installmentAmount ?? 0);
+      const cap = Math.round(baseCap * ratio * 100) / 100;
+      const int = Math.round(baseInt * ratio * 100) / 100;
+      const fee = Math.round(baseFee * ratio * 100) / 100;
+      const amt = Math.round((cap + int + fee) * 100) / 100;
+      const isZero = ratio === 0 || (cap === 0 && int === 0 && amt === 0);
 
-      let interest = Math.round(runningBalance * monthlyRate * 100) / 100;
-      let capital = Math.round((pmt - interest) * 100) / 100;
-
-      if (isLast || runningBalance <= capital) {
-        capital = runningBalance;
-      }
-
-      runningBalance = Math.max(0, Math.round((runningBalance - capital) * 100) / 100);
-      const fee = baseFee;
-      const amt = Math.round((capital + interest + fee) * 100) / 100;
-      const isZero = newPrincipal === 0 || (capital === 0 && interest === 0 && amt === 0);
-
-      patch.set(ev.id, {
-        originalInstallmentAmount: baseTotal,
+      return {
+        ...ev,
         originalInstallmentCapital: baseCap,
         originalInstallmentInterest: baseInt,
         originalInstallmentFee: baseFee,
-        savedInterest: Math.max(0, Math.round((baseInt - interest) * 100) / 100),
-        installmentCapital: capital,
-        installmentInterest: interest,
+        installmentCapital: cap,
+        installmentInterest: int,
         installmentFee: fee,
         installmentAmount: amt,
         status: isZero ? EventStatus.ABATED : ev.status,
         isAbated: isZero ? true : Boolean(ev.isAbated),
         isCompleted: isZero ? true : Boolean(ev.isCompleted)
-      });
-    }
-
-    return processedEvents.map((ev) => patch.has(ev.id) ? { ...ev, ...patch.get(ev.id) } : ev);
+      };
+    });
   }
 
   /**

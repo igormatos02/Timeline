@@ -272,7 +272,7 @@ export default function EditTimelineSettingsModal({
               </button>
             )}
 
-            {initialData && !initialData.isSystemDefault && onDelete && (
+            {onDelete && (
               <button
                 type="button"
                 onClick={handleDelete}

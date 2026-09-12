@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import {
   Sparkles,
   Plus,
-  Trash2,
   Layers,
   Settings
 } from 'lucide-react';
@@ -353,26 +352,6 @@ export default function IncomeTimelineHeader({
               }}
             >
               <Settings size={15} />
-            </button>
-          )}
-
-          {onDelete && !timeline.isSystemDefault && (
-            <button
-              type="button"
-              className="btn btn-outline-danger btn-sm"
-              onClick={() => onDelete && onDelete(timeline)}
-              title={t('incomeHeader.deleteTitle')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 10px',
-                borderRadius: '8px',
-                fontSize: '0.74rem'
-              }}
-            >
-              <Trash2 size={13} />
-              <span>{t('common.delete')}</span>
             </button>
           )}
         </div>

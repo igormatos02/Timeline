@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Plus,
-  Trash2,
   Settings
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -135,26 +134,6 @@ export default function ExpenseTimelineHeader({
             >
               <Settings size={13} />
               <span>{t('buttons.edit') || (language === 'pt' ? 'Editar' : 'Edit')}</span>
-            </button>
-          )}
-
-          {onDelete && !timeline.isSystemDefault && (
-            <button
-              type="button"
-              className="btn btn-outline-danger btn-sm"
-              onClick={() => onDelete && onDelete(timeline)}
-              title={t('expenseHeader.deleteTitle')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 10px',
-                borderRadius: '8px',
-                fontSize: '0.74rem'
-              }}
-            >
-              <Trash2 size={13} />
-              <span>{t('buttons.delete')}</span>
             </button>
           )}
         </div>

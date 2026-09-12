@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Plus,
-  Trash2,
   CheckCircle2,
   Clock,
   Sparkles,
@@ -85,25 +84,6 @@ export default function ProjectTimelineHeader({
               }}
             >
               <Settings size={15} />
-            </button>
-          )}
-
-          {onDelete && !timeline.isSystemDefault && (
-            <button
-              type="button"
-              className="btn btn-outline-danger btn-sm"
-              onClick={() => onDelete && onDelete(timeline)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 10px',
-                borderRadius: '8px',
-                fontSize: '0.74rem'
-              }}
-            >
-              <Trash2 size={13} />
-              <span>{t('buttons.delete')}</span>
             </button>
           )}
         </div>

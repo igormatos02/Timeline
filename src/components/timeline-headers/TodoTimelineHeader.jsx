@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import {
   ListTodo,
   Plus,
-  Trash2,
   Settings,
   CheckCircle2,
   Clock,
@@ -141,26 +140,6 @@ export default function TodoTimelineHeader({
               }}
             >
               <Settings size={14} />
-            </button>
-          )}
-
-          {onDelete && !timeline.isSystemDefault && (
-            <button
-              type="button"
-              className="btn btn-outline-danger btn-sm"
-              onClick={() => onDelete && onDelete(timeline)}
-              title={t('todoHeader.deleteTitle')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 10px',
-                borderRadius: '8px',
-                fontSize: '0.74rem'
-              }}
-            >
-              <Trash2 size={13} />
-              <span>{t('buttons.delete')}</span>
             </button>
           )}
         </div>

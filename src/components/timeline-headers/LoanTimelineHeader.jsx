@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-  Wallet,
-  PieChart,
-  TrendingUp,
+  CreditCard,
+  Plus,
   Settings,
-  Trash2,
+  Sparkles,
   Building2,
-  FileText
+  FileText,
+  Calendar,
+  Percent,
+  CheckCircle2,
+  Clock,
+  ChevronDown
 } from 'lucide-react';
 import { format, parseISO, differenceInCalendarDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -37,8 +41,8 @@ export default function LoanTimelineHeader({
     timeline.status === 'INACTIVE';
 
   const headerColor = isInactive
-    ? '#94a3b8'
-    : (timeline.color || '#6366f1');
+    ? TimelineColor.SLATE
+    : (timeline.color || TimelineColor.PRIMARY);
 
   /*
    * getLoanMetrics() is responsible for reading the TimelineEvent
@@ -174,27 +178,27 @@ export default function LoanTimelineHeader({
 
   // Visual text colors
   const textColorMain = isInactive
-    ? '#94a3b8'
+    ? TimelineColor.SLATE
     : 'var(--text-main)';
 
   const textColorLight = isInactive
-    ? '#64748b'
+    ? TimelineColor.SLATE
     : 'var(--primary-light)';
 
   const textColorGreen = isInactive
-    ? '#64748b'
-    : '#10b981';
+    ? TimelineColor.SLATE
+    : TimelineColor.SUCCESS;
 
   const textColorOrange = isInactive
-    ? '#64748b'
-    : '#f59e0b';
+    ? TimelineColor.SLATE
+    : TimelineColor.WARNING;
 
   const textColorDim = isInactive
-    ? '#64748b'
+    ? TimelineColor.SLATE
     : 'var(--text-dim)';
 
   const textColorMuted = isInactive
-    ? '#64748b'
+    ? TimelineColor.SLATE
     : 'var(--text-muted)';
 
   return (
@@ -279,7 +283,7 @@ export default function LoanTimelineHeader({
                     borderRadius: '9999px',
                     background: isInactive
                       ? 'rgba(148, 163, 184, 0.3)'
-                      : `linear-gradient(135deg, ${TimelineColor.SUCCESS} 0%, #059669 100%)`,
+                      : `linear-gradient(135deg, ${TimelineColor.SUCCESS} 0%, rgba(5, 150, 105, 1) 100%)`,
                     border: 'none',
                     cursor: 'pointer',
                     position: 'relative',
@@ -433,35 +437,6 @@ export default function LoanTimelineHeader({
               <Settings size={15} />
             </button>
           )}
-
-          {onDelete &&
-            !timeline.isSystemDefault && (
-              <button
-                type="button"
-                className="btn btn-outline-danger btn-sm"
-                onClick={() => onDelete && onDelete(timeline)}
-                title={
-                  t(
-                    'loanHeader.deleteContractTitle'
-                  ) ||
-                  'Eliminar este contrato de empréstimo e todas as suas prestações associadas'
-                }
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  padding: '6px 10px',
-                  borderRadius: '8px',
-                  fontSize: '0.74rem'
-                }}
-              >
-                <Trash2 size={13} />
-
-                <span>
-                  {t('loanHeader.deleteContract')}
-                </span>
-              </button>
-            )}
         </div>
       }
     >
@@ -611,7 +586,7 @@ export default function LoanTimelineHeader({
                             width: '42px',
                             height: '42px',
                             borderRadius: '50%',
-                            background: 'var(--bg-card, #0f172a)',
+                            background: 'var(--bg-card)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -636,7 +611,7 @@ export default function LoanTimelineHeader({
                   );
                 }
 
-                const sliceColor = isInactive ? '#94a3b8' : annualCommitmentPct >= 80 ? '#f43f5e' : '#f59e0b';
+                const sliceColor = isInactive ? TimelineColor.SLATE : annualCommitmentPct >= 80 ? TimelineColor.DANGER : TimelineColor.WARNING;
 
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
@@ -716,7 +691,7 @@ export default function LoanTimelineHeader({
                             width: '42px',
                             height: '42px',
                             borderRadius: '50%',
-                            background: 'var(--bg-card, #0f172a)',
+                            background: 'var(--bg-card)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -741,7 +716,7 @@ export default function LoanTimelineHeader({
                   );
                 }
 
-                const sliceColor = isInactive ? '#94a3b8' : textColorGreen;
+                const sliceColor = isInactive ? TimelineColor.SLATE : textColorGreen;
 
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
@@ -813,8 +788,8 @@ export default function LoanTimelineHeader({
                 style={{
                   width: `${progressPercent}%`,
                   background: isInactive
-                    ? '#94a3b8'
-                    : 'linear-gradient(90deg, #6366f1 0%, #10b981 100%)'
+                    ? TimelineColor.SLATE
+                    : `linear-gradient(90deg, ${TimelineColor.PRIMARY} 0%, ${TimelineColor.SUCCESS} 100%)`
                 }}
               />
             </div>

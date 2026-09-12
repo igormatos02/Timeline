@@ -45,7 +45,8 @@ import {
   Utensils,
   Cake,
   Wrench,
-  Bell
+  Bell,
+  Loader2
 } from 'lucide-react';
 import { isLoanInstallment as checkIsLoanInstallment, isAmortizationEvent as checkIsAmortizationEvent } from '../utils/loanCalculations';
 import { formatCurrency } from '../utils/formatCurrency';
@@ -473,8 +474,20 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           setIsStatusMenuOpen((prev) => !prev);
         }}
         {...buttonProps}
+        style={{
+          ...buttonProps?.style,
+          cursor: isTogglingStatus ? 'wait' : (buttonProps?.style?.cursor || 'pointer'),
+          opacity: isTogglingStatus ? 0.75 : (buttonProps?.style?.opacity || 1)
+        }}
       >
-        {children}
+        {isTogglingStatus ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+            <Loader2 size={12} className="animate-spin" />
+            <span>{t('common.processing') || 'Processando...'}</span>
+          </span>
+        ) : (
+          children
+        )}
       </button>
 
       {isStatusMenuOpen && (
@@ -489,11 +502,11 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             border: '1px solid var(--border-glass-glow, rgba(99, 102, 241, 0.35))',
             boxShadow: '0 10px 30px rgba(0, 0, 0, 0.75), 0 0 15px rgba(99, 102, 241, 0.15)',
             borderRadius: '10px',
-            padding: '5px',
+            padding: '6px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '3px',
-            minWidth: '140px',
+            gap: '4px',
+            minWidth: '150px',
             backdropFilter: 'blur(12px)',
             WebkitBackdropFilter: 'blur(12px)'
           }}
@@ -503,6 +516,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             <button
               key={idx}
               type="button"
+              title={opt.label}
               onClick={async (e) => {
                 e.stopPropagation();
                 setIsStatusMenuOpen(false);
@@ -512,20 +526,28 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                padding: '6px 10px',
+                padding: '7px 12px',
                 borderRadius: '6px',
-                border: 'none',
+                border: '1px solid transparent',
                 background: 'transparent',
                 color: opt.color,
                 fontSize: '0.78rem',
                 fontWeight: '700',
                 cursor: 'pointer',
                 textAlign: 'left',
-                transition: 'background 0.15s ease',
+                transition: 'all 0.15s ease',
                 whiteSpace: 'nowrap'
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
+                e.currentTarget.style.borderColor = 'var(--border-glass)';
+                e.currentTarget.style.transform = 'translateX(3px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.borderColor = 'transparent';
+                e.currentTarget.style.transform = 'none';
+              }}
             >
               {opt.icon}
               <span>{opt.label}</span>
@@ -3567,8 +3589,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               {/* Checkbox / Toggle status button */}
               <button
                 type="button"
+                disabled={isTogglingStatus}
                 onClick={(e) => handleStatusToggle(e, isCompleted ? EventStatus.PENDING : EventStatus.COMPLETED)}
-                title={isCompleted ? t('todoModal.markPending') : t('todoModal.markCompleted')}
+                title={isTogglingStatus ? t('common.processing') : (isCompleted ? t('todoModal.markPending') : t('todoModal.markCompleted'))}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -3580,12 +3603,25 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   color: isCompleted ? TimelineColor.SUCCESS : 'var(--text-main)',
                   fontSize: '0.76rem',
                   fontWeight: '700',
-                  cursor: 'pointer',
+                  cursor: isTogglingStatus ? 'wait' : 'pointer',
+                  opacity: isTogglingStatus ? 0.75 : 1,
                   transition: 'all 0.15s ease'
                 }}
               >
-                {isCompleted ? <CheckCircle2 size={13} style={{ color: TimelineColor.SUCCESS }} /> : <Circle size={13} />}
-                <span>{isCompleted ? t('status.completed') : t('todoHeader.completeAction')}</span>
+                {isTogglingStatus ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : isCompleted ? (
+                  <CheckCircle2 size={13} style={{ color: TimelineColor.SUCCESS }} />
+                ) : (
+                  <Circle size={13} />
+                )}
+                <span>
+                  {isTogglingStatus
+                    ? t('common.processing')
+                    : isCompleted
+                      ? t('status.completed')
+                      : t('todoHeader.completeAction')}
+                </span>
               </button>
 
               <div onClick={(e) => e.stopPropagation()}>

@@ -26,8 +26,7 @@ export default function LoanTimelineHeader({
   onToggleStatus,
   onDelete,
   onAddEvent,
-  onOpenAmortizationModal,
-  onToggleAmortizationSystem
+  onOpenAmortizationModal
 }) {
   const { t } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
@@ -484,66 +483,6 @@ export default function LoanTimelineHeader({
             gap: '8px'
           }}
         >
-          {/* Amortization System Switch (Price vs SAC) */}
-          {(() => {
-            const currentSystem =
-              timeline.amortizationSystem ||
-              timeline.loanContract?.amortizationSystem ||
-              LoanAmortizationSystem.PRICE;
-
-            return (
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid var(--border-glass)',
-                  borderRadius: '8px',
-                  padding: '2px',
-                  gap: '2px'
-                }}
-                title={t('loan.systemTitle')}
-              >
-                <button
-                  type="button"
-                  onClick={() => onToggleAmortizationSystem && onToggleAmortizationSystem(LoanAmortizationSystem.PRICE)}
-                  style={{
-                    background: currentSystem === LoanAmortizationSystem.PRICE ? 'var(--primary)' : 'transparent',
-                    color: currentSystem === LoanAmortizationSystem.PRICE ? 'var(--text-bright)' : 'var(--text-muted)',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '4px 9px',
-                    fontSize: '0.74rem',
-                    fontWeight: currentSystem === LoanAmortizationSystem.PRICE ? '800' : '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  title={t('loan.systemPriceDescription')}
-                >
-                  {t('loan.systemPriceShort')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onToggleAmortizationSystem && onToggleAmortizationSystem(LoanAmortizationSystem.SAC)}
-                  style={{
-                    background: currentSystem === LoanAmortizationSystem.SAC ? 'var(--primary)' : 'transparent',
-                    color: currentSystem === LoanAmortizationSystem.SAC ? 'var(--text-bright)' : 'var(--text-muted)',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '4px 9px',
-                    fontSize: '0.74rem',
-                    fontWeight: currentSystem === LoanAmortizationSystem.SAC ? '800' : '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  title={t('loan.systemSacDescription')}
-                >
-                  {t('loan.systemSacShort')}
-                </button>
-              </div>
-            );
-          })()}
-
           {onEdit && (
             <button
               type="button"

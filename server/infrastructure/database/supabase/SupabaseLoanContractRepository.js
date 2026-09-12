@@ -33,6 +33,7 @@ export class SupabaseLoanContractRepository extends IRepository {
       processingFee: Number(row.processing_fee || 0),
       insuranceFee: Number(row.insurance_fee || 0),
       originalCapital: Number(row.original_capital || 0),
+      system: row.system || 'price',
       createdAt: row.created_at,
       updatedAt: row.updated_at
     });
@@ -74,7 +75,8 @@ export class SupabaseLoanContractRepository extends IRepository {
       processing_fee: Number(data.processingFee !== undefined ? data.processingFee : data.processing_fee) || 0.0,
       insurance_fee: Number(data.insuranceFee !== undefined ? data.insuranceFee : data.insurance_fee) || 0.0,
 
-      original_capital: Number(data.originalCapital !== undefined ? data.originalCapital : data.original_capital) || 0
+      original_capital: Number(data.originalCapital !== undefined ? data.originalCapital : data.original_capital) || 0,
+      system: (typeof (data.system || data.amortizationSystem) === 'string' ? (data.system || data.amortizationSystem) : 'price')
     };
 
     if (data.id) {

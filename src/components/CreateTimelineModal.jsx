@@ -78,7 +78,9 @@ export default function CreateTimelineModal({
     bankName: '',
     tanRate: '',
     spread: '',
-    interestStampTaxRate: ''
+    interestStampTaxRate: '',
+    system: LoanAmortizationSystem.PRICE,
+    amortizationSystem: LoanAmortizationSystem.PRICE
   });
 
   useEffect(() => {
@@ -123,7 +125,9 @@ export default function CreateTimelineModal({
         bankName: getVal('bankName', 'bank_name'),
         tanRate: getVal('tanRate', 'tan_rate'),
         spread: getVal('spread'),
-        interestStampTaxRate: getVal('interestStampTaxRate', 'installmentStampTax', 'installment_stamp_tax', 'taxaImpostoSeloJuros', 'installmentFee', 'installment_fee')
+        interestStampTaxRate: getVal('interestStampTaxRate', 'installmentStampTax', 'installment_stamp_tax', 'taxaImpostoSeloJuros', 'installmentFee', 'installment_fee'),
+        system: getVal('system', 'amortizationSystem') || LoanAmortizationSystem.PRICE,
+        amortizationSystem: getVal('system', 'amortizationSystem') || LoanAmortizationSystem.PRICE
       });
     } else {
       const currentYear = new Date().getFullYear();
@@ -217,10 +221,12 @@ export default function CreateTimelineModal({
         spread: parseFloat(formData.spread) || 0,
         interestStampTaxRate: parseFloat(formData.interestStampTaxRate) || 0,
         taxaImpostoSeloJuros: parseFloat(formData.interestStampTaxRate) || 0,
-        periodicity: formData.periodicity || EventPeriodicity.MONTHLY
+        periodicity: formData.periodicity || EventPeriodicity.MONTHLY,
+        system: formData.system || formData.amortizationSystem || LoanAmortizationSystem.PRICE,
+        amortizationSystem: formData.system || formData.amortizationSystem || LoanAmortizationSystem.PRICE
       };
 
-      // Automatically generate loan installments schedule via PMT formula
+      // Automatically generate loan installments schedule via PMT / SAC formula
       if (!initialData) {
         const generatedEvents = generateLoanInstallments({
           totalAmountFinanced: finalData.totalDebt,
@@ -234,7 +240,8 @@ export default function CreateTimelineModal({
           startDate: fullStartDate,
           debtStartDate: fullStartDate,
           dueDay: dueDayNum,
-          periodicity: EventPeriodicity.MONTHLY
+          periodicity: EventPeriodicity.MONTHLY,
+          amortizationSystem: finalData.system
         });
         finalData.events = generatedEvents;
         if (generatedEvents.length > 0) {
@@ -254,13 +261,17 @@ export default function CreateTimelineModal({
     return format(d, 'MMM', { locale: dateLocale });
   });
 
-  const handleRunSimulation = (targetSystem = simulationSystem) => {
+  const handleRunSimulation = (targetSystem = null) => {
     try {
       const parsedTotalDebt = parseFloat(formData.totalDebt) || 0;
       const parsedTotalInstallments = parseInt(formData.totalInstallments, 10) || 0;
       const dueDayNum = parseInt(formData.dueDay, 10) || 1;
       const dueDayStr = dueDayNum.toString().padStart(2, '0');
       const fullStartDate = formData.startDate ? `${formData.startDate}-${dueDayStr}` : getTodayStr();
+
+      const selectedSystem = typeof targetSystem === 'string'
+        ? targetSystem
+        : (formData.system || formData.amortizationSystem || LoanAmortizationSystem.PRICE);
 
       const parsedFees = parseFloat(formData.interestStampTaxRate || formData.taxaImpostoSeloJuros || formData.installmentStampTax) || 0;
       const events = generateLoanInstallments({
@@ -276,10 +287,9 @@ export default function CreateTimelineModal({
         debtStartDate: fullStartDate,
         dueDay: dueDayNum,
         periodicity: EventPeriodicity.MONTHLY,
-        amortizationSystem: targetSystem
+        amortizationSystem: selectedSystem
       });
 
-      setSimulationSystem(targetSystem);
       setSimulationEvents(events);
       setShowSimulation(true);
     } catch (err) {
@@ -785,6 +795,83 @@ export default function CreateTimelineModal({
                     required={isLoanType}
                   />
                 </div>
+
+                {/* Sistema de Amortização (Price vs SAC) no Contrato */}
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                  <label className="form-label">{t('loan.systemTitle')}</label>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '8px',
+                      marginTop: '4px'
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = {
+                          ...formData,
+                          system: LoanAmortizationSystem.PRICE,
+                          amortizationSystem: LoanAmortizationSystem.PRICE
+                        };
+                        setFormData(updated);
+                        if (showSimulation) {
+                          handleRunSimulation(LoanAmortizationSystem.PRICE);
+                        }
+                      }}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: (formData.system || formData.amortizationSystem) === LoanAmortizationSystem.PRICE ? '1px solid var(--primary)' : '1px solid var(--border-glass)',
+                        background: (formData.system || formData.amortizationSystem) === LoanAmortizationSystem.PRICE ? 'var(--primary-glow)' : 'rgba(255, 255, 255, 0.03)',
+                        color: (formData.system || formData.amortizationSystem) === LoanAmortizationSystem.PRICE ? 'var(--primary-light)' : 'var(--text-main)',
+                        fontWeight: (formData.system || formData.amortizationSystem) === LoanAmortizationSystem.PRICE ? '800' : '600',
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <div>{t('loan.systemPrice')}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '400' }}>
+                        {t('loan.systemPriceDescription')}
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = {
+                          ...formData,
+                          system: LoanAmortizationSystem.SAC,
+                          amortizationSystem: LoanAmortizationSystem.SAC
+                        };
+                        setFormData(updated);
+                        if (showSimulation) {
+                          handleRunSimulation(LoanAmortizationSystem.SAC);
+                        }
+                      }}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: (formData.system || formData.amortizationSystem) === LoanAmortizationSystem.SAC ? '1px solid var(--primary)' : '1px solid var(--border-glass)',
+                        background: (formData.system || formData.amortizationSystem) === LoanAmortizationSystem.SAC ? 'var(--primary-glow)' : 'rgba(255, 255, 255, 0.03)',
+                        color: (formData.system || formData.amortizationSystem) === LoanAmortizationSystem.SAC ? 'var(--primary-light)' : 'var(--text-main)',
+                        fontWeight: (formData.system || formData.amortizationSystem) === LoanAmortizationSystem.SAC ? '800' : '600',
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <div>{t('loan.systemSac')}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '400' }}>
+                        {t('loan.systemSacDescription')}
+                      </div>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -818,69 +905,16 @@ export default function CreateTimelineModal({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                 <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--primary-light)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Sparkles size={16} />
-                  <span>{t('createTimelineModal.simulationTitle')}</span>
+                  <span>{t('createTimelineModal.simulationTitle')} ({formData.system === LoanAmortizationSystem.SAC ? t('loan.systemSacShort') : t('loan.systemPriceShort')})</span>
                 </h4>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {/* Switch Price vs SAC */}
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid var(--border-glass)',
-                      borderRadius: '8px',
-                      padding: '2px',
-                      gap: '2px'
-                    }}
-                    title={t('loan.systemTitle')}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleRunSimulation(LoanAmortizationSystem.PRICE)}
-                      style={{
-                        background: simulationSystem === LoanAmortizationSystem.PRICE ? 'var(--primary)' : 'transparent',
-                        color: simulationSystem === LoanAmortizationSystem.PRICE ? 'var(--text-bright)' : 'var(--text-muted)',
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '4px 10px',
-                        fontSize: '0.74rem',
-                        fontWeight: simulationSystem === LoanAmortizationSystem.PRICE ? '800' : '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      title={t('loan.systemPriceDescription')}
-                    >
-                      {t('loan.systemPriceShort')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRunSimulation(LoanAmortizationSystem.SAC)}
-                      style={{
-                        background: simulationSystem === LoanAmortizationSystem.SAC ? 'var(--primary)' : 'transparent',
-                        color: simulationSystem === LoanAmortizationSystem.SAC ? 'var(--text-bright)' : 'var(--text-muted)',
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '4px 10px',
-                        fontSize: '0.74rem',
-                        fontWeight: simulationSystem === LoanAmortizationSystem.SAC ? '800' : '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      title={t('loan.systemSacDescription')}
-                    >
-                      {t('loan.systemSacShort')}
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowSimulation(false)}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem' }}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSimulation(false)}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem' }}
+                >
+                  <X size={16} />
+                </button>
               </div>
 
               {(() => {

@@ -34,6 +34,19 @@ function todayISO() {
   return new Date().toISOString().substring(0, 10);
 }
 
+/** Robust helper to detect SAC amortization system from string or object safely. */
+export function isSacSystem(val) {
+  if (!val) return false;
+  if (typeof val === 'string') {
+    return val.trim().toLowerCase() === LoanAmortizationSystem.SAC;
+  }
+  if (typeof val === 'object') {
+    const raw = val.system || val.amortizationSystem;
+    return typeof raw === 'string' && raw.trim().toLowerCase() === LoanAmortizationSystem.SAC;
+  }
+  return false;
+}
+
 /** Returns the number of periods per year for a given periodicity. */
 function periodsPerYear(periodicity) {
   switch ((periodicity || EventPeriodicity.MONTHLY).toLowerCase()) {
@@ -366,8 +379,7 @@ export function generateLoanInstallments({
 
   let balance = pv;
 
-  const isSac =
-    (amortizationSystem || '').toLowerCase() === LoanAmortizationSystem.SAC;
+  const isSac = isSacSystem(amortizationSystem);
   const sacMonthlyCapital = n > 0 && pv > 0 ? Math.round((pv / n) * 100) / 100 : 0;
 
   for (let k = 1; k <= n; k++) {
@@ -523,11 +535,12 @@ export function applyAmortizationReduceInstallment(
   );
   const n = future.length;
 
-  const amortSystem =
+  const isSac = isSacSystem(
+    timeline?.system ||
     timeline?.amortizationSystem ||
-    timeline?.loanContract?.amortizationSystem ||
-    LoanAmortizationSystem.PRICE;
-  const isSac = (amortSystem || '').toLowerCase() === LoanAmortizationSystem.SAC;
+    timeline?.loanContract?.system ||
+    timeline?.loanContract?.amortizationSystem
+  );
 
   // Extrair a taxa de juros mensal do contrato (i)
   const firstEv = future[0];
@@ -844,46 +857,42 @@ export function recalculateLoanState(
 ) {
   const today = parseISO(todayISO());
 
-  const amortSystem =
+  const isSac = isSacSystem(
+    timeline?.system ||
     timeline?.amortizationSystem ||
-    timeline?.loanContract?.amortizationSystem ||
-    LoanAmortizationSystem.PRICE;
-  const isSac = (amortSystem || '').toLowerCase() === LoanAmortizationSystem.SAC;
+    timeline?.loanContract?.system ||
+    timeline?.loanContract?.amortizationSystem
+  );
 
   let baseEvents = eventsList;
-  if (isSac) {
-    const timelineEvents = eventsList.filter(
-      (ev) => isLoanInstallment(ev) && isEventForTimeline(ev, timeline)
+  const timelineEvents = eventsList.filter(
+    (ev) => isLoanInstallment(ev) && isEventForTimeline(ev, timeline)
+  );
+  if (timelineEvents.length > 0) {
+    const totalCap = Number(
+      timeline?.loanContract?.originalCapital ||
+      timeline?.originalCapital ||
+      timeline?.totalDebt ||
+      0
     );
-    if (timelineEvents.length > 0) {
-      const totalCap = Number(
-        timeline?.loanContract?.originalCapital ||
-        timeline?.originalCapital ||
-        timeline?.totalDebt ||
+    const totalN = Number(
+      timeline?.loanContract?.totalInstallments ||
+      timeline?.totalInstallments ||
+      timelineEvents.length
+    );
+    const tan =
+      Number(timeline?.tanRate || 0) + Number(timeline?.spread || 0) ||
+      Number(
+        timeline?.interestRate ||
+        timeline?.annualInterestRate ||
+        timeline?.loanContract?.annualInterestRate ||
         0
       );
-      const totalN = Number(
-        timeline?.loanContract?.totalInstallments ||
-        timeline?.totalInstallments ||
-        timelineEvents.length
-      );
-      const sacMonthlyCap =
-        totalN > 0 && totalCap > 0
-          ? Math.round((totalCap / totalN) * 100) / 100
-          : 0;
+    const i = tan > 0 ? (tan / 100) / 12 : 0;
 
-      const tan =
-        Number(timeline?.tanRate || 0) + Number(timeline?.spread || 0) ||
-        Number(
-          timeline?.interestRate ||
-          timeline?.annualInterestRate ||
-          timeline?.loanContract?.annualInterestRate ||
-          0
-        );
-      const i = tan > 0 ? (tan / 100) / 12 : 0;
-
+    if (totalCap > 0 && totalN > 0) {
       let bal = totalCap;
-      const sacMap = new Map();
+      const recMap = new Map();
       const sortedTl = [...timelineEvents].sort((a, b) => {
         const na = Number(a.installmentNumber || 0);
         const nb = Number(b.installmentNumber || 0);
@@ -891,37 +900,80 @@ export function recalculateLoanState(
         return (a.date || '').localeCompare(b.date || '');
       });
 
-      for (let k = 0; k < sortedTl.length; k++) {
-        const ev = sortedTl[k];
-        const isLast = k === sortedTl.length - 1;
-        const interest = Math.round(bal * i * 100) / 100;
-        let capital = sacMonthlyCap;
-        if (isLast || bal <= capital) {
-          capital = bal;
-        }
-        bal = Math.max(0, Math.round((bal - capital) * 100) / 100);
-        const fee = Number(
-          ev.originalInstallmentFee ??
-          ev.installmentFee ??
-          getInstallmentFee(ev)
-        );
-        const total = Math.round((capital + interest + fee) * 100) / 100;
+      if (isSac) {
+        const sacMonthlyCap = Math.round((totalCap / totalN) * 100) / 100;
 
-        sacMap.set(ev.id, {
-          installmentCapital: capital,
-          installmentInterest: interest,
-          installmentFee: fee,
-          installmentAmount: total,
-          amount: total,
-          originalInstallmentCapital: capital,
-          originalInstallmentInterest: interest,
-          originalInstallmentFee: fee,
-          originalInstallmentAmount: total
-        });
+        for (let k = 0; k < sortedTl.length; k++) {
+          const ev = sortedTl[k];
+          const isLast = k === sortedTl.length - 1;
+          const interest = Math.round(bal * i * 100) / 100;
+          let capital = sacMonthlyCap;
+          if (isLast || bal <= capital) {
+            capital = bal;
+          }
+          bal = Math.max(0, Math.round((bal - capital) * 100) / 100);
+          const fee = Number(
+            ev.originalInstallmentFee ??
+            ev.installmentFee ??
+            getInstallmentFee(ev)
+          );
+          const total = Math.round((capital + interest + fee) * 100) / 100;
+
+          recMap.set(ev.id, {
+            installmentCapital: capital,
+            installmentInterest: interest,
+            installmentFee: fee,
+            installmentAmount: total,
+            amount: total,
+            originalInstallmentCapital: capital,
+            originalInstallmentInterest: interest,
+            originalInstallmentFee: fee,
+            originalInstallmentAmount: total
+          });
+        }
+      } else {
+        // Price system (PMT)
+        let pmt = 0;
+        if (i > 0) {
+          const compound = Math.pow(1 + i, totalN);
+          pmt = (totalCap * (i * compound)) / (compound - 1);
+        } else {
+          pmt = totalCap / totalN;
+        }
+        pmt = Math.round(pmt * 100) / 100;
+
+        for (let k = 0; k < sortedTl.length; k++) {
+          const ev = sortedTl[k];
+          const isLast = k === sortedTl.length - 1;
+          const interest = Math.round(bal * i * 100) / 100;
+          let capital = Math.round((pmt - interest) * 100) / 100;
+          if (isLast || bal <= capital) {
+            capital = bal;
+          }
+          bal = Math.max(0, Math.round((bal - capital) * 100) / 100);
+          const fee = Number(
+            ev.originalInstallmentFee ??
+            ev.installmentFee ??
+            getInstallmentFee(ev)
+          );
+          const total = Math.round((capital + interest + fee) * 100) / 100;
+
+          recMap.set(ev.id, {
+            installmentCapital: capital,
+            installmentInterest: interest,
+            installmentFee: fee,
+            installmentAmount: total,
+            amount: total,
+            originalInstallmentCapital: capital,
+            originalInstallmentInterest: interest,
+            originalInstallmentFee: fee,
+            originalInstallmentAmount: total
+          });
+        }
       }
 
       baseEvents = eventsList.map((ev) =>
-        sacMap.has(ev.id) ? { ...ev, ...sacMap.get(ev.id) } : ev
+        recMap.has(ev.id) ? { ...ev, ...recMap.get(ev.id) } : ev
       );
     }
   }
@@ -955,6 +1007,20 @@ export function recalculateLoanState(
   );
 
   return sorted.map((ev) => {
+    if (isAmortizationEvent(ev)) {
+      const isPaidAmort = isPositiveStatus(ev.status) || ev.isCompleted;
+      if (isPaidAmort) {
+        const amortVal = Number(ev.amortizationAmount ?? ev.installmentAmount ?? ev.amount ?? 0);
+        if (amortVal > 0) {
+          runningBalance = Math.max(0, Math.round((runningBalance - amortVal) * 100) / 100);
+        }
+      }
+      return {
+        ...ev,
+        balanceAfter: runningBalance
+      };
+    }
+
     if (!isLoanInstallment(ev)) {
       return ev;
     }
@@ -962,50 +1028,28 @@ export function recalculateLoanState(
     if (isAbated(ev)) {
       return {
         ...ev,
-
         status: EventStatus.AMORTIZED,
         isAbatida: true,
         isCompleted: true,
-
         installmentAmount: 0,
         installmentCapital: 0,
         installmentInterest: 0,
         installmentFee: 0,
-
         balanceAfter: runningBalance
       };
     }
 
-    const principal =
-      getPrincipal(ev);
+    const principal = getPrincipal(ev);
+    const totalAmount = getInstallmentAmount(ev);
+    const interest = getInstallmentInterest(ev);
+    const fee = getInstallmentFee(ev);
+    const isPaid = isPositiveStatus(ev.status);
 
-    const totalAmount =
-      getInstallmentAmount(ev);
-
-    const interest =
-      getInstallmentInterest(ev);
-
-    const fee =
-      getInstallmentFee(ev);
-
-    const isPaid =
-      isPositiveStatus(ev.status);
-
-    let status =
-      isPaid
-        ? ev.status
-        : EventStatus.PENDING;
+    let status = isPaid ? ev.status : EventStatus.PENDING;
 
     try {
-      if (
-        !isPaid &&
-        isBefore(
-          parseISO(ev.date),
-          today
-        )
-      ) {
-        status =
-          EventStatus.OVERDUE;
+      if (!isPaid && isBefore(parseISO(ev.date), today)) {
+        status = EventStatus.OVERDUE;
       }
     } catch (_) {
       // Invalid date — keep current status
@@ -1013,25 +1057,17 @@ export function recalculateLoanState(
 
     runningBalance = Math.max(
       0,
-      Math.round(
-        (
-          runningBalance -
-          principal
-        ) * 100
-      ) / 100
+      Math.round((runningBalance - principal) * 100) / 100
     );
 
     return {
       ...ev,
-
       installmentAmount: totalAmount,
       installmentCapital: principal,
       installmentInterest: interest,
       installmentFee: fee,
-
       status,
       isCompleted: isPaid,
-
       balanceAfter: runningBalance
     };
   });

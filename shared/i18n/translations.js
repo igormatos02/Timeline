@@ -70,7 +70,10 @@ export const translations = {
       timelineDeleteError: "Error deleting timeline.",
       timelineUpdatedSuccess: "Timeline updated successfully!",
       contractAndInstallmentsUpdatedSuccess: "Contract and installments updated successfully!",
-      timelineUpdateError: "Error updating timeline: {error}"
+      timelineUpdateError: "Error updating timeline: {error}",
+      timelineCreatedSuccess: "Timeline created successfully!",
+      contractAndInstallmentsCreatedSuccess: "Contract and installments created successfully!",
+      timelineCreateError: "Error creating timeline: {error}"
     },
 
     // Timeline Rows & Cards
@@ -1241,7 +1244,10 @@ export const translations = {
       timelineDeleteError: "Erro ao eliminar linha de tempo.",
       timelineUpdatedSuccess: "Linha de tempo atualizada com sucesso!",
       contractAndInstallmentsUpdatedSuccess: "Contrato e prestações atualizados com sucesso!",
-      timelineUpdateError: "Erro ao atualizar linha de tempo: {error}"
+      timelineUpdateError: "Erro ao atualizar linha de tempo: {error}",
+      timelineCreatedSuccess: "Linha de tempo criada com sucesso!",
+      contractAndInstallmentsCreatedSuccess: "Contrato e prestações criados com sucesso!",
+      timelineCreateError: "Erro ao criar linha de tempo: {error}"
     },
 
     // Timeline Rows & Cards

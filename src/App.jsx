@@ -356,16 +356,6 @@ export default function App() {
   const [amortizationDefaultDate, setAmortizationDefaultDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [editingInstallment, setEditingInstallment] = useState(null);
 
-  const [loanAmortizationSystemMap, setLoanAmortizationSystemMap] = useState({});
-
-  const handleToggleAmortizationSystem = useCallback((system) => {
-    if (!activeTimelineId) return;
-    setLoanAmortizationSystemMap((prev) => ({
-      ...prev,
-      [activeTimelineId]: system
-    }));
-  }, [activeTimelineId]);
-
   const handleOpenAmortizationModal = useCallback((dateStr, eventObj = null) => {
     if (dateStr) {
       setAmortizationDefaultDate(dateStr);
@@ -461,7 +451,8 @@ export default function App() {
 
     const currentSelected = {
       ...currentSelectedRaw,
-      amortizationSystem: loanAmortizationSystemMap[currentSelectedRaw.id] || currentSelectedRaw.amortizationSystem || currentSelectedRaw.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE
+      system: currentSelectedRaw.system || currentSelectedRaw.amortizationSystem || currentSelectedRaw.loanContract?.system || currentSelectedRaw.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE,
+      amortizationSystem: currentSelectedRaw.system || currentSelectedRaw.amortizationSystem || currentSelectedRaw.loanContract?.system || currentSelectedRaw.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE
     };
 
     const isLoanType = isLoanTimelineType(currentSelected?.type);
@@ -473,7 +464,8 @@ export default function App() {
       loanTimelines.forEach((loanTl) => {
         const enrichedLoanTl = {
           ...loanTl,
-          amortizationSystem: loanAmortizationSystemMap[loanTl.id] || loanTl.amortizationSystem || loanTl.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE
+          system: loanTl.system || loanTl.amortizationSystem || loanTl.loanContract?.system || loanTl.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE,
+          amortizationSystem: loanTl.system || loanTl.amortizationSystem || loanTl.loanContract?.system || loanTl.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE
         };
         computedEvents = recalculateLoanState(enrichedLoanTl, computedEvents);
       });
@@ -490,7 +482,7 @@ export default function App() {
       timelines: activeTimeboardTimelines,
       events: computedEvents
     };
-  }, [activeTimeboard, activeTimeboardTimelines, activeFinancialTab, activeTimelineId, rawEvents, loanAmortizationSystemMap]);
+  }, [activeTimeboard, activeTimeboardTimelines, activeFinancialTab, activeTimelineId, rawEvents]);
 
   // ----------------------------------------------------
   // Timeline Handlers
@@ -522,7 +514,9 @@ export default function App() {
             interestStampTaxRate: contract.installmentStampTax ?? contract.installment_stamp_tax ?? enrichedTimeline.interestStampTaxRate ?? '',
             totalInstallments: contract.totalInstallments ?? contract.total_installments ?? enrichedTimeline.totalInstallments ?? '',
             dueDay: contract.dueDay ?? contract.due_day ?? enrichedTimeline.dueDay ?? 15,
-            startDate: contract.startDate ?? contract.start_date ?? enrichedTimeline.startDate
+            startDate: contract.startDate ?? contract.start_date ?? enrichedTimeline.startDate,
+            system: contract.system || contract.amortizationSystem || enrichedTimeline.system || enrichedTimeline.amortizationSystem || LoanAmortizationSystem.PRICE,
+            amortizationSystem: contract.system || contract.amortizationSystem || enrichedTimeline.system || enrichedTimeline.amortizationSystem || LoanAmortizationSystem.PRICE
           };
         }
       } catch (e) {
@@ -593,7 +587,8 @@ export default function App() {
             tanRate: Number(formData.tanRate) || 0,
             spread: Number(formData.spread) || 0,
             installmentStampTax: parsedStampTax,
-            startDate: fullStartDateStr
+            startDate: fullStartDateStr,
+            system: formData.system || formData.amortizationSystem || LoanAmortizationSystem.PRICE
           };
 
           if (existingContract && existingContract.id) {
@@ -616,7 +611,8 @@ export default function App() {
             startDate: fullStartDateStr,
             debtStartDate: fullStartDateStr,
             dueDay: dueDayNum,
-            periodicity: formData.periodicity || formData.aggregation || EventPeriodicity.MONTHLY
+            periodicity: formData.periodicity || formData.aggregation || EventPeriodicity.MONTHLY,
+            amortizationSystem: formData.system || formData.amortizationSystem || LoanAmortizationSystem.PRICE
           });
 
           // Obter eventos existentes desta timeline (garantindo que vêm da API se rawEvents estiver desatualizado)
@@ -803,10 +799,12 @@ export default function App() {
             tanRate: Number(formData.tanRate) || 0,
             spread: Number(formData.spread) || 0,
             installmentStampTax: parsedStampTax,
-            startDate: fullStartDateStr
+            startDate: fullStartDateStr,
+            system: formData.system || formData.amortizationSystem || LoanAmortizationSystem.PRICE
           });
 
           // 3. Create financial events for installments directly from simulated/generated events payload
+          const chosenAmortizationSystem = formData.system || formData.amortizationSystem || LoanAmortizationSystem.PRICE;
           const installmentEvents = (Array.isArray(formData.events) && formData.events.length > 0)
             ? formData.events
             : (parsedTotalDebt > 0 ? generateLoanInstallments({
@@ -822,7 +820,8 @@ export default function App() {
               startDate: fullStartDateStr,
               debtStartDate: fullStartDateStr,
               dueDay: dueDayNum,
-              periodicity: formData.periodicity || formData.aggregation || EventPeriodicity.MONTHLY
+              periodicity: formData.periodicity || formData.aggregation || EventPeriodicity.MONTHLY,
+              amortizationSystem: chosenAmortizationSystem
             }) : []);
 
           if (installmentEvents.length > 0) {
@@ -847,10 +846,15 @@ export default function App() {
         }
 
         await refreshTimelines();
-        showToast(isLoan ? 'Contrato e parcelas criados com sucesso!' : 'Linha de tempo criada com sucesso!', 'success');
+        showToast(
+          isLoan
+            ? t('toast.contractAndInstallmentsCreatedSuccess')
+            : t('toast.timelineCreatedSuccess'),
+          'success'
+        );
       } catch (err) {
         console.error('Error creating timeline, contract or generating loan installments:', err);
-        showToast('Erro ao criar: ' + (err.message || 'Erro desconhecido'), 'error');
+        showToast(t('toast.timelineCreateError', { error: err.message || '' }), 'error');
       } finally {
         setIsUpdatingInstallments(false);
       }
@@ -1917,7 +1921,6 @@ export default function App() {
                 onReset={() => setIsResetConfirmOpen(true)}
                 onOpenCreateTimeline={handleOpenCreateTimeline}
                 onOpenAmortizationModal={() => handleOpenAmortizationModal()}
-                onToggleAmortizationSystem={handleToggleAmortizationSystem}
                 onScrollToOverdue={handleScrollToOverdue}
               />
             }

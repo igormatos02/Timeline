@@ -27,6 +27,7 @@ export class LoanContract {
     insuranceFee = 0.0,
 
     originalCapital = 0,
+    system = 'price',
 
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
@@ -55,6 +56,8 @@ export class LoanContract {
     this.insuranceFee = Number(insuranceFee) || 0.0;
 
     this.originalCapital = Number(originalCapital) || 0;
+    this.system = system || 'price';
+    this.amortizationSystem = this.system;
 
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;

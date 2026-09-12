@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS loan_contracts (
   processing_fee NUMERIC DEFAULT 0,
   insurance_fee NUMERIC DEFAULT 0,
   original_capital NUMERIC NOT NULL,
+  system VARCHAR DEFAULT 'price',
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );

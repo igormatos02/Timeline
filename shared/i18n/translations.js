@@ -55,7 +55,9 @@ export const translations = {
       delete: "Delete",
       edit: "Edit",
       reset: "Reset",
-      close: "Close"
+      close: "Close",
+      copyId: "Copy ID",
+      copied: "Copied!"
     },
 
     // Toast Notifications
@@ -1265,7 +1267,9 @@ export const translations = {
       delete: "Excluir",
       edit: "Editar",
       reset: "Reset",
-      close: "Fechar"
+      close: "Fechar",
+      copyId: "Copiar ID",
+      copied: "Copiado!"
     },
 
     // Toast Notifications

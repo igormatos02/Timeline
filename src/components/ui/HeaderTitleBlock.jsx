@@ -1,10 +1,12 @@
 import React from 'react';
+import CopyIdButton from './CopyIdButton.jsx';
 
 export default function HeaderTitleBlock({
   color,
   icon,
   name,
-  description
+  description,
+  id
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -24,6 +26,7 @@ export default function HeaderTitleBlock({
               {icon}
             </span>
           )}
+          {id && <CopyIdButton id={id} />}
         </h1>
       </div>
       {description && (

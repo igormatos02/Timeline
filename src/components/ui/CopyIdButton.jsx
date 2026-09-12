@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
+import { useTranslation } from '../../i18n/LanguageContext.jsx';
+import { TimelineColor } from '../../enums/index.js';
 
 export default function CopyIdButton({
   id,
-  copiedLabel = 'Copiado!',
-  copyLabel = 'Copiar ID'
+  copiedLabel,
+  copyLabel
 }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+
+  const finalCopiedLabel = copiedLabel || t('common.copied');
+  const finalCopyLabel = copyLabel || t('common.copyId');
 
   const handleCopy = (e) => {
     e.stopPropagation();
@@ -21,21 +27,21 @@ export default function CopyIdButton({
     <button
       type="button"
       onClick={handleCopy}
-      title={copied ? copiedLabel : copyLabel}
+      title={copied ? finalCopiedLabel : finalCopyLabel}
       style={{
         background: 'transparent',
         border: 'none',
-        padding: '1px 2px',
+        padding: '2px 4px',
         cursor: 'pointer',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: copied ? '#10b981' : 'var(--text-muted)',
-        borderRadius: '3px',
+        color: copied ? TimelineColor.SUCCESS : 'var(--text-muted)',
+        borderRadius: '4px',
         transition: 'all 0.15s ease'
       }}
     >
-      {copied ? <Check size={11} strokeWidth={2.5} /> : <Copy size={11} />}
+      {copied ? <Check size={13} strokeWidth={2.5} /> : <Copy size={13} />}
     </button>
   );
 }

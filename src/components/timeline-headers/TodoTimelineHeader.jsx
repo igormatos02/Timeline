@@ -102,6 +102,7 @@ export default function TodoTimelineHeader({
           color={headerColor}
           name={timeline.name || t('todoHeader.defaultTitle')}
           description={t('todoHeader.tasksCount', { count: totalCount })}
+          id={timeline.id}
         />
       }
       controls={

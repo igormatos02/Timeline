@@ -15,6 +15,7 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { LoanAmortizationSystem, TimelineColor } from '../../enums/index.js';
 import { DonutChart } from '../ui/DonutChart.jsx';
+import CopyIdButton from '../ui/CopyIdButton.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 
 export default function LoanTimelineHeader({
@@ -234,6 +235,7 @@ export default function LoanTimelineHeader({
             >
               <span>{timeline.name}</span>
               <CreditCard size={18} style={{ color: headerColor, opacity: 0.9 }} />
+              {timeline.id && <CopyIdButton id={timeline.id} />}
             </h1>
 
             {/* Active / inactive */}

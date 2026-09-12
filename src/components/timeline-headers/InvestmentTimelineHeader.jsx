@@ -11,7 +11,7 @@ import {
 import { format } from 'date-fns';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { InvestmentEventCategory } from '../../../shared/enums/InvestmentEventCategory.js';
-import { EventType, isCancelledStatus, TimelineColor } from '../../enums/index.js';
+import { EventStatus, EventType, isCancelledStatus, isPositiveStatus, TimelineColor } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
@@ -159,7 +159,7 @@ export default function InvestmentTimelineHeader({
     ? Math.min(100, Math.round((annualTotalInvested / annualTotalIncome) * 100))
     : 0;
 
-  // 3. ATUAL: TOTAL RECEBIDO / APORTADO (INCLUINDO APORTE INICIAL) & TARGET
+  // 3. ATUAL: TOTAL RECEBIDO / APORTADO (INCLUINDO APORTE INICIAL & DEPÓSITOS EXTERNOS) & TARGET
   let totalInstallmentsReceived = 0;
   let initialContribution = 0;
   let totalReceivedCount = 0;
@@ -170,8 +170,17 @@ export default function InvestmentTimelineHeader({
     if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
     const isInvestment = ev.eventType === 'investment' || ev.eventType === EventType.INVESTMENT || ev.isInvestment;
     if (isInvestment) {
-      const isReceived = ev.status === 'paid' || ev.status === 'settled' || ev.status === 'completed' || ev.status === 'received' || ev.status === 'invested' || ev.isCompleted;
-      if (isReceived) {
+      const isExternal = Boolean(ev.isExternal || ev.is_external);
+      const isReceived = isPositiveStatus(ev.status) ||
+        ev.status === EventStatus.INVESTED ||
+        ev.status === EventStatus.PAID ||
+        ev.status === EventStatus.RECEIVED ||
+        ev.status === EventStatus.COMPLETED ||
+        ev.status === EventStatus.SETTLED ||
+        Boolean(ev.isCompleted);
+
+      // External deposits are added to Received / Invested without impacting other calculations
+      if (isReceived || isExternal) {
         totalInstallmentsReceived += Number(ev.amount || 0);
         totalReceivedCount += 1;
       }

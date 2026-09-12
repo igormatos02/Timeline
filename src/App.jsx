@@ -1941,7 +1941,6 @@ export default function App() {
                 onEdit={handleOpenEditTimeline}
                 onToggleStatus={handleToggleTimelineStatus}
                 onDelete={handleRequestDeleteTimeline}
-                onReset={() => setIsResetConfirmOpen(true)}
                 onOpenCreateTimeline={handleOpenCreateTimeline}
                 onOpenAmortizationModal={() => handleOpenAmortizationModal()}
                 onScrollToOverdue={handleScrollToOverdue}
@@ -2005,6 +2004,10 @@ export default function App() {
           onClose={() => setIsTimelineSettingsModalOpen(false)}
           onSave={handleSaveTimeline}
           onDelete={handleRequestDeleteTimeline}
+          onReset={() => {
+            setIsTimelineSettingsModalOpen(false);
+            setIsResetConfirmOpen(true);
+          }}
           initialData={editingTimeline}
         />
 

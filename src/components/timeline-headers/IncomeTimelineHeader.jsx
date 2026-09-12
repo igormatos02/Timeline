@@ -4,8 +4,7 @@ import {
   Plus,
   Trash2,
   Layers,
-  Settings,
-  RotateCcw
+  Settings
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { enUS, pt } from 'date-fns/locale';
@@ -332,26 +331,6 @@ export default function IncomeTimelineHeader({
             >
               <Plus size={14} />
               <span>{t('incomeHeader.addIncome')}</span>
-            </button>
-          )}
-
-          {onReset && (
-            <button
-              type="button"
-              className="btn btn-outline-danger btn-sm"
-              onClick={onReset}
-              title={t('incomeHeader.resetTitle')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 10px',
-                borderRadius: '8px',
-                fontSize: '0.74rem'
-              }}
-            >
-              <RotateCcw size={13} />
-              <span>{t('common.reset')}</span>
             </button>
           )}
 

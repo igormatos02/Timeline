@@ -4,7 +4,6 @@ import {
   Plus,
   Trash2,
   Settings,
-  RotateCcw,
   CheckCircle2,
   AlertCircle,
   Calendar,
@@ -226,26 +225,6 @@ export default function ReminderTimelineHeader({
             >
               <Plus size={14} />
               <span>{t('reminderHeader.addReminder') || 'Novo Lembrete'}</span>
-            </button>
-          )}
-
-          {onReset && (
-            <button
-              type="button"
-              className="btn btn-outline-danger btn-sm"
-              onClick={onReset}
-              title={t('reminderHeader.resetTitle') || 'Limpar todos os movimentos desta timeline'}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 10px',
-                borderRadius: '8px',
-                fontSize: '0.74rem'
-              }}
-            >
-              <RotateCcw size={13} />
-              <span>{t('common.reset') || 'Reset'}</span>
             </button>
           )}
 

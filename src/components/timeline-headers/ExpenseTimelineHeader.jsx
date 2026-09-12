@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import {
   Plus,
   Trash2,
-  Settings,
-  RotateCcw
+  Settings
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { ExpenseEventCategory } from '../../../shared/enums/ExpensesEventCategory.js';
@@ -93,7 +92,7 @@ export default function ExpenseTimelineHeader({
                   fontSize: '0.74rem',
                   border: 'none',
                   background: activeViewMode === 'summary' ? 'var(--primary-color)' : 'transparent',
-                  color: activeViewMode === 'summary' ? '#ffffff' : 'var(--text-muted)',
+                  color: activeViewMode === 'summary' ? TimelineColor.WHITE : 'var(--text-muted)',
                   cursor: 'pointer',
                   fontWeight: activeViewMode === 'summary' ? '700' : '500'
                 }}
@@ -109,7 +108,7 @@ export default function ExpenseTimelineHeader({
                   fontSize: '0.74rem',
                   border: 'none',
                   background: activeViewMode === 'categories' ? 'var(--primary-color)' : 'transparent',
-                  color: activeViewMode === 'categories' ? '#ffffff' : 'var(--text-muted)',
+                  color: activeViewMode === 'categories' ? TimelineColor.WHITE : 'var(--text-muted)',
                   cursor: 'pointer',
                   fontWeight: activeViewMode === 'categories' ? '700' : '500'
                 }}
@@ -117,26 +116,6 @@ export default function ExpenseTimelineHeader({
                 {t('expenseHeader.viewCategories')}
               </button>
             </div>
-          )}
-
-          {onReset && (
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={onReset}
-              title={t('buttons.reset') || (language === 'pt' ? 'Reiniciar' : 'Reset')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 10px',
-                borderRadius: '8px',
-                fontSize: '0.74rem'
-              }}
-            >
-              <RotateCcw size={13} />
-              <span>{t('buttons.reset') || (language === 'pt' ? 'Reset' : 'Reset')}</span>
-            </button>
           )}
 
           {onEdit && (
@@ -343,8 +322,8 @@ export default function ExpenseTimelineHeader({
                 </div>
                 {(() => {
                   const categoryColors = [
-                    '#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#06b6d4',
-                    '#a855f7', '#ec4899', '#3b82f6', '#84cc16', '#14b8a6'
+                    TimelineColor.PRIMARY, TimelineColor.DANGER, TimelineColor.SUCCESS, TimelineColor.WARNING, TimelineColor.CYAN,
+                    TimelineColor.PURPLE, TimelineColor.PINK, TimelineColor.BLUE, TimelineColor.AMBER, TimelineColor.SLATE
                   ];
 
                   if (!categoryList || categoryList.length === 0) {
@@ -363,7 +342,7 @@ export default function ExpenseTimelineHeader({
                               width: '42px',
                               height: '42px',
                               borderRadius: '50%',
-                              background: 'var(--bg-card, #0f172a)',
+                              background: 'var(--bg-card)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -428,7 +407,7 @@ export default function ExpenseTimelineHeader({
                               width: '42px',
                               height: '42px',
                               borderRadius: '50%',
-                              background: 'var(--bg-card, #0f172a)',
+                              background: 'var(--bg-card)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -453,7 +432,7 @@ export default function ExpenseTimelineHeader({
                     );
                   }
 
-                  const sliceColor = annualCommitmentPercent > 85 ? '#f43f5e' : '#6366f1';
+                  const sliceColor = annualCommitmentPercent > 85 ? TimelineColor.DANGER : TimelineColor.PRIMARY;
 
                   return (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
@@ -510,7 +489,7 @@ export default function ExpenseTimelineHeader({
                               width: '42px',
                               height: '42px',
                               borderRadius: '50%',
-                              background: 'var(--bg-card, #0f172a)',
+                              background: 'var(--bg-card)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -542,7 +521,7 @@ export default function ExpenseTimelineHeader({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
                       <DonutChart
                         percent={paidPercent}
-                        sliceColor="#10b981"
+                        sliceColor={TimelineColor.SUCCESS}
                         remainingColor="rgba(244, 63, 94, 0.25)"
                         title={`${t('expenseHeader.paidLabel')} ${paidPercent}%`}
                         label={`${paidPercent}%`}
@@ -552,11 +531,11 @@ export default function ExpenseTimelineHeader({
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
                         <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between' }}>
                           <span>{t('expenseHeader.committedLabel')}</span>
-                          <strong style={{ color: '#f43f5e' }}>{formatCurrency(committedAmount30)}</strong>
+                          <strong style={{ color: TimelineColor.DANGER }}>{formatCurrency(committedAmount30)}</strong>
                         </div>
                         <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between' }}>
                           <span>{t('expenseHeader.paidLabel')}</span>
-                          <strong style={{ color: '#10b981' }}>{formatCurrency(paidAmountMonth)}</strong>
+                          <strong style={{ color: TimelineColor.SUCCESS }}>{formatCurrency(paidAmountMonth)}</strong>
                         </div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                           {t('expenseHeader.committedVsPaidCount', { committed: committedCount30, paid: paidCountMonth })}
@@ -611,15 +590,16 @@ export default function ExpenseTimelineHeader({
                   monthVsPrevLabel={t('expenseHeader.monthVsPrevMonth')}
                   diffPercentStr={diffPercentStr}
                   isGoodChange={isDiffNegative}
-                  goodColor="#10b981"
+                  goodColor={TimelineColor.SUCCESS}
+                  badColor={TimelineColor.DANGER}
                   sparklesLabel={t('expenseHeader.annualProjection')}
                   projection={annualProj}
-                  sparklesColor="#f59e0b"
-                  projectionColor="#f59e0b"
-                  currentGradient="linear-gradient(180deg, #f43f5e 0%, #e11d48 100%)"
+                  sparklesColor={TimelineColor.WARNING}
+                  projectionColor={TimelineColor.WARNING}
+                  currentGradient={`linear-gradient(180deg, ${TimelineColor.DANGER} 0%, rgba(225, 29, 72, 1) 100%)`}
                   mutedGradientTop="rgba(244, 63, 94, 0.6)"
                   mutedGradientBottom="rgba(244, 63, 94, 0.3)"
-                  currentTextColor="#f43f5e"
+                  currentTextColor={TimelineColor.DANGER}
                 />
               );
             })()}

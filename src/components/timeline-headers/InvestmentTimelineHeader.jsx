@@ -4,8 +4,7 @@ import {
   Plus,
   Trash2,
   Layers,
-  Settings,
-  RotateCcw
+  Settings
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -241,26 +240,6 @@ export default function InvestmentTimelineHeader({
             >
               <Plus size={14} />
               <span>{t('investmentHeader.addInvestment')}</span>
-            </button>
-          )}
-
-          {onReset && (
-            <button
-              type="button"
-              className="btn btn-outline-danger btn-sm"
-              onClick={onReset}
-              title={t('investmentHeader.resetTitle')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 10px',
-                borderRadius: '8px',
-                fontSize: '0.74rem'
-              }}
-            >
-              <RotateCcw size={13} />
-              <span>{t('common.reset')}</span>
             </button>
           )}
 

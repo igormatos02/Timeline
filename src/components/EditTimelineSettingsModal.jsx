@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Settings, Trash2 } from 'lucide-react';
+import { X, Sparkles, Settings, Trash2, RotateCcw } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { TimelineStatus, TimelineColor, TIMELINE_COLOR_PRESETS, TimelineType, normalizeTimelineType } from '../enums/index.js';
 
@@ -8,6 +8,7 @@ export default function EditTimelineSettingsModal({
   onClose,
   onSave,
   onDelete,
+  onReset,
   initialData
 }) {
   const { t } = useTranslation();
@@ -244,6 +245,33 @@ export default function EditTimelineSettingsModal({
 
           {/* Action Buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '14px' }}>
+            {onReset && (
+              <button
+                type="button"
+                onClick={() => {
+                  onReset();
+                  onClose();
+                }}
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  border: `1px solid ${TimelineColor.ORANGE}55`,
+                  background: `${TimelineColor.ORANGE}1f`,
+                  color: TimelineColor.ORANGE,
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  fontSize: '0.86rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                title={t('common.reset')}
+              >
+                <RotateCcw size={15} />
+                <span>{t('buttons.reset')}</span>
+              </button>
+            )}
+
             {initialData && !initialData.isSystemDefault && onDelete && (
               <button
                 type="button"

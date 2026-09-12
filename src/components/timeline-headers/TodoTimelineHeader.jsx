@@ -4,7 +4,6 @@ import {
   Plus,
   Trash2,
   Settings,
-  RotateCcw,
   CheckCircle2,
   Clock,
   AlertTriangle,
@@ -24,8 +23,7 @@ export default function TodoTimelineHeader({
   events = [],
   onEdit,
   onDelete,
-  onAddEvent,
-  onReset
+  onAddEvent
 }) {
   const { t } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);

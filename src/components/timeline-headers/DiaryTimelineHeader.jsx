@@ -3,7 +3,6 @@ import {
   Plus,
   Trash2,
   Settings,
-  RotateCcw,
   Sparkles,
   Calendar,
   Smile,
@@ -41,7 +40,7 @@ export default function DiaryTimelineHeader({
 
   if (!timeline) return null;
 
-  const headerColor = timeline.color || '#ec4899'; // Pink / Rose default for Diary
+  const headerColor = timeline.color || TimelineColor.DIARY;
   const rawEventsList = timeline.events || events || [];
   const eventsList = rawEventsList.filter((ev) => {
     if (!ev || !ev.date || ev.isDeleted) return false;
@@ -154,26 +153,6 @@ export default function DiaryTimelineHeader({
             </button>
           )}
 
-          {onReset && (
-            <button
-              type="button"
-              className="btn btn-outline-danger btn-sm"
-              onClick={onReset}
-              title={t('diaryHeader.resetTitle') || 'Limpar todos os registros deste diário'}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 10px',
-                borderRadius: '8px',
-                fontSize: '0.74rem'
-              }}
-            >
-              <RotateCcw size={13} />
-              <span>{t('common.reset') || 'Reset'}</span>
-            </button>
-          )}
-
           {onEdit && (
             <button
               type="button"
@@ -185,7 +164,7 @@ export default function DiaryTimelineHeader({
                 justifyContent: 'center',
                 background: 'rgba(236, 72, 153, 0.1)',
                 border: '1px solid rgba(236, 72, 153, 0.2)',
-                color: '#ec4899',
+                color: TimelineColor.DIARY,
                 cursor: 'pointer',
                 padding: '6px 8px',
                 borderRadius: '8px',
@@ -262,7 +241,7 @@ export default function DiaryTimelineHeader({
                         width: '42px',
                         height: '42px',
                         borderRadius: '50%',
-                        background: 'var(--bg-card, #0f172a)',
+                        background: 'var(--bg-card)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -322,7 +301,7 @@ export default function DiaryTimelineHeader({
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
                 <DonutChart
                   percent={annualTotalEntries > 0 ? Math.min(100, Math.round((annualTotalEntries / 365) * 100)) : 0}
-                  sliceColor="#ec4899"
+                  sliceColor={TimelineColor.DIARY}
                   remainingColor="rgba(236, 72, 153, 0.15)"
                   label={`${annualTotalEntries}`}
                   centerFontSize="0.84rem"
@@ -332,7 +311,7 @@ export default function DiaryTimelineHeader({
                   <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
                     {t('diaryHeader.annualEntriesDesc') || 'Registrados nos últimos 12 meses:'}
                   </div>
-                  <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#ec4899' }}>
+                  <div style={{ fontSize: '1.05rem', fontWeight: '800', color: TimelineColor.DIARY }}>
                     {annualTotalEntries} {annualTotalEntries === 1 ? 'registro' : 'registros'}
                   </div>
                   <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
@@ -377,15 +356,15 @@ export default function DiaryTimelineHeader({
                 monthVsPrevLabel={t('diaryHeader.monthVsPrevMonth')}
                 diffPercentStr={diffPercentStr}
                 isGoodChange={isDiffPositive}
-                goodColor="#ec4899"
+                goodColor={TimelineColor.DIARY}
                 sparklesLabel={t('diaryHeader.annualProjectionLabel')}
                 projection={annualTotalEntries}
-                sparklesColor="#ec4899"
-                projectionColor="#ec4899"
-                currentGradient="linear-gradient(180deg, #ec4899 0%, #db2777 100%)"
+                sparklesColor={TimelineColor.DIARY}
+                projectionColor={TimelineColor.DIARY}
+                currentGradient={`linear-gradient(180deg, ${TimelineColor.DIARY} 0%, rgba(219, 39, 119, 1) 100%)`}
                 mutedGradientTop="rgba(236, 72, 153, 0.6)"
                 mutedGradientBottom="rgba(236, 72, 153, 0.25)"
-                currentTextColor="#ec4899"
+                currentTextColor={TimelineColor.DIARY}
                 formatValue={(val) => String(val)}
                 formatProjection={(val) => `${val} registros`}
               />

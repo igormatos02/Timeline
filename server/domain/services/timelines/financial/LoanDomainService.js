@@ -5,7 +5,8 @@ import {
   LoanEventCategory,
   AmortizationEventCategory,
   AmortizationStrategy,
-  isPositiveStatus
+  isPositiveStatus,
+  isCancelledStatus
 } from '../../../../../shared/enums/index.js';
 
 /**
@@ -250,7 +251,7 @@ export class LoanDomainService {
         if (isReduceInstallment) {
           processedEvents = this.#applyAmortizationReduceInstallment(
             processedEvents,
-            openList,
+            amortEv,
             amortVal
           );
         } else {
@@ -470,23 +471,30 @@ export class LoanDomainService {
   }
 
   /**
-   * REDUCE_INSTALLMENT: scale open installments down proportionally.
+   * REDUCE_INSTALLMENT: scale open installments down proportionally starting from the amortization date.
    * Isolated calculation logic.
    */
-  #applyAmortizationReduceInstallment(processedEvents, openList, amortVal) {
-    if (!openList || openList.length === 0) return processedEvents;
+  #applyAmortizationReduceInstallment(processedEvents, amortEv, amortVal) {
+    const amortDateStr = (amortEv.date || '1900-01-01').substring(0, 10);
+    const subsequentList = processedEvents.filter(
+      (ev) =>
+        (ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.isSystemLoanEvent) &&
+        !isCancelledStatus(ev.status) &&
+        (ev.date || '').substring(0, 10) >= amortDateStr
+    );
+    if (!subsequentList || subsequentList.length === 0) return processedEvents;
 
-    const totalOpenCapital = openList.reduce(
+    const totalOpenCapital = subsequentList.reduce(
       (sum, ev) => sum + Number(ev.installmentCapital || 0),
       0
     );
     if (totalOpenCapital <= 0) return processedEvents;
 
     const ratio = Math.max(0, totalOpenCapital - amortVal) / totalOpenCapital;
-    const openIds = new Set(openList.map((ev) => ev.id));
+    const subsequentIds = new Set(subsequentList.map((ev) => ev.id));
 
     return processedEvents.map((ev) => {
-      if (!openIds.has(ev.id)) return ev;
+      if (!subsequentIds.has(ev.id)) return ev;
       const cap = Math.round(Number(ev.installmentCapital || 0) * ratio * 100) / 100;
       const int = Math.round(Number(ev.installmentInterest || 0) * ratio * 100) / 100;
       const fee = Math.round(Number(ev.installmentFee || 0) * ratio * 100) / 100;

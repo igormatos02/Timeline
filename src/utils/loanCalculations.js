@@ -469,9 +469,17 @@ export function applyAmortizationReduceInstallment(
     return currentEvents;
   }
 
-  const future = currentEvents.filter((ev) =>
-    isOpenInstallmentForAmortization(ev, timeline)
-  );
+  const amortDateStr = (amortEv.date || '1900-01-01').substring(0, 10);
+
+  const isSubsequentInstallment = (ev) => {
+    if (!isLoanInstallment(ev)) return false;
+    if (!isEventForTimeline(ev, timeline)) return false;
+    if (isCancelledStatus(ev.status)) return false;
+    const evDateStr = (ev.date || '').substring(0, 10);
+    return evDateStr >= amortDateStr;
+  };
+
+  const future = currentEvents.filter(isSubsequentInstallment);
 
   if (future.length === 0) {
     return currentEvents;

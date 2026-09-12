@@ -97,7 +97,10 @@ export class TimelineService {
   }
 
   async getAllTimelines(timeboardId, query = {}) {
-    const timelines = await timelineRepository.getAllByTimeboardId(timeboardId);
+    const rawTimeboardId = (typeof timeboardId === 'object' && timeboardId !== null)
+      ? (timeboardId.timeboardId || timeboardId.timeboard_id || null)
+      : timeboardId;
+    const timelines = await timelineRepository.getAllByTimeboardId(rawTimeboardId);
 
     const typePriority = {
       [TimelineType.BALANCE]: 1,

@@ -963,19 +963,20 @@ export class FinancialEventService {
   }
 
   async _recalculateForReduceInstallment(loanInstallments, amortVal, amortDate, now, extractInstallmentPrincipal) {
-    const futureUnpaid = loanInstallments.filter(
-      (ev) => ev.status !== EventStatus.PAID && ev.status !== EventStatus.COMPLETED && !ev.isCompleted && ev.status !== EventStatus.ABATED && ev.status !== EventStatus.AMORTIZED && ev.date >= amortDate
+    const amortDateStr = (amortDate || '').substring(0, 10);
+    const futureInstallments = loanInstallments.filter(
+      (ev) => !isCancelledStatus(ev.status) && (ev.date || '').substring(0, 10) >= amortDateStr
     );
-    if (futureUnpaid.length > 0) {
-      let currentRemainingDebt = futureUnpaid.reduce((acc, ev) => acc + extractInstallmentPrincipal(ev), 0);
+    if (futureInstallments.length > 0) {
+      let currentRemainingDebt = futureInstallments.reduce((acc, ev) => acc + extractInstallmentPrincipal(ev), 0);
       if (currentRemainingDebt <= 0) return;
 
-      const firstEv = futureUnpaid[0];
+      const firstEv = futureInstallments[0];
       const originalInstallment = Number(firstEv.installmentAmount || firstEv.amount || 0);
       const newFuturePrincipal = Math.max(0, currentRemainingDebt - amortVal);
       const reductionRatio = currentRemainingDebt > 0 ? newFuturePrincipal / currentRemainingDebt : 0;
 
-      const updates = futureUnpaid.map((ev) => {
+      const updates = futureInstallments.map((ev) => {
         const origCap = Number(ev.installmentCapital ?? ev.principalAmount ?? Math.round((ev.installmentAmount || ev.amount || originalInstallment) * 0.82 * 100) / 100);
         const origJur = Number(ev.installmentInterest ?? ev.interestPortion ?? ev.interestAmount ?? Math.round((ev.installmentAmount || ev.amount || originalInstallment) * 0.18 * 100) / 100);
         const origFee = Number(ev.installmentFee ?? ev.taxAmount ?? 0);

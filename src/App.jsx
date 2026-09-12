@@ -530,6 +530,24 @@ export default function App() {
     }
   };
 
+  const handleSaveComputeStartDate = async (startDateVal) => {
+    const balanceTimeline = (activeTimeboardTimelines || []).find(
+      (t) => t && (t.type === TimelineType.BALANCE || t.type === 'balance')
+    );
+    const targetTimeline = balanceTimeline || activeTimeline;
+    if (targetTimeline && targetTimeline.id) {
+      try {
+        await api.updateTimeline(targetTimeline.id, {
+          startDate: startDateVal,
+          start_date: startDateVal
+        });
+        await refreshSystem();
+      } catch (err) {
+        console.error('Error saving compute start date:', err);
+      }
+    }
+  };
+
   const handleSaveTimeline = async (formData) => {
     const isInactive = formData.status === TimelineStatus.INACTIVE;
     const finalStatus = isInactive ? TimelineStatus.INACTIVE : TimelineStatus.ACTIVE;
@@ -1667,29 +1685,32 @@ export default function App() {
   };
 
   const handleSaveTimeboard = async (formData) => {
-    if (editingTimeboard && editingTimeboard.id) {
+    const targetId = formData?.id || editingTimeboard?.id;
+    if (targetId) {
       const updated = {
         ...formData,
-        tenantId: editingTimeboard.tenantId || DEFAULT_TENANT.id
+        tenantId: formData?.tenantId || editingTimeboard?.tenantId || DEFAULT_TENANT.id
       };
       setTimeboards((prev) =>
-        prev.map((tb) => (tb.id === editingTimeboard.id ? { ...tb, ...updated } : tb))
+        prev.map((tb) => (tb.id === targetId ? { ...tb, ...updated } : tb))
       );
       setMyTimeboards((prev) =>
-        prev.map((tb) => (tb.id === editingTimeboard.id ? { ...tb, ...updated } : tb))
+        prev.map((tb) => (tb.id === targetId ? { ...tb, ...updated } : tb))
       );
       try {
-        const saved = await api.updateTimeboard(editingTimeboard.id, updated);
+        const saved = await api.updateTimeboard(targetId, updated);
         if (saved) {
           setTimeboards((prev) =>
-            prev.map((tb) => (tb.id === editingTimeboard.id ? { ...tb, ...saved } : tb))
+            prev.map((tb) => (tb.id === targetId ? { ...tb, ...saved } : tb))
           );
           setMyTimeboards((prev) =>
-            prev.map((tb) => (tb.id === editingTimeboard.id ? { ...tb, ...saved } : tb))
+            prev.map((tb) => (tb.id === targetId ? { ...tb, ...saved } : tb))
           );
         }
+        return saved;
       } catch (err) {
         console.error('Error updating timeboard:', err);
+        throw err;
       }
     } else {
       const current = currentUser || api.getCurrentUser();
@@ -1910,9 +1931,11 @@ export default function App() {
             onNavigateToTimeline={handleNavigateToTimeline}
             headerComponent={
               <TimelineHeader
+                timeboard={activeTimeboard}
                 timeline={activeTimeline}
                 allTimelines={activeTimeboardTimelines}
                 events={activeTimeline?.events || rawEvents}
+                allEvents={rawEvents}
                 activeFinancialTab={activeFinancialTab}
                 onSelectFinancialTab={setActiveFinancialTab}
                 onEdit={handleOpenEditTimeline}
@@ -1922,6 +1945,7 @@ export default function App() {
                 onOpenCreateTimeline={handleOpenCreateTimeline}
                 onOpenAmortizationModal={() => handleOpenAmortizationModal()}
                 onScrollToOverdue={handleScrollToOverdue}
+                onSaveComputeStartDate={handleSaveComputeStartDate}
               />
             }
           />
@@ -1962,7 +1986,7 @@ export default function App() {
             setIsTimeboardSettingsModalOpen(false);
             setEditingTimeboard(null);
           }}
-          timeboard={editingTimeboard}
+          timeboard={timeboards.find((t) => t.id === (editingTimeboard?.id || activeTimeboardId)) || editingTimeboard || activeTimeboard}
           onSaveTimeboard={handleSaveTimeboard}
           onDeleteTimeboard={handleDeleteTimeboard}
         />

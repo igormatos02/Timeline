@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, Settings, Trash2 } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { TimelineStatus, TimelineColor, TIMELINE_COLOR_PRESETS } from '../enums/index.js';
+import { TimelineStatus, TimelineColor, TIMELINE_COLOR_PRESETS, TimelineType, normalizeTimelineType } from '../enums/index.js';
 
 export default function EditTimelineSettingsModal({
   isOpen,
@@ -16,17 +16,25 @@ export default function EditTimelineSettingsModal({
     name: '',
     description: '',
     color: TimelineColor.PRIMARY,
-    status: TimelineStatus.ACTIVE
+    status: TimelineStatus.ACTIVE,
+    initialValue: ''
   });
+
+  const resolvedType = normalizeTimelineType(initialData?.type);
+  const isIncomeOrInvestment = resolvedType === TimelineType.INCOME || resolvedType === TimelineType.INVESTMENT;
 
   useEffect(() => {
     if (!isOpen) return;
     if (initialData) {
+      const initVal = initialData.initialValue !== undefined && initialData.initialValue !== null
+        ? initialData.initialValue
+        : (initialData.initial_value !== undefined && initialData.initial_value !== null ? initialData.initial_value : '');
       setFormData({
         name: initialData.name || '',
         description: initialData.description || '',
         color: initialData.color || TimelineColor.PRIMARY,
-        status: initialData.status === TimelineStatus.INACTIVE ? TimelineStatus.INACTIVE : TimelineStatus.ACTIVE
+        status: initialData.status === TimelineStatus.INACTIVE ? TimelineStatus.INACTIVE : TimelineStatus.ACTIVE,
+        initialValue: initVal !== '' ? String(initVal) : ''
       });
     }
   }, [initialData, isOpen]);
@@ -50,7 +58,9 @@ export default function EditTimelineSettingsModal({
       ...initialData,
       ...formData,
       name: formData.name.trim(),
-      description: formData.description.trim()
+      description: formData.description.trim(),
+      initialValue: parseFloat(formData.initialValue) || 0,
+      initial_value: parseFloat(formData.initialValue) || 0
     });
     onClose();
   };
@@ -178,6 +188,34 @@ export default function EditTimelineSettingsModal({
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
+
+          {/* Initial Value for Income / Investment */}
+          {isIncomeOrInvestment && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
+                {t('editTimelineSettingsModal.initialValueLabel')}
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  background: 'rgba(0, 0, 0, 0.25)',
+                  border: '1px solid var(--border-glass)',
+                  borderRadius: '10px',
+                  color: 'var(--text-main)',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+                placeholder={t('editTimelineSettingsModal.initialValuePlaceholder')}
+                value={formData.initialValue}
+                onChange={(e) => setFormData({ ...formData, initialValue: e.target.value })}
+              />
+            </div>
+          )}
 
           {/* Color Accent */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

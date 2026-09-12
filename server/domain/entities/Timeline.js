@@ -23,6 +23,7 @@ export class Timeline {
     status = TimelineStatus.ACTIVE,
     periodicity = EventPeriodicity.MONTHLY,
     aggregation = null,
+    initialValue = 0,
     monthlySalary = 0,
     contractNumber = '',
     totalDebt = 0,
@@ -48,6 +49,7 @@ export class Timeline {
     this.status = status;
     this.periodicity = periodicity || aggregation || EventPeriodicity.MONTHLY;
     this.aggregation = this.periodicity;
+    this.initialValue = Number(initialValue) || 0;
     this.monthlySalary = Number(monthlySalary) || 0;
     this.contractNumber = contractNumber;
     this.totalDebt = Number(totalDebt) || 0;

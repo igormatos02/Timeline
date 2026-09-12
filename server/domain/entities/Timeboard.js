@@ -18,6 +18,8 @@ export class Timeboard {
     type = TimeboardType.FINANCIAL,
     tenant = null,
     currency = 'EUR',
+    computeFrom = null,
+    compute_from = null,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
   }) {
@@ -30,6 +32,8 @@ export class Timeboard {
     this.type = type;
     this.tenant = tenant;
     this.currency = currency;
+    this.computeFrom = computeFrom || compute_from || null;
+    this.compute_from = this.computeFrom;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }

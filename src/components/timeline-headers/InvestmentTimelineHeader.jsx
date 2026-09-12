@@ -8,9 +8,10 @@ import {
   Settings,
   RotateCcw
 } from 'lucide-react';
+import { format } from 'date-fns';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { InvestmentEventCategory } from '../../../shared/enums/InvestmentEventCategory.js';
-import { EventType, isCancelledStatus } from '../../enums/index.js';
+import { EventType, isCancelledStatus, TimelineColor } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
@@ -29,12 +30,12 @@ export default function InvestmentTimelineHeader({
   activeViewMode = 'summary',
   setActiveViewMode
 }) {
-  const { t } = useTranslation();
+  const { t, dateLocale } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
 
   if (!timeline) return null;
 
-  const headerColor = timeline.color || '#6366f1';
+  const headerColor = timeline.color || TimelineColor.INVESTMENT;
   const metrics = timeline.metrics || {};
   const dto = timeline.investmentHeaderResult || timeline.procedureMetrics || metrics.investmentHeaderResult;
 
@@ -63,7 +64,7 @@ export default function InvestmentTimelineHeader({
   let categoryList = (dto?.categories_breakdown && dto.categories_breakdown.length > 0)
     ? dto.categories_breakdown.map((item) => ({
         rawCat: item.category,
-        name: item.category, // Valor exato vindo do enum
+        name: item.category,
         amount: Number(item.amount || 0),
         percent: Number(item.percent || 0)
       }))
@@ -89,7 +90,7 @@ export default function InvestmentTimelineHeader({
       .filter(([cat]) => validEnumValues.includes(cat))
       .map(([cat, amt]) => ({
         rawCat: cat,
-        name: cat, // Valor exato vindo do enum
+        name: cat,
         amount: amt,
         percent: monthTotalInvested > 0 ? Math.round((amt / monthTotalInvested) * 100) : 0
       }))
@@ -98,17 +99,14 @@ export default function InvestmentTimelineHeader({
 
   // 2. COMPROMETIMENTO ANUAL — Aportes projetados nos próximos 12 meses vs Renda Anual
   const startDateObj = new Date();
-  // Use local year/month to avoid timezone shifts from toISOString() (UTC) vs local time
   const startYear = startDateObj.getFullYear();
-  const startMonth = startDateObj.getMonth(); // 0-indexed
+  const startMonth = startDateObj.getMonth();
   const startMonthKey = `${startYear}-${String(startMonth + 1).padStart(2, '0')}`;
 
-  // End = exactly 12 months later (exclusive upper bound)
   const endTotalMonths = startMonth + 12;
   const endYear = startYear + Math.floor(endTotalMonths / 12);
-  const endMonthNum = endTotalMonths % 12; // 0-indexed
+  const endMonthNum = endTotalMonths % 12;
   const endMonthKey = `${endYear}-${String(endMonthNum + 1).padStart(2, '0')}`;
-
 
   let annualTotalInvested = 0;
   let annualRegularInvested = 0;
@@ -117,10 +115,8 @@ export default function InvestmentTimelineHeader({
   let currentMonthExternalInvested = 0;
   let annualTotalIncome = 0;
 
-  // eventsList already contains rawEvents from all timelines (set by App.jsx activeTimeline memo)
-  // So we scan it once for both income and investment events in the 12-month window
   eventsList.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
+    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
     const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME || ev.isIncome;
     const isInvestment = ev.eventType === 'investment' || ev.eventType === EventType.INVESTMENT || ev.isInvestment;
     const isExternal = Boolean(ev.isExternal || ev.is_external);
@@ -154,7 +150,6 @@ export default function InvestmentTimelineHeader({
     }
   });
 
-  // Fallback: use timeline monthly salary/budget setting if no income events found
   if (annualTotalIncome === 0) {
     const monthlyFallback = timeline.monthlySalary || timeline.monthlyBudget || timeline.monthlyIncome || 0;
     annualTotalIncome = monthlyFallback * 12;
@@ -172,7 +167,7 @@ export default function InvestmentTimelineHeader({
   let customTarget = 0;
 
   eventsList.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
+    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
     const isInvestment = ev.eventType === 'investment' || ev.eventType === EventType.INVESTMENT || ev.isInvestment;
     if (isInvestment) {
       const isReceived = ev.status === 'paid' || ev.status === 'settled' || ev.status === 'completed' || ev.status === 'received' || ev.status === 'invested' || ev.isCompleted;
@@ -201,6 +196,8 @@ export default function InvestmentTimelineHeader({
     ? Math.min(100, Math.round((totalReceived / targetAmount) * 100))
     : 0;
 
+  const initialValueAmount = timeline.initialValue ?? timeline.initial_value ?? 0;
+
   return (
     <HeaderShell
       timeline={timeline}
@@ -212,7 +209,7 @@ export default function InvestmentTimelineHeader({
           color={headerColor}
           icon={<PiggyBank size={18} />}
           name={timeline.name}
-          badge={t('investmentHeader.badge') || 'Poupança & Investimentos'}
+          badge={t('investmentHeader.badge')}
           iconBackground="rgba(99, 102, 241, 0.12)"
           badgeBackground="rgba(99, 102, 241, 0.12)"
           description={timeline.description}
@@ -239,7 +236,7 @@ export default function InvestmentTimelineHeader({
               }}
             >
               <Plus size={14} />
-              <span>Novo Aporte</span>
+              <span>{t('investmentHeader.addInvestment')}</span>
             </button>
           )}
 
@@ -248,7 +245,7 @@ export default function InvestmentTimelineHeader({
               type="button"
               className="btn btn-outline-danger btn-sm"
               onClick={onReset}
-              title="Limpar todos os movimentos desta timeline"
+              title={t('investmentHeader.resetTitle')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -259,7 +256,7 @@ export default function InvestmentTimelineHeader({
               }}
             >
               <RotateCcw size={13} />
-              <span>Reset</span>
+              <span>{t('common.reset')}</span>
             </button>
           )}
 
@@ -267,7 +264,7 @@ export default function InvestmentTimelineHeader({
             <button
               type="button"
               onClick={onEdit}
-              title="Timeline Settings"
+              title={t('investmentHeader.settingsTitle')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -290,6 +287,7 @@ export default function InvestmentTimelineHeader({
               type="button"
               className="btn btn-outline-danger btn-sm"
               onClick={() => onDelete && onDelete(timeline)}
+              title={t('investmentHeader.deleteTitle')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -339,11 +337,11 @@ export default function InvestmentTimelineHeader({
                     fontWeight: activeViewMode === 'summary' ? '800' : '600',
                     cursor: 'pointer',
                     background: activeViewMode === 'summary' ? 'rgba(99, 102, 241, 0.18)' : 'transparent',
-                    color: activeViewMode === 'summary' ? '#6366f1' : 'var(--text-muted)'
+                    color: activeViewMode === 'summary' ? TimelineColor.INVESTMENT : 'var(--text-muted)'
                   }}
                 >
                   <Layers size={13} />
-                  <span>Resumo</span>
+                  <span>{t('investmentHeader.summaryView')}</span>
                 </button>
                 <button
                   type="button"
@@ -360,11 +358,11 @@ export default function InvestmentTimelineHeader({
                     fontWeight: activeViewMode === 'graph' ? '800' : '600',
                     cursor: 'pointer',
                     background: activeViewMode === 'graph' ? 'rgba(99, 102, 241, 0.18)' : 'transparent',
-                    color: activeViewMode === 'graph' ? '#6366f1' : 'var(--text-muted)'
+                    color: activeViewMode === 'graph' ? TimelineColor.INVESTMENT : 'var(--text-muted)'
                   }}
                 >
                   <Sparkles size={13} />
-                  <span>Evolução</span>
+                  <span>{t('investmentHeader.evolutionView')}</span>
                 </button>
               </div>
             </div>
@@ -375,12 +373,20 @@ export default function InvestmentTimelineHeader({
             {/* Quadrante 1: INVESTIMENTOS POR CATEGORIA (PieChart SVG & Legenda) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                INVESTIMENTOS POR CATEGORIA
+                {t('investmentHeader.categoriesTitle')}
               </div>
               {(() => {
                 const categoryColors = [
-                  '#6366f1', '#a855f7', '#06b6d4', '#10b981', '#f59e0b',
-                  '#ec4899', '#3b82f6', '#84cc16', '#14b8a6', '#f43f5e'
+                  TimelineColor.INVESTMENT,
+                  TimelineColor.PURPLE,
+                  TimelineColor.CYAN,
+                  TimelineColor.SUCCESS,
+                  TimelineColor.WARNING,
+                  TimelineColor.PINK,
+                  TimelineColor.BLUE,
+                  TimelineColor.SLATE,
+                  TimelineColor.PRIMARY,
+                  TimelineColor.ROSE
                 ];
 
                 if (!categoryList || categoryList.length === 0) {
@@ -399,7 +405,7 @@ export default function InvestmentTimelineHeader({
                             width: '42px',
                             height: '42px',
                             borderRadius: '50%',
-                            background: 'var(--bg-card, #0f172a)',
+                            background: 'var(--bg-card)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -414,10 +420,10 @@ export default function InvestmentTimelineHeader({
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                          Sem investimentos registados
+                          {t('investmentHeader.noInvestments')}
                         </span>
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
-                          Adicione aportes para visualizar o gráfico por categoria.
+                          {t('investmentHeader.noInvestmentsHint')}
                         </span>
                       </div>
                     </div>
@@ -441,7 +447,7 @@ export default function InvestmentTimelineHeader({
             {/* Quadrante 2: COMPROMETIMENTO ANUAL (Aportes vs Renda — Donut Chart) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                ANNUAL COMMITMENT
+                {t('investmentHeader.annualProjectionTitle')}
               </div>
               {(() => {
                 if (annualTotalInvested === 0 && annualTotalIncome === 0) {
@@ -453,12 +459,21 @@ export default function InvestmentTimelineHeader({
                         </svg>
                         <div
                           style={{
-                            position: 'absolute', top: '50%', left: '50%',
-                            transform: 'translate(-50%, -50%)', width: '42px', height: '42px',
-                            borderRadius: '50%', background: 'var(--bg-card, #0f172a)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            border: '1px solid var(--border-glass)', fontSize: '0.7rem',
-                            fontWeight: '700', color: 'var(--text-dim)'
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: '42px',
+                            height: '42px',
+                            borderRadius: '50%',
+                            background: 'var(--bg-card)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '1px solid var(--border-glass)',
+                            fontSize: '0.7rem',
+                            fontWeight: '700',
+                            color: 'var(--text-dim)'
                           }}
                         >
                           0%
@@ -466,17 +481,17 @@ export default function InvestmentTimelineHeader({
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                          Sem dados disponíveis
+                          {t('investmentHeader.noInvestments')}
                         </span>
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
-                          Adicione aportes e rendimentos para calcular o comprometimento anual.
+                          {t('investmentHeader.noInvestmentsHint')}
                         </span>
                       </div>
                     </div>
                   );
                 }
 
-                const sliceColor = annualCommitmentPercent > 60 ? '#f59e0b' : '#6366f1';
+                const sliceColor = annualCommitmentPercent > 60 ? TimelineColor.WARNING : TimelineColor.INVESTMENT;
 
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
@@ -484,24 +499,24 @@ export default function InvestmentTimelineHeader({
                       percent={annualCommitmentPercent}
                       sliceColor={sliceColor}
                       remainingColor="rgba(255, 255, 255, 0.08)"
-                      title={`Annual Commitment: ${annualCommitmentPercent}%`}
+                      title={`${t('investmentHeader.annualProjectionTitle')}: ${annualCommitmentPercent}%`}
                       label={`${annualCommitmentPercent}%`}
                     />
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                       <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
-                        Annual Commitment:
+                        {t('investmentHeader.projectionNext12Months')}
                       </div>
                       <div style={{ fontSize: '0.94rem', fontWeight: '800', color: 'var(--text-main)' }}>
                         {formatCurrency(annualTotalInvested)}
                       </div>
                       {annualTotalIncome > 0 ? (
                         <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                          of {formatCurrency(annualTotalIncome)} annual total
+                          {t('investmentHeader.annualTarget', { amount: formatCurrency(annualTotalIncome) })}
                         </div>
                       ) : (
                         <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                          projected next 12 months
+                          {t('investmentHeader.projectionNext12Months')}
                         </div>
                       )}
                     </div>
@@ -510,18 +525,18 @@ export default function InvestmentTimelineHeader({
               })()}
             </div>
 
-            {/* Quadrante 3: ATUAL (PieChart Donut SVG de Atingimento do Target) */}
+            {/* Quadrante 3: ATUAL (Valor Inicial, Total Aportado & Target) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {t('investmentHeader.currentTitle') || 'ATUAL'}
+                {t('investmentHeader.currentTitle')}
               </div>
               {(() => {
-                const targetReachedLabel = t('investmentHeader.targetReached', { percent: targetPercent }) || `${targetPercent}% do target`;
+                const targetReachedLabel = t('investmentHeader.targetReached', { percent: targetPercent });
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
                     <DonutChart
                       percent={targetPercent}
-                      sliceColor="#8b5cf6"
+                      sliceColor={TimelineColor.INVESTMENT}
                       remainingColor="rgba(139, 92, 246, 0.2)"
                       title={targetReachedLabel}
                       label={`${targetPercent}%`}
@@ -529,15 +544,19 @@ export default function InvestmentTimelineHeader({
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                       <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.receivedTotalLabel') || 'recebidos:'}</span>
-                        <strong style={{ color: '#10b981', fontSize: '0.86rem' }}>{formatCurrency(totalReceived)}</strong>
+                        <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.initialValue')}</span>
+                        <strong style={{ color: 'var(--primary-light)', fontSize: '0.86rem' }}>{formatCurrency(initialValueAmount)}</strong>
                       </div>
                       <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.targetLabel') || 'target:'}</span>
-                        <strong style={{ color: '#8b5cf6', fontSize: '0.86rem' }}>{formatCurrency(targetAmount)}</strong>
+                        <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.receivedTotalLabel')}</span>
+                        <strong style={{ color: TimelineColor.SUCCESS, fontSize: '0.86rem' }}>{formatCurrency(totalReceived)}</strong>
+                      </div>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.targetLabel')}</span>
+                        <strong style={{ color: TimelineColor.INVESTMENT, fontSize: '0.86rem' }}>{formatCurrency(targetAmount)}</strong>
                       </div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '2px' }}>
-                        {t('investmentHeader.targetReached', { percent: targetPercent }) || `${targetPercent}% do target atingido`}
+                        {targetReachedLabel}
                       </div>
                     </div>
                   </div>
@@ -557,12 +576,12 @@ export default function InvestmentTimelineHeader({
               const key = `${year}-${monthStr}`;
 
               const d = new Date(year, month - 1, 1);
-              const label = d.toLocaleDateString('pt-PT', { month: 'short' }).replace('.', '').toUpperCase();
+              const label = format(d, 'MMM', { locale: dateLocale }).replace('.', '').toUpperCase();
               last7Months.push({ key, label, total: 0 });
             }
 
             eventsList.forEach((ev) => {
-              if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
+              if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
               const isInvestment = ev.eventType === 'investment' || ev.eventType === EventType.INVESTMENT || ev.isInvestment;
               if (isInvestment) {
                 const evKey = ev.date.substring(0, 7);
@@ -580,19 +599,19 @@ export default function InvestmentTimelineHeader({
             return (
               <BarChart7Months
                 months={last7Months}
-                chartTitle="EVOLUÇÃO DO VOLUME DE APORTES (ÚLTIMOS 6 MESES + MÊS ATUAL)"
-                monthVsPrevLabel="Este mês vs mês anterior:"
+                chartTitle={t('investmentHeader.chartTitle')}
+                monthVsPrevLabel={t('investmentHeader.monthVsPrevMonth')}
                 diffPercentStr={diffPercentStr}
                 isGoodChange={isDiffPositive}
-                goodColor="#6366f1"
-                sparklesLabel="Projeção anual:"
+                goodColor={TimelineColor.INVESTMENT}
+                sparklesLabel={t('investmentHeader.annualProjectionLabel')}
                 projection={annualProj}
-                sparklesColor="#6366f1"
-                projectionColor="#6366f1"
-                currentGradient="linear-gradient(180deg, #6366f1 0%, #4f46e5 100%)"
+                sparklesColor={TimelineColor.INVESTMENT}
+                projectionColor={TimelineColor.INVESTMENT}
+                currentGradient={`linear-gradient(180deg, ${TimelineColor.INVESTMENT} 0%, rgba(139, 92, 246, 0.8) 100%)`}
                 mutedGradientTop="rgba(99, 102, 241, 0.6)"
                 mutedGradientBottom="rgba(99, 102, 241, 0.3)"
-                currentTextColor="#6366f1"
+                currentTextColor={TimelineColor.INVESTMENT}
               />
             );
           })()}

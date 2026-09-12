@@ -11,7 +11,7 @@ import {
 import { format } from 'date-fns';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { IncomeEventCategory } from '../../../shared/enums/IncomeEventCategory.js';
-import { EventType, isCancelledStatus } from '../../enums/index.js';
+import { EventType, isCancelledStatus, TimelineColor, TimelineType } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
@@ -21,21 +21,36 @@ import { computeMonthDiff } from '../../utils/timelineCharts.js';
 
 export default function IncomeTimelineHeader({
   timeline,
+  timeboard = null,
   allTimelines = [],
   events = [],
+  allEvents = [],
   onEdit,
   onDelete,
   onAddEvent,
   onReset,
   activeViewMode = 'summary',
-  setActiveViewMode
+  setActiveViewMode,
+  computeStartDate = null
 }) {
-  const { t, language, dateLocale } = useTranslation();
+  const { t, dateLocale } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
+
+  // Mapa de tipos de timeline para identificação consistente
+  const timelineTypeMap = React.useMemo(() => {
+    const map = new Map();
+    (allTimelines || []).forEach((tl) => {
+      if (tl && tl.id) map.set(String(tl.id), tl.type);
+    });
+    if (timeline && timeline.id) {
+      map.set(String(timeline.id), timeline.type);
+    }
+    return map;
+  }, [allTimelines, timeline]);
 
   if (!timeline) return null;
 
-  const headerColor = timeline.color || '#10b981'; // Verde padrão para Entradas / Income
+  const headerColor = timeline.color || TimelineColor.INCOME;
   const metrics = timeline.metrics || {};
   const dto = timeline.incomeHeaderResult || timeline.procedureMetrics || metrics.incomeHeaderResult;
 
@@ -77,8 +92,8 @@ export default function IncomeTimelineHeader({
   if (categoryList.length === 0) {
     const categoryTotals = {};
     eventsList.forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
-      const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME || ev.isIncome;
+      if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
+      const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
       if (isIncome && ev.date.startsWith(currentMonthStr)) {
         const amt = Number(ev.amount || 0);
         let cat = (ev.category || '').toLowerCase();
@@ -100,66 +115,166 @@ export default function IncomeTimelineHeader({
       .sort((a, b) => b.amount - a.amount);
   }
 
-  // 2. PROJEÇÃO E COMPROMETIMENTO ANUAL (Janela de 12 meses a partir de hoje)
+  // 2. CONSUMO / COMPROMETIMENTO DA ENTRADA (Janela de 12 meses a partir de hoje)
   const startDateObj = new Date();
-  // Use local year/month to avoid timezone shifts from toISOString() (UTC) vs local time
   const startYear = startDateObj.getFullYear();
-  const startMonth = startDateObj.getMonth(); // 0-indexed
+  const startMonth = startDateObj.getMonth();
   const startMonthKey = `${startYear}-${String(startMonth + 1).padStart(2, '0')}`;
-  // End = exactly 12 months later (exclusive upper bound)
   const endTotalMonths = startMonth + 12;
   const endYear = startYear + Math.floor(endTotalMonths / 12);
-  const endMonthNum = endTotalMonths % 12; // 0-indexed
+  const endMonthNum = endTotalMonths % 12;
   const endMonthKey = `${endYear}-${String(endMonthNum + 1).padStart(2, '0')}`;
 
+  // Coletar eventos únicos de todos os tracks para cálculo de consumo cruzado
+  const seenEventIds = new Set();
+  const allBoardEvents = [];
+  const rawEventsList = [
+    ...(allEvents || []),
+    ...eventsList,
+    ...(allTimelines || []).flatMap((tl) => tl.events || [])
+  ];
+  for (const ev of rawEventsList) {
+    if (!ev) continue;
+    const key = ev.id || `${ev.date}-${ev.title}-${ev.amount}`;
+    if (!seenEventIds.has(key)) {
+      seenEventIds.add(key);
+      allBoardEvents.push(ev);
+    }
+  }
 
   let annualTotalIncome = 0;
-  eventsList.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
+  let annualLoans = 0;
+  let annualExpenses = 0;
+  let annualInvestments = 0;
+
+  allBoardEvents.forEach((ev) => {
+    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
     const evMonthKey = ev.date.substring(0, 7);
     if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
-      const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME || ev.isIncome;
+      const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || '')) || ev.timelineType;
+      const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
+      const isLoan = isLoanInstallment || ev.eventType === EventType.LOAN || ev.eventType === EventType.AMORTIZATION || ev.isLoan || ev.category === 'amortizacao' || isLoanTimelineType(tlType);
+      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment || tlType === TimelineType.INVESTMENT;
+      const isExpense = ((ev.eventType === EventType.EXPENSE || ev.category === 'saida_recorrente' || ev.category === 'expense' || ev.isExpense || tlType === TimelineType.EXPENSE) && !isLoan && !isInvestment);
+      const isIncome = (ev.eventType === EventType.INCOME || ev.category === 'entrada_recorrente' || ev.category === 'income' || ev.isIncome || tlType === TimelineType.INCOME) && !isLoan && !isInvestment && !isExpense;
+
+      const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
+      const amt = isLoanInstallment
+        ? Math.abs(Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0)))
+        : Math.abs(Number(ev.amount || 0));
+
       if (isIncome) {
-        annualTotalIncome += Number(ev.amount || 0);
+        annualTotalIncome += amt;
+      } else if (isLoan) {
+        annualLoans += amt;
+      } else if (isExpense) {
+        annualExpenses += amt;
+      } else if (isInvestment && !isExternal && !ev.isFirstOccurrence) {
+        annualInvestments += amt;
       }
     }
   });
 
-  const annualTarget = dto?.annual_target || (metrics.monthlyBaseSalary ? metrics.monthlyBaseSalary * 12 : 36000);
-  const annualAchievementPercent = annualTarget > 0 ? Math.min(100, Math.round((annualTotalIncome / annualTarget) * 100)) : 0;
+  const annualCommitted = annualLoans + annualExpenses + annualInvestments;
+  const commitmentPercent = annualTotalIncome > 0
+    ? Math.round((annualCommitted / annualTotalIncome) * 100)
+    : (annualCommitted > 0 ? 100 : 0);
+  const availableAmount = Math.max(0, annualTotalIncome - annualCommitted);
+  const availablePercent = Math.max(0, 100 - commitmentPercent);
 
-  // 3. ATUAL: TOTAL RECEBIDO & TARGET
-  let totalInstallmentsReceived = 0;
-  let initialContribution = 0;
-  let totalReceivedCount = 0;
-  let customTarget = 0;
+  const getConsumptionColor = (pct) => {
+    if (pct <= 30) return TimelineColor.EMERALD;
+    if (pct <= 50) return TimelineColor.CYAN;
+    if (pct <= 75) return TimelineColor.WARNING;
+    return TimelineColor.DANGER;
+  };
+  const consumptionColor = getConsumptionColor(commitmentPercent);
+
+  // 3. ACUMULAÇÃO ATUAL (Soma dos Balanços mensais desde computeFrom do Timeboard até o mês atual + Valor Inicial da Timeline)
+  const balanceTimeline = (allTimelines || []).find((tl) => tl && (tl.type === TimelineType.BALANCE || tl.type === 'balance'));
+  const timeboardComputeStart = timeboard?.computeFrom || timeboard?.compute_from;
+  const balanceComputeStart = balanceTimeline?.computeStartDate || balanceTimeline?.compute_start_date || balanceTimeline?.computeFrom || balanceTimeline?.compute_from;
+  const ownComputeStart = timeline?.computeStartDate || timeline?.compute_start_date || timeline?.computeFrom || timeline?.compute_from;
+  const rawComputeStart = computeStartDate || timeboardComputeStart || balanceComputeStart || ownComputeStart;
+
+  const computeFromMonth = rawComputeStart
+    ? (String(rawComputeStart) === '1900-01' || String(rawComputeStart).startsWith('1900-01') ? '1900-01' : String(rawComputeStart).substring(0, 7))
+    : currentMonthStr;
+
+  const monthlyTotals = new Map();
+
+  allBoardEvents.forEach((ev) => {
+    if (!ev || !ev.date || ev.isDeleted) return;
+    if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida') return;
+
+    const evMonthKey = ev.date.substring(0, 7);
+    const isAfterStart = computeFromMonth === '1900-01' || evMonthKey >= computeFromMonth;
+    const isUpToCurrentMonth = evMonthKey <= currentMonthStr;
+
+    if (!isAfterStart || !isUpToCurrentMonth) return;
+
+    if (!monthlyTotals.has(evMonthKey)) {
+      monthlyTotals.set(evMonthKey, { income: 0, expense: 0, loan: 0, investmentDeduction: 0 });
+    }
+    const mData = monthlyTotals.get(evMonthKey);
+
+    const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || '')) || ev.timelineType;
+    const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
+    const isLoan = isLoanInstallment || ev.eventType === EventType.LOAN || ev.eventType === EventType.AMORTIZATION || ev.isLoan || ev.category === 'amortizacao' || isLoanTimelineType(tlType);
+    const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment || tlType === TimelineType.INVESTMENT;
+    const isExpense = ((ev.eventType === EventType.EXPENSE || ev.category === 'saida_recorrente' || ev.category === 'expense' || ev.isExpense || tlType === TimelineType.EXPENSE) && !isLoan && !isInvestment);
+    const isIncome = (ev.eventType === EventType.INCOME || ev.category === 'entrada_recorrente' || ev.category === 'income' || ev.isIncome || tlType === TimelineType.INCOME) && !isLoan && !isInvestment && !isExpense;
+
+    const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
+    const amt = isLoanInstallment
+      ? Math.abs(Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0)))
+      : Math.abs(Number(ev.amount || 0));
+
+    if (isIncome) {
+      mData.income += amt;
+    } else if (isExpense) {
+      mData.expense += amt;
+    } else if (isLoan) {
+      mData.loan += amt;
+    } else if (isInvestment && !isExternal && !ev.isFirstOccurrence) {
+      mData.investmentDeduction += amt;
+    }
+  });
+
+  let accumulatedBalance = 0;
+  monthlyTotals.forEach((mData) => {
+    const monthNet = mData.income - (mData.expense + mData.loan + mData.investmentDeduction);
+    accumulatedBalance += monthNet;
+  });
+
+  const initialValueAmount = Number(timeline.initialValue ?? timeline.initial_value ?? 0);
+  const currentAccumulation = initialValueAmount + accumulatedBalance;
+
+  // Projeção do Ano Corrente (Jan - Dez) para o PieDonut do Quadrante 3
+  const currentCalendarYear = new Date().getFullYear().toString();
+  let calendarYearProjectedIncome = 0;
+  let calendarYearReceivedIncome = 0;
 
   eventsList.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
-    const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME || ev.isIncome;
-    if (isIncome) {
+    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
+    const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
+    if (isIncome && ev.date.startsWith(currentCalendarYear)) {
       const isReceived = ev.status === 'paid' || ev.status === 'received' || ev.status === 'completed' || ev.status === 'settled' || ev.isCompleted;
+      const amt = Math.abs(Number(ev.amount || 0));
+
+      calendarYearProjectedIncome += amt;
       if (isReceived) {
-        totalInstallmentsReceived += Number(ev.amount || 0);
-        totalReceivedCount += 1;
-      }
-      if (Number(ev.initialInvestedAmount || 0) > 0 && (ev.isFirstOccurrence || !ev.isProjected)) {
-        initialContribution += Number(ev.initialInvestedAmount);
-      }
-      if (Number(ev.targetAmount || 0) > 0) {
-        customTarget = Math.max(customTarget, Number(ev.targetAmount));
+        calendarYearReceivedIncome += amt;
       }
     }
   });
 
-  const totalReceived = totalInstallmentsReceived + initialContribution;
+  if (calendarYearProjectedIncome === 0 && calendarYearReceivedIncome > 0) {
+    calendarYearProjectedIncome = calendarYearReceivedIncome;
+  }
 
-  const targetAmount = customTarget > 0
-    ? customTarget
-    : (timeline.targetAmount || timeline.target || metrics?.targetAmount || metrics?.annualTarget || dto?.target || dto?.annual_target || 0);
-
-  const targetPercent = targetAmount > 0
-    ? Math.min(100, Math.round((totalReceived / targetAmount) * 100))
+  const calendarYearPercent = calendarYearProjectedIncome > 0
+    ? Math.min(100, Math.round((calendarYearReceivedIncome / calendarYearProjectedIncome) * 100))
     : 0;
 
   return (
@@ -173,7 +288,7 @@ export default function IncomeTimelineHeader({
           color={headerColor}
           icon={<DollarSign size={18} />}
           name={timeline.name}
-          badge={t('incomeHeader.badge') || 'Inflows & Income'}
+          badge={t('incomeHeader.badge')}
           iconBackground="rgba(16, 185, 129, 0.12)"
           badgeBackground="rgba(16, 185, 129, 0.12)"
           description={timeline.description}
@@ -200,7 +315,7 @@ export default function IncomeTimelineHeader({
               }}
             >
               <Plus size={14} />
-              <span>{t('incomeHeader.addIncome') || 'New Income'}</span>
+              <span>{t('incomeHeader.addIncome')}</span>
             </button>
           )}
 
@@ -209,7 +324,7 @@ export default function IncomeTimelineHeader({
               type="button"
               className="btn btn-outline-danger btn-sm"
               onClick={onReset}
-              title={t('incomeHeader.resetTitle') || 'Clear all movements in this timeline'}
+              title={t('incomeHeader.resetTitle')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -220,7 +335,7 @@ export default function IncomeTimelineHeader({
               }}
             >
               <RotateCcw size={13} />
-              <span>{t('common.reset') || 'Reset'}</span>
+              <span>{t('common.reset')}</span>
             </button>
           )}
 
@@ -228,7 +343,7 @@ export default function IncomeTimelineHeader({
             <button
               type="button"
               onClick={onEdit}
-              title={t('incomeHeader.settingsTitle') || 'Timeline Settings'}
+              title={t('incomeHeader.settingsTitle')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -251,7 +366,7 @@ export default function IncomeTimelineHeader({
               type="button"
               className="btn btn-outline-danger btn-sm"
               onClick={() => onDelete && onDelete(timeline)}
-              title={t('incomeHeader.deleteTitle') || 'Delete this timeline'}
+              title={t('incomeHeader.deleteTitle')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -262,7 +377,7 @@ export default function IncomeTimelineHeader({
               }}
             >
               <Trash2 size={13} />
-              <span>{t('common.delete') || 'Delete'}</span>
+              <span>{t('common.delete')}</span>
             </button>
           )}
         </div>
@@ -301,11 +416,11 @@ export default function IncomeTimelineHeader({
                     fontWeight: activeViewMode === 'summary' ? '800' : '600',
                     cursor: 'pointer',
                     background: activeViewMode === 'summary' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
-                    color: activeViewMode === 'summary' ? '#10b981' : 'var(--text-muted)'
+                    color: activeViewMode === 'summary' ? TimelineColor.INCOME : 'var(--text-muted)'
                   }}
                 >
                   <Layers size={13} />
-                  <span>{t('incomeHeader.summaryView') || 'Summary'}</span>
+                  <span>{t('incomeHeader.summaryView')}</span>
                 </button>
                 <button
                   type="button"
@@ -322,11 +437,11 @@ export default function IncomeTimelineHeader({
                     fontWeight: activeViewMode === 'graph' ? '800' : '600',
                     cursor: 'pointer',
                     background: activeViewMode === 'graph' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
-                    color: activeViewMode === 'graph' ? '#10b981' : 'var(--text-muted)'
+                    color: activeViewMode === 'graph' ? TimelineColor.INCOME : 'var(--text-muted)'
                   }}
                 >
                   <Sparkles size={13} />
-                  <span>{t('incomeHeader.evolutionView') || 'Evolution'}</span>
+                  <span>{t('incomeHeader.evolutionView')}</span>
                 </button>
               </div>
             </div>
@@ -337,12 +452,20 @@ export default function IncomeTimelineHeader({
             {/* Quadrante 1: RENDIMENTOS POR ORIGEM (PieChart SVG & Legenda) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {t('incomeHeader.sourcesTitle') || 'INCOME BY SOURCE'}
+                {t('incomeHeader.sourcesTitle')}
               </div>
               {(() => {
                 const categoryColors = [
-                  '#10b981', '#06b6d4', '#3b82f6', '#84cc16', '#a855f7',
-                  '#f59e0b', '#14b8a6', '#6366f1', '#ec4899', '#f43f5e'
+                  TimelineColor.INCOME,
+                  TimelineColor.CYAN,
+                  TimelineColor.BLUE,
+                  TimelineColor.PURPLE,
+                  TimelineColor.AMBER,
+                  TimelineColor.PINK,
+                  TimelineColor.SLATE,
+                  TimelineColor.PRIMARY,
+                  TimelineColor.ROSE,
+                  TimelineColor.VIOLET
                 ];
 
                 if (!categoryList || categoryList.length === 0) {
@@ -361,7 +484,7 @@ export default function IncomeTimelineHeader({
                             width: '42px',
                             height: '42px',
                             borderRadius: '50%',
-                            background: 'var(--bg-card, #0f172a)',
+                            background: 'var(--bg-card)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -376,10 +499,10 @@ export default function IncomeTimelineHeader({
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                          {t('incomeHeader.noIncome') || 'No income recorded'}
+                          {t('incomeHeader.noIncome')}
                         </span>
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
-                          {t('incomeHeader.noIncomeHint') || 'Add income events to view the breakdown by source.'}
+                          {t('incomeHeader.noIncomeHint')}
                         </span>
                       </div>
                     </div>
@@ -400,69 +523,65 @@ export default function IncomeTimelineHeader({
               })()}
             </div>
 
-            {/* Quadrante 2: PROJEÇÃO ANUAL (PieChart Donut SVG Anual) */}
+            {/* Quadrante 2: CONSUMO DA ENTRADA (Donut Chart de Comprometimento) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {t('incomeHeader.annualProjectionTitle') || 'ANNUAL PROJECTION'}
+                {t('incomeHeader.incomeConsumptionTitle')}
               </div>
               {(() => {
-                const annualProjectionTitle = t('incomeHeader.annualProjectionTitle') || 'Annual Projection';
+                const consumptionItems = [
+                  {
+                    name: t('incomeHeader.committedLabel'),
+                    percent: Math.min(100, commitmentPercent),
+                    color: consumptionColor
+                  },
+                  {
+                    name: t('incomeHeader.freeAvailableLabel'),
+                    percent: availablePercent,
+                    color: TimelineColor.SUCCESS
+                  }
+                ];
+
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                    <DonutChart
-                      percent={annualAchievementPercent}
-                      sliceColor="#10b981"
-                      remainingColor="rgba(255, 255, 255, 0.08)"
-                      title={`${annualProjectionTitle}: ${annualAchievementPercent}%`}
-                      label={`${annualAchievementPercent}%`}
-                    />
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
-                        {t('incomeHeader.projectionNext12Months') || 'Projection (Next 12 months):'}
-                      </div>
-                      <div style={{ fontSize: '0.94rem', fontWeight: '800', color: '#10b981' }}>
-                        {formatCurrency(annualTotalIncome)}
-                      </div>
-                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                        {t('incomeHeader.annualTarget', { amount: formatCurrency(annualTarget) }) || `annual target ${formatCurrency(annualTarget)}`}
-                      </div>
-                    </div>
+                    <PieDonut items={consumptionItems} centerLabel={`${commitmentPercent}%`} centerColor={consumptionColor} />
+                    <DonutLegend items={consumptionItems} />
                   </div>
                 );
               })()}
             </div>
 
-            {/* Quadrante 3: ATUAL (PieChart Donut SVG de Atingimento do Target) */}
+            {/* Quadrante 3: ACUMULAÇÃO ATUAL (Balanço + Initial Value & Donut Chart Jan - Dez) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {t('incomeHeader.currentTitle') || 'ATUAL'}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {t('incomeHeader.currentAccumulationTitle')}
+                </span>
+                <span style={{ fontSize: '0.94rem', fontWeight: '800', color: TimelineColor.SUCCESS }}>
+                  {formatCurrency(currentAccumulation)}
+                </span>
               </div>
               {(() => {
-                const targetReachedLabel = t('incomeHeader.targetReached', { percent: targetPercent }) || `${targetPercent}% do target`;
+                const receivedPct = calendarYearPercent;
+                const toReceivePct = Math.max(0, 100 - receivedPct);
+
+                const accumulationItems = [
+                  {
+                    name: t('incomeHeader.receivedYearLabel', { year: currentCalendarYear }),
+                    percent: receivedPct,
+                    color: TimelineColor.INCOME
+                  },
+                  {
+                    name: t('incomeHeader.totalToReceiveYearLabel', { year: currentCalendarYear }),
+                    percent: toReceivePct,
+                    color: TimelineColor.CYAN
+                  }
+                ];
+
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                    <DonutChart
-                      percent={targetPercent}
-                      sliceColor="#10b981"
-                      remainingColor="rgba(16, 185, 129, 0.2)"
-                      title={targetReachedLabel}
-                      label={`${targetPercent}%`}
-                    />
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{t('incomeHeader.receivedTotalLabel') || 'recebidos:'}</span>
-                        <strong style={{ color: '#10b981', fontSize: '0.86rem' }}>{formatCurrency(totalReceived)}</strong>
-                      </div>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{t('incomeHeader.targetLabel') || 'target:'}</span>
-                        <strong style={{ color: '#06b6d4', fontSize: '0.86rem' }}>{formatCurrency(targetAmount)}</strong>
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '2px' }}>
-                        {t('incomeHeader.targetReached', { percent: targetPercent }) || `${targetPercent}% do target atingido`}
-                      </div>
-                    </div>
+                    <PieDonut items={accumulationItems} centerLabel={`${receivedPct}%`} centerColor={TimelineColor.INCOME} />
+                    <DonutLegend items={accumulationItems} />
                   </div>
                 );
               })()}
@@ -485,8 +604,8 @@ export default function IncomeTimelineHeader({
             }
 
             eventsList.forEach((ev) => {
-              if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
-              const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME || ev.isIncome;
+              if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
+              const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
               if (isIncome) {
                 const evKey = ev.date.substring(0, 7);
                 const foundMonth = last7Months.find((m) => m.key === evKey);
@@ -502,19 +621,19 @@ export default function IncomeTimelineHeader({
             return (
               <BarChart7Months
                 months={last7Months}
-                chartTitle={t('incomeHeader.chartTitle') || 'INCOME VOLUME EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)'}
-                monthVsPrevLabel={t('incomeHeader.monthVsPrevMonth') || 'This month vs previous month:'}
+                chartTitle={t('incomeHeader.chartTitle')}
+                monthVsPrevLabel={t('incomeHeader.monthVsPrevMonth')}
                 diffPercentStr={diffPercentStr}
                 isGoodChange={isDiffPositive}
-                goodColor="#10b981"
-                sparklesLabel={t('incomeHeader.annualProjectionLabel') || 'Annual projection:'}
+                goodColor={TimelineColor.INCOME}
+                sparklesLabel={t('incomeHeader.annualProjectionLabel')}
                 projection={annualProj}
-                sparklesColor="#10b981"
-                projectionColor="#10b981"
-                currentGradient="linear-gradient(180deg, #10b981 0%, #059669 100%)"
+                sparklesColor={TimelineColor.INCOME}
+                projectionColor={TimelineColor.INCOME}
+                currentGradient={`linear-gradient(180deg, ${TimelineColor.INCOME} 0%, rgba(16, 185, 129, 0.8) 100%)`}
                 mutedGradientTop="rgba(16, 185, 129, 0.6)"
                 mutedGradientBottom="rgba(16, 185, 129, 0.3)"
-                currentTextColor="#10b981"
+                currentTextColor={TimelineColor.INCOME}
               />
             );
           })()}

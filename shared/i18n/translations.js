@@ -85,6 +85,7 @@ export const translations = {
       addEventMonthTitle: "Add new event in {month}",
       currentBalance: "Current Balance",
       projectedBalance: "Projected Balance",
+      initialValue: "Initial Value",
       income: "Income",
       expenses: "Expenses",
       investments: "Investments",
@@ -173,6 +174,8 @@ export const translations = {
       nameLabel: "Timeline Name *",
       namePlaceholder: "e.g., Main Income, Global Balance, Expenses...",
       namePlaceholderLoan: "e.g., Car Loan, Housing Mortgage, Personal Loan...",
+      initialValueLabel: "Initial Value (€)",
+      initialValuePlaceholder: "e.g., 5000.00",
       descriptionLabel: "Description",
       descriptionPlaceholder: "Brief description of the objectives for this timeline...",
       statusLabel: "Status",
@@ -228,6 +231,8 @@ export const translations = {
       subtitle: "Edit timeline name, description and color",
       nameLabel: "Timeline Name",
       namePlaceholder: "e.g., Incomes and Earnings",
+      initialValueLabel: "Initial Value (€)",
+      initialValuePlaceholder: "e.g., 5000.00",
       descriptionLabel: "Description",
       descriptionPlaceholder: "Describe the purpose of this timeline...",
       colorLabel: "Accent Color",
@@ -641,8 +646,16 @@ export const translations = {
       },
       settingsTab: {
         title: "Advanced Configurations",
-        emptyTitle: "Settings Under Construction",
-        emptyDesc: "Additional timeboard parameters, automations, and custom preferences will be available here soon."
+        subtitle: "Global calculation rules and workspace parameters for this timeboard",
+        computeFromCardTitle: "Balance Calculation Start Date (Compute From)",
+        computeFromCardDesc: "Defines the initial month for calculating accumulated balances across financial timelines (Balance and Income). Past months before this date are excluded from accumulation.",
+        computeFromOptionAll: "All History (From the beginning)",
+        computeFromOptionCurrent: "Current Month ({month})",
+        computeFromOptionCustom: "Custom Month",
+        computeFromMonthLabel: "Select Start Month (YYYY-MM)",
+        computeFromSavedToast: "Settings saved successfully.",
+        saveButton: "Save Settings",
+        savingButton: "Saving..."
       }
     },
 
@@ -839,9 +852,23 @@ export const translations = {
       noIncome: "No income recorded",
       noIncomeHint: "Add income events to view the breakdown by source.",
       annualProjectionTitle: "ANNUAL PROJECTION",
+      incomeConsumptionTitle: "12+ MONTH INCOME CONSUMPTION",
+      committedLabel: "Committed (12m)",
+      projectedIncomeLabel: "Projected Income (12m):",
+      freeAvailableLabel: "Free Available (12m)",
+      availablePercentLabel: "{percent}% free available",
+      committedPercentLabel: "{percent}% of income committed",
       projectionNext12Months: "Projection (Next 12 months):",
       annualTarget: "annual target {amount}",
       currentTitle: "CURRENT",
+      currentAccumulationTitle: "CURRENT ACCUMULATION",
+      currentAvailableAccumulationTitle: "CURRENT AVAILABLE ACCUMULATION",
+      currentAccumulationLabel: "Available:",
+      receivedYearLabel: "received ({year})",
+      totalToReceiveYearLabel: "total to receive ({year})",
+      currentYearReceivedLabel: "Year received ({year}):",
+      currentYearProjectionLabel: "Year projection ({year}):",
+      yearProgressReached: "{percent}% of annual projection received",
       receivedTotalLabel: "Received:",
       targetLabel: "Target:",
       targetReached: "{percent}% of target reached",
@@ -850,10 +877,11 @@ export const translations = {
       receivedLabel: "Received:",
       projectedVsReceivedCount: "{projected} projected ({received} already received)",
       monthVsPrevMonth: "This month vs previous month:",
-      annualProjectionLabel: "Annual projection:",
+      annualProjectionLabel: "12+ MONTH projection:",
       chartTitle: "INCOME VOLUME EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)",
       summaryView: "Summary",
-      evolutionView: "Evolution"
+      evolutionView: "Evolution",
+      initialValue: "Initial Value"
     },
 
     // Investment Timeline Header
@@ -881,7 +909,8 @@ export const translations = {
       annualProjectionLabel: "Annual projection:",
       chartTitle: "CONTRIBUTION VOLUME EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)",
       summaryView: "Summary",
-      evolutionView: "Evolution"
+      evolutionView: "Evolution",
+      initialValue: "Initial Value"
     },
 
     // Balance Timeline Header
@@ -1259,6 +1288,7 @@ export const translations = {
       addEventMonthTitle: "Adicionar novo evento em {month}",
       currentBalance: "Saldo Atual",
       projectedBalance: "Saldo Projetado",
+      initialValue: "Valor Inicial",
       income: "Entradas",
       expenses: "Gastos",
       investments: "Investimentos",
@@ -1347,6 +1377,8 @@ export const translations = {
       nameLabel: "Nome da Linha de Tempo *",
       namePlaceholder: "Ex: Entradas Principais, Balanço, Despesas...",
       namePlaceholderLoan: "Ex: Crédito Automóvel, Habitação, Pessoal...",
+      initialValueLabel: "Valor Inicial (€)",
+      initialValuePlaceholder: "Ex: 5000,00",
       descriptionLabel: "Descrição",
       descriptionPlaceholder: "Breve descrição dos objetivos desta linha temporal...",
       statusLabel: "Status",
@@ -1402,6 +1434,8 @@ export const translations = {
       subtitle: "Editar nome, descrição e cor da timeline",
       nameLabel: "Nome da Linha de Tempo",
       namePlaceholder: "Ex: Entradas e Rendimentos",
+      initialValueLabel: "Valor Inicial (€)",
+      initialValuePlaceholder: "Ex: 5000,00",
       descriptionLabel: "Descrição",
       descriptionPlaceholder: "Descreva o propósito desta timeline...",
       colorLabel: "Cor de Destaque",
@@ -1815,8 +1849,16 @@ export const translations = {
       },
       settingsTab: {
         title: "Configurações Avançadas",
-        emptyTitle: "Configurações em Desenvolvimento",
-        emptyDesc: "Parâmetros adicionais de automação, integrações e preferências avançadas estarão disponíveis aqui em breve."
+        subtitle: "Regras de cálculo global e parâmetros deste timeboard",
+        computeFromCardTitle: "Data Inicial de Cálculo de Saldo (Contar a partir de)",
+        computeFromCardDesc: "Define o mês inicial para o cálculo de saldos acumulados nas timelines financeiras (Balanço e Entradas). Meses anteriores a esta data são desconsiderados no acumulado.",
+        computeFromOptionAll: "Todo o Histórico (Desde o início)",
+        computeFromOptionCurrent: "Mês Atual ({month})",
+        computeFromOptionCustom: "Mês Personalizado",
+        computeFromMonthLabel: "Selecione o Mês Inicial (AAAA-MM)",
+        computeFromSavedToast: "Configurações guardadas com sucesso.",
+        saveButton: "Guardar Configurações",
+        savingButton: "A guardar..."
       }
     },
 
@@ -2013,9 +2055,23 @@ export const translations = {
       noIncome: "Sem rendimentos registados",
       noIncomeHint: "Adicione entradas para visualizar o gráfico por origem.",
       annualProjectionTitle: "PROJEÇÃO ANUAL",
+      incomeConsumptionTitle: "CONSUMO DA ENTRADA (12M+)",
+      committedLabel: "Comprometido (12m)",
+      projectedIncomeLabel: "Renda Projetada (12m):",
+      freeAvailableLabel: "Disponível Livre (12m)",
+      availablePercentLabel: "{percent}% disponível livre",
+      committedPercentLabel: "{percent}% da renda comprometida",
       projectionNext12Months: "Projeção (Próximos 12 meses):",
       annualTarget: "alvo anual {amount}",
       currentTitle: "ATUAL",
+      currentAccumulationTitle: "ACUMULAÇÃO ATUAL",
+      currentAvailableAccumulationTitle: "ACUMULAÇÃO DISPONÍVEL ATUAL",
+      currentAccumulationLabel: "Disponível:",
+      receivedYearLabel: "recebido ({year})",
+      totalToReceiveYearLabel: "total a receber ({year})",
+      currentYearReceivedLabel: "Recebido no ano ({year}):",
+      currentYearProjectionLabel: "Projeção anual ({year}):",
+      yearProgressReached: "{percent}% da projeção anual recebida",
       receivedTotalLabel: "Recebidos:",
       targetLabel: "Target:",
       targetReached: "{percent}% do target atingido",
@@ -2024,10 +2080,11 @@ export const translations = {
       receivedLabel: "Recebidos:",
       projectedVsReceivedCount: "{projected} previstos ({received} já recebidos)",
       monthVsPrevMonth: "Este mês vs mês anterior:",
-      annualProjectionLabel: "Projeção anual:",
+      annualProjectionLabel: "Projeção 12M+:",
       chartTitle: "EVOLUÇÃO DO VOLUME DE ENTRADAS (ÚLTIMOS 6 MESES + MÊS ATUAL)",
       summaryView: "Resumo",
-      evolutionView: "Evolução"
+      evolutionView: "Evolução",
+      initialValue: "Valor Inicial"
     },
 
     // Investment Timeline Header
@@ -2055,7 +2112,8 @@ export const translations = {
       annualProjectionLabel: "Projeção anual:",
       chartTitle: "EVOLUÇÃO DO VOLUME DE APORTES (ÚLTIMOS 6 MESES + MÊS ATUAL)",
       summaryView: "Resumo",
-      evolutionView: "Evolução"
+      evolutionView: "Evolução",
+      initialValue: "Valor Inicial"
     },
 
     // Balance Timeline Header

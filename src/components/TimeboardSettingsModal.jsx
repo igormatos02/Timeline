@@ -29,11 +29,13 @@ import {
   Ban,
   RefreshCw,
   Copy,
-  Link
+  Link,
+  Calendar
 } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { PersonRole, PersonType, TimeboardType, InvitationStatus } from '../enums/index.js';
+import { PersonRole, PersonType, TimeboardType, InvitationStatus, TimelineColor } from '../enums/index.js';
 import * as api from '../services/api.js';
+import MonthPickerPopover from './ui/MonthPickerPopover.jsx';
 
 export default function TimeboardSettingsModal({
   isOpen,
@@ -42,7 +44,8 @@ export default function TimeboardSettingsModal({
   onSaveTimeboard,
   onDeleteTimeboard
 }) {
-  const { t } = useTranslation();
+  const { t, dateLocale } = useTranslation();
+  const currentMonthKey = new Date().toISOString().substring(0, 7);
 
   // Active Tab: 'general' | 'entities' | 'settings'
   const [activeTab, setActiveTab] = useState('general');
@@ -55,6 +58,14 @@ export default function TimeboardSettingsModal({
   });
   const [isSavingGeneral, setIsSavingGeneral] = useState(false);
   const [generalSaveSuccess, setGeneralSaveSuccess] = useState(false);
+
+  // Settings tab form state (Compute From)
+  const [computeMode, setComputeMode] = useState('all'); // 'all' | 'current' | 'custom'
+  const [customComputeMonth, setCustomComputeMonth] = useState(currentMonthKey);
+  const [isCustomMonthPickerOpen, setIsCustomMonthPickerOpen] = useState(false);
+  const [customMonthPickerYear, setCustomMonthPickerYear] = useState(() => new Date().getFullYear());
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsSaveSuccess, setSettingsSaveSuccess] = useState(false);
 
   // Entities tab state
   const [persons, setPersons] = useState([]);
@@ -103,6 +114,25 @@ export default function TimeboardSettingsModal({
         description: timeboard.description || '',
         type: timeboard.type || TimeboardType.FINANCIAL
       });
+
+      const rawCompute = timeboard.computeFrom || timeboard.compute_from;
+      if (!rawCompute || rawCompute === '1900-01-01' || rawCompute === '1900-01') {
+        setComputeMode('all');
+        setCustomComputeMonth(currentMonthKey);
+        setCustomMonthPickerYear(new Date().getFullYear());
+      } else {
+        const monthKey = String(rawCompute).substring(0, 7);
+        const [y] = monthKey.split('-').map(Number);
+        if (!isNaN(y)) setCustomMonthPickerYear(y);
+        if (monthKey === currentMonthKey) {
+          setComputeMode('current');
+          setCustomComputeMonth(currentMonthKey);
+        } else {
+          setComputeMode('custom');
+          setCustomComputeMonth(monthKey);
+        }
+      }
+
       loadPersons(timeboard.id);
     }
   }, [isOpen, timeboard?.id, activeTab]);
@@ -152,6 +182,35 @@ export default function TimeboardSettingsModal({
       console.error('Failed to save timeboard:', err);
     } finally {
       setIsSavingGeneral(false);
+    }
+  };
+
+  // Handler: Save Settings Tab (Compute From)
+  const handleSaveSettings = async (e) => {
+    e?.preventDefault?.();
+    setIsSavingSettings(true);
+
+    let finalComputeFrom = '1900-01-01';
+    if (computeMode === 'current') {
+      finalComputeFrom = `${currentMonthKey}-01`;
+    } else if (computeMode === 'custom') {
+      finalComputeFrom = customComputeMonth ? `${customComputeMonth}-01` : '1900-01-01';
+    }
+
+    try {
+      await onSaveTimeboard({
+        ...timeboard,
+        computeFrom: finalComputeFrom,
+        compute_from: finalComputeFrom
+      });
+      setSettingsSaveSuccess(true);
+      showToast(t('timeboardSettings.settingsTab.computeFromSavedToast'));
+      setTimeout(() => setSettingsSaveSuccess(false), 2500);
+    } catch (err) {
+      console.error('Failed to save timeboard settings:', err);
+      showToast(err.message || 'Error saving settings');
+    } finally {
+      setIsSavingSettings(false);
     }
   };
 
@@ -1277,46 +1336,241 @@ export default function TimeboardSettingsModal({
               </div>
             )}
 
-            {/* TAB 3: CONFIGURAÇÕES (EMPTY PLACEHOLDER) */}
+            {/* TAB 3: CONFIGURAÇÕES DO TIMEBOARD (COMPUTE FROM) */}
             {activeTab === 'settings' && (
-              <div
+              <form
+                onSubmit={handleSaveSettings}
                 style={{
-                  height: '100%',
-                  minHeight: '340px',
                   display: 'flex',
                   flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                  gap: '16px',
-                  padding: '40px 20px'
+                  gap: '20px',
+                  maxWidth: '720px'
                 }}
               >
-                <div
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '16px',
-                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%)',
-                    border: '1px solid rgba(99, 102, 241, 0.3)',
-                    color: 'var(--primary-light, #818cf8)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 8px 24px rgba(99, 102, 241, 0.15)'
-                  }}
-                >
-                  <Sparkles size={32} />
-                </div>
+                {/* Header da Aba */}
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main, #fff)' }}>
-                    {t('timeboardSettings.settingsTab.emptyTitle') || 'Configurações em Desenvolvimento'}
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                    {t('timeboardSettings.settingsTab.title')}
                   </h3>
-                  <p style={{ margin: '8px auto 0', maxWidth: '440px', fontSize: '0.88rem', color: 'var(--text-muted, #94a3b8)', lineHeight: 1.5 }}>
-                    {t('timeboardSettings.settingsTab.emptyDesc') || 'Parâmetros adicionais de automação, integrações e preferências avançadas estarão disponíveis aqui em breve.'}
+                  <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {t('timeboardSettings.settingsTab.subtitle')}
                   </p>
                 </div>
-              </div>
+
+                {/* Card de Configuração: Contar a partir de (Compute From) */}
+                <div
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        background: 'rgba(99, 102, 241, 0.15)',
+                        border: '1px solid rgba(99, 102, 241, 0.3)',
+                        color: TimelineColor.PRIMARY,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <Calendar size={18} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                        {t('timeboardSettings.settingsTab.computeFromCardTitle')}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px', lineHeight: 1.4 }}>
+                        {t('timeboardSettings.settingsTab.computeFromCardDesc')}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Opções de Seleção */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', marginTop: '4px' }}>
+                    {/* Opção 1: Todo o Histórico */}
+                    <div
+                      onClick={() => setComputeMode('all')}
+                      style={{
+                        padding: '14px',
+                        borderRadius: '10px',
+                        border: computeMode === 'all'
+                          ? `2px solid ${TimelineColor.PRIMARY}`
+                          : '1px solid var(--border-glass)',
+                        background: computeMode === 'all'
+                          ? 'rgba(99, 102, 241, 0.12)'
+                          : 'rgba(255, 255, 255, 0.02)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.84rem', fontWeight: '800', color: computeMode === 'all' ? TimelineColor.PRIMARY : 'var(--text-main)' }}>
+                          {t('timeboardSettings.settingsTab.computeFromOptionAll')}
+                        </span>
+                        <div
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            borderRadius: '50%',
+                            border: computeMode === 'all' ? `4px solid ${TimelineColor.PRIMARY}` : '2px solid var(--text-dim)',
+                            background: computeMode === 'all' ? 'var(--bg-card)' : 'transparent'
+                          }}
+                        />
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                        1900-01-01
+                      </span>
+                    </div>
+
+                    {/* Opção 2: Mês Atual */}
+                    <div
+                      onClick={() => setComputeMode('current')}
+                      style={{
+                        padding: '14px',
+                        borderRadius: '10px',
+                        border: computeMode === 'current'
+                          ? `2px solid ${TimelineColor.PRIMARY}`
+                          : '1px solid var(--border-glass)',
+                        background: computeMode === 'current'
+                          ? 'rgba(99, 102, 241, 0.12)'
+                          : 'rgba(255, 255, 255, 0.02)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.84rem', fontWeight: '800', color: computeMode === 'current' ? TimelineColor.PRIMARY : 'var(--text-main)' }}>
+                          {t('timeboardSettings.settingsTab.computeFromOptionCurrent', { month: currentMonthKey })}
+                        </span>
+                        <div
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            borderRadius: '50%',
+                            border: computeMode === 'current' ? `4px solid ${TimelineColor.PRIMARY}` : '2px solid var(--text-dim)',
+                            background: computeMode === 'current' ? 'var(--bg-card)' : 'transparent'
+                          }}
+                        />
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                        {currentMonthKey}-01
+                      </span>
+                    </div>
+
+                    {/* Opção 3: Mês Personalizado */}
+                    <div
+                      onClick={() => setComputeMode('custom')}
+                      style={{
+                        padding: '14px',
+                        borderRadius: '10px',
+                        border: computeMode === 'custom'
+                          ? `2px solid ${TimelineColor.PRIMARY}`
+                          : '1px solid var(--border-glass)',
+                        background: computeMode === 'custom'
+                          ? 'rgba(99, 102, 241, 0.12)'
+                          : 'rgba(255, 255, 255, 0.02)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.84rem', fontWeight: '800', color: computeMode === 'custom' ? TimelineColor.PRIMARY : 'var(--text-main)' }}>
+                          {t('timeboardSettings.settingsTab.computeFromOptionCustom')}
+                        </span>
+                        <div
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            borderRadius: '50%',
+                            border: computeMode === 'custom' ? `4px solid ${TimelineColor.PRIMARY}` : '2px solid var(--text-dim)',
+                            background: computeMode === 'custom' ? 'var(--bg-card)' : 'transparent'
+                          }}
+                        />
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                        {customComputeMonth || currentMonthKey}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Seletor do Mês Personalizado com MonthPickerPopover estilizado */}
+                  {computeMode === 'custom' && (
+                    <div style={{ marginTop: '6px' }}>
+                      <MonthPickerPopover
+                        value={customComputeMonth}
+                        onChange={(month) => {
+                          setCustomComputeMonth(month);
+                          const [y] = month.split('-').map(Number);
+                          if (!isNaN(y)) setCustomMonthPickerYear(y);
+                        }}
+                        accent={TimelineColor.PRIMARY}
+                        dateLocale={dateLocale}
+                        label={t('timeboardSettings.settingsTab.computeFromMonthLabel')}
+                        isOpen={isCustomMonthPickerOpen}
+                        onToggle={() => setIsCustomMonthPickerOpen(!isCustomMonthPickerOpen)}
+                        year={customMonthPickerYear}
+                        onYearChange={setCustomMonthPickerYear}
+                        allowPast={true}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Botão Salvar */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '10px' }}>
+                  <button
+                    type="submit"
+                    disabled={isSavingSettings}
+                    className="btn btn-primary"
+                    style={{
+                      padding: '10px 24px',
+                      borderRadius: '8px',
+                      fontSize: '0.84rem',
+                      fontWeight: '800',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: isSavingSettings ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {isSavingSettings ? (
+                      <>
+                        <RefreshCw size={15} className="spin-animation" />
+                        <span>{t('timeboardSettings.settingsTab.savingButton')}</span>
+                      </>
+                    ) : settingsSaveSuccess ? (
+                      <>
+                        <Check size={15} />
+                        <span>{t('timeboardSettings.settingsTab.computeFromSavedToast')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Settings size={15} />
+                        <span>{t('timeboardSettings.settingsTab.saveButton')}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             )}
           </div>
         </div>

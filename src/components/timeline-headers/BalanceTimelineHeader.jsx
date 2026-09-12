@@ -35,6 +35,7 @@ import { PieDonut } from '../ui/DonutChart.jsx';
 
 export default function BalanceTimelineHeader({
   timeline,
+  timeboard = null,
   allTimelines = [],
   events = [],
   onEdit,
@@ -43,16 +44,13 @@ export default function BalanceTimelineHeader({
   _onReset,
   activeViewMode = 'summary',
   setActiveViewMode,
-  computeStartDate = null,
-  onSaveComputeStartDate
+  computeStartDate = null
 }) {
   const { t, language } = useTranslation();
   const dateLocale = language === 'en' ? enUS : pt;
   const currentMonthStr = format(new Date(), 'yyyy-MM');
   const [collapsed, setIsCollapsed] = useState(false);
   const [projectionMonthsAhead, setProjectionMonthsAhead] = useState(0);
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [_tempComputeMonth, setTempComputeMonth] = useState(currentMonthStr);
 
   // Mapa de tipo por ID de timeline para resolução precisa de eventos
   const timelineTypeMap = React.useMemo(() => {
@@ -116,31 +114,10 @@ export default function BalanceTimelineHeader({
     }
   })();
 
-  const computeFromMonth = computeStartDate
-    ? computeStartDate.substring(0, 7)
+  const rawComputeStart = computeStartDate || timeboard?.computeFrom || timeboard?.compute_from || timeline.computeFrom || timeline.compute_from || timeline.startDate || timeline.start_date;
+  const computeFromMonth = rawComputeStart
+    ? (String(rawComputeStart) === '1900-01' || String(rawComputeStart).startsWith('1900-01') ? '1900-01' : String(rawComputeStart).substring(0, 7))
     : currentMonthStr;
-
-  const getFormattedMonthLabel = (mStr) => {
-    try {
-      if (!mStr || mStr === '1900-01') return t('balanceHeader.allHistory');
-      const [year, month] = mStr.split('-');
-      const d = new Date(Number(year), Number(month) - 1, 1);
-      return format(d, 'MMM/yyyy', { locale: dateLocale });
-    } catch {
-      return mStr;
-    }
-  };
-
-  const handleSaveComputeMonth = (monthVal) => {
-    if (onSaveComputeStartDate) {
-      if (monthVal === '1900-01') {
-        onSaveComputeStartDate('1900-01-01');
-      } else {
-        onSaveComputeStartDate(`${monthVal}-01`);
-      }
-    }
-    setIsDatePickerOpen(false);
-  };
 
   // Extrair métricas consolidadas seguras da Stored Procedure ou fallback
   const dto = timeline.balanceHeaderResult || timeline.procedureMetrics;
@@ -349,41 +326,9 @@ export default function BalanceTimelineHeader({
       {/* Conteúdo Expandido com Métricas e Gráficos */}
       {!collapsed && (
         <div style={{ paddingTop: '14px' }}>
-          {/* Barra de Controles: Computar e Switcher Resumo / Gráfico */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setTempComputeMonth(computeFromMonth);
-                  setIsDatePickerOpen(true);
-                }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '5px 12px',
-                  height: '32px',
-                  background: 'rgba(14, 165, 233, 0.1)',
-                  border: isDatePickerOpen ? '1px solid #0ea5e9' : '1px solid rgba(14, 165, 233, 0.3)',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  transition: 'all 0.2s ease',
-                  whiteSpace: 'nowrap'
-                }}
-                title={t('balanceHeader.computeBtnTitle')}
-              >
-                <Calendar size={13} style={{ color: '#0ea5e9' }} />
-                <span style={{ color: 'var(--text-dim)', fontSize: '0.74rem', fontWeight: '600' }}>{t('balanceHeader.computeLabel')}</span>
-                <span style={{ color: '#0ea5e9', fontSize: '0.78rem', fontWeight: '800' }}>
-                  {getFormattedMonthLabel(computeFromMonth)}
-                </span>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>⚙️</span>
-              </button>
-            </div>
-
-            {setActiveViewMode && (
+          {/* Barra de Controles: Switcher Resumo / Gráfico */}
+          {setActiveViewMode && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
               <div
                 style={{
                   display: 'inline-flex',
@@ -411,7 +356,7 @@ export default function BalanceTimelineHeader({
                     fontWeight: activeViewMode === 'summary' ? '800' : '600',
                     cursor: 'pointer',
                     background: activeViewMode === 'summary' ? 'rgba(14, 165, 233, 0.18)' : 'transparent',
-                    color: activeViewMode === 'summary' ? '#0ea5e9' : 'var(--text-muted)'
+                    color: activeViewMode === 'summary' ? TimelineColor.CYAN : 'var(--text-muted)'
                   }}
                 >
                   <Layers size={13} />
@@ -432,15 +377,15 @@ export default function BalanceTimelineHeader({
                     fontWeight: activeViewMode === 'graph' ? '800' : '600',
                     cursor: 'pointer',
                     background: activeViewMode === 'graph' ? 'rgba(14, 165, 233, 0.18)' : 'transparent',
-                    color: activeViewMode === 'graph' ? '#0ea5e9' : 'var(--text-muted)'
+                    color: activeViewMode === 'graph' ? TimelineColor.CYAN : 'var(--text-muted)'
                   }}
                 >
                   <Sparkles size={13} />
                   <span>{t('balanceHeader.evolutionView')}</span>
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Grid Principal 2x2 padronizado com Donut SVGs */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
@@ -1045,120 +990,6 @@ export default function BalanceTimelineHeader({
             })()}
           </div>
         </div>
-      )}
-
-      {/* Modal para configurar mês inicial de computação */}
-      {isDatePickerOpen && typeof document !== 'undefined' && createPortal(
-        <div
-          className="modal-overlay"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: '100vw',
-            height: '100vh',
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 99999,
-            padding: '16px',
-            boxSizing: 'border-box'
-          }}
-        >
-          <div
-            className="modal-card"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              maxWidth: '440px',
-              width: '100%',
-              background: 'var(--bg-card, #131722)',
-              borderRadius: '16px',
-              border: '1px solid var(--border-glass-glow, rgba(99, 102, 241, 0.35))',
-              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(99, 102, 241, 0.18)',
-              padding: '24px',
-              boxSizing: 'border-box'
-            }}
-          >
-            <div className="modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ background: 'rgba(14, 165, 233, 0.15)', color: '#0ea5e9', padding: '7px', borderRadius: '10px', display: 'flex' }}>
-                  <Calendar size={20} />
-                </div>
-                <h3 className="modal-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                  {t('balanceHeader.computeModalTitle')}
-                </h3>
-              </div>
-              <button
-                type="button"
-                className="modal-close-btn action-icon-btn"
-                onClick={() => setIsDatePickerOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={{ padding: '0 0 16px 0' }}>
-              <p style={{ margin: '0 0 16px 0', fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
-                {t('balanceHeader.computeModalDescription')}
-              </p>
-
-              <label
-                style={{
-                  fontSize: '0.78rem',
-                  color: 'var(--text-main)',
-                  display: 'block',
-                  marginBottom: '6px',
-                  fontWeight: '700'
-                }}
-              >
-                {t('balanceHeader.selectMonthYear')}
-              </label>
-              <input
-                type="month"
-                value={tempComputeMonth}
-                onChange={(e) => setTempComputeMonth(e.target.value)}
-                className="form-input"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  fontSize: '0.94rem',
-                  borderRadius: '10px',
-                  background: 'var(--bg-app, #0f172a)',
-                  border: '1px solid rgba(14, 165, 233, 0.3)',
-                  color: 'var(--text-main)',
-                  marginBottom: '16px',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-
-            <div className="form-footer" style={{ margin: 0, paddingTop: '16px', borderTop: '1px solid var(--border-glass, rgba(255,255,255,0.08))', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => setIsDatePickerOpen(false)}
-                style={{ padding: '8px 16px', borderRadius: '8px' }}
-              >
-                {t('balanceHeader.cancel')}
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => handleSaveComputeMonth(tempComputeMonth)}
-                style={{ padding: '8px 20px', borderRadius: '8px', fontWeight: '800' }}
-              >
-                {t('balanceHeader.saveAndApply')}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
       )}
     </HeaderShell>
   );

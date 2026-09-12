@@ -1,11 +1,21 @@
 import React from 'react';
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, parseISO, setMonth, setYear } from 'date-fns';
+import { TimelineColor } from '../../enums/index.js';
 
 export default function MonthPickerPopover({
-  value, onChange, accent = '#10b981', dateLocale,
-  baseDate, label = 'Mês Final', isOpen, onToggle,
-  year, onYearChange, explanation
+  value,
+  onChange,
+  accent = TimelineColor.EMERALD,
+  dateLocale,
+  baseDate = null,
+  label = '',
+  isOpen,
+  onToggle,
+  year,
+  onYearChange,
+  explanation = null,
+  allowPast = false
 }) {
   const dateObj = baseDate ? parseISO(baseDate) : new Date();
   const baseYearStr = format(dateObj, 'yyyy');
@@ -21,24 +31,26 @@ export default function MonthPickerPopover({
       background: `${accent}14`, border: `1px solid ${accent}47`,
       borderRadius: '10px'
     }}>
-      <label style={{
-        display: 'flex', alignItems: 'center', gap: '6px',
-        color: accent, fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px'
-      }}>
-        <Calendar size={13} />
-        <span>{label}</span>
-      </label>
+      {label && (
+        <label style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          color: accent, fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px'
+        }}>
+          <Calendar size={13} />
+          <span>{label}</span>
+        </label>
+      )}
 
       <div
         onClick={onToggle}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'var(--bg-card, #131722)',
+          background: 'var(--bg-card)',
           border: isOpen ? `2px solid ${accent}` : `1px solid ${accent}59`,
           borderRadius: '8px', padding: '9px 12px', cursor: 'pointer'
         }}
       >
-        <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-main)' }}>
+        <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-main)', textTransform: 'capitalize' }}>
           {displayLabel}
         </span>
         <ChevronDown size={15} style={{
@@ -50,7 +62,7 @@ export default function MonthPickerPopover({
 
       {isOpen && (
         <div style={{
-          marginTop: '8px', background: 'var(--bg-card, #131722)',
+          marginTop: '8px', background: 'var(--bg-card)',
           border: `1px solid ${accent}4d`, borderRadius: '10px',
           padding: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
         }}>
@@ -82,7 +94,7 @@ export default function MonthPickerPopover({
               const mStr = String(mIdx + 1).padStart(2, '0');
               const curMonthKey = `${year}-${mStr}`;
               const isSelectedMonth = value === curMonthKey;
-              const isPastThanStart = curMonthKey < `${baseYearStr}-${baseMonthStr}`;
+              const isPastThanStart = !allowPast && Boolean(baseDate) && curMonthKey < `${baseYearStr}-${baseMonthStr}`;
               const sampleDate = setMonth(setYear(new Date(), year), mIdx);
               const monthLabel = format(sampleDate, 'MMM', { locale: dateLocale });
 

@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS timeboards (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   tenant_id UUID NOT NULL,
   owner_id UUID REFERENCES users(id) ON DELETE SET NULL,
-  "Currency" VARCHAR DEFAULT 'EUR'
+  "Currency" VARCHAR DEFAULT 'EUR',
+  compute_from DATE
 );
 
 -- ============================================================
@@ -60,6 +61,7 @@ CREATE TABLE IF NOT EXISTS timelines (
   end_date DATE,
   status TEXT NOT NULL DEFAULT 'In Progress',
   aggregation TEXT NOT NULL DEFAULT 'monthly',
+  initial_value NUMERIC(15,2) DEFAULT 0,
   tenant_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()

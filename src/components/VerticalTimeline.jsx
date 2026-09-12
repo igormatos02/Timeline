@@ -879,7 +879,7 @@ function VerticalTimeline({
 
       if (isExpense) {
         const mKey = ev.date.substring(0, 7);
-        map.set(mKey, (map.get(mKey) || 0) + Number(ev.amount || 0));
+        map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
       }
     });
     return map;
@@ -900,7 +900,7 @@ function VerticalTimeline({
       if (isLoanInstallment) {
         const mKey = ev.date.substring(0, 7);
         const amt = Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0));
-        map.set(mKey, (map.get(mKey) || 0) + amt);
+        map.set(mKey, (map.get(mKey) || 0) + Math.abs(amt));
       }
     });
     return map;
@@ -922,13 +922,13 @@ function VerticalTimeline({
 
       if (isIncome) {
         const mKey = ev.date.substring(0, 7);
-        map.set(mKey, (map.get(mKey) || 0) + Number(ev.amount || 0));
+        map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
       }
     });
     return map;
   }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
 
-  // Pre-calculate total projected investments per month across all events in timeboard scope
+  // Pre-calculate total projected investments per month across all events in timeboard scope (for badge display)
   const monthInvestmentsTotalMap = useMemo(() => {
     const map = new Map();
     (timelineEvents || []).forEach((ev) => {
@@ -938,12 +938,34 @@ function VerticalTimeline({
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
-      if (ev.isExternal || ev.is_external) return;
       const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment;
 
       if (isInvestment) {
         const mKey = ev.date.substring(0, 7);
-        map.set(mKey, (map.get(mKey) || 0) + Number(ev.amount || 0));
+        map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
+      }
+    });
+    return map;
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+
+  // Pre-calculate total deductible investments from monthly income (excludes external deposits and initial contributions)
+  const monthInvestmentsDeductionsMap = useMemo(() => {
+    const map = new Map();
+    (timelineEvents || []).forEach((ev) => {
+      if (!ev || !ev.date || ev.isDeleted) return;
+      if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
+      if (!isEventTimelineActive(ev)) return;
+      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
+        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
+      }
+      const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
+      if (isExternal || ev.isFirstOccurrence) return;
+
+      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment;
+
+      if (isInvestment) {
+        const mKey = ev.date.substring(0, 7);
+        map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
       }
     });
     return map;
@@ -1095,7 +1117,8 @@ function VerticalTimeline({
           const mMonthProjectedLoan = hasLoanTimeline ? (monthLoansTotalMap.get(monthKeyStr) || 0) : 0;
           const mMonthProjectedIncome = hasIncomeTimeline ? (monthIncomeTotalMap.get(monthKeyStr) || 0) : 0;
           const mMonthProjectedInvestment = hasInvestmentTimeline ? (monthInvestmentsTotalMap.get(monthKeyStr) || 0) : 0;
-          const mMonthProjectedSaldo = mMonthProjectedIncome - (mMonthProjectedExpense + mMonthProjectedInvestment + mMonthProjectedLoan);
+          const mMonthProjectedInvestmentDeduction = hasInvestmentTimeline ? (monthInvestmentsDeductionsMap.get(monthKeyStr) || 0) : 0;
+          const mMonthProjectedSaldo = mMonthProjectedIncome - (mMonthProjectedExpense + mMonthProjectedLoan + mMonthProjectedInvestmentDeduction);
 
           if (!showEmptyDays && !hasEvents && !isCurrentMonth) return null;
 

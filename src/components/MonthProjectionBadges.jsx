@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sparkles, DollarSign, TrendingDown, PiggyBank, Landmark, Scale } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency.js';
+import { TimelineColor } from '../../shared/enums/index.js';
 
 /**
  * MonthProjectionBadges
@@ -24,10 +25,10 @@ export default function MonthProjectionBadges({
   const hasAnyBadge = showIncome || showExpense || showInvestment || showLoan || showBalance;
   if (!hasAnyBadge) return null;
 
-  const numIncome = Number(income || 0);
-  const numExpense = Number(expense || 0);
-  const numInvestment = Number(investment || 0);
-  const numLoan = Number(loan || 0);
+  const numIncome = Math.abs(Number(income || 0));
+  const numExpense = Math.abs(Number(expense || 0));
+  const numInvestment = Math.abs(Number(investment || 0));
+  const numLoan = Math.abs(Number(loan || 0));
 
   const calculatedSaldo = saldo !== null && saldo !== undefined
     ? Number(saldo)
@@ -50,7 +51,7 @@ export default function MonthProjectionBadges({
         }}
       >
         <Sparkles size={12} style={{ color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)' }} />
-        <span>{t('timeline.monthProjection') || 'Month Projection'}</span>
+        <span>{t('timeline.monthProjection')}</span>
       </span>
 
       {/* 1. Entradas Projetadas */}
@@ -64,11 +65,11 @@ export default function MonthProjectionBadges({
             border: 'none',
             color: isFutureMonth
               ? 'var(--text-dim)'
-              : (numIncome > 0 ? '#10b981' : 'var(--text-dim)'),
+              : (numIncome > 0 ? TimelineColor.INCOME : 'var(--text-dim)'),
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
-          title={t('timeline.monthIncomeTitle') || 'Total em entradas previstas para este mês'}
+          title={t('timeline.monthIncomeTitle')}
         >
           <DollarSign size={12} />
           <span>+{formatCurrency(numIncome)}</span>
@@ -86,11 +87,11 @@ export default function MonthProjectionBadges({
             border: 'none',
             color: isFutureMonth
               ? 'var(--text-dim)'
-              : (numExpense > 0 ? '#f43f5e' : 'var(--text-dim)'),
+              : (numExpense > 0 ? TimelineColor.EXPENSE : 'var(--text-dim)'),
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
-          title={t('timeline.monthExpenseTitle') || 'Total em despesas previstas para este mês'}
+          title={t('timeline.monthExpenseTitle')}
         >
           <TrendingDown size={12} />
           <span>-{formatCurrency(numExpense)}</span>
@@ -108,11 +109,11 @@ export default function MonthProjectionBadges({
             border: 'none',
             color: isFutureMonth
               ? 'var(--text-dim)'
-              : (numInvestment > 0 ? '#818cf8' : 'var(--text-dim)'),
+              : (numInvestment > 0 ? TimelineColor.INVESTMENT : 'var(--text-dim)'),
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
-          title={t('timeline.monthInvestmentTitle') || 'Total em investimentos previstos para este mês'}
+          title={t('timeline.monthInvestmentTitle')}
         >
           <PiggyBank size={12} />
           <span>{formatCurrency(numInvestment)}</span>
@@ -130,11 +131,11 @@ export default function MonthProjectionBadges({
             border: 'none',
             color: isFutureMonth
               ? 'var(--text-dim)'
-              : (numLoan > 0 ? '#eab308' : 'var(--text-dim)'),
+              : (numLoan > 0 ? TimelineColor.LOAN : 'var(--text-dim)'),
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
-          title={t('timeline.monthLoanTitle') || 'Total em prestações de empréstimos a pagar este mês'}
+          title={t('timeline.monthLoanTitle')}
         >
           <Landmark size={12} />
           <span>{formatCurrency(numLoan)}</span>
@@ -153,14 +154,14 @@ export default function MonthProjectionBadges({
             borderRadius: '6px',
             background: calculatedSaldo >= 0 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
             border: calculatedSaldo >= 0 ? '1px solid rgba(16, 185, 129, 0.28)' : '1px solid rgba(244, 63, 94, 0.28)',
-            color: calculatedSaldo >= 0 ? '#10b981' : '#f43f5e',
+            color: calculatedSaldo >= 0 ? TimelineColor.INCOME : TimelineColor.EXPENSE,
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
-          title={t('timeline.monthBalanceTitle') || 'Saldo líquido projetado para este mês'}
+          title={t('timeline.monthBalanceTitle')}
         >
           <Scale size={12} />
-          <span>{t('timeline.balance') || 'Balance'}: {calculatedSaldo >= 0 ? '+' : ''}{formatCurrency(calculatedSaldo)}</span>
+          <span>{t('timeline.balance')}: {calculatedSaldo >= 0 ? '+' : ''}{formatCurrency(calculatedSaldo)}</span>
         </span>
       )}
     </div>

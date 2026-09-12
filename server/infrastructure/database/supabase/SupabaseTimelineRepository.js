@@ -28,6 +28,7 @@ function rowToEntity(row) {
     status: row.status,
     aggregation: row.aggregation || row.periodicity,
     periodicity: row.periodicity || row.aggregation,
+    initialValue: row.initial_value !== null && row.initial_value !== undefined ? Number(row.initial_value) : 0,
     tenantId: row.tenant_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -46,6 +47,11 @@ function entityToRow(data) {
   if (data.description !== undefined) row.description = data.description;
   if (data.isSystemDefault !== undefined) row.is_system_default = Boolean(data.isSystemDefault);
   if (data.canDelete !== undefined) row.can_delete = Boolean(data.canDelete);
+
+  const rawInitVal = data.initialValue !== undefined ? data.initialValue : data.initial_value;
+  if (rawInitVal !== undefined && rawInitVal !== null && rawInitVal !== '') {
+    row.initial_value = Number(rawInitVal) || 0;
+  }
 
   const rawStart = data.startDate !== undefined ? data.startDate : data.start_date;
   if (rawStart && typeof rawStart === 'string' && rawStart.trim() !== '') {

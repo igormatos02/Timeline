@@ -70,6 +70,7 @@ export default function CreateTimelineModal({
     status: TimelineStatus.ACTIVE,
     type: TimelineType.LOAN,
     color: TimelineColor.LOAN,
+    initialValue: '',
     totalDebt: '',
     installmentAmount: '',
     periodicity: EventPeriodicity.MONTHLY,
@@ -117,6 +118,7 @@ export default function CreateTimelineModal({
         status: initialData.status === TimelineStatus.INACTIVE ? TimelineStatus.INACTIVE : TimelineStatus.ACTIVE,
         type: resolvedType,
         color: initialData.color || TimelineColor.LOAN,
+        initialValue: getVal('initialValue', 'initial_value') !== '' ? getVal('initialValue', 'initial_value') : '',
         totalDebt: getVal('totalDebt', 'originalCapital', 'original_capital'),
         installmentAmount: getVal('installmentAmount', 'installment_amount'),
         periodicity: initialData.periodicity || initialData.aggregation || EventPeriodicity.MONTHLY,
@@ -153,6 +155,7 @@ export default function CreateTimelineModal({
         status: TimelineStatus.ACTIVE,
         type: resolvedType,
         color: typeMeta.defaultColor,
+        initialValue: '',
         totalDebt: '',
         installmentAmount: '',
         periodicity: EventPeriodicity.MONTHLY,
@@ -205,6 +208,8 @@ export default function CreateTimelineModal({
       description: formData.description.trim(),
       type: formData.type,
       color: formData.color,
+      initialValue: parseFloat(formData.initialValue) || 0,
+      initial_value: parseFloat(formData.initialValue) || 0,
       status: isInactive ? TimelineStatus.INACTIVE : TimelineStatus.ACTIVE
     };
 
@@ -445,6 +450,21 @@ export default function CreateTimelineModal({
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
+
+          {/* Valor Inicial para Entradas ou Investimentos */}
+          {(formData.type === TimelineType.INCOME || formData.type === TimelineType.INVESTMENT) && (
+            <div className="form-group">
+              <label className="form-label">{t('createTimelineModal.initialValueLabel')}</label>
+              <input
+                type="number"
+                step="0.01"
+                className="form-input"
+                placeholder={t('createTimelineModal.initialValuePlaceholder')}
+                value={formData.initialValue}
+                onChange={(e) => setFormData({ ...formData, initialValue: e.target.value })}
+              />
+            </div>
+          )}
 
           {/* Status da Timeline */}
           <div className="form-group" style={{ marginBottom: '16px' }}>

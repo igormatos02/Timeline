@@ -67,7 +67,10 @@ export const translations = {
       eventSaveError: "Error saving event to database.",
       eventDeleteError: "Error deleting event from database.",
       timelineDeletedSuccess: "Timeline deleted successfully!",
-      timelineDeleteError: "Error deleting timeline."
+      timelineDeleteError: "Error deleting timeline.",
+      timelineUpdatedSuccess: "Timeline updated successfully!",
+      contractAndInstallmentsUpdatedSuccess: "Contract and installments updated successfully!",
+      timelineUpdateError: "Error updating timeline: {error}"
     },
 
     // Timeline Rows & Cards
@@ -98,7 +101,7 @@ export const translations = {
       noTabRecords: "No records in this tab for this month",
       noTimelines: "No timelines created in this timeboard yet.",
       createTimeline: "Create Timeline",
-      projectMoreFuture: "Project +12 Future Months",
+      projectMoreFuture: "Load +12 Future Months",
       loadMorePast: "Load +12 Past Months (History)",
       amortizeMonthTitle: "Amortize ({month})",
       currentMonth: "CURRENT MONTH",
@@ -184,7 +187,8 @@ export const translations = {
       totalDebtLabel: "Total Amount Financed (€) *",
       tanRateLabel: "TAN Rate (%)",
       spreadLabel: "Spread (%)",
-      interestStampTaxRateLabel: "Interest Stamp Duty (%)",
+      interestStampTaxRateLabel: "Fees (€)",
+      interestStampTaxRatePlaceholder: "e.g., 8.50",
       dueDayLabel: "Due / Payment Day",
       dayLabel: "Day {day}",
       startDateLabel: "Start Month",
@@ -196,13 +200,13 @@ export const translations = {
       simulateButton: "Simulate",
       originalCapital: "ORIGINAL CAPITAL",
       estimatedInterest: "ESTIMATED INTEREST",
-      estimatedFees: "ESTIMATED TAXES",
+      estimatedFees: "ESTIMATED FEES",
       totalCost: "TOTAL COST",
       colNumber: "#",
       colDate: "Date",
       colCapital: "Capital",
       colInterest: "Interest",
-      colTax: "Tax",
+      colTax: "Fees",
       colInstallment: "Installment",
       simulationError: "Error generating amortization schedule."
     },
@@ -1227,7 +1231,10 @@ export const translations = {
       eventSaveError: "Erro ao guardar evento na base de dados.",
       eventDeleteError: "Erro ao eliminar evento da base de dados.",
       timelineDeletedSuccess: "Linha de tempo eliminada com sucesso!",
-      timelineDeleteError: "Erro ao eliminar linha de tempo."
+      timelineDeleteError: "Erro ao eliminar linha de tempo.",
+      timelineUpdatedSuccess: "Linha de tempo atualizada com sucesso!",
+      contractAndInstallmentsUpdatedSuccess: "Contrato e prestações atualizados com sucesso!",
+      timelineUpdateError: "Erro ao atualizar linha de tempo: {error}"
     },
 
     // Timeline Rows & Cards
@@ -1258,7 +1265,7 @@ export const translations = {
       noTabRecords: "Sem registos nesta aba para este mês",
       noTimelines: "Nenhuma timeline criada neste timeboard ainda.",
       createTimeline: "Criar Timeline",
-      projectMoreFuture: "Projetar +12 Meses Futuros",
+      projectMoreFuture: "Carregar +12 Meses Futuros",
       loadMorePast: "Carregar +12 Meses Anteriores (Histórico)",
       amortizeMonthTitle: "Amortizar ({month})",
       currentMonth: "MÊS ATUAL",
@@ -1344,7 +1351,8 @@ export const translations = {
       totalDebtLabel: "Montante Financiado (€) *",
       tanRateLabel: "Taxa de Juro (TAN %)",
       spreadLabel: "Spread (%)",
-      interestStampTaxRateLabel: "Imposto Selo s/ Juros (%)",
+      interestStampTaxRateLabel: "Taxas (€)",
+      interestStampTaxRatePlaceholder: "Ex: 8.50",
       dueDayLabel: "Dia de Cobrança / Débito",
       dayLabel: "Dia {day}",
       startDateLabel: "Mês de Início",
@@ -1356,13 +1364,13 @@ export const translations = {
       simulateButton: "Simular",
       originalCapital: "CAPITAL ORIGINAL",
       estimatedInterest: "JUROS ESTIMADOS",
-      estimatedFees: "IMPOSTOS ESTIMADOS",
+      estimatedFees: "TAXAS ESTIMADAS",
       totalCost: "CUSTO TOTAL",
       colNumber: "#",
       colDate: "Data",
       colCapital: "Capital",
       colInterest: "Juros",
-      colTax: "Imposto",
+      colTax: "Taxas",
       colInstallment: "Prestação",
       simulationError: "Erro ao gerar o plano de amortização."
     },

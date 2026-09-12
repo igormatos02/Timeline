@@ -3259,7 +3259,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               {!isAmortized && ((event.installmentFee ?? event.taxAmount ?? event.tax_amount ?? 0) > 0) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid var(--border-glass)', paddingLeft: '10px' }}>
                   <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                    {t('loanCard.stampTax') || 'Taxas'}:
+                    {t('loanCard.stampTax')}:
                   </span>
                   <span style={{ fontSize: '0.80rem', fontWeight: '800', color: '#a855f7' }}>
                     {formatCurrency(event.installmentFee ?? event.taxAmount ?? event.tax_amount ?? 0)}

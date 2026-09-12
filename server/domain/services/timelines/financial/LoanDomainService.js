@@ -485,7 +485,7 @@ export class LoanDomainService {
     if (!subsequentList || subsequentList.length === 0) return processedEvents;
 
     const totalOpenCapital = subsequentList.reduce(
-      (sum, ev) => sum + Number(ev.installmentCapital || 0),
+      (sum, ev) => sum + Number(ev.originalInstallmentCapital ?? ev.installmentCapital ?? 0),
       0
     );
     if (totalOpenCapital <= 0) return processedEvents;
@@ -495,14 +495,20 @@ export class LoanDomainService {
 
     return processedEvents.map((ev) => {
       if (!subsequentIds.has(ev.id)) return ev;
-      const cap = Math.round(Number(ev.installmentCapital || 0) * ratio * 100) / 100;
-      const int = Math.round(Number(ev.installmentInterest || 0) * ratio * 100) / 100;
-      const fee = Math.round(Number(ev.installmentFee || 0) * ratio * 100) / 100;
+      const baseCap = Number(ev.originalInstallmentCapital ?? ev.installmentCapital ?? 0);
+      const baseInt = Number(ev.originalInstallmentInterest ?? ev.installmentInterest ?? 0);
+      const baseFee = Number(ev.originalInstallmentFee ?? ev.installmentFee ?? 0);
+      const cap = Math.round(baseCap * ratio * 100) / 100;
+      const int = Math.round(baseInt * ratio * 100) / 100;
+      const fee = Math.round(baseFee * ratio * 100) / 100;
       const amt = Math.round((cap + int + fee) * 100) / 100;
       const isZero = ratio === 0 || (cap === 0 && int === 0 && amt === 0);
 
       return {
         ...ev,
+        originalInstallmentCapital: baseCap,
+        originalInstallmentInterest: baseInt,
+        originalInstallmentFee: baseFee,
         installmentCapital: cap,
         installmentInterest: int,
         installmentFee: fee,

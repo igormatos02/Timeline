@@ -120,7 +120,9 @@ export function isEventForTimeline(ev, timeline) {
 
   return (
     ev.timelineId === timeline.id ||
-    ev.timelineOriginId === timeline.id
+    ev.timelineOriginId === timeline.id ||
+    ev.timeline_id === timeline.id ||
+    ev.timeline_origin_id === timeline.id
   );
 }
 
@@ -402,7 +404,7 @@ export function generateLoanInstallments({
       description:
         `${formatCurrency(capital)} capital + ` +
         `${formatCurrency(interest)} interest + ` +
-        `${formatCurrency(stampTax)} stamp tax`,
+        `${formatCurrency(stampTax)} fees`,
 
       category: LoanEventCategory.LOAN_INSTALLMENT,
       eventType: EventType.LOAN_INSTALLMENT,
@@ -411,6 +413,8 @@ export function generateLoanInstallments({
       priority: EventPriority.NORMAL,
 
       // Entity fields
+      amount: totalPayment,
+      dueDate: format(dueDate, 'yyyy-MM-dd'),
       installmentAmount: totalPayment,
       installmentCapital: capital,
       installmentInterest: interest,
@@ -486,7 +490,7 @@ export function applyAmortizationReduceInstallment(
   }
 
   const totalPrincipalBefore = future.reduce(
-    (sum, ev) => sum + getPrincipal(ev),
+    (sum, ev) => sum + (ev.originalInstallmentCapital ?? getPrincipal(ev)),
     0
   );
 
@@ -502,15 +506,6 @@ export function applyAmortizationReduceInstallment(
     if (!futureIds.has(ev.id)) {
       return ev;
     }
-
-    const capital =
-      Math.round(getPrincipal(ev) * ratio * 100) / 100;
-    const interest =
-      Math.round(getInstallmentInterest(ev) * ratio * 100) / 100;
-    const fee =
-      Math.round(getInstallmentFee(ev) * ratio * 100) / 100;
-    const amount =
-      Math.round((capital + interest + fee) * 100) / 100;
 
     const origCap =
       ev.originalInstallmentCapital ??
@@ -528,6 +523,15 @@ export function applyAmortizationReduceInstallment(
       ev.originalInstallmentAmount ??
       ev.installmentAmount ??
       getInstallmentAmount(ev);
+
+    const capital =
+      Math.round(origCap * ratio * 100) / 100;
+    const interest =
+      Math.round(origInt * ratio * 100) / 100;
+    const fee =
+      Math.round(origFee * ratio * 100) / 100;
+    const amount =
+      Math.round((capital + interest + fee) * 100) / 100;
 
     const isFullyAmortized =
       ratio === 0 || (capital === 0 && interest === 0 && amount === 0);
@@ -595,12 +599,6 @@ export function applyAmortizationReduceTerm(
       break;
     }
 
-    const principal = getPrincipal(inst);
-
-    if (principal <= 0) {
-      continue;
-    }
-
     const origCap =
       inst.originalInstallmentCapital ??
       inst.installmentCapital ??
@@ -617,6 +615,12 @@ export function applyAmortizationReduceTerm(
       inst.originalInstallmentAmount ??
       inst.installmentAmount ??
       getInstallmentAmount(inst);
+
+    const principal = origCap;
+
+    if (principal <= 0) {
+      continue;
+    }
 
     if (remaining >= principal) {
       patch.set(inst.id, {
@@ -642,8 +646,8 @@ export function applyAmortizationReduceTerm(
         Math.round((principal - remaining) * 100) / 100
       );
 
-      const interest = getInstallmentInterest(inst);
-      const fee = getInstallmentFee(inst);
+      const interest = origInt;
+      const fee = origFee;
       const newAmount =
         Math.round((newCapital + interest + fee) * 100) / 100;
 
@@ -678,6 +682,7 @@ function applyAmortizationsInMemory(
 ) {
   const amortEvents = eventsList
     .filter((ev) => {
+      if (!isEventForTimeline(ev, timeline)) return false;
       if (isCancelledStatus(ev.status)) return false;
       const isAmort =
         ev.eventType === EventType.AMORTIZATION ||
@@ -697,7 +702,24 @@ function applyAmortizationsInMemory(
     return eventsList;
   }
 
-  let currentEvents = [...eventsList];
+  // Reset timeline installments to original un-amortized state before applying the chain of amortizations
+  let currentEvents = eventsList.map((ev) => {
+    if (!isLoanInstallment(ev) || !isEventForTimeline(ev, timeline)) {
+      return ev;
+    }
+    if (ev.originalInstallmentCapital !== undefined && ev.originalInstallmentCapital !== null) {
+      return {
+        ...ev,
+        installmentCapital: ev.originalInstallmentCapital,
+        installmentInterest: ev.originalInstallmentInterest ?? ev.installmentInterest,
+        installmentFee: ev.originalInstallmentFee ?? ev.installmentFee,
+        installmentAmount: ev.originalInstallmentAmount ?? ev.installmentAmount,
+        amount: ev.originalInstallmentAmount ?? ev.amount,
+        isAbated: false
+      };
+    }
+    return { ...ev };
+  });
 
   for (const amortEv of amortEvents) {
     const strategy =

@@ -122,7 +122,7 @@ export default function CreateTimelineModal({
         bankName: getVal('bankName', 'bank_name'),
         tanRate: getVal('tanRate', 'tan_rate'),
         spread: getVal('spread'),
-        interestStampTaxRate: getVal('interestStampTaxRate', 'installmentStampTax', 'installment_stamp_tax')
+        interestStampTaxRate: getVal('interestStampTaxRate', 'installmentStampTax', 'installment_stamp_tax', 'taxaImpostoSeloJuros', 'installmentFee', 'installment_fee')
       });
     } else {
       const currentYear = new Date().getFullYear();
@@ -223,16 +223,21 @@ export default function CreateTimelineModal({
       if (!initialData) {
         const generatedEvents = generateLoanInstallments({
           totalAmountFinanced: finalData.totalDebt,
+          totalDebt: finalData.totalDebt,
           numberOfInstallments: finalData.totalInstallments,
+          totalInstallments: finalData.totalInstallments,
           tanRate: finalData.tanRate,
+          spread: finalData.spread,
           interestStampTaxRate: finalData.interestStampTaxRate,
+          taxaImpostoSeloJuros: finalData.interestStampTaxRate,
           startDate: fullStartDate,
+          debtStartDate: fullStartDate,
           dueDay: dueDayNum,
           periodicity: EventPeriodicity.MONTHLY
         });
         finalData.events = generatedEvents;
         if (generatedEvents.length > 0) {
-          finalData.installmentAmount = generatedEvents[0].installmentAmount ?? ((generatedEvents[0].installmentCapital ?? generatedEvents[0].principalAmount ?? 0) + (generatedEvents[0].installmentInterest ?? generatedEvents[0].interestPortion ?? 0));
+          finalData.installmentAmount = generatedEvents[0].installmentAmount ?? ((generatedEvents[0].installmentCapital ?? generatedEvents[0].principalAmount ?? 0) + (generatedEvents[0].installmentInterest ?? generatedEvents[0].interestPortion ?? 0) + (generatedEvents[0].installmentFee ?? 0));
         }
       }
     }
@@ -256,13 +261,18 @@ export default function CreateTimelineModal({
       const dueDayStr = dueDayNum.toString().padStart(2, '0');
       const fullStartDate = formData.startDate ? `${formData.startDate}-${dueDayStr}` : getTodayStr();
 
+      const parsedFees = parseFloat(formData.interestStampTaxRate || formData.taxaImpostoSeloJuros || formData.installmentStampTax) || 0;
       const events = generateLoanInstallments({
         totalAmountFinanced: parsedTotalDebt,
+        totalDebt: parsedTotalDebt,
         numberOfInstallments: parsedTotalInstallments || 12,
+        totalInstallments: parsedTotalInstallments || 12,
         tanRate: parseFloat(formData.tanRate) || 0,
         spread: parseFloat(formData.spread) || 0,
-        interestStampTaxRate: parseFloat(formData.interestStampTaxRate || formData.taxaImpostoSeloJuros || formData.installmentStampTax) || 0,
+        interestStampTaxRate: parsedFees,
+        taxaImpostoSeloJuros: parsedFees,
         startDate: fullStartDate,
+        debtStartDate: fullStartDate,
         dueDay: dueDayNum,
         periodicity: EventPeriodicity.MONTHLY
       });
@@ -563,9 +573,8 @@ export default function CreateTimelineModal({
                     type="number"
                     step="0.01"
                     min="0"
-                    max="100"
                     className="form-input"
-                    placeholder="4.00"
+                    placeholder={t('createTimelineModal.interestStampTaxRatePlaceholder')}
                     value={formData.interestStampTaxRate}
                     onChange={(e) => setFormData({ ...formData, interestStampTaxRate: e.target.value })}
                   />

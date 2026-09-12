@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
-import { format, parseISO, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { format, parseISO, addMonths, subMonths, startOfMonth, endOfMonth, differenceInCalendarMonths } from 'date-fns';
 import Navbar from './components/Navbar';
 import TimelineHeader from './components/TimelineHeader';
 import VerticalTimeline from './components/VerticalTimeline';
@@ -601,19 +601,32 @@ export default function App() {
           });
 
           // Obter eventos existentes desta timeline (garantindo que vêm da API se rawEvents estiver desatualizado)
-          let existingEvents = rawEvents.filter(ev => ev.timelineId === editingTimeline.id || ev.timelineOriginId === editingTimeline.id || ev.timeline_id === editingTimeline.id);
+          let allEventsForTimeline = rawEvents.filter(ev => ev.timelineId === editingTimeline.id || ev.timelineOriginId === editingTimeline.id || ev.timeline_id === editingTimeline.id);
           try {
             const freshEvents = await api.fetchEvents({ timelineId: editingTimeline.id });
             if (freshEvents && freshEvents.length > 0) {
-              existingEvents = freshEvents;
+              allEventsForTimeline = freshEvents;
             }
           } catch (e) { }
+
+          // Filtrar apenas as prestações de crédito (excluindo amortizações avulsas) ordenadas por prestação/data
+          const existingInstallments = allEventsForTimeline.filter(ev =>
+            (ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.isSystemLoanEvent) &&
+            ev.eventType !== EventType.AMORTIZATION &&
+            ev.category !== AmortizationEventCategory.REDUCE_TERM &&
+            ev.category !== AmortizationEventCategory.REDUCE_INSTALLMENT
+          ).sort((a, b) => {
+            const numA = Number(a.installmentNumber || a.installment_number || 0);
+            const numB = Number(b.installmentNumber || b.installment_number || 0);
+            if (numA && numB) return numA - numB;
+            return (a.date || '').localeCompare(b.date || '');
+          });
 
           if (newScheduleEvents.length > 0) {
             const payloadsToSave = [];
             for (let i = 0; i < newScheduleEvents.length; i++) {
               const newEv = newScheduleEvents[i];
-              const matchExisting = existingEvents.find(e => Number(e.installmentNumber || e.installment_number) === Number(newEv.installmentNumber || newEv.installment_number)) || existingEvents[i];
+              const matchExisting = existingInstallments.find(e => Number(e.installmentNumber || e.installment_number) === Number(newEv.installmentNumber || newEv.installment_number)) || existingInstallments[i];
 
               if (matchExisting && matchExisting.id) {
                 payloadsToSave.push({
@@ -624,11 +637,11 @@ export default function App() {
                     eventType: EventType.LOAN_INSTALLMENT,
                     category: LoanEventCategory.LOAN_INSTALLMENT,
                     isSystemLoanEvent: true,
-                    amount: newEv.amount,
-                    installmentAmount: newEv.amount,
-                    installmentCapital: newEv.principalAmount,
-                    installmentInterest: newEv.interestPortion,
-                    installmentFee: newEv.taxAmount,
+                    amount: newEv.installmentAmount ?? newEv.amount,
+                    installmentAmount: newEv.installmentAmount ?? newEv.amount,
+                    installmentCapital: newEv.installmentCapital,
+                    installmentInterest: newEv.installmentInterest,
+                    installmentFee: newEv.installmentFee,
                     balanceAfter: newEv.balanceAfter,
                     description: newEv.description,
                     date: newEv.date,
@@ -646,6 +659,11 @@ export default function App() {
                   isUpdate: false,
                   payload: {
                     ...newEv,
+                    amount: newEv.installmentAmount ?? newEv.amount,
+                    installmentAmount: newEv.installmentAmount ?? newEv.amount,
+                    installmentCapital: newEv.installmentCapital,
+                    installmentInterest: newEv.installmentInterest,
+                    installmentFee: newEv.installmentFee,
                     eventType: EventType.LOAN_INSTALLMENT,
                     category: LoanEventCategory.LOAN_INSTALLMENT,
                     isSystemLoanEvent: true,
@@ -658,7 +676,7 @@ export default function App() {
             }
 
             // Excluir parcelas excedentes se o total de parcelas diminuiu
-            const excessEvents = existingEvents.filter(e => {
+            const excessEvents = existingInstallments.filter(e => {
               const instNum = Number(e.installmentNumber || e.installment_number || 0);
               return instNum > newScheduleEvents.length;
             });
@@ -697,10 +715,18 @@ export default function App() {
         }
 
         await refreshTimelines();
-        showToast(isLoan ? 'Contrato e parcelas atualizados com sucesso!' : 'Linha de tempo atualizada com sucesso!', 'success');
+        showToast(
+          isLoan
+            ? t('toast.contractAndInstallmentsUpdatedSuccess')
+            : t('toast.timelineUpdatedSuccess'),
+          'success'
+        );
       } catch (err) {
         console.error('Error updating timeline and loan contract:', err);
-        showToast('Erro ao atualizar: ' + (err.message || 'Erro desconhecido'), 'error');
+        showToast(
+          t('toast.timelineUpdateError', { error: err.message || '' }),
+          'error'
+        );
       } finally {
         setIsUpdatingInstallments(false);
       }

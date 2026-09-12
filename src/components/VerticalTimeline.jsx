@@ -14,7 +14,8 @@ import {
   addMonths,
   subMonths,
   startOfMonth,
-  endOfMonth
+  endOfMonth,
+  differenceInCalendarMonths
 } from 'date-fns';
 import { pt, enUS } from 'date-fns/locale';
 import {
@@ -501,7 +502,9 @@ function VerticalTimeline({
   // Determine earliest and latest dates in timeline dynamically
   const currentMonthStart = startOfMonth(todayDate);
   const currentMonthEnd = endOfMonth(todayDate);
-  const startDateObj = subMonths(currentMonthStart, Math.max(1, pastHorizonYears) * 12);
+
+  const effectivePastYears = Math.max(1, pastHorizonYears);
+  const startDateObj = subMonths(currentMonthStart, effectivePastYears * 12);
   const maxDateObj = addMonths(currentMonthEnd, Math.max(1, futureHorizonYears) * 12);
 
   // Generate array of days from startDate up to maxDateObj (Descending: future at top, past at bottom)
@@ -669,6 +672,68 @@ function VerticalTimeline({
   // RENDER ENGINES BY GROUPBY MODE
   // ========================================================
 
+  const renderFutureHorizonButton = () => {
+    if (!onLoadMoreFuture) return null;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0 28px 0', position: 'relative', zIndex: 10 }}>
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          onClick={onLoadMoreFuture}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '9px 22px',
+            borderRadius: '24px',
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(168, 85, 247, 0.18))',
+            border: '1px solid rgba(99, 102, 241, 0.45)',
+            color: 'var(--primary-light)',
+            fontWeight: '700',
+            fontSize: '0.84rem',
+            cursor: 'pointer',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+            transition: 'all var(--transition-fast)'
+          }}
+        >
+          <ArrowUp size={15} />
+          <span>{t('timeline.projectMoreFuture')}</span>
+        </button>
+      </div>
+    );
+  };
+
+  const renderPastHorizonButton = () => {
+    if (!onLoadMorePast) return null;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0 16px 0', position: 'relative', zIndex: 10 }}>
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          onClick={onLoadMorePast}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '9px 22px',
+            borderRadius: '24px',
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(168, 85, 247, 0.18))',
+            border: '1px solid rgba(99, 102, 241, 0.45)',
+            color: 'var(--primary-light)',
+            fontWeight: '700',
+            fontSize: '0.84rem',
+            cursor: 'pointer',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+            transition: 'all var(--transition-fast)'
+          }}
+        >
+          <ArrowDown size={15} />
+          <span>{t('timeline.loadMorePast')}</span>
+        </button>
+      </div>
+    );
+  };
+
   const renderWeekView = () => {
     const weekMap = new Map();
 
@@ -708,6 +773,9 @@ function VerticalTimeline({
           className="timeline-spine-gradient"
           style={{ background: timeline.color || 'var(--timeline-line-active)' }}
         />
+
+        {/* Botão Carregar Mais Futuro */}
+        {renderFutureHorizonButton()}
 
         {weeksList.map((weekData) => {
           const isCurrentWeek = isSameWeek(todayDate, weekData.weekStart, { weekStartsOn: 1 });
@@ -789,6 +857,9 @@ function VerticalTimeline({
             </div>
           );
         })}
+
+        {/* Botão Carregar Mais Passado */}
+        {renderPastHorizonButton()}
       </div>
     );
   };
@@ -1010,33 +1081,7 @@ function VerticalTimeline({
         />
 
         {/* Botão Carregar Mais Futuro */}
-        {onLoadMoreFuture && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0 28px 0', position: 'relative', zIndex: 10 }}>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={onLoadMoreFuture}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '9px 22px',
-                borderRadius: '24px',
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(168, 85, 247, 0.18))',
-                border: '1px solid rgba(99, 102, 241, 0.45)',
-                color: 'var(--primary-light)',
-                fontWeight: '700',
-                fontSize: '0.84rem',
-                cursor: 'pointer',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
-                transition: 'all var(--transition-fast)'
-              }}
-            >
-              <ArrowUp size={15} />
-              <span>{t('timeline.projectMoreFuture')}</span>
-            </button>
-          </div>
-        )}
+        {renderFutureHorizonButton()}
 
         {monthsList.map((mGroup) => {
           const currentMonthKey = format(todayDate, 'yyyy-MM');
@@ -1264,33 +1309,7 @@ function VerticalTimeline({
         })}
 
         {/* Botão Carregar Mais Passado */}
-        {onLoadMorePast && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0 16px 0', position: 'relative', zIndex: 10 }}>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={onLoadMorePast}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '9px 22px',
-                borderRadius: '24px',
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(168, 85, 247, 0.18))',
-                border: '1px solid rgba(99, 102, 241, 0.45)',
-                color: 'var(--primary-light)',
-                fontWeight: '700',
-                fontSize: '0.84rem',
-                cursor: 'pointer',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
-                transition: 'all var(--transition-fast)'
-              }}
-            >
-              <ArrowDown size={15} />
-              <span>{t('timeline.loadMorePast')}</span>
-            </button>
-          </div>
-        )}
+        {renderPastHorizonButton()}
       </div>
     );
   };
@@ -1349,6 +1368,9 @@ function VerticalTimeline({
           className="timeline-spine-gradient"
           style={{ background: timeline.color || 'var(--timeline-line-active)' }}
         />
+
+        {/* Botão Carregar Mais Futuro */}
+        {renderFutureHorizonButton()}
 
         {yearsList.map((yGroup) => {
           const isCurrentYear = format(todayDate, 'yyyy') === yGroup.yearStr;
@@ -1446,6 +1468,9 @@ function VerticalTimeline({
             </div>
           );
         })}
+
+        {/* Botão Carregar Mais Passado */}
+        {renderPastHorizonButton()}
       </div>
     );
   };
@@ -1458,6 +1483,9 @@ function VerticalTimeline({
           className="timeline-spine-gradient"
           style={{ background: timeline.color || 'var(--timeline-line-active)' }}
         />
+
+        {/* Botão Carregar Mais Futuro */}
+        {renderFutureHorizonButton()}
 
         {daysArray.map((dayDate) => {
           const dateKey = format(dayDate, 'yyyy-MM-dd');
@@ -1537,6 +1565,9 @@ function VerticalTimeline({
             </div>
           );
         })}
+
+        {/* Botão Carregar Mais Passado */}
+        {renderPastHorizonButton()}
       </div>
     );
   };

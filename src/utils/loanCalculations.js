@@ -21,7 +21,8 @@ import {
   isPositiveStatus,
   isCancelledStatus,
   AmortizationEventCategory,
-  AmortizationStrategy
+  AmortizationStrategy,
+  LoanAmortizationSystem
 } from '../enums/index.js';
 
 // ---------------------------------------------------------------------------
@@ -297,7 +298,8 @@ export function generateLoanInstallments({
   startDate,
   debtStartDate,
   dueDay,
-  periodicity = EventPeriodicity.MONTHLY
+  periodicity = EventPeriodicity.MONTHLY,
+  amortizationSystem = LoanAmortizationSystem.PRICE
 }) {
   const pv = Number(
     totalAmountFinanced ?? totalDebt ?? 0
@@ -364,12 +366,21 @@ export function generateLoanInstallments({
 
   let balance = pv;
 
+  const isSac =
+    (amortizationSystem || '').toLowerCase() === LoanAmortizationSystem.SAC;
+  const sacMonthlyCapital = n > 0 && pv > 0 ? Math.round((pv / n) * 100) / 100 : 0;
+
   for (let k = 1; k <= n; k++) {
     const interest =
       Math.round(balance * i * 100) / 100;
 
-    let capital =
-      Math.round((pmt - interest) * 100) / 100;
+    let capital;
+    if (isSac) {
+      capital = sacMonthlyCapital;
+    } else {
+      capital =
+        Math.round((pmt - interest) * 100) / 100;
+    }
 
     // Last installment pays remaining capital
     if (k === n || balance <= capital) {
@@ -489,6 +500,14 @@ export function applyAmortizationReduceInstallment(
     return currentEvents;
   }
 
+  // Ordenar as parcelas restantes cronologicamente
+  future.sort((a, b) => {
+    const na = Number(a.installmentNumber || 0);
+    const nb = Number(b.installmentNumber || 0);
+    if (na && nb) return na - nb;
+    return (a.date || '').localeCompare(b.date || '');
+  });
+
   const totalPrincipalBefore = future.reduce(
     (sum, ev) => sum + (ev.originalInstallmentCapital ?? getPrincipal(ev)),
     0
@@ -498,14 +517,64 @@ export function applyAmortizationReduceInstallment(
     return currentEvents;
   }
 
-  const futureIds = new Set(future.map((f) => f.id));
-  const ratio =
-    Math.max(0, totalPrincipalBefore - amortVal) / totalPrincipalBefore;
+  const newPrincipal = Math.max(
+    0,
+    Math.round((totalPrincipalBefore - amortVal) * 100) / 100
+  );
+  const n = future.length;
 
-  return currentEvents.map((ev) => {
-    if (!futureIds.has(ev.id)) {
-      return ev;
+  const amortSystem =
+    timeline?.amortizationSystem ||
+    timeline?.loanContract?.amortizationSystem ||
+    LoanAmortizationSystem.PRICE;
+  const isSac = (amortSystem || '').toLowerCase() === LoanAmortizationSystem.SAC;
+
+  // Extrair a taxa de juros mensal do contrato (i)
+  const firstEv = future[0];
+  const firstOrigInt =
+    firstEv.originalInstallmentInterest ??
+    firstEv.installmentInterest ??
+    getInstallmentInterest(firstEv);
+
+  let monthlyRate = 0;
+  const tan =
+    Number(timeline?.tanRate || 0) + Number(timeline?.spread || 0) ||
+    Number(
+      timeline?.interestRate ||
+      timeline?.annualInterestRate ||
+      timeline?.loanContract?.annualInterestRate ||
+      0
+    );
+
+  if (tan > 0) {
+    monthlyRate = (tan / 100) / 12;
+  } else if (totalPrincipalBefore > 0 && firstOrigInt > 0) {
+    monthlyRate = firstOrigInt / totalPrincipalBefore;
+  }
+
+  // Recalcular prestação base Price (PMT) ou cota SAC sobre o novo saldo devedor
+  let pmt = 0;
+  const sacCapital = n > 0 ? Math.round((newPrincipal / n) * 100) / 100 : 0;
+
+  if (!isSac) {
+    if (newPrincipal > 0 && n > 0) {
+      if (monthlyRate > 0) {
+        const compound = Math.pow(1 + monthlyRate, n);
+        pmt = (newPrincipal * (monthlyRate * compound)) / (compound - 1);
+      } else {
+        pmt = newPrincipal / n;
+      }
     }
+    pmt = Math.round(pmt * 100) / 100;
+  }
+
+  // Simular mês a mês a partir do novo saldo
+  let runningBalance = newPrincipal;
+  const patch = new Map();
+
+  for (let k = 0; k < future.length; k++) {
+    const ev = future[k];
+    const isLast = k === future.length - 1;
 
     const origCap =
       ev.originalInstallmentCapital ??
@@ -524,27 +593,32 @@ export function applyAmortizationReduceInstallment(
       ev.installmentAmount ??
       getInstallmentAmount(ev);
 
-    const capital =
-      Math.round(origCap * ratio * 100) / 100;
-    const interest =
-      Math.round(origInt * ratio * 100) / 100;
-    const fee =
-      Math.round(origFee * ratio * 100) / 100;
-    const amount =
-      Math.round((capital + interest + fee) * 100) / 100;
+    let interest = Math.round(runningBalance * monthlyRate * 100) / 100;
+    let capital = isSac ? sacCapital : Math.round((pmt - interest) * 100) / 100;
 
+    if (isLast || runningBalance <= capital) {
+      capital = runningBalance;
+    }
+
+    runningBalance = Math.max(
+      0,
+      Math.round((runningBalance - capital) * 100) / 100
+    );
+
+    const fee = origFee;
+    const amount = Math.round((capital + interest + fee) * 100) / 100;
     const isFullyAmortized =
-      ratio === 0 || (capital === 0 && interest === 0 && amount === 0);
+      newPrincipal === 0 || (capital === 0 && interest === 0 && amount === 0);
 
-    return {
-      ...ev,
+    patch.set(ev.id, {
       originalInstallmentAmount: origTotal,
       originalInstallmentCapital: origCap,
       originalInstallmentInterest: origInt,
       originalInstallmentFee: origFee,
-      savedInterest: isFullyAmortized
-        ? origInt
-        : Math.max(0, Math.round((origInt - interest) * 100) / 100),
+      savedInterest: Math.max(
+        0,
+        Math.round((origInt - interest) * 100) / 100
+      ),
       amount: amount,
       installmentAmount: amount,
       installmentCapital: capital,
@@ -553,8 +627,17 @@ export function applyAmortizationReduceInstallment(
       status: isFullyAmortized ? EventStatus.ABATED : ev.status,
       isAbated: isFullyAmortized ? true : Boolean(ev.isAbated),
       isCompleted: isFullyAmortized ? true : Boolean(ev.isCompleted)
-    };
-  });
+    });
+  }
+
+  return currentEvents.map((ev) =>
+    patch.has(ev.id)
+      ? {
+        ...ev,
+        ...patch.get(ev.id)
+      }
+      : ev
+  );
 }
 
 /**
@@ -761,10 +844,92 @@ export function recalculateLoanState(
 ) {
   const today = parseISO(todayISO());
 
+  const amortSystem =
+    timeline?.amortizationSystem ||
+    timeline?.loanContract?.amortizationSystem ||
+    LoanAmortizationSystem.PRICE;
+  const isSac = (amortSystem || '').toLowerCase() === LoanAmortizationSystem.SAC;
+
+  let baseEvents = eventsList;
+  if (isSac) {
+    const timelineEvents = eventsList.filter(
+      (ev) => isLoanInstallment(ev) && isEventForTimeline(ev, timeline)
+    );
+    if (timelineEvents.length > 0) {
+      const totalCap = Number(
+        timeline?.loanContract?.originalCapital ||
+        timeline?.originalCapital ||
+        timeline?.totalDebt ||
+        0
+      );
+      const totalN = Number(
+        timeline?.loanContract?.totalInstallments ||
+        timeline?.totalInstallments ||
+        timelineEvents.length
+      );
+      const sacMonthlyCap =
+        totalN > 0 && totalCap > 0
+          ? Math.round((totalCap / totalN) * 100) / 100
+          : 0;
+
+      const tan =
+        Number(timeline?.tanRate || 0) + Number(timeline?.spread || 0) ||
+        Number(
+          timeline?.interestRate ||
+          timeline?.annualInterestRate ||
+          timeline?.loanContract?.annualInterestRate ||
+          0
+        );
+      const i = tan > 0 ? (tan / 100) / 12 : 0;
+
+      let bal = totalCap;
+      const sacMap = new Map();
+      const sortedTl = [...timelineEvents].sort((a, b) => {
+        const na = Number(a.installmentNumber || 0);
+        const nb = Number(b.installmentNumber || 0);
+        if (na && nb) return na - nb;
+        return (a.date || '').localeCompare(b.date || '');
+      });
+
+      for (let k = 0; k < sortedTl.length; k++) {
+        const ev = sortedTl[k];
+        const isLast = k === sortedTl.length - 1;
+        const interest = Math.round(bal * i * 100) / 100;
+        let capital = sacMonthlyCap;
+        if (isLast || bal <= capital) {
+          capital = bal;
+        }
+        bal = Math.max(0, Math.round((bal - capital) * 100) / 100);
+        const fee = Number(
+          ev.originalInstallmentFee ??
+          ev.installmentFee ??
+          getInstallmentFee(ev)
+        );
+        const total = Math.round((capital + interest + fee) * 100) / 100;
+
+        sacMap.set(ev.id, {
+          installmentCapital: capital,
+          installmentInterest: interest,
+          installmentFee: fee,
+          installmentAmount: total,
+          amount: total,
+          originalInstallmentCapital: capital,
+          originalInstallmentInterest: interest,
+          originalInstallmentFee: fee,
+          originalInstallmentAmount: total
+        });
+      }
+
+      baseEvents = eventsList.map((ev) =>
+        sacMap.has(ev.id) ? { ...ev, ...sacMap.get(ev.id) } : ev
+      );
+    }
+  }
+
   const prepared =
     applyAmortizationsInMemory(
       timeline,
-      eventsList
+      baseEvents
     );
 
   const sorted = [...prepared].sort(

@@ -21,3 +21,4 @@ export { PersonType } from './PersonType.js';
 export { InvitationStatus } from './InvitationStatus.js';
 export { DiaryMood, DiaryEventCategory } from './DiaryMood.js';
 export { TimelineColor, TIMELINE_COLOR_PRESETS, getDefaultTimelineColor } from './TimelineColor.js';
+export { LoanAmortizationSystem } from './LoanAmortizationSystem.js';

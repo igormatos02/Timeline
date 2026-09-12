@@ -1146,7 +1146,14 @@ export const translations = {
       },
       loan: {
         amortizationTitle: "Extraordinary Amortization ({name})",
-        amortizationDescription: "Early amortization of {amount} €. Remaining balance: {remaining} €."
+        amortizationDescription: "Early amortization of {amount} €. Remaining balance: {remaining} €.",
+        systemPrice: "Price (Fixed)",
+        systemSac: "SAC (Decreasing)",
+        systemPriceShort: "Price",
+        systemSacShort: "SAC",
+        systemTitle: "Amortization System",
+        systemPriceDescription: "Constant base installments (French system)",
+        systemSacDescription: "Constant capital amortization with decreasing installments"
       },
       event: {
         seriesClosed: "Series Closed",
@@ -2310,7 +2317,14 @@ export const translations = {
       },
       loan: {
         amortizationTitle: "Amortização Extraordinária ({name})",
-        amortizationDescription: "Amortização antecipada de {amount} €. Saldo restante: {remaining} €."
+        amortizationDescription: "Amortização antecipada de {amount} €. Saldo restante: {remaining} €.",
+        systemPrice: "Price (Fixas)",
+        systemSac: "SAC (Decrescentes)",
+        systemPriceShort: "Price",
+        systemSacShort: "SAC",
+        systemTitle: "Sistema de Amortização",
+        systemPriceDescription: "Prestações base constantes (Sistema Francês)",
+        systemSacDescription: "Amortização de capital constante com parcelas decrescentes"
       },
       event: {
         seriesClosed: "Série Encerrada",

@@ -25,7 +25,7 @@ import {
 import { formatCurrency } from './utils/formatCurrency';
 import { generateUUID } from './utils/uuid.js';
 import * as api from './services/api';
-import { EventType, EventStatus, TimelineType, TimelineStatus, TimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity } from './enums/index.js';
+import { EventType, EventStatus, TimelineType, TimelineStatus, TimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
@@ -356,6 +356,16 @@ export default function App() {
   const [amortizationDefaultDate, setAmortizationDefaultDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [editingInstallment, setEditingInstallment] = useState(null);
 
+  const [loanAmortizationSystemMap, setLoanAmortizationSystemMap] = useState({});
+
+  const handleToggleAmortizationSystem = useCallback((system) => {
+    if (!activeTimelineId) return;
+    setLoanAmortizationSystemMap((prev) => ({
+      ...prev,
+      [activeTimelineId]: system
+    }));
+  }, [activeTimelineId]);
+
   const handleOpenAmortizationModal = useCallback((dateStr, eventObj = null) => {
     if (dateStr) {
       setAmortizationDefaultDate(dateStr);
@@ -445,9 +455,14 @@ export default function App() {
   const activeTimeline = React.useMemo(() => {
     if (!activeTimeboard || activeTimeboardTimelines.length === 0) return null;
 
-    const currentSelected = activeTimeboardTimelines.find(
+    const currentSelectedRaw = activeTimeboardTimelines.find(
       (tl) => tl.id === activeFinancialTab || tl.type === activeFinancialTab || tl.id === activeTimelineId || tl.type === activeTimelineId
     ) || activeTimeboardTimelines[0];
+
+    const currentSelected = {
+      ...currentSelectedRaw,
+      amortizationSystem: loanAmortizationSystemMap[currentSelectedRaw.id] || currentSelectedRaw.amortizationSystem || currentSelectedRaw.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE
+    };
 
     const isLoanType = isLoanTimelineType(currentSelected?.type);
 
@@ -456,7 +471,11 @@ export default function App() {
 
     if (loanTimelines.length > 0) {
       loanTimelines.forEach((loanTl) => {
-        computedEvents = recalculateLoanState(loanTl, computedEvents);
+        const enrichedLoanTl = {
+          ...loanTl,
+          amortizationSystem: loanAmortizationSystemMap[loanTl.id] || loanTl.amortizationSystem || loanTl.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE
+        };
+        computedEvents = recalculateLoanState(enrichedLoanTl, computedEvents);
       });
     } else if (isLoanType) {
       computedEvents = recalculateLoanState(currentSelected, computedEvents);
@@ -471,7 +490,7 @@ export default function App() {
       timelines: activeTimeboardTimelines,
       events: computedEvents
     };
-  }, [activeTimeboard, activeTimeboardTimelines, activeFinancialTab, activeTimelineId, rawEvents]);
+  }, [activeTimeboard, activeTimeboardTimelines, activeFinancialTab, activeTimelineId, rawEvents, loanAmortizationSystemMap]);
 
   // ----------------------------------------------------
   // Timeline Handlers
@@ -1898,6 +1917,7 @@ export default function App() {
                 onReset={() => setIsResetConfirmOpen(true)}
                 onOpenCreateTimeline={handleOpenCreateTimeline}
                 onOpenAmortizationModal={() => handleOpenAmortizationModal()}
+                onToggleAmortizationSystem={handleToggleAmortizationSystem}
                 onScrollToOverdue={handleScrollToOverdue}
               />
             }

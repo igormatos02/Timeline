@@ -98,23 +98,10 @@ export default function TodoTimelineHeader({
       style={{ borderTop: `3px solid ${headerColor}` }}
       header={
         <HeaderTitleBlock
-          icon={CheckSquare}
-          accentColor={headerColor}
-          title={timeline.name || t('todoHeader.defaultTitle') || 'To Do'}
-          timelineType="TODO"
-          collapsed={collapsed}
-          onToggleCollapse={() => setIsCollapsed((prev) => !prev)}
-          subtitle={
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span className="badge" style={{ background: `${headerColor}22`, color: headerColor, fontWeight: '700' }}>
-                {t('todoHeader.badge') || 'Lista de Tarefas'}
-              </span>
-              <span>•</span>
-              <span style={{ color: 'var(--text-muted)' }}>
-                {t('todoHeader.tasksCount', { count: totalCount }) || `${totalCount} tarefas`}
-              </span>
-            </div>
-          }
+          icon={<CheckSquare size={18} />}
+          color={headerColor}
+          name={timeline.name || t('todoHeader.defaultTitle')}
+          description={t('todoHeader.tasksCount', { count: totalCount })}
         />
       }
       controls={

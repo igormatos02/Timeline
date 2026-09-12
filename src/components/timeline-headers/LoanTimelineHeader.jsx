@@ -13,9 +13,8 @@ import { format, parseISO, differenceInCalendarDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
-import { LoanAmortizationSystem } from '../../enums/index.js';
+import { LoanAmortizationSystem, TimelineColor } from '../../enums/index.js';
 import { DonutChart } from '../ui/DonutChart.jsx';
-import CopyIdButton from '../ui/CopyIdButton.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 
 export default function LoanTimelineHeader({
@@ -213,267 +212,189 @@ export default function LoanTimelineHeader({
           : 'none'
       }}
       left={
-        <>
-          {/* Loan icon */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           <div
             style={{
-              width: '34px',
-              height: '34px',
-              borderRadius: '10px',
-              background: isInactive
-                ? 'rgba(148, 163, 184, 0.12)'
-                : 'rgba(99, 102, 241, 0.12)',
-              color: headerColor,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              border: `1px solid ${headerColor}33`,
-              flexShrink: 0
+              gap: '8px',
+              flexWrap: 'wrap'
             }}
           >
-            <CreditCard size={18} />
-          </div>
-
-          {/* Title */}
-          <div>
-            <div
+            <h1
               style={{
-                display: 'flex',
+                margin: 0,
+                fontSize: '1.2rem',
+                fontWeight: '800',
+                color: textColorMain,
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px'
               }}
             >
-              <h1
+              <span>{timeline.name}</span>
+              <CreditCard size={18} style={{ color: headerColor, opacity: 0.9 }} />
+            </h1>
+
+            {/* Active / inactive */}
+            {(onToggleStatus || onEdit) && (
+              <div
+                title={
+                  isInactive
+                    ? t('loanHeader.activateTitle')
+                    : t('loanHeader.deactivateTitle')
+                }
                 style={{
-                  margin: 0,
-                  fontSize: '1.2rem',
-                  fontWeight: '800',
-                  color: textColorMain
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  marginLeft: '4px'
                 }}
               >
-                {timeline.name}
-              </h1>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={!isInactive}
+                  onClick={() => {
+                    const newStatus =
+                      isInactive
+                        ? 'active'
+                        : 'inactive';
 
-              <span
-                style={{
-                  fontSize: '0.68rem',
-                  fontWeight: '700',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  background: isInactive
-                    ? 'rgba(148, 163, 184, 0.15)'
-                    : 'rgba(99, 102, 241, 0.12)',
-                  color: headerColor,
-                  border: `1px solid ${headerColor}44`,
-                  textTransform: 'uppercase'
-                }}
-              >
-                {t('loanHeader.loanBadge') ||
-                  'Empréstimo'}
-              </span>
-
-              {/* Active / inactive */}
-              {(onToggleStatus || onEdit) && (
-                <div
-                  title={
-                    isInactive
-                      ? (
-                        t(
-                          'loanHeader.activateTitle'
-                        ) ||
-                        'Ativar empréstimo (inclui-o nos totais do balanço)'
-                      )
-                      : (
-                        t(
-                          'loanHeader.deactivateTitle'
-                        ) ||
-                        'Desativar empréstimo (remover temporariamente dos totais do balanço)'
-                      )
-                  }
+                    if (onToggleStatus) {
+                      onToggleStatus(
+                        timeline,
+                        newStatus
+                      );
+                    } else if (onEdit) {
+                      onEdit({
+                        ...timeline,
+                        status: newStatus
+                      });
+                    }
+                  }}
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    marginLeft: '4px'
+                    width: '36px',
+                    height: '20px',
+                    borderRadius: '9999px',
+                    background: isInactive
+                      ? 'rgba(148, 163, 184, 0.3)'
+                      : `linear-gradient(135deg, ${TimelineColor.SUCCESS} 0%, #059669 100%)`,
+                    border: 'none',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition:
+                      'background 0.25s ease, box-shadow 0.25s ease',
+                    padding: 0,
+                    boxShadow: isInactive
+                      ? 'none'
+                      : '0 0 8px rgba(16, 185, 129, 0.4)',
+                    flexShrink: 0
                   }}
                 >
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={!isInactive}
-                    onClick={() => {
-                      const newStatus =
-                        isInactive
-                          ? 'active'
-                          : 'inactive';
-
-                      if (onToggleStatus) {
-                        onToggleStatus(
-                          timeline,
-                          newStatus
-                        );
-                      } else if (onEdit) {
-                        onEdit({
-                          ...timeline,
-                          status: newStatus
-                        });
-                      }
-                    }}
-                    style={{
-                      width: '36px',
-                      height: '20px',
-                      borderRadius: '9999px',
-                      background: isInactive
-                        ? 'rgba(148, 163, 184, 0.3)'
-                        : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                      border: 'none',
-                      cursor: 'pointer',
-                      position: 'relative',
-                      transition:
-                        'background 0.25s ease, box-shadow 0.25s ease',
-                      padding: 0,
-                      boxShadow: isInactive
-                        ? 'none'
-                        : '0 0 8px rgba(16, 185, 129, 0.4)',
-                      flexShrink: 0
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: 'block',
-                        width: '14px',
-                        height: '14px',
-                        borderRadius: '50%',
-                        background: '#ffffff',
-                        position: 'absolute',
-                        top: '3px',
-                        left: isInactive
-                          ? '3px'
-                          : '19px',
-                        transition:
-                          'left 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        boxShadow:
-                          '0 1px 3px rgba(0,0,0,0.3)'
-                      }}
-                    />
-                  </button>
-
                   <span
                     style={{
-                      fontSize: '0.72rem',
-                      fontWeight: '700',
-                      color: isInactive
-                        ? 'var(--text-muted)'
-                        : '#10b981',
-                      userSelect: 'none'
+                      display: 'block',
+                      width: '14px',
+                      height: '14px',
+                      borderRadius: '50%',
+                      background: TimelineColor.WHITE,
+                      position: 'absolute',
+                      top: '3px',
+                      left: isInactive
+                        ? '3px'
+                        : '19px',
+                      transition:
+                        'left 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow:
+                        '0 1px 3px rgba(0,0,0,0.3)'
                     }}
-                  >
-                    {isInactive
-                      ? (
-                        t(
-                          'loanHeader.statusInactive'
-                        ) ||
-                        'Inativo'
-                      )
-                      : (
-                        t(
-                          'loanHeader.statusActive'
-                        ) ||
-                        'Ativo'
-                      )}
-                  </span>
-                </div>
-              )}
-            </div>
+                  />
+                </button>
 
-            <div
-              style={{
-                margin: '3px 0 0',
-                fontSize: '0.78rem',
-                color: textColorMuted,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                flexWrap: 'wrap'
-              }}
-            >
-              {timeline.description && (
-                <span>
-                  {timeline.description}
-                </span>
-              )}
-
-              {bankName && (
                 <span
                   style={{
                     fontSize: '0.72rem',
-                    fontWeight: '600',
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    background: isInactive
-                      ? 'rgba(148, 163, 184, 0.1)'
-                      : 'rgba(99, 102, 241, 0.09)',
-                    border: isInactive
-                      ? '1px solid rgba(148, 163, 184, 0.2)'
-                      : `1px solid ${headerColor}33`,
-                    color: isInactive ? 'var(--text-muted)' : headerColor,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                  title={t('loanModal.bankNameLabel') || 'Instituição Financeira'}
-                >
-                  <Building2 size={12} style={{ flexShrink: 0 }} />
-                  <span>{bankName}</span>
-                </span>
-              )}
-
-              {contractNumber && (
-                <span
-                  style={{
-                    fontSize: '0.72rem',
-                    fontWeight: '600',
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid var(--border-glass)',
-                    color: textColorMain,
-                    fontFamily: 'monospace',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                  title={t('loanModal.contractNumberLabel') || 'Número do Contrato'}
-                >
-                  <FileText size={12} style={{ color: headerColor, flexShrink: 0 }} />
-                  <span>{t('loanHeader.contractNumberShort') || 'Nº Contrato'}: {contractNumber}</span>
-                </span>
-              )}
-
-              {timeline.id && (
-                <span
-                  style={{
-                    fontSize: '0.68rem',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    background:
-                      'rgba(255, 255, 255, 0.06)',
-                    border:
-                      '1px solid var(--border-glass)',
-                    color: textColorDim,
-                    fontFamily: 'monospace',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
+                    fontWeight: '700',
+                    color: isInactive
+                      ? 'var(--text-muted)'
+                      : TimelineColor.SUCCESS,
+                    userSelect: 'none'
                   }}
                 >
-                  <span style={{ userSelect: 'all' }}>ID: {timeline.id}</span>
-                  <CopyIdButton id={timeline.id} />
+                  {isInactive
+                    ? t('loanHeader.statusInactive')
+                    : t('loanHeader.statusActive')}
                 </span>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-        </>
+
+          <div
+            style={{
+              margin: '3px 0 0',
+              fontSize: '0.78rem',
+              color: textColorMuted,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              flexWrap: 'wrap'
+            }}
+          >
+            {timeline.description && (
+              <span>
+                {timeline.description}
+              </span>
+            )}
+
+            {bankName && (
+              <span
+                style={{
+                  fontSize: '0.72rem',
+                  fontWeight: '600',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  background: isInactive
+                    ? 'rgba(148, 163, 184, 0.1)'
+                    : 'rgba(99, 102, 241, 0.09)',
+                  border: isInactive
+                    ? '1px solid rgba(148, 163, 184, 0.2)'
+                    : `1px solid ${headerColor}33`,
+                  color: isInactive ? 'var(--text-muted)' : headerColor,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                title={t('loanModal.bankNameLabel')}
+              >
+                <Building2 size={12} style={{ flexShrink: 0 }} />
+                <span>{bankName}</span>
+              </span>
+            )}
+
+            {contractNumber && (
+              <span
+                style={{
+                  fontSize: '0.72rem',
+                  fontWeight: '600',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid var(--border-glass)',
+                  color: textColorMain,
+                  fontFamily: 'monospace',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                title={t('loanModal.contractNumberLabel')}
+              >
+                <FileText size={12} style={{ color: headerColor, flexShrink: 0 }} />
+                <span>{t('loanHeader.contractNumberShort')}: {contractNumber}</span>
+              </span>
+            )}
+          </div>
+        </div>
       }
       right={
         <div

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  BookOpen,
   Plus,
   Trash2,
   Settings,

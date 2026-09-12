@@ -1089,6 +1089,14 @@ export const translations = {
       completeAction: "Complete"
     },
 
+    // Project Timeline Header
+    projectHeader: {
+      newTaskMilestone: "New Task / Milestone",
+      totalTasks: "Total Tasks:",
+      completed: "Completed:",
+      inProgressPending: "In Progress / Pending:"
+    },
+
     // Todo Event Modal
     todoModal: {
       newTitle: "New To Do Task",
@@ -2299,6 +2307,14 @@ export const translations = {
       markCompleted: "Marcar como concluído",
       markPending: "Marcar como pendente",
       completeAction: "Concluir"
+    },
+
+    // Project Timeline Header
+    projectHeader: {
+      newTaskMilestone: "Nova Tarefa / Marco",
+      totalTasks: "Total de Tarefas:",
+      completed: "Concluídas:",
+      inProgressPending: "Em Andamento / Pendentes:"
     },
 
     // Todo Event Modal

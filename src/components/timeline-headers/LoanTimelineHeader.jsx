@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  CreditCard,
   Wallet,
   PieChart,
   TrendingUp,
@@ -234,7 +233,6 @@ export default function LoanTimelineHeader({
               }}
             >
               <span>{timeline.name}</span>
-              <CreditCard size={18} style={{ color: headerColor, opacity: 0.9 }} />
               {timeline.id && <CopyIdButton id={timeline.id} />}
             </h1>
 

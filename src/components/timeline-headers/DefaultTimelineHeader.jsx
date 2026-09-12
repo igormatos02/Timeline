@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Layers,
   Plus,
   Trash2,
   Settings
@@ -34,7 +33,6 @@ export default function DefaultTimelineHeader({
       left={
         <HeaderTitleBlock
           color={headerColor}
-          icon={<Layers size={18} />}
           name={timeline.name}
           description={timeline.description}
           id={timeline.id}

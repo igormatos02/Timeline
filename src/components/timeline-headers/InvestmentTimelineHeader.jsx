@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  PiggyBank,
   Sparkles,
   Plus,
   Trash2,
@@ -216,11 +215,7 @@ export default function InvestmentTimelineHeader({
       left={
         <HeaderTitleBlock
           color={headerColor}
-          icon={<PiggyBank size={18} />}
           name={timeline.name}
-          badge={t('investmentHeader.badge')}
-          iconBackground="rgba(99, 102, 241, 0.12)"
-          badgeBackground="rgba(99, 102, 241, 0.12)"
           description={timeline.description}
           id={timeline.id}
         />

@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import {
-  CheckSquare,
   ListTodo,
   Plus,
   Trash2,
@@ -14,6 +13,7 @@ import {
   Tag
 } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
+import { EventPriority, EventStatus, TimelineColor } from '../../enums/index.js';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 import { DonutChart, PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
@@ -30,7 +30,7 @@ export default function TodoTimelineHeader({
   const { t } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
 
-  const headerColor = timeline?.color || '#3b82f6'; // Blue default for Todo
+  const headerColor = timeline?.color || TimelineColor.TODO;
   const rawEventsList = timeline?.events || events || [];
   const todoList = useMemo(() => {
     return rawEventsList.filter((ev) => {
@@ -45,13 +45,13 @@ export default function TodoTimelineHeader({
 
   // Calculate metrics
   const totalCount = todoList.length;
-  const completedList = todoList.filter((item) => item.status === 'COMPLETED' || item.isCompleted);
+  const completedList = todoList.filter((item) => item.status === EventStatus.COMPLETED || item.isCompleted);
   const completedCount = completedList.length;
   const pendingCount = totalCount - completedCount;
   const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   const urgentCount = todoList.filter(
-    (item) => (item.priority || '').toLowerCase() === 'urgent' || (item.priority || '').toLowerCase() === 'high'
+    (item) => (item.priority || '').toLowerCase() === EventPriority.URGENT || (item.priority || '').toLowerCase() === EventPriority.HIGH
   ).length;
 
   const obligationsCount = todoList.filter((item) => item.isObligation).length;
@@ -61,18 +61,18 @@ export default function TodoTimelineHeader({
     if (totalCount === 0) return [];
     return [
       {
-        name: t('todoHeader.completed') || 'Concluídas',
+        name: t('todoHeader.completed'),
         amount: completedCount,
         count: completedCount,
         percent: completionRate,
-        color: '#10b981'
+        color: TimelineColor.SUCCESS
       },
       {
-        name: t('todoHeader.pending') || 'Pendentes',
+        name: t('todoHeader.pending'),
         amount: pendingCount,
         count: pendingCount,
         percent: 100 - completionRate,
-        color: '#3b82f6'
+        color: TimelineColor.BLUE
       }
     ].filter((s) => s.count > 0);
   }, [completedCount, pendingCount, totalCount, completionRate, t]);
@@ -80,8 +80,8 @@ export default function TodoTimelineHeader({
   // Priority distribution
   const priorityBreakdown = useMemo(() => {
     const counts = { urgent: 0, high: 0, normal: 0, low: 0 };
-    todoList.forEach((t) => {
-      const p = (t.priority || 'normal').toLowerCase();
+    todoList.forEach((item) => {
+      const p = (item.priority || EventPriority.NORMAL).toLowerCase();
       if (counts[p] !== undefined) counts[p] += 1;
       else counts.normal += 1;
     });
@@ -98,7 +98,6 @@ export default function TodoTimelineHeader({
       style={{ borderTop: `3px solid ${headerColor}` }}
       header={
         <HeaderTitleBlock
-          icon={<CheckSquare size={18} />}
           color={headerColor}
           name={timeline.name || t('todoHeader.defaultTitle')}
           description={t('todoHeader.tasksCount', { count: totalCount })}
@@ -125,7 +124,7 @@ export default function TodoTimelineHeader({
               }}
             >
               <Plus size={15} />
-              <span>{t('todoHeader.addTask') || 'Novo To Do'}</span>
+              <span>{t('todoHeader.addTask')}</span>
             </button>
           )}
 
@@ -134,7 +133,7 @@ export default function TodoTimelineHeader({
               type="button"
               className="btn btn-outline"
               onClick={onEdit}
-              title={t('common.editTimeline') || 'Editar Timeline'}
+              title={t('timeline.editTimeline')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -163,7 +162,7 @@ export default function TodoTimelineHeader({
               }}
             >
               <Trash2 size={13} />
-              <span>{t('common.delete') || 'Delete'}</span>
+              <span>{t('buttons.delete')}</span>
             </button>
           )}
         </div>
@@ -193,16 +192,16 @@ export default function TodoTimelineHeader({
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>
-                {t('todoHeader.progress') || 'Progresso'}
+                {t('todoHeader.progress')}
               </span>
-              <CheckCircle2 size={16} style={{ color: '#10b981' }} />
+              <CheckCircle2 size={16} style={{ color: TimelineColor.SUCCESS }} />
             </div>
             <div style={{ margin: '8px 0' }}>
               <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-main)' }}>
                 {completionRate}%
               </div>
               <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                {completedCount} de {totalCount} concluídas
+                {t('todoHeader.tasksCount', { count: completedCount })} / {totalCount}
               </div>
             </div>
             {/* Progress Bar */}
@@ -211,7 +210,7 @@ export default function TodoTimelineHeader({
                 style={{
                   width: `${completionRate}%`,
                   height: '100%',
-                  background: 'linear-gradient(90deg, #3b82f6 0%, #10b981 100%)',
+                  background: `linear-gradient(90deg, ${TimelineColor.BLUE} 0%, ${TimelineColor.SUCCESS} 100%)`,
                   borderRadius: '3px',
                   transition: 'width 0.3s ease'
                 }}
@@ -234,20 +233,17 @@ export default function TodoTimelineHeader({
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>
-                {t('todoHeader.pending') || 'Pendentes (Mês Corrente)'}
+                {t('todoHeader.pending')}
               </span>
-              <Clock size={16} style={{ color: '#3b82f6' }} />
+              <Clock size={16} style={{ color: TimelineColor.BLUE }} />
             </div>
             <div style={{ margin: '8px 0' }}>
-              <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#3b82f6' }}>
+              <div style={{ fontSize: '1.4rem', fontWeight: '800', color: TimelineColor.BLUE }}>
                 {pendingCount}
               </div>
               <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Tarefas ativas para realização
+                {t('todoHeader.pending')}
               </div>
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-              Ficam sempre no mês atual até conclusão
             </div>
           </div>
 
@@ -266,24 +262,24 @@ export default function TodoTimelineHeader({
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>
-                {t('todoHeader.prioritySummary') || 'Prioridades'}
+                {t('todoHeader.prioritySummary')}
               </span>
-              <AlertTriangle size={16} style={{ color: urgentCount > 0 ? '#f59e0b' : 'var(--text-muted)' }} />
+              <AlertTriangle size={16} style={{ color: urgentCount > 0 ? TimelineColor.WARNING : 'var(--text-muted)' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0' }}>
-              <span className="badge" style={{ background: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e', fontSize: '0.74rem', fontWeight: '700' }}>
-                {priorityBreakdown.urgent} Urgente
+              <span className="badge" style={{ background: 'rgba(244, 63, 94, 0.15)', color: TimelineColor.DANGER, fontSize: '0.74rem', fontWeight: '700' }}>
+                {priorityBreakdown.urgent} {t('priority.urgent')}
               </span>
-              <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontSize: '0.74rem', fontWeight: '700' }}>
-                {priorityBreakdown.high} Alta
+              <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: TimelineColor.WARNING, fontSize: '0.74rem', fontWeight: '700' }}>
+                {priorityBreakdown.high} {t('priority.high')}
               </span>
-              <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', fontSize: '0.74rem', fontWeight: '700' }}>
-                {priorityBreakdown.normal} Normal
+              <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: TimelineColor.BLUE, fontSize: '0.74rem', fontWeight: '700' }}>
+                {priorityBreakdown.normal} {t('priority.normal')}
               </span>
             </div>
             {obligationsCount > 0 && (
               <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span>🔒 {obligationsCount} obrigações associadas</span>
+                <span>🔒 {obligationsCount}</span>
               </div>
             )}
           </div>
@@ -292,3 +288,4 @@ export default function TodoTimelineHeader({
     </HeaderShell>
   );
 }
+

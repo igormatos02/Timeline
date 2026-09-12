@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  FolderKanban,
   Plus,
   Trash2,
   CheckCircle2,
@@ -8,6 +7,8 @@ import {
   Sparkles,
   Settings
 } from 'lucide-react';
+import { useTranslation } from '../../i18n/LanguageContext.jsx';
+import { EventStatus, TimelineColor } from '../../enums/index.js';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 
@@ -19,13 +20,14 @@ export default function ProjectTimelineHeader({
   onDelete,
   onAddEvent
 }) {
+  const { t } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
 
   if (!timeline) return null;
 
-  const headerColor = timeline.color || '#8b5cf6';
+  const headerColor = timeline.color || TimelineColor.PROJECT;
   const totalTasks = events.length;
-  const completedTasks = events.filter((e) => e.isCompleted || e.status === 'completed' || e.status === 'Concluído').length;
+  const completedTasks = events.filter((e) => e.isCompleted || e.status === EventStatus.COMPLETED).length;
   const pendingTasks = totalTasks - completedTasks;
 
   return (
@@ -37,9 +39,7 @@ export default function ProjectTimelineHeader({
       left={
         <HeaderTitleBlock
           color={headerColor}
-          icon={<FolderKanban size={18} />}
           name={timeline.name}
-          badge="Project Roadmap"
           description={timeline.description}
           id={timeline.id}
         />
@@ -62,7 +62,7 @@ export default function ProjectTimelineHeader({
               }}
             >
               <Plus size={14} />
-              <span>New Task / Milestone</span>
+              <span>{t('projectHeader.newTaskMilestone')}</span>
             </button>
           )}
 
@@ -70,7 +70,7 @@ export default function ProjectTimelineHeader({
             <button
               type="button"
               onClick={onEdit}
-              title="Timeline Settings"
+              title={t('timeline.editTimeline')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -103,7 +103,7 @@ export default function ProjectTimelineHeader({
               }}
             >
               <Trash2 size={13} />
-              <span>Delete</span>
+              <span>{t('buttons.delete')}</span>
             </button>
           )}
         </div>
@@ -122,20 +122,21 @@ export default function ProjectTimelineHeader({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--text-main)' }}>
           <Sparkles size={14} style={{ color: headerColor }} />
-          <span>Total Tasks:</span>
+          <span>{t('projectHeader.totalTasks')}</span>
           <strong>{totalTasks}</strong>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#10b981' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: TimelineColor.SUCCESS }}>
           <CheckCircle2 size={14} />
-          <span>Completed:</span>
+          <span>{t('projectHeader.completed')}</span>
           <strong>{completedTasks}</strong>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#8b5cf6' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: TimelineColor.PURPLE }}>
           <Clock size={14} />
-          <span>In Progress / Pending:</span>
+          <span>{t('projectHeader.inProgressPending')}</span>
           <strong>{pendingTasks}</strong>
         </div>
       </div>
     </HeaderShell>
   );
 }
+

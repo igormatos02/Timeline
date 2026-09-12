@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Scale,
   Calendar,
   Layers,
   Sparkles,
@@ -268,11 +267,7 @@ export default function BalanceTimelineHeader({
       left={
         <HeaderTitleBlock
           color={headerColor}
-          icon={<Scale size={18} />}
           name={timeline.name}
-          badge={t('balanceHeader.badge')}
-          iconBackground="rgba(14, 165, 233, 0.12)"
-          badgeBackground="rgba(14, 165, 233, 0.12)"
           description={timeline.description}
           id={timeline.id}
         />

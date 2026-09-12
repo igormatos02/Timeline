@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  ShoppingCart,
   Plus,
   Trash2,
   Settings,
@@ -8,7 +7,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { ExpenseEventCategory } from '../../../shared/enums/ExpensesEventCategory.js';
-import { EventType, isCancelledStatus } from '../../enums/index.js';
+import { EventType, isCancelledStatus, TimelineColor } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
@@ -34,7 +33,7 @@ export default function ExpenseTimelineHeader({
 
   if (!timeline) return null;
 
-  const headerColor = timeline.color || '#f43f5e';
+  const headerColor = timeline.color || TimelineColor.EXPENSE;
   const metrics = timeline.metrics || {};
 
   return (
@@ -46,11 +45,7 @@ export default function ExpenseTimelineHeader({
       left={
         <HeaderTitleBlock
           color={headerColor}
-          icon={<ShoppingCart size={18} />}
           name={timeline.name}
-          badge={t('expenseHeader.badge')}
-          iconBackground="rgba(244, 63, 94, 0.12)"
-          badgeBackground="rgba(244, 63, 94, 0.12)"
           description={timeline.description}
           id={timeline.id}
         />

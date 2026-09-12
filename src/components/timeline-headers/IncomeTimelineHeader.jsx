@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  DollarSign,
   Sparkles,
   Plus,
   Trash2,
@@ -286,11 +285,7 @@ export default function IncomeTimelineHeader({
       left={
         <HeaderTitleBlock
           color={headerColor}
-          icon={<DollarSign size={18} />}
           name={timeline.name}
-          badge={t('incomeHeader.badge')}
-          iconBackground="rgba(16, 185, 129, 0.12)"
-          badgeBackground="rgba(16, 185, 129, 0.12)"
           description={timeline.description}
           id={timeline.id}
         />

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Bell,
   Sparkles,
   Plus,
   Trash2,
@@ -201,11 +200,7 @@ export default function ReminderTimelineHeader({
       left={
         <HeaderTitleBlock
           color={headerColor}
-          icon={<Bell size={18} />}
           name={timeline.name}
-          badge={t('reminderHeader.badge') || 'Lembretes & Alertas'}
-          iconBackground="rgba(245, 158, 11, 0.12)"
-          badgeBackground="rgba(245, 158, 11, 0.12)"
           description={timeline.description}
           id={timeline.id}
         />

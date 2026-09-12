@@ -74,15 +74,15 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
       <div className="modal-card" style={{ maxWidth: '640px' }}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--success-glow)', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <TrendingDown size={20} />
             </div>
             <div>
               <h2 className="modal-title" style={{ fontSize: '1.25rem' }}>
-                {initialEvent ? 'Editar Amortização' : 'Amortização Extraordinária'}
+                {initialEvent ? t('amortizationModal.editTitle') : t('amortizationModal.title')}
               </h2>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                {initialEvent ? 'Altere o montante, data ou estratégia desta amortização' : 'Abata o saldo devedor e escolha o impacto no empréstimo'}
+                {initialEvent ? t('amortizationModal.editSubtitle') : t('amortizationModal.subtitle')}
               </p>
             </div>
           </div>
@@ -93,7 +93,7 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
 
         {remainingBalance !== undefined && (
           <div style={{ padding: '10px 14px', borderRadius: '10px', background: 'rgba(99, 102, 241, 0.08)', border: '1px solid var(--border-glass-glow)', marginBottom: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Saldo Devedor Atual:</span>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{t('amortizationModal.currentRemainingBalance')}</span>
             <span style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--primary-light)' }}>{formatCurrency(remainingBalance)}</span>
           </div>
         )}
@@ -101,7 +101,7 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
         <form onSubmit={handleSubmit}>
           {/* Valor da Amortização */}
           <div className="form-group">
-            <label className="form-label">Valor a Amortizar (€) *</label>
+            <label className="form-label">{t('amortizationModal.amountLabel')}</label>
             <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)', fontWeight: '700' }}>€</span>
               <input
@@ -112,7 +112,7 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
                 required
                 className="form-input"
                 style={{ paddingLeft: '32px', fontSize: '1.05rem', fontWeight: '700' }}
-                placeholder="Ex: 1500"
+                placeholder={t('amortizationModal.amountPlaceholder')}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 autoFocus
@@ -122,7 +122,7 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
 
           {/* Estratégia de Amortização */}
           <div className="form-group" style={{ marginTop: '16px' }}>
-            <label className="form-label">O que deseja alterar com a amortização?</label>
+            <label className="form-label">{t('amortizationModal.strategyLabel')}</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '6px' }}>
               <div
                 onClick={() => setStrategy(AmortizationStrategy.REDUCE_TERM)}
@@ -130,16 +130,16 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
                   padding: '14px 12px',
                   borderRadius: '10px',
                   border: `2px solid ${strategy === AmortizationStrategy.REDUCE_TERM ? 'var(--primary)' : 'var(--border-glass)'}`,
-                  background: strategy === AmortizationStrategy.REDUCE_TERM ? 'rgba(99, 102, 241, 0.14)' : 'var(--bg-glass)',
+                  background: strategy === AmortizationStrategy.REDUCE_TERM ? 'var(--primary-glow)' : 'var(--bg-glass)',
                   cursor: 'pointer',
                   transition: 'all 0.2s'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '0.9rem', color: strategy === AmortizationStrategy.REDUCE_TERM ? 'var(--primary-light)' : 'var(--text-main)' }}>
-                  <Clock size={16} /> 1. Diminuir Prazo
+                  <Clock size={16} /> {t('amortizationModal.reduceTermTitle')}
                 </div>
                 <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '6px', lineHeight: '1.4' }}>
-                  Abate o número de parcelas <strong>do fim para trás</strong>, encurtando o prazo final da dívida.
+                  {t('amortizationModal.reduceTermDesc')}
                 </p>
               </div>
 
@@ -148,17 +148,17 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
                 style={{
                   padding: '14px 12px',
                   borderRadius: '10px',
-                  border: `2px solid ${strategy === AmortizationStrategy.REDUCE_INSTALLMENT ? '#10b981' : 'var(--border-glass)'}`,
-                  background: strategy === AmortizationStrategy.REDUCE_INSTALLMENT ? 'rgba(16, 185, 129, 0.14)' : 'var(--bg-glass)',
+                  border: `2px solid ${strategy === AmortizationStrategy.REDUCE_INSTALLMENT ? 'var(--success)' : 'var(--border-glass)'}`,
+                  background: strategy === AmortizationStrategy.REDUCE_INSTALLMENT ? 'var(--success-glow)' : 'var(--bg-glass)',
                   cursor: 'pointer',
                   transition: 'all 0.2s'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '0.9rem', color: strategy === AmortizationStrategy.REDUCE_INSTALLMENT ? '#10b981' : 'var(--text-main)' }}>
-                  <TrendingDown size={16} /> 2. Diminuir Parcela
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '0.9rem', color: strategy === AmortizationStrategy.REDUCE_INSTALLMENT ? 'var(--success)' : 'var(--text-main)' }}>
+                  <TrendingDown size={16} /> {t('amortizationModal.reduceInstallmentTitle')}
                 </div>
                 <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '6px', lineHeight: '1.4' }}>
-                  Reduz o valor das parcelas <strong>dali para a frente</strong>, diminuindo a prestação mensal.
+                  {t('amortizationModal.reduceInstallmentDesc')}
                 </p>
               </div>
             </div>
@@ -166,7 +166,7 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
 
           {/* Estado Inicial da Amortização */}
           <div className="form-group" style={{ marginTop: '14px' }}>
-            <label className="form-label">Estado Inicial</label>
+            <label className="form-label">{t('amortizationModal.initialStatusLabel')}</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
               <button
                 type="button"
@@ -174,9 +174,9 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
                 style={{
                   padding: '8px 12px',
                   borderRadius: '8px',
-                  border: status === EventStatus.AMORTIZED ? '2px solid #10b981' : '1px solid var(--border-glass)',
-                  background: status === EventStatus.AMORTIZED ? 'rgba(16, 185, 129, 0.16)' : 'var(--bg-glass)',
-                  color: status === EventStatus.AMORTIZED ? '#10b981' : 'var(--text-dim)',
+                  border: status === EventStatus.AMORTIZED ? '2px solid var(--success)' : '1px solid var(--border-glass)',
+                  background: status === EventStatus.AMORTIZED ? 'var(--success-glow)' : 'var(--bg-glass)',
+                  color: status === EventStatus.AMORTIZED ? 'var(--success)' : 'var(--text-dim)',
                   fontWeight: '700',
                   fontSize: '0.84rem',
                   cursor: 'pointer',
@@ -195,9 +195,9 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
                 style={{
                   padding: '8px 12px',
                   borderRadius: '8px',
-                  border: status === EventStatus.PENDING ? '2px solid #f59e0b' : '1px solid var(--border-glass)',
+                  border: status === EventStatus.PENDING ? '2px solid var(--warning)' : '1px solid var(--border-glass)',
                   background: status === EventStatus.PENDING ? 'rgba(245, 158, 11, 0.16)' : 'var(--bg-glass)',
-                  color: status === EventStatus.PENDING ? '#f59e0b' : 'var(--text-dim)',
+                  color: status === EventStatus.PENDING ? 'var(--warning)' : 'var(--text-dim)',
                   fontWeight: '700',
                   fontSize: '0.84rem',
                   cursor: 'pointer',
@@ -215,11 +215,11 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
 
           {/* Notas Opcionais */}
           <div className="form-group" style={{ marginTop: '14px' }}>
-            <label className="form-label">Notas / Justificação (Opcional)</label>
+            <label className="form-label">{t('amortizationModal.notesLabel')}</label>
             <input
               type="text"
               className="form-input"
-              placeholder="Ex: Pagamento com subsídio de férias..."
+              placeholder={t('amortizationModal.notesPlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
@@ -228,10 +228,10 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
           {/* Action Buttons */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px' }}>
             <button type="button" className="btn btn-secondary" onClick={onClose}>
-              Cancelar
+              {t('common.cancel')}
             </button>
-            <button type="submit" className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
-              {initialEvent ? 'Salvar Alterações' : 'Confirmar Amortização'}
+            <button type="submit" className="btn btn-primary" style={{ background: 'linear-gradient(135deg, var(--success) 0%, var(--accent-emerald) 100%)', boxShadow: '0 4px 14px var(--shadow-glow-emerald)' }}>
+              {initialEvent ? t('amortizationModal.saveChanges') : t('amortizationModal.confirmAmortization')}
             </button>
           </div>
         </form>

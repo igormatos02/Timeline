@@ -9,6 +9,7 @@ import {
 } from 'date-fns';
 
 import { generateUUID } from './uuid.js';
+import { formatCurrency } from './formatCurrency.js';
 
 import {
   EventType,
@@ -436,37 +437,244 @@ export function generateLoanInstallments({
 // In-memory Amortization Application
 // ---------------------------------------------------------------------------
 
+/** Helper predicate to find open installments eligible for amortization. */
+function isOpenInstallmentForAmortization(ev, timeline) {
+  return (
+    isLoanInstallment(ev) &&
+    isEventForTimeline(ev, timeline) &&
+    !isPositiveStatus(ev.status) &&
+    !isCancelledStatus(ev.status) &&
+    !isAbated(ev)
+  );
+}
+
+/**
+ * REDUCE_INSTALLMENT (Diminuir Parcela)
+ * Mantém o prazo e reduz o valor das parcelas abertas proporcionalmente.
+ * Função 100% isolada e independente de cálculo.
+ */
+export function applyAmortizationReduceInstallment(
+  currentEvents,
+  amortEv,
+  timeline
+) {
+  const amortVal = Number(
+    amortEv.amortizationAmount ||
+    amortEv.installmentAmount ||
+    amortEv.amount ||
+    0
+  );
+
+  if (isNaN(amortVal) || amortVal <= 0) {
+    return currentEvents;
+  }
+
+  const future = currentEvents.filter((ev) =>
+    isOpenInstallmentForAmortization(ev, timeline)
+  );
+
+  if (future.length === 0) {
+    return currentEvents;
+  }
+
+  const totalPrincipalBefore = future.reduce(
+    (sum, ev) => sum + getPrincipal(ev),
+    0
+  );
+
+  if (totalPrincipalBefore <= 0) {
+    return currentEvents;
+  }
+
+  const futureIds = new Set(future.map((f) => f.id));
+  const ratio =
+    Math.max(0, totalPrincipalBefore - amortVal) / totalPrincipalBefore;
+
+  return currentEvents.map((ev) => {
+    if (!futureIds.has(ev.id)) {
+      return ev;
+    }
+
+    const capital =
+      Math.round(getPrincipal(ev) * ratio * 100) / 100;
+    const interest =
+      Math.round(getInstallmentInterest(ev) * ratio * 100) / 100;
+    const fee =
+      Math.round(getInstallmentFee(ev) * ratio * 100) / 100;
+    const amount =
+      Math.round((capital + interest + fee) * 100) / 100;
+
+    const origCap =
+      ev.originalInstallmentCapital ??
+      ev.installmentCapital ??
+      getPrincipal(ev);
+    const origInt =
+      ev.originalInstallmentInterest ??
+      ev.installmentInterest ??
+      getInstallmentInterest(ev);
+    const origFee =
+      ev.originalInstallmentFee ??
+      ev.installmentFee ??
+      getInstallmentFee(ev);
+    const origTotal =
+      ev.originalInstallmentAmount ??
+      ev.installmentAmount ??
+      getInstallmentAmount(ev);
+
+    const isFullyAmortized =
+      ratio === 0 || (capital === 0 && interest === 0 && amount === 0);
+
+    return {
+      ...ev,
+      originalInstallmentAmount: origTotal,
+      originalInstallmentCapital: origCap,
+      originalInstallmentInterest: origInt,
+      originalInstallmentFee: origFee,
+      savedInterest: isFullyAmortized
+        ? origInt
+        : Math.max(0, Math.round((origInt - interest) * 100) / 100),
+      amount: amount,
+      installmentAmount: amount,
+      installmentCapital: capital,
+      installmentInterest: interest,
+      installmentFee: fee,
+      status: isFullyAmortized ? EventStatus.ABATED : ev.status,
+      isAbated: isFullyAmortized ? true : Boolean(ev.isAbated),
+      isCompleted: isFullyAmortized ? true : Boolean(ev.isCompleted)
+    };
+  });
+}
+
+/**
+ * REDUCE_TERM (Diminuir Prazo)
+ * Abate as parcelas do fim para trás a 0, mantendo as iniciais abertas intactas.
+ * Função 100% isolada e independente de cálculo.
+ */
+export function applyAmortizationReduceTerm(
+  currentEvents,
+  amortEv,
+  timeline
+) {
+  const amortVal = Number(
+    amortEv.amortizationAmount ||
+    amortEv.installmentAmount ||
+    amortEv.amount ||
+    0
+  );
+
+  if (isNaN(amortVal) || amortVal <= 0) {
+    return currentEvents;
+  }
+
+  const futureCandidates = currentEvents.filter((ev) =>
+    isOpenInstallmentForAmortization(ev, timeline)
+  );
+
+  const future = futureCandidates.sort((a, b) => {
+    const na = Number(a.installmentNumber || 0);
+    const nb = Number(b.installmentNumber || 0);
+
+    return na && nb
+      ? nb - na
+      : (b.date || '').localeCompare(a.date || '');
+  });
+
+  let remaining = amortVal;
+  const patch = new Map();
+
+  for (const inst of future) {
+    if (remaining <= 0) {
+      break;
+    }
+
+    const principal = getPrincipal(inst);
+
+    if (principal <= 0) {
+      continue;
+    }
+
+    const origCap =
+      inst.originalInstallmentCapital ??
+      inst.installmentCapital ??
+      getPrincipal(inst);
+    const origInt =
+      inst.originalInstallmentInterest ??
+      inst.installmentInterest ??
+      getInstallmentInterest(inst);
+    const origFee =
+      inst.originalInstallmentFee ??
+      inst.installmentFee ??
+      getInstallmentFee(inst);
+    const origTotal =
+      inst.originalInstallmentAmount ??
+      inst.installmentAmount ??
+      getInstallmentAmount(inst);
+
+    if (remaining >= principal) {
+      patch.set(inst.id, {
+        status: EventStatus.ABATED,
+        isAbated: true,
+        isCompleted: true,
+        originalInstallmentAmount: origTotal,
+        originalInstallmentCapital: origCap,
+        originalInstallmentInterest: origInt,
+        originalInstallmentFee: origFee,
+        savedInterest: origInt,
+        amount: 0,
+        installmentAmount: 0,
+        installmentCapital: 0,
+        installmentInterest: 0,
+        installmentFee: 0
+      });
+
+      remaining -= principal;
+    } else {
+      const newCapital = Math.max(
+        0,
+        Math.round((principal - remaining) * 100) / 100
+      );
+
+      const interest = getInstallmentInterest(inst);
+      const fee = getInstallmentFee(inst);
+      const newAmount =
+        Math.round((newCapital + interest + fee) * 100) / 100;
+
+      patch.set(inst.id, {
+        originalInstallmentAmount: origTotal,
+        originalInstallmentCapital: origCap,
+        originalInstallmentInterest: origInt,
+        originalInstallmentFee: origFee,
+        savedInterest: 0,
+        amount: newAmount,
+        installmentAmount: newAmount,
+        installmentCapital: newCapital
+      });
+
+      remaining = 0;
+    }
+  }
+
+  return currentEvents.map((ev) =>
+    patch.has(ev.id)
+      ? {
+        ...ev,
+        ...patch.get(ev.id)
+      }
+      : ev
+  );
+}
+
 function applyAmortizationsInMemory(
   timeline,
   eventsList
 ) {
   const amortEvents = eventsList
     .filter((ev) => {
-      if (!ev || ev.isDeleted) return false;
-
-      if (
-        ev.status === EventStatus.CANCELLED ||
-        ev.status === EventStatus.DELETED
-      ) {
-        return false;
-      }
-
-      if (
-        timeline?.id &&
-        ev.timelineId &&
-        !isEventForTimeline(ev, timeline)
-      ) {
-        return false;
-      }
-
+      if (isCancelledStatus(ev.status)) return false;
       const isAmort =
+        ev.eventType === EventType.AMORTIZATION ||
         ev.category === AmortizationEventCategory.REDUCE_TERM ||
         ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
-        ev.strategy === AmortizationStrategy.REDUCE_TERM ||
-        ev.strategy === AmortizationStrategy.REDUCE_INSTALLMENT ||
-        ev.amortizationStrategy === AmortizationStrategy.REDUCE_TERM ||
-        ev.amortizationStrategy === AmortizationStrategy.REDUCE_INSTALLMENT ||
-        ev.eventType === EventType.AMORTIZATION ||
         Boolean(ev.isAmortization);
 
       return isAmort;
@@ -484,23 +692,6 @@ function applyAmortizationsInMemory(
   let currentEvents = [...eventsList];
 
   for (const amortEv of amortEvents) {
-    const amortVal = Number(
-      amortEv.amortizationAmount ||
-      amortEv.installmentAmount ||
-      amortEv.amount ||
-      0
-    );
-
-    if (
-      isNaN(amortVal) ||
-      amortVal <= 0
-    ) {
-      continue;
-    }
-
-    const amortDate =
-      amortEv.date || '1900-01-01';
-
     const strategy =
       amortEv.strategy ||
       amortEv.amortizationStrategy ||
@@ -512,225 +703,18 @@ function applyAmortizationsInMemory(
       strategy === AmortizationEventCategory.REDUCE_INSTALLMENT ||
       strategy === 'reduce_installment';
 
-    const isOpenInstallment = (ev) =>
-      isLoanInstallment(ev) &&
-      isEventForTimeline(ev, timeline) &&
-      !isPositiveStatus(ev.status) &&
-      !isCancelledStatus(ev.status) &&
-      !isAbated(ev);
-
     if (isReduceInstallment) {
-      // ---------------------------------------------------------
-      // REDUCE_INSTALLMENT (Diminuir Parcela)
-      // Mantém o prazo e reduz o valor das parcelas abertas proporcionalmente
-      // ---------------------------------------------------------
-
-      const future = currentEvents.filter(isOpenInstallment);
-
-      if (future.length === 0) {
-        continue;
-      }
-
-      const totalPrincipalBefore =
-        future.reduce(
-          (sum, ev) =>
-            sum + getPrincipal(ev),
-          0
-        );
-
-      if (totalPrincipalBefore <= 0) {
-        continue;
-      }
-
-      const futureIds = new Set(future.map((f) => f.id));
-      const ratio =
-        Math.max(
-          0,
-          totalPrincipalBefore - amortVal
-        ) /
-        totalPrincipalBefore;
-
-      currentEvents = currentEvents.map(
-        (ev) => {
-          if (!futureIds.has(ev.id)) {
-            return ev;
-          }
-
-          const capital =
-            Math.round(
-              getPrincipal(ev) *
-              ratio *
-              100
-            ) / 100;
-
-          const interest =
-            Math.round(
-              getInstallmentInterest(ev) *
-              ratio *
-              100
-            ) / 100;
-
-          const fee =
-            Math.round(
-              getInstallmentFee(ev) *
-              ratio *
-              100
-            ) / 100;
-
-          const amount =
-            Math.round(
-              (
-                capital +
-                interest +
-                fee
-              ) * 100
-            ) / 100;
-
-          const origCap = ev.originalInstallmentCapital ?? ev.installmentCapital ?? getPrincipal(ev);
-          const origInt = ev.originalInstallmentInterest ?? ev.installmentInterest ?? getInstallmentInterest(ev);
-          const origFee = ev.originalInstallmentFee ?? ev.installmentFee ?? getInstallmentFee(ev);
-          const origTotal = ev.originalInstallmentAmount ?? ev.installmentAmount ?? getInstallmentAmount(ev);
-
-          const isFullyAmortized = ratio === 0 || (capital === 0 && interest === 0 && amount === 0);
-
-          return {
-            ...ev,
-
-            originalInstallmentAmount: origTotal,
-            originalInstallmentCapital: origCap,
-            originalInstallmentInterest: origInt,
-            originalInstallmentFee: origFee,
-            savedInterest: isFullyAmortized ? origInt : Math.max(0, Math.round((origInt - interest) * 100) / 100),
-
-            amount: amount,
-            installmentAmount: amount,
-            installmentCapital: capital,
-            installmentInterest: interest,
-            installmentFee: fee,
-
-            status: isFullyAmortized ? EventStatus.ABATED : ev.status,
-            isAbated: isFullyAmortized ? true : Boolean(ev.isAbated),
-            isCompleted: isFullyAmortized ? true : Boolean(ev.isCompleted)
-          };
-        }
+      currentEvents = applyAmortizationReduceInstallment(
+        currentEvents,
+        amortEv,
+        timeline
       );
     } else {
-      // ---------------------------------------------------------
-      // REDUCE_TERM (Diminuir Prazo)
-      // Abate as parcelas do fim para trás a 0, mantendo as iniciais abertas intactas
-      // ---------------------------------------------------------
-
-      const futureCandidates = currentEvents.filter(isOpenInstallment);
-
-      const future = futureCandidates.sort((a, b) => {
-        const na =
-          Number(
-            a.installmentNumber || 0
-          );
-
-        const nb =
-          Number(
-            b.installmentNumber || 0
-          );
-
-        return (na && nb)
-          ? nb - na
-          : (b.date || '').localeCompare(
-            a.date || ''
-          );
-      });
-
-      let remaining = amortVal;
-
-      const patch = new Map();
-
-      for (const inst of future) {
-        if (remaining <= 0) {
-          break;
-        }
-
-        const principal =
-          getPrincipal(inst);
-
-        if (principal <= 0) {
-          continue;
-        }
-
-        const origCap = inst.originalInstallmentCapital ?? inst.installmentCapital ?? getPrincipal(inst);
-        const origInt = inst.originalInstallmentInterest ?? inst.installmentInterest ?? getInstallmentInterest(inst);
-        const origFee = inst.originalInstallmentFee ?? inst.installmentFee ?? getInstallmentFee(inst);
-        const origTotal = inst.originalInstallmentAmount ?? inst.installmentAmount ?? getInstallmentAmount(inst);
-
-        if (remaining >= principal) {
-          patch.set(inst.id, {
-            status: EventStatus.ABATED,
-            isAbated: true,
-            isCompleted: true,
-
-            originalInstallmentAmount: origTotal,
-            originalInstallmentCapital: origCap,
-            originalInstallmentInterest: origInt,
-            originalInstallmentFee: origFee,
-            savedInterest: origInt,
-
-            amount: 0,
-            installmentAmount: 0,
-            installmentCapital: 0,
-            installmentInterest: 0,
-            installmentFee: 0
-          });
-
-          remaining -= principal;
-        } else {
-          const newCapital =
-            Math.max(
-              0,
-              Math.round(
-                (principal - remaining) *
-                100
-              ) / 100
-            );
-
-          const interest =
-            getInstallmentInterest(inst);
-
-          const fee =
-            getInstallmentFee(inst);
-
-          const newAmount =
-            Math.round(
-              (
-                newCapital +
-                interest +
-                fee
-              ) * 100
-            ) / 100;
-
-          patch.set(inst.id, {
-            originalInstallmentAmount: origTotal,
-            originalInstallmentCapital: origCap,
-            originalInstallmentInterest: origInt,
-            originalInstallmentFee: origFee,
-            savedInterest: 0,
-
-            amount: newAmount,
-            installmentAmount: newAmount,
-            installmentCapital: newCapital
-          });
-
-          remaining = 0;
-        }
-      }
-
-      currentEvents =
-        currentEvents.map((ev) =>
-          patch.has(ev.id)
-            ? {
-              ...ev,
-              ...patch.get(ev.id)
-            }
-            : ev
-        );
+      currentEvents = applyAmortizationReduceTerm(
+        currentEvents,
+        amortEv,
+        timeline
+      );
     }
   }
 

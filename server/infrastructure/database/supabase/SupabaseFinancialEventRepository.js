@@ -373,7 +373,6 @@ export class SupabaseFinancialEventRepository extends IRepository {
       description: data.description || '',
 
       event_type: eventType,
-      timeline_type: data.timelineType || data.timeline_type || null,
 
       category:
         data.category ||

@@ -24,6 +24,11 @@
   --accent-pink: #db2777;
   --accent-purple: #9333ea;
 
+  --success: #10b981;
+  --success-glow: rgba(16, 185, 129, 0.3);
+  --danger: #ef4444;
+  --warning: #f59e0b;
+
   --text-main: #1e1b4b;
   --text-muted: #4b5563;
   --text-dim: #9ca3af;
@@ -68,6 +73,11 @@
   --accent-amber: #f59e0b;
   --accent-pink: #ec4899;
   --accent-purple: #a855f7;
+
+  --success: #10b981;
+  --success-glow: rgba(16, 185, 129, 0.4);
+  --danger: #ef4444;
+  --warning: #f59e0b;
 
   --text-main: #f3f4f6;
   --text-muted: #9ca3af;

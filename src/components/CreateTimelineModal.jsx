@@ -129,9 +129,13 @@ export default function CreateTimelineModal({
       setPickerYear(currentYear);
 
       // Determine initial type (passed from caller or first available type)
-      let resolvedType = initialType ? normalizeTimelineType(initialType) : TimelineType.LOAN;
-      if (initialType && isSingleInstanceTimelineType(resolvedType) && existingTypesSet.has(resolvedType)) {
-        resolvedType = TimelineType.LOAN;
+      let resolvedType = initialType ? normalizeTimelineType(initialType) : null;
+      if (resolvedType && isSingleInstanceTimelineType(resolvedType) && existingTypesSet.has(resolvedType)) {
+        resolvedType = null;
+      }
+      if (!resolvedType) {
+        const firstAvailable = TIMELINE_TYPE_OPTIONS.find((opt) => !opt.singleInstance || !existingTypesSet.has(opt.type));
+        resolvedType = firstAvailable ? firstAvailable.type : TimelineType.LOAN;
       }
 
       const typeMeta = TIMELINE_TYPE_OPTIONS.find((opt) => opt.type === resolvedType) || TIMELINE_TYPE_OPTIONS[0];
@@ -173,6 +177,7 @@ export default function CreateTimelineModal({
   if (!isOpen) return null;
 
   const isEditing = Boolean(initialData && initialData.id);
+  const isTypeLocked = Boolean(initialType || isEditing);
   const isLoanType = isLoanTimelineType(formData.type);
   const isStatusActive = formData.status === TimelineStatus.ACTIVE;
   const isStatusInactive = formData.status === TimelineStatus.INACTIVE;
@@ -322,28 +327,75 @@ export default function CreateTimelineModal({
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Tipo de Timeline (Read-only Badge) */}
+          {/* Tipo de Timeline */}
           <div style={{ marginBottom: '18px' }}>
             <label className="form-label" style={{ marginBottom: '6px', display: 'block' }}>
               {t('createTimelineModal.typeLabel')}
             </label>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 14px',
-                borderRadius: '10px',
-                background: `${currentTypeMeta.defaultColor}18`,
-                border: `1px solid ${currentTypeMeta.defaultColor}44`,
-                color: currentTypeMeta.defaultColor,
-                fontWeight: '700',
-                fontSize: '0.88rem'
-              }}
-            >
-              <HeaderIcon size={18} />
-              <span>{t(currentTypeMeta.labelKey)}</span>
-            </div>
+            {isTypeLocked ? (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 14px',
+                  borderRadius: '10px',
+                  background: `${currentTypeMeta.defaultColor}18`,
+                  border: `1px solid ${currentTypeMeta.defaultColor}44`,
+                  color: currentTypeMeta.defaultColor,
+                  fontWeight: '700',
+                  fontSize: '0.88rem'
+                }}
+              >
+                <HeaderIcon size={18} />
+                <span>{t(currentTypeMeta.labelKey)}</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: `${currentTypeMeta.defaultColor}18`,
+                    border: `1px solid ${currentTypeMeta.defaultColor}44`,
+                    color: currentTypeMeta.defaultColor,
+                    flexShrink: 0
+                  }}
+                >
+                  <HeaderIcon size={20} />
+                </div>
+                <select
+                  className="form-input"
+                  style={{
+                    fontWeight: '600',
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    height: '40px'
+                  }}
+                  value={formData.type}
+                  onChange={(e) => {
+                    const newType = normalizeTimelineType(e.target.value);
+                    const newMeta = TIMELINE_TYPE_OPTIONS.find((opt) => opt.type === newType) || TIMELINE_TYPE_OPTIONS[0];
+                    setFormData((prev) => ({
+                      ...prev,
+                      type: newType,
+                      color: newMeta.defaultColor,
+                      name: newType === TimelineType.LOAN ? '' : (t(newMeta.labelKey) || '')
+                    }));
+                  }}
+                >
+                  {TIMELINE_TYPE_OPTIONS.filter((opt) => !opt.singleInstance || !existingTypesSet.has(opt.type)).map((opt) => (
+                    <option key={opt.type} value={opt.type}>
+                      {t(opt.labelKey)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Nome da Timeline */}

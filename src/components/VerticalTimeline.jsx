@@ -1116,10 +1116,10 @@ function VerticalTimeline({
                           return (
                             <button
                               type="button"
-                              className="btn btn-primary btn-sm"
+                              className="btn btn-sm"
                               style={{
-                                background: 'linear-gradient(135deg, var(--success) 0%, var(--primary) 100%)',
-                                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                                background: 'linear-gradient(135deg, var(--success) 0%, var(--accent-emerald) 100%)',
+                                boxShadow: '0 4px 14px var(--shadow-glow-emerald)',
                                 padding: '4px 12px',
                                 height: '26px',
                                 display: 'inline-flex',

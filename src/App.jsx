@@ -478,7 +478,8 @@ export default function App() {
   // ----------------------------------------------------
   const handleOpenCreateTimeline = (initialType = null) => {
     setEditingTimeline(null);
-    setCreateTimelineInitialType(initialType || null);
+    const validInitialType = typeof initialType === 'string' ? initialType : null;
+    setCreateTimelineInitialType(validInitialType);
     setIsTimelineModalOpen(true);
   };
 

@@ -247,80 +247,17 @@ export class LoanDomainService {
           (ev) => !isPositiveStatus(ev.status) && !ev.isCompleted && !ev.isAbated
         );
 
-        if (openList.length === 0) continue;
-
         if (isReduceInstallment) {
-          // REDUCE_INSTALLMENT: scale open installments down proportionally
-          const totalOpenCapital = openList.reduce(
-            (sum, ev) => sum + Number(ev.installmentCapital || 0),
-            0
+          processedEvents = this.#applyAmortizationReduceInstallment(
+            processedEvents,
+            openList,
+            amortVal
           );
-          if (totalOpenCapital <= 0) continue;
-
-          const ratio = Math.max(0, totalOpenCapital - amortVal) / totalOpenCapital;
-          const openIds = new Set(openList.map((ev) => ev.id));
-
-          processedEvents = processedEvents.map((ev) => {
-            if (!openIds.has(ev.id)) return ev;
-            const cap = Math.round(Number(ev.installmentCapital || 0) * ratio * 100) / 100;
-            const int = Math.round(Number(ev.installmentInterest || 0) * ratio * 100) / 100;
-            const fee = Math.round(Number(ev.installmentFee || 0) * ratio * 100) / 100;
-            const amt = Math.round((cap + int + fee) * 100) / 100;
-            const isZero = ratio === 0 || (cap === 0 && int === 0 && amt === 0);
-
-            return {
-              ...ev,
-              installmentCapital: cap,
-              installmentInterest: int,
-              installmentFee: fee,
-              installmentAmount: amt,
-              status: isZero ? EventStatus.ABATED : ev.status,
-              isAbated: isZero ? true : Boolean(ev.isAbated),
-              isCompleted: isZero ? true : Boolean(ev.isCompleted)
-            };
-          });
         } else {
-          // REDUCE_TERM: abate open installments from end backwards
-          const sortedOpen = [...openList].sort((a, b) => {
-            const numA = Number(a.installmentNumber || 0);
-            const numB = Number(b.installmentNumber || 0);
-            if (numA && numB) return numB - numA;
-            return (b.date || '').localeCompare(a.date || '');
-          });
-
-          let remaining = amortVal;
-          const patch = new Map();
-
-          for (const inst of sortedOpen) {
-            if (remaining <= 0) break;
-            const cap = Number(inst.installmentCapital || 0);
-            if (cap <= 0) continue;
-
-            if (remaining >= cap) {
-              patch.set(inst.id, {
-                installmentCapital: 0,
-                installmentInterest: 0,
-                installmentFee: 0,
-                installmentAmount: 0,
-                status: EventStatus.ABATED,
-                isAbated: true,
-                isCompleted: true
-              });
-              remaining -= cap;
-            } else {
-              const newCap = Math.max(0, Math.round((cap - remaining) * 100) / 100);
-              const int = Number(inst.installmentInterest || 0);
-              const fee = Number(inst.installmentFee || 0);
-              patch.set(inst.id, {
-                installmentCapital: newCap,
-                installmentAmount: Math.round((newCap + int + fee) * 100) / 100
-              });
-              remaining = 0;
-            }
-          }
-
-          processedEvents = processedEvents.map((ev) =>
-            patch.has(ev.id) ? { ...ev, ...patch.get(ev.id) } : ev
+          processedEvents = this.#applyAmortizationReduceTerm(
+            processedEvents,
+            openList,
+            amortVal
           );
         }
       }
@@ -530,6 +467,93 @@ export class LoanDomainService {
       amortizedPercent:
         progressPercent
     };
+  }
+
+  /**
+   * REDUCE_INSTALLMENT: scale open installments down proportionally.
+   * Isolated calculation logic.
+   */
+  #applyAmortizationReduceInstallment(processedEvents, openList, amortVal) {
+    if (!openList || openList.length === 0) return processedEvents;
+
+    const totalOpenCapital = openList.reduce(
+      (sum, ev) => sum + Number(ev.installmentCapital || 0),
+      0
+    );
+    if (totalOpenCapital <= 0) return processedEvents;
+
+    const ratio = Math.max(0, totalOpenCapital - amortVal) / totalOpenCapital;
+    const openIds = new Set(openList.map((ev) => ev.id));
+
+    return processedEvents.map((ev) => {
+      if (!openIds.has(ev.id)) return ev;
+      const cap = Math.round(Number(ev.installmentCapital || 0) * ratio * 100) / 100;
+      const int = Math.round(Number(ev.installmentInterest || 0) * ratio * 100) / 100;
+      const fee = Math.round(Number(ev.installmentFee || 0) * ratio * 100) / 100;
+      const amt = Math.round((cap + int + fee) * 100) / 100;
+      const isZero = ratio === 0 || (cap === 0 && int === 0 && amt === 0);
+
+      return {
+        ...ev,
+        installmentCapital: cap,
+        installmentInterest: int,
+        installmentFee: fee,
+        installmentAmount: amt,
+        status: isZero ? EventStatus.ABATED : ev.status,
+        isAbated: isZero ? true : Boolean(ev.isAbated),
+        isCompleted: isZero ? true : Boolean(ev.isCompleted)
+      };
+    });
+  }
+
+  /**
+   * REDUCE_TERM: abate open installments from end backwards.
+   * Isolated calculation logic.
+   */
+  #applyAmortizationReduceTerm(processedEvents, openList, amortVal) {
+    if (!openList || openList.length === 0) return processedEvents;
+
+    const sortedOpen = [...openList].sort((a, b) => {
+      const numA = Number(a.installmentNumber || 0);
+      const numB = Number(b.installmentNumber || 0);
+      if (numA && numB) return numB - numA;
+      return (b.date || '').localeCompare(a.date || '');
+    });
+
+    let remaining = amortVal;
+    const patch = new Map();
+
+    for (const inst of sortedOpen) {
+      if (remaining <= 0) break;
+      const cap = Number(inst.installmentCapital || 0);
+      if (cap <= 0) continue;
+
+      if (remaining >= cap) {
+        patch.set(inst.id, {
+          installmentCapital: 0,
+          installmentInterest: 0,
+          installmentFee: 0,
+          installmentAmount: 0,
+          status: EventStatus.ABATED,
+          isAbated: true,
+          isCompleted: true
+        });
+        remaining -= cap;
+      } else {
+        const newCap = Math.max(0, Math.round((cap - remaining) * 100) / 100);
+        const int = Number(inst.installmentInterest || 0);
+        const fee = Number(inst.installmentFee || 0);
+        patch.set(inst.id, {
+          installmentCapital: newCap,
+          installmentAmount: Math.round((newCap + int + fee) * 100) / 100
+        });
+        remaining = 0;
+      }
+    }
+
+    return processedEvents.map((ev) =>
+      patch.has(ev.id) ? { ...ev, ...patch.get(ev.id) } : ev
+    );
   }
 }
 

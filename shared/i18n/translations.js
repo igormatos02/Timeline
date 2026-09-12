@@ -227,6 +227,27 @@ export const translations = {
       deleteTitle: "Delete this Timeline"
     },
 
+    // Amortization Modal
+    amortizationModal: {
+      title: "Extraordinary Amortization",
+      editTitle: "Edit Amortization",
+      subtitle: "Pay down debt balance and select its impact on the loan",
+      editSubtitle: "Change amount, date or strategy of this amortization",
+      currentRemainingBalance: "Current Remaining Balance:",
+      amountLabel: "Amount to Amortize (€) *",
+      amountPlaceholder: "e.g., 1500",
+      strategyLabel: "What would you like to change with this amortization?",
+      reduceTermTitle: "1. Reduce Term",
+      reduceTermDesc: "Abates installments from the end backwards, shortening the final payoff date.",
+      reduceInstallmentTitle: "2. Reduce Installment",
+      reduceInstallmentDesc: "Reduces future installment amounts going forward, lowering monthly payment.",
+      initialStatusLabel: "Initial Status",
+      notesLabel: "Notes / Justification (Optional)",
+      notesPlaceholder: "e.g., Payment with vacation bonus...",
+      saveChanges: "Save Changes",
+      confirmAmortization: "Confirm Amortization"
+    },
+
     // Sidebar Filters
     sidebar: {
       filtersNavigation: "Filters & Navigation",
@@ -1364,6 +1385,27 @@ export const translations = {
       descriptionPlaceholder: "Descreva o propósito desta timeline...",
       colorLabel: "Cor de Destaque",
       deleteTitle: "Eliminar esta Timeline"
+    },
+
+    // Amortization Modal
+    amortizationModal: {
+      title: "Amortização Extraordinária",
+      editTitle: "Editar Amortização",
+      subtitle: "Abata o saldo devedor e escolha o impacto no empréstimo",
+      editSubtitle: "Altere o montante, data ou estratégia desta amortização",
+      currentRemainingBalance: "Saldo Devedor Atual:",
+      amountLabel: "Valor a Amortizar (€) *",
+      amountPlaceholder: "Ex: 1500",
+      strategyLabel: "O que deseja alterar com a amortização?",
+      reduceTermTitle: "1. Diminuir Prazo",
+      reduceTermDesc: "Abate o número de parcelas do fim para trás, encurtando o prazo final da dívida.",
+      reduceInstallmentTitle: "2. Diminuir Parcela",
+      reduceInstallmentDesc: "Reduz o valor das parcelas dali para a frente, diminuindo a prestação mensal.",
+      initialStatusLabel: "Estado Inicial",
+      notesLabel: "Notas / Justificação (Opcional)",
+      notesPlaceholder: "Ex: Pagamento com subsídio de férias...",
+      saveChanges: "Salvar Alterações",
+      confirmAmortization: "Confirmar Amortização"
     },
 
     // Sidebar Filters

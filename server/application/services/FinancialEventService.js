@@ -905,102 +905,109 @@ export class FinancialEventService {
     }
 
     if (strategy === AmortizationStrategy.REDUCE_TERM) {
-      const futureUnpaid = loanInstallments
-        .filter((ev) => ev.status !== EventStatus.PAID && ev.status !== EventStatus.COMPLETED && !ev.isCompleted && ev.status !== EventStatus.ABATED && ev.status !== EventStatus.AMORTIZED && ev.date >= amortDate)
-        .sort((a, b) => (a.date > b.date ? 1 : -1));
+      await this._recalculateForReduceTerm(loanInstallments, amortVal, amortDate, now, extractInstallmentPrincipal);
+    } else {
+      await this._recalculateForReduceInstallment(loanInstallments, amortVal, amortDate, now, extractInstallmentPrincipal);
+    }
+  }
 
-      let remainingToDeduct = amortVal;
-      const updates = [];
+  async _recalculateForReduceTerm(loanInstallments, amortVal, amortDate, now, extractInstallmentPrincipal) {
+    const futureUnpaid = loanInstallments
+      .filter((ev) => ev.status !== EventStatus.PAID && ev.status !== EventStatus.COMPLETED && !ev.isCompleted && ev.status !== EventStatus.ABATED && ev.status !== EventStatus.AMORTIZED && ev.date >= amortDate)
+      .sort((a, b) => (a.date > b.date ? 1 : -1));
 
-      for (let i = futureUnpaid.length - 1; i >= 0; i--) {
-        if (remainingToDeduct <= 0) break;
-        const inst = futureUnpaid[i];
-        const instPrincipal = extractInstallmentPrincipal(inst);
+    let remainingToDeduct = amortVal;
+    const updates = [];
 
-        if (remainingToDeduct >= instPrincipal) {
-          updates.push({
-            id: inst.id,
-            data: {
-              status: EventStatus.ABATED,
-              isCompleted: true,
-              installmentAmount: 0,
-              installmentCapital: 0,
-              installmentInterest: 0,
-              installmentFee: 0,
-              labels: Array.from(new Set([...(inst.labels || []), t('backend.event.abated')])),
-              updatedAt: now
-            }
-          });
-          remainingToDeduct -= instPrincipal;
-        } else {
-          const newPrincipal = Math.max(0, Math.round((instPrincipal - remainingToDeduct) * 100) / 100);
-          const interestPortion = Number(inst.installmentInterest ?? inst.interestPortion ?? inst.interestAmount ?? 0);
-          const fee = Number(inst.installmentFee ?? inst.taxAmount ?? 0);
-          updates.push({
-            id: inst.id,
-            data: {
-              installmentAmount: Math.round((newPrincipal + interestPortion + fee) * 100) / 100,
-              installmentCapital: newPrincipal,
-              labels: Array.from(new Set([...(inst.labels || []), t('backend.event.partiallyAbated')])),
-              updatedAt: now
-            }
-          });
-          remainingToDeduct = 0;
-        }
+    for (let i = futureUnpaid.length - 1; i >= 0; i--) {
+      if (remainingToDeduct <= 0) break;
+      const inst = futureUnpaid[i];
+      const instPrincipal = extractInstallmentPrincipal(inst);
+
+      if (remainingToDeduct >= instPrincipal) {
+        updates.push({
+          id: inst.id,
+          data: {
+            status: EventStatus.ABATED,
+            isCompleted: true,
+            installmentAmount: 0,
+            installmentCapital: 0,
+            installmentInterest: 0,
+            installmentFee: 0,
+            labels: Array.from(new Set([...(inst.labels || []), t('backend.event.abated')])),
+            updatedAt: now
+          }
+        });
+        remainingToDeduct -= instPrincipal;
+      } else {
+        const newPrincipal = Math.max(0, Math.round((instPrincipal - remainingToDeduct) * 100) / 100);
+        const interestPortion = Number(inst.installmentInterest ?? inst.interestPortion ?? inst.interestAmount ?? 0);
+        const fee = Number(inst.installmentFee ?? inst.taxAmount ?? 0);
+        updates.push({
+          id: inst.id,
+          data: {
+            installmentAmount: Math.round((newPrincipal + interestPortion + fee) * 100) / 100,
+            installmentCapital: newPrincipal,
+            labels: Array.from(new Set([...(inst.labels || []), t('backend.event.partiallyAbated')])),
+            updatedAt: now
+          }
+        });
+        remainingToDeduct = 0;
       }
+    }
+
+    for (let i = 0; i < updates.length; i += 15) {
+      const chunk = updates.slice(i, i + 15);
+      await Promise.all(chunk.map((u) => eventRepository.update(u.id, u.data)));
+    }
+  }
+
+  async _recalculateForReduceInstallment(loanInstallments, amortVal, amortDate, now, extractInstallmentPrincipal) {
+    const futureUnpaid = loanInstallments.filter(
+      (ev) => ev.status !== EventStatus.PAID && ev.status !== EventStatus.COMPLETED && !ev.isCompleted && ev.status !== EventStatus.ABATED && ev.status !== EventStatus.AMORTIZED && ev.date >= amortDate
+    );
+    if (futureUnpaid.length > 0) {
+      let currentRemainingDebt = futureUnpaid.reduce((acc, ev) => acc + extractInstallmentPrincipal(ev), 0);
+      if (currentRemainingDebt <= 0) return;
+
+      const firstEv = futureUnpaid[0];
+      const originalInstallment = Number(firstEv.installmentAmount || firstEv.amount || 0);
+      const newFuturePrincipal = Math.max(0, currentRemainingDebt - amortVal);
+      const reductionRatio = currentRemainingDebt > 0 ? newFuturePrincipal / currentRemainingDebt : 0;
+
+      const updates = futureUnpaid.map((ev) => {
+        const origCap = Number(ev.installmentCapital ?? ev.principalAmount ?? Math.round((ev.installmentAmount || ev.amount || originalInstallment) * 0.82 * 100) / 100);
+        const origJur = Number(ev.installmentInterest ?? ev.interestPortion ?? ev.interestAmount ?? Math.round((ev.installmentAmount || ev.amount || originalInstallment) * 0.18 * 100) / 100);
+        const origFee = Number(ev.installmentFee ?? ev.taxAmount ?? 0);
+        const newCap = Math.round(origCap * reductionRatio * 100) / 100;
+        const newJur = Math.round(origJur * reductionRatio * 100) / 100;
+        const newFee = Math.round(origFee * (reductionRatio === 0 ? 0 : 1) * 100) / 100;
+        const newTotal = Math.round((newCap + newJur + newFee) * 100) / 100;
+        const isFullyAmortized = reductionRatio === 0 || (newCap === 0 && newJur === 0 && newTotal === 0);
+
+        const labels = Array.from(new Set([
+          ...(ev.labels || []),
+          isFullyAmortized ? t('backend.event.abated') : t('backend.event.partiallyAbated')
+        ]));
+
+        return {
+          id: ev.id,
+          data: {
+            installmentAmount: newTotal,
+            installmentCapital: newCap,
+            installmentInterest: newJur,
+            installmentFee: newFee,
+            status: isFullyAmortized ? EventStatus.ABATED : ev.status,
+            isCompleted: isFullyAmortized ? true : Boolean(ev.isCompleted),
+            labels,
+            updatedAt: now
+          }
+        };
+      });
 
       for (let i = 0; i < updates.length; i += 15) {
         const chunk = updates.slice(i, i + 15);
         await Promise.all(chunk.map((u) => eventRepository.update(u.id, u.data)));
-      }
-    } else {
-      // reduce_installment
-      const futureUnpaid = loanInstallments.filter(
-        (ev) => ev.status !== EventStatus.PAID && ev.status !== EventStatus.COMPLETED && !ev.isCompleted && ev.status !== EventStatus.ABATED && ev.status !== EventStatus.AMORTIZED && ev.date >= amortDate
-      );
-      if (futureUnpaid.length > 0) {
-        let currentRemainingDebt = futureUnpaid.reduce((acc, ev) => acc + extractInstallmentPrincipal(ev), 0);
-        if (currentRemainingDebt <= 0) return;
-
-        const firstEv = futureUnpaid[0];
-        const originalInstallment = Number(firstEv.installmentAmount || firstEv.amount || 0);
-        const newFuturePrincipal = Math.max(0, currentRemainingDebt - amortVal);
-        const reductionRatio = currentRemainingDebt > 0 ? newFuturePrincipal / currentRemainingDebt : 0;
-
-        const updates = futureUnpaid.map((ev) => {
-          const origCap = Number(ev.installmentCapital ?? ev.principalAmount ?? Math.round((ev.installmentAmount || ev.amount || originalInstallment) * 0.82 * 100) / 100);
-          const origJur = Number(ev.installmentInterest ?? ev.interestPortion ?? ev.interestAmount ?? Math.round((ev.installmentAmount || ev.amount || originalInstallment) * 0.18 * 100) / 100);
-          const origFee = Number(ev.installmentFee ?? ev.taxAmount ?? 0);
-          const newCap = Math.round(origCap * reductionRatio * 100) / 100;
-          const newJur = Math.round(origJur * reductionRatio * 100) / 100;
-          const newFee = Math.round(origFee * (reductionRatio === 0 ? 0 : 1) * 100) / 100;
-          const newTotal = Math.round((newCap + newJur + newFee) * 100) / 100;
-          const isFullyAmortized = reductionRatio === 0 || (newCap === 0 && newJur === 0 && newTotal === 0);
-
-          const labels = Array.from(new Set([
-            ...(ev.labels || []),
-            isFullyAmortized ? t('backend.event.abated') : t('backend.event.partiallyAbated')
-          ]));
-
-          return {
-            id: ev.id,
-            data: {
-              installmentAmount: newTotal,
-              installmentCapital: newCap,
-              installmentInterest: newJur,
-              installmentFee: newFee,
-              status: isFullyAmortized ? EventStatus.ABATED : ev.status,
-              isCompleted: isFullyAmortized ? true : Boolean(ev.isCompleted),
-              labels,
-              updatedAt: now
-            }
-          };
-        });
-
-        for (let i = 0; i < updates.length; i += 15) {
-          const chunk = updates.slice(i, i + 15);
-          await Promise.all(chunk.map((u) => eventRepository.update(u.id, u.data)));
-        }
       }
     }
   }

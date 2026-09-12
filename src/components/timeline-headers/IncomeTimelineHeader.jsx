@@ -638,7 +638,8 @@ export default function IncomeTimelineHeader({
               if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida') return;
 
               const evMonthKey = ev.date.substring(0, 7);
-              if (!monthMap.has(evMonthKey)) return;
+              const isAfterStart = computeFromMonth === '1900-01' || evMonthKey >= computeFromMonth;
+              if (!isAfterStart || !monthMap.has(evMonthKey)) return;
 
               const mData = monthMap.get(evMonthKey);
 
@@ -666,6 +667,11 @@ export default function IncomeTimelineHeader({
             });
 
             last7Months.forEach((m) => {
+              const isMonthAfterStart = computeFromMonth === '1900-01' || m.key >= computeFromMonth;
+              if (!isMonthAfterStart) {
+                m.total = 0;
+                return;
+              }
               const mData = monthMap.get(m.key);
               if (mData) {
                 m.total = mData.income - (mData.expense + mData.loan + mData.investmentDeduction);

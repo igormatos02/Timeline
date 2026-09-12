@@ -2,6 +2,50 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.2.0](https://github.com/igormatos02/Timeline/compare/v0.1.9...v0.2.0) (2026-09-12)
+
+
+### Features
+
+* add diary timeline, wysiwyg editor and supabase health keepalive cron ([226a5c9](https://github.com/igormatos02/Timeline/commit/226a5c9c1d329855cf2f58bb8491ae7f7aa4796b))
+* add dynamic timeline type selector and decouple amortization calculation strategies ([0fbf63a](https://github.com/igormatos02/Timeline/commit/0fbf63abe5b55ea38053a8bbd431b44b47476cc5))
+* add real-time in-memory Price vs SAC switch in loan header ([db9bb23](https://github.com/igormatos02/Timeline/commit/db9bb2374af1c4eb67f7c8b8881de8a6448f91e5))
+* add real-time Price vs SAC simulation switch in CreateTimelineModal ([bd2df77](https://github.com/igormatos02/Timeline/commit/bd2df773b7d68f43ac9c05ae6b9c12864fbb581f))
+* add reminder timeline, status cycling and modal refinements ([17b415e](https://github.com/igormatos02/Timeline/commit/17b415ea4fd94186314653f3facfa67e4c14096b))
+* add timeboard compute_from settings and fix balance accumulation ([819a812](https://github.com/igormatos02/Timeline/commit/819a8125d208b045180917f06451b6fdf0279b37))
+* hide status buttons and show disabled labels on future month events ([9a25add](https://github.com/igormatos02/Timeline/commit/9a25adddfea24cbf4a4d4d3bc83b9ca305f75072))
+* implement diary timeline and register event with rich text and mood tracking ([09ff8d3](https://github.com/igormatos02/Timeline/commit/09ff8d3ccda2ff9463a8d336ac7a1e6acc9adfbf))
+* **income:** add projected accumulation amount below current accumulation ([733c385](https://github.com/igormatos02/Timeline/commit/733c385ec41f27b31705d5b9e3aeff22d721ea74))
+* **income:** filter 7-month chart to calculate only months on or after computeFrom start date ([5fa35fb](https://github.com/igormatos02/Timeline/commit/5fa35fbda7177412261e06770a507bb69a438838))
+* **income:** update 7-month chart to show net monthly accumulation with positive/negative coloring ([75093fc](https://github.com/igormatos02/Timeline/commit/75093fc581c2afd82870ce46462dd2cdff750b68))
+* restructure event periodicity and recurrence with dedicated enums ([9c71d6c](https://github.com/igormatos02/Timeline/commit/9c71d6c5c8e5bc74d79c354a06ab03559765fc97))
+* support empty timeboard and dynamic single-instance timeline creation ([2ed5a25](https://github.com/igormatos02/Timeline/commit/2ed5a254251ce480607d1bfedd8544d39457d48d))
+
+
+### Bug Fixes
+
+* adding loan type ([3a84624](https://github.com/igormatos02/Timeline/commit/3a8462430a3067660a89492cf715be6856cc9976))
+* adjust loan calculations and timeline horizon loading ([87ee316](https://github.com/igormatos02/Timeline/commit/87ee3164bdcd0840af73540b52465e1db538e693))
+* descrição em minúsculas ([3e45c00](https://github.com/igormatos02/Timeline/commit/3e45c00848c95e0a0450aaf16f1057828562b34e))
+* descrição test commit ([66032b1](https://github.com/igormatos02/Timeline/commit/66032b1e4622f0ae08f390a5d7dd15219a724fd6))
+* enable active status buttons for events in future months ([bf84647](https://github.com/igormatos02/Timeline/commit/bf84647b734297127bf3c86e1733c2050a202fbb))
+* import EventStatus in IncomeTimelineHeader ([e80da0d](https://github.com/igormatos02/Timeline/commit/e80da0d38b5e42611000e3d538583828ab6fd0d6))
+* import isLoanTimelineType in IncomeTimelineHeader ([1b5f6ea](https://github.com/igormatos02/Timeline/commit/1b5f6ead40de60f33961771407d3a7168ca42cd4))
+* include external deposits in investment received and invested calculation ([0de1a2b](https://github.com/igormatos02/Timeline/commit/0de1a2bc16cff6c8f29a95fa2ea87617071a9385))
+* **income:** correctly classify past months as realized and format accumulation display ([4e0b0ec](https://github.com/igormatos02/Timeline/commit/4e0b0eca05a9ed1e7c74f97a2ca1765a335fac4b))
+* **income:** import useMemo in IncomeTimelineHeader ([1dcf184](https://github.com/igormatos02/Timeline/commit/1dcf184b598988effcc4619b19739573eb4ce2fb))
+* resolve missing isCancelledStatus import in LoanDomainService and safe timeboardId extraction ([74f9806](https://github.com/igormatos02/Timeline/commit/74f980628b6765e0566f4a86b499f84c59fbe968))
+* resolve past completed todo date placement and eliminate hardcoding in vertical timeline ([0e4b948](https://github.com/igormatos02/Timeline/commit/0e4b948a46cf77bbc75c142f901087b2e591b5e1))
+* resolve timeline reference in LoanDomainService and implement price recalculation ([31a315b](https://github.com/igormatos02/Timeline/commit/31a315b1791eceb207fd4536814fa5f8f9bdfc4e))
+* **ui:** place copy id button next to header title and hide raw id text ([9cac0f2](https://github.com/igormatos02/Timeline/commit/9cac0f2e9d3338f1974dc60cc76a2ee5e2f390eb))
+* **ui:** remove timeline type icons next to title across all timeline headers ([82cdc18](https://github.com/igormatos02/Timeline/commit/82cdc186640fd0d2089b84b5357e3cc3fe0ce7df))
+
+
+### Refactors
+
+* **enums:** remove legacy hardcoded string aliases and use strict enum validation ([afb5815](https://github.com/igormatos02/Timeline/commit/afb581547a12c28fb98d0bfac23f2ce186e68f99))
+* place header icon after title and remove badge and id display ([92fa6ae](https://github.com/igormatos02/Timeline/commit/92fa6ae1bcb8186ef1f57f49be719cd480c541de))
+
 ### [0.1.9](https://github.com/igormatos02/Timeline/compare/v0.1.8...v0.1.9) (2026-09-10)
 
 

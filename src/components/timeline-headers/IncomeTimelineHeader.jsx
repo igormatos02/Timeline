@@ -236,7 +236,8 @@ export default function IncomeTimelineHeader({
       ? Math.abs(Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0)))
       : Math.abs(Number(ev.amount || 0));
 
-    const isRealized = isPositiveStatus(ev.status) || isPositiveStatus(ev.status?.toLowerCase()) || Boolean(ev.isCompleted);
+    const isPastMonth = evMonthKey < currentMonthStr;
+    const isRealized = isPastMonth || isPositiveStatus(ev.status) || isPositiveStatus(ev.status?.toLowerCase()) || Boolean(ev.isCompleted);
 
     if (isIncome) {
       mProjected.income += amt;
@@ -568,12 +569,12 @@ export default function IncomeTimelineHeader({
 
             {/* Quadrante 3: ACUMULAÇÃO ATUAL & PROJETADA (Balanço + Initial Value & Donut Chart Jan - Dez) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                   <span style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {t('incomeHeader.currentAccumulationTitle')}
                   </span>
-                  <span style={{ fontSize: '0.94rem', fontWeight: '800', color: currentAccumulation >= 0 ? TimelineColor.SUCCESS : TimelineColor.DANGER }}>
+                  <span style={{ fontSize: '0.96rem', fontWeight: '800', color: currentAccumulation >= 0 ? TimelineColor.SUCCESS : TimelineColor.DANGER }}>
                     {formatCurrency(currentAccumulation)}
                   </span>
                 </div>
@@ -581,7 +582,7 @@ export default function IncomeTimelineHeader({
                   <span style={{ color: 'var(--text-muted)', fontWeight: '600' }}>
                     {t('incomeHeader.projectedAccumulationLabel')}
                   </span>
-                  <strong style={{ color: currentProjectedAccumulation >= 0 ? TimelineColor.CYAN : TimelineColor.DANGER, fontSize: '0.84rem' }}>
+                  <strong style={{ color: currentProjectedAccumulation >= 0 ? TimelineColor.SUCCESS : TimelineColor.DANGER, fontSize: '0.86rem' }}>
                     {formatCurrency(currentProjectedAccumulation)}
                   </strong>
                 </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, Sparkles } from 'lucide-react';
+import { TrendingUp, Sparkles, Layers } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency.js';
 import { TimelineColor } from '../../enums/index.js';
 
@@ -11,6 +11,10 @@ export default function BarChart7Months({
   isGoodChange,
   goodColor = TimelineColor.SUCCESS,
   badColor = TimelineColor.DANGER,
+  middleLabel,
+  middleValue,
+  middleIcon,
+  middleColor,
   sparklesLabel,
   projection,
   sparklesColor,
@@ -59,6 +63,17 @@ export default function BarChart7Months({
             {diffPercentStr}
           </span>
         </div>
+
+        {middleLabel && (
+          <div style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {middleIcon || <Layers size={15} style={{ color: middleColor || TimelineColor.INCOME }} />}
+            <span>{middleLabel}</span>
+            <span style={{ color: middleColor || TimelineColor.INCOME }}>
+              {typeof middleValue === 'number' ? formatProjection(middleValue) : middleValue}
+            </span>
+          </div>
+        )}
+
         {sparklesLabel && (
           <div style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Sparkles size={15} style={{ color: sparklesColor || goodColor }} />

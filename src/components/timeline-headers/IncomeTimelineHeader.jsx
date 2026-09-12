@@ -691,6 +691,9 @@ export default function IncomeTimelineHeader({
                 isGoodChange={isDiffPositive}
                 goodColor={TimelineColor.INCOME}
                 badColor={TimelineColor.DANGER}
+                middleLabel={t('incomeHeader.annualIncomingLabel')}
+                middleValue={annualTotalIncome}
+                middleColor={TimelineColor.INCOME}
                 sparklesLabel={t('incomeHeader.annualProjectionLabel')}
                 projection={annualProj}
                 sparklesColor={TimelineColor.INCOME}

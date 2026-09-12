@@ -56,13 +56,15 @@ export const computeMonthDiff = (last7Months) => {
   const currentMonthTotal = last7Months[last7Months.length - 1]?.total || 0;
   const prevMonthTotal = last7Months[last7Months.length - 2]?.total || 0;
   let diffPercentStr = '0,0%';
-  let isDiffPositive = true;
-  if (prevMonthTotal > 0) {
-    const diffPct = ((currentMonthTotal - prevMonthTotal) / prevMonthTotal) * 100;
+  let isDiffPositive = currentMonthTotal >= prevMonthTotal;
+
+  if (prevMonthTotal !== 0) {
+    const diffPct = ((currentMonthTotal - prevMonthTotal) / Math.abs(prevMonthTotal)) * 100;
     isDiffPositive = diffPct >= 0;
     diffPercentStr = `${diffPct > 0 ? '+' : ''}${diffPct.toFixed(1).replace('.', ',')}%`;
-  } else if (currentMonthTotal > 0) {
-    diffPercentStr = '+100%';
+  } else if (currentMonthTotal !== 0) {
+    isDiffPositive = currentMonthTotal > 0;
+    diffPercentStr = currentMonthTotal > 0 ? '+100%' : '-100%';
   }
   return { diffPercentStr, isDiffPositive, currentMonthTotal, prevMonthTotal };
 };

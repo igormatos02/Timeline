@@ -888,7 +888,7 @@ export const translations = {
       projectedVsReceivedCount: "{projected} projected ({received} already received)",
       monthVsPrevMonth: "This month vs previous month:",
       annualProjectionLabel: "12+ MONTH projection:",
-      chartTitle: "INCOME VOLUME EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)",
+      chartTitle: "NET ACCUMULATION EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)",
       summaryView: "Summary",
       evolutionView: "Evolution",
       initialValue: "Initial Value"
@@ -2109,7 +2109,7 @@ export const translations = {
       projectedVsReceivedCount: "{projected} previstos ({received} já recebidos)",
       monthVsPrevMonth: "Este mês vs mês anterior:",
       annualProjectionLabel: "Projeção 12M+:",
-      chartTitle: "EVOLUÇÃO DO VOLUME DE ENTRADAS (ÚLTIMOS 6 MESES + MÊS ATUAL)",
+      chartTitle: "EVOLUÇÃO DA ACUMULAÇÃO LÍQUIDA (ÚLTIMOS 6 MESES + MÊS ATUAL)",
       summaryView: "Resumo",
       evolutionView: "Evolução",
       initialValue: "Valor Inicial"

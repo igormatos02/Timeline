@@ -628,20 +628,52 @@ export default function IncomeTimelineHeader({
               last7Months.push({ key, label, total: 0 });
             }
 
-            eventsList.forEach((ev) => {
-              if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
-              const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
+            const monthMap = new Map();
+            last7Months.forEach((m) => {
+              monthMap.set(m.key, { income: 0, expense: 0, loan: 0, investmentDeduction: 0 });
+            });
+
+            allBoardEvents.forEach((ev) => {
+              if (!ev || !ev.date || ev.isDeleted) return;
+              if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida') return;
+
+              const evMonthKey = ev.date.substring(0, 7);
+              if (!monthMap.has(evMonthKey)) return;
+
+              const mData = monthMap.get(evMonthKey);
+
+              const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || '')) || ev.timelineType;
+              const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
+              const isLoan = isLoanInstallment || ev.eventType === EventType.LOAN || ev.eventType === EventType.AMORTIZATION || ev.isLoan || ev.category === 'amortizacao' || isLoanTimelineType(tlType);
+              const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment || tlType === TimelineType.INVESTMENT;
+              const isExpense = ((ev.eventType === EventType.EXPENSE || ev.category === 'saida_recorrente' || ev.category === 'expense' || ev.isExpense || tlType === TimelineType.EXPENSE) && !isLoan && !isInvestment);
+              const isIncome = (ev.eventType === EventType.INCOME || ev.category === 'entrada_recorrente' || ev.category === 'income' || ev.isIncome || tlType === TimelineType.INCOME) && !isLoan && !isInvestment && !isExpense;
+
+              const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
+              const amt = isLoanInstallment
+                ? Math.abs(Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0)))
+                : Math.abs(Number(ev.amount || 0));
+
               if (isIncome) {
-                const evKey = ev.date.substring(0, 7);
-                const foundMonth = last7Months.find((m) => m.key === evKey);
-                if (foundMonth) {
-                  foundMonth.total += Number(ev.amount || 0);
-                }
+                mData.income += amt;
+              } else if (isExpense) {
+                mData.expense += amt;
+              } else if (isLoan) {
+                mData.loan += amt;
+              } else if (isInvestment && !isExternal && !ev.isFirstOccurrence) {
+                mData.investmentDeduction += amt;
+              }
+            });
+
+            last7Months.forEach((m) => {
+              const mData = monthMap.get(m.key);
+              if (mData) {
+                m.total = mData.income - (mData.expense + mData.loan + mData.investmentDeduction);
               }
             });
 
             const { diffPercentStr, isDiffPositive } = computeMonthDiff(last7Months);
-            const annualProj = annualTotalIncome;
+            const annualProj = availableAmount;
 
             return (
               <BarChart7Months
@@ -651,6 +683,7 @@ export default function IncomeTimelineHeader({
                 diffPercentStr={diffPercentStr}
                 isGoodChange={isDiffPositive}
                 goodColor={TimelineColor.INCOME}
+                badColor={TimelineColor.DANGER}
                 sparklesLabel={t('incomeHeader.annualProjectionLabel')}
                 projection={annualProj}
                 sparklesColor={TimelineColor.INCOME}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { TrendingUp, Sparkles } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency.js';
+import { TimelineColor } from '../../enums/index.js';
 
 export default function BarChart7Months({
   months,
@@ -8,8 +9,8 @@ export default function BarChart7Months({
   monthVsPrevLabel,
   diffPercentStr,
   isGoodChange,
-  goodColor,
-  badColor = '#f43f5e',
+  goodColor = TimelineColor.SUCCESS,
+  badColor = TimelineColor.DANGER,
   sparklesLabel,
   projection,
   sparklesColor,
@@ -21,7 +22,7 @@ export default function BarChart7Months({
   formatValue = (val) => formatCurrency(val).replace(',00', ''),
   formatProjection = (val) => formatCurrency(val)
 }) {
-  const maxMonthTotal = Math.max(...months.map((m) => m.total), 1);
+  const maxMonthTotal = Math.max(...months.map((m) => Math.abs(m.total || 0)), 1);
 
   return (
     <div
@@ -58,11 +59,13 @@ export default function BarChart7Months({
             {diffPercentStr}
           </span>
         </div>
-        <div style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Sparkles size={15} style={{ color: sparklesColor }} />
-          <span>{sparklesLabel}</span>
-          <span style={{ color: projectionColor }}>{formatProjection(projection)}</span>
-        </div>
+        {sparklesLabel && (
+          <div style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Sparkles size={15} style={{ color: sparklesColor || goodColor }} />
+            <span>{sparklesLabel}</span>
+            <span style={{ color: projectionColor || sparklesColor || goodColor }}>{formatProjection(projection)}</span>
+          </div>
+        )}
       </div>
 
       <div
@@ -95,8 +98,23 @@ export default function BarChart7Months({
           }}
         >
           {months.map((m, idx) => {
-            const heightPct = Math.max(8, Math.min(100, Math.round((m.total / maxMonthTotal) * 100)));
+            const isNegative = m.total < 0;
+            const heightPct = Math.max(8, Math.min(100, Math.round((Math.abs(m.total || 0) / maxMonthTotal) * 100)));
             const isCurrentMonth = idx === months.length - 1;
+
+            const textCol = isNegative
+              ? badColor
+              : (isCurrentMonth ? (currentTextColor || goodColor) : 'var(--text-muted)');
+
+            const barBg = isNegative
+              ? (isCurrentMonth
+                  ? `linear-gradient(180deg, ${badColor} 0%, rgba(244, 63, 94, 0.6) 100%)`
+                  : `linear-gradient(180deg, rgba(244, 63, 94, 0.6) 0%, rgba(244, 63, 94, 0.25) 100%)`)
+              : (isCurrentMonth
+                  ? (currentGradient || `linear-gradient(180deg, ${goodColor} 0%, rgba(16, 185, 129, 0.6) 100%)`)
+                  : (mutedGradientTop && mutedGradientBottom
+                      ? `linear-gradient(180deg, ${mutedGradientTop} 0%, ${mutedGradientBottom} 100%)`
+                      : `linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(16, 185, 129, 0.25) 100%)`));
 
             return (
               <div
@@ -115,7 +133,7 @@ export default function BarChart7Months({
                   style={{
                     fontSize: '0.66rem',
                     fontWeight: '800',
-                    color: isCurrentMonth ? currentTextColor : 'var(--text-muted)'
+                    color: textCol
                   }}
                 >
                   {formatValue(m.total)}
@@ -136,9 +154,7 @@ export default function BarChart7Months({
                     style={{
                       width: '100%',
                       height: `${heightPct}%`,
-                      background: isCurrentMonth
-                        ? currentGradient
-                        : `linear-gradient(180deg, ${mutedGradientTop} 0%, ${mutedGradientBottom} 100%)`,
+                      background: barBg,
                       borderRadius: '4px',
                       transition: 'height 0.3s ease'
                     }}
@@ -150,7 +166,7 @@ export default function BarChart7Months({
                   style={{
                     fontSize: '0.66rem',
                     fontWeight: isCurrentMonth ? '800' : '600',
-                    color: isCurrentMonth ? currentTextColor : 'var(--text-dim)'
+                    color: isCurrentMonth ? (isNegative ? badColor : (currentTextColor || goodColor)) : 'var(--text-dim)'
                   }}
                 >
                   {m.label}

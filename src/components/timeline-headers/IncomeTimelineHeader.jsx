@@ -8,9 +8,10 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { enUS, pt } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { IncomeEventCategory } from '../../../shared/enums/IncomeEventCategory.js';
-import { EventType, EventStatus, isCancelledStatus, TimelineColor, TimelineType, isLoanTimelineType } from '../../enums/index.js';
+import { EventType, EventStatus, isCancelledStatus, isPositiveStatus, TimelineColor, TimelineType, isLoanTimelineType } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
@@ -32,20 +33,20 @@ export default function IncomeTimelineHeader({
   setActiveViewMode,
   computeStartDate = null
 }) {
-  const { t, dateLocale } = useTranslation();
+  const { t, language } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
+  const dateLocale = language === 'en' ? enUS : pt;
 
-  // Mapa de tipos de timeline para identificação consistente
-  const timelineTypeMap = React.useMemo(() => {
+  // Mapa rápido de id -> tipo de timeline para classificação precisa
+  const timelineTypeMap = useMemo(() => {
     const map = new Map();
     (allTimelines || []).forEach((tl) => {
-      if (tl && tl.id) map.set(String(tl.id), tl.type);
+      if (tl && tl.id) {
+        map.set(String(tl.id), tl.type);
+      }
     });
-    if (timeline && timeline.id) {
-      map.set(String(timeline.id), timeline.type);
-    }
     return map;
-  }, [allTimelines, timeline]);
+  }, [allTimelines]);
 
   if (!timeline) return null;
 
@@ -189,7 +190,7 @@ export default function IncomeTimelineHeader({
   };
   const consumptionColor = getConsumptionColor(commitmentPercent);
 
-  // 3. ACUMULAÇÃO ATUAL (Soma dos Balanços mensais desde computeFrom do Timeboard até o mês atual + Valor Inicial da Timeline)
+  // 3. ACUMULAÇÃO ATUAL & PROJETADA (Soma dos Balanços mensais desde computeFrom do Timeboard até o mês atual + Valor Inicial da Timeline)
   const balanceTimeline = (allTimelines || []).find((tl) => tl && (tl.type === TimelineType.BALANCE || tl.type === 'balance'));
   const timeboardComputeStart = timeboard?.computeFrom || timeboard?.compute_from;
   const balanceComputeStart = balanceTimeline?.computeStartDate || balanceTimeline?.compute_start_date || balanceTimeline?.computeFrom || balanceTimeline?.compute_from;
@@ -200,7 +201,8 @@ export default function IncomeTimelineHeader({
     ? (String(rawComputeStart) === '1900-01' || String(rawComputeStart).startsWith('1900-01') ? '1900-01' : String(rawComputeStart).substring(0, 7))
     : currentMonthStr;
 
-  const monthlyTotals = new Map();
+  const monthlyTotalsRealized = new Map();
+  const monthlyTotalsProjected = new Map();
 
   allBoardEvents.forEach((ev) => {
     if (!ev || !ev.date || ev.isDeleted) return;
@@ -212,10 +214,15 @@ export default function IncomeTimelineHeader({
 
     if (!isAfterStart || !isUpToCurrentMonth) return;
 
-    if (!monthlyTotals.has(evMonthKey)) {
-      monthlyTotals.set(evMonthKey, { income: 0, expense: 0, loan: 0, investmentDeduction: 0 });
+    if (!monthlyTotalsRealized.has(evMonthKey)) {
+      monthlyTotalsRealized.set(evMonthKey, { income: 0, expense: 0, loan: 0, investmentDeduction: 0 });
     }
-    const mData = monthlyTotals.get(evMonthKey);
+    if (!monthlyTotalsProjected.has(evMonthKey)) {
+      monthlyTotalsProjected.set(evMonthKey, { income: 0, expense: 0, loan: 0, investmentDeduction: 0 });
+    }
+
+    const mRealized = monthlyTotalsRealized.get(evMonthKey);
+    const mProjected = monthlyTotalsProjected.get(evMonthKey);
 
     const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || '')) || ev.timelineType;
     const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
@@ -229,25 +236,38 @@ export default function IncomeTimelineHeader({
       ? Math.abs(Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0)))
       : Math.abs(Number(ev.amount || 0));
 
+    const isRealized = isPositiveStatus(ev.status) || isPositiveStatus(ev.status?.toLowerCase()) || Boolean(ev.isCompleted);
+
     if (isIncome) {
-      mData.income += amt;
+      mProjected.income += amt;
+      if (isRealized) mRealized.income += amt;
     } else if (isExpense) {
-      mData.expense += amt;
+      mProjected.expense += amt;
+      if (isRealized) mRealized.expense += amt;
     } else if (isLoan) {
-      mData.loan += amt;
+      mProjected.loan += amt;
+      if (isRealized) mRealized.loan += amt;
     } else if (isInvestment && !isExternal && !ev.isFirstOccurrence) {
-      mData.investmentDeduction += amt;
+      mProjected.investmentDeduction += amt;
+      if (isRealized) mRealized.investmentDeduction += amt;
     }
   });
 
-  let accumulatedBalance = 0;
-  monthlyTotals.forEach((mData) => {
+  let accumulatedRealizedBalance = 0;
+  monthlyTotalsRealized.forEach((mData) => {
     const monthNet = mData.income - (mData.expense + mData.loan + mData.investmentDeduction);
-    accumulatedBalance += monthNet;
+    accumulatedRealizedBalance += monthNet;
+  });
+
+  let accumulatedProjectedBalance = 0;
+  monthlyTotalsProjected.forEach((mData) => {
+    const monthNet = mData.income - (mData.expense + mData.loan + mData.investmentDeduction);
+    accumulatedProjectedBalance += monthNet;
   });
 
   const initialValueAmount = Number(timeline.initialValue ?? timeline.initial_value ?? 0);
-  const currentAccumulation = initialValueAmount + accumulatedBalance;
+  const currentAccumulation = initialValueAmount + accumulatedRealizedBalance;
+  const currentProjectedAccumulation = initialValueAmount + accumulatedProjectedBalance;
 
   // Projeção do Ano Corrente (Jan - Dez) para o PieDonut do Quadrante 3
   const currentCalendarYear = new Date().getFullYear().toString();
@@ -546,15 +566,25 @@ export default function IncomeTimelineHeader({
               })()}
             </div>
 
-            {/* Quadrante 3: ACUMULAÇÃO ATUAL (Balanço + Initial Value & Donut Chart Jan - Dez) */}
+            {/* Quadrante 3: ACUMULAÇÃO ATUAL & PROJETADA (Balanço + Initial Value & Donut Chart Jan - Dez) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                <span style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {t('incomeHeader.currentAccumulationTitle')}
-                </span>
-                <span style={{ fontSize: '0.94rem', fontWeight: '800', color: TimelineColor.SUCCESS }}>
-                  {formatCurrency(currentAccumulation)}
-                </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {t('incomeHeader.currentAccumulationTitle')}
+                  </span>
+                  <span style={{ fontSize: '0.94rem', fontWeight: '800', color: currentAccumulation >= 0 ? TimelineColor.SUCCESS : TimelineColor.DANGER }}>
+                    {formatCurrency(currentAccumulation)}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '0.74rem' }}>
+                  <span style={{ color: 'var(--text-muted)', fontWeight: '600' }}>
+                    {t('incomeHeader.projectedAccumulationLabel')}
+                  </span>
+                  <strong style={{ color: currentProjectedAccumulation >= 0 ? TimelineColor.CYAN : TimelineColor.DANGER, fontSize: '0.84rem' }}>
+                    {formatCurrency(currentProjectedAccumulation)}
+                  </strong>
+                </div>
               </div>
               {(() => {
                 const receivedPct = calendarYearPercent;

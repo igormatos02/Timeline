@@ -11,7 +11,7 @@ import {
 import { format } from 'date-fns';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { IncomeEventCategory } from '../../../shared/enums/IncomeEventCategory.js';
-import { EventType, isCancelledStatus, TimelineColor, TimelineType } from '../../enums/index.js';
+import { EventType, isCancelledStatus, TimelineColor, TimelineType, isLoanTimelineType } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';

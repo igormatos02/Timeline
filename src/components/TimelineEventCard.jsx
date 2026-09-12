@@ -218,8 +218,6 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     isLoanInstallment
   ) && normRec !== EventRecurrence.ONCE;
 
-  const isInertFuture = event.date > currentMonthEndStr;
-
   const isCancelled = isCancelledStatus(effectiveStatus) || isCancelledStatus(event.status);
 
   const isCompleted = !isCancelled && (
@@ -246,7 +244,6 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const isReceivedIncome = isIncomeEvent && isCompleted && !isCancelled;
   const isOverdueIncome = isIncomeEvent && isOverdue && !isCancelled;
   const isNextIncome = isIncomeEvent && event.date >= todayStr && event.date <= currentMonthEndStr && !isReceivedIncome && !isCancelled;
-  const isFarFutureIncome = isIncomeEvent && event.date > currentMonthEndStr && !isReceivedIncome && !isCancelled;
 
   const isPaidExpense = isExpenseEvent && isCompleted && !isCancelled;
   const isOverdueExpense = isExpenseEvent && isOverdue && !isCancelled;
@@ -297,15 +294,15 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         primaryOption = {
           label: t(`status.${EventStatus.OPEN}`),
           targetStatus: EventStatus.OPEN,
-          icon: <Clock size={13} style={{ color: '#06b6d4' }} />,
-          color: '#06b6d4'
+          icon: <Clock size={13} style={{ color: TimelineColor.CYAN }} />,
+          color: TimelineColor.CYAN
         };
       } else {
         primaryOption = {
           label: t(`status.${EventStatus.CLOSED}`),
           targetStatus: EventStatus.CLOSED,
-          icon: <CheckCircle2 size={13} style={{ color: '#10b981' }} />,
-          color: '#10b981'
+          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
+          color: TimelineColor.INCOME
         };
       }
     } else if (isIncomeEvent) {
@@ -313,15 +310,15 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         primaryOption = {
           label: t(`status.${EventStatus.TO_RECEIVE}`),
           targetStatus: EventStatus.PENDING,
-          icon: <Clock size={13} style={{ color: '#f59e0b' }} />,
-          color: '#f59e0b'
+          icon: <Clock size={13} style={{ color: TimelineColor.WARNING }} />,
+          color: TimelineColor.WARNING
         };
       } else {
         primaryOption = {
           label: t(`status.${EventStatus.RECEIVED}`),
           targetStatus: EventStatus.RECEIVED,
-          icon: <CheckCircle2 size={13} style={{ color: '#10b981' }} />,
-          color: '#10b981'
+          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
+          color: TimelineColor.INCOME
         };
       }
     } else if (isExpenseEvent) {
@@ -329,15 +326,15 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         primaryOption = {
           label: t(`status.${EventStatus.TO_PAY}`),
           targetStatus: EventStatus.PENDING,
-          icon: <Clock size={13} style={{ color: '#f59e0b' }} />,
-          color: '#f59e0b'
+          icon: <Clock size={13} style={{ color: TimelineColor.WARNING }} />,
+          color: TimelineColor.WARNING
         };
       } else {
         primaryOption = {
           label: t(`status.${EventStatus.PAID}`),
           targetStatus: EventStatus.PAID,
-          icon: <CheckCircle2 size={13} style={{ color: '#10b981' }} />,
-          color: '#10b981'
+          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
+          color: TimelineColor.INCOME
         };
       }
     } else if (isInvestmentEvent) {
@@ -345,15 +342,15 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         primaryOption = {
           label: t(`status.${EventStatus.PLANNED}`),
           targetStatus: EventStatus.PLANNED,
-          icon: <Clock size={13} style={{ color: '#818cf8' }} />,
-          color: '#818cf8'
+          icon: <Clock size={13} style={{ color: TimelineColor.INVESTMENT }} />,
+          color: TimelineColor.INVESTMENT
         };
       } else {
         primaryOption = {
           label: t(`status.${EventStatus.INVESTED}`),
           targetStatus: EventStatus.INVESTED,
-          icon: <CheckCircle2 size={13} style={{ color: '#10b981' }} />,
-          color: '#10b981'
+          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
+          color: TimelineColor.INCOME
         };
       }
     } else if (isAmortization || event.eventType === EventType.AMORTIZATION) {
@@ -361,15 +358,15 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         primaryOption = {
           label: t(`status.${EventStatus.PENDING}`),
           targetStatus: EventStatus.PENDING,
-          icon: <Clock size={13} style={{ color: '#f59e0b' }} />,
-          color: '#f59e0b'
+          icon: <Clock size={13} style={{ color: TimelineColor.WARNING }} />,
+          color: TimelineColor.WARNING
         };
       } else {
         primaryOption = {
           label: t(`status.${EventStatus.AMORTIZED}`),
           targetStatus: EventStatus.AMORTIZED,
-          icon: <CheckCircle2 size={13} style={{ color: '#10b981' }} />,
-          color: '#10b981'
+          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
+          color: TimelineColor.INCOME
         };
       }
     } else if (isLoanInstallment) {
@@ -377,15 +374,15 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         primaryOption = {
           label: t(`status.${EventStatus.TO_PAY}`),
           targetStatus: EventStatus.PENDING,
-          icon: <Clock size={13} style={{ color: '#f59e0b' }} />,
-          color: '#f59e0b'
+          icon: <Clock size={13} style={{ color: TimelineColor.WARNING }} />,
+          color: TimelineColor.WARNING
         };
       } else {
         primaryOption = {
           label: t(`status.${EventStatus.SETTLED}`),
           targetStatus: EventStatus.PAID,
-          icon: <CheckCircle2 size={13} style={{ color: '#10b981' }} />,
-          color: '#10b981'
+          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
+          color: TimelineColor.INCOME
         };
       }
     } else if (isTodoEvent) {
@@ -393,15 +390,15 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         primaryOption = {
           label: t(`status.${EventStatus.PENDING}`),
           targetStatus: EventStatus.PENDING,
-          icon: <Clock size={13} style={{ color: '#f59e0b' }} />,
-          color: '#f59e0b'
+          icon: <Clock size={13} style={{ color: TimelineColor.WARNING }} />,
+          color: TimelineColor.WARNING
         };
       } else {
         primaryOption = {
           label: t(`status.${EventStatus.COMPLETED}`),
           targetStatus: EventStatus.COMPLETED,
-          icon: <CheckCircle2 size={13} style={{ color: '#10b981' }} />,
-          color: '#10b981'
+          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
+          color: TimelineColor.INCOME
         };
       }
     } else {
@@ -409,15 +406,15 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         primaryOption = {
           label: t(`status.${EventStatus.PENDING}`),
           targetStatus: EventStatus.PENDING,
-          icon: <Clock size={13} style={{ color: '#f59e0b' }} />,
-          color: '#f59e0b'
+          icon: <Clock size={13} style={{ color: TimelineColor.WARNING }} />,
+          color: TimelineColor.WARNING
         };
       } else {
         primaryOption = {
           label: t(`status.${EventStatus.COMPLETED}`),
           targetStatus: EventStatus.COMPLETED,
-          icon: <CheckCircle2 size={13} style={{ color: '#10b981' }} />,
-          color: '#10b981'
+          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
+          color: TimelineColor.INCOME
         };
       }
     }
@@ -431,15 +428,15 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       cancelOption = {
         label: t(`status.${targetStatus}`),
         targetStatus,
-        icon: <Clock size={13} style={{ color: '#38bdf8' }} />,
-        color: '#38bdf8'
+        icon: <Clock size={13} style={{ color: TimelineColor.SKY }} />,
+        color: TimelineColor.SKY
       };
     } else {
       cancelOption = {
         label: t(`status.${EventStatus.CANCELLED}`),
         targetStatus: EventStatus.CANCELLED,
-        icon: <Ban size={13} style={{ color: '#94a3b8' }} />,
-        color: '#94a3b8'
+        icon: <Ban size={13} style={{ color: TimelineColor.SLATE }} />,
+        color: TimelineColor.SLATE
       };
     }
 
@@ -1822,12 +1819,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: 1, minWidth: 0 }}>
         {/* Ícone de Único ou Recorrente */}
         <span
-          title={isRecurring ? 'Recorrente' : 'Único / Pontual'}
+          title={isRecurring ? t('recurrence.recurring') : t('recurrence.once')}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: isInertFuture ? 'var(--text-dim)' : 'var(--primary-light)',
+            color: 'var(--primary-light)',
             opacity: 0.85,
             flexShrink: 0,
             marginTop: '2px'
@@ -1933,7 +1930,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     margin: 0,
                     fontSize: '0.98rem',
                     fontWeight: '700',
-                    color: (isAmortized || isCancelled) ? 'var(--text-dim)' : isInertFuture ? 'var(--text-muted)' : 'var(--text-main)',
+                    color: (isAmortized || isCancelled) ? 'var(--text-dim)' : 'var(--text-main)',
                     textDecoration: (isAmortized || isCancelled) ? 'line-through' : 'none',
                     cursor: isAmortized ? 'default' : 'pointer'
                   }}
@@ -2480,7 +2477,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
   return (
     <div
-      className={`event-inner-item ${isMemoryCard ? 'memory-card' : ''} ${isInertFuture ? 'is-inert-future-card' : ''}`}
+      className={`event-inner-item ${isMemoryCard ? 'memory-card' : ''}`}
       style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' }}
     >
       {/* 💰 Income (Entrada) Financial Highlight Strip (boc in) */}
@@ -2518,27 +2515,21 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                         ? 'rgba(16, 185, 129, 0.16)'
                         : isOverdueIncome
                           ? 'rgba(252, 191, 73, 0.16)'
-                          : isNextIncome
-                            ? 'rgba(245, 158, 11, 0.14)'
-                            : 'rgba(148, 163, 184, 0.1)',
+                          : 'rgba(245, 158, 11, 0.14)',
                     color: isCancelled
-                      ? '#94a3b8'
+                      ? TimelineColor.SLATE
                       : isReceivedIncome
-                        ? '#10b981'
+                        ? TimelineColor.INCOME
                         : isOverdueIncome
-                          ? '#fcbf49'
-                          : isNextIncome
-                            ? '#f59e0b'
-                            : '#94a3b8',
+                          ? TimelineColor.WARNING
+                          : TimelineColor.WARNING,
                     border: isCancelled
                       ? '1px solid rgba(148, 163, 184, 0.35)'
                       : isReceivedIncome
                         ? '1px solid rgba(16, 185, 129, 0.35)'
                         : isOverdueIncome
                           ? '1px solid rgba(252, 191, 73, 0.4)'
-                          : isNextIncome
-                            ? '1px solid rgba(245, 158, 11, 0.35)'
-                            : '1px solid rgba(148, 163, 184, 0.2)',
+                          : '1px solid rgba(245, 158, 11, 0.35)',
                     borderRadius: '9999px',
                     padding: '4px 12px',
                     fontSize: '0.76rem',
@@ -2559,22 +2550,22 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 },
                 isCancelled ? (
                   <>
-                    <Ban size={13} style={{ color: '#94a3b8' }} />
+                    <Ban size={13} style={{ color: TimelineColor.SLATE }} />
                     <span>{t('status.cancelled')}</span>
                   </>
                 ) : isReceivedIncome ? (
                   <>
-                    <CheckCircle2 size={13} style={{ color: '#10b981' }} />
+                    <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />
                     <span>{t('status.received')}</span>
                   </>
                 ) : isOverdueIncome ? (
                   <>
-                    <AlertCircle size={13} style={{ color: '#fcbf49' }} />
+                    <AlertCircle size={13} style={{ color: TimelineColor.WARNING }} />
                     <span>{t('status.overdue')}</span>
                   </>
                 ) : (
                   <>
-                    <Clock size={13} style={{ color: isNextIncome ? '#f59e0b' : '#94a3b8' }} />
+                    <Clock size={13} style={{ color: TimelineColor.WARNING }} />
                     <span>{t('status.toReceive')}</span>
                   </>
                 )
@@ -2594,7 +2585,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             borderTop: '1px solid var(--border-glass, rgba(255, 255, 255, 0.08))'
           }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              {renderEditableAmount('+', isInertFuture ? '#94a3b8' : (isNextIncome ? '#f59e0b' : isFarFutureIncome ? '#94a3b8' : '#10b981'))}
+              {renderEditableAmount('+', isCancelled ? TimelineColor.SLATE : isReceivedIncome ? TimelineColor.INCOME : TimelineColor.WARNING)}
             </div>
             <div style={{ marginLeft: 'auto' }}>
               {renderActionButtons()}
@@ -2627,10 +2618,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1 }}>
                 {t(`status.${EventStatus.TO_PAY}`)}
               </span>
-              {event.priority && !isInertFuture && (
+              {event.priority && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid var(--border-glass)', paddingLeft: '10px' }}>
                   <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                    Prioridade:
+                    {t('timeline.priority')}:
                   </span>
                   <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--text-main)' }}>
                     {event.priority}
@@ -2643,7 +2634,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               {renderStatusDropdownButton(
                 {
                   className: 'btn btn-sm',
-                  title: t('timeline.clickToChangeStatus') || 'Clique para alterar o status',
+                  title: t('timeline.clickToChangeStatus'),
                   style: {
                     background: isCancelled
                       ? 'rgba(148, 163, 184, 0.15)'
@@ -2653,12 +2644,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                           ? 'rgba(252, 191, 73, 0.16)'
                           : 'rgba(245, 158, 11, 0.14)',
                     color: isCancelled
-                      ? '#94a3b8'
+                      ? TimelineColor.SLATE
                       : isPaidExpense
-                        ? '#10b981'
+                        ? TimelineColor.INCOME
                         : isOverdueExpense
-                          ? '#fcbf49'
-                          : '#f59e0b',
+                          ? TimelineColor.WARNING
+                          : TimelineColor.WARNING,
                     border: isCancelled
                       ? '1px solid rgba(148, 163, 184, 0.35)'
                       : isPaidExpense
@@ -2681,22 +2672,22 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 },
                 isCancelled ? (
                   <>
-                    <Ban size={13} style={{ color: '#94a3b8' }} />
+                    <Ban size={13} style={{ color: TimelineColor.SLATE }} />
                     <span>{t('status.cancelled')}</span>
                   </>
                 ) : isPaidExpense ? (
                   <>
-                    <CheckCircle2 size={13} style={{ color: '#10b981' }} />
+                    <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />
                     <span>{t('status.paid')}</span>
                   </>
                 ) : isOverdueExpense ? (
                   <>
-                    <AlertCircle size={13} style={{ color: '#fcbf49' }} />
+                    <AlertCircle size={13} style={{ color: TimelineColor.WARNING }} />
                     <span>{t('status.overdue')}</span>
                   </>
                 ) : (
                   <>
-                    <Clock size={13} style={{ color: '#f59e0b' }} />
+                    <Clock size={13} style={{ color: TimelineColor.WARNING }} />
                     <span>{t('status.pending')}</span>
                   </>
                 )
@@ -2716,7 +2707,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             borderTop: '1px solid var(--border-glass, rgba(255, 255, 255, 0.08))'
           }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              {renderEditableAmount('-', isInertFuture ? '#94a3b8' : '#f43f5e')}
+              {renderEditableAmount('-', isCancelled ? TimelineColor.SLATE : isPaidExpense ? TimelineColor.SLATE : TimelineColor.EXPENSE)}
             </div>
             <div style={{ marginLeft: 'auto' }}>
               {renderActionButtons()}
@@ -2784,7 +2775,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   <span style={{ fontSize: '0.68rem', color: '#38bdf8', textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
                     <CreditCard size={11} /> Financiamento:
                   </span>
-                  <span style={{ fontSize: '0.80rem', fontWeight: '700', color: '#38bdf8' }}>
+                  <span style={{ fontSize: '0.80rem', fontWeight: '700', color: TimelineColor.SKY }}>
                     {event.linkedLoanTimelineName}
                   </span>
                 </div>
@@ -2793,9 +2784,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               {event.category !== 'investimento_patrimonio' && Number(event.initialInvestedAmount || 0) > 0 && (event.isFirstOccurrence === true || (!event.isProjected && !event.eventId || event.seriesId) || (event.isFirstOccurrence !== false && !event.isProjected)) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid var(--border-glass)', paddingLeft: '10px' }}>
                   <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                    Aporte Inicial:
+                    {t('timeline.initialContribution')}:
                   </span>
-                  <span style={{ fontSize: '0.80rem', fontWeight: '800', color: isInertFuture ? 'var(--text-dim)' : 'var(--primary-light)' }}>
+                  <span style={{ fontSize: '0.80rem', fontWeight: '800', color: 'var(--primary-light)' }}>
                     {formatCurrency(event.initialInvestedAmount)}
                   </span>
                 </div>
@@ -2803,10 +2794,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
               {event.category !== 'investimento_patrimonio' && Number(event.targetAmount || 0) > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                  <span style={{ fontSize: '0.68rem', color: '#a78bfa', textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                    <Target size={11} /> Meta:
+                  <span style={{ fontSize: '0.68rem', color: TimelineColor.INVESTMENT, textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    <Target size={11} /> {t('timeline.goal')}:
                   </span>
-                  <span style={{ fontSize: '0.80rem', fontWeight: '800', color: '#a78bfa' }}>
+                  <span style={{ fontSize: '0.80rem', fontWeight: '800', color: TimelineColor.INVESTMENT }}>
                     {formatCurrency(event.targetAmount)}
                   </span>
                 </div>
@@ -2877,16 +2868,16 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                           ? 'rgba(139, 92, 246, 0.16)'
                           : isOverdueInvestment
                             ? 'rgba(252, 191, 73, 0.16)'
-                            : 'rgba(148, 163, 184, 0.12)',
+                            : 'rgba(139, 92, 246, 0.14)',
                     color: isCancelled
-                      ? '#94a3b8'
+                      ? TimelineColor.SLATE
                       : event.category === 'investimento_patrimonio'
-                        ? (event.status === 'Financiado' ? '#38bdf8' : '#10b981')
+                        ? (event.status === 'Financiado' ? TimelineColor.CYAN : TimelineColor.INCOME)
                         : isCompletedInvestment
-                          ? '#8b5cf6'
+                          ? TimelineColor.INVESTMENT
                           : isOverdueInvestment
-                            ? '#fcbf49'
-                            : '#94a3b8',
+                            ? TimelineColor.WARNING
+                            : TimelineColor.INVESTMENT,
                     border: isCancelled
                       ? '1px solid rgba(148, 163, 184, 0.35)'
                       : event.category === 'investimento_patrimonio'
@@ -2895,7 +2886,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                           ? '1px solid rgba(139, 92, 246, 0.35)'
                           : isOverdueInvestment
                             ? '1px solid rgba(252, 191, 73, 0.4)'
-                            : '1px solid rgba(148, 163, 184, 0.3)',
+                            : '1px solid rgba(139, 92, 246, 0.35)',
                     borderRadius: '9999px',
                     padding: '4px 12px',
                     fontSize: '0.76rem',
@@ -2911,34 +2902,34 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 },
                 isCancelled ? (
                   <>
-                    <Ban size={13} style={{ color: '#94a3b8' }} />
+                    <Ban size={13} style={{ color: TimelineColor.SLATE }} />
                     <span>{t('status.cancelled')}</span>
                   </>
                 ) : event.category === 'investimento_patrimonio' ? (
                   event.status === 'Financiado' ? (
                     <>
-                      <CreditCard size={13} style={{ color: '#38bdf8' }} />
+                      <CreditCard size={13} style={{ color: TimelineColor.CYAN }} />
                       <span>Financiado</span>
                     </>
                   ) : (
                     <>
-                      <Landmark size={13} style={{ color: '#10b981' }} />
+                      <Landmark size={13} style={{ color: TimelineColor.INCOME }} />
                       <span>Quitado</span>
                     </>
                   )
                 ) : isCompletedInvestment ? (
                   <>
-                    <CheckCircle2 size={13} style={{ color: '#10b981' }} />
+                    <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />
                     <span>{t('status.invested')}</span>
                   </>
                 ) : isOverdueInvestment ? (
                   <>
-                    <AlertCircle size={13} style={{ color: '#fcbf49' }} />
+                    <AlertCircle size={13} style={{ color: TimelineColor.WARNING }} />
                     <span>{t('status.overdue')}</span>
                   </>
                 ) : (
                   <>
-                    <Clock size={13} style={{ color: '#818cf8' }} />
+                    <Clock size={13} style={{ color: TimelineColor.INVESTMENT }} />
                     <span>{t('status.planned')}</span>
                   </>
                 )
@@ -2959,11 +2950,11 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {event.category === 'investimento_patrimonio' ? (
-                <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#c084fc' }}>
+                <span style={{ fontSize: '1.05rem', fontWeight: '800', color: TimelineColor.INVESTMENT }}>
                   +{formatCurrency(event.amount || event.initialInvestedAmount || 0)}
                 </span>
               ) : (
-                renderEditableAmount('+', isInertFuture ? '#94a3b8' : 'var(--primary-light)')
+                renderEditableAmount('+', isCancelled ? TimelineColor.SLATE : TimelineColor.INVESTMENT)
               )}
             </div>
             <div style={{ marginLeft: 'auto' }}>
@@ -3155,10 +3146,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                         ? 'rgba(16, 185, 129, 0.16)'
                         : 'rgba(245, 158, 11, 0.16)',
                     color: isCancelled
-                      ? '#94a3b8'
+                      ? TimelineColor.SLATE
                       : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED)
-                        ? '#10b981'
-                        : '#f59e0b',
+                        ? TimelineColor.INCOME
+                        : TimelineColor.WARNING,
                     border: isCancelled
                       ? '1px solid rgba(148, 163, 184, 0.35)'
                       : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED)
@@ -3179,18 +3170,18 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 },
                 isCancelled ? (
                   <>
-                    <Ban size={13} style={{ color: '#94a3b8' }} />
+                    <Ban size={13} style={{ color: TimelineColor.SLATE }} />
                     <span>{t('status.cancelled')}</span>
                   </>
                 ) : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED) ? (
                   <>
-                    <CheckCircle2 size={12} />
-                    <span>{t('status.amortized') || 'Amortizado'}</span>
+                    <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />
+                    <span>{t('status.settled')}</span>
                   </>
                 ) : (
                   <>
-                    <Clock size={12} />
-                    <span>{t('status.planned') || 'Previsto'}</span>
+                    <Clock size={13} style={{ color: TimelineColor.WARNING }} />
+                    <span>{t('status.pending')}</span>
                   </>
                 )
               )}
@@ -3260,7 +3251,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                   {isAmortized ? t('loanCard.capitalAbated') : t('loanCard.capitalDebt')}:
                 </span>
-                <span style={{ fontSize: '0.80rem', fontWeight: '800', color: isAmortized ? 'var(--text-main)' : isInertFuture ? 'var(--text-muted)' : 'var(--text-main)' }}>
+                <span style={{ fontSize: '0.80rem', fontWeight: '800', color: isAmortized ? 'var(--text-dim)' : 'var(--text-main)' }}>
                   {isAmortized
                     ? formatCurrency(abatedBreakdown?.origCapital || event.originalInstallmentCapital || 0)
                     : formatCurrency(event.installmentCapital ?? event.principalAmount ?? event.principal_amount ?? 0)}
@@ -3268,10 +3259,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                <span style={{ fontSize: '0.68rem', color: isAmortized ? '#10b981' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                <span style={{ fontSize: '0.68rem', color: isAmortized ? TimelineColor.INCOME : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                   {isAmortized ? t('loanCard.interestSaved') : t('loanCard.interest')}:
                 </span>
-                <span style={{ fontSize: '0.80rem', fontWeight: '800', color: isAmortized ? '#10b981' : isInertFuture ? '#94a3b8' : '#f59e0b' }}>
+                <span style={{ fontSize: '0.80rem', fontWeight: '800', color: isAmortized ? TimelineColor.INCOME : TimelineColor.WARNING }}>
                   {isAmortized
                     ? `+${formatCurrency(abatedBreakdown?.origInterest || event.savedInterest || event.originalInstallmentInterest || 0)}`
                     : formatCurrency(event.installmentInterest ?? event.interestPortion ?? event.interest_portion ?? 0)}
@@ -3283,7 +3274,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                     {t('loanCard.stampTax')}:
                   </span>
-                  <span style={{ fontSize: '0.80rem', fontWeight: '800', color: '#a855f7' }}>
+                  <span style={{ fontSize: '0.80rem', fontWeight: '800', color: TimelineColor.PURPLE }}>
                     {formatCurrency(event.installmentFee ?? event.taxAmount ?? event.tax_amount ?? 0)}
                   </span>
                 </div>
@@ -3294,7 +3285,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                     {t('loanCard.remainingDebt')}:
                   </span>
-                  <span style={{ fontSize: '0.80rem', fontWeight: '800', color: isAmortized || isInertFuture ? '#94a3b8' : 'var(--primary-light)' }}>
+                  <span style={{ fontSize: '0.80rem', fontWeight: '800', color: isAmortized ? TimelineColor.SLATE : 'var(--primary-light)' }}>
                     {formatCurrency(event.balanceAfter !== undefined ? event.balanceAfter : (event.remainingDebtAfter !== undefined ? event.remainingDebtAfter : (event.remaining_debt_after || 0)))}
                   </span>
                 </div>
@@ -3307,7 +3298,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 <div
                   style={{
                     background: 'rgba(148, 163, 184, 0.12)',
-                    color: '#94a3b8',
+                    color: TimelineColor.SLATE,
                     border: '1px solid rgba(148, 163, 184, 0.3)',
                     borderRadius: '9999px',
                     padding: '4px 12px',
@@ -3321,7 +3312,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   }}
                   title="Parcela abatida por amortização extraordinária antecipada."
                 >
-                  <CheckCircle2 size={13} style={{ color: '#94a3b8' }} />
+                  <CheckCircle2 size={13} style={{ color: TimelineColor.SLATE }} />
                   <span>{t('status.abatida')}</span>
                 </div>
               ) : (
@@ -3338,12 +3329,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                             ? 'rgba(252, 191, 73, 0.16)'
                             : 'rgba(245, 158, 11, 0.14)',
                       color: isCancelled
-                        ? '#94a3b8'
+                        ? TimelineColor.SLATE
                         : isPaidLoan
-                          ? '#10b981'
+                          ? TimelineColor.INCOME
                           : isOverdueLoan
-                            ? '#fcbf49'
-                            : '#f59e0b',
+                            ? TimelineColor.WARNING
+                            : TimelineColor.WARNING,
                       border: isCancelled
                         ? '1px solid rgba(148, 163, 184, 0.35)'
                         : isPaidLoan
@@ -3369,22 +3360,22 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   },
                   isCancelled ? (
                     <>
-                      <Ban size={13} style={{ color: '#94a3b8' }} />
+                      <Ban size={13} style={{ color: TimelineColor.SLATE }} />
                       <span>{t('status.cancelled')}</span>
                     </>
                   ) : isPaidLoan ? (
                     <>
-                      <CheckCircle2 size={13} style={{ color: '#10b981' }} />
+                      <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />
                       <span>{t('status.settled')}</span>
                     </>
                   ) : isOverdueLoan ? (
                     <>
-                      <AlertCircle size={13} style={{ color: '#fcbf49' }} />
+                      <AlertCircle size={13} style={{ color: TimelineColor.WARNING }} />
                       <span>{t('status.overdue')}</span>
                     </>
                   ) : (
                     <>
-                      <Clock size={13} style={{ color: '#f59e0b' }} />
+                      <Clock size={13} style={{ color: TimelineColor.WARNING }} />
                       <span>{t('status.pending')}</span>
                     </>
                   )
@@ -3410,7 +3401,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   <span style={{ fontSize: '0.82rem', color: 'var(--text-dim)', textDecoration: 'line-through' }}>
                     {formatCurrency(abatedBreakdown?.origTotal || event.originalInstallmentAmount || event.originalAmount || 0)}
                   </span>
-                  <span style={{ fontSize: '0.94rem', fontWeight: '800', color: '#10b981' }}>
+                  <span style={{ fontSize: '0.94rem', fontWeight: '800', color: TimelineColor.INCOME }}>
                     {formatCurrency(abatedBreakdown?.origCapital || event.originalInstallmentCapital || 0)}
                   </span>
                 </div>
@@ -3419,12 +3410,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   <span style={{ fontSize: '0.82rem', color: 'var(--text-dim)', textDecoration: 'line-through' }} title="Valor original antes da amortização extraordinária">
                     {formatCurrency(reducedBreakdown.origTotal)}
                   </span>
-                  <span style={{ fontSize: '0.95rem', fontWeight: '800', color: isInertFuture ? '#94a3b8' : 'var(--primary-light)' }} title="Novo valor reduzido da parcela">
+                  <span style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--primary-light)' }} title="Novo valor reduzido da parcela">
                     {formatCurrency(reducedBreakdown.currentTotal)}
                   </span>
                 </div>
               ) : (
-                renderEditableAmount('', isInertFuture ? '#94a3b8' : 'var(--primary-light)')
+                renderEditableAmount('', 'var(--primary-light)')
               )}
             </div>
             <div style={{ marginLeft: 'auto' }}>
@@ -3654,12 +3645,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', paddingBottom: '0px' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1 }}>
-                {isReminderEvent ? (t('timeline.reminders') || 'Lembretes') : (t('common.event') || 'Evento')}
+                {isReminderEvent ? t('timeline.reminders') : t('common.event')}
               </span>
-              {event.priority && !isInertFuture && (
+              {event.priority && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid var(--border-glass)', paddingLeft: '10px' }}>
                   <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                    {t('common.priority') || 'Prioridade'}:
+                    {t('timeline.priority')}:
                   </span>
                   <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--text-main)' }}>
                     {event.priority}

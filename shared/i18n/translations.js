@@ -118,7 +118,12 @@ export const translations = {
       monthsCount: "{count} month(s)",
       noEventsFound: "No events found",
       noEventsFoundDesc: "Try adjusting search filters in the sidebar or click below to add an event.",
-      addEventToday: "Add Event on Today"
+      addEventToday: "Add Event on Today",
+      clickToChangeStatus: "Click to change status",
+      clickToEditName: "Click to edit name",
+      initialContribution: "Initial Contribution",
+      goal: "Goal",
+      priority: "Priority"
     },
 
     // Floating Tasks Stack
@@ -1321,7 +1326,12 @@ export const translations = {
       monthsCount: "{count} mês(es)",
       noEventsFound: "Nenhum evento encontrado",
       noEventsFoundDesc: "Tente alterar os filtros de pesquisa na barra lateral ou clique abaixo para adicionar um evento.",
-      addEventToday: "Adicionar Evento em Hoje"
+      addEventToday: "Adicionar Evento em Hoje",
+      clickToChangeStatus: "Clique para alterar o status",
+      clickToEditName: "Clique para editar o nome",
+      initialContribution: "Aporte Inicial",
+      goal: "Meta",
+      priority: "Prioridade"
     },
 
     // Floating Tasks Stack

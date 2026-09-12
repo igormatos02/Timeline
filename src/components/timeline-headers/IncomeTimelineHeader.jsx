@@ -267,8 +267,8 @@ export default function IncomeTimelineHeader({
   });
 
   const initialValueAmount = Number(timeline.initialValue ?? timeline.initial_value ?? 0);
-  const currentAccumulation = initialValueAmount + accumulatedRealizedBalance;
-  const currentProjectedAccumulation = initialValueAmount + accumulatedProjectedBalance;
+  const currentAccumulation = initialValueAmount + accumulatedProjectedBalance;
+  const currentProjectedAccumulation = initialValueAmount + accumulatedRealizedBalance;
 
   // Projeção do Ano Corrente (Jan - Dez) para o PieDonut do Quadrante 3
   const currentCalendarYear = new Date().getFullYear().toString();

@@ -31,7 +31,8 @@ import {
   TIMELINE_COLOR_PRESETS,
   isLoanTimelineType,
   isSingleInstanceTimelineType,
-  normalizeTimelineType
+  normalizeTimelineType,
+  LoanAmortizationSystem
 } from '../enums/index.js';
 import { getTimelineTypeOptions } from '../utils/timelineConfig.jsx';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
@@ -253,7 +254,7 @@ export default function CreateTimelineModal({
     return format(d, 'MMM', { locale: dateLocale });
   });
 
-  const handleRunSimulation = () => {
+  const handleRunSimulation = (targetSystem = simulationSystem) => {
     try {
       const parsedTotalDebt = parseFloat(formData.totalDebt) || 0;
       const parsedTotalInstallments = parseInt(formData.totalInstallments, 10) || 0;
@@ -274,9 +275,11 @@ export default function CreateTimelineModal({
         startDate: fullStartDate,
         debtStartDate: fullStartDate,
         dueDay: dueDayNum,
-        periodicity: EventPeriodicity.MONTHLY
+        periodicity: EventPeriodicity.MONTHLY,
+        amortizationSystem: targetSystem
       });
 
+      setSimulationSystem(targetSystem);
       setSimulationEvents(events);
       setShowSimulation(true);
     } catch (err) {
@@ -817,13 +820,67 @@ export default function CreateTimelineModal({
                   <Sparkles size={16} />
                   <span>{t('createTimelineModal.simulationTitle')}</span>
                 </h4>
-                <button
-                  type="button"
-                  onClick={() => setShowSimulation(false)}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem' }}
-                >
-                  <X size={16} />
-                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {/* Switch Price vs SAC */}
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid var(--border-glass)',
+                      borderRadius: '8px',
+                      padding: '2px',
+                      gap: '2px'
+                    }}
+                    title={t('loan.systemTitle')}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleRunSimulation(LoanAmortizationSystem.PRICE)}
+                      style={{
+                        background: simulationSystem === LoanAmortizationSystem.PRICE ? 'var(--primary)' : 'transparent',
+                        color: simulationSystem === LoanAmortizationSystem.PRICE ? 'var(--text-bright)' : 'var(--text-muted)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '4px 10px',
+                        fontSize: '0.74rem',
+                        fontWeight: simulationSystem === LoanAmortizationSystem.PRICE ? '800' : '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      title={t('loan.systemPriceDescription')}
+                    >
+                      {t('loan.systemPriceShort')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRunSimulation(LoanAmortizationSystem.SAC)}
+                      style={{
+                        background: simulationSystem === LoanAmortizationSystem.SAC ? 'var(--primary)' : 'transparent',
+                        color: simulationSystem === LoanAmortizationSystem.SAC ? 'var(--text-bright)' : 'var(--text-muted)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '4px 10px',
+                        fontSize: '0.74rem',
+                        fontWeight: simulationSystem === LoanAmortizationSystem.SAC ? '800' : '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      title={t('loan.systemSacDescription')}
+                    >
+                      {t('loan.systemSacShort')}
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowSimulation(false)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem' }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
 
               {(() => {

@@ -968,23 +968,53 @@ export class FinancialEventService {
       (ev) => !isCancelledStatus(ev.status) && (ev.date || '').substring(0, 10) >= amortDateStr
     );
     if (futureInstallments.length > 0) {
+      futureInstallments.sort((a, b) => {
+        const na = Number(a.installmentNumber || 0);
+        const nb = Number(b.installmentNumber || 0);
+        if (na && nb) return na - nb;
+        return (a.date || '').localeCompare(b.date || '');
+      });
+
       let currentRemainingDebt = futureInstallments.reduce((acc, ev) => acc + extractInstallmentPrincipal(ev), 0);
       if (currentRemainingDebt <= 0) return;
 
-      const firstEv = futureInstallments[0];
-      const originalInstallment = Number(firstEv.installmentAmount || firstEv.amount || 0);
-      const newFuturePrincipal = Math.max(0, currentRemainingDebt - amortVal);
-      const reductionRatio = currentRemainingDebt > 0 ? newFuturePrincipal / currentRemainingDebt : 0;
+      const newFuturePrincipal = Math.max(0, Math.round((currentRemainingDebt - amortVal) * 100) / 100);
+      const n = futureInstallments.length;
 
-      const updates = futureInstallments.map((ev) => {
-        const origCap = Number(ev.installmentCapital ?? ev.principalAmount ?? Math.round((ev.installmentAmount || ev.amount || originalInstallment) * 0.82 * 100) / 100);
-        const origJur = Number(ev.installmentInterest ?? ev.interestPortion ?? ev.interestAmount ?? Math.round((ev.installmentAmount || ev.amount || originalInstallment) * 0.18 * 100) / 100);
+      const firstEv = futureInstallments[0];
+      const firstOrigInt = Number(firstEv.installmentInterest ?? firstEv.interestPortion ?? firstEv.interestAmount ?? 0);
+      const monthlyRate = currentRemainingDebt > 0 && firstOrigInt > 0 ? firstOrigInt / currentRemainingDebt : 0;
+
+      let pmt = 0;
+      if (newFuturePrincipal > 0 && n > 0) {
+        if (monthlyRate > 0) {
+          const compound = Math.pow(1 + monthlyRate, n);
+          pmt = (newFuturePrincipal * (monthlyRate * compound)) / (compound - 1);
+        } else {
+          pmt = newFuturePrincipal / n;
+        }
+      }
+      pmt = Math.round(pmt * 100) / 100;
+
+      let runningBalance = newFuturePrincipal;
+
+      const updates = futureInstallments.map((ev, k) => {
+        const isLast = k === futureInstallments.length - 1;
+        const origCap = Number(ev.installmentCapital ?? ev.principalAmount ?? 0);
+        const origJur = Number(ev.installmentInterest ?? ev.interestPortion ?? ev.interestAmount ?? 0);
         const origFee = Number(ev.installmentFee ?? ev.taxAmount ?? 0);
-        const newCap = Math.round(origCap * reductionRatio * 100) / 100;
-        const newJur = Math.round(origJur * reductionRatio * 100) / 100;
-        const newFee = Math.round(origFee * (reductionRatio === 0 ? 0 : 1) * 100) / 100;
-        const newTotal = Math.round((newCap + newJur + newFee) * 100) / 100;
-        const isFullyAmortized = reductionRatio === 0 || (newCap === 0 && newJur === 0 && newTotal === 0);
+
+        let interest = Math.round(runningBalance * monthlyRate * 100) / 100;
+        let capital = Math.round((pmt - interest) * 100) / 100;
+
+        if (isLast || runningBalance <= capital) {
+          capital = runningBalance;
+        }
+
+        runningBalance = Math.max(0, Math.round((runningBalance - capital) * 100) / 100);
+        const fee = origFee;
+        const total = Math.round((capital + interest + fee) * 100) / 100;
+        const isFullyAmortized = newFuturePrincipal === 0 || (capital === 0 && interest === 0 && total === 0);
 
         const labels = Array.from(new Set([
           ...(ev.labels || []),
@@ -994,10 +1024,11 @@ export class FinancialEventService {
         return {
           id: ev.id,
           data: {
-            installmentAmount: newTotal,
-            installmentCapital: newCap,
-            installmentInterest: newJur,
-            installmentFee: newFee,
+            installmentAmount: total,
+            installmentCapital: capital,
+            installmentInterest: interest,
+            installmentFee: fee,
+            savedInterest: Math.max(0, Math.round((origJur - interest) * 100) / 100),
             status: isFullyAmortized ? EventStatus.ABATED : ev.status,
             isCompleted: isFullyAmortized ? true : Boolean(ev.isCompleted),
             labels,

@@ -49,27 +49,44 @@ export default function BarChart7Months({
           fontWeight: '700'
         }}
       >
-        <div style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <TrendingUp size={15} style={{ color: isGoodChange ? goodColor : badColor }} />
-          <span>{monthVsPrevLabel}</span>
-          <span
-            style={{
-              color: isGoodChange ? goodColor : badColor,
-              background: isGoodChange ? `${goodColor}1f` : `${badColor}1f`,
-              padding: '2px 6px',
-              borderRadius: '6px'
-            }}
-          >
-            {diffPercentStr}
-          </span>
-        </div>
+        {middleLabel ? (
+          <>
+            <div style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {middleIcon || <Layers size={15} style={{ color: middleColor || TimelineColor.INCOME }} />}
+              <span>{middleLabel}</span>
+              <span style={{ color: middleColor || TimelineColor.INCOME }}>
+                {typeof middleValue === 'number' ? formatProjection(middleValue) : middleValue}
+              </span>
+            </div>
 
-        {middleLabel && (
+            <div style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <TrendingUp size={15} style={{ color: isGoodChange ? goodColor : badColor }} />
+              <span>{monthVsPrevLabel}</span>
+              <span
+                style={{
+                  color: isGoodChange ? goodColor : badColor,
+                  background: isGoodChange ? `${goodColor}1f` : `${badColor}1f`,
+                  padding: '2px 6px',
+                  borderRadius: '6px'
+                }}
+              >
+                {diffPercentStr}
+              </span>
+            </div>
+          </>
+        ) : (
           <div style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {middleIcon || <Layers size={15} style={{ color: middleColor || TimelineColor.INCOME }} />}
-            <span>{middleLabel}</span>
-            <span style={{ color: middleColor || TimelineColor.INCOME }}>
-              {typeof middleValue === 'number' ? formatProjection(middleValue) : middleValue}
+            <TrendingUp size={15} style={{ color: isGoodChange ? goodColor : badColor }} />
+            <span>{monthVsPrevLabel}</span>
+            <span
+              style={{
+                color: isGoodChange ? goodColor : badColor,
+                background: isGoodChange ? `${goodColor}1f` : `${badColor}1f`,
+                padding: '2px 6px',
+                borderRadius: '6px'
+              }}
+            >
+              {diffPercentStr}
             </span>
           </div>
         )}

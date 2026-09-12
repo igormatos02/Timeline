@@ -19,7 +19,7 @@ import { useTranslation } from '../i18n/LanguageContext.jsx';
 export default function IncomeEvolutionChart({
   timeline = {},
   events = [],
-  todayStr = '2026-08-21',
+  todayStr = format(new Date(), 'yyyy-MM-dd'),
   activeFinancialTab = null,
   computeStartDate = null
 }) {

@@ -1,7 +1,7 @@
 import { IRepository } from '../../../domain/repositories/IRepository.js';
 import { TimelineEvent } from '../../../domain/entities/TimelineEvent.js';
 import { supabase } from './supabaseClient.js';
-import { EventType, EventStatus, EventPeriodicity, EventRecurrence, AmortizationEventCategory, AmortizationStrategy } from '../../../../shared/enums/index.js';
+import { EventType, EventStatus, EventPriority, EventPeriodicity, EventRecurrence, AmortizationEventCategory, AmortizationStrategy } from '../../../../shared/enums/index.js';
 
 /**
  * Infrastructure Adapter: SupabaseFinancialEventRepository
@@ -43,6 +43,8 @@ export class SupabaseFinancialEventRepository extends IRepository {
       description: row.description || '',
 
       eventType,
+      timelineType: row.timeline_type || null,
+      timeline_type: row.timeline_type || null,
       category: row.category,
 
       // Loan/installment values.
@@ -99,7 +101,7 @@ export class SupabaseFinancialEventRepository extends IRepository {
       // FinancialEventService.getAllEvents will override this with the value from
       // the financial_event_status join for regular installments.
       status: row.is_terminated ? EventStatus.DELETED : (row.status || EventStatus.PENDING),
-      isDeleted: Boolean(row.is_terminated || row.status === EventStatus.DELETED || row.status === 'Excluido'),
+      isDeleted: Boolean(row.is_terminated || row.status === EventStatus.DELETED),
       sobrepositionOver: row.sobreposition_over || null,
 
       automatic: row.automatic,
@@ -201,7 +203,7 @@ export class SupabaseFinancialEventRepository extends IRepository {
 
       notes: row.notes || '',
 
-      priority: row.priority || 'Normal',
+      priority: row.priority || EventPriority.NORMAL,
 
       installmentNumber:
         row.installment_number !== undefined
@@ -371,6 +373,7 @@ export class SupabaseFinancialEventRepository extends IRepository {
       description: data.description || '',
 
       event_type: eventType,
+      timeline_type: data.timelineType || data.timeline_type || null,
 
       category:
         data.category ||
@@ -489,7 +492,7 @@ export class SupabaseFinancialEventRepository extends IRepository {
 
       notes: data.notes || '',
 
-      priority: data.priority || 'Normal',
+      priority: data.priority || EventPriority.NORMAL,
 
       is_obligation: Boolean(
         data.isObligation !== undefined
@@ -1022,21 +1025,24 @@ export class SupabaseFinancialEventRepository extends IRepository {
       return true;
     }
 
-    const { error } = await supabase
+    const { error: err1 } = await supabase
       .from(this.tableName)
       .delete()
       .eq('timeline_id', timelineId);
 
-    if (error) {
-      console.error(
-        `Error deleting financial events for timeline ${timelineId} from Supabase:`,
-        error
-      );
+    const { error: err2 } = await supabase
+      .from(this.tableName)
+      .delete()
+      .eq('timeline_origin_id', timelineId);
 
-      return false;
+    if (err1) {
+      console.warn(`Warning deleting financial events by timeline_id ${timelineId}:`, err1.message);
+    }
+    if (err2) {
+      console.warn(`Warning deleting financial events by timeline_origin_id ${timelineId}:`, err2.message);
     }
 
-    return true;
+    return !err1 || !err2;
   }
 
   async updateMany(predicate, updates) {

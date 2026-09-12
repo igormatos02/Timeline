@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, LayoutGrid, ChevronDown, Trash2 } from 'lucide-react';
 import { TimeboardType } from '../../shared/enums/TimeboardType.js';
+import { TimelineColor } from '../../shared/enums/TimelineColor.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 export default function CreateTimeboardModal({
@@ -94,10 +95,10 @@ export default function CreateTimeboardModal({
           width: '100%',
           maxHeight: '90vh',
           overflowY: 'auto',
-          background: 'var(--bg-card, #131722)',
+          background: 'var(--bg-card)',
           borderRadius: '16px',
-          border: '1px solid rgba(99, 102, 241, 0.35)',
-          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(99, 102, 241, 0.15)',
+          border: '1px solid var(--border-glass)',
+          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.85)',
           padding: '24px',
           boxSizing: 'border-box'
         }}
@@ -105,14 +106,14 @@ export default function CreateTimeboardModal({
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#6366f1', padding: '8px', borderRadius: '10px', display: 'flex' }}>
+            <div style={{ background: `${TimelineColor.PRIMARY}26`, color: TimelineColor.PRIMARY, padding: '8px', borderRadius: '10px', display: 'flex' }}>
               <LayoutGrid size={20} />
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                {initialData ? 'Timeboard Settings' : t('timeboardModal.newTitle')}
+                {initialData ? t('timeboardModal.editTitle') : t('timeboardModal.newTitle')}
               </h3>
-              <div style={{ fontSize: '0.76rem', color: '#6366f1', fontWeight: '700' }}>
+              <div style={{ fontSize: '0.76rem', color: TimelineColor.PRIMARY, fontWeight: '700' }}>
                 {initialData ? t('timeboardModal.editSubtitle') : t('timeboardModal.newSubtitle')}
               </div>
             </div>
@@ -140,7 +141,7 @@ export default function CreateTimeboardModal({
                 width: '100%',
                 padding: '12px 14px',
                 background: 'rgba(0, 0, 0, 0.25)',
-                border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
+                border: '1px solid var(--border-glass)',
                 borderRadius: '10px',
                 color: 'var(--text-main)',
                 fontSize: '0.95rem',
@@ -167,7 +168,7 @@ export default function CreateTimeboardModal({
                 width: '100%',
                 padding: '12px 14px',
                 background: 'rgba(0, 0, 0, 0.25)',
-                border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
+                border: '1px solid var(--border-glass)',
                 borderRadius: '10px',
                 color: 'var(--text-main)',
                 fontSize: '0.9rem',
@@ -195,7 +196,7 @@ export default function CreateTimeboardModal({
                   padding: '10px 36px 10px 12px',
                   borderRadius: '8px',
                   boxSizing: 'border-box',
-                  background: initialData ? 'rgba(148, 163, 184, 0.1)' : 'var(--bg-glass, rgba(255, 255, 255, 0.03))',
+                  background: initialData ? 'rgba(148, 163, 184, 0.1)' : 'var(--bg-glass)',
                   color: initialData ? 'var(--text-dim)' : 'var(--text-main)',
                   border: '1px solid var(--border-glass)',
                   cursor: initialData ? 'not-allowed' : 'pointer',
@@ -208,20 +209,20 @@ export default function CreateTimeboardModal({
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                 required
               >
-                <option value={TimeboardType.FINANCIAL} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
+                <option value={TimeboardType.FINANCIAL} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
                   {t('timeboardModal.typeFinancial')}
                 </option>
-                <option value={TimeboardType.EMPTY} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
-                  {t('timeboardModal.typeEmpty') || 'Vazio (Empty)'}
+                <option value={TimeboardType.EMPTY} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
+                  {t('timeboardModal.typeEmpty')}
                 </option>
-                <option value={TimeboardType.PROJECTS} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
+                <option value={TimeboardType.PROJECTS} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
                   {t('timeboardModal.typeProjects')}
                 </option>
-                <option value={TimeboardType.REMINDERS} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
+                <option value={TimeboardType.REMINDERS} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
                   {t('timeboardModal.typeReminders')}
                 </option>
-                <option value={TimeboardType.CONDOFLOW} style={{ background: 'var(--bg-card, #131722)', color: 'var(--text-main)' }}>
-                  {t('timeboardModal.typeCondoflow') || 'Condoflow'}
+                <option value={TimeboardType.CONDOFLOW} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
+                  {t('timeboardModal.typeCondoflow')}
                 </option>
               </select>
               <div
@@ -249,9 +250,9 @@ export default function CreateTimeboardModal({
                 style={{
                   padding: '12px 14px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(244, 63, 94, 0.35)',
-                  background: 'rgba(244, 63, 94, 0.12)',
-                  color: '#f43f5e',
+                  border: `1px solid ${TimelineColor.DANGER}55`,
+                  background: `${TimelineColor.DANGER}1f`,
+                  color: TimelineColor.DANGER,
                   fontWeight: '700',
                   cursor: 'pointer',
                   fontSize: '0.86rem',
@@ -259,45 +260,36 @@ export default function CreateTimeboardModal({
                   alignItems: 'center',
                   gap: '6px'
                 }}
-                title="Eliminar este Timeboard"
+                title={t('timeboardModal.deleteTitle')}
               >
                 <Trash2 size={15} />
-                <span>{t('buttons.delete') || 'Excluir'}</span>
+                <span>{t('buttons.delete')}</span>
               </button>
             )}
 
             <button
               type="button"
+              className="btn btn-secondary"
               onClick={onClose}
               style={{
                 flex: 1,
                 padding: '12px',
-                borderRadius: '10px',
-                border: '1px solid var(--border-glass)',
-                background: 'transparent',
-                color: 'var(--text-main)',
-                fontWeight: '700',
-                cursor: 'pointer'
+                borderRadius: '10px'
               }}
             >
               {t('buttons.cancel')}
             </button>
             <button
               type="submit"
+              className="btn btn-primary"
               style={{
                 flex: 2,
                 padding: '12px',
                 borderRadius: '10px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-                color: '#fff',
-                fontWeight: '700',
-                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)'
+                gap: '8px'
               }}
             >
               <Sparkles size={16} />

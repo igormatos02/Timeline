@@ -92,7 +92,7 @@ export default function ProjectTimelineHeader({
             <button
               type="button"
               className="btn btn-outline-danger btn-sm"
-              onClick={onDelete}
+              onClick={() => onDelete && onDelete(timeline)}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',

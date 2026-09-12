@@ -1,43 +1,35 @@
 import React, { useState } from 'react';
 import {
-  Layers,
   Plus,
-  CheckCircle2,
   Circle,
   Clock,
-  Tag,
-  Sparkles,
   Pin,
   CheckSquare,
   ChevronDown,
   ChevronUp,
-  Trash2
+  Trash2,
+  CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { differenceInDays, parseISO } from 'date-fns';
+import { differenceInDays, parseISO, format } from 'date-fns';
+import { EventPriority, EventStatus, EventType, TimelineColor } from '../enums/index.js';
+import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 // Calcula quantos dias tem a tarefa desde a data de criação
-function getTaskAge(dateStr) {
+function getTaskAge(dateStr, t) {
   if (!dateStr) return null;
   try {
-    const today = new Date('2026-08-21');
+    const today = new Date();
     const created = parseISO(dateStr);
     const days = differenceInDays(today, created);
-    if (days === 0) return 'hoje';
-    if (days === 1) return 'ontem';
+    if (days === 0) return t('floatingTasks.today');
+    if (days === 1) return t('floatingTasks.yesterday');
     if (days < 0) return null;
-    return `${days} dias`;
+    return t('floatingTasks.daysAgo', { days });
   } catch {
     return null;
   }
 }
-
-// Config de prioridades
-const PRIORITIES = [
-  { id: 'Urgente', label: 'Urgente', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
-  { id: 'Normal',  label: 'Normal',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-  { id: 'Baixa',   label: 'Baixa',   color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
-];
 
 export default function FloatingTaskStack({
   pendingTasks,
@@ -49,10 +41,17 @@ export default function FloatingTaskStack({
   onAddChecklistItem,
   onDeleteChecklistItem
 }) {
+  const { t } = useTranslation();
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [expandedChecklists, setExpandedChecklists] = useState({});
   const [newItemInputs, setNewItemInputs] = useState({});
+
+  const priorities = [
+    { id: EventPriority.URGENT, label: t('floatingTasks.priorityUrgent'), color: TimelineColor.DANGER, bg: 'rgba(239, 68, 68, 0.12)' },
+    { id: EventPriority.NORMAL, label: t('floatingTasks.priorityNormal'), color: TimelineColor.AMBER, bg: 'rgba(245, 158, 11, 0.12)' },
+    { id: EventPriority.LOW, label: t('floatingTasks.priorityLow'), color: TimelineColor.SUCCESS, bg: 'rgba(16, 185, 129, 0.12)' }
+  ];
 
   const toggleChecklist = (taskId) => {
     setExpandedChecklists((prev) => ({
@@ -67,13 +66,13 @@ export default function FloatingTaskStack({
 
     onAddFloatingTask({
       title: quickTaskTitle.trim(),
-      description: 'Tarefa criada diretamente na pilha flutuante do topo da timeline.',
-      category: 'tarefa',
-      status: 'Em Progresso',
-      priority: 'Normal',
+      description: t('floatingTasks.defaultDescription'),
+      category: EventType.TODO,
+      status: EventStatus.IN_PROGRESS,
+      priority: EventPriority.NORMAL,
       isCompleted: false,
-      date: '2026-08-21', // today
-      labels: ['Trabalho'],
+      date: format(new Date(), 'yyyy-MM-dd'),
+      labels: [],
       tasks: []
     });
 
@@ -82,29 +81,62 @@ export default function FloatingTaskStack({
   };
 
   return (
-    <div className="floating-stack-wrapper glass-panel" style={{ marginBottom: '28px', padding: '20px', borderRadius: '16px', borderLeft: '4px solid #f59e0b' }}>
-      <div className="stack-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+    <div
+      className="floating-stack-wrapper glass-panel"
+      style={{
+        marginBottom: '28px',
+        padding: '20px',
+        borderRadius: '16px',
+        borderLeft: `4px solid ${TimelineColor.AMBER}`
+      }}
+    >
+      <div
+        className="stack-header"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '14px',
+          flexWrap: 'wrap',
+          gap: '10px'
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div
+            style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '10px',
+              background: 'rgba(245, 158, 11, 0.15)',
+              color: TimelineColor.AMBER,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
             <Pin size={18} />
           </div>
           <div>
             <h3 style={{ fontSize: '1.1rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              Pilha de Tarefas Pendentes <span className="badge badge-planned">{pendingTasks.length} pendente(s)</span>
+              {t('floatingTasks.title')}{' '}
+              <span className="badge badge-planned">
+                {t('floatingTasks.pendingCount', { count: pendingTasks.length })}
+              </span>
             </h3>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              Permanecem no topo da timeline até serem concluídas. Ao marcar como concluída, a tarefa fixar-se-á na data respetiva.
+              {t('floatingTasks.description')}
             </p>
           </div>
         </div>
 
         <button
+          type="button"
           className="btn btn-secondary btn-sm"
           onClick={() => setIsAdding(!isAdding)}
-          style={{ borderColor: 'rgba(245, 158, 11, 0.3)', color: '#fcd34d' }}
+          style={{ borderColor: 'rgba(245, 158, 11, 0.3)', color: TimelineColor.AMBER }}
         >
           <Plus size={15} />
-          <span>{isAdding ? 'Fechar' : 'Nova Tarefa'}</span>
+          <span>{isAdding ? t('floatingTasks.close') : t('floatingTasks.newTask')}</span>
         </button>
       </div>
 
@@ -120,13 +152,17 @@ export default function FloatingTaskStack({
           <input
             type="text"
             className="form-input"
-            placeholder="Digite o título da tarefa pendente..."
+            placeholder={t('floatingTasks.inputPlaceholder')}
             value={quickTaskTitle}
             onChange={(e) => setQuickTaskTitle(e.target.value)}
             autoFocus
           />
-          <button type="submit" className="btn btn-primary btn-sm" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
-            Adicionar à Pilha
+          <button
+            type="submit"
+            className="btn btn-primary btn-sm"
+            style={{ background: 'linear-gradient(135deg, var(--warning) 0%, var(--warning-hover) 100%)' }}
+          >
+            {t('floatingTasks.addToStack')}
           </button>
         </motion.form>
       )}
@@ -137,8 +173,9 @@ export default function FloatingTaskStack({
           <AnimatePresence>
             {pendingTasks.map((task) => {
               const subtasks = task.tasks || [];
-              const completedSubtasks = subtasks.filter((t) => t.completed).length;
+              const completedSubtasks = subtasks.filter((item) => item.completed).length;
               const isExpanded = !!expandedChecklists[task.id];
+              const ageStr = getTaskAge(task.date, t);
 
               return (
                 <motion.div
@@ -181,9 +218,9 @@ export default function FloatingTaskStack({
                           transition: 'all 0.2s',
                           padding: '2px'
                         }}
-                        title="Concluir tarefa (Fixará a tarefa na data de hoje)"
+                        title={t('floatingTasks.completeTooltip')}
                       >
-                        <Circle size={20} style={{ color: '#f59e0b' }} />
+                        <Circle size={20} style={{ color: TimelineColor.AMBER }} />
                       </button>
 
                       <div>
@@ -195,11 +232,11 @@ export default function FloatingTaskStack({
                             {task.description}
                           </div>
                         )}
-                        {getTaskAge(task.date) && (
+                        {ageStr && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                            <Clock size={11} style={{ color: '#f59e0b' }} />
-                            <span style={{ fontSize: '0.72rem', fontWeight: '600', color: '#f59e0b' }}>
-                              Idade: {getTaskAge(task.date)}
+                            <Clock size={11} style={{ color: TimelineColor.AMBER }} />
+                            <span style={{ fontSize: '0.72rem', fontWeight: '600', color: TimelineColor.AMBER }}>
+                              {t('floatingTasks.age', { age: ageStr })}
                             </span>
                           </div>
                         )}
@@ -210,14 +247,14 @@ export default function FloatingTaskStack({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       {/* Priority Selector */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        {PRIORITIES.map((p) => {
-                          const isActive = (task.priority || 'Normal') === p.id;
+                        {priorities.map((p) => {
+                          const isActive = (task.priority || EventPriority.NORMAL) === p.id;
                           return (
                             <button
                               key={p.id}
                               type="button"
                               onClick={() => onUpdatePriority && onUpdatePriority(task.id, p.id)}
-                              title={`Prioridade ${p.label}`}
+                              title={t('floatingTasks.priorityTitle', { priority: p.label })}
                               style={{
                                 padding: '2px 8px',
                                 borderRadius: '9999px',
@@ -227,7 +264,7 @@ export default function FloatingTaskStack({
                                 background: isActive ? p.bg : 'transparent',
                                 color: isActive ? p.color : 'var(--text-dim)',
                                 cursor: 'pointer',
-                                transition: 'all 0.15s',
+                                transition: 'all 0.15s'
                               }}
                             >
                               {p.label}
@@ -254,26 +291,44 @@ export default function FloatingTaskStack({
                           cursor: 'pointer',
                           transition: 'all 0.15s'
                         }}
-                        title={isExpanded ? 'Recolher Checklist' : 'Expandir Checklist'}
+                        title={isExpanded ? t('floatingTasks.collapseChecklist') : t('floatingTasks.expandChecklist')}
                       >
-                        <CheckSquare size={13} style={{ color: subtasks.length > 0 && completedSubtasks === subtasks.length ? 'var(--accent-emerald)' : 'inherit' }} />
-                        <span>Checklist {subtasks.length > 0 ? `(${completedSubtasks}/${subtasks.length})` : ''}</span>
+                        <CheckSquare
+                          size={13}
+                          style={{
+                            color: subtasks.length > 0 && completedSubtasks === subtasks.length ? 'var(--accent-emerald)' : 'inherit'
+                          }}
+                        />
+                        <span>
+                          {t('floatingTasks.checklist')}{' '}
+                          {subtasks.length > 0 ? `(${completedSubtasks}/${subtasks.length})` : ''}
+                        </span>
                         {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                       </button>
 
-                      {task.labels && task.labels.map((lbl, idx) => (
-                        <span key={idx} className="event-tag" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fcd34d' }}>
-                          #{lbl}
-                        </span>
-                      ))}
+                      {task.labels &&
+                        task.labels.map((lbl, idx) => (
+                          <span
+                            key={idx}
+                            className="event-tag"
+                            style={{ background: 'rgba(245, 158, 11, 0.15)', color: TimelineColor.AMBER }}
+                          >
+                            #{lbl}
+                          </span>
+                        ))}
 
                       <button
                         type="button"
                         onClick={() => onCompleteTask(task.id)}
                         className="btn btn-outline btn-sm"
-                        style={{ fontSize: '0.75rem', padding: '4px 10px', color: '#fcd34d', borderColor: 'rgba(245, 158, 11, 0.3)' }}
+                        style={{
+                          fontSize: '0.75rem',
+                          padding: '4px 10px',
+                          color: TimelineColor.AMBER,
+                          borderColor: 'rgba(245, 158, 11, 0.3)'
+                        }}
                       >
-                        <CheckCircle2 size={13} /> Concluir e Fixar
+                        <CheckCircle2 size={13} /> {t('floatingTasks.completeAndPin')}
                       </button>
                     </div>
                   </div>
@@ -329,7 +384,7 @@ export default function FloatingTaskStack({
                                       borderRadius: '4px',
                                       background: st.completed ? 'var(--accent-emerald)' : 'transparent',
                                       borderColor: st.completed ? 'var(--accent-emerald)' : 'var(--border-glass-glow)',
-                                      color: '#000',
+                                      color: 'var(--text-main)',
                                       fontSize: '11px',
                                       fontWeight: 'bold',
                                       display: 'flex',
@@ -364,7 +419,7 @@ export default function FloatingTaskStack({
                                     display: 'flex',
                                     alignItems: 'center'
                                   }}
-                                  title="Eliminar item de checklist"
+                                  title={t('floatingTasks.deleteChecklistItem')}
                                 >
                                   <Trash2 size={12} />
                                 </button>
@@ -373,7 +428,7 @@ export default function FloatingTaskStack({
                           </div>
                         ) : (
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginBottom: '8px', fontStyle: 'italic' }}>
-                            Sem itens na checklist. Adicione o primeiro item abaixo:
+                            {t('floatingTasks.noChecklistItems')}
                           </div>
                         )}
 
@@ -390,7 +445,7 @@ export default function FloatingTaskStack({
                         >
                           <input
                             type="text"
-                            placeholder="Adicionar novo item de checklist..."
+                            placeholder={t('floatingTasks.addChecklistPlaceholder')}
                             value={newItemInputs[task.id] || ''}
                             onChange={(e) => setNewItemInputs((prev) => ({ ...prev, [task.id]: e.target.value }))}
                             style={{
@@ -409,7 +464,7 @@ export default function FloatingTaskStack({
                             className="btn btn-secondary btn-sm"
                             style={{ padding: '4px 12px', fontSize: '0.75rem', gap: '4px' }}
                           >
-                            <Plus size={13} /> Adicionar
+                            <Plus size={13} /> {t('buttons.add')}
                           </button>
                         </form>
                       </motion.div>
@@ -422,10 +477,9 @@ export default function FloatingTaskStack({
         </div>
       ) : (
         <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)', textAlign: 'center', padding: '12px 0', border: '1px dashed rgba(255,255,255,0.06)', borderRadius: '8px' }}>
-          🎉 Nenhuma tarefa pendente na pilha! Todas as tarefas concluídas estão fixadas nas suas respetivas datas na timeline.
+          {t('floatingTasks.emptyStack')}
         </div>
       )}
     </div>
   );
 }
-

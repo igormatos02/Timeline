@@ -218,6 +218,38 @@ CREATE INDEX IF NOT EXISTS idx_timeboard_invitations_email ON timeboard_invitati
 CREATE INDEX IF NOT EXISTS idx_timeboard_invitations_status ON timeboard_invitations(status);
 
 -- ============================================================
+-- to_do
+-- ============================================================
+create table public.to_do (
+  id uuid not null default gen_random_uuid (),
+  timeboard_id uuid not null,
+  timeline_id uuid null,
+  name character varying not null,
+  description text null default ''::text,
+  labels jsonb null default '[]'::jsonb,
+  notes text null default ''::text,
+  priority character varying null default 'Normal'::character varying,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  tenant_id uuid null,
+  is_obligation boolean not null default false,
+  obligation_person_id uuid null,
+  constraint to_do_pkey primary key (id),
+  constraint to_do_obligation_person_id_fkey foreign KEY (obligation_person_id) references persons (id) on delete set null,
+  constraint to_do_tenant_id_fkey foreign KEY (tenant_id) references tenant (id),
+  constraint to_do_timeboard_id_fkey foreign KEY (timeboard_id) references timeboards (id),
+  constraint to_do_timeline_id_fkey foreign KEY (timeline_id) references timelines (id),
+  constraint fk_freminder_to_do_timeline foreign KEY (timeline_id) references timelines (id) on delete CASCADE
+) TABLESPACE pg_default;
+
+create index IF not exists idx_to_do_id on public.to_do using btree (id) TABLESPACE pg_default;
+
+ALTER TABLE public.to_do
+ADD COLUMN status VARCHAR DEFAULT 'PENDING',
+ADD COLUMN done_date DATE NULL;
+
+
+-- ============================================================
 -- Row Level Security
 -- ============================================================
 ALTER TABLE tenant ENABLE ROW LEVEL SECURITY;

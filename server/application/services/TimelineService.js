@@ -2,6 +2,7 @@ import { timelineRepository } from '../../infrastructure/database/supabase/Supab
 import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
 import { financialEventStatusRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventStatusRepository.js';
 import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
+import { todoRepository } from '../../infrastructure/database/supabase/SupabaseTodoRepository.js';
 import { financialEventService } from './FinancialEventService.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
 import {
@@ -22,12 +23,12 @@ export class TimelineService {
    */
   async _enrichTimelineMetrics(timeline, referenceDate = null, preloadedEvents = null) {
     if (!timeline) return timeline;
-    const typeLower = (timeline.type || '').toLowerCase();
+    const normType = normalizeTimelineType(timeline.type);
     
     // Obter todos os eventos em memória projetados
     const allEvents = preloadedEvents || (await financialEventService.getAllEvents({ timeboardId: timeline.timeboardId }));
 
-    if (typeLower === TimelineType.LOAN || typeLower === 'loan' || typeLower === 'empréstimo' || typeLower === 'emprestimo') {
+    if (normType === TimelineType.LOAN) {
       const loanEvents = allEvents.filter((ev) => ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id);
       let loanContract = null;
       try {
@@ -51,7 +52,7 @@ export class TimelineService {
         procedureMetrics: metrics,
         metrics
       };
-    } else if (typeLower === TimelineType.EXPENSE || typeLower === 'expense' || typeLower === 'despesa' || typeLower === 'gastos') {
+    } else if (normType === TimelineType.EXPENSE) {
       const expenseEvents = allEvents.filter((ev) => ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id);
       const metrics = expenseDomainService.calculateMetrics(expenseEvents);
       return {
@@ -60,7 +61,7 @@ export class TimelineService {
         procedureMetrics: metrics,
         metrics
       };
-    } else if (typeLower === TimelineType.INCOME || typeLower === 'income' || typeLower === 'entradas' || typeLower === 'rendimentos') {
+    } else if (normType === TimelineType.INCOME) {
       const incomeEvents = allEvents.filter((ev) => ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id);
       const metrics = incomeDomainService.calculateMetrics(incomeEvents);
       return {
@@ -69,7 +70,7 @@ export class TimelineService {
         procedureMetrics: metrics,
         metrics
       };
-    } else if (typeLower === TimelineType.INVESTMENT || typeLower === 'investment' || typeLower === 'investimento' || typeLower === 'poupança' || typeLower === 'poupanca') {
+    } else if (normType === TimelineType.INVESTMENT) {
       const investmentEvents = allEvents.filter((ev) => ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id);
       const metrics = investmentDomainService.calculateMetrics(investmentEvents);
       return {
@@ -78,8 +79,8 @@ export class TimelineService {
         procedureMetrics: metrics,
         metrics
       };
-    } else if (typeLower === TimelineType.BALANCE || typeLower === 'balance' || typeLower === 'balanço' || typeLower === 'balanco') {
-      const loanTimelines = await timelineRepository.getAll((tl) => (!timeline.timeboardId || tl.timeboardId === timeline.timeboardId) && (tl.type === TimelineType.LOAN || tl.type === 'loan'));
+    } else if (normType === TimelineType.BALANCE) {
+      const loanTimelines = await timelineRepository.getAll((tl) => (!timeline.timeboardId || tl.timeboardId === timeline.timeboardId) && (normalizeTimelineType(tl.type) === TimelineType.LOAN));
       const balanceMetrics = balanceDomainService.calculateBalance({
         allEvents,
         loanTimelines,
@@ -139,16 +140,18 @@ export class TimelineService {
     let events = [];
     let metrics = {};
 
-    if (timeline.type === TimelineType.INCOME) {
+    const normType = normalizeTimelineType(timeline.type);
+
+    if (normType === TimelineType.INCOME) {
       events = incomeDomainService.filterEvents(projectedEvents, id);
       metrics = incomeDomainService.calculateMetrics(events, query.currentMonth);
-    } else if (timeline.type === TimelineType.EXPENSE) {
+    } else if (normType === TimelineType.EXPENSE) {
       events = expenseDomainService.filterEvents(projectedEvents, id);
       metrics = expenseDomainService.calculateMetrics(events, query.currentMonth);
-    } else if (timeline.type === TimelineType.INVESTMENT) {
+    } else if (normType === TimelineType.INVESTMENT) {
       events = investmentDomainService.filterEvents(projectedEvents, id);
       metrics = investmentDomainService.calculateMetrics(events, query.currentMonth);
-    } else if (timeline.type === TimelineType.LOAN || timeline.type === 'loan' || timeline.type === 'Empréstimo' || timeline.type === 'emprestimo') {
+    } else if (normType === TimelineType.LOAN) {
       events = loanDomainService.filterEvents(projectedEvents, id);
     } else {
       events = projectedEvents.filter((ev) => ev.timelineId === id || ev.timelineOriginId === id);
@@ -214,21 +217,59 @@ export class TimelineService {
 
   async deleteTimeline(id) {
     const timeline = await timelineRepository.getById(id);
-    if (!timeline) throw new Error(t('backend.validation.timelineNotFound'));
-    if (!timeline.canDelete) {
-      throw new Error(t('backend.validation.timelineSystemCannotBeDeleted'));
+    if (!timeline) throw new Error(t('backend.validation.timelineNotFound') || 'Linha de tempo não encontrada.');
+    if (timeline.isSystemDefault) {
+      throw new Error(t('backend.validation.timelineSystemCannotBeDeleted') || 'Linhas de tempo do sistema não podem ser eliminadas.');
     }
 
-    // 1. Excluir todos os status associados à timeline
-    await financialEventStatusRepository.deleteByTimelineId(id);
+    // 1. Obter todos os eventos pertencentes a esta timeline (por timelineId ou timelineOriginId)
+    const allEvents = await eventRepository.getAll();
+    const timelineEvents = allEvents.filter((e) =>
+      String(e.timelineId) === String(id) ||
+      String(e.timelineOriginId) === String(id) ||
+      String(e.timeline_id) === String(id) ||
+      String(e.timeline_origin_id) === String(id)
+    );
 
-    // 2. Excluir todos os eventos financeiros associados à timeline
-    await eventRepository.deleteByTimelineId(id);
+    const eventIds = new Set();
+    timelineEvents.forEach((e) => {
+      if (e.id) eventIds.add(String(e.id));
+      if (e.eventId) eventIds.add(String(e.eventId));
+      if (e.event_id) eventIds.add(String(e.event_id));
+      if (e.seriesId) eventIds.add(String(e.seriesId));
+    });
 
-    // 3. Excluir contrato de empréstimo associado à timeline (se existir)
-    await loanContractRepository.deleteByTimelineId(id);
+    const eventIdList = Array.from(eventIds);
 
-    // 4. Excluir a timeline
+    // 2. Excluir todos os status de eventos na tabela financial_event_status por timeline_id e por lista de event_ids
+    if (financialEventStatusRepository.deleteByTimelineId) {
+      await financialEventStatusRepository.deleteByTimelineId(id);
+    }
+    if (eventIdList.length > 0 && financialEventStatusRepository.deleteAllStatusForEvent) {
+      await financialEventStatusRepository.deleteAllStatusForEvent(eventIdList);
+    }
+
+    // 3. Excluir todos os eventos financeiros associados à timeline
+    if (eventRepository.deleteByTimelineId) {
+      await eventRepository.deleteByTimelineId(id);
+    }
+    for (const ev of timelineEvents) {
+      if (ev.id) {
+        await eventRepository.delete(ev.id).catch(() => {});
+      }
+    }
+
+    // 4. Excluir contrato de empréstimo associado à timeline (se existir)
+    if (loanContractRepository.deleteByTimelineId) {
+      await loanContractRepository.deleteByTimelineId(id);
+    }
+
+    // 5. Excluir tarefas To Do associadas à timeline (se existirem)
+    if (todoRepository.deleteByTimelineId) {
+      await todoRepository.deleteByTimelineId(id);
+    }
+
+    // 6. Excluir a timeline
     return timelineRepository.delete(id);
   }
 

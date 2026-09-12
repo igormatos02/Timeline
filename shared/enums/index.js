@@ -1,6 +1,6 @@
 export { TimelineAssociationType } from './TimelineAssociationType.js';
 export { EventType } from './EventType.js';
-export { TimelineType, isLoanTimelineType, normalizeTimelineType } from './TimelineType.js';
+export { TimelineType, isLoanTimelineType, normalizeTimelineType, SINGLE_INSTANCE_TIMELINE_TYPES, isSingleInstanceTimelineType } from './TimelineType.js';
 export { EventStatus, EventStatusLabel, getEventStatusLabel, isPositiveStatus, isNegativeStatus, isCancelledStatus, ReminderEventStatus } from './EventStatus.js';
 export { EventPeriodicity, normalizePeriodicity } from './EventPeriodicity.js';
 export { EventPeriodicity as EventAggregation } from './EventPeriodicity.js';
@@ -20,4 +20,4 @@ export { PersonRole } from './PersonRole.js';
 export { PersonType } from './PersonType.js';
 export { InvitationStatus } from './InvitationStatus.js';
 export { DiaryMood, DiaryEventCategory } from './DiaryMood.js';
-
+export { TimelineColor, TIMELINE_COLOR_PRESETS, getDefaultTimelineColor } from './TimelineColor.js';

@@ -1,4 +1,4 @@
-import { TimelineType, TimelineStatus, EventPeriodicity } from '../../../shared/enums/index.js';
+import { TimelineType, TimelineStatus, EventPeriodicity, isLoanTimelineType } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -42,7 +42,7 @@ export class Timeline {
     this.color = color;
     this.description = description;
     this.isSystemDefault = Boolean(isSystemDefault);
-    this.canDelete = isSystemDefault ? false : Boolean(canDelete);
+    this.canDelete = this.isSystemDefault ? false : (canDelete !== undefined && canDelete !== null ? Boolean(canDelete) : true);
     this.startDate = startDate;
     this.endDate = endDate;
     this.status = status;
@@ -61,11 +61,11 @@ export class Timeline {
   }
 
   isLoan() {
-    return this.type === TimelineType.LOAN || this.type === 'emprestimo' || this.type === 'Empréstimo';
+    return isLoanTimelineType(this.type);
   }
 
   isActive() {
-    return this.status === TimelineStatus.ACTIVE || this.status === 'Ativo';
+    return this.status === TimelineStatus.ACTIVE;
   }
 
   isUniquePerTimeboard() {

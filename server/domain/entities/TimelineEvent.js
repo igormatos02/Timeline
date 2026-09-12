@@ -1,4 +1,16 @@
-import { EventType, TimelineType, EventStatus, EventPriority, EventPeriodicity, EventRecurrence, LoanEventCategory, isPositiveStatus, normalizePeriodicity, normalizeRecurrence } from '../../../shared/enums/index.js';
+import {
+  EventType,
+  TimelineType,
+  EventStatus,
+  EventPriority,
+  EventPeriodicity,
+  EventRecurrence,
+  LoanEventCategory,
+  isPositiveStatus,
+  isCancelledStatus,
+  normalizePeriodicity,
+  normalizeRecurrence
+} from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -31,6 +43,8 @@ export class TimelineEvent {
     category = LoanEventCategory.LOAN_INSTALLMENT,
     eventType = EventType.EXPENSE,
     event_type,
+    timelineType = null,
+    timeline_type,
     recurrence = null,
     periodicity = null,
     aggregation = null,
@@ -112,6 +126,8 @@ export class TimelineEvent {
     this.description = description || '';
     this.category = category;
     this.eventType = event_type || eventType;
+    this.timelineType = timelineType || timeline_type || null;
+    this.timeline_type = this.timelineType;
 
     // Periodicity & Recurrence mapping
     this.periodicity = normalizePeriodicity(periodicity || aggregation);
@@ -247,7 +263,8 @@ export function calcToggledStatus(event, explicitStatus = null) {
   const isAmortization = event.eventType === EventType.AMORTIZATION || (typeof event.isAmortizationEvent === 'function' && event.isAmortizationEvent());
   const isInvestment = event.eventType === EventType.INVESTMENT;
   const isIncome = event.eventType === EventType.INCOME;
-  const isReminder = event.eventType === EventType.REMINDER || event.eventType === 'reminder' || event.timelineType === TimelineType.REMINDER || event.timeline_type === TimelineType.REMINDER;
+  const isReminder = event.eventType === EventType.REMINDER || event.timelineType === TimelineType.REMINDER || event.timeline_type === TimelineType.REMINDER;
+  const isTodo = event.eventType === EventType.TODO || event.timelineType === TimelineType.TODO || event.timeline_type === TimelineType.TODO;
 
   const currentStatus = String(event.status || '').toLowerCase();
 
@@ -261,10 +278,7 @@ export function calcToggledStatus(event, explicitStatus = null) {
     currentStatus === EventStatus.CLOSED ||
     Boolean(event.isCompleted);
 
-  const isCancelled =
-    currentStatus === EventStatus.CANCELLED ||
-    currentStatus === 'cancelled' ||
-    currentStatus === 'cancelado';
+  const isCancelled = isCancelledStatus(currentStatus);
 
   // 3-state cycle:
   // 1. Negative (pending/planned/open) -> 2. Positive (paid/received/invested/amortized/closed) -> 3. Cancelled (cancelled) -> 1. Negative
@@ -279,13 +293,14 @@ export function calcToggledStatus(event, explicitStatus = null) {
 
   if (isPositive) {
     return {
-      status: EventStatus.CANCELLED,
+      status: isTodo ? EventStatus.PENDING : EventStatus.CANCELLED,
       isCompleted: false
     };
   }
 
   let positiveStatus = EventStatus.PAID;
   if (isReminder) positiveStatus = EventStatus.CLOSED;
+  else if (isTodo) positiveStatus = EventStatus.COMPLETED;
   else if (isIncome) positiveStatus = EventStatus.RECEIVED;
   else if (isInvestment) positiveStatus = EventStatus.INVESTED;
   else if (isAmortization) positiveStatus = EventStatus.AMORTIZED;

@@ -575,7 +575,10 @@ export async function deleteTimeline(id) {
     method: 'DELETE',
     headers: getHeaders()
   });
-  if (!res.ok) throw new Error('Failed to delete timeline');
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || 'Failed to delete timeline');
+  }
   return res.json();
 }
 
@@ -654,6 +657,74 @@ export async function deleteEvent(id, options = {}) {
     body: JSON.stringify(options)
   });
   if (!res.ok) throw new Error('Failed to delete event');
+  return res.json();
+}
+
+// To Do Items
+export async function fetchTodos(filter = {}) {
+  const query = new URLSearchParams();
+  if (filter.timeboardId) query.set('timeboardId', filter.timeboardId);
+  if (filter.timelineId) query.set('timelineId', filter.timelineId);
+  if (filter.status) query.set('status', filter.status);
+
+  const res = await fetch(`${API_BASE}/todos?${query.toString()}`, {
+    headers: getHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch todos');
+  return res.json();
+}
+
+export async function createTodo(todoData) {
+  const res = await fetch(`${API_BASE}/todos`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      tenantId: getActiveTenantId(),
+      ...todoData
+    })
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || 'Failed to create todo');
+  }
+  return res.json();
+}
+
+export async function updateTodo(id, updates) {
+  const res = await fetch(`${API_BASE}/todos/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || 'Failed to update todo');
+  }
+  return res.json();
+}
+
+export async function toggleTodoStatus(id, status = null) {
+  const res = await fetch(`${API_BASE}/todos/${id}/toggle-status`, {
+    method: 'POST',
+    headers: getHeaders(),
+    ...(status ? { body: JSON.stringify({ status }) } : {})
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || 'Failed to toggle todo status');
+  }
+  return res.json();
+}
+
+export async function deleteTodo(id) {
+  const res = await fetch(`${API_BASE}/todos/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || 'Failed to delete todo');
+  }
   return res.json();
 }
 

@@ -201,8 +201,8 @@ export default function DiaryTimelineHeader({
             <button
               type="button"
               className="btn btn-outline-danger btn-sm"
-              onClick={onDelete}
-              title={t('diaryHeader.deleteTitle') || 'Excluir esta timeline'}
+              onClick={() => onDelete && onDelete(timeline)}
+              title={t('diaryHeader.deleteTitle')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',

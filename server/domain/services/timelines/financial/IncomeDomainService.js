@@ -1,4 +1,4 @@
-import { EventStatus, EventType } from '../../../../../shared/enums/index.js';
+import { EventStatus, EventType, isCancelledStatus } from '../../../../../shared/enums/index.js';
 
 /**
  * Domain Service: IncomeDomainService
@@ -11,7 +11,7 @@ export class IncomeDomainService {
   filterEvents(events = [], timelineId = null) {
     return events.filter((ev) => {
       if (!ev || ev.isDeleted) return false;
-      if (ev.status === EventStatus.CANCELLED || ev.status === 'cancelled' || ev.status === 'cancelado') return false;
+      if (isCancelledStatus(ev.status)) return false;
       if (timelineId && ev.timelineId === timelineId) return true;
       return (
         ev.eventType === EventType.INCOME
@@ -25,7 +25,7 @@ export class IncomeDomainService {
   calculateMetrics(incomeEvents = [], currentMonthKey = null) {
     const activeMonth = currentMonthKey || new Date().toISOString().substring(0, 7);
 
-    const validEvents = incomeEvents.filter((ev) => !ev.isDeleted && ev.status !== EventStatus.CANCELLED && ev.status !== 'cancelled' && ev.status !== 'cancelado');
+    const validEvents = incomeEvents.filter((ev) => !ev.isDeleted && !isCancelledStatus(ev.status));
 
     const monthlyTotal = validEvents
       .filter((ev) => ev.date && ev.date.startsWith(activeMonth))

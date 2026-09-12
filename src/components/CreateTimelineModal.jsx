@@ -10,6 +10,9 @@ import {
   FolderKanban,
   Bell,
   BookOpen,
+  CheckSquare,
+  Layers,
+  Target,
   Calendar,
   ShieldCheck,
   ShieldAlert,
@@ -24,85 +27,16 @@ import {
   TimelineType,
   TimelineStatus,
   EventPeriodicity,
+  TimelineColor,
+  TIMELINE_COLOR_PRESETS,
   isLoanTimelineType,
+  isSingleInstanceTimelineType,
   normalizeTimelineType
 } from '../enums/index.js';
+import { getTimelineTypeOptions } from '../utils/timelineConfig.jsx';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
-const TIMELINE_TYPE_OPTIONS = [
-  {
-    type: TimelineType.BALANCE,
-    labelKey: 'sidebar.balanceTimeline',
-    fallbackLabel: 'Balanço',
-    defaultName: 'Balanço',
-    defaultColor: '#0ea5e9',
-    icon: Scale,
-    singleInstance: true
-  },
-  {
-    type: TimelineType.INCOME,
-    labelKey: 'sidebar.incomeTimeline',
-    fallbackLabel: 'Entradas',
-    defaultName: 'Entradas',
-    defaultColor: '#10b981',
-    icon: TrendingUp,
-    singleInstance: true
-  },
-  {
-    type: TimelineType.EXPENSE,
-    labelKey: 'sidebar.expenseTimeline',
-    fallbackLabel: 'Despesas',
-    defaultName: 'Despesas',
-    defaultColor: '#f43f5e',
-    icon: ShoppingCart,
-    singleInstance: true
-  },
-  {
-    type: TimelineType.INVESTMENT,
-    labelKey: 'sidebar.investmentTimeline',
-    fallbackLabel: 'Investimentos',
-    defaultName: 'Investimentos',
-    defaultColor: '#8b5cf6',
-    icon: PiggyBank,
-    singleInstance: true
-  },
-  {
-    type: TimelineType.LOAN,
-    labelKey: 'sidebar.loanTimeline',
-    fallbackLabel: 'Crédito / Empréstimo',
-    defaultName: 'Crédito Habitação / Auto',
-    defaultColor: '#6366f1',
-    icon: CreditCard,
-    singleInstance: false
-  },
-  {
-    type: TimelineType.PROJECT,
-    labelKey: 'sidebar.projectTimeline',
-    fallbackLabel: 'Projetos',
-    defaultName: 'Projetos',
-    defaultColor: '#a855f7',
-    icon: FolderKanban,
-    singleInstance: false
-  },
-  {
-    type: TimelineType.REMINDER,
-    labelKey: 'sidebar.reminderTimeline',
-    fallbackLabel: 'Lembretes',
-    defaultName: 'Lembretes',
-    defaultColor: '#f59e0b',
-    icon: Bell,
-    singleInstance: false
-  },
-  {
-    type: TimelineType.DIARY,
-    labelKey: 'sidebar.diaryTimeline',
-    fallbackLabel: 'Diário',
-    defaultName: 'Diário Pessoal',
-    defaultColor: '#ec4899',
-    icon: BookOpen,
-    singleInstance: false
-  }
-];
+const TIMELINE_TYPE_OPTIONS = getTimelineTypeOptions();
 
 export default function CreateTimelineModal({
   isOpen,
@@ -134,7 +68,7 @@ export default function CreateTimelineModal({
     totalInstallments: '',
     status: TimelineStatus.ACTIVE,
     type: TimelineType.LOAN,
-    color: '#6366f1',
+    color: TimelineColor.LOAN,
     totalDebt: '',
     installmentAmount: '',
     periodicity: EventPeriodicity.MONTHLY,
@@ -179,7 +113,7 @@ export default function CreateTimelineModal({
         totalInstallments: getVal('totalInstallments', 'total_installments'),
         status: initialData.status === TimelineStatus.INACTIVE ? TimelineStatus.INACTIVE : TimelineStatus.ACTIVE,
         type: resolvedType,
-        color: initialData.color || '#6366f1',
+        color: initialData.color || TimelineColor.LOAN,
         totalDebt: getVal('totalDebt', 'originalCapital', 'original_capital'),
         installmentAmount: getVal('installmentAmount', 'installment_amount'),
         periodicity: initialData.periodicity || initialData.aggregation || EventPeriodicity.MONTHLY,
@@ -196,14 +130,14 @@ export default function CreateTimelineModal({
 
       // Determine initial type (passed from caller or first available type)
       let resolvedType = initialType ? normalizeTimelineType(initialType) : TimelineType.LOAN;
-      if (initialType && TIMELINE_TYPE_OPTIONS.find((opt) => opt.type === resolvedType && opt.singleInstance && existingTypesSet.has(resolvedType))) {
+      if (initialType && isSingleInstanceTimelineType(resolvedType) && existingTypesSet.has(resolvedType)) {
         resolvedType = TimelineType.LOAN;
       }
 
-      const typeMeta = TIMELINE_TYPE_OPTIONS.find((opt) => opt.type === resolvedType) || TIMELINE_TYPE_OPTIONS[4];
+      const typeMeta = TIMELINE_TYPE_OPTIONS.find((opt) => opt.type === resolvedType) || TIMELINE_TYPE_OPTIONS[0];
 
       setFormData({
-        name: typeMeta.type === TimelineType.LOAN ? '' : typeMeta.defaultName,
+        name: typeMeta.type === TimelineType.LOAN ? '' : (t(typeMeta.labelKey) || ''),
         description: '',
         startDate: getTodayMonthStr(),
         totalInstallments: '',
@@ -242,21 +176,6 @@ export default function CreateTimelineModal({
   const isLoanType = isLoanTimelineType(formData.type);
   const isStatusActive = formData.status === TimelineStatus.ACTIVE;
   const isStatusInactive = formData.status === TimelineStatus.INACTIVE;
-
-  const handleSelectType = (selectedType) => {
-    const meta = TIMELINE_TYPE_OPTIONS.find((opt) => opt.type === selectedType);
-    if (!meta) return;
-
-    // Check if current name was a default name, replace it; otherwise keep user's custom name
-    const wasDefaultName = TIMELINE_TYPE_OPTIONS.some((opt) => opt.defaultName === formData.name) || !formData.name.trim();
-
-    setFormData((prev) => ({
-      ...prev,
-      type: selectedType,
-      color: meta.defaultColor,
-      name: wasDefaultName ? (selectedType === TimelineType.LOAN ? '' : meta.defaultName) : prev.name
-    }));
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -317,16 +236,7 @@ export default function CreateTimelineModal({
     onClose();
   };
 
-  const colors = [
-    '#6366f1', // Indigo
-    '#0ea5e9', // Sky Blue
-    '#10b981', // Emerald
-    '#f43f5e', // Rose
-    '#f59e0b', // Amber
-    '#a855f7', // Purple
-    '#06b6d4', // Cyan
-    '#3b82f6'  // Blue
-  ];
+  const colors = TIMELINE_COLOR_PRESETS;
 
   const monthNames = Array.from({ length: 12 }, (_, i) => {
     const d = setMonth(new Date(2026, 0, 1), i);
@@ -355,12 +265,12 @@ export default function CreateTimelineModal({
       setSimulationEvents(events);
       setShowSimulation(true);
     } catch (err) {
-      alert(err.message || 'Erro ao gerar o plano de amortização.');
+      alert(err.message || t('createTimelineModal.simulationError'));
     }
   };
 
-  const currentTypeMeta = TIMELINE_TYPE_OPTIONS.find((opt) => opt.type === formData.type) || TIMELINE_TYPE_OPTIONS[4];
-  const HeaderIcon = currentTypeMeta.icon;
+  const currentTypeMeta = TIMELINE_TYPE_OPTIONS.find((opt) => opt.type === formData.type) || TIMELINE_TYPE_OPTIONS[0];
+  const HeaderIcon = currentTypeMeta?.icon || Layers;
 
   return (
     <div
@@ -390,20 +300,20 @@ export default function CreateTimelineModal({
           width: '100%',
           maxHeight: '90vh',
           overflowY: 'auto',
-          background: 'var(--bg-card, #131722)',
+          background: 'var(--bg-card)',
           borderRadius: '16px',
-          border: '1px solid rgba(99, 102, 241, 0.35)',
-          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(99, 102, 241, 0.15)',
+          border: '1px solid var(--border-glass)',
+          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.85)',
           transition: 'max-width 0.3s ease'
         }}
       >
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <HeaderIcon size={22} style={{ color: formData.color || 'var(--primary)' }} />
+            <HeaderIcon size={22} style={{ color: formData.color || TimelineColor.PRIMARY }} />
             <h2 className="modal-title">
               {isEditing
-                ? `${t('modal.edit') || 'Editar'} ${t(currentTypeMeta.labelKey) || currentTypeMeta.fallbackLabel}`
-                : `${t('modal.new') || 'Nova'} ${t(currentTypeMeta.labelKey) || currentTypeMeta.fallbackLabel}`}
+                ? t('createTimelineModal.editTitle', { type: t(currentTypeMeta.labelKey) })
+                : t('createTimelineModal.newTitle', { type: t(currentTypeMeta.labelKey) })}
             </h2>
           </div>
           <button className="modal-close-btn" onClick={onClose}>
@@ -412,74 +322,37 @@ export default function CreateTimelineModal({
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Seletor de Tipo de Timeline (Apenas na Criação) */}
-          {!isEditing && (
-            <div style={{ marginBottom: '20px' }}>
-              <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>
-                {t('timelineModal.typeLabel') || 'Tipo de Timeline *'}
-              </label>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-                  gap: '8px'
-                }}
-              >
-                {TIMELINE_TYPE_OPTIONS.map((opt) => {
-                  const isSelected = formData.type === opt.type;
-                  const isAlreadyAdded = opt.singleInstance && existingTypesSet.has(opt.type);
-                  const Icon = opt.icon;
-
-                  return (
-                    <button
-                      key={opt.type}
-                      type="button"
-                      disabled={isAlreadyAdded}
-                      onClick={() => handleSelectType(opt.type)}
-                      title={isAlreadyAdded ? 'Já adicionada a este Timeboard (apenas 1 permitida)' : ''}
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        padding: '10px 8px',
-                        borderRadius: '10px',
-                        border: isSelected ? `2px solid ${opt.defaultColor}` : '1px solid var(--border-glass)',
-                        background: isSelected
-                          ? `${opt.defaultColor}22`
-                          : isAlreadyAdded
-                            ? 'rgba(255, 255, 255, 0.02)'
-                            : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                        color: isSelected ? opt.defaultColor : isAlreadyAdded ? 'var(--text-dim)' : 'var(--text-main)',
-                        opacity: isAlreadyAdded ? 0.45 : 1,
-                        cursor: isAlreadyAdded ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <Icon size={18} style={{ color: isSelected ? opt.defaultColor : isAlreadyAdded ? 'var(--text-dim)' : opt.defaultColor }} />
-                      <span style={{ fontSize: '0.74rem', fontWeight: isSelected ? '800' : '600', textAlign: 'center' }}>
-                        {t(opt.labelKey) || opt.fallbackLabel}
-                      </span>
-                      {isAlreadyAdded && (
-                        <span style={{ fontSize: '0.62rem', color: 'var(--text-dim)' }}>
-                          (Adicionada)
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+          {/* Tipo de Timeline (Read-only Badge) */}
+          <div style={{ marginBottom: '18px' }}>
+            <label className="form-label" style={{ marginBottom: '6px', display: 'block' }}>
+              {t('createTimelineModal.typeLabel')}
+            </label>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 14px',
+                borderRadius: '10px',
+                background: `${currentTypeMeta.defaultColor}18`,
+                border: `1px solid ${currentTypeMeta.defaultColor}44`,
+                color: currentTypeMeta.defaultColor,
+                fontWeight: '700',
+                fontSize: '0.88rem'
+              }}
+            >
+              <HeaderIcon size={18} />
+              <span>{t(currentTypeMeta.labelKey)}</span>
             </div>
-          )}
+          </div>
 
           {/* Nome da Timeline */}
           <div className="form-group">
-            <label className="form-label">{t('timelineModal.nameLabel') || t('loanModal.nameLabel') || 'Nome da Timeline *'}</label>
+            <label className="form-label">{t('createTimelineModal.nameLabel')}</label>
             <input
               type="text"
               className="form-input"
-              placeholder={isLoanType ? (t('loanModal.namePlaceholder') || 'Ex: Crédito Automóvel, Habitação...') : 'Ex: Entradas Principais, Balanço, Despesas...'}
+              placeholder={isLoanType ? t('createTimelineModal.namePlaceholderLoan') : t('createTimelineModal.namePlaceholder')}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -489,10 +362,10 @@ export default function CreateTimelineModal({
 
           {/* Descrição */}
           <div className="form-group">
-            <label className="form-label">{t('loanModal.descriptionLabel') || 'Descrição'}</label>
+            <label className="form-label">{t('createTimelineModal.descriptionLabel')}</label>
             <textarea
               className="form-textarea"
-              placeholder={t('loanModal.descriptionPlaceholder') || 'Breve descrição dos objetivos desta linha temporal...'}
+              placeholder={t('createTimelineModal.descriptionPlaceholder')}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
@@ -501,9 +374,9 @@ export default function CreateTimelineModal({
           {/* Status da Timeline */}
           <div className="form-group" style={{ marginBottom: '16px' }}>
             <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>{t('loanModal.statusLabel') || 'Status'}</span>
-              <span style={{ fontSize: '0.72rem', color: isStatusActive ? '#10b981' : '#f43f5e', fontWeight: '700' }}>
-                {isStatusActive ? (t('loanModal.statusActiveHint') || 'Ativa na Projeção') : (t('loanModal.statusInactiveHint') || 'Inativa')}
+              <span>{t('createTimelineModal.statusLabel')}</span>
+              <span style={{ fontSize: '0.72rem', color: isStatusActive ? TimelineColor.SUCCESS : TimelineColor.DANGER, fontWeight: '700' }}>
+                {isStatusActive ? t('createTimelineModal.statusActiveHint') : t('createTimelineModal.statusInactiveHint')}
               </span>
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -513,9 +386,9 @@ export default function CreateTimelineModal({
                 style={{
                   padding: '10px 12px',
                   borderRadius: '8px',
-                  border: isStatusActive ? '2px solid #10b981' : '1px solid var(--border-glass)',
-                  background: isStatusActive ? 'rgba(16, 185, 129, 0.18)' : 'var(--bg-glass)',
-                  color: isStatusActive ? '#10b981' : 'var(--text-muted)',
+                  border: isStatusActive ? `2px solid ${TimelineColor.SUCCESS}` : '1px solid var(--border-glass)',
+                  background: isStatusActive ? `${TimelineColor.SUCCESS}2e` : 'var(--bg-glass)',
+                  color: isStatusActive ? TimelineColor.SUCCESS : 'var(--text-muted)',
                   fontWeight: '700',
                   fontSize: '0.86rem',
                   display: 'flex',
@@ -526,7 +399,7 @@ export default function CreateTimelineModal({
                   transition: 'all 0.15s ease'
                 }}
               >
-                <ShieldCheck size={16} /> {t('loanModal.statusActive') || 'Ativa'}
+                <ShieldCheck size={16} /> {t('createTimelineModal.statusActive')}
               </button>
 
               <button
@@ -535,9 +408,9 @@ export default function CreateTimelineModal({
                 style={{
                   padding: '10px 12px',
                   borderRadius: '8px',
-                  border: isStatusInactive ? '2px solid #f43f5e' : '1px solid var(--border-glass)',
-                  background: isStatusInactive ? 'rgba(244, 63, 94, 0.18)' : 'var(--bg-glass)',
-                  color: isStatusInactive ? '#f43f5e' : 'var(--text-muted)',
+                  border: isStatusInactive ? `2px solid ${TimelineColor.DANGER}` : '1px solid var(--border-glass)',
+                  background: isStatusInactive ? `${TimelineColor.DANGER}2e` : 'var(--bg-glass)',
+                  color: isStatusInactive ? TimelineColor.DANGER : 'var(--text-muted)',
                   fontWeight: '700',
                   fontSize: '0.86rem',
                   display: 'flex',
@@ -548,7 +421,7 @@ export default function CreateTimelineModal({
                   transition: 'all 0.15s ease'
                 }}
               >
-                <ShieldAlert size={16} /> {t('loanModal.statusInactive') || 'Inativa'}
+                <ShieldAlert size={16} /> {t('createTimelineModal.statusInactive')}
               </button>
             </div>
           </div>
@@ -557,28 +430,28 @@ export default function CreateTimelineModal({
           {isLoanType && (
             <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.07)', border: '1px solid var(--border-glass-glow)', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', fontWeight: '700', color: 'var(--primary-light)', marginBottom: '12px' }}>
-                <CreditCard size={16} /> {t('loanModal.contractSectionTitle') || 'Parâmetros do Contrato de Crédito'}
+                <CreditCard size={16} /> {t('createTimelineModal.contractSectionTitle')}
               </div>
 
               {/* Identificação do Contrato */}
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">{t('loanModal.contractNumberLabel') || 'Nº do Contrato'}</label>
+                  <label className="form-label">{t('createTimelineModal.contractNumberLabel')}</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder={t('loanModal.contractNumberPlaceholder') || 'Ex: CRED-2026-998'}
+                    placeholder={t('createTimelineModal.contractNumberPlaceholder')}
                     value={formData.contractNumber || ''}
                     onChange={(e) => setFormData({ ...formData, contractNumber: e.target.value })}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">{t('loanModal.bankNameLabel') || 'Entidade Bancária'}</label>
+                  <label className="form-label">{t('createTimelineModal.bankNameLabel')}</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder={t('loanModal.bankNamePlaceholder') || 'Ex: Millennium BCP, Santander...'}
+                    placeholder={t('createTimelineModal.bankNamePlaceholder')}
                     value={formData.bankName || ''}
                     onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
                   />
@@ -588,7 +461,7 @@ export default function CreateTimelineModal({
               {/* Capital & TAN */}
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">{t('loanModal.totalDebtLabel') || 'Montante Financiado (€) *'}</label>
+                  <label className="form-label">{t('createTimelineModal.totalDebtLabel')}</label>
                   <input
                     type="number"
                     step="0.01"
@@ -602,14 +475,14 @@ export default function CreateTimelineModal({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">{t('loanModal.tanRateLabel') || 'Taxa de Juro (TAN %)'}</label>
+                  <label className="form-label">{t('createTimelineModal.tanRateLabel')}</label>
                   <input
                     type="number"
                     step="0.001"
                     min="0"
                     max="100"
                     className="form-input"
-                    placeholder="Ex: 3.85"
+                    placeholder="3.85"
                     value={formData.tanRate}
                     onChange={(e) => setFormData({ ...formData, tanRate: e.target.value })}
                   />
@@ -619,28 +492,28 @@ export default function CreateTimelineModal({
               {/* Spread & Imposto do Selo */}
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">{t('loanModal.spreadLabel') || 'Spread (%)'}</label>
+                  <label className="form-label">{t('createTimelineModal.spreadLabel')}</label>
                   <input
                     type="number"
                     step="0.001"
                     min="0"
                     max="100"
                     className="form-input"
-                    placeholder="Ex: 0.85"
+                    placeholder="0.85"
                     value={formData.spread}
                     onChange={(e) => setFormData({ ...formData, spread: e.target.value })}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">{t('loanModal.interestStampTaxRateLabel') || 'Imposto Selo s/ Juros (%)'}</label>
+                  <label className="form-label">{t('createTimelineModal.interestStampTaxRateLabel')}</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     max="100"
                     className="form-input"
-                    placeholder="Ex: 4.00"
+                    placeholder="4.00"
                     value={formData.interestStampTaxRate}
                     onChange={(e) => setFormData({ ...formData, interestStampTaxRate: e.target.value })}
                   />
@@ -649,7 +522,7 @@ export default function CreateTimelineModal({
 
               {/* Dia de Débito (1-31) */}
               <div className="form-group" style={{ position: 'relative', marginBottom: '14px' }}>
-                <label className="form-label">{t('loanModal.dueDayLabel') || 'Dia de Cobrança / Débito'}</label>
+                <label className="form-label">{t('createTimelineModal.dueDayLabel')}</label>
                 <div
                   onClick={() => setIsDueDayPickerOpen(!isDueDayPickerOpen)}
                   style={{
@@ -666,7 +539,7 @@ export default function CreateTimelineModal({
                   }}
                 >
                   <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                    {t('modal.dayLabel', { day: formData.dueDay || 10 }) || `Dia ${formData.dueDay || 10}`}
+                    {t('createTimelineModal.dayLabel', { day: formData.dueDay || 10 })}
                   </span>
                   <ChevronDown
                     size={16}
@@ -687,8 +560,8 @@ export default function CreateTimelineModal({
                       zIndex: 100,
                       marginTop: '6px',
                       width: '280px',
-                      background: 'var(--bg-card, #131722)',
-                      border: '1px solid var(--border-glass-glow, rgba(99, 102, 241, 0.3))',
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border-glass-glow)',
                       borderRadius: '12px',
                       padding: '12px',
                       boxShadow: '0 12px 30px rgba(0,0,0,0.7)'
@@ -711,8 +584,8 @@ export default function CreateTimelineModal({
                               fontWeight: isSelected ? '800' : '600',
                               borderRadius: '6px',
                               border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border-glass)',
-                              background: isSelected ? 'rgba(99, 102, 241, 0.28)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                              color: isSelected ? '#ffffff' : 'var(--text-main)',
+                              background: isSelected ? `${TimelineColor.PRIMARY}47` : 'var(--bg-glass)',
+                              color: isSelected ? TimelineColor.WHITE : 'var(--text-main)',
                               cursor: 'pointer',
                               transition: 'all 0.15s ease'
                             }}
@@ -729,7 +602,7 @@ export default function CreateTimelineModal({
               {/* Start Date & Total Installments */}
               <div className="form-row">
                 <div className="form-group" style={{ position: 'relative' }}>
-                  <label className="form-label">{t('loanModal.startDateLabel') || 'Mês de Início'}</label>
+                  <label className="form-label">{t('createTimelineModal.startDateLabel')}</label>
 
                   <div
                     onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)}
@@ -737,7 +610,7 @@ export default function CreateTimelineModal({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      background: 'var(--bg-glass, rgba(255,255,255,0.03))',
+                      background: 'var(--bg-glass)',
                       border: isMonthPickerOpen ? '2px solid var(--primary)' : '1px solid var(--border-glass)',
                       borderRadius: '8px',
                       padding: '10px 12px',
@@ -749,7 +622,7 @@ export default function CreateTimelineModal({
                     <span style={{ fontSize: '0.9rem', fontWeight: '700', color: formData.startDate ? 'var(--text-main)' : 'var(--text-muted)' }}>
                       {formData.startDate
                         ? format(parseISO(`${formData.startDate}-01`), 'MMMM yyyy', { locale: dateLocale })
-                        : t('modal.startMonth') || 'Selecionar Mês'}
+                        : t('createTimelineModal.startMonthPlaceholder')}
                     </span>
                     <ChevronDown
                       size={16}
@@ -770,8 +643,8 @@ export default function CreateTimelineModal({
                         zIndex: 100,
                         marginTop: '6px',
                         width: '260px',
-                        background: 'var(--bg-card, #131722)',
-                        border: '1px solid var(--border-glass-glow, rgba(99, 102, 241, 0.3))',
+                        background: 'var(--bg-card)',
+                        border: '1px solid var(--border-glass-glow)',
                         borderRadius: '12px',
                         padding: '12px',
                         boxShadow: '0 12px 30px rgba(0,0,0,0.7)'
@@ -815,7 +688,7 @@ export default function CreateTimelineModal({
                                 padding: '8px 4px',
                                 borderRadius: '6px',
                                 border: isSelected ? '1px solid var(--primary)' : '1px solid transparent',
-                                background: isSelected ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255,255,255,0.03)',
+                                background: isSelected ? `${TimelineColor.PRIMARY}40` : 'rgba(255,255,255,0.03)',
                                 color: isSelected ? 'var(--primary-light)' : 'var(--text-main)',
                                 fontWeight: isSelected ? '800' : '600',
                                 fontSize: '0.8rem',
@@ -834,13 +707,13 @@ export default function CreateTimelineModal({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">{t('loanModal.totalInstallmentsLabel') || 'Nº de Prestações'}</label>
+                  <label className="form-label">{t('createTimelineModal.totalInstallmentsLabel')}</label>
                   <input
                     type="number"
                     min="0"
                     max="600"
                     className="form-input"
-                    placeholder={t('loanModal.totalInstallmentsPlaceholder') || 'Ex: 120, 240, 360'}
+                    placeholder={t('createTimelineModal.totalInstallmentsPlaceholder')}
                     value={formData.totalInstallments}
                     onChange={(e) => setFormData({ ...formData, totalInstallments: e.target.value })}
                     disabled={isEditing}
@@ -854,7 +727,7 @@ export default function CreateTimelineModal({
 
           {/* Seletor de Cor */}
           <div className="form-group">
-            <label className="form-label">{t('loanModal.colorLabel') || 'Cor de Destaque'}</label>
+            <label className="form-label">{t('createTimelineModal.colorLabel')}</label>
             <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
               {colors.map((c) => (
                 <div
@@ -866,8 +739,8 @@ export default function CreateTimelineModal({
                     borderRadius: '50%',
                     backgroundColor: c,
                     cursor: 'pointer',
-                    border: formData.color === c ? '3px solid #fff' : '2px solid transparent',
-                    boxShadow: formData.color === c ? '0 0 12px ' + c : 'none',
+                    border: formData.color === c ? `3px solid ${TimelineColor.WHITE}` : '2px solid transparent',
+                    boxShadow: formData.color === c ? `0 0 12px ${c}` : 'none',
                     transition: 'all 0.2s'
                   }}
                 />
@@ -877,11 +750,11 @@ export default function CreateTimelineModal({
 
           {/* Tabela de Simulação de Prestações (Apenas para Empréstimo) */}
           {showSimulation && isLoanType && (
-            <div style={{ marginTop: '20px', marginBottom: '20px', padding: '16px', background: 'var(--bg-glass, rgba(255,255,255,0.02))', borderRadius: '12px', border: '1px solid var(--border-glass-glow)' }}>
+            <div style={{ marginTop: '20px', marginBottom: '20px', padding: '16px', background: 'var(--bg-glass)', borderRadius: '12px', border: '1px solid var(--border-glass-glow)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                 <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--primary-light)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Sparkles size={16} />
-                  <span>{t('loanModal.simulationTitle') || 'Simulação do Plano de Pagamentos'}</span>
+                  <span>{t('createTimelineModal.simulationTitle')}</span>
                 </h4>
                 <button
                   type="button"
@@ -913,34 +786,34 @@ export default function CreateTimelineModal({
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <span style={{ fontSize: '0.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
-                        {t('loanHeader.originalCapital') || 'CAPITAL ORIGINAL'}
+                        {t('createTimelineModal.originalCapital')}
                       </span>
-                      <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#10b981' }}>
+                      <span style={{ fontSize: '1.05rem', fontWeight: '800', color: TimelineColor.SUCCESS }}>
                         {formatCurrency(simCapital)}
                       </span>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <span style={{ fontSize: '0.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
-                        {t('loanHeader.totalEstimatedInterest') || 'JUROS ESTIMADOS'}
+                        {t('createTimelineModal.estimatedInterest')}
                       </span>
-                      <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#f59e0b' }}>
+                      <span style={{ fontSize: '1.05rem', fontWeight: '800', color: TimelineColor.WARNING }}>
                         {formatCurrency(simInterest)}
                       </span>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <span style={{ fontSize: '0.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
-                        {t('loanHeader.totalEstimatedFees') || 'IMPOSTOS ESTIMADOS'}
+                        {t('createTimelineModal.estimatedFees')}
                       </span>
-                      <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#a855f7' }}>
+                      <span style={{ fontSize: '1.05rem', fontWeight: '800', color: TimelineColor.PROJECT }}>
                         {formatCurrency(simFees)}
                       </span>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <span style={{ fontSize: '0.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
-                        {t('loanHeader.totalLoanCost') || 'CUSTO TOTAL'}
+                        {t('createTimelineModal.totalCost')}
                       </span>
                       <span style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--primary-light)' }}>
                         {formatCurrency(simTotalCost)}
@@ -952,14 +825,14 @@ export default function CreateTimelineModal({
 
               <div style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid var(--border-glass)', borderRadius: '8px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
-                  <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-card, #131722)', zIndex: 2 }}>
+                  <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 2 }}>
                     <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)' }}>
-                      <th style={{ padding: '8px 10px' }}>#</th>
-                      <th style={{ padding: '8px 10px' }}>Data</th>
-                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Capital</th>
-                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Juros</th>
-                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Imposto</th>
-                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Prestação</th>
+                      <th style={{ padding: '8px 10px' }}>{t('createTimelineModal.colNumber')}</th>
+                      <th style={{ padding: '8px 10px' }}>{t('createTimelineModal.colDate')}</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>{t('createTimelineModal.colCapital')}</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>{t('createTimelineModal.colInterest')}</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>{t('createTimelineModal.colTax')}</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>{t('createTimelineModal.colInstallment')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -973,9 +846,9 @@ export default function CreateTimelineModal({
                         <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
                           <td style={{ padding: '6px 10px', fontWeight: '700', color: 'var(--text-muted)' }}>{ev.installmentNumber || (i + 1)}</td>
                           <td style={{ padding: '6px 10px', color: 'var(--text-main)' }}>{ev.date}</td>
-                          <td style={{ padding: '6px 10px', textAlign: 'right', color: '#10b981' }}>{formatCurrency(c)}</td>
-                          <td style={{ padding: '6px 10px', textAlign: 'right', color: '#f59e0b' }}>{formatCurrency(j)}</td>
-                          <td style={{ padding: '6px 10px', textAlign: 'right', color: '#a855f7' }}>{formatCurrency(f)}</td>
+                          <td style={{ padding: '6px 10px', textAlign: 'right', color: TimelineColor.SUCCESS }}>{formatCurrency(c)}</td>
+                          <td style={{ padding: '6px 10px', textAlign: 'right', color: TimelineColor.WARNING }}>{formatCurrency(j)}</td>
+                          <td style={{ padding: '6px 10px', textAlign: 'right', color: TimelineColor.PROJECT }}>{formatCurrency(f)}</td>
                           <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: '800', color: 'var(--primary-light)' }}>
                             {formatCurrency(totalPmt)}
                           </td>
@@ -991,7 +864,7 @@ export default function CreateTimelineModal({
           {/* Botões de Ação */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px' }}>
             <button type="button" className="btn btn-secondary" onClick={onClose}>
-              {t('buttons.cancel') || 'Cancelar'}
+              {t('buttons.cancel')}
             </button>
 
             {isLoanType && (
@@ -1008,14 +881,14 @@ export default function CreateTimelineModal({
                 }}
               >
                 <Sparkles size={16} />
-                {t('loanModal.simulateButton') || 'Simular'}
+                {t('createTimelineModal.simulateButton')}
               </button>
             )}
 
             <button type="submit" className="btn btn-primary">
               {isEditing
-                ? (t('loanModal.saveButton') || 'Guardar Alterações')
-                : (t('loanModal.createButton') || 'Criar Timeline')}
+                ? t('createTimelineModal.saveButton')
+                : t('createTimelineModal.createButton')}
             </button>
           </div>
         </form>

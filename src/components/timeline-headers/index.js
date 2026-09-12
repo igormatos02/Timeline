@@ -6,4 +6,5 @@ export { default as LoanTimelineHeader } from './LoanTimelineHeader.jsx';
 export { default as ReminderTimelineHeader } from './ReminderTimelineHeader.jsx';
 export { default as DiaryTimelineHeader } from './DiaryTimelineHeader.jsx';
 export { default as ProjectTimelineHeader } from './ProjectTimelineHeader.jsx';
+export { default as TodoTimelineHeader } from './TodoTimelineHeader.jsx';
 export { default as DefaultTimelineHeader } from './DefaultTimelineHeader.jsx';

@@ -56,10 +56,7 @@ export class LoanDomainService {
   ) {
     const isInactive =
       loanTimeline &&
-      (
-        loanTimeline.status === TimelineStatus.INACTIVE ||
-        loanTimeline.status === 'inactive'
-      );
+      loanTimeline.status === TimelineStatus.INACTIVE;
 
     const activeMonth =
       currentMonthKey ||
@@ -244,8 +241,7 @@ export class LoanDomainService {
 
         const isReduceInstallment =
           strategy === AmortizationStrategy.REDUCE_INSTALLMENT ||
-          strategy === AmortizationEventCategory.REDUCE_INSTALLMENT ||
-          strategy === 'reduce_installment';
+          strategy === AmortizationEventCategory.REDUCE_INSTALLMENT;
 
         const openList = processedEvents.filter(
           (ev) => !isPositiveStatus(ev.status) && !ev.isCompleted && !ev.isAbated

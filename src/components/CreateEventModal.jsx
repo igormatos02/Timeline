@@ -8,6 +8,7 @@ import {
   BalanceEventModal,
   ReminderEventModal,
   DiaryEventModal,
+  TodoEventModal,
   DefaultEventModal
 } from './event-modals/index.js';
 
@@ -24,6 +25,10 @@ export default function CreateEventModal(props) {
 
   if (initialData?.eventType === EventType.REGISTER || normalizedType === TimelineType.DIARY) {
     return <DiaryEventModal {...props} />;
+  }
+
+  if (initialData?.eventType === EventType.TODO || normalizedType === TimelineType.TODO) {
+    return <TodoEventModal {...props} />;
   }
 
   switch (normalizedType) {
@@ -47,6 +52,9 @@ export default function CreateEventModal(props) {
 
     case TimelineType.DIARY:
       return <DiaryEventModal {...props} />;
+
+    case TimelineType.TODO:
+      return <TodoEventModal {...props} />;
 
     default:
       return <DefaultEventModal {...props} />;

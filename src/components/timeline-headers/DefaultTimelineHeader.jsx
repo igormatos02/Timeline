@@ -5,6 +5,8 @@ import {
   Trash2,
   Settings
 } from 'lucide-react';
+import { TimelineColor } from '../../enums/index.js';
+import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 
@@ -16,11 +18,12 @@ export default function DefaultTimelineHeader({
   onDelete,
   onAddEvent
 }) {
+  const { t } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
 
   if (!timeline) return null;
 
-  const headerColor = timeline.color || '#6366f1';
+  const headerColor = timeline.color || TimelineColor.PRIMARY;
 
   return (
     <HeaderShell
@@ -55,7 +58,7 @@ export default function DefaultTimelineHeader({
               }}
             >
               <Plus size={14} />
-              <span>Novo Evento</span>
+              <span>{t('buttons.addEvent')}</span>
             </button>
           )}
 
@@ -63,7 +66,7 @@ export default function DefaultTimelineHeader({
             <button
               type="button"
               onClick={onEdit}
-              title="Timeline Settings"
+              title={t('timeline.editTimeline')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -85,7 +88,7 @@ export default function DefaultTimelineHeader({
             <button
               type="button"
               className="btn btn-outline-danger btn-sm"
-              onClick={onDelete}
+              onClick={() => onDelete && onDelete(timeline)}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -96,7 +99,7 @@ export default function DefaultTimelineHeader({
               }}
             >
               <Trash2 size={13} />
-              <span>Excluir</span>
+              <span>{t('buttons.delete')}</span>
             </button>
           )}
         </div>
@@ -104,3 +107,4 @@ export default function DefaultTimelineHeader({
     />
   );
 }
+

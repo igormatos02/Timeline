@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, Settings, Trash2 } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { TimelineStatus } from '../enums/index.js';
+import { TimelineStatus, TimelineColor, TIMELINE_COLOR_PRESETS } from '../enums/index.js';
 
 export default function EditTimelineSettingsModal({
   isOpen,
@@ -15,7 +15,7 @@ export default function EditTimelineSettingsModal({
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    color: '#6366f1',
+    color: TimelineColor.PRIMARY,
     status: TimelineStatus.ACTIVE
   });
 
@@ -25,7 +25,7 @@ export default function EditTimelineSettingsModal({
       setFormData({
         name: initialData.name || '',
         description: initialData.description || '',
-        color: initialData.color || '#6366f1',
+        color: initialData.color || TimelineColor.PRIMARY,
         status: initialData.status === TimelineStatus.INACTIVE ? TimelineStatus.INACTIVE : TimelineStatus.ACTIVE
       });
     }
@@ -62,15 +62,7 @@ export default function EditTimelineSettingsModal({
     }
   };
 
-  const colors = [
-    '#6366f1', // Indigo
-    '#0ea5e9', // Sky Blue
-    '#10b981', // Emerald
-    '#f43f5e', // Rose
-    '#f59e0b', // Amber
-    '#a855f7', // Purple
-    '#06b6d4'  // Cyan
-  ];
+  const colors = TIMELINE_COLOR_PRESETS;
 
   return (
     <div
@@ -100,10 +92,10 @@ export default function EditTimelineSettingsModal({
           width: '100%',
           maxHeight: '90vh',
           overflowY: 'auto',
-          background: 'var(--bg-card, #131722)',
+          background: 'var(--bg-card)',
           borderRadius: '16px',
-          border: '1px solid rgba(99, 102, 241, 0.35)',
-          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(99, 102, 241, 0.15)',
+          border: '1px solid var(--border-glass)',
+          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.85)',
           padding: '24px',
           boxSizing: 'border-box'
         }}
@@ -111,15 +103,15 @@ export default function EditTimelineSettingsModal({
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#6366f1', padding: '8px', borderRadius: '10px', display: 'flex' }}>
+            <div style={{ background: `${formData.color || TimelineColor.PRIMARY}26`, color: formData.color || TimelineColor.PRIMARY, padding: '8px', borderRadius: '10px', display: 'flex' }}>
               <Settings size={20} />
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                Timeline Settings
+                {t('editTimelineSettingsModal.title')}
               </h3>
-              <div style={{ fontSize: '0.76rem', color: '#6366f1', fontWeight: '700' }}>
-                Editar nome e descrição da timeline
+              <div style={{ fontSize: '0.76rem', color: formData.color || TimelineColor.PRIMARY, fontWeight: '700' }}>
+                {t('editTimelineSettingsModal.subtitle')}
               </div>
             </div>
           </div>
@@ -138,7 +130,7 @@ export default function EditTimelineSettingsModal({
           {/* Timeline Name */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
-              Nome da Timeline
+              {t('editTimelineSettingsModal.nameLabel')}
             </label>
             <input
               type="text"
@@ -146,7 +138,7 @@ export default function EditTimelineSettingsModal({
                 width: '100%',
                 padding: '12px 14px',
                 background: 'rgba(0, 0, 0, 0.25)',
-                border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
+                border: '1px solid var(--border-glass)',
                 borderRadius: '10px',
                 color: 'var(--text-main)',
                 fontSize: '0.95rem',
@@ -154,7 +146,7 @@ export default function EditTimelineSettingsModal({
                 outline: 'none',
                 boxSizing: 'border-box'
               }}
-              placeholder="Ex: Entradas e Rendimentos"
+              placeholder={t('editTimelineSettingsModal.namePlaceholder')}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -165,7 +157,7 @@ export default function EditTimelineSettingsModal({
           {/* Description */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
-              Descrição
+              {t('editTimelineSettingsModal.descriptionLabel')}
             </label>
             <textarea
               rows={3}
@@ -173,7 +165,7 @@ export default function EditTimelineSettingsModal({
                 width: '100%',
                 padding: '12px 14px',
                 background: 'rgba(0, 0, 0, 0.25)',
-                border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
+                border: '1px solid var(--border-glass)',
                 borderRadius: '10px',
                 color: 'var(--text-main)',
                 fontSize: '0.9rem',
@@ -181,7 +173,7 @@ export default function EditTimelineSettingsModal({
                 boxSizing: 'border-box',
                 resize: 'none'
               }}
-              placeholder="Descreva o propósito desta timeline..."
+              placeholder={t('editTimelineSettingsModal.descriptionPlaceholder')}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
@@ -190,7 +182,7 @@ export default function EditTimelineSettingsModal({
           {/* Color Accent */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
-              Cor de Destaque
+              {t('editTimelineSettingsModal.colorLabel')}
             </label>
             <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
               {colors.map((c) => (
@@ -203,8 +195,8 @@ export default function EditTimelineSettingsModal({
                     borderRadius: '50%',
                     backgroundColor: c,
                     cursor: 'pointer',
-                    border: formData.color === c ? '3px solid #fff' : '2px solid transparent',
-                    boxShadow: formData.color === c ? '0 0 12px ' + c : 'none',
+                    border: formData.color === c ? `3px solid ${TimelineColor.WHITE}` : '2px solid transparent',
+                    boxShadow: formData.color === c ? `0 0 12px ${c}` : 'none',
                     transition: 'all 0.2s'
                   }}
                 />
@@ -221,9 +213,9 @@ export default function EditTimelineSettingsModal({
                 style={{
                   padding: '12px 14px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(244, 63, 94, 0.35)',
-                  background: 'rgba(244, 63, 94, 0.12)',
-                  color: '#f43f5e',
+                  border: `1px solid ${TimelineColor.DANGER}55`,
+                  background: `${TimelineColor.DANGER}1f`,
+                  color: TimelineColor.DANGER,
                   fontWeight: '700',
                   cursor: 'pointer',
                   fontSize: '0.86rem',
@@ -231,25 +223,21 @@ export default function EditTimelineSettingsModal({
                   alignItems: 'center',
                   gap: '6px'
                 }}
-                title="Eliminar esta Timeline"
+                title={t('editTimelineSettingsModal.deleteTitle')}
               >
                 <Trash2 size={15} />
-                <span>{t('buttons.delete') || 'Excluir'}</span>
+                <span>{t('buttons.delete')}</span>
               </button>
             )}
 
             <button
               type="button"
+              className="btn btn-secondary"
               onClick={onClose}
               style={{
                 flex: 1,
                 padding: '12px',
-                borderRadius: '10px',
-                border: '1px solid var(--border-glass)',
-                background: 'transparent',
-                color: 'var(--text-main)',
-                fontWeight: '700',
-                cursor: 'pointer'
+                borderRadius: '10px'
               }}
             >
               {t('buttons.cancel')}
@@ -257,24 +245,19 @@ export default function EditTimelineSettingsModal({
 
             <button
               type="submit"
+              className="btn btn-primary"
               style={{
                 flex: 2,
                 padding: '12px',
                 borderRadius: '10px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-                color: '#fff',
-                fontWeight: '700',
-                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)'
+                gap: '8px'
               }}
             >
               <Sparkles size={16} />
-              <span>{t('buttons.save') || 'Salvar'}</span>
+              <span>{t('buttons.save')}</span>
             </button>
           </div>
         </form>

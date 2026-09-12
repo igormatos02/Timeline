@@ -15,7 +15,14 @@ import {
   Tag
 } from 'lucide-react';
 import { format, parseISO, isAfter, isBefore, addDays, startOfDay } from 'date-fns';
-import { ReminderEventCategory, ReminderEventStatus, EventStatus, isPositiveStatus, isCancelledStatus } from '../../enums/index.js';
+import {
+  TimelineColor,
+  ReminderEventCategory,
+  ReminderEventStatus,
+  EventStatus,
+  isPositiveStatus,
+  isCancelledStatus
+} from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
@@ -24,11 +31,11 @@ import BarChart7Months from '../ui/BarChart7Months.jsx';
 import { computeMonthDiff } from '../../utils/timelineCharts.js';
 
 export const REMINDER_CATEGORY_COLORS = {
-  [ReminderEventCategory.BIRTHDAY]: '#ec4899', // Pink / Rose
-  [ReminderEventCategory.MAINTENANCE]: '#f97316', // Orange
-  [ReminderEventCategory.RANDOM_EVENT]: '#06b6d4', // Cyan
-  [ReminderEventCategory.APPOINTMENT]: '#6366f1', // Indigo
-  [ReminderEventCategory.OTHER]: '#94a3b8' // Slate
+  [ReminderEventCategory.BIRTHDAY]: TimelineColor.PINK,
+  [ReminderEventCategory.MAINTENANCE]: TimelineColor.WARNING,
+  [ReminderEventCategory.RANDOM_EVENT]: TimelineColor.CYAN,
+  [ReminderEventCategory.APPOINTMENT]: TimelineColor.LOAN,
+  [ReminderEventCategory.OTHER]: TimelineColor.SLATE
 };
 
 export const REMINDER_CATEGORY_ICONS = {
@@ -53,7 +60,7 @@ export default function ReminderTimelineHeader({
 
   if (!timeline) return null;
 
-  const headerColor = timeline.color || '#f59e0b'; // Âmbar padrão para Lembretes
+  const headerColor = timeline.color || TimelineColor.REMINDER;
   const rawEventsList = timeline.events || events || [];
   const eventsList = rawEventsList.filter((ev) => {
     if (!ev || !ev.date || ev.isDeleted) return false;
@@ -101,7 +108,7 @@ export default function ReminderTimelineHeader({
       amount: count,
       count,
       percent: totalActiveReminders > 0 ? Math.round((count / totalActiveReminders) * 100) : 0,
-      color: REMINDER_CATEGORY_COLORS[cat] || '#94a3b8'
+      color: REMINDER_CATEGORY_COLORS[cat] || TimelineColor.SLATE
     }))
     .sort((a, b) => b.count - a.count);
 
@@ -273,8 +280,8 @@ export default function ReminderTimelineHeader({
             <button
               type="button"
               className="btn btn-outline-danger btn-sm"
-              onClick={onDelete}
-              title={t('reminderHeader.deleteTitle') || 'Excluir esta timeline'}
+              onClick={() => onDelete && onDelete(timeline)}
+              title={t('reminderHeader.deleteTitle')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -335,7 +342,7 @@ export default function ReminderTimelineHeader({
                         width: '42px',
                         height: '42px',
                         borderRadius: '50%',
-                        background: 'var(--bg-card, #0f172a)',
+                        background: 'var(--bg-card)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -395,7 +402,7 @@ export default function ReminderTimelineHeader({
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
                 <DonutChart
                   percent={seenPercent}
-                  sliceColor="#10b981"
+                  sliceColor={TimelineColor.SUCCESS}
                   remainingColor="rgba(245, 158, 11, 0.25)"
                   title={t('reminderHeader.seenRatioTitleDonut', { percent: seenPercent })}
                   label={`${seenPercent}%`}
@@ -404,11 +411,11 @@ export default function ReminderTimelineHeader({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                   <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ color: 'var(--text-muted)' }}>{t('reminderHeader.seenLabel')}</span>
-                    <strong style={{ color: '#10b981', fontSize: '0.9rem' }}>{totalSeenClosed}</strong>
+                    <strong style={{ color: TimelineColor.SUCCESS, fontSize: '0.9rem' }}>{totalSeenClosed}</strong>
                   </div>
                   <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ color: 'var(--text-muted)' }}>{t('reminderHeader.unseenLabel')}</span>
-                    <strong style={{ color: '#f59e0b', fontSize: '0.9rem' }}>{totalUnseenOpen}</strong>
+                    <strong style={{ color: TimelineColor.WARNING, fontSize: '0.9rem' }}>{totalUnseenOpen}</strong>
                   </div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '2px' }}>
                     {t('reminderHeader.seenPercentage', { percent: seenPercent })}
@@ -444,7 +451,7 @@ export default function ReminderTimelineHeader({
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
                 <DonutChart
                   percent={next30DaysCompletionPercent}
-                  sliceColor="#06b6d4"
+                  sliceColor={TimelineColor.CYAN}
                   remainingColor="rgba(6, 182, 212, 0.15)"
                   title={t('reminderHeader.next30DaysTitleDonut', { count: next30DaysTotal })}
                   label={`${next30DaysTotal}`}
@@ -455,7 +462,7 @@ export default function ReminderTimelineHeader({
                   <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
                     {t('reminderHeader.next30DaysDesc')}
                   </div>
-                  <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#06b6d4' }}>
+                  <div style={{ fontSize: '1.05rem', fontWeight: '800', color: TimelineColor.CYAN }}>
                     {next30DaysTotal === 1
                       ? t('reminderHeader.remindersCountOne', { count: next30DaysTotal })
                       : t('reminderHeader.remindersCountOther', { count: next30DaysTotal })}
@@ -502,15 +509,15 @@ export default function ReminderTimelineHeader({
                 monthVsPrevLabel={t('reminderHeader.monthVsPrevMonth')}
                 diffPercentStr={diffPercentStr}
                 isGoodChange={isDiffPositive}
-                goodColor="#f59e0b"
+                goodColor={TimelineColor.WARNING}
                 sparklesLabel={t('reminderHeader.annualProjectionLabel')}
                 projection={annualTotalReminders}
-                sparklesColor="#f59e0b"
-                projectionColor="#f59e0b"
-                currentGradient="linear-gradient(180deg, #f59e0b 0%, #d97706 100%)"
+                sparklesColor={TimelineColor.WARNING}
+                projectionColor={TimelineColor.WARNING}
+                currentGradient="linear-gradient(180deg, rgba(245, 158, 11, 1) 0%, rgba(217, 119, 6, 1) 100%)"
                 mutedGradientTop="rgba(245, 158, 11, 0.6)"
                 mutedGradientBottom="rgba(245, 158, 11, 0.25)"
-                currentTextColor="#f59e0b"
+                currentTextColor={TimelineColor.WARNING}
                 formatValue={(val) => String(val)}
                 formatProjection={(val) => (
                   val === 1

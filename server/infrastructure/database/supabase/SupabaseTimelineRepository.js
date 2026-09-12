@@ -12,6 +12,8 @@ const TABLE = 'timelines';
 // Maps database row (snake_case) to Domain Entity (camelCase)
 function rowToEntity(row) {
   if (!row) return null;
+  const isSystemDefault = Boolean(row.is_system_default);
+  const canDelete = isSystemDefault ? false : (row.can_delete !== null && row.can_delete !== undefined ? Boolean(row.can_delete) : true);
   return new Timeline({
     id: row.id,
     timeboardId: row.timeboard_id,
@@ -19,8 +21,8 @@ function rowToEntity(row) {
     type: row.type,
     color: row.color,
     description: row.description,
-    isSystemDefault: row.is_system_default,
-    canDelete: row.can_delete,
+    isSystemDefault,
+    canDelete,
     startDate: row.start_date,
     endDate: row.end_date,
     status: row.status,

@@ -25,7 +25,7 @@ import {
 import { formatCurrency } from './utils/formatCurrency';
 import { generateUUID } from './utils/uuid.js';
 import * as api from './services/api';
-import { EventType, EventStatus, TimelineType, TimelineStatus, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity } from './enums/index.js';
+import { EventType, EventStatus, TimelineType, TimelineStatus, TimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
@@ -353,7 +353,7 @@ export default function App() {
   // Loan Specific Modals
   const [isAmortizationModalOpen, setIsAmortizationModalOpen] = useState(false);
   const [editingAmortization, setEditingAmortization] = useState(null);
-  const [amortizationDefaultDate, setAmortizationDefaultDate] = useState('2026-08-21');
+  const [amortizationDefaultDate, setAmortizationDefaultDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [editingInstallment, setEditingInstallment] = useState(null);
 
   const handleOpenAmortizationModal = useCallback((dateStr, eventObj = null) => {
@@ -428,9 +428,7 @@ export default function App() {
       [TimelineType.PROJECT]: 5,
       [TimelineType.REMINDER]: 6,
       [TimelineType.DIARY]: 7,
-      project: 5,
-      reminder: 6,
-      diary: 7
+      [TimelineType.TODO]: 8
     };
 
     return [...filtered].sort((a, b) => {
@@ -547,10 +545,10 @@ export default function App() {
             formData.interestStampTaxRate !== undefined && formData.interestStampTaxRate !== ''
               ? formData.interestStampTaxRate
               : (formData.installmentStampTax !== undefined && formData.installmentStampTax !== ''
-                  ? formData.installmentStampTax
-                  : (formData.taxaImpostoSeloJuros !== undefined ? formData.taxaImpostoSeloJuros : 0))
+                ? formData.installmentStampTax
+                : (formData.taxaImpostoSeloJuros !== undefined ? formData.taxaImpostoSeloJuros : 0))
           ) || 0;
-          
+
           // 1. Obter contrato existente e atualizar
           let existingContract = null;
           try {
@@ -609,7 +607,7 @@ export default function App() {
               existingEvents = freshEvents;
             }
           } catch (e) { }
-          
+
           if (newScheduleEvents.length > 0) {
             const payloadsToSave = [];
             for (let i = 0; i < newScheduleEvents.length; i++) {
@@ -741,8 +739,8 @@ export default function App() {
           formData.interestStampTaxRate !== undefined && formData.interestStampTaxRate !== ''
             ? formData.interestStampTaxRate
             : (formData.installmentStampTax !== undefined && formData.installmentStampTax !== ''
-                ? formData.installmentStampTax
-                : (formData.taxaImpostoSeloJuros !== undefined ? formData.taxaImpostoSeloJuros : 0))
+              ? formData.installmentStampTax
+              : (formData.taxaImpostoSeloJuros !== undefined ? formData.taxaImpostoSeloJuros : 0))
         ) || 0;
 
         if (isLoan) {
@@ -766,20 +764,20 @@ export default function App() {
           const installmentEvents = (Array.isArray(formData.events) && formData.events.length > 0)
             ? formData.events
             : (parsedTotalDebt > 0 ? generateLoanInstallments({
-                totalDebt: parsedTotalDebt,
-                totalAmountFinanced: parsedTotalDebt,
-                monthlyInstallment: 0, // PMT formula
-                totalInstallments: parsedTotalInstallments,
-                numberOfInstallments: parsedTotalInstallments,
-                tanRate: Number(formData.tanRate) || 0,
-                spread: Number(formData.spread) || 0,
-                taxaImpostoSeloJuros: parsedStampTax,
-                interestStampTaxRate: parsedStampTax,
-                startDate: fullStartDateStr,
-                debtStartDate: fullStartDateStr,
-                dueDay: dueDayNum,
-                periodicity: formData.periodicity || formData.aggregation || EventPeriodicity.MONTHLY
-              }) : []);
+              totalDebt: parsedTotalDebt,
+              totalAmountFinanced: parsedTotalDebt,
+              monthlyInstallment: 0, // PMT formula
+              totalInstallments: parsedTotalInstallments,
+              numberOfInstallments: parsedTotalInstallments,
+              tanRate: Number(formData.tanRate) || 0,
+              spread: Number(formData.spread) || 0,
+              taxaImpostoSeloJuros: parsedStampTax,
+              interestStampTaxRate: parsedStampTax,
+              startDate: fullStartDateStr,
+              debtStartDate: fullStartDateStr,
+              dueDay: dueDayNum,
+              periodicity: formData.periodicity || formData.aggregation || EventPeriodicity.MONTHLY
+            }) : []);
 
           if (installmentEvents.length > 0) {
             const BATCH_SIZE = 10;
@@ -829,30 +827,54 @@ export default function App() {
     }
   };
 
-  const handleRequestDeleteTimeline = (timelineOrId) => {
-    let target = timelineOrId;
+  const handleRequestDeleteTimeline = useCallback((timelineOrId) => {
+    let target = null;
     if (typeof timelineOrId === 'string') {
-      target = timelines.find((tl) => tl.id === timelineOrId) || activeTimeline;
+      target = timelines.find((tl) => tl.id === timelineOrId);
+    } else if (
+      timelineOrId &&
+      typeof timelineOrId === 'object' &&
+      timelineOrId.id &&
+      typeof timelineOrId.id === 'string' &&
+      !timelineOrId.nativeEvent &&
+      !timelineOrId._reactName
+    ) {
+      target = timelineOrId;
     }
     setDeletingTimeline(target || activeTimeline);
-  };
+  }, [timelines, activeTimeline]);
 
   const handleConfirmDeleteTimeline = async (timelineId) => {
-    const targetId = typeof timelineId === 'object' ? timelineId.id : timelineId;
+    let targetId = null;
+    if (typeof timelineId === 'string') {
+      targetId = timelineId;
+    } else if (timelineId && typeof timelineId === 'object' && timelineId.id) {
+      targetId = timelineId.id;
+    }
+    if (!targetId && deletingTimeline && deletingTimeline.id) {
+      targetId = deletingTimeline.id;
+    }
+    if (!targetId && activeTimeline && activeTimeline.id) {
+      targetId = activeTimeline.id;
+    }
     if (!targetId) return;
 
     try {
-      const filtered = timelines.filter((tl) => tl.id !== targetId);
-      setTimelines(filtered);
-      if (filtered.length > 0) {
-        setActiveTimelineId(filtered[0].id);
-      }
-      setRawEvents((prev) => prev.filter((ev) => ev.timelineId !== targetId && ev.timelineOriginId !== targetId));
       await api.deleteTimeline(targetId);
+      setTimelines((prev) => {
+        const filtered = prev.filter((tl) => tl.id !== targetId);
+        if (activeTimelineId === targetId && filtered.length > 0) {
+          setActiveTimelineId(filtered[0].id);
+        }
+        return filtered;
+      });
+      setRawEvents((prev) => prev.filter((ev) => ev.timelineId !== targetId && ev.timelineOriginId !== targetId));
+      await refreshTimelines();
       showToast(t('toast.timelineDeletedSuccess') || 'Linha de tempo eliminada com sucesso!', 'success');
     } catch (err) {
       console.error('Error deleting timeline:', err);
-      showToast(t('toast.timelineDeleteError') || 'Erro ao eliminar linha de tempo.', 'error');
+      showToast(err.message || t('toast.timelineDeleteError') || 'Erro ao eliminar linha de tempo.', 'error');
+      await refreshTimelines();
     } finally {
       setDeletingTimeline(null);
     }
@@ -863,7 +885,7 @@ export default function App() {
   // ----------------------------------------------------
   const focusedMonthRef = React.useRef(null);
 
-  const handleOpenCreateEvent = useCallback((dateStr = '2026-08-21', nature = 'income') => {
+  const handleOpenCreateEvent = useCallback((dateStr = format(new Date(), 'yyyy-MM-dd'), nature = 'income') => {
     focusedMonthRef.current = dateStr ? dateStr.substring(0, 7) : null;
     scrollYBeforeModalRef.current = window.scrollY;
     setEditingEvent(null);
@@ -914,7 +936,7 @@ export default function App() {
           };
           await api.updateEvent(editingEvent.id, updated);
           await refreshTimelines();
-          showToast(t('toast.eventUpdatedSuccess') || 'Evento atualizado com sucesso na base de dados!', 'success');
+          showToast(t('toast.eventUpdatedSuccess'), 'success');
         } else {
           const normRec = normalizeRecurrence(eventData);
           const isRecurring = normRec === EventRecurrence.RECURRING || normRec === EventRecurrence.LIMITED;
@@ -932,13 +954,14 @@ export default function App() {
           };
           await api.createEvent(newEvent);
           await refreshTimelines();
-          showToast(t('toast.eventCreatedSuccess') || 'Evento adicionado com sucesso na base de dados!', 'success');
+          showToast(t('toast.eventCreatedSuccess'), 'success');
         }
 
         const monthKey = eventData.date ? eventData.date.substring(0, 7) : focusedMonthRef.current;
+        const currentMonthKey = format(new Date(), 'yyyy-MM');
         const scrollToMonthNode = () => {
           if (monthKey) {
-            const targetNode = document.querySelector(`[data-month-key="${monthKey}"]`) || (monthKey === '2026-08' ? document.getElementById('timeline-node-today') : null);
+            const targetNode = document.querySelector(`[data-month-key="${monthKey}"]`) || (monthKey === currentMonthKey ? document.getElementById('timeline-node-today') : null);
             if (targetNode) {
               const navbar = document.querySelector('.app-header') || document.querySelector('header');
               const stickyDock = document.querySelector('.sticky-header-dock');
@@ -1093,13 +1116,14 @@ export default function App() {
         });
         setRawEvents((prev) => prev.filter((ev) => String(ev.id) !== String(eventId)));
         const monthKey = targetEvent?.date ? targetEvent.date.substring(0, 7) : focusedMonthRef.current;
+        const currentMonthKey = format(new Date(), 'yyyy-MM');
         const savedScrollPos = scrollYBeforeModalRef.current || window.scrollY;
-        showToast(t('toast.eventDeletedSuccess') || 'Evento eliminado da base de dados!', 'success');
+        showToast(t('toast.eventDeletedSuccess'), 'success');
         await refreshTimelines();
 
         const scrollToMonthNode = () => {
           if (monthKey) {
-            const targetNode = document.querySelector(`[data-month-key="${monthKey}"]`) || (monthKey === '2026-08' ? document.getElementById('timeline-node-today') : null);
+            const targetNode = document.querySelector(`[data-month-key="${monthKey}"]`) || (monthKey === currentMonthKey ? document.getElementById('timeline-node-today') : null);
             if (targetNode) {
               const navbar = document.querySelector('.app-header') || document.querySelector('header');
               const stickyDock = document.querySelector('.sticky-header-dock');
@@ -1123,7 +1147,7 @@ export default function App() {
         });
       } catch (err) {
         console.error('Error deleting event:', err);
-        showToast(t('toast.eventDeleteError') || 'Erro ao eliminar evento da base de dados.', 'error');
+        showToast(t('toast.eventDeleteError'), 'error');
       }
     };
 
@@ -1212,8 +1236,8 @@ export default function App() {
         return {
           ...ev,
           isCompleted: true,
-          status: 'Concluído',
-          date: '2026-08-21' // Fix to completion date (today)
+          status: EventStatus.COMPLETED,
+          date: format(new Date(), 'yyyy-MM-dd')
         };
       }
       return ev;
@@ -1271,8 +1295,9 @@ export default function App() {
       const isInvestment = ev.eventType === EventType.INVESTMENT;
       const isAmortization = ev.eventType === EventType.AMORTIZATION;
       const isReminder = ev.eventType === EventType.REMINDER || ev.timelineType === TimelineType.REMINDER || ev.timeline_type === TimelineType.REMINDER;
+      const isTodo = ev.eventType === EventType.TODO || ev.timelineType === TimelineType.TODO || ev.timeline_type === TimelineType.TODO;
 
-      const isCurrCancelled = ev.status === EventStatus.CANCELLED || ev.status === 'cancelled' || ev.status === 'cancelado';
+      const isCurrCancelled = ev.status === EventStatus.CANCELLED;
       const isCurrPositive = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
 
       if (isCurrCancelled) {
@@ -1284,13 +1309,14 @@ export default function App() {
 
       if (isCurrPositive) {
         return {
-          nextStatus: EventStatus.CANCELLED,
+          nextStatus: isTodo ? EventStatus.PENDING : EventStatus.CANCELLED,
           nextCompleted: false
         };
       }
 
       let positiveStatus = EventStatus.PAID;
       if (isReminder) positiveStatus = EventStatus.CLOSED;
+      else if (isTodo) positiveStatus = EventStatus.COMPLETED;
       else if (isIncome) positiveStatus = EventStatus.RECEIVED;
       else if (isInvestment) positiveStatus = EventStatus.INVESTED;
       else if (isAmortization) positiveStatus = EventStatus.AMORTIZED;
@@ -1483,8 +1509,8 @@ export default function App() {
 
     if (!targetTimeline) return;
 
-    const loanName = targetTimeline.name || 'Empréstimo';
-    const targetDate = date || '2026-08-15';
+    const loanName = targetTimeline.name || '';
+    const targetDate = date || format(new Date(), 'yyyy-MM-dd');
     const isCompleted = status === EventStatus.AMORTIZED || status === EventStatus.PAID;
 
     const amortEvent = {
@@ -1494,7 +1520,7 @@ export default function App() {
       timelineId: targetTimeline.id,
       timelineOriginId: targetTimeline.id,
       timelineOriginName: loanName,
-      timelineOriginColor: targetTimeline.color || '#10b981',
+      timelineOriginColor: targetTimeline.color || TimelineColor.PRIMARY,
       description:
         notes ||
         (strategy === AmortizationStrategy.REDUCE_TERM
@@ -1555,7 +1581,7 @@ export default function App() {
     }
   };
 
-  const loanMetrics = isLoanTimelineType(activeTimeline?.type)
+  const loanMetrics = activeTimeline && isLoanTimelineType(activeTimeline.type)
     ? getLoanMetrics(activeTimeline, activeTimeline.events || [])
     : null;
 
@@ -1972,7 +1998,7 @@ export default function App() {
                     height: '36px',
                     borderRadius: '8px',
                     background: 'rgba(245, 158, 11, 0.15)',
-                    color: '#f59e0b',
+                    color: TimelineColor.WARNING,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -2008,7 +2034,7 @@ export default function App() {
                   background: 'rgba(239, 68, 68, 0.08)',
                   border: '1px solid rgba(239, 68, 68, 0.25)',
                   fontSize: '0.82rem',
-                  color: '#f87171'
+                  color: TimelineColor.DANGER
                 }}
               >
                 ⚠️ Esta ação limpará todos os eventos registados e não pode ser revertida.
@@ -2028,8 +2054,8 @@ export default function App() {
                 className="btn btn-primary"
                 onClick={handleConfirmResetTimeline}
                 style={{
-                  background: '#f59e0b',
-                  borderColor: '#f59e0b',
+                  background: TimelineColor.WARNING,
+                  borderColor: TimelineColor.WARNING,
                   boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
                   fontWeight: '700',
                   display: 'flex',
@@ -2059,7 +2085,7 @@ export default function App() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: '18px',
-            color: '#fff'
+            color: TimelineColor.WHITE
           }}
         >
           <div
@@ -2067,7 +2093,7 @@ export default function App() {
               width: '48px',
               height: '48px',
               border: '3px solid rgba(99, 102, 241, 0.2)',
-              borderTopColor: '#6366f1',
+              borderTopColor: TimelineColor.PRIMARY,
               borderRadius: '50%',
               animation: 'spin 0.8s linear infinite'
             }}
@@ -2079,10 +2105,10 @@ export default function App() {
             }
           `}</style>
           <div style={{ textAlign: 'center' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 4px 0', color: '#f8fafc' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 4px 0', color: 'var(--text-main)' }}>
               System Loading...
             </h3>
-            <p style={{ fontSize: '0.84rem', color: '#94a3b8', margin: 0 }}>
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', margin: 0 }}>
               Sincronizando eventos e status do mês corrente
             </p>
           </div>
@@ -2103,7 +2129,7 @@ export default function App() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: '16px',
-            color: '#fff'
+            color: TimelineColor.WHITE
           }}
         >
           <div
@@ -2111,16 +2137,16 @@ export default function App() {
               width: '52px',
               height: '52px',
               border: '4px solid rgba(99, 102, 241, 0.25)',
-              borderTopColor: '#6366f1',
+              borderTopColor: TimelineColor.PRIMARY,
               borderRadius: '50%',
               animation: 'spin 0.75s linear infinite'
             }}
           />
           <div style={{ textAlign: 'center' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '700', margin: '0 0 6px 0', color: '#f8fafc' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: '700', margin: '0 0 6px 0', color: 'var(--text-main)' }}>
               Atualizando Prestações...
             </h3>
-            <p style={{ fontSize: '0.88rem', color: '#cbd5e1', margin: 0 }}>
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', margin: 0 }}>
               Por favor aguarde, a sincronizar o novo plano de amortização e impostos.
             </p>
           </div>

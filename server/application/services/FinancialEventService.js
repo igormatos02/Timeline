@@ -2,9 +2,31 @@ import { financialEventRepository as eventRepository } from '../../infrastructur
 import { financialEventStatusRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventStatusRepository.js';
 import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
+import { todoRepository } from '../../infrastructure/database/supabase/SupabaseTodoRepository.js';
+import { todoService } from './TodoService.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
 import { calcToggledStatus } from '../../domain/entities/TimelineEvent.js';
-import { EventType, TimelineType, EventStatus, EventPeriodicity, EventRecurrence, EventDeletionMode, EventUpdateMode, AmortizationStrategy, LoanEventCategory, AmortizationEventCategory, InvestmentEventCategory, IncomeEventCategory, ExpensesEventCategory, DiaryMood, isPositiveStatus, isNegativeStatus, normalizeRecurrence } from '../../../shared/enums/index.js';
+import {
+  EventType,
+  TimelineType,
+  EventStatus,
+  EventPriority,
+  EventPeriodicity,
+  EventRecurrence,
+  EventDeletionMode,
+  EventUpdateMode,
+  AmortizationStrategy,
+  LoanEventCategory,
+  AmortizationEventCategory,
+  InvestmentEventCategory,
+  IncomeEventCategory,
+  ExpensesEventCategory,
+  DiaryMood,
+  isPositiveStatus,
+  isNegativeStatus,
+  isCancelledStatus,
+  normalizeRecurrence
+} from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -18,9 +40,9 @@ export class FinancialEventService {
     const month = parseInt(dateStr.substring(5, 7), 10);
     if (isNaN(year) || isNaN(month)) return;
 
-    if (status === EventStatus.DELETED || status === 'deleted') {
+    if (status === EventStatus.DELETED) {
       await financialEventStatusRepository.upsertStatus(year, month, eventId, EventStatus.DELETED, options);
-    } else if (status === EventStatus.CANCELLED || status === 'cancelled' || status === 'Cancelado') {
+    } else if (status === EventStatus.CANCELLED || isCancelledStatus(status)) {
       await financialEventStatusRepository.upsertStatus(year, month, eventId, EventStatus.CANCELLED, options);
     } else if (isPositiveStatus(status)) {
       await financialEventStatusRepository.upsertStatus(year, month, eventId, status, options);
@@ -77,7 +99,24 @@ export class FinancialEventService {
         const targetId = ev.eventId || ev.id;
         const key = `${year}_${month}_${targetId}`;
         const keyById = `${year}_${month}_${ev.id}`;
-        let matchedStatus = statusMap.get(key) || statusMap.get(keyById) || joinedStatusMap.get(key) || joinedStatusMap.get(keyById);
+        const keyBySob = ev.sobrepositionOver ? `${year}_${month}_${ev.sobrepositionOver}` : null;
+        const keyBySeries = ev.seriesId ? `${year}_${month}_${ev.seriesId}` : null;
+        const keyByStrippedId = ev.id && String(ev.id).includes('_') ? `${year}_${month}_${String(ev.id).split('_')[0]}` : null;
+        const keyByStrippedTargetId = targetId && String(targetId).includes('_') ? `${year}_${month}_${String(targetId).split('_')[0]}` : null;
+
+        let matchedStatus =
+          statusMap.get(key) ||
+          statusMap.get(keyById) ||
+          (keyBySob ? statusMap.get(keyBySob) : null) ||
+          (keyBySeries ? statusMap.get(keyBySeries) : null) ||
+          (keyByStrippedId ? statusMap.get(keyByStrippedId) : null) ||
+          (keyByStrippedTargetId ? statusMap.get(keyByStrippedTargetId) : null) ||
+          joinedStatusMap.get(key) ||
+          joinedStatusMap.get(keyById) ||
+          (keyBySob ? joinedStatusMap.get(keyBySob) : null) ||
+          (keyBySeries ? joinedStatusMap.get(keyBySeries) : null) ||
+          (keyByStrippedId ? joinedStatusMap.get(keyByStrippedId) : null) ||
+          (keyByStrippedTargetId ? joinedStatusMap.get(keyByStrippedTargetId) : null);
 
         if (matchedStatus) {
           ev.status = matchedStatus;
@@ -96,7 +135,7 @@ export class FinancialEventService {
     const eventsByTimeline = new Map();
     for (const ev of projectedEvents) {
       const tlId = ev.timelineId || ev.timelineOriginId;
-      if (tlId && (ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || ev.isSystemLoanEvent)) {
+      if (tlId && (ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.isSystemLoanEvent)) {
         if (!eventsByTimeline.has(tlId)) {
           eventsByTimeline.set(tlId, []);
         }
@@ -156,6 +195,71 @@ export class FinancialEventService {
       }
     }
 
+    // Resolve timeline to timeboard mapping for complete multi-timeline support
+    let timelineToTimeboard = new Map();
+    try {
+      const allTimelines = await timelineRepository.getAll();
+      for (const tl of allTimelines) {
+        if (tl && tl.id) {
+          const tbId = tl.timeboardId || tl.timeboard_id;
+          if (tbId) timelineToTimeboard.set(tl.id, tbId);
+        }
+      }
+    } catch (err) {
+      console.warn('Error loading timeline mapping in getAllEvents:', err.message);
+    }
+
+    // Attach missing timeboardId to projectedEvents if timelineId is known
+    for (const ev of projectedEvents) {
+      if (!ev.timeboardId && ev.timelineId && timelineToTimeboard.has(ev.timelineId)) {
+        ev.timeboardId = timelineToTimeboard.get(ev.timelineId);
+      }
+    }
+
+    // Load To Do items from to_do table and map them to projected timeline events
+    try {
+      const todos = await todoRepository.getAll();
+      const todayStr = new Date().toISOString().substring(0, 10);
+
+      for (const todo of todos) {
+        if (!todo || !todo.id) continue;
+        const rawStatus = String(todo.status || '').toLowerCase();
+        const isCompleted = typeof todo.isCompleted === 'function' ? todo.isCompleted() : (rawStatus === EventStatus.COMPLETED || isPositiveStatus(rawStatus));
+        const effectiveDoneDate = todo.doneDate || todo.done_date;
+        const fallbackDate = todo.date || (todo.createdAt ? String(todo.createdAt).substring(0, 10) : (todo.updatedAt ? String(todo.updatedAt).substring(0, 10) : todayStr));
+        const effectiveDate = effectiveDoneDate ? String(effectiveDoneDate).substring(0, 10) : fallbackDate;
+        const effectiveTimeboardId = todo.timeboardId || (todo.timelineId ? timelineToTimeboard.get(todo.timelineId) : null);
+
+        projectedEvents.push({
+          id: todo.id,
+          eventId: todo.id,
+          timelineId: todo.timelineId,
+          timelineOriginId: todo.timelineId,
+          timeboardId: effectiveTimeboardId,
+          title: todo.name,
+          name: todo.name,
+          description: todo.description || '',
+          notes: todo.notes || '',
+          labels: todo.labels || [],
+          priority: todo.priority || EventPriority.NORMAL,
+          status: isCompleted ? EventStatus.COMPLETED : (rawStatus || EventStatus.PENDING),
+          isCompleted,
+          doneDate: effectiveDoneDate,
+          isObligation: todo.isObligation,
+          obligationPersonId: todo.obligationPersonId,
+          eventType: EventType.TODO,
+          timelineType: TimelineType.TODO,
+          recurrence: EventRecurrence.ONCE,
+          isRecurring: false,
+          date: effectiveDate,
+          createdAt: todo.createdAt,
+          updatedAt: todo.updatedAt
+        });
+      }
+    } catch (err) {
+      console.warn('Error including to_do items in getAllEvents:', err.message);
+    }
+
     const filteredEvents = projectedEvents.filter((ev) => {
       if (filter.timeboardId && ev.timeboardId && ev.timeboardId !== filter.timeboardId) return false;
       if (filter.timelineId && ev.timelineId !== filter.timelineId && ev.timelineOriginId !== filter.timelineId) return false;
@@ -188,6 +292,10 @@ export class FinancialEventService {
   }
 
   async createEvent(eventData) {
+    if (eventData.eventType === EventType.TODO || eventData.timelineType === TimelineType.TODO) {
+      return todoService.createTodo(eventData);
+    }
+
     const isRecurring =
       eventData.recurrence === EventRecurrence.RECURRING ||
       eventData.recurrence === EventRecurrence.LIMITED ||
@@ -224,7 +332,7 @@ export class FinancialEventService {
       });
 
       if (duplicate) {
-        throw new Error(t('diaryModal.duplicateDayError') || 'Já existe um registro para este dia no Diário.');
+        throw new Error(t('diaryModal.duplicateDayError'));
       }
     }
 
@@ -258,6 +366,11 @@ export class FinancialEventService {
   async updateEvent(id, updates) {
     const { updateScope, propagateForward, ...directUpdates } = updates;
 
+    const isTodoDirect = await todoRepository.getById(id);
+    if (isTodoDirect || directUpdates.eventType === EventType.TODO || directUpdates.timelineType === TimelineType.TODO) {
+      return todoService.updateTodo(id, directUpdates);
+    }
+
     const allRawEvents = await eventRepository.getAll();
     const existingDirect = (await eventRepository.getById(id)) || allRawEvents.find((e) => e.id === id);
 
@@ -271,7 +384,7 @@ export class FinancialEventService {
       });
 
       if (duplicate) {
-        throw new Error(t('diaryModal.duplicateDayError') || 'Já existe um registro para este dia no Diário.');
+        throw new Error(t('diaryModal.duplicateDayError'));
       }
     }
 
@@ -307,10 +420,10 @@ export class FinancialEventService {
 
     const isRecurring = Boolean(
       directUpdates.isRecurring !== undefined ? directUpdates.isRecurring :
-      (directUpdates.recurrence !== undefined ? (directUpdates.recurrence === EventRecurrence.RECURRING || directUpdates.recurrence === EventRecurrence.LIMITED) :
-      (existing?.isRecurring !== undefined ? existing.isRecurring :
-      (existing?.recurrence !== undefined ? (existing.recurrence === EventRecurrence.RECURRING || existing.recurrence === EventRecurrence.LIMITED) :
-      (directUpdates.periodicity === EventPeriodicity.RECURRING || directUpdates.periodicity === EventPeriodicity.PERIOD))))
+        (directUpdates.recurrence !== undefined ? (directUpdates.recurrence === EventRecurrence.RECURRING || directUpdates.recurrence === EventRecurrence.LIMITED) :
+          (existing?.isRecurring !== undefined ? existing.isRecurring :
+            (existing?.recurrence !== undefined ? (existing.recurrence === EventRecurrence.RECURRING || existing.recurrence === EventRecurrence.LIMITED) :
+              (directUpdates.periodicity === EventPeriodicity.RECURRING || directUpdates.periodicity === EventPeriodicity.PERIOD))))
     );
 
     const isSubsequentUpdate = (
@@ -522,6 +635,11 @@ export class FinancialEventService {
   }
 
   async toggleEventPayment(id, explicitStatus = null) {
+    const todoItem = await todoRepository.getById(id);
+    if (todoItem) {
+      return todoService.toggleStatus(id, explicitStatus);
+    }
+
     const allEvents = await this.getAllEvents();
     const targetEvent = allEvents.find((e) => e.id === id || e.eventId === id || e.sobrepositionOver === id);
 
@@ -538,15 +656,31 @@ export class FinancialEventService {
       timeboardId: targetEvent.timeboardId || targetEvent.timeboard_id
     });
 
+    if (targetEvent.id && !String(targetEvent.id).includes('_')) {
+      try {
+        await eventRepository.update(targetEvent.id, {
+          status: toggled.status,
+          isCompleted: toggled.isCompleted
+        });
+      } catch (e) {
+        console.warn('Could not update direct event status in financial_events:', e.message);
+      }
+    }
+
     return { ...targetEvent, ...toggled };
   }
 
   async deleteEvent(id, options = {}) {
+    const todoItem = await todoRepository.getById(id);
+    if (todoItem) {
+      return todoService.deleteTodo(id);
+    }
+
     const deletionMode = options.deletionMode || options.deleteScope || EventDeletionMode.ONLY_THIS;
     const allRawEvents = await eventRepository.getAll();
     const directEvent = await eventRepository.getById(id);
 
-    if (directEvent && (directEvent.isAmortizationEvent?.() || directEvent.eventType === EventType.AMORTIZATION || directEvent.category === 'amortizacao' || directEvent.category === 'amortization')) {
+    if (directEvent && (directEvent.isAmortizationEvent?.() || directEvent.eventType === EventType.AMORTIZATION || directEvent.category === AmortizationEventCategory.REDUCE_TERM || directEvent.category === AmortizationEventCategory.REDUCE_INSTALLMENT)) {
       if (directEvent.date) {
         const year = parseInt(directEvent.date.substring(0, 4), 10);
         const month = parseInt(directEvent.date.substring(5, 7), 10);
@@ -585,16 +719,16 @@ export class FinancialEventService {
         return ((ev.eventId && ev.eventId === targetSeriesId) || ev.id === targetSeriesId) && (evRec === EventRecurrence.RECURRING || evRec === EventRecurrence.LIMITED);
       });
 
-    const isAll = deletionMode === EventDeletionMode.EVERYTHING || deletionMode === 'all' || options.deleteSeries;
-    const isSubsequent = deletionMode === EventDeletionMode.FROM_NOW_ON || deletionMode === 'subsequent';
-    const isOnlyThis = deletionMode === EventDeletionMode.ONLY_THIS || deletionMode === 'single';
+    const isAll = deletionMode === EventDeletionMode.EVERYTHING || options.deleteSeries;
+    const isSubsequent = deletionMode === EventDeletionMode.FROM_NOW_ON;
+    const isOnlyThis = deletionMode === EventDeletionMode.ONLY_THIS;
 
     if (isAll) {
       const effectiveSeriesId = targetSeriesId || rootEvent.id;
       const allRelatedEvents = allRawEvents.filter(
         (ev) => (effectiveSeriesId && (ev.eventId === effectiveSeriesId || ev.id === effectiveSeriesId || ev.sobrepositionOver === effectiveSeriesId)) ||
-                (id && (ev.id === id || ev.eventId === id)) ||
-                (directEvent && (ev.id === directEvent.id || ev.eventId === directEvent.eventId))
+          (id && (ev.id === id || ev.eventId === id)) ||
+          (directEvent && (ev.id === directEvent.id || ev.eventId === directEvent.eventId))
       );
 
       const targetIds = Array.from(new Set([
@@ -890,7 +1024,7 @@ export class FinancialEventService {
     );
 
     const updates = loanInstallments.map((ev) => {
-      const filteredLabels = (ev.labels || []).filter((l) => l !== 'Abatida' && l !== 'Abatida Parcial');
+      const filteredLabels = (ev.labels || []).filter((l) => l !== t('backend.event.abated') && l !== t('backend.event.partiallyAbated') && l !== 'Abatida' && l !== 'Abatida Parcial');
       return {
         id: ev.id,
         data: {

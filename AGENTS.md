@@ -83,8 +83,26 @@ Commits MUST use Conventional Commits so `npm run release` bumps versions correc
 
 Version is stamped in the header via `VersionBadge` (Vite `define __APP_VERSION__` from package.json).
 
+## Mandatory Rules on Every File Edit & Implementation (STRICT ENFORCEMENT)
+Whenever you edit an existing file or implement new code, you MUST follow these 4 rules:
+
+1. **Regra 1 - Zero Enums Hardcoded**:
+   - Sempre que editar um arquivo, verifique se existe algum valor de enum (tipos, status, periodicidades, categorias, prioridades, papéis, etc.) em texto literal hardcoded e substitua-o imediatamente pelo enum canónico correspondente de `src/enums/index.js` / `shared/enums/index.js` (e.g. `EventType`, `EventStatus`, `TimelineType`, `TimelineStatus`, `EventPriority`, `EventPeriodicity`, `EventRecurrence`, `EventDeletionMode`, etc.).
+   - Nunca crie aliases redundantes em arquivos de enum nem compare com variantes de string.
+
+2. **Regra 2 - Zero Strings / Labels / Messages Hardcoded**:
+   - Sempre que editar um arquivo, verifique se existem labels, títulos, botões, placeholders, mensagens de validação/toast/erro em texto literal hardcoded ou em fallbacks com operador lógico (e.g. `t('key') || 'Texto'`).
+   - Remova todos os textos literais e fallbacks. Registre as novas chaves tanto no dicionário inglês (`en`) quanto português (`pt`) de `shared/i18n/translations.js` e consuma exclusivamente via `t('key')`.
+
+3. **Regra 3 - Zero Cores Hardcoded (Usar TimelineColor & TIMELINE_COLOR_PRESETS + Checagem Obrigatória)**:
+   - TODAS as cores hardcoded (hexadecimais `'#...'`, RGBs literais, gradientes hardcoded) DEVEM ser obrigatoriamente repostas pelas constantes de `TimelineColor` / `TIMELINE_COLOR_PRESETS` / `getDefaultTimelineColor` ou variáveis de tema CSS (e.g. `var(--border-glass)`, `var(--primary)`, `var(--bg-card)`).
+   - **Checagem Final Obrigatória**: Ao final de CADA edição de arquivo, execute uma varredura/grep de busca por `#` e valores de cor no arquivo editado para garantir e certificar que absolutamente NENHUMA cor hardcoded restou.
+
+4. **Regra 4 - Zero Hardcoded em Novas Implementações**:
+   - Ao implementar qualquer nova funcionalidade, modal, endpoint, serviço ou componente: NUNCA crie labels, placeholders, mensagens, cores ou enums hardcoded.
+   - Sempre verifique e reutilize os enums, cores e traduções existentes em `shared/enums/index.js` e `shared/i18n/translations.js` antes de criar novos.
+
 ## Code Conventions
-- **ALWAYS USE ENUMS**: Never use hardcoded strings for types, statuses, periodicities, categories, or roles. Always import and use centralized enums and enum helper functions from `src/enums/index.js` / `shared/enums/index.js` (e.g., `EventType`, `EventStatus`, `TimelineType`, `TimelineStatus`, `isPositiveStatus`, `isCancelledStatus`, `isLoanTimelineType`).
 - Use ES modules (import/export)
 - Use `date-fns` for date operations (never native Date for formatting)
 - Use `generateUUID()` from `src/utils/uuid.js` for new IDs

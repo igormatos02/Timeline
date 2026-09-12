@@ -1,5 +1,15 @@
 import { addDays, addMonths, addYears, format, parseISO } from 'date-fns';
-import { EventStatus, EventPeriodicity, EventRecurrence, EventType, normalizePeriodicity, normalizeRecurrence } from '../../../shared/enums/index.js';
+import {
+  EventStatus,
+  EventPeriodicity,
+  EventRecurrence,
+  EventType,
+  LoanEventCategory,
+  AmortizationEventCategory,
+  isCancelledStatus,
+  normalizePeriodicity,
+  normalizeRecurrence
+} from '../../../shared/enums/index.js';
 
 function advanceDateByPeriodicity(curDate, periodicity, dayOfMonth) {
   const p = normalizePeriodicity(periodicity);
@@ -43,9 +53,12 @@ export function projectEvents(rawEvents = [], options = {}) {
   // 1. Classify raw events
   for (const ev of rawEvents) {
     const isLoan =
-      ev.category === 'parcela_emprestimo' ||
+      ev.eventType === EventType.LOAN_INSTALLMENT ||
+      ev.category === LoanEventCategory.LOAN_INSTALLMENT ||
       ev.isSystemLoanEvent ||
-      ev.category === 'amortizacao' ||
+      ev.eventType === EventType.AMORTIZATION ||
+      ev.category === AmortizationEventCategory.REDUCE_TERM ||
+      ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
       (ev.timelineId && String(ev.timelineId).startsWith('tl-loan-')) ||
       (ev.timelineOriginId && String(ev.timelineOriginId).startsWith('tl-loan-'));
 
@@ -254,8 +267,8 @@ export function projectEvents(rawEvents = [], options = {}) {
 
   const finalEvents = allGenerated.map((ev) => {
     const isAuto = Boolean(ev.automatic !== undefined ? ev.automatic : ev.isAutomatic);
-    const isCancelled = ev.status === EventStatus.CANCELLED || ev.status === 'Cancelado';
-    const isDeleted = ev.status === EventStatus.DELETED || ev.status === 'Excluido';
+    const isCancelled = isCancelledStatus(ev.status);
+    const isDeleted = ev.status === EventStatus.DELETED || Boolean(ev.isDeleted);
 
     if (isAuto && ev.date && ev.date <= todayStr && !isCancelled && !isDeleted) {
       const isIncome = ev.eventType === EventType.INCOME;

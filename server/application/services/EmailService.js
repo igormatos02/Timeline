@@ -1,6 +1,7 @@
 import { BrevoClient } from '@getbrevo/brevo';
 import dotenv from 'dotenv';
 import { getAppUrl } from '../../../shared/config/appConfig.js';
+import { PersonRole } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 dotenv.config({ path: './server/.env' });
 
@@ -35,7 +36,7 @@ class EmailService {
     const client = this.getClient();
     const finalAcceptUrl = acceptUrl || `${this.appUrl}/?inviteTimeboardId=${encodeURIComponent(timeboardId)}&email=${encodeURIComponent(toEmail)}`;
 
-    const roleLabel = role === 'admin' ? t('backend.email.roleAdmin') : t('backend.email.roleContributor');
+    const roleLabel = role === PersonRole.ADMIN ? t('backend.email.roleAdmin') : t('backend.email.roleContributor');
     const cleanInviterName = inviterName || t('backend.email.defaultInviter');
     const cleanTbName = timeboardName || t('backend.email.timeboardLabel');
 

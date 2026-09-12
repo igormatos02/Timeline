@@ -168,7 +168,7 @@ export default function ExpenseTimelineHeader({
             <button
               type="button"
               className="btn btn-outline-danger btn-sm"
-              onClick={onDelete}
+              onClick={() => onDelete && onDelete(timeline)}
               title={t('expenseHeader.deleteTitle')}
               style={{
                 display: 'inline-flex',
@@ -180,7 +180,7 @@ export default function ExpenseTimelineHeader({
               }}
             >
               <Trash2 size={13} />
-              <span>{t('buttons.delete') || (language === 'pt' ? 'Excluir' : 'Delete')}</span>
+              <span>{t('buttons.delete')}</span>
             </button>
           )}
         </div>

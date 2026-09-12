@@ -7,6 +7,7 @@ export const EventType = Object.freeze({
   WITHDRAWAL: 'withdrawal',
   GENERIC: 'generic',
   REMINDER: 'generic',
-  REGISTER: 'register'
+  REGISTER: 'register',
+  TODO: 'todo'
 });
 

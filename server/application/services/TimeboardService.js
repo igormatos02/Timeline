@@ -249,9 +249,9 @@ export class TimeboardService {
       type: data.type || TimeboardType.FINANCIAL
     });
 
-    const isFinancial = createdTimeboard.type === TimeboardType.FINANCIAL || createdTimeboard.type === 'financial';
-    const isProjects = createdTimeboard.type === TimeboardType.PROJECTS || createdTimeboard.type === 'projects';
-    const isReminders = createdTimeboard.type === TimeboardType.REMINDERS || createdTimeboard.type === 'reminders';
+    const isFinancial = createdTimeboard.type === TimeboardType.FINANCIAL;
+    const isProjects = createdTimeboard.type === TimeboardType.PROJECTS;
+    const isReminders = createdTimeboard.type === TimeboardType.REMINDERS;
     const defaultTenantId = createdTimeboard.tenantId || '9e3c3070-d4db-43be-ab03-3f852a9a81da';
 
     let defaultTimelines = [];

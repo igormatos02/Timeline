@@ -4,17 +4,30 @@ export const TimelineType = Object.freeze({
   EXPENSE: 'expense',
   INVESTMENT: 'investments',
   LOAN: 'loan',
-  CUSTOM: 'custom',
   REMINDER: 'reminder',
-  PROJECT: 'project',
-  HISTORY: 'history',
   DIARY: 'diary',
-  GOALS: 'goals',
-  PROSPECTS: 'prospects',
+  /* GOALS: 'goals',
+    PROJECT: 'project',
+   HISTORY: 'history',
+     CUSTOM: 'custom',
+  */
+  TODO: 'todo',
 
 });
 
 const VALID_TIMELINE_TYPES = new Set(Object.values(TimelineType));
+
+export const SINGLE_INSTANCE_TIMELINE_TYPES = Object.freeze(new Set([
+  TimelineType.BALANCE,
+  TimelineType.INCOME,
+  TimelineType.EXPENSE,
+  TimelineType.INVESTMENT
+]));
+
+export function isSingleInstanceTimelineType(type) {
+  if (!type) return false;
+  return SINGLE_INSTANCE_TIMELINE_TYPES.has(normalizeTimelineType(type));
+}
 
 /**
  * Normaliza qualquer valor para o TimelineType enum canónico.
@@ -22,9 +35,9 @@ const VALID_TIMELINE_TYPES = new Set(Object.values(TimelineType));
  * @returns {string}
  */
 export function normalizeTimelineType(type) {
-  if (!type) return TimelineType.CUSTOM;
+  if (!type) return '';
   const t = String(type).trim().toLowerCase();
-  return VALID_TIMELINE_TYPES.has(t) ? t : TimelineType.CUSTOM;
+  return VALID_TIMELINE_TYPES.has(t) ? t : '';
 }
 
 /**
@@ -33,5 +46,7 @@ export function normalizeTimelineType(type) {
  * @returns {boolean}
  */
 export function isLoanTimelineType(type) {
+  if (!type) return false;
   return normalizeTimelineType(type) === TimelineType.LOAN;
 }
+

@@ -48,10 +48,11 @@ export default function BalanceTimelineHeader({
 }) {
   const { t, language } = useTranslation();
   const dateLocale = language === 'en' ? enUS : pt;
+  const currentMonthStr = format(new Date(), 'yyyy-MM');
   const [collapsed, setIsCollapsed] = useState(false);
   const [projectionMonthsAhead, setProjectionMonthsAhead] = useState(0);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [_tempComputeMonth, setTempComputeMonth] = useState('2026-08');
+  const [_tempComputeMonth, setTempComputeMonth] = useState(currentMonthStr);
 
   // Mapa de tipo por ID de timeline para resolução precisa de eventos
   const timelineTypeMap = React.useMemo(() => {
@@ -102,22 +103,22 @@ export default function BalanceTimelineHeader({
 
   if (!timeline) return null;
 
-  const headerColor = timeline.color || '#0ea5e9';
+  const headerColor = timeline.color || TimelineColor.CYAN;
 
   // Helper de data de horizonte projetado
   const projectedHorizonLabel = (() => {
     try {
-      const baseDate = parseISO('2026-08-01');
+      const baseDate = new Date();
       const targetDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + projectionMonthsAhead, 1);
       return format(targetDate, 'MMM yyyy', { locale: dateLocale });
     } catch {
-      return language === 'en' ? 'Aug 2026' : 'Ago 2026';
+      return format(new Date(), 'MMM yyyy', { locale: dateLocale });
     }
   })();
 
   const computeFromMonth = computeStartDate
     ? computeStartDate.substring(0, 7)
-    : '2026-08';
+    : currentMonthStr;
 
   const getFormattedMonthLabel = (mStr) => {
     try {
@@ -155,7 +156,6 @@ export default function BalanceTimelineHeader({
   const hasInvestmentTimeline = (allTimelines || []).some((t) => t.type === TimelineType.INVESTMENT || t.type === 'investments' || t.type === 'investment');
 
   const todayDate = new Date();
-  const currentMonthStr = format(todayDate, 'yyyy-MM');
   const currentMonthLabel = (() => {
     try {
       return format(todayDate, 'MMMM yyyy', { locale: dateLocale });

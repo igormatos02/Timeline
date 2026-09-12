@@ -289,7 +289,7 @@ export default function InvestmentTimelineHeader({
             <button
               type="button"
               className="btn btn-outline-danger btn-sm"
-              onClick={onDelete}
+              onClick={() => onDelete && onDelete(timeline)}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -300,7 +300,7 @@ export default function InvestmentTimelineHeader({
               }}
             >
               <Trash2 size={13} />
-              <span>Excluir</span>
+              <span>{t('buttons.delete')}</span>
             </button>
           )}
         </div>

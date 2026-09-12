@@ -517,7 +517,7 @@ export default function LoanTimelineHeader({
               <button
                 type="button"
                 className="btn btn-outline-danger btn-sm"
-                onClick={onDelete}
+                onClick={() => onDelete && onDelete(timeline)}
                 title={
                   t(
                     'loanHeader.deleteContractTitle'
@@ -536,9 +536,7 @@ export default function LoanTimelineHeader({
                 <Trash2 size={13} />
 
                 <span>
-                  {t(
-                    'loanHeader.deleteContract'
-                  ) || 'Excluir'}
+                  {t('loanHeader.deleteContract')}
                 </span>
               </button>
             )}

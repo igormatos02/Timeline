@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, DollarSign, Calendar, FileText, X, TrendingDown, Clock } from 'lucide-react';
+import { format } from 'date-fns';
 import { formatCurrency } from '../utils/formatCurrency';
 import { EventStatus, AmortizationStrategy, AmortizationEventCategory } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
-export default function AmortizationModal({ isOpen, onClose, onSave, remainingBalance, defaultDate = '2026-08-21', initialEvent = null }) {
+export default function AmortizationModal({ isOpen, onClose, onSave, remainingBalance, defaultDate = null, initialEvent = null }) {
   const { t } = useTranslation();
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(defaultDate || '2026-08-21');
+  const [date, setDate] = useState(defaultDate || todayStr);
   const [strategy, setStrategy] = useState(AmortizationStrategy.REDUCE_TERM);
   const [status, setStatus] = useState(EventStatus.AMORTIZED);
   const [notes, setNotes] = useState('');
@@ -16,7 +18,7 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
     if (!isOpen) return;
     if (initialEvent) {
       setAmount(initialEvent.amount || initialEvent.amortizationAmount || '');
-      setDate(initialEvent.date || defaultDate || '2026-08-21');
+      setDate(initialEvent.date || defaultDate || todayStr);
       const eventStrategy =
         initialEvent.strategy ||
         initialEvent.amortizationStrategy ||

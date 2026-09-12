@@ -250,7 +250,7 @@ export default function IncomeTimelineHeader({
             <button
               type="button"
               className="btn btn-outline-danger btn-sm"
-              onClick={onDelete}
+              onClick={() => onDelete && onDelete(timeline)}
               title={t('incomeHeader.deleteTitle') || 'Delete this timeline'}
               style={{
                 display: 'inline-flex',

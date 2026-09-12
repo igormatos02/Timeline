@@ -97,7 +97,50 @@ export const translations = {
       noLoanMonth: "No installment or amortization this month",
       noTabRecords: "No records in this tab for this month",
       noTimelines: "No timelines created in this timeboard yet.",
-      createTimeline: "Create Timeline"
+      createTimeline: "Create Timeline",
+      projectMoreFuture: "Project +12 Future Months",
+      loadMorePast: "Load +12 Past Months (History)",
+      amortizeMonthTitle: "Amortize ({month})",
+      currentMonth: "CURRENT MONTH",
+      currentWeek: "CURRENT WEEK",
+      weekLabel: "WEEK {week}",
+      weekTitle: "Week {week}",
+      yearLabel: "YEAR {year}",
+      currentYear: "CURRENT YEAR",
+      currentYearTitle: "Year {year}",
+      monthsCount: "{count} month(s)",
+      noEventsFound: "No events found",
+      noEventsFoundDesc: "Try adjusting search filters in the sidebar or click below to add an event.",
+      addEventToday: "Add Event on Today"
+    },
+
+    // Floating Tasks Stack
+    floatingTasks: {
+      title: "Floating Pending Tasks",
+      pendingCount: "{count} pending",
+      description: "They stay at the top of the timeline until completed. Upon marking as completed, the task will be pinned to its completion date.",
+      newTask: "New Task",
+      close: "Close",
+      inputPlaceholder: "Enter pending task title...",
+      addToStack: "Add to Stack",
+      completeTooltip: "Complete task (Pins task to today)",
+      today: "today",
+      yesterday: "yesterday",
+      daysAgo: "{days} days ago",
+      defaultDescription: "Task created directly in the floating stack at top of timeline.",
+      priorityUrgent: "Urgent",
+      priorityNormal: "Normal",
+      priorityLow: "Low",
+      expandChecklist: "Expand Checklist",
+      collapseChecklist: "Collapse Checklist",
+      checklist: "Checklist",
+      completeAndPin: "Complete and Pin",
+      deleteChecklistItem: "Delete checklist item",
+      noChecklistItems: "No items in checklist. Add the first item below:",
+      addChecklistPlaceholder: "Add new checklist item...",
+      emptyStack: "No pending tasks in stack! All completed tasks are pinned to their respective dates on the timeline.",
+      age: "Age: {age}",
+      priorityTitle: "Priority {priority}"
     },
 
     // Loan Card Breakdown
@@ -116,12 +159,72 @@ export const translations = {
       abatedInfo: "Installment abated by early extraordinary amortization."
     },
 
+    // Create / Edit Timeline Modal
+    createTimelineModal: {
+      newTitle: "New {type}",
+      editTitle: "Edit {type}",
+      typeLabel: "Timeline Type",
+      nameLabel: "Timeline Name *",
+      namePlaceholder: "e.g., Main Income, Global Balance, Expenses...",
+      namePlaceholderLoan: "e.g., Car Loan, Housing Mortgage, Personal Loan...",
+      descriptionLabel: "Description",
+      descriptionPlaceholder: "Brief description of the objectives for this timeline...",
+      statusLabel: "Status",
+      statusActive: "Active",
+      statusInactive: "Inactive",
+      statusActiveHint: "Active in Projection",
+      statusInactiveHint: "Inactive",
+      saveButton: "Save Changes",
+      createButton: "Create Timeline",
+      contractSectionTitle: "Contract Details & Financial Parameters",
+      contractNumberLabel: "Contract Number",
+      contractNumberPlaceholder: "e.g., CRED-2026-998",
+      bankNameLabel: "Financial Institution / Bank",
+      bankNamePlaceholder: "e.g., Millennium BCP, Santander...",
+      totalDebtLabel: "Total Amount Financed (€) *",
+      tanRateLabel: "TAN Rate (%)",
+      spreadLabel: "Spread (%)",
+      interestStampTaxRateLabel: "Interest Stamp Duty (%)",
+      dueDayLabel: "Due / Payment Day",
+      dayLabel: "Day {day}",
+      startDateLabel: "Start Month",
+      startMonthPlaceholder: "Select Month",
+      totalInstallmentsLabel: "Number of Installments",
+      totalInstallmentsPlaceholder: "e.g., 120, 240, 360",
+      colorLabel: "Accent Color",
+      simulationTitle: "Payment Schedule Simulation",
+      simulateButton: "Simulate",
+      originalCapital: "ORIGINAL CAPITAL",
+      estimatedInterest: "ESTIMATED INTEREST",
+      estimatedFees: "ESTIMATED TAXES",
+      totalCost: "TOTAL COST",
+      colNumber: "#",
+      colDate: "Date",
+      colCapital: "Capital",
+      colInterest: "Interest",
+      colTax: "Tax",
+      colInstallment: "Installment",
+      simulationError: "Error generating amortization schedule."
+    },
+
     // Delete Timeline Modal
     deleteTimelineModal: {
       title: "Delete Timeline",
       subtitle: "Confirm timeline deletion",
       warning: "Are you sure you want to delete this timeline and all its associated events? This action cannot be undone.",
       eventsCount: "{count} associated events will be removed"
+    },
+
+    // Edit Timeline Settings Modal
+    editTimelineSettingsModal: {
+      title: "Timeline Settings",
+      subtitle: "Edit timeline name, description and color",
+      nameLabel: "Timeline Name",
+      namePlaceholder: "e.g., Incomes and Earnings",
+      descriptionLabel: "Description",
+      descriptionPlaceholder: "Describe the purpose of this timeline...",
+      colorLabel: "Accent Color",
+      deleteTitle: "Delete this Timeline"
     },
 
     // Sidebar Filters
@@ -156,6 +259,8 @@ export const translations = {
       projectTimeline: "Project Timeline",
       reminderTimeline: "Reminder Timeline",
       diaryTimeline: "Diary Timeline",
+      todoTimeline: "To Do Timeline",
+      goalsTimeline: "Goals Timeline",
       customTimeline: "Custom Timeline"
     },
 
@@ -224,10 +329,11 @@ export const translations = {
       closed: "Closed",
       toReceive: "To Receive",
       toPay: "To Pay",
-      receivedAt: "Recebido",
-      paidAt: "Pago",
-      investedAt: "Investido",
-      settledAt: "Liquidado"
+      nextIncome: "Next Income",
+      receivedAt: "Received",
+      paidAt: "Paid",
+      investedAt: "Invested",
+      settledAt: "Settled"
     },
 
     // Recurrence
@@ -899,6 +1005,48 @@ export const translations = {
       save: "Save Entry"
     },
 
+    // Todo Timeline Header
+    todoHeader: {
+      badge: "Task List",
+      defaultTitle: "To Do",
+      addTask: "New To Do",
+      deleteTitle: "Delete this timeline",
+      progress: "Progress",
+      completed: "Completed",
+      pending: "Pending (Current Month)",
+      prioritySummary: "Priorities",
+      tasksCount: "{count} tasks",
+      completedOn: "Completed on {date}",
+      currentMonthBadge: "Current Month",
+      markCompleted: "Mark as completed",
+      markPending: "Mark as pending",
+      completeAction: "Complete"
+    },
+
+    // Todo Event Modal
+    todoModal: {
+      newTitle: "New To Do Task",
+      editTitle: "Edit To Do Task",
+      nameLabel: "Task Name *",
+      namePlaceholder: "e.g. Pay electricity bill...",
+      priorityLabel: "Priority",
+      statusLabel: "Status",
+      statusPending: "Pending (Current Month)",
+      statusCompleted: "Completed (Fixed Date)",
+      labelsLabel: "Labels / Tags",
+      tagPlaceholder: "Add tag...",
+      addTag: "Add",
+      descriptionLabel: "Description / Details",
+      descriptionPlaceholder: "Additional details about the task...",
+      notesLabel: "Private Notes",
+      notesPlaceholder: "Internal or private notes...",
+      nameRequired: "Please enter the task name.",
+      concludedOn: "Concluded on {date}",
+      currentMonth: "Current Month",
+      markPending: "Mark as pending",
+      markCompleted: "Mark as completed"
+    },
+
     // Evolution Chart
     evolutionChart: {
       monthlyVariation: "Monthly Variation",
@@ -1088,7 +1236,50 @@ export const translations = {
       noLoanMonth: "Nenhuma parcela ou amortização neste mês",
       noTabRecords: "Sem registos nesta aba para este mês",
       noTimelines: "Nenhuma timeline criada neste timeboard ainda.",
-      createTimeline: "Criar Timeline"
+      createTimeline: "Criar Timeline",
+      projectMoreFuture: "Projetar +12 Meses Futuros",
+      loadMorePast: "Carregar +12 Meses Anteriores (Histórico)",
+      amortizeMonthTitle: "Amortizar ({month})",
+      currentMonth: "MÊS ATUAL",
+      currentWeek: "SEMANA ATUAL",
+      weekLabel: "SEMANA {week}",
+      weekTitle: "Semana {week}",
+      yearLabel: "ANO {year}",
+      currentYear: "ANO ATUAL",
+      currentYearTitle: "Ano de {year}",
+      monthsCount: "{count} mês(es)",
+      noEventsFound: "Nenhum evento encontrado",
+      noEventsFoundDesc: "Tente alterar os filtros de pesquisa na barra lateral ou clique abaixo para adicionar um evento.",
+      addEventToday: "Adicionar Evento em Hoje"
+    },
+
+    // Floating Tasks Stack
+    floatingTasks: {
+      title: "Pilha de Tarefas Pendentes",
+      pendingCount: "{count} pendente(s)",
+      description: "Permanecem no topo da timeline até serem concluídas. Ao marcar como concluída, a tarefa fixar-se-á na data respetiva.",
+      newTask: "Nova Tarefa",
+      close: "Fechar",
+      inputPlaceholder: "Digite o título da tarefa pendente...",
+      addToStack: "Adicionar à Pilha",
+      completeTooltip: "Concluir tarefa (Fixará a tarefa na data de hoje)",
+      today: "hoje",
+      yesterday: "ontem",
+      daysAgo: "há {days} dias",
+      defaultDescription: "Tarefa criada diretamente na pilha flutuante do topo da timeline.",
+      priorityUrgent: "Urgente",
+      priorityNormal: "Normal",
+      priorityLow: "Baixa",
+      expandChecklist: "Expandir Checklist",
+      collapseChecklist: "Recolher Checklist",
+      checklist: "Checklist",
+      completeAndPin: "Concluir e Fixar",
+      deleteChecklistItem: "Eliminar item de checklist",
+      noChecklistItems: "Sem itens na checklist. Adicione o primeiro item abaixo:",
+      addChecklistPlaceholder: "Adicionar novo item de checklist...",
+      emptyStack: "Nenhuma tarefa pendente na pilha! Todas as tarefas concluídas estão fixadas nas suas respetivas datas na timeline.",
+      age: "Idade: {age}",
+      priorityTitle: "Prioridade {priority}"
     },
 
     // Loan Card Breakdown
@@ -1107,12 +1298,72 @@ export const translations = {
       abatedInfo: "Parcela abatida por amortização extraordinária antecipada."
     },
 
+    // Create / Edit Timeline Modal
+    createTimelineModal: {
+      newTitle: "Nova Linha de Tempo: {type}",
+      editTitle: "Editar Linha de Tempo: {type}",
+      typeLabel: "Tipo de Linha de Tempo",
+      nameLabel: "Nome da Linha de Tempo *",
+      namePlaceholder: "Ex: Entradas Principais, Balanço, Despesas...",
+      namePlaceholderLoan: "Ex: Crédito Automóvel, Habitação, Pessoal...",
+      descriptionLabel: "Descrição",
+      descriptionPlaceholder: "Breve descrição dos objetivos desta linha temporal...",
+      statusLabel: "Status",
+      statusActive: "Ativa",
+      statusInactive: "Inativa",
+      statusActiveHint: "Ativa na Projeção",
+      statusInactiveHint: "Inativa",
+      saveButton: "Guardar Alterações",
+      createButton: "Criar Linha de Tempo",
+      contractSectionTitle: "Parâmetros do Contrato de Crédito",
+      contractNumberLabel: "Nº do Contrato",
+      contractNumberPlaceholder: "Ex: CRED-2026-998",
+      bankNameLabel: "Entidade Bancária",
+      bankNamePlaceholder: "Ex: Millennium BCP, Santander...",
+      totalDebtLabel: "Montante Financiado (€) *",
+      tanRateLabel: "Taxa de Juro (TAN %)",
+      spreadLabel: "Spread (%)",
+      interestStampTaxRateLabel: "Imposto Selo s/ Juros (%)",
+      dueDayLabel: "Dia de Cobrança / Débito",
+      dayLabel: "Dia {day}",
+      startDateLabel: "Mês de Início",
+      startMonthPlaceholder: "Selecionar Mês",
+      totalInstallmentsLabel: "Nº de Prestações",
+      totalInstallmentsPlaceholder: "Ex: 120, 240, 360",
+      colorLabel: "Cor de Destaque",
+      simulationTitle: "Simulação do Plano de Pagamentos",
+      simulateButton: "Simular",
+      originalCapital: "CAPITAL ORIGINAL",
+      estimatedInterest: "JUROS ESTIMADOS",
+      estimatedFees: "IMPOSTOS ESTIMADOS",
+      totalCost: "CUSTO TOTAL",
+      colNumber: "#",
+      colDate: "Data",
+      colCapital: "Capital",
+      colInterest: "Juros",
+      colTax: "Imposto",
+      colInstallment: "Prestação",
+      simulationError: "Erro ao gerar o plano de amortização."
+    },
+
     // Delete Timeline Modal
     deleteTimelineModal: {
       title: "Eliminar Linha de Tempo",
       subtitle: "Confirmar eliminação da timeline",
       warning: "Tem a certeza que deseja eliminar esta linha de tempo e todos os seus registos associados? Esta ação não pode ser desfeita.",
       eventsCount: "{count} registos associados serão removidos"
+    },
+
+    // Edit Timeline Settings Modal
+    editTimelineSettingsModal: {
+      title: "Configurações da Linha de Tempo",
+      subtitle: "Editar nome, descrição e cor da timeline",
+      nameLabel: "Nome da Linha de Tempo",
+      namePlaceholder: "Ex: Entradas e Rendimentos",
+      descriptionLabel: "Descrição",
+      descriptionPlaceholder: "Descreva o propósito desta timeline...",
+      colorLabel: "Cor de Destaque",
+      deleteTitle: "Eliminar esta Timeline"
     },
 
     // Sidebar Filters
@@ -1147,6 +1398,8 @@ export const translations = {
       projectTimeline: "Projetos",
       reminderTimeline: "Lembretes",
       diaryTimeline: "Diário",
+      todoTimeline: "Lista de Tarefas / To Do",
+      goalsTimeline: "Metas / Objetivos",
       customTimeline: "Personalizada"
     },
 
@@ -1215,6 +1468,7 @@ export const translations = {
       closed: "Concluído",
       toReceive: "A Receber",
       toPay: "A Pagar",
+      nextIncome: "Próxima Entrada",
       receivedAt: "Recebido",
       paidAt: "Pago",
       investedAt: "Investido",
@@ -1888,6 +2142,48 @@ export const translations = {
       loadingDescription: "Carregando relato...",
       cancel: "Cancelar",
       save: "Salvar Registro"
+    },
+
+    // Todo Timeline Header
+    todoHeader: {
+      badge: "Lista de Tarefas",
+      defaultTitle: "To Do",
+      addTask: "Novo To Do",
+      deleteTitle: "Excluir esta timeline",
+      progress: "Progresso",
+      completed: "Concluídas",
+      pending: "Pendentes (Mês Corrente)",
+      prioritySummary: "Prioridades",
+      tasksCount: "{count} tarefas",
+      completedOn: "Concluído em {date}",
+      currentMonthBadge: "Mês Corrente",
+      markCompleted: "Marcar como concluído",
+      markPending: "Marcar como pendente",
+      completeAction: "Concluir"
+    },
+
+    // Todo Event Modal
+    todoModal: {
+      newTitle: "Nova Tarefa To Do",
+      editTitle: "Editar Tarefa To Do",
+      nameLabel: "Nome da Tarefa *",
+      namePlaceholder: "Ex: Pagar fatura da eletricidade...",
+      priorityLabel: "Prioridade",
+      statusLabel: "Estado",
+      statusPending: "Pendente (Mês Corrente)",
+      statusCompleted: "Concluído (Data Fixa)",
+      labelsLabel: "Etiquetas / Tags",
+      tagPlaceholder: "Adicionar etiqueta...",
+      addTag: "Adicionar",
+      descriptionLabel: "Descrição / Detalhes",
+      descriptionPlaceholder: "Detalhes adicionais sobre a tarefa...",
+      notesLabel: "Notas Internas",
+      notesPlaceholder: "Notas privadas ou anotações...",
+      nameRequired: "Por favor, insira o nome da tarefa.",
+      concludedOn: "Concluído em {date}",
+      currentMonth: "Mês Corrente",
+      markPending: "Marcar como pendente",
+      markCompleted: "Marcar como concluído"
     },
 
     // Evolution Chart

@@ -156,12 +156,10 @@ export default function InvestmentTimelineHeader({
     ? Math.min(100, Math.round((annualTotalInvested / annualTotalIncome) * 100))
     : 0;
 
-  // 3. ATUAL: TOTAL RECEBIDO / APORTADO (INCLUINDO APORTE INICIAL & DEPÓSITOS EXTERNOS) & TARGET
+  // 3. ATUAL: TOTAL RECEBIDO / APORTADO (INCLUINDO APORTE INICIAL & DEPÓSITOS EXTERNOS)
   let totalInstallmentsReceived = 0;
   let initialContribution = 0;
   let totalReceivedCount = 0;
-  let highestTargetVersion = -1;
-  let customTarget = 0;
 
   eventsList.forEach((ev) => {
     if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
@@ -184,24 +182,10 @@ export default function InvestmentTimelineHeader({
       if (Number(ev.initialInvestedAmount || 0) > 0 && (ev.isFirstOccurrence || !ev.isProjected)) {
         initialContribution += Number(ev.initialInvestedAmount);
       }
-      const evVer = Number(ev.version !== undefined ? ev.version : (ev.eventVersion !== undefined ? ev.eventVersion : (ev.event_version || 0)));
-      if (Number(ev.targetAmount || 0) > 0 && evVer >= highestTargetVersion) {
-        highestTargetVersion = evVer;
-        customTarget = Number(ev.targetAmount);
-      }
     }
   });
 
   const totalReceived = totalInstallmentsReceived + initialContribution;
-
-  const targetAmount = customTarget > 0
-    ? customTarget
-    : (timeline.targetAmount || timeline.target || metrics?.targetAmount || metrics?.target || dto?.target || dto?.annual_target || 0);
-
-  const targetPercent = targetAmount > 0
-    ? Math.min(100, Math.round((totalReceived / targetAmount) * 100))
-    : 0;
-
   const initialValueAmount = timeline.initialValue ?? timeline.initial_value ?? 0;
 
   return (
@@ -487,43 +471,21 @@ export default function InvestmentTimelineHeader({
               })()}
             </div>
 
-            {/* Quadrante 3: ATUAL (Valor Inicial, Total Aportado & Target) */}
+            {/* Quadrante 3: ATUAL (Valor Inicial & Total Recebido/Aportado) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 {t('investmentHeader.currentTitle')}
               </div>
-              {(() => {
-                const targetReachedLabel = t('investmentHeader.targetReached', { percent: targetPercent });
-                return (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                    <DonutChart
-                      percent={targetPercent}
-                      sliceColor={TimelineColor.INVESTMENT}
-                      remainingColor="rgba(139, 92, 246, 0.2)"
-                      title={targetReachedLabel}
-                      label={`${targetPercent}%`}
-                    />
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.initialValue')}</span>
-                        <strong style={{ color: 'var(--primary-light)', fontSize: '0.86rem' }}>{formatCurrency(initialValueAmount)}</strong>
-                      </div>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.receivedTotalLabel')}</span>
-                        <strong style={{ color: TimelineColor.SUCCESS, fontSize: '0.86rem' }}>{formatCurrency(totalReceived)}</strong>
-                      </div>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.targetLabel')}</span>
-                        <strong style={{ color: TimelineColor.INVESTMENT, fontSize: '0.86rem' }}>{formatCurrency(targetAmount)}</strong>
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '2px' }}>
-                        {targetReachedLabel}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.initialValue')}</span>
+                  <strong style={{ color: 'var(--primary-light)', fontSize: '0.88rem' }}>{formatCurrency(initialValueAmount)}</strong>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.receivedTotalLabel')}</span>
+                  <strong style={{ color: TimelineColor.SUCCESS, fontSize: '0.94rem', fontWeight: '800' }}>{formatCurrency(totalReceived)}</strong>
+                </div>
+              </div>
             </div>
           </div>
 

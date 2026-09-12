@@ -371,7 +371,9 @@ export const translations = {
       receivedAt: "Received",
       paidAt: "Paid",
       investedAt: "Invested",
-      settledAt: "Settled"
+      settledAt: "Settled",
+      financed: "Financed",
+      paidOff: "Paid Off"
     },
 
     // Recurrence
@@ -1579,7 +1581,9 @@ export const translations = {
       receivedAt: "Recebido",
       paidAt: "Pago",
       investedAt: "Investido",
-      settledAt: "Liquidado"
+      settledAt: "Liquidado",
+      financed: "Financiado",
+      paidOff: "Quitado"
     },
 
     // Recurrence

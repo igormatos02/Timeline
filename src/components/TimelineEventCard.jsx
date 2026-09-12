@@ -218,6 +218,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     isLoanInstallment
   ) && normRec !== EventRecurrence.ONCE;
 
+  const isFutureMonth = Boolean(event.date && event.date > currentMonthEndStr);
+
   const isCancelled = isCancelledStatus(effectiveStatus) || isCancelledStatus(event.status);
 
   const isCompleted = !isCancelled && (
@@ -461,31 +463,57 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     t
   ]);
 
-  const renderStatusDropdownButton = (buttonProps, children) => (
-    <div ref={statusMenuRef} style={{ position: 'relative', display: 'inline-flex' }}>
-      <button
-        type="button"
-        disabled={isTogglingStatus}
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsStatusMenuOpen((prev) => !prev);
-        }}
-        {...buttonProps}
-        style={{
-          ...buttonProps?.style,
-          cursor: isTogglingStatus ? 'wait' : (buttonProps?.style?.cursor || 'pointer'),
-          opacity: isTogglingStatus ? 0.75 : (buttonProps?.style?.opacity || 1)
-        }}
-      >
-        {isTogglingStatus ? (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-            <Loader2 size={12} className="animate-spin" />
-            <span>{t('common.processing') || 'Processando...'}</span>
-          </span>
-        ) : (
-          children
-        )}
-      </button>
+  const renderStatusDropdownButton = (buttonProps, children) => {
+    if (isFutureMonth) {
+      return (
+        <div
+          className="btn btn-sm"
+          style={{
+            ...buttonProps?.style,
+            background: 'rgba(255, 255, 255, 0.03)',
+            color: 'var(--text-dim)',
+            border: '1px solid var(--border-glass)',
+            boxShadow: 'none',
+            cursor: 'default',
+            userSelect: 'none',
+            opacity: 0.65,
+            pointerEvents: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}
+          title=""
+        >
+          {children}
+        </div>
+      );
+    }
+
+    return (
+      <div ref={statusMenuRef} style={{ position: 'relative', display: 'inline-flex' }}>
+        <button
+          type="button"
+          disabled={isTogglingStatus}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsStatusMenuOpen((prev) => !prev);
+          }}
+          {...buttonProps}
+          style={{
+            ...buttonProps?.style,
+            cursor: isTogglingStatus ? 'wait' : (buttonProps?.style?.cursor || 'pointer'),
+            opacity: isTogglingStatus ? 0.75 : (buttonProps?.style?.opacity || 1)
+          }}
+        >
+          {isTogglingStatus ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <Loader2 size={12} className="animate-spin" />
+              <span>{t('common.processing')}</span>
+            </span>
+          ) : (
+            children
+          )}
+        </button>
 
       {isStatusMenuOpen && (
         <div
@@ -554,6 +582,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       )}
     </div>
   );
+};
 
   const abatedBreakdown = React.useMemo(() => {
     if (!isAmortized) return null;
@@ -2548,7 +2577,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                         : 'none'
                   }
                 },
-                isCancelled ? (
+                isFutureMonth ? (
+                  <>
+                    <Clock size={13} style={{ color: 'var(--text-dim)' }} />
+                    <span>{t('status.toReceive')}</span>
+                  </>
+                ) : isCancelled ? (
                   <>
                     <Ban size={13} style={{ color: TimelineColor.SLATE }} />
                     <span>{t('status.cancelled')}</span>
@@ -2670,7 +2704,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     transition: 'all 0.15s ease'
                   }
                 },
-                isCancelled ? (
+                isFutureMonth ? (
+                  <>
+                    <Clock size={13} style={{ color: 'var(--text-dim)' }} />
+                    <span>{t('status.toPay')}</span>
+                  </>
+                ) : isCancelled ? (
                   <>
                     <Ban size={13} style={{ color: TimelineColor.SLATE }} />
                     <span>{t('status.cancelled')}</span>
@@ -2688,7 +2727,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 ) : (
                   <>
                     <Clock size={13} style={{ color: TimelineColor.WARNING }} />
-                    <span>{t('status.pending')}</span>
+                    <span>{t('status.toPay')}</span>
                   </>
                 )
               )}
@@ -2900,7 +2939,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     transition: 'all 0.15s ease'
                   }
                 },
-                isCancelled ? (
+                isFutureMonth ? (
+                  <>
+                    <Clock size={13} style={{ color: 'var(--text-dim)' }} />
+                    <span>{t('status.planned')}</span>
+                  </>
+                ) : isCancelled ? (
                   <>
                     <Ban size={13} style={{ color: TimelineColor.SLATE }} />
                     <span>{t('status.cancelled')}</span>
@@ -2909,12 +2953,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   event.status === 'Financiado' ? (
                     <>
                       <CreditCard size={13} style={{ color: TimelineColor.CYAN }} />
-                      <span>Financiado</span>
+                      <span>{t('status.financed')}</span>
                     </>
                   ) : (
                     <>
                       <Landmark size={13} style={{ color: TimelineColor.INCOME }} />
-                      <span>Quitado</span>
+                      <span>{t('status.paidOff')}</span>
                     </>
                   )
                 ) : isCompletedInvestment ? (
@@ -3168,7 +3212,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     transition: 'all 0.15s ease'
                   }
                 },
-                isCancelled ? (
+                isFutureMonth ? (
+                  <>
+                    <Clock size={13} style={{ color: 'var(--text-dim)' }} />
+                    <span>{t('status.pending')}</span>
+                  </>
+                ) : isCancelled ? (
                   <>
                     <Ban size={13} style={{ color: TimelineColor.SLATE }} />
                     <span>{t('status.cancelled')}</span>
@@ -3358,7 +3407,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                         : 'none'
                     }
                   },
-                  isCancelled ? (
+                  isFutureMonth ? (
+                    <>
+                      <Clock size={13} style={{ color: 'var(--text-dim)' }} />
+                      <span>{t('status.pending')}</span>
+                    </>
+                  ) : isCancelled ? (
                     <>
                       <Ban size={13} style={{ color: TimelineColor.SLATE }} />
                       <span>{t('status.cancelled')}</span>
@@ -3578,42 +3632,65 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
               {/* Checkbox / Toggle status button */}
-              <button
-                type="button"
-                disabled={isTogglingStatus}
-                onClick={(e) => handleStatusToggle(e, isCompleted ? EventStatus.PENDING : EventStatus.COMPLETED)}
-                title={isTogglingStatus ? t('common.processing') : (isCompleted ? t('todoModal.markPending') : t('todoModal.markCompleted'))}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  border: isCompleted ? `1px solid ${TimelineColor.SUCCESS}` : '1px solid var(--border-glass)',
-                  background: isCompleted ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                  color: isCompleted ? TimelineColor.SUCCESS : 'var(--text-main)',
-                  fontSize: '0.76rem',
-                  fontWeight: '700',
-                  cursor: isTogglingStatus ? 'wait' : 'pointer',
-                  opacity: isTogglingStatus ? 0.75 : 1,
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {isTogglingStatus ? (
-                  <Loader2 size={13} className="animate-spin" />
-                ) : isCompleted ? (
-                  <CheckCircle2 size={13} style={{ color: TimelineColor.SUCCESS }} />
-                ) : (
-                  <Circle size={13} />
-                )}
-                <span>
-                  {isTogglingStatus
-                    ? t('common.processing')
-                    : isCompleted
-                      ? t('status.completed')
-                      : t('todoHeader.completeAction')}
-                </span>
-              </button>
+              {isFutureMonth ? (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-glass)',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    color: 'var(--text-dim)',
+                    fontSize: '0.76rem',
+                    fontWeight: '700',
+                    cursor: 'default',
+                    userSelect: 'none',
+                    opacity: 0.65
+                  }}
+                >
+                  <Circle size={13} style={{ color: 'var(--text-dim)' }} />
+                  <span>{t('status.pending')}</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isTogglingStatus}
+                  onClick={(e) => handleStatusToggle(e, isCompleted ? EventStatus.PENDING : EventStatus.COMPLETED)}
+                  title={isTogglingStatus ? t('common.processing') : (isCompleted ? t('todoModal.markPending') : t('todoModal.markCompleted'))}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: isCompleted ? `1px solid ${TimelineColor.SUCCESS}` : '1px solid var(--border-glass)',
+                    background: isCompleted ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                    color: isCompleted ? TimelineColor.SUCCESS : 'var(--text-main)',
+                    fontSize: '0.76rem',
+                    fontWeight: '700',
+                    cursor: isTogglingStatus ? 'wait' : 'pointer',
+                    opacity: isTogglingStatus ? 0.75 : 1,
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {isTogglingStatus ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : isCompleted ? (
+                    <CheckCircle2 size={13} style={{ color: TimelineColor.SUCCESS }} />
+                  ) : (
+                    <Circle size={13} />
+                  )}
+                  <span>
+                    {isTogglingStatus
+                      ? t('common.processing')
+                      : isCompleted
+                        ? t('status.completed')
+                        : t('todoHeader.completeAction')}
+                  </span>
+                </button>
+              )}
 
               <div onClick={(e) => e.stopPropagation()}>
                 {renderActionButtons()}
@@ -3699,7 +3776,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     transition: 'all 0.15s ease'
                   }
                 },
-                isCancelled ? (
+                isFutureMonth ? (
+                  <>
+                    <Clock size={13} style={{ color: 'var(--text-dim)' }} />
+                    <span>{t('status.open')}</span>
+                  </>
+                ) : isCancelled ? (
                   <>
                     <Ban size={13} style={{ color: TimelineColor.SLATE }} />
                     <span>{t('status.cancelled')}</span>

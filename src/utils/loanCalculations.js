@@ -1008,8 +1008,7 @@ export function recalculateLoanState(
 
   return sorted.map((ev) => {
     if (isAmortizationEvent(ev)) {
-      const isPaidAmort = isPositiveStatus(ev.status) || ev.isCompleted;
-      if (isPaidAmort) {
+      if (!isCancelledStatus(ev.status)) {
         const amortVal = Number(ev.amortizationAmount ?? ev.installmentAmount ?? ev.amount ?? 0);
         if (amortVal > 0) {
           runningBalance = Math.max(0, Math.round((runningBalance - amortVal) * 100) / 100);

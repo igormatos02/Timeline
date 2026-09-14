@@ -80,9 +80,12 @@ export default function BalanceTimelineHeader({
     const map = new Map();
     const addIfValid = (e) => {
       if (!e || !e.id) return;
-      const tid = String(e.timelineId || e.timeline_id || e.timelineOriginId || '');
-      // Se conhecemos as timelines do timeboard, apenas incluir eventos pertencentes a elas
-      if (validTimelineIds.size > 0 && tid && !validTimelineIds.has(tid)) return;
+      if (validTimelineIds.size > 0) {
+        const hasValid = (e.timelineId && validTimelineIds.has(String(e.timelineId))) ||
+          (e.timelineOriginId && validTimelineIds.has(String(e.timelineOriginId))) ||
+          (e.timeline_id && validTimelineIds.has(String(e.timeline_id)));
+        if (!hasValid) return;
+      }
       map.set(e.id, e);
     };
 

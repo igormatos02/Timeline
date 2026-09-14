@@ -1092,6 +1092,87 @@ export class SupabaseFinancialEventRepository extends IRepository {
     );
   }
 
+  async payUpTo({ timelineId, date, installmentNumber, status = EventStatus.PAID }) {
+    if (!timelineId) return { updatedCount: 0, updatedIds: [] };
+
+    // 1. Fetch matching events from financial_events
+    let selectQuery = supabase
+      .from(this.tableName)
+      .select('id, event_id, date, timeboard_id, timeline_id, installment_number')
+      .eq('timeline_id', String(timelineId));
+
+    if (installmentNumber && Number(installmentNumber) > 0) {
+      selectQuery = selectQuery.lte('installment_number', Number(installmentNumber));
+    } else if (date) {
+      selectQuery = selectQuery.lte('date', String(date));
+    }
+
+    const { data: matchedEvents, error: selectError } = await selectQuery;
+    if (selectError) {
+      console.error('Error selecting events in payUpTo:', selectError.message);
+      throw new Error(`Failed to select events in payUpTo: ${selectError.message}`);
+    }
+
+    const eventsList = matchedEvents || [];
+    if (eventsList.length === 0) {
+      return { updatedCount: 0, updatedIds: [] };
+    }
+
+    // 2. Batch upsert into financial_event_status
+    const statusRows = eventsList
+      .filter((ev) => ev.date && String(ev.date).length >= 7)
+      .map((ev) => {
+        const dateStr = String(ev.date);
+        const year = parseInt(dateStr.substring(0, 4), 10);
+        const month = parseInt(dateStr.substring(5, 7), 10);
+        return {
+          year,
+          month,
+          event_id: String(ev.event_id || ev.id),
+          status: String(status),
+          timeline_id: String(ev.timeline_id || timelineId),
+          timeboard_id: ev.timeboard_id ? String(ev.timeboard_id) : null,
+          updated_at: new Date().toISOString()
+        };
+      });
+
+    if (statusRows.length > 0) {
+      const { error: upsertError } = await supabase
+        .from('financial_event_status')
+        .upsert(statusRows, { onConflict: 'year,month,event_id' });
+
+      if (upsertError) {
+        console.error('Error batch upserting financial_event_status in payUpTo:', upsertError.message);
+        throw new Error(`Failed to batch upsert financial_event_status: ${upsertError.message}`);
+      }
+    }
+
+    // 3. Update paid_date on financial_events
+    let updateQuery = supabase
+      .from(this.tableName)
+      .update({
+        paid_date: new Date().toISOString().substring(0, 10),
+        updated_at: new Date().toISOString()
+      })
+      .eq('timeline_id', String(timelineId));
+
+    if (installmentNumber && Number(installmentNumber) > 0) {
+      updateQuery = updateQuery.lte('installment_number', Number(installmentNumber));
+    } else if (date) {
+      updateQuery = updateQuery.lte('date', String(date));
+    }
+
+    const { error: updateError } = await updateQuery;
+    if (updateError) {
+      console.warn('Could not update paid_date in financial_events:', updateError.message);
+    }
+
+    return {
+      updatedCount: eventsList.length,
+      updatedIds: eventsList.map((r) => r.id)
+    };
+  }
+
   async deleteMany(predicate) {
     const all = await this.getAll();
     const toDelete = all.filter(predicate);

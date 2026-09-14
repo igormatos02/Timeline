@@ -512,19 +512,6 @@ function VerticalTimeline({
   const startDateObj = subMonths(currentMonthStart, effectivePastYears * 12);
   const maxDateObj = addMonths(currentMonthEnd, Math.max(1, futureHorizonYears) * 12);
 
-  // Generate array of days from startDate up to maxDateObj (Descending: future at top, past at bottom)
-  const daysArray = useMemo(() => {
-    try {
-      const daysAscending = eachDayOfInterval({
-        start: startDateObj,
-        end: maxDateObj
-      });
-      return daysAscending.reverse();
-    } catch (err) {
-      return [todayDate];
-    }
-  }, [startDateObj.getTime(), maxDateObj.getTime()]);
-
   // Filter events based on search query, status, category, and label
   const filteredEvents = useMemo(() => {
     if (!timelineEvents) return [];
@@ -680,6 +667,33 @@ function VerticalTimeline({
     return map;
   }, [filteredEvents]);
 
+  // Generate array of days only when day-view is active
+  const daysArray = useMemo(() => {
+    if (groupBy !== 'day') return [];
+    if (!showEmptyDays) {
+      const datesSet = new Set(Object.keys(eventsByDate));
+      datesSet.add(todayStr);
+      return Array.from(datesSet)
+        .sort((a, b) => b.localeCompare(a))
+        .map((dStr) => {
+          try {
+            return parseISO(dStr);
+          } catch {
+            return todayDate;
+          }
+        });
+    }
+    try {
+      const daysAscending = eachDayOfInterval({
+        start: startDateObj,
+        end: maxDateObj
+      });
+      return daysAscending.reverse();
+    } catch {
+      return [todayDate];
+    }
+  }, [groupBy, showEmptyDays, eventsByDate, todayStr, startDateObj.getTime(), maxDateObj.getTime(), todayDate]);
+
   // ========================================================
   // RENDER ENGINES BY GROUPBY MODE
   // ========================================================
@@ -749,34 +763,41 @@ function VerticalTimeline({
   const renderWeekView = () => {
     const weekMap = new Map();
 
-    daysArray.forEach((dayObj) => {
-      const weekStart = startOfWeek(dayObj, { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(dayObj, { weekStartsOn: 1 });
-      const weekKey = format(weekStart, 'yyyy-MM-dd');
-
-      if (!weekMap.has(weekKey)) {
-        weekMap.set(weekKey, {
-          weekStart,
-          weekEnd,
-          weekNum: getWeek(weekStart),
-          events: []
-        });
-      }
-    });
-
+    // Map events directly into their corresponding weeks
     filteredEvents.forEach((ev) => {
+      if (!ev || !ev.date) return;
       try {
         const evDate = parseISO(ev.date);
-        for (let [weekKey, weekData] of weekMap.entries()) {
-          if (isSameWeek(evDate, weekData.weekStart, { weekStartsOn: 1 })) {
-            weekData.events.push(ev);
-            break;
-          }
+        const weekStart = startOfWeek(evDate, { weekStartsOn: 1 });
+        const weekKey = format(weekStart, 'yyyy-MM-dd');
+        if (!weekMap.has(weekKey)) {
+          const weekEnd = endOfWeek(evDate, { weekStartsOn: 1 });
+          weekMap.set(weekKey, {
+            weekStart,
+            weekEnd,
+            weekNum: getWeek(weekStart),
+            events: []
+          });
         }
+        weekMap.get(weekKey).events.push(ev);
       } catch (e) { }
     });
 
-    const weeksList = Array.from(weekMap.values());
+    // Ensure current week is present
+    const currentWeekStart = startOfWeek(todayDate, { weekStartsOn: 1 });
+    const currentWeekKey = format(currentWeekStart, 'yyyy-MM-dd');
+    if (!weekMap.has(currentWeekKey)) {
+      weekMap.set(currentWeekKey, {
+        weekStart: currentWeekStart,
+        weekEnd: endOfWeek(todayDate, { weekStartsOn: 1 }),
+        weekNum: getWeek(currentWeekStart),
+        events: []
+      });
+    }
+
+    const weeksList = Array.from(weekMap.values()).sort(
+      (a, b) => b.weekStart.getTime() - a.weekStart.getTime()
+    );
 
     return (
       <div className="vertical-timeline-container">
@@ -1390,8 +1411,8 @@ function VerticalTimeline({
   const renderYearView = () => {
     const yearMap = new Map();
 
-    daysArray.forEach((dayObj) => {
-      const yearKey = format(dayObj, 'yyyy');
+    monthsList.forEach((mEntry) => {
+      const yearKey = format(mEntry.monthDate, 'yyyy');
       if (!yearMap.has(yearKey)) {
         yearMap.set(yearKey, {
           yearStr: yearKey,
@@ -1400,36 +1421,11 @@ function VerticalTimeline({
       }
 
       const yearEntry = yearMap.get(yearKey);
-      const monthKey = format(dayObj, 'yyyy-MM');
-      if (!yearEntry.monthsMap.has(monthKey)) {
-        yearEntry.monthsMap.set(monthKey, {
-          monthDate: dayObj,
-          events: []
-        });
-      }
-    });
-
-    filteredEvents.forEach((ev) => {
-      try {
-        const evDate = parseISO(ev.date);
-        const yearKey = format(evDate, 'yyyy');
-        const monthKey = format(evDate, 'yyyy-MM');
-
-        if (!yearMap.has(yearKey)) {
-          yearMap.set(yearKey, {
-            yearStr: yearKey,
-            monthsMap: new Map()
-          });
-        }
-        const yearEntry = yearMap.get(yearKey);
-        if (!yearEntry.monthsMap.has(monthKey)) {
-          yearEntry.monthsMap.set(monthKey, {
-            monthDate: evDate,
-            events: []
-          });
-        }
-        yearEntry.monthsMap.get(monthKey).events.push(ev);
-      } catch (e) { }
+      const monthKey = format(mEntry.monthDate, 'yyyy-MM');
+      yearEntry.monthsMap.set(monthKey, {
+        monthDate: mEntry.monthDate,
+        events: mEntry.events
+      });
     });
 
     const yearsList = Array.from(yearMap.values());

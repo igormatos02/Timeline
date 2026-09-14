@@ -769,3 +769,14 @@ export async function amortizeLoan(payload) {
   if (!res.ok) throw new Error('Failed to process amortization');
   return res.json();
 }
+
+export async function payUpTo(payload) {
+  const res = await fetch(`${API_BASE}/events/pay-up-to`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('Failed to pay up to target date/installment');
+  return res.json();
+}
+

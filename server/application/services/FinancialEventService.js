@@ -1205,6 +1205,13 @@ export class FinancialEventService {
       console.error('Error rolling back loan remaining debt:', e);
     }
   }
+
+  async payUpTo({ timelineId, date, installmentNumber, status = EventStatus.PAID }) {
+    if (!timelineId) {
+      throw new Error('timelineId is required');
+    }
+    return eventRepository.payUpTo({ timelineId, date, installmentNumber, status });
+  }
 }
 
 export const financialEventService = new FinancialEventService();

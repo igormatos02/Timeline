@@ -36,6 +36,16 @@ eventsRouter.post('/', async (req, res) => {
   }
 });
 
+// POST /api/events/pay-up-to
+eventsRouter.post('/pay-up-to', async (req, res) => {
+  try {
+    const result = await eventService.payUpTo(req.body);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // PUT /api/events/:id
 eventsRouter.put('/:id', async (req, res) => {
   try {

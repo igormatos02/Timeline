@@ -79,7 +79,10 @@ export const translations = {
       timelineUpdateError: "Error updating timeline: {error}",
       timelineCreatedSuccess: "Timeline created successfully!",
       contractAndInstallmentsCreatedSuccess: "Contract and installments created successfully!",
-      timelineCreateError: "Error creating timeline: {error}"
+      timelineCreateError: "Error creating timeline: {error}",
+      allPreviousPaid: "All previous installments are already marked as paid.",
+      payUpToSuccess: "{count} installment(s) successfully marked as paid!",
+      payUpToError: "Error updating installments in the database."
     },
 
     // Timeline Rows & Cards
@@ -1385,7 +1388,10 @@ export const translations = {
       timelineUpdateError: "Erro ao atualizar linha de tempo: {error}",
       timelineCreatedSuccess: "Linha de tempo criada com sucesso!",
       contractAndInstallmentsCreatedSuccess: "Contrato e prestações criados com sucesso!",
-      timelineCreateError: "Erro ao criar linha de tempo: {error}"
+      timelineCreateError: "Erro ao criar linha de tempo: {error}",
+      allPreviousPaid: "Todas as prestações anteriores já estão pagas.",
+      payUpToSuccess: "{count} prestações marcadas como pagas com sucesso!",
+      payUpToError: "Erro ao atualizar prestações na base de dados."
     },
 
     // Timeline Rows & Cards

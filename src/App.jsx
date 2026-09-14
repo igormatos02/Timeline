@@ -1486,14 +1486,15 @@ export default function App() {
     if (!targetEv || !activeTimeline) return;
     const targetInstNum = Number(targetEv.installmentNumber || targetEv.installment_number || 0);
     const targetDate = targetEv.date || '';
+    const targetTimelineId = targetEv.timelineOriginId || targetEv.timelineId || targetEv.timeline_id || activeTimeline.id;
 
     let allTlEvents = rawEvents.filter(
-      (ev) => ev.timelineId === activeTimeline.id || ev.timelineOriginId === activeTimeline.id || ev.timeline_id === activeTimeline.id
+      (ev) => ev.timelineId === targetTimelineId || ev.timelineOriginId === targetTimelineId || ev.timeline_id === targetTimelineId || ev.timelineId === activeTimeline.id || ev.timelineOriginId === activeTimeline.id
     );
 
     // Garantir que obtemos a totalidade das prestações da timeline vindas da API (mesmo as não visíveis no ecrã)
     try {
-      const freshEvents = await api.fetchEvents({ timelineId: activeTimeline.id });
+      const freshEvents = await api.fetchEvents({ timelineId: targetTimelineId });
       if (freshEvents && freshEvents.length > 0) {
         allTlEvents = freshEvents;
       }
@@ -1510,7 +1511,7 @@ export default function App() {
     });
 
     if (eventsToPay.length === 0) {
-      showToast('Todas as prestações anteriores já estão pagas.', 'info');
+      showToast(t('toast.allPreviousPaid'), 'info');
       return;
     }
 
@@ -1527,25 +1528,24 @@ export default function App() {
       })
     );
 
-    // 2. Batch update on backend via status synchronization (api.toggleEventPayment)
+    // 2. Atomic single-query update on backend (payUpTo)
     setIsUpdatingInstallments(true);
     try {
-      const BATCH_SIZE = 10;
-      for (let i = 0; i < eventsToPay.length; i += BATCH_SIZE) {
-        const batch = eventsToPay.slice(i, i + BATCH_SIZE);
-        await Promise.all(
-          batch.map((item) => api.toggleEventPayment(item.id))
-        );
-      }
-      showToast(`${eventsToPay.length} prestações marcadas como pagas com sucesso!`, 'success');
+      await api.payUpTo({
+        timelineId: targetTimelineId,
+        date: targetDate,
+        installmentNumber: targetInstNum,
+        status: EventStatus.PAID
+      });
+      showToast(t('toast.payUpToSuccess', { count: eventsToPay.length }), 'success');
       await refreshTimelines();
     } catch (err) {
       console.error('Error paying up to here:', err);
-      showToast('Erro ao atualizar prestações na base de dados.', 'error');
+      showToast(t('toast.payUpToError'), 'error');
     } finally {
       setIsUpdatingInstallments(false);
     }
-  }, [activeTimeline, rawEvents, refreshTimelines]);
+  }, [activeTimeline, rawEvents, refreshTimelines, t]);
 
   // Save changes from EditInstallmentModal (amount, principalAmount, interestPortion, interestAmount, propagateForward)
   const handleSaveEditInstallment = async (installmentId, { status, amount, principalAmount, interestPortion, interestAmount, propagateForward }) => {

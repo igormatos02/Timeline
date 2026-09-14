@@ -43,6 +43,10 @@ export class EventService {
   async deleteEvent(id, options = {}) {
     return financialEventService.deleteEvent(id, options);
   }
+
+  async payUpTo(payload) {
+    return financialEventService.payUpTo(payload);
+  }
 }
 
 export const eventService = new EventService();

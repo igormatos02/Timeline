@@ -8,6 +8,7 @@ export const EventType = Object.freeze({
   GENERIC: 'generic',
   REMINDER: 'generic',
   REGISTER: 'register',
-  TODO: 'todo'
+  TODO: 'todo',
+  FOLLOWUP: 'followup'
 });
 

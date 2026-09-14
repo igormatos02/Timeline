@@ -10,6 +10,7 @@ import {
   DiaryTimelineHeader,
   ProjectTimelineHeader,
   TodoTimelineHeader,
+  FollowupTimelineHeader,
   DefaultTimelineHeader
 } from './timeline-headers/index.js';
 
@@ -52,6 +53,9 @@ function TimelineHeader(props) {
 
     case TimelineType.TODO:
       return <TodoTimelineHeader {...props} />;
+
+    case TimelineType.FOLLOWUP:
+      return <FollowupTimelineHeader {...props} />;
 
     default:
       return <DefaultTimelineHeader {...props} />;

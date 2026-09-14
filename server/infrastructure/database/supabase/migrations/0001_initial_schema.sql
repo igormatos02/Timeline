@@ -278,5 +278,41 @@ BEGIN
       EXECUTE format('CREATE POLICY "Allow all operations on %I" ON %I FOR ALL USING (true) WITH CHECK (true)', tbl, tbl);
     END IF;
   END LOOP;
-END
-$$;
+END $$;
+
+create table if not exists public.followup (
+  id uuid not null default gen_random_uuid (),
+  event_id character varying not null,
+  timeboard_id uuid not null,
+  timeline_id uuid null,
+  name character varying not null,
+  description text null default ''::text,
+  labels jsonb null default '[]'::jsonb,
+  notes text null default ''::text,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  tenant_id uuid null,
+  breakdown_items jsonb null default '[]'::jsonb,
+  position smallint null,
+  status character varying null,
+  constraint followup_pkey primary key (id),
+  constraint fk_followup_timeline foreign KEY (timeline_id) references timelines (id) on delete CASCADE,
+  constraint followup_tenant_id_fkey foreign KEY (tenant_id) references tenant (id),
+  constraint followup_timeboard_id_fkey foreign KEY (timeboard_id) references timeboards (id),
+  constraint followup_timeline_id_fkey foreign KEY (timeline_id) references timelines (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_followup_id on public.followup using btree (id) TABLESPACE pg_default;
+create index IF not exists idx_followup_event_id on public.followup using btree (event_id) TABLESPACE pg_default;
+create index IF not exists idx_followup_timeline_id on public.followup using btree (timeline_id) TABLESPACE pg_default;
+create index IF not exists idx_followup_timeboard_id on public.followup using btree (timeboard_id) TABLESPACE pg_default;
+
+ALTER TABLE public.followup ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'followup' AND policyname = 'Allow all operations on followup'
+  ) THEN
+    CREATE POLICY "Allow all operations on followup" ON public.followup FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+END $$;

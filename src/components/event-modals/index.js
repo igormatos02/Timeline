@@ -7,5 +7,6 @@ export { default as BalanceEventModal } from './BalanceEventModal.jsx';
 export { default as ReminderEventModal } from './ReminderEventModal.jsx';
 export { default as DiaryEventModal } from './DiaryEventModal.jsx';
 export { default as TodoEventModal } from './TodoEventModal.jsx';
+export { default as FollowupEventModal } from './FollowupEventModal.jsx';
 export { default as DefaultEventModal } from './DefaultEventModal.jsx';
 

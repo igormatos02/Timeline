@@ -12,7 +12,7 @@ export const TimelineType = Object.freeze({
      CUSTOM: 'custom',
   */
   TODO: 'todo',
-
+  FOLLOWUP: 'followup'
 });
 
 const VALID_TIMELINE_TYPES = new Set(Object.values(TimelineType));

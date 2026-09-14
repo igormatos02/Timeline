@@ -7,6 +7,7 @@ import { loansRouter } from './interfaces/http/routes/loansRoutes.js';
 import { personsRouter } from './interfaces/http/routes/personsRoutes.js';
 import { authRouter } from './interfaces/http/routes/authRoutes.js';
 import { todoRouter } from './interfaces/http/routes/todoRoutes.js';
+import { followupRouter } from './interfaces/http/routes/followupRoutes.js';
 
 export const app = express();
 
@@ -22,6 +23,7 @@ app.use('/api/events', eventsRouter);
 app.use('/api/loans', loansRouter);
 app.use('/api/persons', personsRouter);
 app.use('/api/todos', todoRouter);
+app.use('/api/followups', followupRouter);
 
 // Dynamic version endpoint reading package.json on demand
 app.get('/api/version', (req, res) => {

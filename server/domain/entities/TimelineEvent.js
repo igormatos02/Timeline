@@ -6,6 +6,7 @@ import {
   EventPeriodicity,
   EventRecurrence,
   LoanEventCategory,
+  FollowupStatus,
   isPositiveStatus,
   isCancelledStatus,
   normalizePeriodicity,
@@ -265,6 +266,7 @@ export function calcToggledStatus(event, explicitStatus = null) {
   const isIncome = event.eventType === EventType.INCOME;
   const isReminder = event.eventType === EventType.REMINDER || event.timelineType === TimelineType.REMINDER || event.timeline_type === TimelineType.REMINDER;
   const isTodo = event.eventType === EventType.TODO || event.timelineType === TimelineType.TODO || event.timeline_type === TimelineType.TODO;
+  const isFollowup = event.eventType === EventType.FOLLOWUP || event.timelineType === TimelineType.FOLLOWUP || event.timeline_type === TimelineType.FOLLOWUP;
 
   const currentStatus = String(event.status || '').toLowerCase();
 
@@ -276,14 +278,14 @@ export function calcToggledStatus(event, explicitStatus = null) {
     currentStatus === EventStatus.AMORTIZED ||
     currentStatus === EventStatus.COMPLETED ||
     currentStatus === EventStatus.CLOSED ||
+    currentStatus === FollowupStatus.FINISHED ||
     Boolean(event.isCompleted);
 
-  const isCancelled = isCancelledStatus(currentStatus);
-
-  // 3-state cycle:
-  // 1. Negative (pending/planned/open) -> 2. Positive (paid/received/invested/amortized/closed) -> 3. Cancelled (cancelled) -> 1. Negative
-  if (isCancelled) {
-    let nextNeg = isInvestment ? EventStatus.PLANNED : EventStatus.PENDING;
+  // Direct 2-way toggle:
+  // If Positive -> Negative (Pending / Open / Planned / In Progress)
+  // If Negative or Cancelled -> Positive (Paid / Received / Invested / Amortized / Closed / Completed / Finished)
+  if (isPositive) {
+    let nextNeg = isInvestment ? EventStatus.PLANNED : (isFollowup ? FollowupStatus.IN_PROGRESS : EventStatus.PENDING);
     if (isReminder) nextNeg = EventStatus.OPEN;
     return {
       status: nextNeg,
@@ -291,16 +293,10 @@ export function calcToggledStatus(event, explicitStatus = null) {
     };
   }
 
-  if (isPositive) {
-    return {
-      status: isTodo ? EventStatus.PENDING : EventStatus.CANCELLED,
-      isCompleted: false
-    };
-  }
-
   let positiveStatus = EventStatus.PAID;
   if (isReminder) positiveStatus = EventStatus.CLOSED;
   else if (isTodo) positiveStatus = EventStatus.COMPLETED;
+  else if (isFollowup) positiveStatus = FollowupStatus.FINISHED;
   else if (isIncome) positiveStatus = EventStatus.RECEIVED;
   else if (isInvestment) positiveStatus = EventStatus.INVESTED;
   else if (isAmortization) positiveStatus = EventStatus.AMORTIZED;

@@ -7,7 +7,8 @@ import {
   Smile,
   Meh,
   Frown,
-  Heart
+  Heart,
+  BookOpen
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import {
@@ -15,6 +16,7 @@ import {
   TimelineType,
   EventType,
   EventStatus,
+  TimelineColor,
   isCancelledStatus
 } from '../../enums/index.js';
 import { DIARY_MOOD_CONFIG } from '../event-modals/DiaryEventModal.jsx';

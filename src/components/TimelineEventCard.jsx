@@ -46,7 +46,9 @@ import {
   Cake,
   Wrench,
   Bell,
-  Loader2
+  ListTree,
+  Loader2,
+  Flag
 } from 'lucide-react';
 import { isLoanInstallment as checkIsLoanInstallment, isAmortizationEvent as checkIsAmortizationEvent } from '../utils/loanCalculations';
 import { formatCurrency } from '../utils/formatCurrency';
@@ -58,6 +60,7 @@ import {
   EventType,
   TimelineType,
   EventStatus,
+  FollowupStatus,
   ReminderEventStatus,
   EventRecurrence,
   EventPeriodicity,
@@ -199,9 +202,17 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     event.timeline_type === TimelineType.REMINDER ||
     event.category === 'reminder';
 
-  const isIncomeEvent = event.eventType === EventType.INCOME && !isRegisterEvent && !isTodoEvent && !isReminderEvent;
-  const isExpenseEvent = event.eventType === EventType.EXPENSE && !isRegisterEvent && !isTodoEvent && !isReminderEvent;
-  const isInvestmentEvent = event.eventType === EventType.INVESTMENT && !isRegisterEvent && !isTodoEvent && !isReminderEvent;
+  const isFollowupTimeline = timelineType === TimelineType.FOLLOWUP;
+  const isFollowupEvent =
+    isFollowupTimeline ||
+    event.eventType === EventType.FOLLOWUP ||
+    event.timelineType === TimelineType.FOLLOWUP ||
+    event.timeline_type === TimelineType.FOLLOWUP ||
+    event.category === 'followup';
+
+  const isIncomeEvent = event.eventType === EventType.INCOME && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
+  const isExpenseEvent = event.eventType === EventType.EXPENSE && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
+  const isInvestmentEvent = event.eventType === EventType.INVESTMENT && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
   const isSavingsInvestment = isInvestmentEvent && (
     !event.category ||
     event.category === 'savings' ||
@@ -222,14 +233,28 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
   const isCancelled = isCancelledStatus(effectiveStatus) || isCancelledStatus(event.status);
 
+  const isAnchorCard = isFollowupEvent && Boolean(event.position === 0 || event.isReadOnly || event.isAnchorVisible);
+
+  const isFollowupFinished = isFollowupEvent && (
+    effectiveStatus === FollowupStatus.FINISHED ||
+    effectiveStatus === 'finished' ||
+    event.status === FollowupStatus.FINISHED ||
+    event.status === 'finished' ||
+    Boolean(event.isFinished)
+  );
+
   const isCompleted = !isCancelled && (
-    effectiveStatus === EventStatus.PAID ||
-    effectiveStatus === EventStatus.RECEIVED ||
-    effectiveStatus === EventStatus.INVESTED ||
-    effectiveStatus === EventStatus.SETTLED ||
-    effectiveStatus === EventStatus.COMPLETED ||
-    effectiveStatus === EventStatus.AMORTIZED ||
-    effectiveStatus === EventStatus.CLOSED
+    (isFollowupEvent && isFollowupFinished) ||
+    (!isFollowupEvent && (
+      effectiveStatus === EventStatus.PAID ||
+      effectiveStatus === EventStatus.RECEIVED ||
+      effectiveStatus === EventStatus.INVESTED ||
+      effectiveStatus === EventStatus.SETTLED ||
+      effectiveStatus === EventStatus.COMPLETED ||
+      effectiveStatus === EventStatus.AMORTIZED ||
+      effectiveStatus === EventStatus.CLOSED ||
+      effectiveStatus === EventStatus.FINISHED
+    ))
   );
 
   const isOverdue = Boolean(
@@ -256,212 +281,6 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const isPaidLoan = isLoanInstallment && !isCancelled && (effectiveStatus === EventStatus.PAID || effectiveStatus === EventStatus.SETTLED || effectiveStatus === EventStatus.COMPLETED || effectiveStatus === EventStatus.AMORTIZED);
   const isOverdueLoan = isLoanInstallment && !isCancelled && (isOverdue || effectiveStatus === EventStatus.OVERDUE);
   const isAmortized = isLoanInstallment && !isCancelled && effectiveStatus === EventStatus.AMORTIZED;
-
-  const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
-  const [openUpwards, setOpenUpwards] = useState(false);
-  const statusMenuRef = React.useRef(null);
-
-  React.useEffect(() => {
-    if (!isStatusMenuOpen) return;
-    if (statusMenuRef.current) {
-      const rect = statusMenuRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      if (spaceBelow < 220 && rect.top > 220) {
-        setOpenUpwards(true);
-      } else {
-        setOpenUpwards(false);
-      }
-    }
-    const handleClickOutside = (e) => {
-      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target)) {
-        setIsStatusMenuOpen(false);
-      }
-    };
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setIsStatusMenuOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isStatusMenuOpen]);
-
-  const statusMenuOptions = React.useMemo(() => {
-    // 1. Positive or Pending Option ("A outra opção")
-    let primaryOption;
-    if (isReminderEvent) {
-      if (isClosedReminder) {
-        primaryOption = {
-          label: t(`status.${EventStatus.OPEN}`),
-          targetStatus: EventStatus.OPEN,
-          icon: <Clock size={13} style={{ color: TimelineColor.CYAN }} />,
-          color: TimelineColor.CYAN
-        };
-      } else {
-        primaryOption = {
-          label: t(`status.${EventStatus.CLOSED}`),
-          targetStatus: EventStatus.CLOSED,
-          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
-          color: TimelineColor.INCOME
-        };
-      }
-    } else if (isIncomeEvent) {
-      if (isReceivedIncome) {
-        primaryOption = {
-          label: t(`status.${EventStatus.TO_RECEIVE}`),
-          targetStatus: EventStatus.PENDING,
-          icon: <Clock size={13} style={{ color: TimelineColor.WARNING }} />,
-          color: TimelineColor.WARNING
-        };
-      } else {
-        primaryOption = {
-          label: t(`status.${EventStatus.RECEIVED}`),
-          targetStatus: EventStatus.RECEIVED,
-          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
-          color: TimelineColor.INCOME
-        };
-      }
-    } else if (isExpenseEvent) {
-      if (isPaidExpense) {
-        primaryOption = {
-          label: t(`status.${EventStatus.TO_PAY}`),
-          targetStatus: EventStatus.PENDING,
-          icon: <Clock size={13} style={{ color: TimelineColor.WARNING }} />,
-          color: TimelineColor.WARNING
-        };
-      } else {
-        primaryOption = {
-          label: t(`status.${EventStatus.PAID}`),
-          targetStatus: EventStatus.PAID,
-          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
-          color: TimelineColor.INCOME
-        };
-      }
-    } else if (isInvestmentEvent) {
-      if (isCompletedInvestment) {
-        primaryOption = {
-          label: t(`status.${EventStatus.PLANNED}`),
-          targetStatus: EventStatus.PLANNED,
-          icon: <Clock size={13} style={{ color: TimelineColor.INVESTMENT }} />,
-          color: TimelineColor.INVESTMENT
-        };
-      } else {
-        primaryOption = {
-          label: t(`status.${EventStatus.INVESTED}`),
-          targetStatus: EventStatus.INVESTED,
-          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
-          color: TimelineColor.INCOME
-        };
-      }
-    } else if (isAmortization || event.eventType === EventType.AMORTIZATION) {
-      if (isAmortized) {
-        primaryOption = {
-          label: t(`status.${EventStatus.PENDING}`),
-          targetStatus: EventStatus.PENDING,
-          icon: <Clock size={13} style={{ color: TimelineColor.WARNING }} />,
-          color: TimelineColor.WARNING
-        };
-      } else {
-        primaryOption = {
-          label: t(`status.${EventStatus.AMORTIZED}`),
-          targetStatus: EventStatus.AMORTIZED,
-          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
-          color: TimelineColor.INCOME
-        };
-      }
-    } else if (isLoanInstallment) {
-      if (isPaidLoan) {
-        primaryOption = {
-          label: t(`status.${EventStatus.TO_PAY}`),
-          targetStatus: EventStatus.PENDING,
-          icon: <Clock size={13} style={{ color: TimelineColor.WARNING }} />,
-          color: TimelineColor.WARNING
-        };
-      } else {
-        primaryOption = {
-          label: t(`status.${EventStatus.SETTLED}`),
-          targetStatus: EventStatus.PAID,
-          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
-          color: TimelineColor.INCOME
-        };
-      }
-    } else if (isTodoEvent) {
-      if (isCompleted) {
-        primaryOption = {
-          label: t(`status.${EventStatus.PENDING}`),
-          targetStatus: EventStatus.PENDING,
-          icon: <Clock size={13} style={{ color: TimelineColor.WARNING }} />,
-          color: TimelineColor.WARNING
-        };
-      } else {
-        primaryOption = {
-          label: t(`status.${EventStatus.COMPLETED}`),
-          targetStatus: EventStatus.COMPLETED,
-          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
-          color: TimelineColor.INCOME
-        };
-      }
-    } else {
-      if (isCompleted) {
-        primaryOption = {
-          label: t(`status.${EventStatus.PENDING}`),
-          targetStatus: EventStatus.PENDING,
-          icon: <Clock size={13} style={{ color: TimelineColor.WARNING }} />,
-          color: TimelineColor.WARNING
-        };
-      } else {
-        primaryOption = {
-          label: t(`status.${EventStatus.COMPLETED}`),
-          targetStatus: EventStatus.COMPLETED,
-          icon: <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />,
-          color: TimelineColor.INCOME
-        };
-      }
-    }
-
-    // 2. Cancel Option
-    let cancelOption;
-    if (isCancelled) {
-      const isInv = isInvestmentEvent;
-      const isRem = isReminderEvent;
-      const targetStatus = isRem ? EventStatus.OPEN : isInv ? EventStatus.PLANNED : EventStatus.PENDING;
-      cancelOption = {
-        label: t(`status.${targetStatus}`),
-        targetStatus,
-        icon: <Clock size={13} style={{ color: TimelineColor.SKY }} />,
-        color: TimelineColor.SKY
-      };
-    } else {
-      cancelOption = {
-        label: t(`status.${EventStatus.CANCELLED}`),
-        targetStatus: EventStatus.CANCELLED,
-        icon: <Ban size={13} style={{ color: TimelineColor.SLATE }} />,
-        color: TimelineColor.SLATE
-      };
-    }
-
-    return [primaryOption, cancelOption];
-  }, [
-    isReminderEvent,
-    isClosedReminder,
-    isTodoEvent,
-    isIncomeEvent,
-    isExpenseEvent,
-    isInvestmentEvent,
-    isAmortization,
-    event.eventType,
-    isLoanInstallment,
-    isReceivedIncome,
-    isPaidExpense,
-    isCompletedInvestment,
-    isAmortized,
-    isPaidLoan,
-    isCompleted,
-    isCancelled,
-    t
-  ]);
 
   const renderStatusDropdownButton = (buttonProps, children) => {
     if (isFutureMonth) {
@@ -490,99 +309,31 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     }
 
     return (
-      <div ref={statusMenuRef} style={{ position: 'relative', display: 'inline-flex' }}>
-        <button
-          type="button"
-          disabled={isTogglingStatus}
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsStatusMenuOpen((prev) => !prev);
-          }}
-          {...buttonProps}
-          style={{
-            ...buttonProps?.style,
-            cursor: isTogglingStatus ? 'wait' : (buttonProps?.style?.cursor || 'pointer'),
-            opacity: isTogglingStatus ? 0.75 : (buttonProps?.style?.opacity || 1)
-          }}
-        >
-          {isTogglingStatus ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-              <Loader2 size={12} className="animate-spin" />
-              <span>{t('common.processing')}</span>
-            </span>
-          ) : (
-            children
-          )}
-        </button>
-
-      {isStatusMenuOpen && (
-        <div
-          style={{
-            position: 'absolute',
-            top: openUpwards ? undefined : 'calc(100% + 4px)',
-            bottom: openUpwards ? 'calc(100% + 4px)' : undefined,
-            right: 0,
-            zIndex: 999999,
-            background: 'var(--bg-card, #131722)',
-            border: '1px solid var(--border-glass-glow, rgba(99, 102, 241, 0.35))',
-            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.75), 0 0 15px rgba(99, 102, 241, 0.15)',
-            borderRadius: '10px',
-            padding: '6px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            minWidth: '150px',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)'
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {statusMenuOptions.map((opt, idx) => (
-            <button
-              key={idx}
-              type="button"
-              title={opt.label}
-              onClick={async (e) => {
-                e.stopPropagation();
-                setIsStatusMenuOpen(false);
-                await handleStatusToggle(e, opt.targetStatus);
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '7px 12px',
-                borderRadius: '6px',
-                border: '1px solid transparent',
-                background: 'transparent',
-                color: opt.color,
-                fontSize: '0.78rem',
-                fontWeight: '700',
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'all 0.15s ease',
-                whiteSpace: 'nowrap'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
-                e.currentTarget.style.borderColor = 'var(--border-glass)';
-                e.currentTarget.style.transform = 'translateX(3px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.borderColor = 'transparent';
-                e.currentTarget.style.transform = 'none';
-              }}
-            >
-              {opt.icon}
-              <span>{opt.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
+      <button
+        type="button"
+        disabled={isTogglingStatus}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleStatusToggle(e);
+        }}
+        {...buttonProps}
+        style={{
+          ...buttonProps?.style,
+          cursor: isTogglingStatus ? 'wait' : (buttonProps?.style?.cursor || 'pointer'),
+          opacity: isTogglingStatus ? 0.75 : (buttonProps?.style?.opacity || 1)
+        }}
+      >
+        {isTogglingStatus ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+            <Loader2 size={12} className="animate-spin" />
+            <span>{t('common.processing')}</span>
+          </span>
+        ) : (
+          children
+        )}
+      </button>
+    );
+  };
 
   const abatedBreakdown = React.useMemo(() => {
     if (!isAmortized) return null;
@@ -1809,6 +1560,17 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         tab: originId
       };
     }
+    if (isFollowupEvent || event.timelineType === TimelineType.FOLLOWUP) {
+      return {
+        label: originName || t('sidebar.followupTimeline'),
+        icon: <ListTree size={11} strokeWidth={2.4} />,
+        bg: originColor ? `${originColor}20` : 'rgba(6, 182, 212, 0.12)',
+        color: originColor || TimelineColor.FOLLOWUP,
+        border: originColor ? `${originColor}48` : 'rgba(6, 182, 212, 0.28)',
+        timelineId: originId,
+        tab: originId
+      };
+    }
     if (isRegisterEvent || event.timelineType === TimelineType.DIARY) {
       return {
         label: originName || t('sidebar.diaryTimeline'),
@@ -1859,7 +1621,23 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             marginTop: '2px'
           }}
         >
-          {isRecurring ? <Repeat size={14} strokeWidth={2.2} /> : (isRegisterEvent ? <BookOpen size={14} strokeWidth={2.2} /> : (isTodoEvent ? <CheckSquare size={14} strokeWidth={2.2} /> : <Zap size={14} strokeWidth={2.2} />))}
+          {isRecurring ? (
+            <Repeat size={14} strokeWidth={2.2} />
+          ) : isRegisterEvent ? (
+            <BookOpen size={14} strokeWidth={2.2} />
+          ) : isTodoEvent ? (
+            <CheckSquare size={14} strokeWidth={2.2} />
+          ) : isFollowupEvent ? (
+            isAnchorCard ? (
+              <Flag size={14} strokeWidth={2.2} style={{ color: TimelineColor.WHITE }} />
+            ) : isCompleted ? (
+              <CheckCircle2 size={14} strokeWidth={2.2} style={{ color: TimelineColor.SUCCESS }} />
+            ) : (
+              <ListTree size={14} strokeWidth={2.2} style={{ color: TimelineColor.FOLLOWUP }} />
+            )
+          ) : (
+            <Zap size={14} strokeWidth={2.2} />
+          )}
         </span>
 
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, gap: '2px' }}>
@@ -1939,7 +1717,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   className="event-title"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (isAmortized) return;
+                    if (isAmortized || isAnchorCard) return;
                     if (isLoanInstallment) {
                       handleNavigateToTimelineOrigin();
                     } else {
@@ -1959,9 +1737,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     margin: 0,
                     fontSize: '0.98rem',
                     fontWeight: '700',
-                    color: (isAmortized || isCancelled) ? 'var(--text-dim)' : 'var(--text-main)',
+                    color: isAnchorCard ? TimelineColor.WHITE : ((isAmortized || isCancelled) ? 'var(--text-dim)' : 'var(--text-main)'),
                     textDecoration: (isAmortized || isCancelled) ? 'line-through' : 'none',
-                    cursor: isAmortized ? 'default' : 'pointer'
+                    cursor: (isAmortized || isAnchorCard) ? 'default' : 'pointer'
                   }}
                 >
                   {(event.title || '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
@@ -1974,17 +1752,20 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 {event.labels && event.labels.map((lbl, i) => (
                   <span
                     key={i}
-                    className="event-tag"
+                    className={isAnchorCard ? '' : 'event-tag'}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '3px',
                       fontSize: '0.70rem',
                       padding: '2px 7px',
-                      borderRadius: '5px'
+                      borderRadius: '5px',
+                      background: isAnchorCard ? 'rgba(255, 255, 255, 0.2)' : undefined,
+                      color: isAnchorCard ? TimelineColor.WHITE : undefined,
+                      border: isAnchorCard ? '1px solid rgba(255, 255, 255, 0.35)' : undefined
                     }}
                   >
-                    <Tag size={10} /> {lbl}
+                    <Tag size={10} style={{ color: isAnchorCard ? TimelineColor.WHITE : undefined }} /> {lbl}
                   </span>
                 ))}
 
@@ -2327,7 +2108,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       )}
 
       {/* Botão de Notas */}
-      {onEdit && (() => {
+      {onEdit && !isAnchorCard && (() => {
         const allNotes = Array.isArray(event.notes)
           ? event.notes.filter(Boolean)
           : (event.description && !event.description.toLowerCase().includes('transferência bancária de vencimento') && event.description.trim() ? [event.description.trim()] : []);
@@ -2364,7 +2145,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       })()}
 
       {/* Botão de Desmembrar Valor */}
-      {!isLoanInstallment && (onUpdateEventDirect || onEdit) && (() => {
+      {!isLoanInstallment && !isFollowupEvent && !isAnchorCard && (onUpdateEventDirect || onEdit) && (() => {
         const allSubparts = Array.isArray(event.breakdownItems) ? event.breakdownItems : [];
         const hasBreakdown = allSubparts.length > 0;
 
@@ -2470,6 +2251,45 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         </button>
       )}
 
+      {/* Botão Cancelar / Reativar Evento */}
+      {!isAnchorCard && !isLoanInstallment && onToggleLoanPayment && (
+        <button
+          type="button"
+          className="action-icon-btn"
+          disabled={isTogglingStatus}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isCancelled) {
+              handleStatusToggle(
+                e,
+                isReminderEvent
+                  ? EventStatus.OPEN
+                  : isInvestmentEvent
+                    ? EventStatus.PLANNED
+                    : isFollowupEvent
+                      ? FollowupStatus.IN_PROGRESS
+                      : EventStatus.PENDING
+              );
+            } else {
+              handleStatusToggle(e, EventStatus.CANCELLED);
+            }
+          }}
+          title={isCancelled ? t('actionReactivateEvent') : t('actionCancelEvent')}
+          style={{
+            padding: '3px 5px',
+            borderRadius: '5px',
+            color: isCancelled ? TimelineColor.WARNING : (isAnchorCard ? TimelineColor.WHITE : 'var(--text-dim)'),
+            background: isCancelled ? 'rgba(245, 158, 11, 0.14)' : 'transparent',
+            border: isCancelled ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid transparent',
+            cursor: isTogglingStatus ? 'wait' : 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center'
+          }}
+        >
+          <Ban size={13} style={{ color: isCancelled ? TimelineColor.WARNING : (isAnchorCard ? TimelineColor.WHITE : undefined) }} />
+        </button>
+      )}
+
       {/* Botão Editar Evento - Não permitido para parcelas de empréstimo */}
       {onEdit && !isLoanInstallment && (
         <button
@@ -2479,10 +2299,14 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             e.stopPropagation();
             onEdit(event);
           }}
-          title="Editar detalhes do evento (Nome, Data, Valor, Categoria, Notas)"
-          style={{ padding: '3px 5px', borderRadius: '5px' }}
+          title={t('actionEdit')}
+          style={{
+            padding: '3px 5px',
+            borderRadius: '5px',
+            color: isAnchorCard ? TimelineColor.WHITE : undefined
+          }}
         >
-          <Edit3 size={13} />
+          <Edit3 size={13} style={{ color: isAnchorCard ? TimelineColor.WHITE : undefined }} />
         </button>
       )}
 
@@ -2495,10 +2319,14 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             e.stopPropagation();
             onDelete(event);
           }}
-          title="Eliminar este evento permanentemente"
-          style={{ padding: '3px 5px', borderRadius: '5px' }}
+          title={t('actionDelete')}
+          style={{
+            padding: '3px 5px',
+            borderRadius: '5px',
+            color: isAnchorCard ? 'rgba(255, 255, 255, 0.9)' : undefined
+          }}
         >
-          <Trash2 size={13} />
+          <Trash2 size={13} style={{ color: isAnchorCard ? 'rgba(255, 255, 255, 0.9)' : undefined }} />
         </button>
       )}
     </div>
@@ -3700,8 +3528,244 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         </div>
       )}
 
+      {/* 🚀 Follow-up Event Strip */}
+      {isFollowupEvent && (
+        <div
+          className={isAnchorCard ? 'followup-anchor-strip' : 'loan-breakdown-strip'}
+          style={{
+            background: isAnchorCard
+              ? TimelineColor.BLUE
+              : isCompleted
+                ? 'linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%)'
+                : 'linear-gradient(90deg, rgba(6, 182, 212, 0.08) 0%, rgba(6, 182, 212, 0.02) 100%)',
+            border: isAnchorCard
+              ? 'none'
+              : isCompleted
+                ? '1px solid rgba(16, 185, 129, 0.35)'
+                : '1px solid rgba(6, 182, 212, 0.35)',
+            borderLeft: isAnchorCard
+              ? 'none'
+              : isCompleted
+                ? `4px solid ${TimelineColor.SUCCESS}`
+                : `4px solid ${TimelineColor.FOLLOWUP}`,
+            borderRadius: '8px',
+            padding: '8px 12px',
+            margin: '0',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            color: isAnchorCard ? TimelineColor.WHITE : 'inherit',
+            boxShadow: isAnchorCard ? '0 4px 14px rgba(59, 130, 246, 0.28)' : 'none',
+            opacity: 1
+          }}
+        >
+          {/* Linha 1: [icone] [titulo do evento] [labels] */}
+          {renderCardInnerHeader()}
+
+          {/* Subtasks Progress Bar & Checklist Preview */}
+          {(() => {
+            const rawSubtasks = event.breakdownItems || event.breakdown_items || [];
+            const subtasks = Array.isArray(rawSubtasks) ? rawSubtasks : (typeof rawSubtasks === 'string' ? JSON.parse(rawSubtasks || '[]') : []);
+            const completedSubtasks = subtasks.filter((s) => s.status === FollowupStatus.FINISHED || s.status === 'finished' || s.status === 'completed').length;
+            const subtaskRate = subtasks.length > 0 ? Math.round((completedSubtasks / subtasks.length) * 100) : 0;
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {subtasks.length > 0 && !isAnchorCard && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'rgba(255, 255, 255, 0.02)', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-glass)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                      <span style={{ color: 'var(--text-dim)', fontWeight: '700' }}>
+                        {t('followupModal.subtasksLabel')} ({completedSubtasks}/{subtasks.length})
+                      </span>
+                      <span style={{ fontWeight: '800', color: subtaskRate === 100 ? TimelineColor.SUCCESS : TimelineColor.FOLLOWUP }}>
+                        {subtaskRate}%
+                      </span>
+                    </div>
+                    <div style={{ width: '100%', height: '4px', background: 'var(--border-glass)', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          width: `${subtaskRate}%`,
+                          height: '100%',
+                          background: subtaskRate === 100 ? TimelineColor.SUCCESS : TimelineColor.FOLLOWUP,
+                          borderRadius: '2px',
+                          transition: 'width 0.2s ease'
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Linha 2: Badges (Status / Anchor / Floating) + Botão de Ação */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginTop: '2px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    {/* Status Badge */}
+                    {isAnchorCard ? (
+                      <>
+                        <span
+                          style={{
+                            fontSize: '0.72rem',
+                            fontWeight: '800',
+                            padding: '3px 9px',
+                            borderRadius: '5px',
+                            background: 'rgba(255, 255, 255, 0.22)',
+                            color: TimelineColor.WHITE,
+                            border: '1px solid rgba(255, 255, 255, 0.4)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.03em'
+                          }}
+                        >
+                          <Flag size={11} style={{ color: TimelineColor.WHITE }} />
+                          {t('followupHeader.startAnchorBadge')}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.70rem',
+                            fontWeight: '700',
+                            padding: '3px 8px',
+                            borderRadius: '5px',
+                            background: 'rgba(255, 255, 255, 0.15)',
+                            border: '1px solid rgba(255, 255, 255, 0.3)',
+                            color: TimelineColor.WHITE,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Clock size={11} style={{ color: TimelineColor.WHITE }} />
+                          {t('followupStatus.initiated')}
+                        </span>
+                      </>
+                    ) : isCompleted ? (
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          fontWeight: '700',
+                          padding: '2px 8px',
+                          borderRadius: '5px',
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          color: TimelineColor.SUCCESS,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <CheckCircle2 size={12} />
+                        {t('followupStatus.finished')}
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          fontWeight: '700',
+                          padding: '2px 8px',
+                          borderRadius: '5px',
+                          background: 'rgba(6, 182, 212, 0.15)',
+                          color: TimelineColor.FOLLOWUP,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Clock size={12} />
+                        {t('followupStatus.inProgress')}
+                      </span>
+                    )}
+
+                    {/* Indicador de Trilha / Ligação ao Marco Inicial no Card Ativo */}
+                    {!isAnchorCard && event.createdAt && (
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '2px 7px',
+                          borderRadius: '4px',
+                          background: 'rgba(59, 130, 246, 0.08)',
+                          border: '1px solid rgba(59, 130, 246, 0.25)',
+                          fontSize: '0.68rem',
+                          color: TimelineColor.BLUE,
+                          fontWeight: '700'
+                        }}
+                        title={t('followupHeader.initiatedOn', { date: format(new Date(event.createdAt), 'dd/MM/yyyy') })}
+                      >
+                        <Flag size={10} style={{ color: TimelineColor.BLUE }} />
+                        <span>{t('followupHeader.initiatedOn', { date: format(new Date(event.createdAt), 'dd/MM/yyyy') })}</span>
+                      </div>
+                    )}
+
+                    {event.isFloating && !isCompleted && !isAnchorCard && (
+                      <span
+                        style={{
+                          fontSize: '0.68rem',
+                          fontWeight: '600',
+                          color: 'var(--text-dim)',
+                          background: 'rgba(255, 255, 255, 0.04)',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          border: '1px solid var(--border-glass)'
+                        }}
+                      >
+                        {t('followupHeader.currentMonthBadge')}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {!isAnchorCard && (
+                      <button
+                        type="button"
+                        disabled={isTogglingStatus}
+                        onClick={(e) => handleStatusToggle(e, isCompleted ? FollowupStatus.IN_PROGRESS : FollowupStatus.FINISHED)}
+                        title={isTogglingStatus ? t('common.processing') : (isCompleted ? t('followupHeader.markInProgress') : t('followupHeader.markFinished'))}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          border: isCompleted ? `1px solid ${TimelineColor.SUCCESS}` : `1px solid ${TimelineColor.FOLLOWUP}`,
+                          background: isCompleted ? 'rgba(16, 185, 129, 0.15)' : 'rgba(6, 182, 212, 0.15)',
+                          color: isCompleted ? TimelineColor.SUCCESS : TimelineColor.FOLLOWUP,
+                          fontSize: '0.76rem',
+                          fontWeight: '700',
+                          cursor: isTogglingStatus ? 'wait' : 'pointer',
+                          opacity: isTogglingStatus ? 0.75 : 1,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {isTogglingStatus ? (
+                          <Loader2 size={13} className="animate-spin" />
+                        ) : isCompleted ? (
+                          <CheckCircle2 size={13} style={{ color: TimelineColor.SUCCESS }} />
+                        ) : (
+                          <Circle size={13} />
+                        )}
+                        <span>
+                          {isTogglingStatus
+                            ? t('common.processing')
+                            : isCompleted
+                              ? t('followupStatus.finished')
+                              : t('followupHeader.finishAction')}
+                        </span>
+                      </button>
+                    )}
+
+                    <div onClick={(e) => e.stopPropagation()}>
+                      {renderActionButtons()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
       {/* 📋 Default / Generic / Reminder Event Strip */}
-      {!isIncomeEvent && !isExpenseEvent && !isInvestmentEvent && !isAmortization && !isLoanInstallment && !isRegisterEvent && !isTodoEvent && (
+      {!isIncomeEvent && !isExpenseEvent && !isInvestmentEvent && !isAmortization && !isLoanInstallment && !isRegisterEvent && !isTodoEvent && !isFollowupEvent && (
         <div
           className="loan-breakdown-strip"
           style={{

@@ -3,6 +3,7 @@ import { financialEventRepository as eventRepository } from '../../infrastructur
 import { financialEventStatusRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventStatusRepository.js';
 import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
 import { todoRepository } from '../../infrastructure/database/supabase/SupabaseTodoRepository.js';
+import { followupRepository } from '../../infrastructure/database/supabase/SupabaseFollowupRepository.js';
 import { financialEventService } from './FinancialEventService.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
 import {
@@ -272,7 +273,12 @@ export class TimelineService {
       await todoRepository.deleteByTimelineId(id);
     }
 
-    // 6. Excluir a timeline
+    // 6. Excluir Follow-ups associados à timeline (se existirem)
+    if (followupRepository.deleteByTimelineId) {
+      await followupRepository.deleteByTimelineId(id);
+    }
+
+    // 7. Excluir a timeline
     return timelineRepository.delete(id);
   }
 
@@ -283,6 +289,10 @@ export class TimelineService {
     const events = await eventRepository.getAll((ev) => ev.timelineId === timelineId);
     for (const ev of events) {
       await eventRepository.delete(ev.id);
+    }
+
+    if (followupRepository.deleteByTimelineId) {
+      await followupRepository.deleteByTimelineId(timelineId);
     }
     return true;
   }

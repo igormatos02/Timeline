@@ -10,7 +10,10 @@ import {
   Percent,
   CheckCircle2,
   Clock,
-  ChevronDown
+  ChevronDown,
+  Wallet,
+  PieChart,
+  TrendingUp
 } from 'lucide-react';
 import { format, parseISO, differenceInCalendarDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -515,7 +518,7 @@ export default function LoanTimelineHeader({
                           marginTop: '2px'
                         }}
                       >
-                        {t('loanHeader.capitalStillDue') || 'Capital ainda devido'}
+                        {t('loanHeader.capitalStillDue')}
                       </div>
                     </div>
 
@@ -537,7 +540,7 @@ export default function LoanTimelineHeader({
                           marginTop: '2px'
                         }}
                       >
-                        {t('loanHeader.installmentStillDue') || 'Instalment still due'}
+                        {t('loanHeader.installmentStillDue')}
                       </div>
                     </div>
                   </div>
@@ -566,7 +569,7 @@ export default function LoanTimelineHeader({
                   letterSpacing: '0.5px'
                 }}
               >
-                {t('loanHeader.annualCommitmentTitle') || 'COMPROMETIMENTO ANUAL'}
+                {t('loanHeader.annualCommitmentTitle')}
               </div>
 
               {(() => {
@@ -601,10 +604,10 @@ export default function LoanTimelineHeader({
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                          {t('loanHeader.noAnnualCommitment') || 'Sem compromisso anual'}
+                          {t('loanHeader.noAnnualCommitment')}
                         </span>
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
-                          {t('loanHeader.noAnnualCommitmentHint') || 'Sem dados anuais projetados.'}
+                          {t('loanHeader.noAnnualCommitmentHint')}
                         </span>
                       </div>
                     </div>
@@ -619,25 +622,25 @@ export default function LoanTimelineHeader({
                       percent={annualCommitmentPct}
                       sliceColor={sliceColor}
                       remainingColor="rgba(255, 255, 255, 0.08)"
-                      title={`${t('loanHeader.annualCommitmentLabel') || 'Comprometimento Anual'} ${annualCommitmentPct}%`}
+                      title={`${t('loanHeader.annualCommitmentLabel')} ${annualCommitmentPct}%`}
                       label={`${annualCommitmentPct}%`}
                     />
 
                     {/* Informações Numéricas de Dívidas vs Entradas Anuais */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                       <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
-                        {t('loanHeader.annualCommitmentLabel') || 'Comprometimento Anual'}
+                        {t('loanHeader.annualCommitmentLabel')}
                       </div>
                       <div style={{ fontSize: '0.94rem', fontWeight: '800', color: isInactive ? 'var(--text-dim)' : 'var(--text-main)' }}>
                         {formatCurrency(annualLoanCost)}
                       </div>
                       {annualIncomeProjected > 0 ? (
                         <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                          {t('loanHeader.ofAnnualTotal', { amount: formatCurrency(annualIncomeProjected) }) || `de ${formatCurrency(annualIncomeProjected)} total anual`}
+                          {t('loanHeader.ofAnnualTotal', { amount: formatCurrency(annualIncomeProjected) })}
                         </div>
                       ) : (
                         <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                          {t('loanHeader.projectedNext12Months') || 'projetado nos próximos 12 meses'}
+                          {t('loanHeader.projectedNext12Months')}
                         </div>
                       )}
                     </div>
@@ -709,7 +712,7 @@ export default function LoanTimelineHeader({
                           {formatCurrency(0)}
                         </span>
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
-                          {(t('loanHeader.ofOriginalCapital') || '0% do capital original').replace('{percent}', 0)}
+                          {t('loanHeader.ofOriginalCapital', { percent: 0 })}
                         </span>
                       </div>
                     </div>
@@ -724,22 +727,22 @@ export default function LoanTimelineHeader({
                       percent={progressPercent}
                       sliceColor={sliceColor}
                       remainingColor="rgba(255, 255, 255, 0.08)"
-                      title={`${t('loanHeader.amortizedCapital') || 'Capital Amortizado'} ${progressPercent}%`}
+                      title={`${t('loanHeader.amortizedCapital')} ${progressPercent}%`}
                       label={`${progressPercent}%`}
                     />
 
                     {/* Informações Numéricas de Capital Amortizado */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                       <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
-                        {t('loanHeader.amortizedCapital') || 'Capital Amortizado'}
+                        {t('loanHeader.amortizedCapital')}
                       </div>
                       <div style={{ fontSize: '0.94rem', fontWeight: '800', color: isInactive ? 'var(--text-dim)' : textColorGreen }}>
                         {formatCurrency(amortizedCap)}
                       </div>
                       <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
                         {origCapital > 0
-                          ? (t('loanHeader.ofOriginalCapitalAmount', { amount: formatCurrency(origCapital) }) || `de ${formatCurrency(origCapital)} capital original`)
-                          : (t('loanHeader.ofOriginalCapital') || '{percent}% do capital original').replace('{percent}', progressPercent)}
+                          ? t('loanHeader.ofOriginalCapitalAmount', { amount: formatCurrency(origCapital) })
+                          : t('loanHeader.ofOriginalCapital', { percent: progressPercent })}
                       </div>
                     </div>
                   </div>
@@ -987,10 +990,7 @@ export default function LoanTimelineHeader({
                 />
 
                 <span>
-                  {t(
-                    'loanHeader.debtCompositionTitle'
-                  ) ||
-                    'COMPOSIÇÃO DA DÍVIDA'}
+                  {t('loanHeader.debtCompositionTitle')}
                 </span>
               </div>
 
@@ -1165,10 +1165,7 @@ export default function LoanTimelineHeader({
                 />
 
                 <span>
-                  {t(
-                    'loanHeader.whatIPaidTitle'
-                  ) ||
-                    'O QUE JÁ PAGUEI'}
+                  {t('loanHeader.whatIPaidTitle')}
                 </span>
               </div>
 
@@ -1343,10 +1340,7 @@ export default function LoanTimelineHeader({
                 />
 
                 <span>
-                  {t(
-                    'loanHeader.loanCostTitle'
-                  ) ||
-                    'CUSTO DO EMPRÉSTIMO'}
+                  {t('loanHeader.loanCostTitle')}
                 </span>
               </div>
 

@@ -25,7 +25,7 @@ import {
 import { formatCurrency } from './utils/formatCurrency';
 import { generateUUID } from './utils/uuid.js';
 import * as api from './services/api';
-import { EventType, EventStatus, TimelineType, TimelineStatus, TimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem } from './enums/index.js';
+import { EventType, EventStatus, FollowupStatus, TimelineType, TimelineStatus, TimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
@@ -428,7 +428,8 @@ export default function App() {
       [TimelineType.PROJECT]: 5,
       [TimelineType.REMINDER]: 6,
       [TimelineType.DIARY]: 7,
-      [TimelineType.TODO]: 8
+      [TimelineType.TODO]: 8,
+      [TimelineType.FOLLOWUP]: 9
     };
 
     return [...filtered].sort((a, b) => {
@@ -1364,20 +1365,13 @@ export default function App() {
       const isAmortization = ev.eventType === EventType.AMORTIZATION;
       const isReminder = ev.eventType === EventType.REMINDER || ev.timelineType === TimelineType.REMINDER || ev.timeline_type === TimelineType.REMINDER;
       const isTodo = ev.eventType === EventType.TODO || ev.timelineType === TimelineType.TODO || ev.timeline_type === TimelineType.TODO;
+      const isFollowup = ev.eventType === EventType.FOLLOWUP || ev.timelineType === TimelineType.FOLLOWUP || ev.timeline_type === TimelineType.FOLLOWUP;
 
-      const isCurrCancelled = ev.status === EventStatus.CANCELLED;
-      const isCurrPositive = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
-
-      if (isCurrCancelled) {
-        return {
-          nextStatus: isReminder ? EventStatus.OPEN : isInvestment ? EventStatus.PLANNED : EventStatus.PENDING,
-          nextCompleted: false
-        };
-      }
+      const isCurrPositive = isPositiveStatus(ev.status) || ev.status === FollowupStatus.FINISHED || Boolean(ev.isCompleted);
 
       if (isCurrPositive) {
         return {
-          nextStatus: isTodo ? EventStatus.PENDING : EventStatus.CANCELLED,
+          nextStatus: isReminder ? EventStatus.OPEN : isInvestment ? EventStatus.PLANNED : (isFollowup ? FollowupStatus.IN_PROGRESS : EventStatus.PENDING),
           nextCompleted: false
         };
       }
@@ -1385,6 +1379,7 @@ export default function App() {
       let positiveStatus = EventStatus.PAID;
       if (isReminder) positiveStatus = EventStatus.CLOSED;
       else if (isTodo) positiveStatus = EventStatus.COMPLETED;
+      else if (isFollowup) positiveStatus = FollowupStatus.FINISHED;
       else if (isIncome) positiveStatus = EventStatus.RECEIVED;
       else if (isInvestment) positiveStatus = EventStatus.INVESTED;
       else if (isAmortization) positiveStatus = EventStatus.AMORTIZED;

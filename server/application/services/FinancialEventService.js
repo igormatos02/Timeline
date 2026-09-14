@@ -4,12 +4,15 @@ import { loanContractRepository } from '../../infrastructure/database/supabase/S
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { todoRepository } from '../../infrastructure/database/supabase/SupabaseTodoRepository.js';
 import { todoService } from './TodoService.js';
+import { followupRepository } from '../../infrastructure/database/supabase/SupabaseFollowupRepository.js';
+import { followupService } from './FollowupService.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
 import { calcToggledStatus } from '../../domain/entities/TimelineEvent.js';
 import {
   EventType,
   TimelineType,
   EventStatus,
+  FollowupStatus,
   EventPriority,
   EventPeriodicity,
   EventRecurrence,
@@ -260,6 +263,49 @@ export class FinancialEventService {
       console.warn('Error including to_do items in getAllEvents:', err.message);
     }
 
+    // Load Follow-up items from followup table and map them to projected timeline events
+    try {
+      const projectedFollowups = await followupService.getProjectedFollowups();
+
+      for (const item of projectedFollowups) {
+        if (!item || !item.id) continue;
+        const effectiveTimeboardId = item.timeboardId || (item.timelineId ? timelineToTimeboard.get(item.timelineId) : null);
+        const effectiveDate = item.effectiveDate || (item.createdAt ? String(item.createdAt).substring(0, 10) : new Date().toISOString().substring(0, 10));
+        const rawStatus = String(item.status || '').toLowerCase();
+        const isFinished = rawStatus === FollowupStatus.FINISHED;
+
+        projectedEvents.push({
+          id: item.id,
+          eventId: item.eventId || item.id,
+          timelineId: item.timelineId,
+          timelineOriginId: item.timelineId,
+          timeboardId: effectiveTimeboardId,
+          title: item.name,
+          name: item.name,
+          description: item.description || '',
+          notes: item.notes || '',
+          labels: item.labels || [],
+          breakdownItems: item.breakdownItems || item.breakdown_items || [],
+          position: item.position !== undefined ? Number(item.position) : 0,
+          status: rawStatus || FollowupStatus.IN_PROGRESS,
+          isCompleted: isFinished,
+          isFinished,
+          isAnchorVisible: Boolean(item.isAnchorVisible),
+          isReadOnly: Boolean(item.isReadOnly),
+          isFloating: Boolean(item.isFloating),
+          eventType: EventType.FOLLOWUP,
+          timelineType: TimelineType.FOLLOWUP,
+          recurrence: EventRecurrence.ONCE,
+          isRecurring: false,
+          date: effectiveDate,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt
+        });
+      }
+    } catch (err) {
+      console.warn('Error including followup items in getAllEvents:', err.message);
+    }
+
     const filteredEvents = projectedEvents.filter((ev) => {
       if (filter.timeboardId && ev.timeboardId && ev.timeboardId !== filter.timeboardId) return false;
       if (filter.timelineId && ev.timelineId !== filter.timelineId && ev.timelineOriginId !== filter.timelineId) return false;
@@ -283,6 +329,10 @@ export class FinancialEventService {
 
   async getEventById(id) {
     if (!id) return null;
+    const directFollowup = await followupRepository.getById(id);
+    if (directFollowup) return directFollowup;
+    const directTodo = await todoRepository.getById(id);
+    if (directTodo) return directTodo;
     const directEvent = await eventRepository.getById(id);
     if (directEvent) return directEvent;
 
@@ -292,6 +342,9 @@ export class FinancialEventService {
   }
 
   async createEvent(eventData) {
+    if (eventData.eventType === EventType.FOLLOWUP || eventData.timelineType === TimelineType.FOLLOWUP) {
+      return followupService.createFollowup(eventData);
+    }
     if (eventData.eventType === EventType.TODO || eventData.timelineType === TimelineType.TODO) {
       return todoService.createTodo(eventData);
     }
@@ -365,6 +418,11 @@ export class FinancialEventService {
 
   async updateEvent(id, updates) {
     const { updateScope, propagateForward, ...directUpdates } = updates;
+
+    const isFollowupDirect = await followupRepository.getById(id);
+    if (isFollowupDirect || directUpdates.eventType === EventType.FOLLOWUP || directUpdates.timelineType === TimelineType.FOLLOWUP) {
+      return followupService.updateFollowup(id, directUpdates);
+    }
 
     const isTodoDirect = await todoRepository.getById(id);
     if (isTodoDirect || directUpdates.eventType === EventType.TODO || directUpdates.timelineType === TimelineType.TODO) {
@@ -635,6 +693,11 @@ export class FinancialEventService {
   }
 
   async toggleEventPayment(id, explicitStatus = null) {
+    const followupItem = await followupRepository.getById(id);
+    if (followupItem) {
+      return followupService.toggleStatus(id, explicitStatus);
+    }
+
     const todoItem = await todoRepository.getById(id);
     if (todoItem) {
       return todoService.toggleStatus(id, explicitStatus);
@@ -671,6 +734,11 @@ export class FinancialEventService {
   }
 
   async deleteEvent(id, options = {}) {
+    const followupItem = await followupRepository.getById(id);
+    if (followupItem) {
+      return followupService.deleteFollowup(id);
+    }
+
     const todoItem = await todoRepository.getById(id);
     if (todoItem) {
       return todoService.deleteTodo(id);

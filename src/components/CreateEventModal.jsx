@@ -9,6 +9,7 @@ import {
   ReminderEventModal,
   DiaryEventModal,
   TodoEventModal,
+  FollowupEventModal,
   DefaultEventModal
 } from './event-modals/index.js';
 
@@ -29,6 +30,10 @@ export default function CreateEventModal(props) {
 
   if (initialData?.eventType === EventType.TODO || normalizedType === TimelineType.TODO) {
     return <TodoEventModal {...props} />;
+  }
+
+  if (initialData?.eventType === EventType.FOLLOWUP || normalizedType === TimelineType.FOLLOWUP) {
+    return <FollowupEventModal {...props} />;
   }
 
   switch (normalizedType) {
@@ -55,6 +60,9 @@ export default function CreateEventModal(props) {
 
     case TimelineType.TODO:
       return <TodoEventModal {...props} />;
+
+    case TimelineType.FOLLOWUP:
+      return <FollowupEventModal {...props} />;
 
     default:
       return <DefaultEventModal {...props} />;

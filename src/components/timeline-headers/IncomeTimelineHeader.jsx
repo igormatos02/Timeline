@@ -79,11 +79,11 @@ export default function IncomeTimelineHeader({
   // Extrair lista de categorias / origens diretamente do DTO vindo da Stored Procedure SQL
   let categoryList = (dto?.categories_breakdown && dto.categories_breakdown.length > 0)
     ? dto.categories_breakdown.map((item) => ({
-        rawCat: item.category,
-        name: getCategoryLabel(item.category),
-        amount: Number(item.amount || 0),
-        percent: Number(item.percent || 0)
-      }))
+      rawCat: item.category,
+      name: getCategoryLabel(item.category),
+      amount: Number(item.amount || 0),
+      percent: Number(item.percent || 0)
+    }))
     : [];
 
   // Fallback para cálculo local estritamente validado com IncomeEventCategory enum

@@ -300,6 +300,7 @@ export const translations = {
       reminderTimeline: "Reminder Timeline",
       diaryTimeline: "Diary Timeline",
       todoTimeline: "To Do Timeline",
+      followupTimeline: "Follow-up Timeline",
       goalsTimeline: "Goals Timeline",
       customTimeline: "Custom Timeline"
     },
@@ -320,6 +321,8 @@ export const translations = {
     actionAmortize: "Simulate / Apply Extraordinary Amortization",
     actionSave: "Save",
     actionCancel: "Cancel",
+    actionCancelEvent: "Cancel Event",
+    actionReactivateEvent: "Reactivate Event",
     actionViewDetails: "View Details",
 
     // Financial Types
@@ -1123,6 +1126,72 @@ export const translations = {
       markCompleted: "Mark as completed"
     },
 
+    // Follow-up Timeline Header
+    followupHeader: {
+      badge: "Follow-up",
+      defaultTitle: "Follow-up",
+      addFollowup: "New Follow-up",
+      deleteTitle: "Delete this timeline",
+      progress: "Progress",
+      inProgress: "In Progress",
+      finished: "Finished",
+      initiated: "Initiated (Anchor)",
+      subtasksCompleted: "Subtasks Completed",
+      subtasksRate: "Subtasks Completion",
+      followupsCount: "{count} follow-ups",
+      finishedOn: "Finished on {date}",
+      initiatedOn: "Initiated on {date}",
+      currentMonthBadge: "Current Month",
+      markFinished: "Mark as finished",
+      markInProgress: "Reopen follow-up",
+      finishAction: "Finish",
+      reopenAction: "Reopen",
+      statusDistribution: "Status Distribution",
+      startAnchorBadge: "Start Point"
+    },
+
+    // Follow-up Event Modal
+    followupModal: {
+      newTitle: "New Follow-up",
+      editTitle: "Edit Follow-up",
+      viewAnchorTitle: "Initial Follow-up Anchor (Read-Only)",
+      dateLabel: "Start Date / Creation Date",
+      dayOfMonth: "Day of Month",
+      nameLabel: "Title / Name *",
+      namePlaceholder: "e.g. Hiring candidate follow-up, Project review...",
+      statusLabel: "Status",
+      statusInitiated: "Initiated (Fixed on Creation Date)",
+      statusInProgress: "In Progress (Floating to Current Month)",
+      statusFinished: "Finished (Fixed on Completion Date)",
+      labelsLabel: "Labels / Tags",
+      tagPlaceholder: "Add tag...",
+      addTag: "Add",
+      descriptionLabel: "Description",
+      descriptionPlaceholder: "Objectives, context or background...",
+      notesLabel: "Notes / Follow-up Log",
+      notesPlaceholder: "Follow-up notes, feedback, milestones...",
+      subtasksLabel: "Subtasks / Checklist",
+      subtaskPlaceholder: "New subtask title...",
+      addSubtask: "Add Subtask",
+      noSubtasks: "No subtasks added yet.",
+      nameRequired: "Please enter the follow-up title.",
+      anchorNotice: "This is the initial anchor created when this follow-up was started. It is locked and kept for historical timeline tracking.",
+      save: "Save Follow-up",
+      cancel: "Cancel"
+    },
+
+    followupStatus: {
+      initiated: "Initiated",
+      inProgress: "In Progress",
+      finished: "Finished"
+    },
+
+    followupBreakdownStatus: {
+      notStarted: "Not Started",
+      inProgress: "In Progress",
+      finished: "Finished"
+    },
+
     // Evolution Chart
     evolutionChart: {
       monthlyVariation: "Monthly Variation",
@@ -1522,6 +1591,7 @@ export const translations = {
       reminderTimeline: "Lembretes",
       diaryTimeline: "Diário",
       todoTimeline: "Lista de Tarefas / To Do",
+      followupTimeline: "Acompanhamento / Follow-up",
       goalsTimeline: "Metas / Objetivos",
       customTimeline: "Personalizada"
     },
@@ -1542,6 +1612,8 @@ export const translations = {
     actionAmortize: "Simular / Aplicar Amortização Extraordinária",
     actionSave: "Guardar",
     actionCancel: "Cancelar",
+    actionCancelEvent: "Cancelar Evento",
+    actionReactivateEvent: "Reativar Evento",
     actionViewDetails: "Ver Detalhes",
 
     // Financial Types
@@ -2343,6 +2415,72 @@ export const translations = {
       currentMonth: "Mês Corrente",
       markPending: "Marcar como pendente",
       markCompleted: "Marcar como concluído"
+    },
+
+    // Follow-up Timeline Header
+    followupHeader: {
+      badge: "Acompanhamento",
+      defaultTitle: "Follow-up",
+      addFollowup: "Novo Follow-up",
+      deleteTitle: "Excluir esta timeline",
+      progress: "Progresso",
+      inProgress: "Em Andamento",
+      finished: "Finalizados",
+      initiated: "Iniciado (Âncora)",
+      subtasksCompleted: "Subtarefas Concluídas",
+      subtasksRate: "Conclusão de Subtarefas",
+      followupsCount: "{count} follow-ups",
+      finishedOn: "Finalizado em {date}",
+      initiatedOn: "Iniciado em {date}",
+      currentMonthBadge: "Mês Corrente",
+      markFinished: "Marcar como finalizado",
+      markInProgress: "Reabrir follow-up",
+      finishAction: "Finalizar",
+      reopenAction: "Reabrir",
+      statusDistribution: "Distribuição de Estados",
+      startAnchorBadge: "Marco Inicial"
+    },
+
+    // Follow-up Event Modal
+    followupModal: {
+      newTitle: "Novo Follow-up",
+      editTitle: "Editar Follow-up",
+      viewAnchorTitle: "Âncora Inicial de Follow-up (Apenas Leitura)",
+      dateLabel: "Data de Início / Registo",
+      dayOfMonth: "Dia do Mês",
+      nameLabel: "Título / Nome *",
+      namePlaceholder: "Ex: Acompanhamento de contratação, Revisão de projeto...",
+      statusLabel: "Estado",
+      statusInitiated: "Iniciado (Fixo na Data de Criação)",
+      statusInProgress: "Em Andamento (Flutuante no Mês Corrente)",
+      statusFinished: "Finalizado (Fixo na Data de Conclusão)",
+      labelsLabel: "Etiquetas / Tags",
+      tagPlaceholder: "Adicionar etiqueta...",
+      addTag: "Adicionar",
+      descriptionLabel: "Descrição",
+      descriptionPlaceholder: "Objetivos, contexto ou detalhes...",
+      notesLabel: "Notas / Histórico de Acompanhamento",
+      notesPlaceholder: "Anotações de progresso, reuniões, observações...",
+      subtasksLabel: "Subtarefas / Checklist",
+      subtaskPlaceholder: "Título da subtarefa...",
+      addSubtask: "Adicionar Subtarefa",
+      noSubtasks: "Nenhuma subtarefa adicionada.",
+      nameRequired: "Por favor, insira o título do follow-up.",
+      anchorNotice: "Este é o registro inicial criado quando o follow-up foi iniciado. Encontra-se fixado para preservação do histórico da timeline.",
+      save: "Salvar Follow-up",
+      cancel: "Cancelar"
+    },
+
+    followupStatus: {
+      initiated: "Iniciado",
+      inProgress: "Em Andamento",
+      finished: "Finalizado"
+    },
+
+    followupBreakdownStatus: {
+      notStarted: "Não Iniciado",
+      inProgress: "Em Andamento",
+      finished: "Finalizado"
     },
 
     // Evolution Chart

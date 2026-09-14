@@ -45,6 +45,7 @@ import {
   Play,
   CheckSquare,
   Square,
+  ListTree,
   Home,
   Car,
   CreditCard,
@@ -95,6 +96,7 @@ import {
   AmortizationEventCategory,
   AmortizationStrategy,
   EventPeriodicity,
+  FollowupStatus,
   normalizePeriodicity,
   normalizeTimelineType,
   isLoanTimelineType
@@ -225,6 +227,9 @@ function VerticalTimeline({
         (t) =>
           t.type !== TimelineType.BALANCE &&
           t.type !== TimelineType.TODO &&
+          t.type !== TimelineType.FOLLOWUP &&
+          t.type !== TimelineType.DIARY &&
+          t.type !== TimelineType.REMINDER &&
           t.status !== TimelineStatus.INACTIVE &&
           t.status !== 'inactive' &&
           t.status !== 'Inativo' &&
@@ -588,14 +593,21 @@ function VerticalTimeline({
       // Financial Tabs Filter by TimelineType
       if (isFinancialTimeline) {
         if (timeline.type === TimelineType.BALANCE) {
-          const isTodo =
+          const isNonFinancial =
             ev.eventType === EventType.TODO ||
             ev.timelineType === TimelineType.TODO ||
             ev.timeline_type === TimelineType.TODO ||
             ev.category === EventType.TODO ||
             ev.category === 'tarefa' ||
-            ev.category === 'todo';
-          if (isTodo) return false;
+            ev.category === 'todo' ||
+            ev.eventType === EventType.FOLLOWUP ||
+            ev.timelineType === TimelineType.FOLLOWUP ||
+            ev.timeline_type === TimelineType.FOLLOWUP ||
+            ev.category === 'followup' ||
+            ev.eventType === EventType.REGISTER ||
+            ev.timelineType === TimelineType.DIARY ||
+            ev.timeline_type === TimelineType.DIARY;
+          if (isNonFinancial) return false;
         } else if (timeline.type === TimelineType.INCOME) {
           const isIncome = ev.eventType === EventType.INCOME || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
           if (!isIncome) return false;
@@ -1096,6 +1108,7 @@ function VerticalTimeline({
 
     return (
       <div className="vertical-timeline-container">
+        {/* Left Main Chronological Timeline Spine */}
         <div className="timeline-spine" />
         <div
           className="timeline-spine-gradient"
@@ -1145,7 +1158,9 @@ function VerticalTimeline({
                   style={
                     hasEvents && !isCurrentMonth
                       ? {
-                        backgroundColor: isFutureMonth ? 'rgba(148, 163, 184, 0.4)' : timeline.color,
+                        backgroundColor: isFutureMonth
+                          ? 'rgba(148, 163, 184, 0.4)'
+                          : timeline.color,
                         borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.3)' : undefined
                       }
                       : {}
@@ -1237,9 +1252,11 @@ function VerticalTimeline({
                                   ? 'expense'
                                   : timeline.type === TimelineType.INVESTMENT
                                     ? 'investment'
-                                    : isReminders
-                                      ? 'reminder'
-                                      : 'income'
+                                    : timeline.type === TimelineType.FOLLOWUP
+                                      ? 'followup'
+                                      : isReminders
+                                        ? 'reminder'
+                                        : 'income'
                               );
                             }}
                             title={t('timeline.addEventMonthTitle', { month: monthTitleStr })}
@@ -1251,19 +1268,19 @@ function VerticalTimeline({
                       </div>
                     </div>
 
-                    {isFinancialTimeline && !isLoanTimelineOrTab && !isReminders && !isProjects && (
+                    {isFinancialTimeline && !isLoanTimelineOrTab && (
                       <MonthProjectionBadges
-                        income={mMonthProjectedIncome}
-                        expense={mMonthProjectedExpense}
-                        investment={mMonthProjectedInvestment}
-                        loan={mMonthProjectedLoan}
-                        saldo={mMonthProjectedSaldo}
-                        isFutureMonth={isFutureMonth}
-                        showIncome={hasIncomeTimeline}
-                        showExpense={hasExpenseTimeline}
-                        showInvestment={hasInvestmentTimeline}
-                        showLoan={hasLoanTimeline}
-                        showBalance={hasBalanceTimeline}
+                        monthProjectedIncome={mMonthProjectedIncome}
+                        monthProjectedExpense={mMonthProjectedExpense}
+                        monthProjectedLoan={mMonthProjectedLoan}
+                        monthProjectedInvestment={mMonthProjectedInvestment}
+                        monthProjectedInvestmentDeduction={mMonthProjectedInvestmentDeduction}
+                        monthProjectedSaldo={mMonthProjectedSaldo}
+                        hasIncomeTimeline={hasIncomeTimeline}
+                        hasExpenseTimeline={hasExpenseTimeline}
+                        hasLoanTimeline={hasLoanTimeline}
+                        hasInvestmentTimeline={hasInvestmentTimeline}
+                        formatCurrency={formatCurrency}
                         t={t}
                       />
                     )}
@@ -1733,6 +1750,10 @@ function VerticalTimeline({
                     case 'todo':
                     case 'todos':
                       return <CheckSquare size={14} style={{ color: tlColor }} />;
+                    case TimelineType.FOLLOWUP:
+                    case 'followup':
+                    case 'followups':
+                      return <ListTree size={14} style={{ color: tlColor }} />;
                     default:
                       return <Layers size={14} style={{ color: tlColor }} />;
                   }

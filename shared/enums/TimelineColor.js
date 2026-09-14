@@ -10,6 +10,7 @@ export const TimelineColor = Object.freeze({
   REMINDER: '#f59e0b',
   DIARY: '#ec4899',
   TODO: '#3b82f6',
+  FOLLOWUP: '#06b6d4',
   GOALS: '#10b981',
   CUSTOM: '#6366f1',
 
@@ -67,6 +68,8 @@ export function getDefaultTimelineColor(type) {
       return TimelineColor.DIARY;
     case TimelineType.TODO:
       return TimelineColor.TODO;
+    case TimelineType.FOLLOWUP:
+      return TimelineColor.FOLLOWUP;
     default:
       return TimelineColor.PRIMARY;
   }

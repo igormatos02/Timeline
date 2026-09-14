@@ -8,6 +8,7 @@ import {
   Bell,
   BookOpen,
   CheckSquare,
+  ListTree,
   Layers
 } from 'lucide-react';
 import {
@@ -41,6 +42,8 @@ export function getTimelineTypeLabelKey(type) {
       return 'sidebar.diaryTimeline';
     case TimelineType.TODO:
       return 'sidebar.todoTimeline';
+    case TimelineType.FOLLOWUP:
+      return 'sidebar.followupTimeline';
     default:
       return 'sidebar.customTimeline';
   }
@@ -70,6 +73,8 @@ export function getTimelineTypeIconComponent(type) {
       return BookOpen;
     case TimelineType.TODO:
       return CheckSquare;
+    case TimelineType.FOLLOWUP:
+      return ListTree;
     default:
       return Layers;
   }

@@ -7,4 +7,5 @@ export { default as ReminderTimelineHeader } from './ReminderTimelineHeader.jsx'
 export { default as DiaryTimelineHeader } from './DiaryTimelineHeader.jsx';
 export { default as ProjectTimelineHeader } from './ProjectTimelineHeader.jsx';
 export { default as TodoTimelineHeader } from './TodoTimelineHeader.jsx';
+export { default as FollowupTimelineHeader } from './FollowupTimelineHeader.jsx';
 export { default as DefaultTimelineHeader } from './DefaultTimelineHeader.jsx';

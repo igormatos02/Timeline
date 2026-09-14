@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.3](https://github.com/igormatos02/Timeline/compare/v0.2.2...v0.2.3) (2026-09-14)
+
+
+### Features
+
+* add dynamic balance recalculation on forecast horizon and flat green amortization cards ([3a8e068](https://github.com/igormatos02/Timeline/commit/3a8e068dd8786ea95375461a64e36a38147b64f1))
+* flat positive event cards styling, purple progress bar and rendering optimizations ([2c4b3f8](https://github.com/igormatos02/Timeline/commit/2c4b3f83acf3e9bb26386a5ad6d70a06df07a31b))
+
+
+### Bug Fixes
+
+* restrict positive status to past and current dates and show pending label on future cards ([27177a1](https://github.com/igormatos02/Timeline/commit/27177a10f2aa90ec7795946ce8d34a49a4dd8712))
+* **timeline:** optimize memory usage on horizon expansion and fix pay-up-to batch update ([e965b20](https://github.com/igormatos02/Timeline/commit/e965b202d9eb1ab52e411aa3c5246de3994ef7bf))
+
 ### [0.2.2](https://github.com/igormatos02/Timeline/compare/v0.2.1...v0.2.2) (2026-09-14)
 
 

@@ -907,15 +907,21 @@ export class SupabaseFinancialEventRepository extends IRepository {
   }
 
   async getById(id) {
-    if (!id || typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    if (!id || typeof id !== 'string') {
       return null;
     }
 
-    const { data, error } = await supabase
-      .from(this.tableName)
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
+    const cleanId = id.includes('_') ? id.split('_')[0] : id;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId);
+
+    let query = supabase.from(this.tableName).select('*');
+    if (isUuid) {
+      query = query.or(`id.eq.${cleanId},event_id.eq.${cleanId}`);
+    } else {
+      query = query.eq('event_id', cleanId);
+    }
+
+    const { data, error } = await query.maybeSingle();
 
     if (error || !data) {
       return null;

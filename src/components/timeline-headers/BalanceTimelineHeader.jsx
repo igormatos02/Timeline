@@ -909,8 +909,8 @@ export default function BalanceTimelineHeader({
           {/* 🔵 LINHA 2: PREVISTOS & PROJEÇÃO */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: TimelineColor.CYAN, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: TimelineColor.CYAN, display: 'inline-block' }} />
+              <span style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: TimelineColor.PRIMARY, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: `linear-gradient(135deg, ${TimelineColor.PRIMARY} 0%, ${TimelineColor.PRIMARY_LIGHT} 100%)`, display: 'inline-block' }} />
                 {t('balanceHeader.futureProjection')}
               </span>
             </div>
@@ -931,7 +931,7 @@ export default function BalanceTimelineHeader({
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ background: 'rgba(2, 132, 199, 0.12)', color: TimelineColor.CYAN, padding: '5px', borderRadius: '7px', display: 'flex' }}>
+                  <div style={{ background: 'rgba(99, 102, 241, 0.12)', color: TimelineColor.PRIMARY, padding: '5px', borderRadius: '7px', display: 'flex' }}>
                     <Clock size={15} />
                   </div>
                   <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--text-main)' }}>
@@ -939,9 +939,9 @@ export default function BalanceTimelineHeader({
                   </span>
                   <span
                     style={{
-                      background: 'rgba(2, 132, 199, 0.1)',
-                      color: TimelineColor.CYAN,
-                      border: '1px solid rgba(2, 132, 199, 0.3)',
+                      background: 'rgba(99, 102, 241, 0.12)',
+                      color: TimelineColor.PRIMARY,
+                      border: 'none',
                       padding: '2px 9px',
                       borderRadius: '6px',
                       fontSize: '0.76rem',
@@ -973,9 +973,10 @@ export default function BalanceTimelineHeader({
                           fontSize: '0.72rem',
                           fontWeight: isSelected ? '800' : '600',
                           cursor: 'pointer',
-                          border: isSelected ? `1px solid ${TimelineColor.CYAN}` : '1px solid var(--border-glass)',
-                          background: isSelected ? TimelineColor.CYAN : 'var(--bg-app)',
+                          border: 'none',
+                          background: isSelected ? `linear-gradient(135deg, ${TimelineColor.PRIMARY} 0%, ${TimelineColor.PRIMARY_LIGHT} 100%)` : 'var(--bg-app)',
                           color: isSelected ? 'var(--text-white)' : 'var(--text-muted)',
+                          boxShadow: isSelected ? '0 0 10px rgba(99, 102, 241, 0.35)' : 'none',
                           transition: 'all 0.15s ease'
                         }}
                       >
@@ -999,7 +1000,7 @@ export default function BalanceTimelineHeader({
                   onChange={(e) => setProjectionMonthsAhead(Number(e.target.value))}
                   style={{
                     flex: 1,
-                    accentColor: TimelineColor.CYAN,
+                    accentColor: TimelineColor.PRIMARY,
                     cursor: 'pointer',
                     height: '6px'
                   }}
@@ -1022,20 +1023,20 @@ export default function BalanceTimelineHeader({
               return (
                 <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
                   <div className="meta-item" style={{ padding: '8px 12px' }}>
-                    <div className="meta-icon-box" style={{ color: TimelineColor.CYAN }}>
+                    <div className="meta-icon-box" style={{ background: 'rgba(99, 102, 241, 0.12)', color: TimelineColor.PRIMARY }}>
                       <TrendingUp size={16} />
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
                         <span className="meta-label" style={{ fontSize: '0.7rem' }}>{t('balanceHeader.projectedBalance')}</span>
-                        <span style={{ color: netProj >= 0 ? TimelineColor.CYAN : TimelineColor.EXPENSE, fontSize: '0.96rem', fontWeight: '800' }}>
+                        <span style={{ color: netProj >= 0 ? TimelineColor.PRIMARY : TimelineColor.EXPENSE, fontSize: '0.96rem', fontWeight: '800' }}>
                           {netProj >= 0 ? '+' : ''}{formatCurrency(netProj)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '4px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                           <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>{t('balanceHeader.forecastInflows')}</span>
-                          <span style={{ color: TimelineColor.CYAN, fontSize: '0.78rem', fontWeight: '700' }}>
+                          <span style={{ color: TimelineColor.PRIMARY, fontSize: '0.78rem', fontWeight: '700' }}>
                             +{formatCurrency(forecastInc)}
                           </span>
                         </div>

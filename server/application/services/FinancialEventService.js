@@ -55,7 +55,29 @@ export class FinancialEventService {
   }
 
   async getAllEvents(filter = {}) {
-    const rawEvents = await eventRepository.getAllWithStatuses();
+    let rawEvents = [];
+    if (filter.timeboardId) {
+      let tlIds = [];
+      try {
+        const timelines = await timelineRepository.getAllByTimeboardId(filter.timeboardId);
+        tlIds = (timelines || []).map((tl) => tl.id);
+      } catch (err) {
+        console.warn('Could not fetch timelines for timeboardId in getAllEvents:', err.message);
+      }
+
+      const allCandidateEvents = await eventRepository.getAllWithStatuses();
+      rawEvents = allCandidateEvents.filter((ev) =>
+        ev.timeboardId === filter.timeboardId ||
+        tlIds.includes(ev.timelineId) ||
+        tlIds.includes(ev.timelineOriginId)
+      );
+    } else if (filter.timelineId) {
+      const allCandidateEvents = await eventRepository.getAllWithStatuses({ timelineId: filter.timelineId });
+      rawEvents = allCandidateEvents;
+    } else {
+      rawEvents = await eventRepository.getAllWithStatuses();
+    }
+
     const statusMap = await financialEventStatusRepository.getStatusMap();
 
     // Mapear também os status dinâmicos que vieram no join dos rawEvents
@@ -720,33 +742,48 @@ export class FinancialEventService {
   }
 
   async toggleEventPayment(id, explicitStatus = null) {
-    const followupItem = await followupRepository.getById(id);
-    if (followupItem) {
-      return followupService.toggleStatus(id, explicitStatus);
-    }
+    const rootId = String(id).includes('_') ? String(id).split('_')[0] : id;
+    const dateSuffix = String(id).includes('_') ? String(id).split('_')[1] : null;
 
-    const todoItem = await todoRepository.getById(id);
-    if (todoItem) {
-      return todoService.toggleStatus(id, explicitStatus);
-    }
-
-    const allEvents = await this.getAllEvents();
-    const targetEvent = allEvents.find((e) => e.id === id || e.eventId === id || e.sobrepositionOver === id);
+    // Direct lookup in financial_events first
+    let targetEvent = await eventRepository.getById(rootId);
+    let targetDate = dateSuffix || targetEvent?.date;
 
     if (!targetEvent) {
-      throw new Error(`${t('backend.validation.eventNotFound')}: ${id}`);
+      // Check in parallel for followup or todo items
+      const [followupItem, todoItem] = await Promise.all([
+        followupRepository.getById(id),
+        todoRepository.getById(id)
+      ]);
+
+      if (followupItem) {
+        return followupService.toggleStatus(id, explicitStatus);
+      }
+      if (todoItem) {
+        return todoService.toggleStatus(id, explicitStatus);
+      }
+
+      // Safe fallback: check candidate events
+      const allCandidateEvents = await eventRepository.getAllWithStatuses();
+      targetEvent = allCandidateEvents.find(
+        (e) => e.id === id || e.eventId === id || e.id === rootId || e.eventId === rootId || e.sobrepositionOver === rootId
+      );
+
+      if (!targetEvent) {
+        throw new Error(`${t('backend.validation.eventNotFound')}: ${id}`);
+      }
+      targetDate = dateSuffix || targetEvent.date;
     }
 
     const toggled = calcToggledStatus(targetEvent, explicitStatus);
     const targetEventId = targetEvent.eventId || targetEvent.id;
-    const targetDate = targetEvent.date;
 
     await this._syncStatus(targetDate, targetEventId, toggled.status, {
       timelineId: targetEvent.timelineId || targetEvent.timeline_id,
       timeboardId: targetEvent.timeboardId || targetEvent.timeboard_id
     });
 
-    if (targetEvent.id && !String(targetEvent.id).includes('_')) {
+    if (targetEvent.id && !String(id).includes('_')) {
       try {
         await eventRepository.update(targetEvent.id, {
           status: toggled.status,
@@ -757,7 +794,7 @@ export class FinancialEventService {
       }
     }
 
-    return { ...targetEvent, ...toggled };
+    return { ...targetEvent, id, date: targetDate, ...toggled };
   }
 
   async deleteEvent(id, options = {}) {

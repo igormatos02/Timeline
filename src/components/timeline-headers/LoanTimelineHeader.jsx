@@ -792,7 +792,8 @@ export default function LoanTimelineHeader({
                   width: `${progressPercent}%`,
                   background: isInactive
                     ? TimelineColor.SLATE
-                    : `linear-gradient(90deg, ${TimelineColor.PRIMARY} 0%, ${TimelineColor.SUCCESS} 100%)`
+                    : `linear-gradient(90deg, ${TimelineColor.PRIMARY} 0%, ${TimelineColor.PRIMARY_LIGHT} 100%)`,
+                  boxShadow: isInactive ? 'none' : '0 0 10px rgba(99, 102, 241, 0.45)'
                 }}
               />
             </div>

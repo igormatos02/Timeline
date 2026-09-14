@@ -533,10 +533,10 @@ export default function FinancialEventModal({
         <ToggleSwitch
           checked={formData.isExternal}
           onChange={(val) => setFormData({ ...formData, isExternal: val })}
-          label={t('modal.isExternalDeposit') || 'É depósito externo?'}
+          label={t('modal.isExternalDeposit')}
           icon={ExternalLink}
           accent={ACCENT}
-          hint={t('modal.isExternalDepositHint') || 'Não abate das entradas no cálculo de saldo/comprometimento.'}
+          hint={t('modal.isExternalDepositHint')}
         />
       )}
 

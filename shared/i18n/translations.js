@@ -25,7 +25,11 @@ export const translations = {
       toggleThemeDark: "Switch to dark theme",
       toggleThemeLight: "Switch to light theme",
       expandHeader: "Expand header",
-      collapseHeader: "Collapse header"
+      collapseHeader: "Collapse header",
+      dbEvents: "DB",
+      calcEvents: "Calc",
+      dbEventsTooltip: "{{count}} events loaded from database",
+      calculatedEventsTooltip: "{{count}} calculated events (projections, recurrence & amortizations)"
     },
 
     // Buttons
@@ -100,6 +104,7 @@ export const translations = {
       monthIncomeTitle: "Total projected income for this month",
       monthExpenseTitle: "Total projected expenses for this month (includes loan installments)",
       monthInvestmentTitle: "Total projected contributions / investments for this month",
+      externalDeposits: "external deposits",
       monthLoanTitle: "Total projected loan installments / amortizations to pay this month",
       monthBalanceTitle: "Projected monthly balance = Income - (Expenses + Investments)",
       balance: "Balance",
@@ -1326,7 +1331,11 @@ export const translations = {
       toggleThemeDark: "Mudar para tema escuro",
       toggleThemeLight: "Mudar para tema claro",
       expandHeader: "Expandir cabeçalho",
-      collapseHeader: "Recolher cabeçalho"
+      collapseHeader: "Recolher cabeçalho",
+      dbEvents: "BD",
+      calcEvents: "Calc",
+      dbEventsTooltip: "{{count}} eventos carregados da base de dados",
+      calculatedEventsTooltip: "{{count}} eventos calculados (projeções, recorrências e amortizações)"
     },
 
     // Buttons
@@ -1401,6 +1410,7 @@ export const translations = {
       monthIncomeTitle: "Total de entradas projetadas para este mês",
       monthExpenseTitle: "Total de gastos projetados para este mês (inclui prestações de empréstimos)",
       monthInvestmentTitle: "Total de aportes / investimentos projetados para este mês",
+      externalDeposits: "depósitos externos",
       monthLoanTitle: "Total de prestações de empréstimos a pagar este mês",
       monthBalanceTitle: "Saldo Projetado do mês = Entradas - (Gastos + Investimentos)",
       balance: "Saldo",

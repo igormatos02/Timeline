@@ -186,6 +186,30 @@ CREATE TABLE IF NOT EXISTS financial_event_status (
 
 CREATE INDEX IF NOT EXISTS idx_financial_event_status_timeline_id ON financial_event_status(timeline_id);
 
+
+-- Busca por ano + mês
+CREATE INDEX IF NOT EXISTS idx_financial_event_status_year_month
+ON public.financial_event_status (year, month);
+
+-- Busca por event_id
+CREATE INDEX IF NOT EXISTS idx_financial_event_status_event_id
+ON public.financial_event_status (event_id);
+
+-- Busca por event_id e ordenação cronológica
+CREATE INDEX IF NOT EXISTS idx_financial_event_status_event_date
+ON public.financial_event_status (event_id, year DESC, month DESC);
+
+-- Busca por event_id + status
+CREATE INDEX IF NOT EXISTS idx_financial_event_status_event_status
+ON public.financial_event_status (event_id, status);
+
+-- Busca por timeline_id
+CREATE INDEX IF NOT EXISTS idx_financial_event_status_timeline_id
+ON public.financial_event_status (timeline_id);
+
+-- Busca por timeboard_id
+CREATE INDEX IF NOT EXISTS idx_financial_event_status_timeboard_id
+ON public.financial_event_status (timeboard_id);
 -- ============================================================
 -- timeboard_members
 -- ============================================================

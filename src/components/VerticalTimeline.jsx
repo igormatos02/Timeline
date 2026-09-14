@@ -983,7 +983,30 @@ function VerticalTimeline({
     return map;
   }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
 
-  const renderMonthView = () => {
+  // Pre-calculate total external deposits / investments per month (excluded from monthly income deduction)
+  const monthInvestmentsExternalMap = useMemo(() => {
+    const map = new Map();
+    (timelineEvents || []).forEach((ev) => {
+      if (!ev || !ev.date || ev.isDeleted) return;
+      if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
+      if (!isEventTimelineActive(ev)) return;
+      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
+        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
+      }
+      const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
+      if (!isExternal) return;
+
+      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment;
+
+      if (isInvestment) {
+        const mKey = ev.date.substring(0, 7);
+        map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
+      }
+    });
+    return map;
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+
+  const monthsList = useMemo(() => {
     const monthMap = new Map();
 
     try {
@@ -996,11 +1019,12 @@ function VerticalTimeline({
         const monthKey = format(mDate, 'yyyy-MM');
         monthMap.set(monthKey, {
           monthDate: mDate,
-          events: []
+          events: [],
+          groupedDateEvents: []
         });
       });
     } catch {
-      monthMap.set(format(todayDate, 'yyyy-MM'), { monthDate: todayDate, events: [] });
+      monthMap.set(format(todayDate, 'yyyy-MM'), { monthDate: todayDate, events: [], groupedDateEvents: [] });
     }
 
     filteredEvents.forEach((ev) => {
@@ -1023,9 +1047,13 @@ function VerticalTimeline({
         if (titleCmp !== 0) return titleCmp;
         return String(b.id || '').localeCompare(String(a.id || ''));
       });
+      mEntry.groupedDateEvents = groupEventsByDate(mEntry.events);
     });
 
-    const monthsList = Array.from(monthMap.values());
+    return Array.from(monthMap.values());
+  }, [filteredEvents, startDateObj, maxDateObj, todayDate]);
+
+  const renderMonthView = () => {
 
     // Helper to verify if an event belongs to active / selected timelines
     const isEventInActiveTimelines = (ev) => {
@@ -1130,7 +1158,9 @@ function VerticalTimeline({
           const mMonthProjectedLoan = hasLoanTimeline ? (monthLoansTotalMap.get(monthKeyStr) || 0) : 0;
           const mMonthProjectedIncome = hasIncomeTimeline ? (monthIncomeTotalMap.get(monthKeyStr) || 0) : 0;
           const mMonthProjectedInvestment = hasInvestmentTimeline ? (monthInvestmentsTotalMap.get(monthKeyStr) || 0) : 0;
-          const mMonthProjectedInvestmentDeduction = hasInvestmentTimeline ? (monthInvestmentsDeductionsMap.get(monthKeyStr) || 0) : 0;
+          const mMonthProjectedInvestmentInternal = hasInvestmentTimeline ? (monthInvestmentsDeductionsMap.get(monthKeyStr) || 0) : 0;
+          const mMonthProjectedInvestmentExternal = hasInvestmentTimeline ? (monthInvestmentsExternalMap.get(monthKeyStr) || 0) : 0;
+          const mMonthProjectedInvestmentDeduction = mMonthProjectedInvestmentInternal;
           const mMonthProjectedSaldo = mMonthProjectedIncome - (mMonthProjectedExpense + mMonthProjectedLoan + mMonthProjectedInvestmentDeduction);
 
           if (!showEmptyDays && !hasEvents && !isCurrentMonth) return null;
@@ -1274,6 +1304,8 @@ function VerticalTimeline({
                         monthProjectedExpense={mMonthProjectedExpense}
                         monthProjectedLoan={mMonthProjectedLoan}
                         monthProjectedInvestment={mMonthProjectedInvestment}
+                        monthProjectedInvestmentInternal={mMonthProjectedInvestmentInternal}
+                        monthProjectedInvestmentExternal={mMonthProjectedInvestmentExternal}
                         monthProjectedInvestmentDeduction={mMonthProjectedInvestmentDeduction}
                         monthProjectedSaldo={mMonthProjectedSaldo}
                         hasIncomeTimeline={hasIncomeTimeline}
@@ -1288,7 +1320,7 @@ function VerticalTimeline({
                   </div>
 
                   {hasEvents ? (
-                    groupEventsByDate(mGroup.events).map((dateGroup, gIdx) => (
+                    (mGroup.groupedDateEvents || groupEventsByDate(mGroup.events)).map((dateGroup, gIdx) => (
                       <div
                         key={`${dateGroup.date}_${gIdx}`}
                         style={{ marginBottom: '8px' }}

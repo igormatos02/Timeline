@@ -428,7 +428,7 @@ export default function IncomeEvolutionChart({
                 {t('evolutionChart.realizedHistory') || 'Realized History'}
               </span>
               <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                {chartData.length > 0 ? `${chartData[0].label} — ${chartData[chartData.length - 1].label}` : ''} ({chartData.length} {t('evolutionChart.months') || 'months'})
+                {chartData.length > 0 ? `${chartData[0].label} — ${chartData[chartData.length - 1].label}` : ''} ({chartData.length} {t('evolutionChart.months')})
               </span>
             </div>
           </div>
@@ -438,10 +438,10 @@ export default function IncomeEvolutionChart({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                  {t('evolutionChart.horizon') || 'Horizon:'}
+                  {t('evolutionChart.horizon')}
                 </span>
                 <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--primary-light)' }}>
-                  {horizonYears} {horizonYears === 1 ? (t('evolutionChart.year') || 'Year') : (t('evolutionChart.years') || 'Years')} ({chartData.length}m)
+                  {horizonYears} {horizonYears === 1 ? t('evolutionChart.year') : t('evolutionChart.years')} ({chartData.length}m)
                 </span>
               </div>
               <input

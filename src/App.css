@@ -364,10 +364,10 @@
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary) 0%, var(--accent-cyan) 100%);
+  background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
   border-radius: 4px;
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.45);
 }
 
 /* Toolbar & Filters */
@@ -559,6 +559,8 @@
   align-items: flex-start;
   margin-bottom: 24px;
   scroll-margin-top: 80px;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 140px;
 }
 
 .timeline-day-row.is-today {
@@ -1169,4 +1171,80 @@
   padding: 3px 10px;
   white-space: nowrap;
   user-select: none;
+}
+
+/* Flat Positive Event Cards */
+.flat-positive-card {
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+}
+
+.flat-positive-income {
+  background: linear-gradient(135deg, var(--success) 0%, var(--accent-emerald) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px var(--shadow-glow-emerald) !important;
+}
+
+.flat-positive-income:hover {
+  background: linear-gradient(135deg, var(--success) 0%, var(--accent-emerald) 100%) !important;
+}
+
+.flat-positive-expense {
+  background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25) !important;
+}
+
+.flat-positive-expense:hover {
+  background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%) !important;
+}
+
+.flat-positive-investment {
+  background: linear-gradient(135deg, var(--accent-purple) 0%, #7c3aed 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(147, 51, 234, 0.25) !important;
+}
+
+.flat-positive-investment:hover {
+  background: linear-gradient(135deg, var(--accent-purple) 0%, #7c3aed 100%) !important;
+}
+
+.flat-positive-loan {
+  background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px var(--shadow-glow) !important;
+}
+
+.flat-positive-loan:hover {
+  background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%) !important;
+}
+
+.flat-positive-todo {
+  background: linear-gradient(135deg, var(--success) 0%, var(--accent-emerald) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px var(--shadow-glow-emerald) !important;
+}
+
+.flat-positive-todo:hover {
+  background: linear-gradient(135deg, var(--success) 0%, var(--accent-emerald) 100%) !important;
+}
+
+.flat-positive-followup {
+  background: linear-gradient(135deg, var(--accent-cyan) 0%, #0891b2 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px var(--shadow-glow-cyan) !important;
+}
+
+.flat-positive-followup:hover {
+  background: linear-gradient(135deg, var(--accent-cyan) 0%, #0891b2 100%) !important;
+}
+
+.flat-positive-reminder {
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(100, 116, 139, 0.25) !important;
+}
+
+.flat-positive-reminder:hover {
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
 }

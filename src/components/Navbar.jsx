@@ -1,12 +1,15 @@
 import React from 'react';
-import { Clock, Plus, LayoutGrid, Sparkles, Sun, Moon, LocateFixed, User, Shield, Settings, ChevronDown, LogOut } from 'lucide-react';
+import { Clock, Plus, LayoutGrid, Sparkles, Sun, Moon, LocateFixed, User, Shield, Settings, ChevronDown, LogOut, Database, Calculator } from 'lucide-react';
 import { getCurrentUser } from '../services/api';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
+import { TimelineColor } from '../enums/index.js';
 import VersionBadge from './ui/VersionBadge.jsx';
 
 export default function Navbar({
   timeboards = [],
   activeTimeboardId,
+  dbEventsCount = 0,
+  calculatedEventsCount = 0,
   onSelectTimeboard,
   onOpenCreateTimeboard,
   onOpenEditTimeboard,
@@ -40,20 +43,71 @@ export default function Navbar({
           </div>
           <div>
             <div className="brand-title">
-              Timeboard <Sparkles size={16} style={{ color: '#818cf8' }} />
+              Timeboard <Sparkles size={16} style={{ color: 'var(--primary-light)' }} />
             </div>
           </div>
           <VersionBadge style={{ marginLeft: '4px' }} />
         </div>
 
-        {/* Custom Premium Timeboard Selector Dropdown & Settings Button */}
-        <TimeboardDropdownSelector
-          timeboards={timeboards}
-          activeTimeboard={activeTimeboard}
-          activeTimeboardId={activeTimeboardId}
-          onSelectTimeboard={onSelectTimeboard}
-          onOpenEditTimeboard={onOpenEditTimeboard}
-        />
+        {/* Custom Premium Timeboard Selector Dropdown & Event Counts Badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <TimeboardDropdownSelector
+            timeboards={timeboards}
+            activeTimeboard={activeTimeboard}
+            activeTimeboardId={activeTimeboardId}
+            onSelectTimeboard={onSelectTimeboard}
+            onOpenEditTimeboard={onOpenEditTimeboard}
+          />
+
+          {/* 📊 Event Counts Badge (DB / Raw vs Calculated) */}
+          <div
+            className="events-count-badge"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 10px',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: 'var(--radius-md, 10px)',
+              boxShadow: 'var(--shadow-sm)',
+              fontSize: '0.74rem',
+              fontWeight: '700',
+              color: 'var(--text-main)',
+              userSelect: 'none'
+            }}
+          >
+            {/* DB Events Count */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title={t('header.dbEventsTooltip', { count: dbEventsCount })}
+            >
+              <Database size={13} style={{ color: TimelineColor.PRIMARY }} />
+              <span style={{ color: 'var(--text-main)', fontWeight: '800' }}>{dbEventsCount}</span>
+              <span style={{ fontSize: '0.68rem', fontWeight: '600', color: 'var(--text-dim)' }}>{t('header.dbEvents')}</span>
+            </div>
+
+            <span style={{ width: '1px', height: '12px', background: 'var(--border-glass)', display: 'inline-block' }} />
+
+            {/* Calculated Events Count */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title={t('header.calculatedEventsTooltip', { count: calculatedEventsCount })}
+            >
+              <Calculator size={13} style={{ color: TimelineColor.SUCCESS }} />
+              <span style={{ color: 'var(--text-main)', fontWeight: '800' }}>{calculatedEventsCount}</span>
+              <span style={{ fontSize: '0.68rem', fontWeight: '600', color: 'var(--text-dim)' }}>{t('header.calcEvents')}</span>
+            </div>
+          </div>
+        </div>
 
         {/* Actions & User Profile */}
         <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -83,7 +137,7 @@ export default function Navbar({
                 borderRadius: '6px',
                 border: 'none',
                 background: language === 'en' ? 'var(--primary)' : 'transparent',
-                color: language === 'en' ? '#ffffff' : 'var(--text-muted)',
+                color: language === 'en' ? TimelineColor.WHITE : 'var(--text-muted)',
                 cursor: 'pointer',
                 fontSize: '0.78rem',
                 fontWeight: language === 'en' ? '700' : '500',
@@ -106,7 +160,7 @@ export default function Navbar({
                 borderRadius: '6px',
                 border: 'none',
                 background: language === 'pt' ? 'var(--primary)' : 'transparent',
-                color: language === 'pt' ? '#ffffff' : 'var(--text-muted)',
+                color: language === 'pt' ? TimelineColor.WHITE : 'var(--text-muted)',
                 cursor: 'pointer',
                 fontSize: '0.78rem',
                 fontWeight: language === 'pt' ? '700' : '500',
@@ -178,8 +232,8 @@ export default function Navbar({
                 width: '30px',
                 height: '30px',
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-                color: '#ffffff',
+                background: `linear-gradient(135deg, ${TimelineColor.PRIMARY} 0%, ${TimelineColor.PURPLE} 100%)`,
+                color: TimelineColor.WHITE,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -198,7 +252,7 @@ export default function Navbar({
                   right: '-1px',
                   width: '8px',
                   height: '8px',
-                  background: '#10b981',
+                  background: TimelineColor.SUCCESS,
                   border: '1.5px solid var(--bg-card)',
                   borderRadius: '50%'
                 }}
@@ -224,7 +278,7 @@ export default function Navbar({
               style={{
                 background: 'rgba(239, 68, 68, 0.1)',
                 borderColor: 'rgba(239, 68, 68, 0.3)',
-                color: '#f87171',
+                color: TimelineColor.DANGER,
                 padding: '6px 10px',
                 borderRadius: '8px'
               }}
@@ -246,6 +300,7 @@ function TimeboardDropdownSelector({
   onSelectTimeboard,
   onOpenEditTimeboard
 }) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
   const dropdownRef = React.useRef(null);
 
@@ -279,7 +334,7 @@ function TimeboardDropdownSelector({
           background: 'var(--bg-card)',
           padding: '6px 10px 6px 12px',
           borderRadius: 'var(--radius-md, 10px)',
-          border: '1px solid var(--border-glass, rgba(255,255,255,0.12))',
+          border: '1px solid var(--border-glass)',
           boxShadow: 'var(--shadow-sm)',
           transition: 'all 0.2s ease',
           cursor: 'pointer'
@@ -302,7 +357,7 @@ function TimeboardDropdownSelector({
               maxWidth: '160px'
             }}
           >
-            {activeTimeboard?.name || 'Selecione Timeboard'}
+            {activeTimeboard?.name || t('header.selectTimeboard')}
           </span>
           <span
             style={{
@@ -365,8 +420,8 @@ function TimeboardDropdownSelector({
             top: 'calc(100% + 6px)',
             left: 0,
             width: '240px',
-            background: 'var(--bg-card, #131722)',
-            border: '1px solid var(--border-glass-glow, rgba(99, 102, 241, 0.3))',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-glass-glow)',
             borderRadius: '12px',
             boxShadow: '0 16px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.15)',
             backdropFilter: 'blur(16px)',
@@ -388,7 +443,7 @@ function TimeboardDropdownSelector({
               letterSpacing: '0.05em'
             }}
           >
-            Selecione o Timeboard
+            {t('header.selectTimeboard')}
           </div>
 
           {timeboards.map((tb) => {
@@ -442,7 +497,7 @@ function TimeboardDropdownSelector({
                   <span
                     style={{
                       fontSize: '0.68rem',
-                      color: isSelected ? '#818cf8' : 'var(--text-dim, #94a3b8)',
+                      color: isSelected ? 'var(--primary-light)' : 'var(--text-dim)',
                       fontWeight: '500'
                     }}
                   >
@@ -456,8 +511,8 @@ function TimeboardDropdownSelector({
                       width: '6px',
                       height: '6px',
                       borderRadius: '50%',
-                      background: 'var(--primary, #6366f1)',
-                      boxShadow: '0 0 8px #6366f1'
+                      background: 'var(--primary)',
+                      boxShadow: '0 0 8px rgba(99, 102, 241, 0.6)'
                     }}
                   />
                 )}

@@ -486,6 +486,21 @@ export default function App() {
     };
   }, [activeTimeboard, activeTimeboardTimelines, activeFinancialTab, activeTimelineId, rawEvents]);
 
+  // Contagem de eventos da base de dados (templates únicos) e calculados (projeções/ocorrências)
+  const dbEventsCount = React.useMemo(() => {
+    if (!Array.isArray(rawEvents) || rawEvents.length === 0) return 0;
+    const uniqueRootIds = new Set();
+    rawEvents.forEach((ev) => {
+      const rootId = ev.eventId || ev.seriesId || (ev.id && String(ev.id).includes('_') ? String(ev.id).split('_')[0] : ev.id);
+      if (rootId) uniqueRootIds.add(rootId);
+    });
+    return uniqueRootIds.size;
+  }, [rawEvents]);
+
+  const calculatedEventsCount = React.useMemo(() => {
+    return (activeTimeline?.events || rawEvents || []).length;
+  }, [activeTimeline?.events, rawEvents]);
+
   // ----------------------------------------------------
   // Timeline Handlers
   // ----------------------------------------------------
@@ -1456,11 +1471,13 @@ export default function App() {
       });
     });
 
+    // 3. Persist to backend asynchronously in the background
     try {
       await api.toggleEventPayment(installmentId, explicitStatus);
-      await refreshTimelines();
     } catch (err) {
       console.error('Error toggling payment status:', err);
+      // Rollback on network failure
+      refreshTimelines();
     }
   }, [refreshTimelines]);
 
@@ -1901,6 +1918,8 @@ export default function App() {
       <Navbar
         timeboards={timeboards}
         activeTimeboardId={activeTimeboardId}
+        dbEventsCount={dbEventsCount}
+        calculatedEventsCount={calculatedEventsCount}
         onSelectTimeboard={(id) => {
           setActiveTimeboardId(id);
           setActiveTimelineId(null);

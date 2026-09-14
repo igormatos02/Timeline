@@ -1,7 +1,8 @@
 import React from 'react';
 import { Sparkles, DollarSign, TrendingDown, PiggyBank, Landmark, Scale } from 'lucide-react';
-import { formatCurrency } from '../utils/formatCurrency.js';
+import { formatCurrency as defaultFormatCurrency } from '../utils/formatCurrency.js';
 import { TimelineColor } from '../../shared/enums/index.js';
+import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 /**
  * MonthProjectionBadges
@@ -12,11 +13,16 @@ export default function MonthProjectionBadges({
   income,
   expense,
   investment,
+  investmentInternal,
+  investmentExternal,
   loan,
   saldo,
   monthProjectedIncome,
   monthProjectedExpense,
   monthProjectedInvestment,
+  monthProjectedInvestmentInternal,
+  monthProjectedInvestmentExternal,
+  monthProjectedInvestmentDeduction,
   monthProjectedLoan,
   monthProjectedSaldo,
   hasIncomeTimeline,
@@ -29,11 +35,22 @@ export default function MonthProjectionBadges({
   showInvestment = true,
   showLoan = true,
   showBalance = true,
-  t = (key) => key
+  formatCurrency = defaultFormatCurrency,
+  t: propT
 }) {
+  const { t: contextT } = useTranslation();
+  const t = propT || contextT;
   const actualIncome = monthProjectedIncome !== undefined ? monthProjectedIncome : (income || 0);
   const actualExpense = monthProjectedExpense !== undefined ? monthProjectedExpense : (expense || 0);
-  const actualInvestment = monthProjectedInvestment !== undefined ? monthProjectedInvestment : (investment || 0);
+  const actualInvestmentInternal = monthProjectedInvestmentInternal !== undefined
+    ? monthProjectedInvestmentInternal
+    : (monthProjectedInvestmentDeduction !== undefined ? monthProjectedInvestmentDeduction : (investmentInternal || 0));
+  const actualInvestmentExternal = monthProjectedInvestmentExternal !== undefined
+    ? monthProjectedInvestmentExternal
+    : (investmentExternal || 0);
+  const actualInvestmentTotal = monthProjectedInvestment !== undefined
+    ? monthProjectedInvestment
+    : (investment !== undefined ? investment : (actualInvestmentInternal + actualInvestmentExternal));
   const actualLoan = monthProjectedLoan !== undefined ? monthProjectedLoan : (loan || 0);
   const actualSaldo = monthProjectedSaldo !== undefined ? monthProjectedSaldo : saldo;
 
@@ -47,12 +64,14 @@ export default function MonthProjectionBadges({
 
   const numIncome = Math.abs(Number(actualIncome || 0));
   const numExpense = Math.abs(Number(actualExpense || 0));
-  const numInvestment = Math.abs(Number(actualInvestment || 0));
+  const numInvestmentInternal = Math.abs(Number(actualInvestmentInternal || 0));
+  const numInvestmentExternal = Math.abs(Number(actualInvestmentExternal || 0));
+  const numInvestmentTotal = Math.abs(Number(actualInvestmentTotal || 0));
   const numLoan = Math.abs(Number(actualLoan || 0));
 
   const calculatedSaldo = actualSaldo !== null && actualSaldo !== undefined
     ? Number(actualSaldo)
-    : (numIncome - (numExpense + numInvestment + numLoan));
+    : (numIncome - (numExpense + numInvestmentInternal + numLoan));
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
@@ -118,25 +137,46 @@ export default function MonthProjectionBadges({
         </span>
       )}
 
-      {/* 3. Investimento Projetado */}
+      {/* 3. Investimento Projetado (Separado: Interno + Depósitos Externos) */}
       {showInvestment && (
         <span
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '4px',
+            gap: '5px',
             background: 'transparent',
             border: 'none',
             color: isFutureMonth
               ? 'var(--text-dim)'
-              : (numInvestment > 0 ? TimelineColor.INVESTMENT : 'var(--text-dim)'),
+              : (numInvestmentTotal > 0 || numInvestmentInternal > 0 || numInvestmentExternal > 0 ? TimelineColor.INVESTMENT : 'var(--text-dim)'),
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
           title={t('timeline.monthInvestmentTitle')}
         >
           <PiggyBank size={12} />
-          <span>{formatCurrency(numInvestment)}</span>
+          <span>
+            {formatCurrency(numInvestmentExternal > 0 ? numInvestmentInternal : (numInvestmentTotal > 0 ? numInvestmentTotal : numInvestmentInternal))}
+          </span>
+          {numInvestmentExternal > 0 && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+                fontWeight: '700',
+                color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)',
+                opacity: 0.95
+              }}
+              title={t('modal.isExternalDepositHint')}
+            >
+              <span>+</span>
+              <span>{formatCurrency(numInvestmentExternal)}</span>
+              <span style={{ fontSize: '0.70rem', fontWeight: '600', textTransform: 'lowercase' }}>
+                {t('timeline.externalDeposits')}
+              </span>
+            </span>
+          )}
         </span>
       )}
 
@@ -173,7 +213,7 @@ export default function MonthProjectionBadges({
             padding: '2px 8px',
             borderRadius: '6px',
             background: calculatedSaldo >= 0 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
-            border: calculatedSaldo >= 0 ? '1px solid rgba(16, 185, 129, 0.28)' : '1px solid rgba(244, 63, 94, 0.28)',
+            border: 'none',
             color: calculatedSaldo >= 0 ? TimelineColor.INCOME : TimelineColor.EXPENSE,
             fontWeight: '800',
             fontSize: '0.76rem'

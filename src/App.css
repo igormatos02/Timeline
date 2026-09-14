@@ -814,6 +814,42 @@
   transform: translateY(-1px);
 }
 
+.followup-anchor-strip .action-icon-btn:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.followup-anchor-strip .action-icon-btn.delete:hover {
+  color: #ffffff !important;
+  background: rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Amortization Strip - Flat Solid Green without hover background changes */
+.amortization-event-strip {
+  background: var(--success, #10b981) !important;
+  border: 1px solid var(--success, #10b981) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28);
+  transition: all var(--transition-fast);
+}
+
+.amortization-event-strip:hover {
+  background: var(--success, #10b981) !important;
+  border-color: var(--success, #10b981) !important;
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4) !important;
+  transform: translateY(-1px);
+}
+
+.amortization-event-strip .action-icon-btn:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.amortization-event-strip .action-icon-btn.delete:hover {
+  color: #ffffff !important;
+  background: rgba(239, 68, 68, 0.4) !important;
+}
+
 /* Inline Amount Input (no increment/decrement spinners, transparent background, auto-selected) */
 .inline-amount-input {
   background: transparent !important;

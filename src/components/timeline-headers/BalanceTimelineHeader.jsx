@@ -24,6 +24,8 @@ import {
   ExpenseEventCategory,
   AmortizationEventCategory,
   AmortizationStrategy,
+  TimelineColor,
+  TIMELINE_COLOR_PRESETS,
   isPositiveStatus,
   isCancelledStatus,
   isLoanTimelineType
@@ -118,6 +120,16 @@ export default function BalanceTimelineHeader({
     ? (String(rawComputeStart) === '1900-01' || String(rawComputeStart).startsWith('1900-01') ? '1900-01' : String(rawComputeStart).substring(0, 7))
     : currentMonthStr;
 
+  const targetHorizonMonthStr = (() => {
+    try {
+      const baseDate = new Date();
+      const targetDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + projectionMonthsAhead, 1);
+      return format(targetDate, 'yyyy-MM');
+    } catch {
+      return currentMonthStr;
+    }
+  })();
+
   // Extrair métricas consolidadas seguras da Stored Procedure ou fallback
   const dto = timeline.balanceHeaderResult || timeline.procedureMetrics;
   const rawMetrics = dto || timeline.metrics || {};
@@ -145,16 +157,23 @@ export default function BalanceTimelineHeader({
   let calculatedInvestments = 0;
   let calculatedLoanPaid = 0;
   let calculatedLoanDue = 0;
+  let calculatedAmortized = 0;
+
+  let horizonFutureInflows = 0;
+  let horizonFutureOutflows = 0;
+  let horizonFutureInvestments = 0;
+  let horizonFutureAmortization = 0;
 
   eventsList.forEach((ev) => {
     if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
 
     const eventMonthStr = ev.date.substring(0, 7);
     const isAfterStart = !computeFromMonth || computeFromMonth === '1900-01' || eventMonthStr >= computeFromMonth;
-    const isUpToCurrentMonth = eventMonthStr <= currentMonthStr;
+    const isUpToHorizon = eventMonthStr <= targetHorizonMonthStr;
 
-    if (!isAfterStart || !isUpToCurrentMonth) return;
+    if (!isAfterStart || !isUpToHorizon) return;
 
+    const isFutureEvent = eventMonthStr > currentMonthStr;
     const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timeline_id || ''));
 
     const isLoanInst = ev.eventType === EventType.LOAN_INSTALLMENT ||
@@ -175,16 +194,23 @@ export default function BalanceTimelineHeader({
     const isLoan = isLoanInst || isAmortization || isLoanTimelineType(tlType);
 
     const amt = isLoanInst
-      ? Number(ev.installmentAmount !== undefined ? ev.installmentAmount : (ev.amount || 0))
+      ? Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0))
       : Number(ev.amount || 0);
 
     if (amt <= 0) return;
 
-    const isRealized = isPositiveStatus(ev.status) || isPositiveStatus(ev.status?.toLowerCase()) || Boolean(ev.isCompleted);
+    const isRealized = isFutureEvent || isPositiveStatus(ev.status) || isPositiveStatus(ev.status?.toLowerCase()) || Boolean(ev.isCompleted);
 
     if (isLoan) {
       if (isRealized) {
         calculatedLoanPaid += amt;
+        if (isAmortization) {
+          calculatedAmortized += amt;
+          if (isFutureEvent) horizonFutureAmortization += amt;
+        }
+        if (isFutureEvent) {
+          horizonFutureOutflows += amt;
+        }
       } else {
         calculatedLoanDue += amt;
       }
@@ -221,10 +247,13 @@ export default function BalanceTimelineHeader({
 
     if (isIncome) {
       calculatedIncome += amt;
+      if (isFutureEvent) horizonFutureInflows += amt;
     } else if (isInvestment && !ev.isExternal && !ev.is_external && !ev.isFirstOccurrence) {
       calculatedInvestments += amt;
+      if (isFutureEvent) horizonFutureInvestments += amt;
     } else if (isExpense) {
       calculatedExpenses += amt;
+      if (isFutureEvent) horizonFutureOutflows += amt;
     }
   });
 
@@ -234,14 +263,15 @@ export default function BalanceTimelineHeader({
   }, 0);
 
   const rawRemainingDebt = rawMetrics.total_remaining_debt ?? rawMetrics.totalRemainingDebt ?? rawMetrics.totalActiveDebt ?? 0;
-  const computedRemainingDebt = activeLoanTimelinesSum > 0 ? activeLoanTimelinesSum : rawRemainingDebt;
+  const initialBaseRemainingDebt = activeLoanTimelinesSum > 0 ? activeLoanTimelinesSum : rawRemainingDebt;
+  const computedRemainingDebt = Math.max(0, initialBaseRemainingDebt - (projectionMonthsAhead > 0 ? calculatedAmortized : 0));
 
   const totalReceived = calculatedIncome;
   const totalPaidExpenses = calculatedExpenses + calculatedLoanPaid;
   const totalInvested = calculatedInvestments;
   const totalPeriodDueDebt = calculatedLoanDue;
   const totalRemainingDebt = computedRemainingDebt;
-  // Saldo Líquido do período: Entradas Realizadas - Saídas Realizadas (incluindo parcelas pagas) - Investimentos Realizados
+  // Saldo Líquido do período: Entradas - Saídas (incluindo parcelas) - Investimentos
   const netRealized = totalReceived - totalPaidExpenses - totalInvested;
 
   const finMetrics = {
@@ -253,7 +283,7 @@ export default function BalanceTimelineHeader({
     totalPeriodDueDebt,
     totalLoanPaid: calculatedLoanPaid,
     totalRemainingDebt: computedRemainingDebt,
-    totalAmortized: rawMetrics.total_amortized ?? rawMetrics.totalAmortized ?? 0,
+    totalAmortized: calculatedAmortized > 0 ? calculatedAmortized : (rawMetrics.total_amortized ?? rawMetrics.totalAmortized ?? 0),
     totalLoanDebt: rawMetrics.total_loan_debt ?? rawMetrics.totalLoanDebt ?? 0,
     investmentsTotalAccumulated: rawMetrics.investments_total_accumulated ?? rawMetrics.investmentsTotalAccumulated ?? 0
   };
@@ -384,47 +414,50 @@ export default function BalanceTimelineHeader({
 
           {/* Grid Principal 2x2 padronizado com Donut SVGs */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-            {/* Quadrante 1: BALANÇO ATÉ O MÊS ATUAL */}
+            {/* Quadrante 1: BALANÇO ATÉ O HORIZONTE */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {t('balanceHeader.currentBalanceTitle', { month: currentMonthLabel })}
+                {projectionMonthsAhead === 0
+                  ? t('balanceHeader.currentBalanceTitle', { month: currentMonthLabel })
+                  : t('balanceHeader.projectedBalanceTitle', { month: projectedHorizonLabel })}
               </div>
               {(() => {
-                const totalReceived = finMetrics.totalReceived ?? 0;
-                const totalPaidExpenses = finMetrics.totalPaidExpenses ?? 0;
-                const totalInvested = finMetrics.totalInvested ?? 0;
-                const totalRemainingDebt = finMetrics.totalRemainingDebt ?? 0;
-                const netRealized = finMetrics.netRealized ?? (totalReceived - totalPaidExpenses - totalInvested);
+                const totalReceivedVal = finMetrics.totalReceived ?? 0;
+                const totalPaidExpensesVal = finMetrics.totalPaidExpenses ?? 0;
+                const totalInvestedVal = finMetrics.totalInvested ?? 0;
+                const netVal = finMetrics.netRealized ?? (totalReceivedVal - totalPaidExpensesVal - totalInvestedVal);
 
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
                     {/* Detalhes Verticais em Lista */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: '600' }}>
-                        {t('balanceHeader.netRealizedAccumulated')}
+                        {projectionMonthsAhead === 0
+                          ? t('balanceHeader.netRealizedAccumulated')
+                          : t('balanceHeader.netProjectedAccumulated')}
                       </div>
-                      <div style={{ fontSize: '0.92rem', fontWeight: '800', color: netRealized >= 0 ? '#10b981' : '#f43f5e', marginBottom: '2px' }}>
-                        {netRealized >= 0 ? '+' : ''}{formatCurrency(netRealized)}
+                      <div style={{ fontSize: '0.92rem', fontWeight: '800', color: netVal >= 0 ? TimelineColor.SUCCESS : TimelineColor.EXPENSE, marginBottom: '2px' }}>
+                        {netVal >= 0 ? '+' : ''}{formatCurrency(netVal)}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
                           <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.inflows')}</span>
-                          <strong style={{ color: '#10b981' }}>+{formatCurrency(totalReceived).replace(',00', '')}</strong>
+                          <strong style={{ color: TimelineColor.SUCCESS }}>+{formatCurrency(totalReceivedVal).replace(',00', '')}</strong>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
                           <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.outflows')}</span>
-                          <strong style={{ color: '#f43f5e' }}>-{formatCurrency(totalPaidExpenses).replace(',00', '')}</strong>
+                          <strong style={{ color: TimelineColor.EXPENSE }}>-{formatCurrency(totalPaidExpensesVal).replace(',00', '')}</strong>
                         </div>
-                        {(hasInvestmentTimeline && totalInvested > 0) && (
+                        {(hasInvestmentTimeline && totalInvestedVal > 0) && (
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
                             <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.inAccount')}</span>
-                            <strong style={{ color: '#6366f1' }}>-{formatCurrency(totalInvested).replace(',00', '')}</strong>
+                            <strong style={{ color: TimelineColor.LOAN }}>-{formatCurrency(totalInvestedVal).replace(',00', '')}</strong>
                           </div>
                         )}
                         {(hasLoanTimeline && totalPeriodDueDebt > 0) && (
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
                             <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.due')}</span>
-                            <strong style={{ color: '#f59e0b' }}>{formatCurrency(totalPeriodDueDebt).replace(',00', '')}</strong>
+                            <strong style={{ color: TimelineColor.WARNING }}>{formatCurrency(totalPeriodDueDebt).replace(',00', '')}</strong>
                           </div>
                         )}
                       </div>
@@ -434,29 +467,35 @@ export default function BalanceTimelineHeader({
               })()}
             </div>
 
-            {/* Quadrante 2: ANNUAL INCOME BREAKDOWN (Despesas + Em conta + Devido vs Renda) */}
+            {/* Quadrante 2: DISTRIBUIÇÃO DE RENDIMENTOS NO PERÍODO / ANUAL */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {t('balanceHeader.annualIncomeBreakdown')}
+                {projectionMonthsAhead === 0
+                  ? t('balanceHeader.annualIncomeBreakdown')
+                  : t('balanceHeader.periodIncomeBreakdown')}
               </div>
               {(() => {
-                // Janela de 12 meses a partir do mês de início de computação configurado (Computar: ...)
-                let baseYear, baseMonth;
-                if (computeFromMonth && computeFromMonth !== '1900-01') {
-                  const [y, m] = computeFromMonth.split('-').map(Number);
-                  baseYear = y;
-                  baseMonth = m - 1;
+                let startMK, endMK;
+                if (projectionMonthsAhead === 0) {
+                  let baseYear, baseMonth;
+                  if (computeFromMonth && computeFromMonth !== '1900-01') {
+                    const [y, m] = computeFromMonth.split('-').map(Number);
+                    baseYear = y;
+                    baseMonth = m - 1;
+                  } else {
+                    const now = new Date();
+                    baseYear = now.getFullYear();
+                    baseMonth = now.getMonth();
+                  }
+                  startMK = `${baseYear}-${String(baseMonth + 1).padStart(2, '0')}`;
+                  const etm = baseMonth + 12;
+                  const ey = baseYear + Math.floor(etm / 12);
+                  const em = etm % 12;
+                  endMK = `${ey}-${String(em + 1).padStart(2, '0')}`;
                 } else {
-                  const now = new Date();
-                  baseYear = now.getFullYear();
-                  baseMonth = now.getMonth();
+                  startMK = computeFromMonth === '1900-01' ? '1900-01' : computeFromMonth;
+                  endMK = targetHorizonMonthStr;
                 }
-
-                const startMK = `${baseYear}-${String(baseMonth + 1).padStart(2, '0')}`;
-                const etm = baseMonth + 12;
-                const ey = baseYear + Math.floor(etm / 12);
-                const em = etm % 12;
-                const endMK = `${ey}-${String(em + 1).padStart(2, '0')}`;
 
                 const activeLoanTimelines = (allTimelines || []).filter((t) => {
                   const isLoan = isLoanTimelineType(t.type);
@@ -471,8 +510,8 @@ export default function BalanceTimelineHeader({
                 let annualInvestment = 0;
                 let annualLoan = 0;
 
-                // Calcular custo anual de empréstimos das timelines ativas (mensalidade × 12)
-                if (hasLoanTimeline) {
+                // Calcular custo de empréstimos das timelines ativas
+                if (hasLoanTimeline && projectionMonthsAhead === 0) {
                   activeLoanTimelines.forEach((t) => {
                     const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
                     const monthly = Number(
@@ -489,7 +528,7 @@ export default function BalanceTimelineHeader({
                 eventsList.forEach((ev) => {
                   if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
                   const mk = ev.date.substring(0, 7);
-                  if (mk < startMK || mk >= endMK) return;
+                  if (mk < startMK || (projectionMonthsAhead === 0 ? mk >= endMK : mk > endMK)) return;
 
                   const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timeline_id || ''));
 
@@ -511,7 +550,7 @@ export default function BalanceTimelineHeader({
                   const isLoan = isLoanInst || isAmortization || isLoanTimelineType(tlType);
 
                   const amt = isLoanInst
-                    ? Number(ev.installmentAmount !== undefined ? ev.installmentAmount : (ev.amount || 0))
+                    ? Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0))
                     : Number(ev.amount || 0);
 
                   if (amt <= 0) return;
@@ -550,9 +589,8 @@ export default function BalanceTimelineHeader({
                     annualInvestment += amt;
                   } else if (
                     hasLoanTimeline &&
-                    annualLoan === 0 &&
-                    isLoanInst &&
-                    !isAmortization &&
+                    (annualLoan === 0 || projectionMonthsAhead > 0) &&
+                    (isLoanInst || isAmortization) &&
                     activeLoanIds.has(String(ev.timelineId || ev.timeline_id || ''))
                   ) {
                     annualLoan += amt;
@@ -565,7 +603,7 @@ export default function BalanceTimelineHeader({
                 const freePct = Math.max(0, 100 - expPct - invPct - loanPct);
                 const totalCommitted = expPct + invPct + loanPct;
 
-                // Mesma fórmula do Balanço: Entradas - Saídas - Dívidas - Em conta
+                // Entradas - Saídas - Dívidas - Em conta
                 const annualNet = annualIncome - annualExpense - (hasLoanTimeline ? annualLoan : 0) - annualInvestment;
 
                 if (annualIncome === 0) {
@@ -581,19 +619,19 @@ export default function BalanceTimelineHeader({
 
                       <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                          {t('balanceHeader.totalAnnualProjected')}
+                          {projectionMonthsAhead === 0 ? t('balanceHeader.totalAnnualProjected') : t('balanceHeader.totalPeriodProjected')}
                         </span>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', background: 'rgba(255, 255, 255, 0.02)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-glass)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.balanceLabel')}</span>
-                            <strong style={{ color: annualNet >= 0 ? '#10b981' : '#f43f5e' }}>
+                            <strong style={{ color: annualNet >= 0 ? TimelineColor.SUCCESS : TimelineColor.EXPENSE }}>
                               {annualNet >= 0 ? '+' : ''}{formatCurrency(annualNet)}
                             </strong>
                           </div>
                           {(hasInvestmentTimeline || annualInvestment > 0) && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.inAccount')}</span>
-                              <strong style={{ color: '#6366f1' }}>
+                              <strong style={{ color: TimelineColor.LOAN }}>
                                 +{formatCurrency(annualInvestment)}
                               </strong>
                             </div>
@@ -606,10 +644,10 @@ export default function BalanceTimelineHeader({
 
                 // Fatias do Donut
                 const segments = [
-                  { name: t('balanceHeader.expensesLegend'), label: t('balanceHeader.expensesLegend'), percent: expPct, pct: expPct, amount: annualExpense, color: '#f43f5e' },
-                  ...((hasInvestmentTimeline && invPct > 0) ? [{ name: t('balanceHeader.inAccountLegend'), label: t('balanceHeader.inAccountLegend'), percent: invPct, pct: invPct, amount: annualInvestment, color: '#6366f1' }] : []),
-                  ...((hasLoanTimeline && loanPct > 0) ? [{ name: t('balanceHeader.dueLegend'), label: t('balanceHeader.dueLegend'), percent: loanPct, pct: loanPct, amount: annualLoan, color: '#f59e0b' }] : []),
-                  ...(freePct > 0 ? [{ name: t('balanceHeader.availableLegend'), label: t('balanceHeader.availableLegend'), percent: freePct, pct: freePct, amount: Math.max(0, annualNet), color: '#10b981' }] : [])
+                  { name: t('balanceHeader.expensesLegend'), label: t('balanceHeader.expensesLegend'), percent: expPct, pct: expPct, amount: annualExpense, color: TimelineColor.EXPENSE },
+                  ...((hasInvestmentTimeline && invPct > 0) ? [{ name: t('balanceHeader.inAccountLegend'), label: t('balanceHeader.inAccountLegend'), percent: invPct, pct: invPct, amount: annualInvestment, color: TimelineColor.LOAN }] : []),
+                  ...((hasLoanTimeline && loanPct > 0) ? [{ name: t('balanceHeader.dueLegend'), label: t('balanceHeader.dueLegend'), percent: loanPct, pct: loanPct, amount: annualLoan, color: TimelineColor.WARNING }] : []),
+                  ...(freePct > 0 ? [{ name: t('balanceHeader.availableLegend'), label: t('balanceHeader.availableLegend'), percent: freePct, pct: freePct, amount: Math.max(0, annualNet), color: TimelineColor.SUCCESS }] : [])
                 ].filter((s) => s.percent > 0);
 
                 return (
@@ -617,7 +655,7 @@ export default function BalanceTimelineHeader({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
                       <PieDonut
                         items={segments}
-                        centerColor={totalCommitted > 85 ? '#f43f5e' : '#0ea5e9'}
+                        centerColor={totalCommitted > 85 ? TimelineColor.EXPENSE : TimelineColor.CYAN}
                         centerLabel={`${totalCommitted}%`}
                         centerFontSize="0.74rem"
                       />
@@ -625,24 +663,24 @@ export default function BalanceTimelineHeader({
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f43f5e', flexShrink: 0 }} />
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: TimelineColor.EXPENSE, flexShrink: 0 }} />
                             <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.expensesLegend')}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ color: 'var(--text-dim)', fontSize: '0.66rem' }}>-{formatCurrency(annualExpense)}</span>
-                            <strong style={{ color: '#f43f5e' }}>{expPct}%</strong>
+                            <strong style={{ color: TimelineColor.EXPENSE }}>{expPct}%</strong>
                           </div>
                         </div>
 
                         {(hasInvestmentTimeline && invPct > 0) && (
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6366f1', flexShrink: 0 }} />
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: TimelineColor.LOAN, flexShrink: 0 }} />
                               <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.inAccountLegend')}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{ color: 'var(--text-dim)', fontSize: '0.66rem' }}>-{formatCurrency(annualInvestment)}</span>
-                              <strong style={{ color: '#6366f1' }}>{invPct}%</strong>
+                              <strong style={{ color: TimelineColor.LOAN }}>{invPct}%</strong>
                             </div>
                           </div>
                         )}
@@ -650,24 +688,24 @@ export default function BalanceTimelineHeader({
                         {(hasLoanTimeline && loanPct > 0) && (
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: TimelineColor.WARNING, flexShrink: 0 }} />
                               <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.dueLegend')}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{ color: 'var(--text-dim)', fontSize: '0.66rem' }}>-{formatCurrency(annualLoan)}</span>
-                              <strong style={{ color: '#f59e0b' }}>{loanPct}%</strong>
+                              <strong style={{ color: TimelineColor.WARNING }}>{loanPct}%</strong>
                             </div>
                           </div>
                         )}
 
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: TimelineColor.SUCCESS, flexShrink: 0 }} />
                             <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.availableLegend')}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ color: 'var(--text-dim)', fontSize: '0.66rem' }}>+{formatCurrency(Math.max(0, annualNet))}</span>
-                            <strong style={{ color: '#10b981' }}>{freePct}%</strong>
+                            <strong style={{ color: TimelineColor.SUCCESS }}>{freePct}%</strong>
                           </div>
                         </div>
                       </div>
@@ -675,19 +713,19 @@ export default function BalanceTimelineHeader({
 
                     <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                        {t('balanceHeader.totalAnnualProjected')}
+                        {projectionMonthsAhead === 0 ? t('balanceHeader.totalAnnualProjected') : t('balanceHeader.totalPeriodProjected')}
                       </span>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', background: 'rgba(255, 255, 255, 0.02)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-glass)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.balanceLabel')}</span>
-                          <strong style={{ color: annualNet >= 0 ? '#10b981' : '#f43f5e' }}>
+                          <strong style={{ color: annualNet >= 0 ? TimelineColor.SUCCESS : TimelineColor.EXPENSE }}>
                             {annualNet >= 0 ? '+' : ''}{formatCurrency(annualNet)}
                           </strong>
                         </div>
                         {(hasInvestmentTimeline && annualInvestment > 0) && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.inAccount')}</span>
-                            <strong style={{ color: '#6366f1' }}>
+                            <strong style={{ color: TimelineColor.LOAN }}>
                               +{formatCurrency(annualInvestment)}
                             </strong>
                           </div>
@@ -699,22 +737,14 @@ export default function BalanceTimelineHeader({
               })()}
             </div>
 
-            {/* Quadrante 3: EMPRÉSTIMOS E FINANCIAMENTOS (Apenas exibido se houver timelines de dívida ativas) */}
+            {/* Quadrante 3: EMPRÉSTIMOS E FINANCIAMENTOS */}
             {hasLoanTimeline && (
               <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   {t('balanceHeader.loansAndFinancing')}
                 </div>
                 {(() => {
-                  const loanColors = ['#8b5cf6', '#0ea5e9', '#14b8a6', '#6366f1', '#f59e0b', '#ec4899'];
-
-                  let loanItems = (finMetrics.loans_breakdown || []).map((l, idx) => ({
-                    id: l.timeline_id,
-                    name: l.name,
-                    amount: Number(l.amount || l.remaining_principal || 0),
-                    percent: Number(l.percentage || l.percent || 0),
-                    color: loanColors[idx % loanColors.length]
-                  })).filter((item) => item.amount > 0 || item.percent > 0);
+                  const loanColors = TIMELINE_COLOR_PRESETS;
 
                   const activeLoanTimelines = (allTimelines || []).filter((t) => {
                     const isLoan = isLoanTimelineType(t.type);
@@ -722,28 +752,88 @@ export default function BalanceTimelineHeader({
                     return isLoan && isActive;
                   });
 
-                  if (loanItems.length === 0) {
-                    loanItems = activeLoanTimelines.map((t, idx) => {
-                      const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
-                      const debt = Number(m.remaining_debt ?? m.remainingDebt ?? m.total_debt ?? m.totalDebt ?? 0);
-                      return {
-                        id: t.id,
-                        name: t.name,
-                        amount: debt,
-                        color: t.color || loanColors[idx % loanColors.length]
-                      };
-                    }).filter((item) => item.amount > 0);
-                  }
+                  // Calcular dinamicamente o saldo devedor e o capital amortizado de CADA empréstimo até o horizonte projetado
+                  const loanDynamicMetricsMap = new Map();
 
-                  const computedActiveAmortized = activeLoanTimelines.reduce((sum, t) => {
+                  activeLoanTimelines.forEach((t) => {
+                    const tid = String(t.id);
                     const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
-                    return sum + Number(m.amortized_capital ?? m.amortizedCapital ?? m.paid_capital ?? 0);
+                    const baseRemainingDebt = Number(m.remaining_debt ?? m.remainingDebt ?? m.total_debt ?? m.totalDebt ?? t.totalDebt ?? 0);
+                    const baseAmortizedCapital = Number(m.amortized_capital ?? m.amortizedCapital ?? m.paid_capital ?? 0);
+                    const baseTotalCost = Number(m.total_loan_cost ?? m.totalLoanCost ?? m.totalCost ?? 0);
+
+                    let futureAmortized = 0;
+
+                    if (projectionMonthsAhead > 0) {
+                      eventsList.forEach((ev) => {
+                        if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+                        const evTid = String(ev.timelineId || ev.timeline_id || ev.timelineOriginId || '');
+                        if (evTid !== tid) return;
+
+                        const eventMonthStr = ev.date.substring(0, 7);
+                        if (eventMonthStr <= currentMonthStr || eventMonthStr > targetHorizonMonthStr) return;
+
+                        const isAmort = ev.eventType === EventType.AMORTIZATION ||
+                          ev.eventType === 'amortization' ||
+                          ev.category === 'amortizacao' ||
+                          ev.category === 'amortization' ||
+                          ev.category === AmortizationEventCategory.REDUCE_TERM ||
+                          ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
+                          ev.category === AmortizationStrategy.REDUCE_TERM ||
+                          ev.category === AmortizationStrategy.REDUCE_INSTALLMENT;
+
+                        const isInstallment = ev.eventType === EventType.LOAN_INSTALLMENT ||
+                          ev.eventType === 'loan_installment' ||
+                          ev.category === 'parcela_emprestimo' ||
+                          ev.category === LoanEventCategory.LOAN_INSTALLMENT ||
+                          (Boolean(ev.isSystemLoanEvent) && !isAmort);
+
+                        if (isAmort) {
+                          futureAmortized += Number(ev.amount || 0);
+                        } else if (isInstallment) {
+                          const cap = Number(ev.installmentCapital ?? ev.principalAmount ?? ev.principal_amount ?? 0);
+                          const amt = Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0));
+                          const principal = cap > 0 ? cap : (amt * 0.82);
+                          futureAmortized += principal;
+                        }
+                      });
+                    }
+
+                    const projectedDebt = Math.max(0, baseRemainingDebt - futureAmortized);
+                    const projectedAmortized = baseAmortizedCapital + Math.min(baseRemainingDebt, futureAmortized);
+
+                    loanDynamicMetricsMap.set(tid, {
+                      remainingDebt: projectedDebt,
+                      amortizedCapital: projectedAmortized,
+                      totalCost: baseTotalCost,
+                      name: t.name,
+                      color: t.color
+                    });
+                  });
+
+                  const loanItems = activeLoanTimelines.map((t, idx) => {
+                    const m = loanDynamicMetricsMap.get(String(t.id)) || {};
+                    const debt = Number(m.remainingDebt ?? 0);
+                    return {
+                      id: t.id,
+                      name: t.name,
+                      amount: debt,
+                      color: t.color || loanColors[idx % loanColors.length]
+                    };
+                  });
+
+                  const totalDebtSum = loanItems.reduce((acc, i) => acc + (i.amount || 0), 0);
+                  const itemsWithPct = loanItems.map((i) => ({
+                    ...i,
+                    percent: totalDebtSum > 0 ? Math.round((i.amount / totalDebtSum) * 100) : 0
+                  }));
+
+                  const totalAmortizedVal = activeLoanTimelines.reduce((sum, t) => {
+                    const m = loanDynamicMetricsMap.get(String(t.id)) || {};
+                    return sum + Number(m.amortizedCapital ?? 0);
                   }, 0);
 
-                  const computedActiveRemainingDebt = activeLoanTimelines.reduce((sum, t) => {
-                    const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
-                    return sum + Number(m.remaining_debt ?? m.remainingDebt ?? m.total_debt ?? m.totalDebt ?? 0);
-                  }, 0);
+                  const totalRemainingDebtVal = totalDebtSum;
 
                   const computedActiveTotalLoanCost = activeLoanTimelines.reduce((sum, t) => {
                     const m = t.metrics || t.loanHeaderResult || t.procedureMetrics || {};
@@ -755,14 +845,6 @@ export default function BalanceTimelineHeader({
                     return sum + (originalCap + estInt + estFee);
                   }, 0);
 
-                  const totalDebtSum = loanItems.reduce((acc, i) => acc + (i.amount || 0), 0);
-                  const itemsWithPct = loanItems.map((i) => ({
-                    ...i,
-                    percent: i.percent ?? (totalDebtSum > 0 ? Math.round((i.amount / totalDebtSum) * 100) : 0)
-                  }));
-
-                  const totalAmortizedVal = activeLoanTimelines.length > 0 ? computedActiveAmortized : (finMetrics.totalAmortized ?? 0);
-                  const totalRemainingDebtVal = activeLoanTimelines.length > 0 ? computedActiveRemainingDebt : (finMetrics.totalRemainingDebt ?? 0);
                   const totalRealCostVal = activeLoanTimelines.length > 0
                     ? computedActiveTotalLoanCost
                     : Number(finMetrics.totalLoanCost ?? finMetrics.total_loan_cost ?? (totalRemainingDebtVal + totalAmortizedVal));
@@ -770,7 +852,13 @@ export default function BalanceTimelineHeader({
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                        <PieDonut items={itemsWithPct} centerFontSize="0.64rem" centerColor="#0ea5e9" />
+                        <PieDonut
+                          items={itemsWithPct.filter((i) => i.amount > 0)}
+                          empty={totalDebtSum === 0}
+                          emptyLabel="0€"
+                          centerFontSize="0.64rem"
+                          centerColor={TimelineColor.CYAN}
+                        />
 
                         {/* Lista com percentagem de cada financiamento */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, maxHeight: '90px', overflowY: 'auto' }}>
@@ -790,17 +878,17 @@ export default function BalanceTimelineHeader({
                         </div>
                       </div>
 
-                      {/* Resumo de Totais: Capital Amortizado vs Capital Devido vs Custo Real do Capital */}
+                      {/* Resumo de Totais */}
                       <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', alignItems: 'flex-start' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                           <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }}>{t('balanceHeader.amortizedCapital')}</span>
-                          <strong style={{ color: '#10b981', fontSize: '0.84rem', fontWeight: '800' }}>
+                          <strong style={{ color: TimelineColor.SUCCESS, fontSize: '0.84rem', fontWeight: '800' }}>
                             {formatCurrency(totalAmortizedVal)}
                           </strong>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                           <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', fontWeight: '600', whiteSpace: 'nowrap' }}>{t('balanceHeader.debtCapital')}</span>
-                          <strong style={{ color: '#f43f5e', fontSize: '0.84rem', fontWeight: '800' }}>
+                          <strong style={{ color: TimelineColor.EXPENSE, fontSize: '0.84rem', fontWeight: '800' }}>
                             {formatCurrency(totalRemainingDebtVal)}
                           </strong>
                         </div>
@@ -821,8 +909,8 @@ export default function BalanceTimelineHeader({
           {/* 🔵 LINHA 2: PREVISTOS & PROJEÇÃO */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#38bdf8', display: 'inline-block' }} />
+              <span style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: TimelineColor.CYAN, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: TimelineColor.CYAN, display: 'inline-block' }} />
                 {t('balanceHeader.futureProjection')}
               </span>
             </div>
@@ -830,9 +918,9 @@ export default function BalanceTimelineHeader({
             {/* Slider de Horizonte */}
             <div
               style={{
-                background: '#ffffff',
-                color: '#1e293b',
-                border: '1px solid rgba(226, 232, 240, 0.95)',
+                background: 'var(--bg-card)',
+                color: 'var(--text-main)',
+                border: '1px solid var(--border-glass)',
                 borderRadius: '12px',
                 padding: '10px 14px',
                 display: 'flex',
@@ -843,16 +931,16 @@ export default function BalanceTimelineHeader({
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ background: 'rgba(2, 132, 199, 0.12)', color: '#0284c7', padding: '5px', borderRadius: '7px', display: 'flex' }}>
+                  <div style={{ background: 'rgba(2, 132, 199, 0.12)', color: TimelineColor.CYAN, padding: '5px', borderRadius: '7px', display: 'flex' }}>
                     <Clock size={15} />
                   </div>
-                  <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#1e293b' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--text-main)' }}>
                     {t('balanceHeader.forecastHorizon')}
                   </span>
                   <span
                     style={{
                       background: 'rgba(2, 132, 199, 0.1)',
-                      color: '#0284c7',
+                      color: TimelineColor.CYAN,
                       border: '1px solid rgba(2, 132, 199, 0.3)',
                       padding: '2px 9px',
                       borderRadius: '6px',
@@ -885,9 +973,9 @@ export default function BalanceTimelineHeader({
                           fontSize: '0.72rem',
                           fontWeight: isSelected ? '800' : '600',
                           cursor: 'pointer',
-                          border: isSelected ? '1px solid #0284c7' : '1px solid #cbd5e1',
-                          background: isSelected ? '#0284c7' : '#f8fafc',
-                          color: isSelected ? '#ffffff' : '#334155',
+                          border: isSelected ? `1px solid ${TimelineColor.CYAN}` : '1px solid var(--border-glass)',
+                          background: isSelected ? TimelineColor.CYAN : 'var(--bg-app)',
+                          color: isSelected ? 'var(--text-white)' : 'var(--text-muted)',
                           transition: 'all 0.15s ease'
                         }}
                       >
@@ -899,7 +987,7 @@ export default function BalanceTimelineHeader({
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: '700', whiteSpace: 'nowrap' }}>
                   {t('balanceHeader.today', { month: format(todayDate, 'MMM yyyy', { locale: dateLocale }) })}
                 </span>
                 <input
@@ -911,60 +999,56 @@ export default function BalanceTimelineHeader({
                   onChange={(e) => setProjectionMonthsAhead(Number(e.target.value))}
                   style={{
                     flex: 1,
-                    accentColor: '#0284c7',
+                    accentColor: TimelineColor.CYAN,
                     cursor: 'pointer',
                     height: '6px'
                   }}
                   title={t('balanceHeader.projectToTitle', { date: projectedHorizonLabel })}
                 />
-                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: '700', whiteSpace: 'nowrap' }}>
                   {t('balanceHeader.plusYears', { count: 10 })}
                 </span>
               </div>
             </div>
 
-            {/* Cards Projetados vindos da Stored Procedure em memória */}
+            {/* Cards Projetados dinâmicos */}
             {(() => {
-              const projectedItem = (dto?.projected_list && dto.projected_list.length > 0)
-                ? (dto.projected_list.find((p) => p.monthsOffset === projectionMonthsAhead) || dto.projected_list[Math.min(projectionMonthsAhead, dto.projected_list.length - 1)])
-                : null;
-
-              const netProj = projectedItem ? projectedItem.netProjected : (finMetrics.netProjectedHorizon ?? 0);
-              const forecastInc = projectedItem ? projectedItem.forecastIncome : (finMetrics.totalForecastIncomeHorizon ?? 0);
-              const plannedExp = projectedItem ? projectedItem.plannedExpenses : (finMetrics.totalPlannedExpensesHorizon ?? 0);
-              const plannedInv = projectedItem ? projectedItem.plannedInvestments : (finMetrics.totalInvestmentsHorizon ?? finMetrics.totalInvested ?? 0);
-              const plannedAmort = projectedItem ? projectedItem.plannedAmortization : (finMetrics.totalAmortizedHorizon ?? finMetrics.totalAmortized ?? 0);
+              const netProj = netRealized;
+              const forecastInc = projectionMonthsAhead === 0 ? totalReceived : (horizonFutureInflows > 0 ? horizonFutureInflows : totalReceived);
+              const plannedExp = projectionMonthsAhead === 0 ? totalPaidExpenses : (horizonFutureOutflows > 0 ? horizonFutureOutflows : totalPaidExpenses);
+              const plannedInv = projectionMonthsAhead === 0 ? totalInvested : (horizonFutureInvestments > 0 ? horizonFutureInvestments : totalInvested);
+              const plannedAmort = projectionMonthsAhead === 0 ? calculatedAmortized : (horizonFutureAmortization > 0 ? horizonFutureAmortization : calculatedAmortized);
 
               return (
                 <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
                   <div className="meta-item" style={{ padding: '8px 12px' }}>
-                    <div className="meta-icon-box" style={{ color: '#38bdf8' }}>
+                    <div className="meta-icon-box" style={{ color: TimelineColor.CYAN }}>
                       <TrendingUp size={16} />
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
                         <span className="meta-label" style={{ fontSize: '0.7rem' }}>{t('balanceHeader.projectedBalance')}</span>
-                        <span style={{ color: netProj >= 0 ? '#38bdf8' : '#f43f5e', fontSize: '0.96rem', fontWeight: '800' }}>
+                        <span style={{ color: netProj >= 0 ? TimelineColor.CYAN : TimelineColor.EXPENSE, fontSize: '0.96rem', fontWeight: '800' }}>
                           {netProj >= 0 ? '+' : ''}{formatCurrency(netProj)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '4px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                           <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>{t('balanceHeader.forecastInflows')}</span>
-                          <span style={{ color: '#38bdf8', fontSize: '0.78rem', fontWeight: '700' }}>
+                          <span style={{ color: TimelineColor.CYAN, fontSize: '0.78rem', fontWeight: '700' }}>
                             +{formatCurrency(forecastInc)}
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                           <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>{t('balanceHeader.forecastOutflows')}</span>
-                          <span style={{ color: '#fb7185', fontSize: '0.78rem', fontWeight: '700' }}>
+                          <span style={{ color: TimelineColor.EXPENSE, fontSize: '0.78rem', fontWeight: '700' }}>
                             -{formatCurrency(plannedExp)}
                           </span>
                         </div>
                         {(hasInvestmentTimeline && plannedInv > 0) && (
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                             <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>{t('balanceHeader.investments')}</span>
-                            <span style={{ color: '#6366f1', fontSize: '0.78rem', fontWeight: '700' }}>
+                            <span style={{ color: TimelineColor.LOAN, fontSize: '0.78rem', fontWeight: '700' }}>
                               -{formatCurrency(plannedInv)}
                             </span>
                           </div>
@@ -972,7 +1056,7 @@ export default function BalanceTimelineHeader({
                         {(hasLoanTimeline && plannedAmort > 0) && (
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                             <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>{t('balanceHeader.amortizedCapital')}:</span>
-                            <span style={{ color: '#10b981', fontSize: '0.78rem', fontWeight: '700' }}>
+                            <span style={{ color: TimelineColor.SUCCESS, fontSize: '0.78rem', fontWeight: '700' }}>
                               +{formatCurrency(plannedAmort)}
                             </span>
                           </div>

@@ -283,7 +283,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const isAmortized = isLoanInstallment && !isCancelled && effectiveStatus === EventStatus.AMORTIZED;
 
   const renderStatusDropdownButton = (buttonProps, children) => {
-    if (isFutureMonth) {
+    if (isFutureMonth && !isAmortization) {
       return (
         <div
           className="btn btn-sm"
@@ -1472,10 +1472,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     }
     if (isAmortization) {
       return {
-        color: '#10b981',
+        color: TimelineColor.INCOME,
         bg: 'rgba(16, 185, 129, 0.12)',
         border: 'rgba(16, 185, 129, 0.3)',
-        lightText: '#34d399'
+        lightText: TimelineColor.EMERALD
       };
     }
     return {
@@ -1615,8 +1615,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--primary-light)',
-            opacity: 0.85,
+            color: (isAnchorCard || isAmortization) ? TimelineColor.WHITE : 'var(--primary-light)',
+            opacity: (isAnchorCard || isAmortization) ? 1 : 0.85,
             flexShrink: 0,
             marginTop: '2px'
           }}
@@ -1635,6 +1635,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             ) : (
               <ListTree size={14} strokeWidth={2.2} style={{ color: TimelineColor.FOLLOWUP }} />
             )
+          ) : isAmortization ? (
+            <Zap size={14} strokeWidth={2.2} style={{ color: TimelineColor.WHITE }} />
           ) : (
             <Zap size={14} strokeWidth={2.2} />
           )}
@@ -1737,7 +1739,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     margin: 0,
                     fontSize: '0.98rem',
                     fontWeight: '700',
-                    color: isAnchorCard ? TimelineColor.WHITE : ((isAmortized || isCancelled) ? 'var(--text-dim)' : 'var(--text-main)'),
+                    color: (isAnchorCard || isAmortization) ? TimelineColor.WHITE : ((isAmortized || isCancelled) ? 'var(--text-dim)' : 'var(--text-main)'),
                     textDecoration: (isAmortized || isCancelled) ? 'line-through' : 'none',
                     cursor: (isAmortized || isAnchorCard) ? 'default' : 'pointer'
                   }}
@@ -1752,7 +1754,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 {event.labels && event.labels.map((lbl, i) => (
                   <span
                     key={i}
-                    className={isAnchorCard ? '' : 'event-tag'}
+                    className={(isAnchorCard || isAmortization) ? '' : 'event-tag'}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1760,12 +1762,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       fontSize: '0.70rem',
                       padding: '2px 7px',
                       borderRadius: '5px',
-                      background: isAnchorCard ? 'rgba(255, 255, 255, 0.2)' : undefined,
-                      color: isAnchorCard ? TimelineColor.WHITE : undefined,
-                      border: isAnchorCard ? '1px solid rgba(255, 255, 255, 0.35)' : undefined
+                      background: (isAnchorCard || isAmortization) ? 'rgba(255, 255, 255, 0.2)' : undefined,
+                      color: (isAnchorCard || isAmortization) ? TimelineColor.WHITE : undefined,
+                      border: (isAnchorCard || isAmortization) ? '1px solid rgba(255, 255, 255, 0.35)' : undefined
                     }}
                   >
-                    <Tag size={10} style={{ color: isAnchorCard ? TimelineColor.WHITE : undefined }} /> {lbl}
+                    <Tag size={10} style={{ color: (isAnchorCard || isAmortization) ? TimelineColor.WHITE : undefined }} /> {lbl}
                   </span>
                 ))}
 
@@ -2124,9 +2126,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             }}
             title={hasNotes ? `${t('actionNotes')} (${allNotes.length})` : t('actionAddNote')}
             style={{
-              color: hasNotes ? '#f59e0b' : 'var(--text-dim)',
-              background: hasNotes ? 'rgba(245, 158, 11, 0.14)' : 'transparent',
-              border: hasNotes ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid transparent',
+              color: hasNotes ? (isAnchorCard || isAmortization ? TimelineColor.WHITE : TimelineColor.WARNING) : (isAnchorCard || isAmortization ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)'),
+              background: hasNotes ? (isAnchorCard || isAmortization ? 'rgba(255, 255, 255, 0.25)' : 'rgba(245, 158, 11, 0.14)') : 'transparent',
+              border: hasNotes ? (isAnchorCard || isAmortization ? '1px solid rgba(255, 255, 255, 0.4)' : '1px solid rgba(245, 158, 11, 0.35)') : '1px solid transparent',
               borderRadius: '5px',
               padding: '3px 5px',
               display: 'inline-flex',
@@ -2136,7 +2138,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           >
             <FileText size={13} />
             {hasNotes && (
-              <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#f59e0b' }}>
+              <span style={{ fontSize: '0.65rem', fontWeight: '800', color: (isAnchorCard || isAmortization) ? TimelineColor.WHITE : TimelineColor.WARNING }}>
                 {allNotes.length}
               </span>
             )}
@@ -2278,15 +2280,15 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           style={{
             padding: '3px 5px',
             borderRadius: '5px',
-            color: isCancelled ? TimelineColor.WARNING : (isAnchorCard ? TimelineColor.WHITE : 'var(--text-dim)'),
-            background: isCancelled ? 'rgba(245, 158, 11, 0.14)' : 'transparent',
-            border: isCancelled ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid transparent',
+            color: isCancelled ? (isAnchorCard || isAmortization ? TimelineColor.WHITE : TimelineColor.WARNING) : (isAnchorCard || isAmortization ? TimelineColor.WHITE : 'var(--text-dim)'),
+            background: isCancelled ? (isAnchorCard || isAmortization ? 'rgba(255, 255, 255, 0.25)' : 'rgba(245, 158, 11, 0.14)') : 'transparent',
+            border: isCancelled ? (isAnchorCard || isAmortization ? '1px solid rgba(255, 255, 255, 0.4)' : '1px solid rgba(245, 158, 11, 0.35)') : '1px solid transparent',
             cursor: isTogglingStatus ? 'wait' : 'pointer',
             display: 'inline-flex',
             alignItems: 'center'
           }}
         >
-          <Ban size={13} style={{ color: isCancelled ? TimelineColor.WARNING : (isAnchorCard ? TimelineColor.WHITE : undefined) }} />
+          <Ban size={13} style={{ color: isCancelled ? (isAnchorCard || isAmortization ? TimelineColor.WHITE : TimelineColor.WARNING) : (isAnchorCard || isAmortization ? TimelineColor.WHITE : undefined) }} />
         </button>
       )}
 
@@ -2303,10 +2305,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           style={{
             padding: '3px 5px',
             borderRadius: '5px',
-            color: isAnchorCard ? TimelineColor.WHITE : undefined
+            color: (isAnchorCard || isAmortization) ? TimelineColor.WHITE : undefined
           }}
         >
-          <Edit3 size={13} style={{ color: isAnchorCard ? TimelineColor.WHITE : undefined }} />
+          <Edit3 size={13} style={{ color: (isAnchorCard || isAmortization) ? TimelineColor.WHITE : undefined }} />
         </button>
       )}
 
@@ -2323,10 +2325,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           style={{
             padding: '3px 5px',
             borderRadius: '5px',
-            color: isAnchorCard ? 'rgba(255, 255, 255, 0.9)' : undefined
+            color: (isAnchorCard || isAmortization) ? 'rgba(255, 255, 255, 0.9)' : undefined
           }}
         >
-          <Trash2 size={13} style={{ color: isAnchorCard ? 'rgba(255, 255, 255, 0.9)' : undefined }} />
+          <Trash2 size={13} style={{ color: (isAnchorCard || isAmortization) ? 'rgba(255, 255, 255, 0.9)' : undefined }} />
         </button>
       )}
     </div>
@@ -2961,19 +2963,21 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         </div>
       )}
 
-      {/* ⚡ Amortização Extraordinária Strip (boc in) */}
+      {/* ⚡ Amortização Extraordinária Strip (flat green with white text) */}
       {isAmortization && (
         <div
-          className="loan-breakdown-strip"
+          className="amortization-event-strip"
           style={{
-            background: 'transparent',
-            border: '1px solid var(--border-glass)',
+            background: TimelineColor.INCOME,
+            border: `1px solid ${TimelineColor.INCOME}`,
             borderRadius: '8px',
-            padding: '8px 10px',
+            padding: '8px 12px',
             margin: '0',
             display: 'flex',
             flexDirection: 'column',
-            gap: '4px'
+            gap: '6px',
+            color: TimelineColor.WHITE,
+            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.28)'
           }}
         >
           {/* Linha 1: [icone] [titulo do evento] [lables] */}
@@ -2982,25 +2986,25 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           {/* Linha 2: [motivo] (left) e [b status] (right) */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                Valor Amortizado
+              <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.85)', textTransform: 'uppercase', fontWeight: '700' }}>
+                {t('loanCard.amortizedValue')}
               </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                  Finalidade:
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid rgba(255, 255, 255, 0.25)', paddingLeft: '10px' }}>
+                <span style={{ fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.85)', textTransform: 'uppercase', fontWeight: '700' }}>
+                  {t('loanCard.purpose')}
                 </span>
-                <span style={{ fontSize: '0.80rem', fontWeight: '700', color: 'var(--primary-light)' }}>
+                <span style={{ fontSize: '0.80rem', fontWeight: '800', color: TimelineColor.WHITE }}>
                   {event.strategy === AmortizationEventCategory.REDUCE_INSTALLMENT || event.category === AmortizationEventCategory.REDUCE_INSTALLMENT
-                    ? 'Redução da Parcela'
-                    : 'Redução do Prazo'}
+                    ? t('loanCard.reduceInstallment')
+                    : t('loanCard.reduceTerm')}
                 </span>
               </div>
               {event.balanceAfter !== undefined && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                    Saldo Devedor Após:
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid rgba(255, 255, 255, 0.25)', paddingLeft: '10px' }}>
+                  <span style={{ fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.85)', textTransform: 'uppercase', fontWeight: '700' }}>
+                    {t('loanCard.remainingBalanceAfter')}
                   </span>
-                  <span style={{ fontSize: '0.80rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                  <span style={{ fontSize: '0.80rem', fontWeight: '800', color: TimelineColor.WHITE }}>
                     {formatCurrency(event.balanceAfter)}
                   </span>
                 </div>
@@ -3010,23 +3014,17 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
               {renderStatusDropdownButton(
                 {
-                  title: t('timeline.clickToChangeStatus') || 'Clique para alterar o status',
+                  title: t('timeline.clickToChangeStatus'),
                   style: {
                     background: isCancelled
-                      ? 'rgba(148, 163, 184, 0.15)'
-                      : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED)
-                        ? 'rgba(16, 185, 129, 0.16)'
-                        : 'rgba(245, 158, 11, 0.16)',
-                    color: isCancelled
-                      ? TimelineColor.SLATE
-                      : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED)
-                        ? TimelineColor.INCOME
-                        : TimelineColor.WARNING,
+                      ? 'rgba(0, 0, 0, 0.2)'
+                      : (isCompleted || isPositiveStatus(effectiveStatus) || effectiveStatus === EventStatus.AMORTIZED)
+                        ? 'rgba(255, 255, 255, 0.25)'
+                        : 'rgba(255, 255, 255, 0.18)',
+                    color: TimelineColor.WHITE,
                     border: isCancelled
-                      ? '1px solid rgba(148, 163, 184, 0.35)'
-                      : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED)
-                        ? '1px solid rgba(16, 185, 129, 0.4)'
-                        : '1px solid rgba(245, 158, 11, 0.4)',
+                      ? '1px solid rgba(255, 255, 255, 0.25)'
+                      : '1px solid rgba(255, 255, 255, 0.4)',
                     borderRadius: '9999px',
                     padding: '4px 12px',
                     fontSize: '0.76rem',
@@ -3034,31 +3032,26 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px',
-                    cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
+                    cursor: isTogglingStatus ? 'wait' : 'pointer',
                     opacity: isTogglingStatus ? 0.6 : 1,
                     pointerEvents: isTogglingStatus ? 'none' : 'auto',
                     transition: 'all 0.15s ease'
                   }
                 },
-                isFutureMonth ? (
+                isCancelled ? (
                   <>
-                    <Clock size={13} style={{ color: 'var(--text-dim)' }} />
-                    <span>{t('status.pending')}</span>
+                    <Ban size={13} style={{ color: 'rgba(255, 255, 255, 0.85)' }} />
+                    <span style={{ color: TimelineColor.WHITE }}>{t('status.cancelled')}</span>
                   </>
-                ) : isCancelled ? (
+                ) : (isCompleted || isPositiveStatus(effectiveStatus) || effectiveStatus === EventStatus.AMORTIZED) ? (
                   <>
-                    <Ban size={13} style={{ color: TimelineColor.SLATE }} />
-                    <span>{t('status.cancelled')}</span>
-                  </>
-                ) : (isCompleted || isPositiveStatus(event.status) || event.status === EventStatus.AMORTIZED) ? (
-                  <>
-                    <CheckCircle2 size={13} style={{ color: TimelineColor.INCOME }} />
-                    <span>{t('status.settled')}</span>
+                    <CheckCircle2 size={13} style={{ color: TimelineColor.WHITE }} />
+                    <span style={{ color: TimelineColor.WHITE }}>{t('status.amortized')}</span>
                   </>
                 ) : (
                   <>
-                    <Clock size={13} style={{ color: TimelineColor.WARNING }} />
-                    <span>{t('status.pending')}</span>
+                    <Clock size={13} style={{ color: 'rgba(255, 255, 255, 0.85)' }} />
+                    <span style={{ color: TimelineColor.WHITE }}>{t('status.pending')}</span>
                   </>
                 )
               )}
@@ -3074,10 +3067,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             flexWrap: 'wrap',
             marginTop: '-1px',
             paddingTop: '6px',
-            borderTop: '1px solid var(--border-glass, rgba(255, 255, 255, 0.08))'
+            borderTop: '1px solid rgba(255, 255, 255, 0.2)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#10b981' }}>
+              <span style={{ fontSize: '1.05rem', fontWeight: '800', color: TimelineColor.WHITE }}>
                 +{formatCurrency(event.amount || event.amortizationAmount || 0)}
               </span>
             </div>

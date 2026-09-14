@@ -20,7 +20,8 @@ import {
   applyExtraordinaryAmortization,
   getLoanMetrics,
   generateLoanInstallments,
-  isLoanInstallment
+  isLoanInstallment,
+  isAmortizationEvent
 } from './utils/loanCalculations';
 import { formatCurrency } from './utils/formatCurrency';
 import { generateUUID } from './utils/uuid.js';
@@ -1362,7 +1363,7 @@ export default function App() {
 
       const isIncome = ev.eventType === EventType.INCOME;
       const isInvestment = ev.eventType === EventType.INVESTMENT;
-      const isAmortization = ev.eventType === EventType.AMORTIZATION;
+      const isAmortization = ev.eventType === EventType.AMORTIZATION || isAmortizationEvent(ev);
       const isReminder = ev.eventType === EventType.REMINDER || ev.timelineType === TimelineType.REMINDER || ev.timeline_type === TimelineType.REMINDER;
       const isTodo = ev.eventType === EventType.TODO || ev.timelineType === TimelineType.TODO || ev.timeline_type === TimelineType.TODO;
       const isFollowup = ev.eventType === EventType.FOLLOWUP || ev.timelineType === TimelineType.FOLLOWUP || ev.timeline_type === TimelineType.FOLLOWUP;

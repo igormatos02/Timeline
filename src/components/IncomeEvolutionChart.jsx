@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { format, parseISO, addMonths } from 'date-fns';
 import { formatCurrency } from '../utils/formatCurrency';
-import { EventType, EventStatus, TimelineType } from '../enums/index.js';
+import { EventType, EventStatus, TimelineType, TimelineColor } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 export default function IncomeEvolutionChart({
@@ -257,7 +257,7 @@ export default function IncomeEvolutionChart({
   const todayX = todayIndex >= 0 && chartMode !== 'acumulado_real' ? getX(todayIndex) : null;
 
   // Active theme color definitions
-  const activeColor = isExpense ? '#f43f5e' : isInvestment ? '#8b5cf6' : '#10b981';
+  const activeColor = isExpense ? TimelineColor.EXPENSE : isInvestment ? TimelineColor.INVESTMENT : TimelineColor.INCOME;
   const activeGradId = isExpense ? 'roseBarGrad' : isInvestment ? 'indigoBarGrad' : 'emeraldBarGrad';
   
   const handleMouseMove = (e) => {
@@ -321,8 +321,8 @@ export default function IncomeEvolutionChart({
                 padding: '4px 12px',
                 fontSize: '0.78rem',
                 borderRadius: '6px',
-                background: chartMode === 'variante' ? (isExpense ? 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)' : isInvestment ? 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)') : 'transparent',
-                color: chartMode === 'variante' ? '#fff' : 'var(--text-muted)',
+                background: chartMode === 'variante' ? (isExpense ? `linear-gradient(135deg, ${TimelineColor.EXPENSE} 0%, ${TimelineColor.DANGER} 100%)` : isInvestment ? `linear-gradient(135deg, ${TimelineColor.INVESTMENT} 0%, ${TimelineColor.PURPLE} 100%)` : `linear-gradient(135deg, ${TimelineColor.INCOME} 0%, ${TimelineColor.EMERALD} 100%)`) : 'transparent',
+                color: chartMode === 'variante' ? 'var(--text-white)' : 'var(--text-muted)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px'
@@ -340,8 +340,8 @@ export default function IncomeEvolutionChart({
                 padding: '4px 12px',
                 fontSize: '0.78rem',
                 borderRadius: '6px',
-                background: chartMode === 'acumulado_real' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'transparent',
-                color: chartMode === 'acumulado_real' ? '#fff' : 'var(--text-muted)',
+                background: chartMode === 'acumulado_real' ? `linear-gradient(135deg, ${TimelineColor.INCOME} 0%, ${TimelineColor.EMERALD} 100%)` : 'transparent',
+                color: chartMode === 'acumulado_real' ? 'var(--text-white)' : 'var(--text-muted)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px'
@@ -359,8 +359,8 @@ export default function IncomeEvolutionChart({
                 padding: '4px 12px',
                 fontSize: '0.78rem',
                 borderRadius: '6px',
-                background: chartMode === 'acumulativo' ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'transparent',
-                color: chartMode === 'acumulativo' ? '#fff' : 'var(--text-muted)',
+                background: chartMode === 'acumulativo' ? `linear-gradient(135deg, ${TimelineColor.LOAN} 0%, ${TimelineColor.PRIMARY} 100%)` : 'transparent',
+                color: chartMode === 'acumulativo' ? 'var(--text-white)' : 'var(--text-muted)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px'
@@ -384,7 +384,7 @@ export default function IncomeEvolutionChart({
                 fontSize: '0.95rem',
                 fontWeight: '800',
                 color: isBalance
-                  ? (averageMonthly >= 0 ? '#10b981' : '#f43f5e')
+                  ? (averageMonthly >= 0 ? TimelineColor.SUCCESS : TimelineColor.EXPENSE)
                   : activeColor
               }}
             >
@@ -401,7 +401,7 @@ export default function IncomeEvolutionChart({
               style={{
                 fontSize: '0.95rem',
                 fontWeight: '800',
-                color: chartMode === 'variante' ? '#f59e0b' : activeColor
+                color: chartMode === 'variante' ? TimelineColor.WARNING : activeColor
               }}
             >
               {chartMode === 'variante' ? formatCurrency(maxMonthly) : formatCurrency(maxCumulative)}
@@ -422,9 +422,9 @@ export default function IncomeEvolutionChart({
               border: '1px solid rgba(16, 185, 129, 0.25)'
             }}
           >
-            <Calendar size={14} style={{ color: '#10b981' }} />
+            <Calendar size={14} style={{ color: TimelineColor.SUCCESS }} />
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: '700', color: '#10b981', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: '700', color: TimelineColor.SUCCESS, textTransform: 'uppercase' }}>
                 {t('evolutionChart.realizedHistory') || 'Realized History'}
               </span>
               <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--text-main)' }}>
@@ -474,36 +474,36 @@ export default function IncomeEvolutionChart({
           <defs>
             {/* Emerald Gradient (Green - Entradas / Balanço Positivo) */}
             <linearGradient id="emeraldBarGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10b981" stopOpacity="0.9" />
-              <stop offset="100%" stopColor="#059669" stopOpacity="0.45" />
+              <stop offset="0%" stopColor={TimelineColor.INCOME} stopOpacity="0.9" />
+              <stop offset="100%" stopColor={TimelineColor.EMERALD} stopOpacity="0.45" />
             </linearGradient>
 
             <linearGradient id="emeraldAreaGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#10b981" stopOpacity="0.02" />
+              <stop offset="0%" stopColor={TimelineColor.INCOME} stopOpacity="0.4" />
+              <stop offset="100%" stopColor={TimelineColor.INCOME} stopOpacity="0.02" />
             </linearGradient>
 
             {/* Rose Gradient (Red - Gastos / Balanço Negativo) */}
             <linearGradient id="roseBarGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.9" />
-              <stop offset="100%" stopColor="#e11d48" stopOpacity="0.45" />
+              <stop offset="0%" stopColor={TimelineColor.EXPENSE} stopOpacity="0.9" />
+              <stop offset="100%" stopColor={TimelineColor.DANGER} stopOpacity="0.45" />
             </linearGradient>
 
             <linearGradient id="roseAreaGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.02" />
+              <stop offset="0%" stopColor={TimelineColor.EXPENSE} stopOpacity="0.4" />
+              <stop offset="100%" stopColor={TimelineColor.EXPENSE} stopOpacity="0.02" />
             </linearGradient>
 
             {/* Indigo Gradient (Investimentos) */}
             <linearGradient id="indigoBarGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.9" />
-              <stop offset="100%" stopColor="#6d28d9" stopOpacity="0.45" />
+              <stop offset="0%" stopColor={TimelineColor.INVESTMENT} stopOpacity="0.9" />
+              <stop offset="100%" stopColor={TimelineColor.PURPLE} stopOpacity="0.45" />
             </linearGradient>
 
             {/* Amber Gradient for Peaks */}
             <linearGradient id="amberBarGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.95" />
-              <stop offset="100%" stopColor="#d97706" stopOpacity="0.45" />
+              <stop offset="0%" stopColor={TimelineColor.WARNING} stopOpacity="0.95" />
+              <stop offset="100%" stopColor={TimelineColor.AMBER} stopOpacity="0.45" />
             </linearGradient>
           </defs>
 
@@ -518,8 +518,38 @@ export default function IncomeEvolutionChart({
                 x2={padding.left + graphWidth}
                 y2={y}
                 stroke="rgba(255, 255, 255, 0.05)"
-                strokeDasharray="2 2"
-                pointerEvents="none"
+                strokeWidth="1"
+                strokeDasharray="4 4"
+              />
+            );
+          })}
+
+          {/* Zero Baseline for Balance Mode */}
+          {isBalanco && (
+            <line
+              x1={padding.left}
+              y1={getZeroY()}
+              x2={padding.left + graphWidth}
+              y2={getZeroY()}
+              stroke="rgba(255, 255, 255, 0.25)"
+              strokeWidth="1.5"
+            />
+          )}
+
+          {/* Vertical Guides for Years */}
+          {chartData.map((d, i) => {
+            if (i % 12 !== 0 && i !== 0) return null;
+            const x = getX(i);
+            return (
+              <line
+                key={`grid-v-${d.dateKey}`}
+                x1={x}
+                y1={padding.top}
+                x2={x}
+                y2={padding.top + graphHeight}
+                stroke="rgba(255, 255, 255, 0.08)"
+                strokeWidth="1"
+                strokeDasharray="2 4"
               />
             );
           })}
@@ -584,15 +614,15 @@ export default function IncomeEvolutionChart({
             })
           )}
 
-          {/* Today Indicator Line */}
-          {todayX && (
+          {/* Indicator: Today Vertical Line */}
+          {todayX !== null && (
             <g pointerEvents="none">
               <line
                 x1={todayX}
                 y1={padding.top}
                 x2={todayX}
                 y2={padding.top + graphHeight}
-                stroke="#6366f1"
+                stroke={TimelineColor.PRIMARY}
                 strokeWidth="2"
                 strokeDasharray="3 3"
               />
@@ -602,12 +632,12 @@ export default function IncomeEvolutionChart({
                 width="56"
                 height="16"
                 rx="4"
-                fill="#6366f1"
+                fill={TimelineColor.PRIMARY}
               />
               <text
                 x={todayX}
                 y={padding.top - 6}
-                fill="#ffffff"
+                fill="var(--text-white)"
                 fontSize="9"
                 fontWeight="800"
                 textAnchor="middle"
@@ -660,7 +690,7 @@ export default function IncomeEvolutionChart({
                         cx={x}
                         cy={y}
                         r={isHovered ? 6 : isYearMarker ? 4 : 3}
-                        fill={d.isCurrent ? '#6366f1' : activeColor}
+                        fill={d.isCurrent ? TimelineColor.PRIMARY : activeColor}
                         stroke="var(--bg-app)"
                         strokeWidth="2"
                       />
@@ -725,7 +755,7 @@ export default function IncomeEvolutionChart({
                         rx={barWidth > 6 ? 3 : 1}
                         fill={barFill}
                         opacity={isHovered ? 1 : d.isPast ? 0.95 : 0.8}
-                        stroke={isHovered ? '#ffffff' : 'transparent'}
+                        stroke={isHovered ? 'var(--text-white)' : 'transparent'}
                         strokeWidth="1.5"
                       />
                     ) : (
@@ -796,7 +826,7 @@ export default function IncomeEvolutionChart({
                   padding: '2px 6px',
                   borderRadius: '4px',
                   background: chartMode === 'acumulado_real' ? 'rgba(16, 185, 129, 0.2)' : hoveredData.isPast ? 'rgba(16, 185, 129, 0.2)' : hoveredData.isCurrent ? 'rgba(99, 102, 241, 0.2)' : 'rgba(148, 163, 184, 0.15)',
-                  color: chartMode === 'acumulado_real' ? '#10b981' : hoveredData.isPast ? '#10b981' : hoveredData.isCurrent ? '#a5b4fc' : '#94a3b8',
+                  color: chartMode === 'acumulado_real' ? TimelineColor.SUCCESS : hoveredData.isPast ? TimelineColor.SUCCESS : hoveredData.isCurrent ? 'var(--primary-light)' : 'var(--text-muted)',
                   fontWeight: '700'
                 }}
               >
@@ -813,8 +843,8 @@ export default function IncomeEvolutionChart({
                   style={{
                     fontWeight: '800',
                     color: isBalanco
-                      ? (hoveredData.monthTotal >= 0 ? '#10b981' : '#f43f5e')
-                      : (isGastos ? '#f43f5e' : isInvest ? '#a78bfa' : '#10b981')
+                      ? (hoveredData.monthTotal >= 0 ? TimelineColor.SUCCESS : TimelineColor.EXPENSE)
+                      : (isGastos ? TimelineColor.EXPENSE : isInvest ? TimelineColor.INVESTMENT : TimelineColor.INCOME)
                   }}
                 >
                   {isBalanco && hoveredData.monthTotal > 0 ? '+' : isGastos && hoveredData.monthTotal > 0 ? '-' : ''}
@@ -826,7 +856,7 @@ export default function IncomeEvolutionChart({
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
                   <span>Entradas vs Saídas:</span>
                   <span>
-                    <span style={{ color: '#10b981' }}>+{formatCurrency(hoveredData.monthIncome)}</span> / <span style={{ color: '#f43f5e' }}>-{formatCurrency(hoveredData.monthExpense)}</span>
+                    <span style={{ color: TimelineColor.SUCCESS }}>+{formatCurrency(hoveredData.monthIncome)}</span> / <span style={{ color: TimelineColor.EXPENSE }}>-{formatCurrency(hoveredData.monthExpense)}</span>
                   </span>
                 </div>
               )}

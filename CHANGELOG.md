@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.2](https://github.com/igormatos02/Timeline/compare/v0.2.1...v0.2.2) (2026-09-14)
+
+
+### Bug Fixes
+
+* **timeline:** fix monthly projected balance calculation in projection badges ([a7087c3](https://github.com/igormatos02/Timeline/commit/a7087c3441b6d7d0c6d42d077b40dc7ba75bf5d4))
+
 ### [0.2.1](https://github.com/igormatos02/Timeline/compare/v0.2.0...v0.2.1) (2026-09-14)
 
 

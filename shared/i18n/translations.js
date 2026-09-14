@@ -268,6 +268,7 @@ export const translations = {
       initialStatusLabel: "Initial Status",
       notesLabel: "Notes / Justification (Optional)",
       notesPlaceholder: "e.g., Payment with vacation bonus...",
+      futureDateStatusDisabled: "Future events cannot be created or marked with a positive status before they occur.",
       saveChanges: "Save Changes",
       confirmAmortization: "Confirm Amortization"
     },
@@ -1568,6 +1569,7 @@ export const translations = {
       initialStatusLabel: "Estado Inicial",
       notesLabel: "Notas / Justificação (Opcional)",
       notesPlaceholder: "Ex: Pagamento com subsídio de férias...",
+      futureDateStatusDisabled: "Eventos futuros não podem ser criados ou marcados com status positivo antes de ocorrerem.",
       saveChanges: "Salvar Alterações",
       confirmAmortization: "Confirmar Amortização"
     },

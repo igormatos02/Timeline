@@ -283,7 +283,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const isAmortized = isLoanInstallment && !isCancelled && effectiveStatus === EventStatus.AMORTIZED;
 
   const renderStatusDropdownButton = (buttonProps, children) => {
-    if (isFutureMonth && !isAmortization) {
+    if (isFutureMonth) {
       return (
         <div
           className="btn btn-sm"
@@ -3038,7 +3038,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     transition: 'all 0.15s ease'
                   }
                 },
-                isCancelled ? (
+                isFutureMonth ? (
+                  <>
+                    <Clock size={13} style={{ color: 'rgba(255, 255, 255, 0.85)' }} />
+                    <span style={{ color: TimelineColor.WHITE }}>{t('status.pending')}</span>
+                  </>
+                ) : isCancelled ? (
                   <>
                     <Ban size={13} style={{ color: 'rgba(255, 255, 255, 0.85)' }} />
                     <span style={{ color: TimelineColor.WHITE }}>{t('status.cancelled')}</span>

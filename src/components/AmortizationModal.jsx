@@ -10,15 +10,19 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(defaultDate || todayStr);
+  const isFutureDate = Boolean(date && date > todayStr);
   const [strategy, setStrategy] = useState(AmortizationStrategy.REDUCE_TERM);
-  const [status, setStatus] = useState(EventStatus.AMORTIZED);
+  const [status, setStatus] = useState(isFutureDate ? EventStatus.PENDING : EventStatus.AMORTIZED);
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
+    const targetDate = initialEvent?.date || defaultDate || todayStr;
+    const isTargetFuture = Boolean(targetDate && targetDate > todayStr);
+    setDate(targetDate);
+
     if (initialEvent) {
       setAmount(initialEvent.amount || initialEvent.amortizationAmount || '');
-      setDate(initialEvent.date || defaultDate || todayStr);
       const eventStrategy =
         initialEvent.strategy ||
         initialEvent.amortizationStrategy ||
@@ -26,17 +30,22 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
           ? AmortizationStrategy.REDUCE_INSTALLMENT
           : AmortizationStrategy.REDUCE_TERM);
       setStrategy(eventStrategy);
-      const isAmortized = initialEvent.status === EventStatus.AMORTIZED;
+      const isAmortized = initialEvent.status === EventStatus.AMORTIZED && !isTargetFuture;
       setStatus(isAmortized ? EventStatus.AMORTIZED : EventStatus.PENDING);
       setNotes(initialEvent.notes || (initialEvent.description && !initialEvent.description.startsWith('Amortização extraordinária') ? initialEvent.description : ''));
     } else {
-      if (defaultDate) setDate(defaultDate);
       setAmount('');
       setStrategy(AmortizationStrategy.REDUCE_TERM);
-      setStatus(EventStatus.AMORTIZED);
+      setStatus(isTargetFuture ? EventStatus.PENDING : EventStatus.AMORTIZED);
       setNotes('');
     }
-  }, [defaultDate, isOpen, initialEvent]);
+  }, [defaultDate, isOpen, initialEvent, todayStr]);
+
+  useEffect(() => {
+    if (isFutureDate && status === EventStatus.AMORTIZED) {
+      setStatus(EventStatus.PENDING);
+    }
+  }, [isFutureDate, status]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -59,13 +68,13 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
       amount: numAmount,
       date,
       strategy,
-      status,
+      status: isFutureDate ? EventStatus.PENDING : status,
       notes: notes.trim()
     });
 
     setAmount('');
     setNotes('');
-    setStatus(EventStatus.AMORTIZED);
+    setStatus(EventStatus.PENDING);
     onClose();
   };
 
@@ -170,22 +179,25 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
               <button
                 type="button"
-                onClick={() => setStatus(EventStatus.AMORTIZED)}
+                disabled={isFutureDate}
+                onClick={() => !isFutureDate && setStatus(EventStatus.AMORTIZED)}
                 style={{
                   padding: '8px 12px',
                   borderRadius: '8px',
-                  border: status === EventStatus.AMORTIZED ? '2px solid var(--success)' : '1px solid var(--border-glass)',
-                  background: status === EventStatus.AMORTIZED ? 'var(--success-glow)' : 'var(--bg-glass)',
-                  color: status === EventStatus.AMORTIZED ? 'var(--success)' : 'var(--text-dim)',
+                  border: (!isFutureDate && status === EventStatus.AMORTIZED) ? '2px solid var(--success)' : '1px solid var(--border-glass)',
+                  background: (!isFutureDate && status === EventStatus.AMORTIZED) ? 'var(--success-glow)' : 'var(--bg-glass)',
+                  color: (!isFutureDate && status === EventStatus.AMORTIZED) ? 'var(--success)' : 'var(--text-dim)',
                   fontWeight: '700',
                   fontSize: '0.84rem',
-                  cursor: 'pointer',
+                  cursor: isFutureDate ? 'not-allowed' : 'pointer',
+                  opacity: isFutureDate ? 0.45 : 1,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '6px',
                   transition: 'all 0.15s'
                 }}
+                title={isFutureDate ? t('amortizationModal.futureDateStatusDisabled') : ''}
               >
                 <span>✓ {t('status.amortized')}</span>
               </button>
@@ -195,9 +207,9 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
                 style={{
                   padding: '8px 12px',
                   borderRadius: '8px',
-                  border: status === EventStatus.PENDING ? '2px solid var(--warning)' : '1px solid var(--border-glass)',
-                  background: status === EventStatus.PENDING ? 'rgba(245, 158, 11, 0.16)' : 'var(--bg-glass)',
-                  color: status === EventStatus.PENDING ? 'var(--warning)' : 'var(--text-dim)',
+                  border: (isFutureDate || status === EventStatus.PENDING) ? '2px solid var(--warning)' : '1px solid var(--border-glass)',
+                  background: (isFutureDate || status === EventStatus.PENDING) ? 'rgba(245, 158, 11, 0.16)' : 'var(--bg-glass)',
+                  color: (isFutureDate || status === EventStatus.PENDING) ? 'var(--warning)' : 'var(--text-dim)',
                   fontWeight: '700',
                   fontSize: '0.84rem',
                   cursor: 'pointer',
@@ -211,6 +223,11 @@ export default function AmortizationModal({ isOpen, onClose, onSave, remainingBa
                 <span>⏳ {t('status.pending')}</span>
               </button>
             </div>
+            {isFutureDate && (
+              <p style={{ fontSize: '0.74rem', color: 'var(--text-dim)', marginTop: '5px', fontStyle: 'italic' }}>
+                {t('amortizationModal.futureDateStatusDisabled')}
+              </p>
+            )}
           </div>
 
           {/* Notas Opcionais */}

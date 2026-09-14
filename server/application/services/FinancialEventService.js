@@ -341,29 +341,55 @@ export class FinancialEventService {
     return found || null;
   }
 
-  async createEvent(eventData) {
-    if (eventData.eventType === EventType.FOLLOWUP || eventData.timelineType === TimelineType.FOLLOWUP) {
-      return followupService.createFollowup(eventData);
+  _sanitizeFutureEventStatus(data) {
+    if (!data || !data.date) return data;
+    const todayStr = new Date().toISOString().substring(0, 10);
+    const isFuture = data.date > todayStr;
+    if (!isFuture) return data;
+
+    if (isPositiveStatus(data.status) || data.status === FollowupStatus.FINISHED || Boolean(data.isCompleted)) {
+      let pendingStatus = EventStatus.PENDING;
+      const evType = data.eventType;
+      const tlType = data.timelineType || data.timeline_type;
+      if (evType === EventType.INVESTMENT) pendingStatus = EventStatus.PLANNED;
+      else if (evType === EventType.REMINDER || tlType === TimelineType.REMINDER || evType === EventType.REGISTER || tlType === TimelineType.DIARY) pendingStatus = EventStatus.OPEN;
+      else if (evType === EventType.FOLLOWUP || tlType === TimelineType.FOLLOWUP) pendingStatus = FollowupStatus.IN_PROGRESS;
+
+      return {
+        ...data,
+        status: pendingStatus,
+        isCompleted: false,
+        completedAtTime: null
+      };
     }
-    if (eventData.eventType === EventType.TODO || eventData.timelineType === TimelineType.TODO) {
-      return todoService.createTodo(eventData);
+    return data;
+  }
+
+  async createEvent(eventData) {
+    const sanitizedData = this._sanitizeFutureEventStatus(eventData);
+
+    if (sanitizedData.eventType === EventType.FOLLOWUP || sanitizedData.timelineType === TimelineType.FOLLOWUP) {
+      return followupService.createFollowup(sanitizedData);
+    }
+    if (sanitizedData.eventType === EventType.TODO || sanitizedData.timelineType === TimelineType.TODO) {
+      return todoService.createTodo(sanitizedData);
     }
 
     const isRecurring =
-      eventData.recurrence === EventRecurrence.RECURRING ||
-      eventData.recurrence === EventRecurrence.LIMITED ||
-      eventData.periodicity === EventPeriodicity.RECURRING ||
-      eventData.isRecurring;
-    const eventId = eventData.eventId || eventData.event_id || (isRecurring ? `series-${Date.now()}` : null);
+      sanitizedData.recurrence === EventRecurrence.RECURRING ||
+      sanitizedData.recurrence === EventRecurrence.LIMITED ||
+      sanitizedData.periodicity === EventPeriodicity.RECURRING ||
+      sanitizedData.isRecurring;
+    const eventId = sanitizedData.eventId || sanitizedData.event_id || (isRecurring ? `series-${Date.now()}` : null);
 
     const isLoanInstallment = (
-      eventData.eventType === EventType.LOAN_INSTALLMENT ||
-      eventData.category === LoanEventCategory.LOAN_INSTALLMENT ||
-      eventData.isSystemLoanEvent
+      sanitizedData.eventType === EventType.LOAN_INSTALLMENT ||
+      sanitizedData.category === LoanEventCategory.LOAN_INSTALLMENT ||
+      sanitizedData.isSystemLoanEvent
     );
 
-    let timeboardId = eventData.timeboardId || eventData.timeboard_id || null;
-    const timelineId = eventData.timelineId || eventData.timelineOriginId || eventData.timeline_id || null;
+    let timeboardId = sanitizedData.timeboardId || sanitizedData.timeboard_id || null;
+    const timelineId = sanitizedData.timelineId || sanitizedData.timelineOriginId || sanitizedData.timeline_id || null;
 
     if (!timeboardId && timelineId) {
       try {
@@ -374,13 +400,13 @@ export class FinancialEventService {
       }
     }
 
-    const isRegister = eventData.eventType === EventType.REGISTER;
+    const isRegister = sanitizedData.eventType === EventType.REGISTER;
     if (isRegister) {
       const allRawEvents = await eventRepository.getAll();
       const duplicate = allRawEvents.find((e) => {
         if (e.isDeleted || e.status === EventStatus.DELETED) return false;
         const sameTimeline = String(e.timelineId || e.timelineOriginId || e.timeline_id) === String(timelineId);
-        const sameDate = String(e.date) === String(eventData.date);
+        const sameDate = String(e.date) === String(sanitizedData.date);
         return sameTimeline && sameDate;
       });
 
@@ -390,16 +416,16 @@ export class FinancialEventService {
     }
 
     const payload = {
-      ...eventData,
+      ...sanitizedData,
       timelineId,
       timelineOriginId: timelineId,
       timeboardId,
       eventId,
-      version: isLoanInstallment ? 0 : (eventData.version !== undefined ? Number(eventData.version) : 0),
-      eventVersion: isLoanInstallment ? 0 : (eventData.eventVersion !== undefined ? Number(eventData.eventVersion) : 0),
-      event_version: isLoanInstallment ? 0 : (eventData.event_version !== undefined ? Number(eventData.event_version) : 0),
-      recurrence: isLoanInstallment || isRegister ? EventRecurrence.ONCE : (eventData.recurrence || (isRecurring ? EventRecurrence.RECURRING : EventRecurrence.ONCE)),
-      periodicity: eventData.periodicity || EventPeriodicity.MONTHLY,
+      version: isLoanInstallment ? 0 : (sanitizedData.version !== undefined ? Number(sanitizedData.version) : 0),
+      eventVersion: isLoanInstallment ? 0 : (sanitizedData.eventVersion !== undefined ? Number(sanitizedData.eventVersion) : 0),
+      event_version: isLoanInstallment ? 0 : (sanitizedData.event_version !== undefined ? Number(sanitizedData.event_version) : 0),
+      recurrence: isLoanInstallment || isRegister ? EventRecurrence.ONCE : (sanitizedData.recurrence || (isRecurring ? EventRecurrence.RECURRING : EventRecurrence.ONCE)),
+      periodicity: sanitizedData.periodicity || EventPeriodicity.MONTHLY,
       isRecurring: isLoanInstallment || isRegister ? false : Boolean(isRecurring)
     };
 
@@ -417,7 +443,8 @@ export class FinancialEventService {
   }
 
   async updateEvent(id, updates) {
-    const { updateScope, propagateForward, ...directUpdates } = updates;
+    const { updateScope, propagateForward, ...rawDirectUpdates } = updates;
+    const directUpdates = this._sanitizeFutureEventStatus(rawDirectUpdates);
 
     const isFollowupDirect = await followupRepository.getById(id);
     if (isFollowupDirect || directUpdates.eventType === EventType.FOLLOWUP || directUpdates.timelineType === TimelineType.FOLLOWUP) {

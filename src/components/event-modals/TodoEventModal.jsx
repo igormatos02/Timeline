@@ -263,7 +263,7 @@ export default function TodoEventModal({
                   padding: '7px 10px',
                   borderRadius: '7px',
                   border: status === EventStatus.PENDING ? '2px solid var(--primary)' : '1px solid var(--border-glass)',
-                  background: status === EventStatus.PENDING ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                  background: status === EventStatus.PENDING ? 'var(--primary-glow)' : 'transparent',
                   color: status === EventStatus.PENDING ? 'var(--primary-light)' : 'var(--text-muted)',
                   fontSize: '0.8rem',
                   fontWeight: '700',
@@ -274,17 +274,19 @@ export default function TodoEventModal({
               </button>
               <button
                 type="button"
+                disabled={Boolean(initialData?.date && initialData?.date > format(new Date(), 'yyyy-MM-dd'))}
                 onClick={() => setStatus(EventStatus.COMPLETED)}
                 style={{
                   flex: 1,
                   padding: '7px 10px',
                   borderRadius: '7px',
                   border: status === EventStatus.COMPLETED ? '2px solid var(--success)' : '1px solid var(--border-glass)',
-                  background: status === EventStatus.COMPLETED ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                  background: status === EventStatus.COMPLETED ? 'var(--success-glow)' : 'transparent',
                   color: status === EventStatus.COMPLETED ? 'var(--success)' : 'var(--text-muted)',
                   fontSize: '0.8rem',
                   fontWeight: '700',
-                  cursor: 'pointer'
+                  cursor: Boolean(initialData?.date && initialData?.date > format(new Date(), 'yyyy-MM-dd')) ? 'not-allowed' : 'pointer',
+                  opacity: Boolean(initialData?.date && initialData?.date > format(new Date(), 'yyyy-MM-dd')) ? 0.45 : 1
                 }}
               >
                 {t('todoModal.statusCompleted')}

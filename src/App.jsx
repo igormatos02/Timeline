@@ -982,7 +982,33 @@ export default function App() {
     setIsEventModalOpen(true);
   }, [handleOpenAmortizationModal]);
 
-  const handleSaveEvent = (eventData) => {
+  const sanitizeFutureEventStatus = (event) => {
+    if (!event || !event.date) return event;
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const isFutureEvent = event.date > todayStr;
+    if (!isFutureEvent) return event;
+
+    const isPositive = isPositiveStatus(event.status) || event.status === FollowupStatus.FINISHED || Boolean(event.isCompleted);
+    if (isPositive) {
+      let pendingStatus = EventStatus.PENDING;
+      const evType = event.eventType;
+      const tlType = event.timelineType || event.timeline_type;
+      if (evType === EventType.INVESTMENT) pendingStatus = EventStatus.PLANNED;
+      else if (evType === EventType.REMINDER || tlType === TimelineType.REMINDER || evType === EventType.REGISTER || tlType === TimelineType.DIARY) pendingStatus = EventStatus.OPEN;
+      else if (evType === EventType.FOLLOWUP || tlType === TimelineType.FOLLOWUP) pendingStatus = FollowupStatus.IN_PROGRESS;
+
+      return {
+        ...event,
+        status: pendingStatus,
+        isCompleted: false,
+        completedAtTime: null
+      };
+    }
+    return event;
+  };
+
+  const handleSaveEvent = (rawEventData) => {
+    const eventData = sanitizeFutureEventStatus(rawEventData);
     const savedScrollPos = scrollYBeforeModalRef.current || window.scrollY;
 
     // 1. Determinar se o evento pertence a um contrato específico (empréstimo) ou é dinâmico do Timeboard
@@ -1575,7 +1601,9 @@ export default function App() {
 
     const loanName = targetTimeline.name || '';
     const targetDate = date || format(new Date(), 'yyyy-MM-dd');
-    const isCompleted = status === EventStatus.AMORTIZED || status === EventStatus.PAID;
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const isFutureEvent = targetDate > todayStr;
+    const isCompleted = !isFutureEvent && (status === EventStatus.AMORTIZED || status === EventStatus.PAID);
 
     const amortEvent = {
       id: generateUUID(),

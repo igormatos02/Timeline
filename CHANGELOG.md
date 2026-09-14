@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.1](https://github.com/igormatos02/Timeline/compare/v0.2.0...v0.2.1) (2026-09-14)
+
+
+### Features
+
+* implement followup timeline and direct status toggle with cancel action ([1490177](https://github.com/igormatos02/Timeline/commit/14901777ae50342e0db3c78051b7e6cfa16bc310))
+* **income:** add annual incoming indicator in 12-month summary header ([9f721c8](https://github.com/igormatos02/Timeline/commit/9f721c82fc0d4bc46168a101cb03a74b9b866d0f))
+* **timeline:** move reset action to timeline settings modal and remove reset buttons from headers ([c8e5479](https://github.com/igormatos02/Timeline/commit/c8e5479ba875b51e139d7561cdf304f557727bd1))
+
+
+### Bug Fixes
+
+* **income:** correct current accumulation and projected accumulation positions ([eb4b97e](https://github.com/igormatos02/Timeline/commit/eb4b97e1b50bf769e47f5abedd6e00511a571508))
+* **investment:** remove target metric and progress percentage from current card ([6b53f07](https://github.com/igormatos02/Timeline/commit/6b53f07a12d2baaec820023bcf613c3eb1cc5e8c))
+* **timeline:** show delete in settings modal and remove from headers ([6f70276](https://github.com/igormatos02/Timeline/commit/6f70276dec2583a8bc4dc43bc59159c792bde049))
+* **ui:** swap annual income and month vs prev indicators position ([b77def1](https://github.com/igormatos02/Timeline/commit/b77def18904eb5a45ff0e60afb6690be9e26d415))
+
 ## [0.2.0](https://github.com/igormatos02/Timeline/compare/v0.1.9...v0.2.0) (2026-09-12)
 
 

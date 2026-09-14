@@ -1280,6 +1280,7 @@ function VerticalTimeline({
                         hasExpenseTimeline={hasExpenseTimeline}
                         hasLoanTimeline={hasLoanTimeline}
                         hasInvestmentTimeline={hasInvestmentTimeline}
+                        isFutureMonth={isFutureMonth}
                         formatCurrency={formatCurrency}
                         t={t}
                       />

@@ -9,11 +9,20 @@ import { TimelineColor } from '../../shared/enums/index.js';
  * across financial views, conditionally showing only the badges for timeline types that exist in the active timeboard.
  */
 export default function MonthProjectionBadges({
-  income = 0,
-  expense = 0,
-  investment = 0,
-  loan = 0,
-  saldo = null,
+  income,
+  expense,
+  investment,
+  loan,
+  saldo,
+  monthProjectedIncome,
+  monthProjectedExpense,
+  monthProjectedInvestment,
+  monthProjectedLoan,
+  monthProjectedSaldo,
+  hasIncomeTimeline,
+  hasExpenseTimeline,
+  hasInvestmentTimeline,
+  hasLoanTimeline,
   isFutureMonth = false,
   showIncome = true,
   showExpense = true,
@@ -22,16 +31,27 @@ export default function MonthProjectionBadges({
   showBalance = true,
   t = (key) => key
 }) {
-  const hasAnyBadge = showIncome || showExpense || showInvestment || showLoan || showBalance;
+  const actualIncome = monthProjectedIncome !== undefined ? monthProjectedIncome : (income || 0);
+  const actualExpense = monthProjectedExpense !== undefined ? monthProjectedExpense : (expense || 0);
+  const actualInvestment = monthProjectedInvestment !== undefined ? monthProjectedInvestment : (investment || 0);
+  const actualLoan = monthProjectedLoan !== undefined ? monthProjectedLoan : (loan || 0);
+  const actualSaldo = monthProjectedSaldo !== undefined ? monthProjectedSaldo : saldo;
+
+  const actualShowIncome = hasIncomeTimeline !== undefined ? hasIncomeTimeline : showIncome;
+  const actualShowExpense = hasExpenseTimeline !== undefined ? hasExpenseTimeline : showExpense;
+  const actualShowInvestment = hasInvestmentTimeline !== undefined ? hasInvestmentTimeline : showInvestment;
+  const actualShowLoan = hasLoanTimeline !== undefined ? hasLoanTimeline : showLoan;
+
+  const hasAnyBadge = actualShowIncome || actualShowExpense || actualShowInvestment || actualShowLoan || showBalance;
   if (!hasAnyBadge) return null;
 
-  const numIncome = Math.abs(Number(income || 0));
-  const numExpense = Math.abs(Number(expense || 0));
-  const numInvestment = Math.abs(Number(investment || 0));
-  const numLoan = Math.abs(Number(loan || 0));
+  const numIncome = Math.abs(Number(actualIncome || 0));
+  const numExpense = Math.abs(Number(actualExpense || 0));
+  const numInvestment = Math.abs(Number(actualInvestment || 0));
+  const numLoan = Math.abs(Number(actualLoan || 0));
 
-  const calculatedSaldo = saldo !== null && saldo !== undefined
-    ? Number(saldo)
+  const calculatedSaldo = actualSaldo !== null && actualSaldo !== undefined
+    ? Number(actualSaldo)
     : (numIncome - (numExpense + numInvestment + numLoan));
 
   return (

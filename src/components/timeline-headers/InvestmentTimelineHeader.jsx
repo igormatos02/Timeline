@@ -18,6 +18,8 @@ import { computeMonthDiff } from '../../utils/timelineCharts.js';
 
 export default function InvestmentTimelineHeader({
   timeline,
+  timeboard = null,
+  computeStartDate = null,
   allTimelines = [],
   events = [],
   onEdit,
@@ -114,8 +116,8 @@ export default function InvestmentTimelineHeader({
 
   eventsList.forEach((ev) => {
     if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
-    const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME || ev.isIncome;
-    const isInvestment = ev.eventType === 'investment' || ev.eventType === EventType.INVESTMENT || ev.isInvestment;
+    const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
+    const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment;
     const isExternal = Boolean(ev.isExternal || ev.is_external);
     const amt = Number(ev.amount || 0);
 
@@ -165,16 +167,10 @@ export default function InvestmentTimelineHeader({
 
   eventsList.forEach((ev) => {
     if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
-    const isInvestment = ev.eventType === 'investment' || ev.eventType === EventType.INVESTMENT || ev.isInvestment;
+    const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment;
     if (isInvestment) {
       const isExternal = Boolean(ev.isExternal || ev.is_external);
-      const isReceived = isPositiveStatus(ev.status) ||
-        ev.status === EventStatus.INVESTED ||
-        ev.status === EventStatus.PAID ||
-        ev.status === EventStatus.RECEIVED ||
-        ev.status === EventStatus.COMPLETED ||
-        ev.status === EventStatus.SETTLED ||
-        Boolean(ev.isCompleted);
+      const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
 
       // External deposits are added to Received / Invested without impacting other calculations
       if (isReceived || isExternal) {
@@ -529,6 +525,13 @@ export default function InvestmentTimelineHeader({
 
           {/* Rodapé com Comparações, Projeção Anual & Gráfico de Colunas dos últimos 6 meses + mês atual */}
           {(() => {
+            const timeboardComputeStart = timeboard?.computeFrom || timeboard?.compute_from;
+            const ownComputeStart = timeline?.computeStartDate || timeline?.compute_start_date || timeline?.computeFrom || timeline?.compute_from;
+            const rawComputeStart = computeStartDate || timeboardComputeStart || ownComputeStart;
+            const computeFromMonth = rawComputeStart && String(rawComputeStart) !== '1900-01' && !String(rawComputeStart).startsWith('1900-01') && String(rawComputeStart) !== 'all'
+              ? String(rawComputeStart).substring(0, 7)
+              : null;
+
             const currentDateObj = new Date();
             const last7Months = [];
             for (let i = 6; i >= 0; i--) {
@@ -539,14 +542,16 @@ export default function InvestmentTimelineHeader({
 
               const d = new Date(year, month - 1, 1);
               const label = format(d, 'MMM', { locale: dateLocale }).replace('.', '').toUpperCase();
-              last7Months.push({ key, label, total: 0 });
+              const isNotComputed = Boolean(computeFromMonth && key < computeFromMonth);
+              last7Months.push({ key, label, total: 0, isNotComputed });
             }
 
             eventsList.forEach((ev) => {
-              if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
-              const isInvestment = ev.eventType === 'investment' || ev.eventType === EventType.INVESTMENT || ev.isInvestment;
+              if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+              const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment;
               if (isInvestment) {
                 const evKey = ev.date.substring(0, 7);
+                if (computeFromMonth && evKey < computeFromMonth) return;
                 const foundMonth = last7Months.find((m) => m.key === evKey);
                 if (foundMonth) {
                   foundMonth.total += Number(ev.amount || 0);

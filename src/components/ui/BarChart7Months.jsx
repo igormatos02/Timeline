@@ -2,6 +2,7 @@ import React from 'react';
 import { TrendingUp, Sparkles, Layers } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency.js';
 import { TimelineColor } from '../../enums/index.js';
+import { useTranslation } from '../../i18n/LanguageContext.jsx';
 
 export default function BarChart7Months({
   months,
@@ -26,6 +27,7 @@ export default function BarChart7Months({
   formatValue = (val) => formatCurrency(val).replace(',00', ''),
   formatProjection = (val) => formatCurrency(val)
 }) {
+  const { t } = useTranslation();
   const maxMonthTotal = Math.max(...months.map((m) => Math.abs(m.total || 0)), 1);
 
   return (
@@ -130,23 +132,30 @@ export default function BarChart7Months({
           }}
         >
           {months.map((m, idx) => {
+            const isNotComputed = Boolean(m.isNotComputed);
             const isNegative = m.total < 0;
-            const heightPct = Math.max(8, Math.min(100, Math.round((Math.abs(m.total || 0) / maxMonthTotal) * 100)));
+            const heightPct = isNotComputed
+              ? 8
+              : Math.max(8, Math.min(100, Math.round((Math.abs(m.total || 0) / maxMonthTotal) * 100)));
             const isCurrentMonth = idx === months.length - 1;
 
-            const textCol = isNegative
-              ? badColor
-              : (isCurrentMonth ? (currentTextColor || goodColor) : 'var(--text-muted)');
+            const textCol = isNotComputed
+              ? 'var(--text-dim)'
+              : (isNegative
+                ? badColor
+                : (isCurrentMonth ? (currentTextColor || goodColor) : 'var(--text-muted)'));
 
-            const barBg = isNegative
-              ? (isCurrentMonth
-                  ? `linear-gradient(180deg, ${badColor} 0%, rgba(244, 63, 94, 0.6) 100%)`
-                  : `linear-gradient(180deg, rgba(244, 63, 94, 0.6) 0%, rgba(244, 63, 94, 0.25) 100%)`)
-              : (isCurrentMonth
-                  ? (currentGradient || `linear-gradient(180deg, ${goodColor} 0%, rgba(16, 185, 129, 0.6) 100%)`)
-                  : (mutedGradientTop && mutedGradientBottom
-                      ? `linear-gradient(180deg, ${mutedGradientTop} 0%, ${mutedGradientBottom} 100%)`
-                      : `linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(16, 185, 129, 0.25) 100%)`));
+            const barBg = isNotComputed
+              ? 'rgba(148, 163, 184, 0.12)'
+              : (isNegative
+                ? (isCurrentMonth
+                    ? `linear-gradient(180deg, ${badColor} 0%, rgba(244, 63, 94, 0.6) 100%)`
+                    : `linear-gradient(180deg, rgba(244, 63, 94, 0.6) 0%, rgba(244, 63, 94, 0.25) 100%)`)
+                : (isCurrentMonth
+                    ? (currentGradient || `linear-gradient(180deg, ${goodColor} 0%, rgba(16, 185, 129, 0.6) 100%)`)
+                    : (mutedGradientTop && mutedGradientBottom
+                        ? `linear-gradient(180deg, ${mutedGradientTop} 0%, ${mutedGradientBottom} 100%)`
+                        : `linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(16, 185, 129, 0.25) 100%)`)));
 
             return (
               <div
@@ -158,7 +167,8 @@ export default function BarChart7Months({
                   alignItems: 'center',
                   gap: '6px',
                   height: '100%',
-                  justifyContent: 'flex-end'
+                  justifyContent: 'flex-end',
+                  opacity: isNotComputed ? 0.6 : 1
                 }}
               >
                 <div
@@ -168,7 +178,7 @@ export default function BarChart7Months({
                     color: textCol
                   }}
                 >
-                  {formatValue(m.total)}
+                  {isNotComputed ? '—' : formatValue(m.total)}
                 </div>
 
                 <div
@@ -179,7 +189,8 @@ export default function BarChart7Months({
                     alignItems: 'flex-end',
                     background: 'rgba(255, 255, 255, 0.03)',
                     borderRadius: '4px',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    border: isNotComputed ? '1px dashed rgba(148, 163, 184, 0.3)' : undefined
                   }}
                 >
                   <div
@@ -190,7 +201,7 @@ export default function BarChart7Months({
                       borderRadius: '4px',
                       transition: 'height 0.3s ease'
                     }}
-                    title={`${m.label}: ${formatValue(m.total)}`}
+                    title={isNotComputed ? `${m.label}: ${t('timeline.notComputed')}` : `${m.label}: ${formatValue(m.total)}`}
                   />
                 </div>
 
@@ -198,7 +209,9 @@ export default function BarChart7Months({
                   style={{
                     fontSize: '0.66rem',
                     fontWeight: isCurrentMonth ? '800' : '600',
-                    color: isCurrentMonth ? (isNegative ? badColor : (currentTextColor || goodColor)) : 'var(--text-dim)'
+                    color: isNotComputed
+                      ? 'var(--text-dim)'
+                      : (isCurrentMonth ? (isNegative ? badColor : (currentTextColor || goodColor)) : 'var(--text-dim)')
                   }}
                 >
                   {m.label}

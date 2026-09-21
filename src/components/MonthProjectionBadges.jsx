@@ -1,13 +1,13 @@
-import React from 'react';
-import { Sparkles, DollarSign, TrendingDown, PiggyBank, Landmark, Scale } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sparkles, DollarSign, TrendingDown, PiggyBank, Landmark, Scale, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { formatCurrency as defaultFormatCurrency } from '../utils/formatCurrency.js';
 import { TimelineColor } from '../../shared/enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 /**
  * MonthProjectionBadges
- * Renders the unified monthly projection bar (+Entradas, -Saídas, Investimentos, Empréstimos, Balance/Saldo)
- * across financial views, conditionally showing only the badges for timeline types that exist in the active timeboard.
+ * Renders the unified monthly projection / realized bar (+Entradas, -Saídas, Investimentos, Empréstimos, Balance/Saldo)
+ * across financial views with a dropdown to toggle between "Month Projection" and "Real Projection".
  */
 export default function MonthProjectionBadges({
   income,
@@ -25,11 +25,22 @@ export default function MonthProjectionBadges({
   monthProjectedInvestmentDeduction,
   monthProjectedLoan,
   monthProjectedSaldo,
+  monthRealizedIncome,
+  monthRealizedExpense,
+  monthRealizedInvestment,
+  monthRealizedInvestmentInternal,
+  monthRealizedInvestmentExternal,
+  monthRealizedInvestmentDeduction,
+  monthRealizedLoan,
+  monthRealizedSaldo,
+  projectionMode = 'projected',
+  onToggleProjectionMode,
   hasIncomeTimeline,
   hasExpenseTimeline,
   hasInvestmentTimeline,
   hasLoanTimeline,
   isFutureMonth = false,
+  isNotComputedMonth = false,
   showIncome = true,
   showExpense = true,
   showInvestment = true,
@@ -40,19 +51,53 @@ export default function MonthProjectionBadges({
 }) {
   const { t: contextT } = useTranslation();
   const t = propT || contextT;
-  const actualIncome = monthProjectedIncome !== undefined ? monthProjectedIncome : (income || 0);
-  const actualExpense = monthProjectedExpense !== undefined ? monthProjectedExpense : (expense || 0);
-  const actualInvestmentInternal = monthProjectedInvestmentInternal !== undefined
-    ? monthProjectedInvestmentInternal
-    : (monthProjectedInvestmentDeduction !== undefined ? monthProjectedInvestmentDeduction : (investmentInternal || 0));
-  const actualInvestmentExternal = monthProjectedInvestmentExternal !== undefined
-    ? monthProjectedInvestmentExternal
-    : (investmentExternal || 0);
-  const actualInvestmentTotal = monthProjectedInvestment !== undefined
-    ? monthProjectedInvestment
-    : (investment !== undefined ? investment : (actualInvestmentInternal + actualInvestmentExternal));
-  const actualLoan = monthProjectedLoan !== undefined ? monthProjectedLoan : (loan || 0);
-  const actualSaldo = monthProjectedSaldo !== undefined ? monthProjectedSaldo : saldo;
+
+  const [localMode, setLocalMode] = useState('projected');
+  const currentMode = onToggleProjectionMode ? projectionMode : localMode;
+  const handleModeChange = (newMode) => {
+    if (onToggleProjectionMode) {
+      onToggleProjectionMode(newMode);
+    } else {
+      setLocalMode(newMode);
+    }
+  };
+
+  const isRealizedMode = currentMode === 'realized';
+
+  // Values based on active mode
+  const actualIncome = isRealizedMode
+    ? (monthRealizedIncome !== undefined ? monthRealizedIncome : 0)
+    : (monthProjectedIncome !== undefined ? monthProjectedIncome : (income || 0));
+
+  const actualExpense = isRealizedMode
+    ? (monthRealizedExpense !== undefined ? monthRealizedExpense : 0)
+    : (monthProjectedExpense !== undefined ? monthProjectedExpense : (expense || 0));
+
+  const actualInvestmentInternal = isRealizedMode
+    ? (monthRealizedInvestmentInternal !== undefined
+      ? monthRealizedInvestmentInternal
+      : (monthRealizedInvestmentDeduction !== undefined ? monthRealizedInvestmentDeduction : 0))
+    : (monthProjectedInvestmentInternal !== undefined
+      ? monthProjectedInvestmentInternal
+      : (monthProjectedInvestmentDeduction !== undefined ? monthProjectedInvestmentDeduction : (investmentInternal || 0)));
+
+  const actualInvestmentExternal = isRealizedMode
+    ? (monthRealizedInvestmentExternal !== undefined ? monthRealizedInvestmentExternal : 0)
+    : (monthProjectedInvestmentExternal !== undefined ? monthProjectedInvestmentExternal : (investmentExternal || 0));
+
+  const actualInvestmentTotal = isRealizedMode
+    ? (monthRealizedInvestment !== undefined ? monthRealizedInvestment : (actualInvestmentInternal + actualInvestmentExternal))
+    : (monthProjectedInvestment !== undefined
+      ? monthProjectedInvestment
+      : (investment !== undefined ? investment : (actualInvestmentInternal + actualInvestmentExternal)));
+
+  const actualLoan = isRealizedMode
+    ? (monthRealizedLoan !== undefined ? monthRealizedLoan : 0)
+    : (monthProjectedLoan !== undefined ? monthProjectedLoan : (loan || 0));
+
+  const actualSaldo = isRealizedMode
+    ? (monthRealizedSaldo !== undefined ? monthRealizedSaldo : null)
+    : (monthProjectedSaldo !== undefined ? monthProjectedSaldo : saldo);
 
   const actualShowIncome = hasIncomeTimeline !== undefined ? hasIncomeTimeline : showIncome;
   const actualShowExpense = hasExpenseTimeline !== undefined ? hasExpenseTimeline : showExpense;
@@ -74,26 +119,83 @@ export default function MonthProjectionBadges({
     : (numIncome - (numExpense + numInvestmentInternal + numLoan));
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
-      {/* 🏷️ Indicador Projeção do Mês */}
-      <span
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%', opacity: isNotComputedMonth ? 0.82 : 1 }}>
+      {/* 🏷️ Dropdown Seletor: Month Projection vs Real Projection */}
+      <div
         style={{
+          position: 'relative',
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '5px',
-          fontSize: '0.72rem',
-          fontWeight: '700',
-          color: isFutureMonth ? 'var(--text-dim)' : 'var(--text-muted)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.04em',
           marginRight: '2px'
         }}
       >
-        <Sparkles size={12} style={{ color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)' }} />
-        <span>{t('timeline.monthProjection')}</span>
-      </span>
+        <select
+          value={currentMode}
+          onChange={(e) => handleModeChange(e.target.value)}
+          aria-label={t('timeline.selectProjectionMode')}
+          style={{
+            appearance: 'none',
+            WebkitAppearance: 'none',
+            MozAppearance: 'none',
+            background: isRealizedMode ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+            border: `1px solid ${isRealizedMode ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-glass)'}`,
+            borderRadius: '6px',
+            padding: '2px 22px 2px 24px',
+            fontSize: '0.72rem',
+            fontWeight: '700',
+            color: isRealizedMode
+              ? TimelineColor.INCOME
+              : (isNotComputedMonth || isFutureMonth ? 'var(--text-dim)' : 'var(--text-muted)'),
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            cursor: 'pointer',
+            outline: 'none',
+            height: '24px',
+            lineHeight: '20px',
+            transition: 'all 0.15s ease'
+          }}
+          title={t('timeline.selectProjectionMode')}
+        >
+          <option value="projected" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
+            {t('timeline.monthProjection')}
+          </option>
+          <option value="realized" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
+            {t('timeline.realProjection')}
+          </option>
+        </select>
+        {isRealizedMode ? (
+          <CheckCircle2
+            size={12}
+            style={{
+              position: 'absolute',
+              left: '7px',
+              pointerEvents: 'none',
+              color: TimelineColor.INCOME
+            }}
+          />
+        ) : (
+          <Sparkles
+            size={12}
+            style={{
+              position: 'absolute',
+              left: '7px',
+              pointerEvents: 'none',
+              color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)'
+            }}
+          />
+        )}
+        <ChevronDown
+          size={12}
+          style={{
+            position: 'absolute',
+            right: '6px',
+            pointerEvents: 'none',
+            color: isRealizedMode ? TimelineColor.INCOME : 'var(--text-dim)'
+          }}
+        />
+      </div>
 
-      {/* 1. Entradas Projetadas */}
+      {/* 1. Entradas */}
       {showIncome && (
         <span
           style={{
@@ -108,14 +210,14 @@ export default function MonthProjectionBadges({
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
-          title={t('timeline.monthIncomeTitle')}
+          title={isRealizedMode ? t('timeline.monthRealizedIncomeTitle') : t('timeline.monthIncomeTitle')}
         >
           <DollarSign size={12} />
           <span>+{formatCurrency(numIncome)}</span>
         </span>
       )}
 
-      {/* 2. Gasto Projetado */}
+      {/* 2. Gastos */}
       {showExpense && (
         <span
           style={{
@@ -130,14 +232,14 @@ export default function MonthProjectionBadges({
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
-          title={t('timeline.monthExpenseTitle')}
+          title={isRealizedMode ? t('timeline.monthRealizedExpenseTitle') : t('timeline.monthExpenseTitle')}
         >
           <TrendingDown size={12} />
           <span>-{formatCurrency(numExpense)}</span>
         </span>
       )}
 
-      {/* 3. Investimento Projetado (Separado: Interno + Depósitos Externos) */}
+      {/* 3. Investimentos */}
       {showInvestment && (
         <span
           style={{
@@ -152,7 +254,7 @@ export default function MonthProjectionBadges({
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
-          title={t('timeline.monthInvestmentTitle')}
+          title={isRealizedMode ? t('timeline.monthRealizedInvestmentTitle') : t('timeline.monthInvestmentTitle')}
         >
           <PiggyBank size={12} />
           <span>
@@ -180,7 +282,7 @@ export default function MonthProjectionBadges({
         </span>
       )}
 
-      {/* 4. Total em Empréstimos a Pagar */}
+      {/* 4. Empréstimos */}
       {showLoan && (
         <span
           style={{
@@ -195,14 +297,14 @@ export default function MonthProjectionBadges({
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
-          title={t('timeline.monthLoanTitle')}
+          title={isRealizedMode ? t('timeline.monthRealizedLoanTitle') : t('timeline.monthLoanTitle')}
         >
           <Landmark size={12} />
           <span>{formatCurrency(numLoan)}</span>
         </span>
       )}
 
-      {/* 5. Saldo Líquido Projetado */}
+      {/* 5. Saldo Líquido */}
       {showBalance && (
         <span
           style={{
@@ -218,7 +320,7 @@ export default function MonthProjectionBadges({
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
-          title={t('timeline.monthBalanceTitle')}
+          title={isRealizedMode ? t('timeline.monthRealizedBalanceTitle') : t('timeline.monthBalanceTitle')}
         >
           <Scale size={12} />
           <span>{t('timeline.balance')}: {calculatedSaldo >= 0 ? '+' : ''}{formatCurrency(calculatedSaldo)}</span>

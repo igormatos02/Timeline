@@ -8,8 +8,20 @@ import {
 import { format } from 'date-fns';
 import { enUS, pt } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { IncomeEventCategory } from '../../../shared/enums/IncomeEventCategory.js';
-import { EventType, EventStatus, isCancelledStatus, isPositiveStatus, TimelineColor, TimelineType, isLoanTimelineType } from '../../enums/index.js';
+import {
+  EventType,
+  EventStatus,
+  isCancelledStatus,
+  isPositiveStatus,
+  TimelineColor,
+  TimelineType,
+  isLoanTimelineType,
+  IncomeEventCategory,
+  ExpensesEventCategory,
+  InvestmentEventCategory,
+  LoanEventCategory,
+  AmortizationEventCategory
+} from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
@@ -61,56 +73,42 @@ export default function IncomeTimelineHeader({
     return t(`incomeCategories.${cat}`) || cat;
   };
 
-  let monthTotalIncome = dto?.current_month_income ?? 0;
-
   let uiTotalInc = 0;
+  const categoryTotals = {};
   eventsList.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
+    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
     const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
     if (isIncome && ev.date.startsWith(currentMonthStr)) {
-      uiTotalInc += Number(ev.amount || 0);
+      const amt = Number(ev.amount || 0);
+      uiTotalInc += amt;
+      let cat = (ev.category || '').toLowerCase();
+      if (!validEnumValues.includes(cat)) {
+        cat = IncomeEventCategory.OTHER;
+      }
+      categoryTotals[cat] = (categoryTotals[cat] || 0) + amt;
     }
   });
 
-  if (monthTotalIncome === 0 && uiTotalInc > 0) {
-    monthTotalIncome = uiTotalInc;
-  }
+  const monthTotalIncome = uiTotalInc > 0 ? uiTotalInc : (dto?.current_month_income ?? 0);
 
-  // Extrair lista de categorias / origens diretamente do DTO vindo da Stored Procedure SQL
-  let categoryList = (dto?.categories_breakdown && dto.categories_breakdown.length > 0)
-    ? dto.categories_breakdown.map((item) => ({
+  // Extrair lista de categorias / origens com cálculo local reativo
+  let categoryList = Object.entries(categoryTotals)
+    .filter(([cat]) => validEnumValues.includes(cat))
+    .map(([cat, amt]) => ({
+      rawCat: cat,
+      name: getCategoryLabel(cat),
+      amount: amt,
+      percent: monthTotalIncome > 0 ? Math.round((amt / monthTotalIncome) * 100) : 0
+    }))
+    .sort((a, b) => b.amount - a.amount);
+
+  if (categoryList.length === 0 && dto?.categories_breakdown && dto.categories_breakdown.length > 0) {
+    categoryList = dto.categories_breakdown.map((item) => ({
       rawCat: item.category,
       name: getCategoryLabel(item.category),
       amount: Number(item.amount || 0),
       percent: Number(item.percent || 0)
-    }))
-    : [];
-
-  // Fallback para cálculo local estritamente validado com IncomeEventCategory enum
-  if (categoryList.length === 0) {
-    const categoryTotals = {};
-    eventsList.forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
-      const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
-      if (isIncome && ev.date.startsWith(currentMonthStr)) {
-        const amt = Number(ev.amount || 0);
-        let cat = (ev.category || '').toLowerCase();
-        if (!validEnumValues.includes(cat)) {
-          cat = IncomeEventCategory.OTHER;
-        }
-        categoryTotals[cat] = (categoryTotals[cat] || 0) + amt;
-      }
-    });
-
-    categoryList = Object.entries(categoryTotals)
-      .filter(([cat]) => validEnumValues.includes(cat))
-      .map(([cat, amt]) => ({
-        rawCat: cat,
-        name: getCategoryLabel(cat),
-        amount: amt,
-        percent: monthTotalIncome > 0 ? Math.round((amt / monthTotalIncome) * 100) : 0
-      }))
-      .sort((a, b) => b.amount - a.amount);
+    }));
   }
 
   // 2. CONSUMO / COMPROMETIMENTO DA ENTRADA (Janela de 12 meses a partir de hoje)
@@ -123,22 +121,19 @@ export default function IncomeTimelineHeader({
   const endMonthNum = endTotalMonths % 12;
   const endMonthKey = `${endYear}-${String(endMonthNum + 1).padStart(2, '0')}`;
 
-  // Coletar eventos únicos de todos os tracks para cálculo de consumo cruzado
-  const seenEventIds = new Set();
-  const allBoardEvents = [];
+  // Coletar eventos únicos de todos os tracks para cálculo de consumo cruzado e acumulação
+  const seenEventMap = new Map();
   const rawEventsList = [
+    ...(allTimelines || []).flatMap((tl) => tl.events || []),
     ...(allEvents || []),
-    ...eventsList,
-    ...(allTimelines || []).flatMap((tl) => tl.events || [])
+    ...eventsList
   ];
   for (const ev of rawEventsList) {
     if (!ev) continue;
     const key = ev.id || `${ev.date}-${ev.title}-${ev.amount}`;
-    if (!seenEventIds.has(key)) {
-      seenEventIds.add(key);
-      allBoardEvents.push(ev);
-    }
+    seenEventMap.set(key, ev);
   }
+  const allBoardEvents = Array.from(seenEventMap.values());
 
   let annualTotalIncome = 0;
   let annualLoans = 0;
@@ -150,11 +145,11 @@ export default function IncomeTimelineHeader({
     const evMonthKey = ev.date.substring(0, 7);
     if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
       const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || '')) || ev.timelineType;
-      const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
-      const isLoan = isLoanInstallment || ev.eventType === EventType.LOAN || ev.eventType === EventType.AMORTIZATION || ev.isLoan || ev.category === 'amortizacao' || isLoanTimelineType(tlType);
-      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment || tlType === TimelineType.INVESTMENT;
-      const isExpense = ((ev.eventType === EventType.EXPENSE || ev.category === 'saida_recorrente' || ev.category === 'expense' || ev.isExpense || tlType === TimelineType.EXPENSE) && !isLoan && !isInvestment);
-      const isIncome = (ev.eventType === EventType.INCOME || ev.category === 'entrada_recorrente' || ev.category === 'income' || ev.isIncome || tlType === TimelineType.INCOME) && !isLoan && !isInvestment && !isExpense;
+      const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== AmortizationEventCategory.REDUCE_TERM && ev.category !== AmortizationEventCategory.REDUCE_INSTALLMENT);
+      const isLoan = isLoanInstallment || ev.eventType === EventType.LOAN || ev.eventType === EventType.AMORTIZATION || ev.isLoan || isLoanTimelineType(tlType);
+      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment || tlType === TimelineType.INVESTMENT;
+      const isExpense = ((ev.eventType === EventType.EXPENSE || ev.isExpense || tlType === TimelineType.EXPENSE) && !isLoan && !isInvestment);
+      const isIncome = (ev.eventType === EventType.INCOME || ev.isIncome || tlType === TimelineType.INCOME) && !isLoan && !isInvestment && !isExpense;
 
       const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
       const amt = isLoanInstallment
@@ -188,16 +183,19 @@ export default function IncomeTimelineHeader({
   };
   const consumptionColor = getConsumptionColor(commitmentPercent);
 
-  // 3. ACUMULAÇÃO ATUAL & PROJETADA (Soma dos Balanços mensais desde computeFrom do Timeboard até o mês atual + Valor Inicial da Timeline)
-  const balanceTimeline = (allTimelines || []).find((tl) => tl && (tl.type === TimelineType.BALANCE || tl.type === 'balance'));
+  // 3. ACUMULAÇÃO ATUAL & PROJETADA (Soma dos Balanços mensais desde computeFrom do Timeboard até o final do ano corrente + Valor Inicial da Timeline)
+  const balanceTimeline = (allTimelines || []).find((tl) => tl && tl.type === TimelineType.BALANCE);
   const timeboardComputeStart = timeboard?.computeFrom || timeboard?.compute_from;
   const balanceComputeStart = balanceTimeline?.computeStartDate || balanceTimeline?.compute_start_date || balanceTimeline?.computeFrom || balanceTimeline?.compute_from;
-  const ownComputeStart = timeline?.computeStartDate || timeline?.compute_start_date || timeline?.computeFrom || timeline?.compute_from;
+  const ownComputeStart = timeline?.computeStartDate || timeline?.compute_start_date || timeline?.computeFrom || timeline?.compute_from || timeline?.startDate || timeline?.start_date;
   const rawComputeStart = computeStartDate || timeboardComputeStart || balanceComputeStart || ownComputeStart;
 
   const computeFromMonth = rawComputeStart
-    ? (String(rawComputeStart) === '1900-01' || String(rawComputeStart).startsWith('1900-01') ? '1900-01' : String(rawComputeStart).substring(0, 7))
-    : currentMonthStr;
+    ? (String(rawComputeStart) === '1900-01' || String(rawComputeStart).startsWith('1900-01') || String(rawComputeStart) === 'all' ? '1900-01' : String(rawComputeStart).substring(0, 7))
+    : '1900-01';
+
+  const currentCalendarYear = new Date().getFullYear().toString();
+  const endOfYearMonthStr = `${currentCalendarYear}-12`;
 
   const monthlyTotalsRealized = new Map();
   const monthlyTotalsProjected = new Map();
@@ -207,48 +205,49 @@ export default function IncomeTimelineHeader({
     if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida') return;
 
     const evMonthKey = ev.date.substring(0, 7);
-    const isAfterStart = computeFromMonth === '1900-01' || evMonthKey >= computeFromMonth;
+    const isAfterStart = !computeFromMonth || computeFromMonth === '1900-01' || evMonthKey >= computeFromMonth;
     const isUpToCurrentMonth = evMonthKey <= currentMonthStr;
+    const isUpToEndOfYear = evMonthKey <= endOfYearMonthStr;
 
-    if (!isAfterStart || !isUpToCurrentMonth) return;
-
-    if (!monthlyTotalsRealized.has(evMonthKey)) {
-      monthlyTotalsRealized.set(evMonthKey, { income: 0, expense: 0, loan: 0, investmentDeduction: 0 });
-    }
-    if (!monthlyTotalsProjected.has(evMonthKey)) {
-      monthlyTotalsProjected.set(evMonthKey, { income: 0, expense: 0, loan: 0, investmentDeduction: 0 });
-    }
-
-    const mRealized = monthlyTotalsRealized.get(evMonthKey);
-    const mProjected = monthlyTotalsProjected.get(evMonthKey);
+    if (!isAfterStart || (!isUpToCurrentMonth && !isUpToEndOfYear)) return;
 
     const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || '')) || ev.timelineType;
-    const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
-    const isLoan = isLoanInstallment || ev.eventType === EventType.LOAN || ev.eventType === EventType.AMORTIZATION || ev.isLoan || ev.category === 'amortizacao' || isLoanTimelineType(tlType);
-    const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment || tlType === TimelineType.INVESTMENT;
-    const isExpense = ((ev.eventType === EventType.EXPENSE || ev.category === 'saida_recorrente' || ev.category === 'expense' || ev.isExpense || tlType === TimelineType.EXPENSE) && !isLoan && !isInvestment);
-    const isIncome = (ev.eventType === EventType.INCOME || ev.category === 'entrada_recorrente' || ev.category === 'income' || ev.isIncome || tlType === TimelineType.INCOME) && !isLoan && !isInvestment && !isExpense;
+    const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== AmortizationEventCategory.REDUCE_TERM && ev.category !== AmortizationEventCategory.REDUCE_INSTALLMENT);
+    const isLoan = isLoanInstallment || ev.eventType === EventType.LOAN || ev.eventType === EventType.AMORTIZATION || ev.isLoan || isLoanTimelineType(tlType);
+    const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment || tlType === TimelineType.INVESTMENT;
+    const isExpense = ((ev.eventType === EventType.EXPENSE || ev.isExpense || tlType === TimelineType.EXPENSE) && !isLoan && !isInvestment);
+    const isIncome = (ev.eventType === EventType.INCOME || ev.isIncome || tlType === TimelineType.INCOME) && !isLoan && !isInvestment && !isExpense;
 
     const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
     const amt = isLoanInstallment
       ? Math.abs(Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0)))
       : Math.abs(Number(ev.amount || 0));
 
-    const isPastMonth = evMonthKey < currentMonthStr;
-    const isRealized = isPastMonth || isPositiveStatus(ev.status) || isPositiveStatus(ev.status?.toLowerCase()) || Boolean(ev.isCompleted);
+    // Balanço Realizado (até o mês atual)
+    if (isUpToCurrentMonth) {
+      if (!monthlyTotalsRealized.has(evMonthKey)) {
+        monthlyTotalsRealized.set(evMonthKey, { income: 0, expense: 0, loan: 0, investmentDeduction: 0 });
+      }
+      const mRealized = monthlyTotalsRealized.get(evMonthKey);
+      const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
 
-    if (isIncome) {
-      mProjected.income += amt;
-      if (isRealized) mRealized.income += amt;
-    } else if (isExpense) {
-      mProjected.expense += amt;
-      if (isRealized) mRealized.expense += amt;
-    } else if (isLoan) {
-      mProjected.loan += amt;
-      if (isRealized) mRealized.loan += amt;
-    } else if (isInvestment && !isExternal && !ev.isFirstOccurrence) {
-      mProjected.investmentDeduction += amt;
-      if (isRealized) mRealized.investmentDeduction += amt;
+      if (isIncome && isRealized) mRealized.income += amt;
+      else if (isExpense && isRealized) mRealized.expense += amt;
+      else if (isLoan && isRealized) mRealized.loan += amt;
+      else if (isInvestment && !isExternal && !ev.isFirstOccurrence && isRealized) mRealized.investmentDeduction += amt;
+    }
+
+    // Balanço Projetado (até o final do ano corrente)
+    if (isUpToEndOfYear) {
+      if (!monthlyTotalsProjected.has(evMonthKey)) {
+        monthlyTotalsProjected.set(evMonthKey, { income: 0, expense: 0, loan: 0, investmentDeduction: 0 });
+      }
+      const mProjected = monthlyTotalsProjected.get(evMonthKey);
+
+      if (isIncome) mProjected.income += amt;
+      else if (isExpense) mProjected.expense += amt;
+      else if (isLoan) mProjected.loan += amt;
+      else if (isInvestment && !isExternal && !ev.isFirstOccurrence) mProjected.investmentDeduction += amt;
     }
   });
 
@@ -265,19 +264,20 @@ export default function IncomeTimelineHeader({
   });
 
   const initialValueAmount = Number(timeline.initialValue ?? timeline.initial_value ?? 0);
-  const currentAccumulation = initialValueAmount + accumulatedProjectedBalance;
-  const currentProjectedAccumulation = initialValueAmount + accumulatedRealizedBalance;
+  const currentAccumulation = initialValueAmount + accumulatedRealizedBalance;
+  const currentProjectedAccumulation = initialValueAmount + accumulatedProjectedBalance;
 
   // Projeção do Ano Corrente (Jan - Dez) para o PieDonut do Quadrante 3
-  const currentCalendarYear = new Date().getFullYear().toString();
   let calendarYearProjectedIncome = 0;
   let calendarYearReceivedIncome = 0;
 
   eventsList.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
+    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+    const evMonthKey = ev.date.substring(0, 7);
+    if (computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== 'all' && evMonthKey < computeFromMonth) return;
     const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
     if (isIncome && ev.date.startsWith(currentCalendarYear)) {
-      const isReceived = ev.status === 'paid' || ev.status === 'received' || ev.status === 'completed' || ev.status === 'settled' || ev.isCompleted;
+      const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
       const amt = Math.abs(Number(ev.amount || 0));
 
       calendarYearProjectedIncome += amt;
@@ -538,7 +538,7 @@ export default function IncomeTimelineHeader({
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '0.74rem' }}>
                   <span style={{ color: 'var(--text-muted)', fontWeight: '600' }}>
-                    {t('incomeHeader.projectedAccumulationLabel')}
+                    {t('incomeHeader.projectedAccumulationLabel', { year: currentCalendarYear })}
                   </span>
                   <strong style={{ color: currentProjectedAccumulation >= 0 ? TimelineColor.SUCCESS : TimelineColor.DANGER, fontSize: '0.86rem' }}>
                     {formatCurrency(currentProjectedAccumulation)}
@@ -584,56 +584,24 @@ export default function IncomeTimelineHeader({
 
               const d = new Date(year, month - 1, 1);
               const label = format(d, 'MMM', { locale: dateLocale }).replace('.', '').toUpperCase();
-              last7Months.push({ key, label, total: 0 });
+              const isNotComputed = Boolean(computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== 'all' && key < computeFromMonth);
+              last7Months.push({ key, label, total: 0, isNotComputed });
             }
 
-            const monthMap = new Map();
-            last7Months.forEach((m) => {
-              monthMap.set(m.key, { income: 0, expense: 0, loan: 0, investmentDeduction: 0 });
-            });
-
-            allBoardEvents.forEach((ev) => {
-              if (!ev || !ev.date || ev.isDeleted) return;
-              if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida') return;
-
+            eventsList.forEach((ev) => {
+              if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
               const evMonthKey = ev.date.substring(0, 7);
-              const isAfterStart = computeFromMonth === '1900-01' || evMonthKey >= computeFromMonth;
-              if (!isAfterStart || !monthMap.has(evMonthKey)) return;
+              if (computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== 'all' && evMonthKey < computeFromMonth) return;
 
-              const mData = monthMap.get(evMonthKey);
-
-              const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || '')) || ev.timelineType;
-              const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
-              const isLoan = isLoanInstallment || ev.eventType === EventType.LOAN || ev.eventType === EventType.AMORTIZATION || ev.isLoan || ev.category === 'amortizacao' || isLoanTimelineType(tlType);
-              const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === 'investimento_poupanca' || ev.category === 'investment' || ev.isInvestment || tlType === TimelineType.INVESTMENT;
-              const isExpense = ((ev.eventType === EventType.EXPENSE || ev.category === 'saida_recorrente' || ev.category === 'expense' || ev.isExpense || tlType === TimelineType.EXPENSE) && !isLoan && !isInvestment);
-              const isIncome = (ev.eventType === EventType.INCOME || ev.category === 'entrada_recorrente' || ev.category === 'income' || ev.isIncome || tlType === TimelineType.INCOME) && !isLoan && !isInvestment && !isExpense;
-
-              const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
-              const amt = isLoanInstallment
-                ? Math.abs(Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0)))
-                : Math.abs(Number(ev.amount || 0));
-
+              const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
               if (isIncome) {
-                mData.income += amt;
-              } else if (isExpense) {
-                mData.expense += amt;
-              } else if (isLoan) {
-                mData.loan += amt;
-              } else if (isInvestment && !isExternal && !ev.isFirstOccurrence) {
-                mData.investmentDeduction += amt;
-              }
-            });
+                const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
+                if (!isReceived) return;
 
-            last7Months.forEach((m) => {
-              const isMonthAfterStart = computeFromMonth === '1900-01' || m.key >= computeFromMonth;
-              if (!isMonthAfterStart) {
-                m.total = 0;
-                return;
-              }
-              const mData = monthMap.get(m.key);
-              if (mData) {
-                m.total = mData.income - (mData.expense + mData.loan + mData.investmentDeduction);
+                const foundMonth = last7Months.find((m) => m.key === evMonthKey);
+                if (foundMonth) {
+                  foundMonth.total += Math.abs(Number(ev.amount || 0));
+                }
               }
             });
 

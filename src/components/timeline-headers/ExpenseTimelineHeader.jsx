@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { ExpenseEventCategory } from '../../../shared/enums/ExpensesEventCategory.js';
-import { EventType, isCancelledStatus, TimelineColor } from '../../enums/index.js';
+import { EventType, EventStatus, isCancelledStatus, TimelineColor } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
@@ -15,6 +15,8 @@ import { computeMonthDiff } from '../../utils/timelineCharts.js';
 
 export default function ExpenseTimelineHeader({
   timeline,
+  timeboard = null,
+  computeStartDate = null,
   allTimelines = [],
   events = [],
   filteredEvents,
@@ -228,8 +230,8 @@ export default function ExpenseTimelineHeader({
           const evMonthKey = ev.date.substring(0, 7);
 
           if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
-            const isExpense = ev.eventType === 'expense' || ev.eventType === EventType.EXPENSE || ev.isExpense;
-            const isIncome = ev.eventType === 'income' || ev.eventType === EventType.INCOME || ev.isIncome;
+            const isExpense = ev.eventType === EventType.EXPENSE || ev.isExpense;
+            const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
 
             if (isExpense) {
               annualTotalExpense += Number(ev.amount || 0);
@@ -265,8 +267,8 @@ export default function ExpenseTimelineHeader({
         let uiPaidCnt = 0;
 
         eventsList.forEach((ev) => {
-          if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
-          const isExpense = ev.eventType === 'expense' || ev.eventType === EventType.EXPENSE || ev.isExpense;
+          if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+          const isExpense = ev.eventType === EventType.EXPENSE || ev.isExpense;
           if (isExpense) {
             if (ev.date >= todayStr && ev.date <= next30Str) {
               uiCommAmt += Number(ev.amount || 0);
@@ -528,6 +530,13 @@ export default function ExpenseTimelineHeader({
 
             {/* Rodapé com Comparações, Projeção Anual & Gráfico de Colunas dos últimos 6 meses + mês atual */}
             {(() => {
+              const timeboardComputeStart = timeboard?.computeFrom || timeboard?.compute_from;
+              const ownComputeStart = timeline?.computeStartDate || timeline?.compute_start_date || timeline?.computeFrom || timeline?.compute_from;
+              const rawComputeStart = computeStartDate || timeboardComputeStart || ownComputeStart;
+              const computeFromMonth = rawComputeStart && String(rawComputeStart) !== '1900-01' && !String(rawComputeStart).startsWith('1900-01') && String(rawComputeStart) !== 'all'
+                ? String(rawComputeStart).substring(0, 7)
+                : null;
+
               // Gerar estrutura dos últimos 6 meses + mês atual (total 7 meses)
               const currentDateObj = new Date();
               const last7Months = [];
@@ -540,15 +549,17 @@ export default function ExpenseTimelineHeader({
 
                 const d = new Date(year, month - 1, 1);
                 const label = d.toLocaleDateString(localeStr, { month: 'short' }).replace('.', '').toUpperCase();
-                last7Months.push({ key, label, total: 0 });
+                const isNotComputed = Boolean(computeFromMonth && key < computeFromMonth);
+                last7Months.push({ key, label, total: 0, isNotComputed });
               }
 
               // Calcular volume de despesas de cada um dos 7 meses
               eventsList.forEach((ev) => {
-                if (!ev || !ev.date || ev.isDeleted || ev.status === 'cancelled' || ev.status === 'deleted') return;
-                const isExpense = ev.eventType === 'expense' || ev.isExpense;
+                if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+                const isExpense = ev.eventType === EventType.EXPENSE || ev.isExpense;
                 if (isExpense) {
                   const evKey = ev.date.substring(0, 7);
+                  if (computeFromMonth && evKey < computeFromMonth) return;
                   const foundMonth = last7Months.find((m) => m.key === evKey);
                   if (foundMonth) {
                     foundMonth.total += Number(ev.amount || 0);

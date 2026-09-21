@@ -549,7 +549,7 @@ export default function App() {
 
   const handleSaveComputeStartDate = async (startDateVal) => {
     const balanceTimeline = (activeTimeboardTimelines || []).find(
-      (t) => t && (t.type === TimelineType.BALANCE || t.type === 'balance')
+      (t) => t && t.type === TimelineType.BALANCE
     );
     const targetTimeline = balanceTimeline || activeTimeline;
     if (targetTimeline && targetTimeline.id) {
@@ -1432,11 +1432,14 @@ export default function App() {
       };
     };
 
+    let finalTargetStatus = explicitStatus;
+
     // 1. Optimistic update in rawEvents
     setRawEvents((prevEvents) =>
       prevEvents.map((ev) => {
         if (ev.id !== installmentId) return ev;
         const { nextStatus, nextCompleted } = getNextState(ev);
+        if (!finalTargetStatus) finalTargetStatus = nextStatus;
         return {
           ...ev,
           status: nextStatus,
@@ -1455,6 +1458,7 @@ export default function App() {
         const updatedEvents = (tl.events || []).map((ev) => {
           if (ev.id !== installmentId) return ev;
           const { nextStatus, nextCompleted } = getNextState(ev);
+          if (!finalTargetStatus) finalTargetStatus = nextStatus;
           return {
             ...ev,
             status: nextStatus,
@@ -1473,7 +1477,7 @@ export default function App() {
 
     // 3. Persist to backend asynchronously in the background
     try {
-      await api.toggleEventPayment(installmentId, explicitStatus);
+      await api.toggleEventPayment(installmentId, finalTargetStatus);
     } catch (err) {
       console.error('Error toggling payment status:', err);
       // Rollback on network failure

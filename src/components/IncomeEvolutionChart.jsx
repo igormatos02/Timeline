@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { format, parseISO, addMonths } from 'date-fns';
 import { formatCurrency } from '../utils/formatCurrency';
-import { EventType, EventStatus, TimelineType, TimelineColor } from '../enums/index.js';
+import { EventType, EventStatus, TimelineType, TimelineColor, isPositiveStatus } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 export default function IncomeEvolutionChart({
@@ -113,7 +113,7 @@ export default function IncomeEvolutionChart({
       if (eventsByMonth[monthKey] && eventsByMonth[monthKey].length > 0) {
         eventsByMonth[monthKey].forEach((ev) => {
           const amt = Number(ev.amount || 0);
-          const isReceived = ev.status === EventStatus.RECEIVED || ev.status === EventStatus.PAID || ev.status === EventStatus.INVESTED || ev.status === 'Recebido' || ev.status === 'Pago' || ev.status === 'Investido' || ev.isCompleted;
+          const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
 
           const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent;
           const isIncome = (ev.eventType === EventType.INCOME || ev.isIncome === true) && !isLoan;

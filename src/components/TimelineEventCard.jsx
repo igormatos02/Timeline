@@ -122,7 +122,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
     setIsTogglingStatus(true);
     try {
-      await onToggleLoanPayment(event.id, explicitStatus);
+      await onToggleLoanPayment(event.id, nextStatus);
     } catch (err) {
       console.error('Error toggling status:', err);
       setLocalStatus(event.status);
@@ -2222,18 +2222,18 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
             if (nextAuto) {
               const isPastOrToday = Boolean(event.date && event.date <= todayStr);
-              if (isPastOrToday && event.status !== 'cancelled' && event.status !== 'deleted' && event.status !== 'Cancelado' && event.status !== 'Excluido') {
+              if (isPastOrToday && !isCancelledStatus(event.status) && event.status !== EventStatus.DELETED) {
                 if (isIncomeEvent) {
-                  newStatus = 'received';
+                  newStatus = EventStatus.RECEIVED;
                   newIsCompleted = true;
                 } else if (isInvestmentEvent) {
-                  newStatus = 'invested';
+                  newStatus = EventStatus.INVESTED;
                   newIsCompleted = true;
                 } else if (isAmortization) {
-                  newStatus = 'amortized';
+                  newStatus = EventStatus.AMORTIZED;
                   newIsCompleted = true;
                 } else {
-                  newStatus = 'paid';
+                  newStatus = EventStatus.PAID;
                   newIsCompleted = true;
                 }
               }
@@ -4520,7 +4520,7 @@ export const TimelineEventCard = React.memo(function TimelineEventCard({
     ? format(eventDateObj, language === 'pt' ? "EEEE, dd 'de' MMMM" : "EEEE, MMMM dd", { locale: dateLocale })
     : '';
 
-  const isBalance = timelineType === TimelineType.BALANCE || timelineType === 'balance' || timelineType === 'balanco';
+  const isBalance = timelineType === TimelineType.BALANCE;
 
   const baseColor = isBalance
     ? TimelineColor.SLATE

@@ -120,8 +120,8 @@ export default function BalanceTimelineHeader({
 
   const rawComputeStart = computeStartDate || timeboard?.computeFrom || timeboard?.compute_from || timeline.computeFrom || timeline.compute_from || timeline.startDate || timeline.start_date;
   const computeFromMonth = rawComputeStart
-    ? (String(rawComputeStart) === '1900-01' || String(rawComputeStart).startsWith('1900-01') ? '1900-01' : String(rawComputeStart).substring(0, 7))
-    : currentMonthStr;
+    ? (String(rawComputeStart) === '1900-01' || String(rawComputeStart).startsWith('1900-01') || String(rawComputeStart) === 'all' ? '1900-01' : String(rawComputeStart).substring(0, 7))
+    : '1900-01';
 
   const targetHorizonMonthStr = (() => {
     try {
@@ -144,7 +144,7 @@ export default function BalanceTimelineHeader({
     return isLoan && isActive;
   });
   const hasLoanTimeline = activeLoanTimelines.length > 0;
-  const hasInvestmentTimeline = (allTimelines || []).some((t) => t.type === TimelineType.INVESTMENT || t.type === 'investments' || t.type === 'investment');
+  const hasInvestmentTimeline = (allTimelines || []).some((t) => t.type === TimelineType.INVESTMENT);
 
   const todayDate = new Date();
   const currentMonthLabel = (() => {
@@ -224,26 +224,20 @@ export default function BalanceTimelineHeader({
 
     const isIncome = (
       ev.eventType === EventType.INCOME ||
-      ev.eventType === 'income' ||
       tlType === TimelineType.INCOME ||
-      ev.category === 'entrada_recorrente' ||
       ev.category === IncomeEventCategory.RECURRING_INCOME ||
       Boolean(ev.isIncome)
     );
 
     const isInvestment = (
       ev.eventType === EventType.INVESTMENT ||
-      ev.eventType === 'investment' ||
-      ev.eventType === 'investimento' ||
       tlType === TimelineType.INVESTMENT ||
       Boolean(ev.isInvestment)
     );
 
     const isExpense = (
       ev.eventType === EventType.EXPENSE ||
-      ev.eventType === 'expense' ||
       tlType === TimelineType.EXPENSE ||
-      ev.category === 'saida_recorrente' ||
       ev.category === ExpenseEventCategory.RECURRING_EXPENSE ||
       Boolean(ev.isExpense)
     ) && !isIncome && !isInvestment;
@@ -560,26 +554,20 @@ export default function BalanceTimelineHeader({
 
                   const isIncome = (
                     ev.eventType === EventType.INCOME ||
-                    ev.eventType === 'income' ||
                     tlType === TimelineType.INCOME ||
-                    ev.category === 'entrada_recorrente' ||
                     ev.category === IncomeEventCategory.RECURRING_INCOME ||
                     Boolean(ev.isIncome)
                   ) && !isLoan;
 
                   const isInvestment = (
                     ev.eventType === EventType.INVESTMENT ||
-                    ev.eventType === 'investment' ||
-                    ev.eventType === 'investimento' ||
                     tlType === TimelineType.INVESTMENT ||
                     Boolean(ev.isInvestment)
                   ) && !isLoan;
 
                   const isExpense = (
                     ev.eventType === EventType.EXPENSE ||
-                    ev.eventType === 'expense' ||
                     tlType === TimelineType.EXPENSE ||
-                    ev.category === 'saida_recorrente' ||
                     ev.category === ExpenseEventCategory.RECURRING_EXPENSE ||
                     Boolean(ev.isExpense)
                   ) && !isIncome && !isInvestment && !isLoan;

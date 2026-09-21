@@ -47,10 +47,8 @@ export class FinancialEventService {
       await financialEventStatusRepository.upsertStatus(year, month, eventId, EventStatus.DELETED, options);
     } else if (status === EventStatus.CANCELLED || isCancelledStatus(status)) {
       await financialEventStatusRepository.upsertStatus(year, month, eventId, EventStatus.CANCELLED, options);
-    } else if (isPositiveStatus(status)) {
+    } else {
       await financialEventStatusRepository.upsertStatus(year, month, eventId, status, options);
-    } else if (isNegativeStatus(status)) {
-      await financialEventStatusRepository.deleteStatus(year, month, eventId);
     }
   }
 
@@ -773,6 +771,22 @@ export class FinancialEventService {
         throw new Error(`${t('backend.validation.eventNotFound')}: ${id}`);
       }
       targetDate = dateSuffix || targetEvent.date;
+    }
+
+    if (!explicitStatus && targetDate) {
+      const dateStr = String(targetDate);
+      if (dateStr.length >= 7) {
+        const year = parseInt(dateStr.substring(0, 4), 10);
+        const month = parseInt(dateStr.substring(5, 7), 10);
+        const targetEventId = targetEvent.eventId || targetEvent.id;
+        const statusMap = await financialEventStatusRepository.getStatusMap();
+        const key = `${year}_${month}_${targetEventId}`;
+        const keyById = `${year}_${month}_${targetEvent.id}`;
+        const matched = statusMap.get(key) || statusMap.get(keyById);
+        if (matched) {
+          targetEvent = { ...targetEvent, status: matched, isCompleted: isPositiveStatus(matched) };
+        }
+      }
     }
 
     const toggled = calcToggledStatus(targetEvent, explicitStatus);

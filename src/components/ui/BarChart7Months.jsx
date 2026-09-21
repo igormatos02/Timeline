@@ -25,7 +25,10 @@ export default function BarChart7Months({
   mutedGradientBottom,
   currentTextColor,
   formatValue = (val) => formatCurrency(val).replace(',00', ''),
-  formatProjection = (val) => formatCurrency(val)
+  formatProjection = (val) => formatCurrency(val),
+  mode = 'projected',
+  onToggleMode,
+  accentColor
 }) {
   const { t } = useTranslation();
   const maxMonthTotal = Math.max(...months.map((m) => Math.abs(m.total || 0)), 1);
@@ -112,15 +115,73 @@ export default function BarChart7Months({
       >
         <div
           style={{
-            fontSize: '0.7rem',
-            fontWeight: '800',
-            color: 'var(--text-dim)',
-            textTransform: 'uppercase',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
             marginBottom: '10px',
-            letterSpacing: '0.5px'
+            gap: '8px',
+            flexWrap: 'wrap'
           }}
         >
-          {chartTitle}
+          <div
+            style={{
+              fontSize: '0.7rem',
+              fontWeight: '800',
+              color: 'var(--text-dim)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}
+          >
+            {chartTitle}
+          </div>
+
+          {onToggleMode && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                background: 'rgba(255, 255, 255, 0.04)',
+                borderRadius: '6px',
+                padding: '2px',
+                border: '1px solid var(--border-glass)'
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => onToggleMode('projected')}
+                style={{
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  fontSize: '0.68rem',
+                  fontWeight: mode === 'projected' ? '700' : '500',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: mode === 'projected' ? (accentColor || goodColor || 'var(--primary)') : 'transparent',
+                  color: mode === 'projected' ? TimelineColor.WHITE : 'var(--text-muted)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {t('timeline.monthProjection')}
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleMode('realized')}
+                style={{
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  fontSize: '0.68rem',
+                  fontWeight: mode === 'realized' ? '700' : '500',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: mode === 'realized' ? (accentColor || goodColor || 'var(--primary)') : 'transparent',
+                  color: mode === 'realized' ? TimelineColor.WHITE : 'var(--text-muted)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {t('timeline.realProjection')}
+              </button>
+            </div>
+          )}
         </div>
         <div
           style={{

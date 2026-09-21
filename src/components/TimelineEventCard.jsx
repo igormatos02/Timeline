@@ -4494,6 +4494,7 @@ export const TimelineEventCard = React.memo(function TimelineEventCard({
   currentTimelineId,
   timelineType,
   activeFinancialTab = null,
+  showYear = false,
   onEdit,
   onUpdateEventDirect,
   onDelete,
@@ -4517,7 +4518,13 @@ export const TimelineEventCard = React.memo(function TimelineEventCard({
   const firstEvent = eventList[0];
   const eventDateObj = firstEvent.date ? parseISO(firstEvent.date) : (firstEvent.dueDate ? parseISO(firstEvent.dueDate) : null);
   const formattedDateStr = eventDateObj
-    ? format(eventDateObj, language === 'pt' ? "EEEE, dd 'de' MMMM" : "EEEE, MMMM dd", { locale: dateLocale })
+    ? format(
+        eventDateObj,
+        showYear
+          ? (language === 'pt' ? "EEEE, dd 'de' MMMM 'de' yyyy" : "EEEE, MMMM dd, yyyy")
+          : (language === 'pt' ? "EEEE, dd 'de' MMMM" : "EEEE, MMMM dd"),
+        { locale: dateLocale }
+      )
     : '';
 
   const isBalance = timelineType === TimelineType.BALANCE;

@@ -190,7 +190,7 @@ function VerticalTimeline({
   const isLoanTimelineOrTab = isLoanTimelineType(timeline.type);
   const isInvestmentTimelineOrTab = normalizeTimelineType(timeline.type) === TimelineType.INVESTMENT;
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState(EventStatus.ALL);
+  const [selectedStatusFilters, setSelectedStatusFilters] = useState([]);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(EventStatus.ALL);
   const [selectedLabelFilter, setSelectedLabelFilter] = useState(EventStatus.ALL);
   const [showEmptyDays, setShowEmptyDays] = useState(true);
@@ -212,7 +212,7 @@ function VerticalTimeline({
 
   React.useEffect(() => {
     setSelectedCategoryFilter(EventStatus.ALL);
-    setSelectedStatusFilter(EventStatus.ALL);
+    setSelectedStatusFilters([]);
     setSelectedExpenseCategories([]);
   }, [timeline?.id]);
 
@@ -220,9 +220,11 @@ function VerticalTimeline({
   const isProjects = activeTimeboard?.type === TimeboardType.PROJECTS || normalizeTimelineType(timeline?.type) === TimelineType.PROJECT;
   const isReminders = activeTimeboard?.type === TimeboardType.REMINDERS || normalizeTimelineType(timeline?.type) === TimelineType.REMINDER;
 
+  const balanceTimeline = (timelines || []).find((tl) => tl && tl.type === TimelineType.BALANCE);
   const timeboardComputeStart = activeTimeboard?.computeFrom || activeTimeboard?.compute_from;
-  const timelineComputeStart = timeline?.computeStartDate || timeline?.compute_start_date || timeline?.computeFrom || timeline?.compute_from;
-  const rawComputeStart = timeboardComputeStart || timelineComputeStart;
+  const balanceComputeStart = balanceTimeline?.computeStartDate || balanceTimeline?.compute_start_date || balanceTimeline?.computeFrom || balanceTimeline?.compute_from;
+  const timelineComputeStart = timeline?.computeStartDate || timeline?.compute_start_date || timeline?.computeFrom || timeline?.compute_from || timeline?.startDate || timeline?.start_date;
+  const rawComputeStart = timeboardComputeStart || balanceComputeStart || timelineComputeStart;
   const computeFromMonth = rawComputeStart && String(rawComputeStart) !== '1900-01' && !String(rawComputeStart).startsWith('1900-01') && String(rawComputeStart) !== 'all'
     ? String(rawComputeStart).substring(0, 7)
     : null;
@@ -328,10 +330,78 @@ function VerticalTimeline({
     }
   };
 
+  // Multi-selection of status filters
+  const toggleStatusFilter = (stId) => {
+    if (stId === EventStatus.ALL) {
+      setSelectedStatusFilters([]);
+      return;
+    }
+    if (selectedStatusFilters.length === 0) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+    if (selectedStatusFilters.includes(stId)) {
+      setSelectedStatusFilters(selectedStatusFilters.filter((id) => id !== stId));
+    } else {
+      setSelectedStatusFilters([...selectedStatusFilters, stId]);
+    }
+  };
+
+  const selectAllStatuses = () => {
+    setSelectedStatusFilters([]);
+  };
+
+  const getStatusFilterOptions = () => {
+    if ([TimelineType.INCOME, TimelineType.BALANCE].includes(timeline.type)) {
+      return [
+        { id: EventStatus.ALL, name: t('status.all'), icon: <Layers size={13} /> },
+        { id: EventStatus.RECEIVED, name: t('status.received'), icon: <CheckCircle2 size={13} /> },
+        { id: EventStatus.PENDING, name: t('status.pending'), icon: <Clock size={13} /> },
+        { id: EventStatus.OVERDUE, name: t('status.overdue'), icon: <AlertCircle size={13} /> }
+      ];
+    }
+    if ([TimelineType.EXPENSE, TimelineType.LOAN].includes(timeline.type) || isLoanTimelineType(timeline.type)) {
+      return [
+        { id: EventStatus.ALL, name: t('status.all'), icon: <Layers size={13} /> },
+        { id: EventStatus.PAID, name: t('status.paid'), icon: <CheckCircle2 size={13} /> },
+        { id: EventStatus.PENDING, name: t('status.pending'), icon: <Clock size={13} /> },
+        { id: EventStatus.OVERDUE, name: t('status.overdue'), icon: <AlertCircle size={13} /> }
+      ];
+    }
+    if (timeline.type === TimelineType.INVESTMENT) {
+      return [
+        { id: EventStatus.ALL, name: t('status.all'), icon: <Layers size={13} /> },
+        { id: EventStatus.INVESTED, name: t('status.invested'), icon: <CheckCircle2 size={13} /> },
+        { id: EventStatus.PENDING, name: t('status.pending'), icon: <Clock size={13} /> },
+        { id: EventStatus.OVERDUE, name: t('status.overdue'), icon: <AlertCircle size={13} /> }
+      ];
+    }
+    return [
+      { id: EventStatus.ALL, name: t('status.all'), icon: <Layers size={13} /> },
+      { id: EventStatus.IN_PROGRESS, name: t('status.inProgress'), icon: <Play size={13} /> },
+      { id: EventStatus.COMPLETED, name: t('status.completed'), icon: <CheckCircle2 size={13} /> },
+      { id: EventStatus.PLANNED, name: t('status.planned'), icon: <Calendar size={13} /> }
+    ];
+  };
+
   // Multi-selection of categories for Expense timeline
   const [selectedExpenseCategories, setSelectedExpenseCategories] = useState([]);
 
+  const isCategoryFiltered =
+    (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) ||
+    (timeline.type !== TimelineType.EXPENSE && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos');
+
+  const isListView = selectedStatusFilters.length > 0 || isCategoryFiltered;
+
+  const resetAllFilters = () => {
+    setSelectedStatusFilters([]);
+    setSelectedExpenseCategories([]);
+    setSelectedCategoryFilter(EventStatus.ALL);
+  };
+
   const toggleExpenseCategory = (catId) => {
+    if (!isListView) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
     if (selectedExpenseCategories.length === 0) {
       setSelectedExpenseCategories([catId]);
     } else if (selectedExpenseCategories.includes(catId)) {
@@ -499,6 +569,42 @@ function VerticalTimeline({
     };
   }, [timeline?.id, timeline?.events?.length, activeFinancialTab, positionOnToday]);
 
+  // Auto-scroll when switching between full timeline view and list view (status or category filtered)
+  const prevIsListViewRef = React.useRef(isListView);
+  React.useEffect(() => {
+    // When switching from timeline to list mode -> instant jump to top of page
+    if (!prevIsListViewRef.current && isListView) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+    // When returning to full timeline view -> instant scroll to today / current month
+    if (prevIsListViewRef.current && !isListView) {
+      userInteractedRef.current = false;
+      let attempts = 0;
+      const maxAttempts = 12;
+
+      const attemptScroll = () => {
+        return positionOnToday('instant');
+      };
+
+      attemptScroll();
+      const rafId = requestAnimationFrame(attemptScroll);
+
+      const intervalId = setInterval(() => {
+        attempts++;
+        const done = attemptScroll();
+        if (done || attempts >= maxAttempts) {
+          clearInterval(intervalId);
+        }
+      }, 50);
+
+      return () => {
+        cancelAnimationFrame(rafId);
+        clearInterval(intervalId);
+      };
+    }
+    prevIsListViewRef.current = isListView;
+  }, [isListView, positionOnToday]);
+
   // Reference to Today using current system date
   const todayDate = new Date();
   const todayStr = format(todayDate, 'yyyy-MM-dd');
@@ -516,6 +622,101 @@ function VerticalTimeline({
 
   // Events that belong on the timeline (have dates, or completed, or non-floating)
   const timelineEvents = allEvents.filter((ev) => !isFloatingTask(ev));
+
+  // Only display categories in the sidebar filter that have at least one existing event
+  const availableExpenseCategoryItems = useMemo(() => {
+    if (!timelineEvents || timelineEvents.length === 0) return [];
+    const presentCategories = new Set(
+      timelineEvents
+        .filter((ev) => !ev.isDeleted)
+        .map((ev) => ev.category || ev.expenseCategory || ev.type)
+        .filter(Boolean)
+    );
+    return EXPENSE_CATEGORY_ITEMS.filter((cat) => presentCategories.has(cat.id));
+  }, [timelineEvents]);
+
+  const availableCategoryOptions = useMemo(() => {
+    if (!timelineEvents || timelineEvents.length === 0) {
+      const allTitle = timeline.type === TimelineType.INCOME || timeline.type === TimelineType.INVESTMENT
+        ? t('category.all')
+        : t('category.allTypes');
+      return [{ id: EventStatus.ALL, name: allTitle, icon: <Layers size={13} /> }];
+    }
+
+    let allOptions = [];
+    if (timeline.type === TimelineType.LOAN) {
+      allOptions = [
+        {
+          id: EventType.LOAN_INSTALLMENT,
+          name: t('category.loanInstallment'),
+          icon: <CreditCard size={13} />,
+          matches: (ev) => ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao')
+        },
+        {
+          id: EventType.AMORTIZATION,
+          name: t('category.amortization'),
+          icon: <TrendingDown size={13} />,
+          matches: (ev) => ev.eventType === EventType.AMORTIZATION || ev.category === 'amortizacao' || ev.category === 'amortization' || ev.category === LoanEventCategory.AMORTIZATION || ev.category === AmortizationEventCategory.REDUCE_TERM || ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT || ev.category === AmortizationStrategy.REDUCE_TERM || ev.category === AmortizationStrategy.REDUCE_INSTALLMENT
+        }
+      ];
+    } else if (timeline.type === TimelineType.INCOME) {
+      allOptions = [
+        {
+          id: IncomeEventCategory.RECURRING,
+          name: t('category.recurringIncome'),
+          icon: <DollarSign size={13} />,
+          matches: (ev) => ev.category === IncomeEventCategory.RECURRING || ev.isRecurring || ev.periodicity === EventPeriodicity.MONTHLY || ev.recurrence === 'monthly'
+        },
+        {
+          id: IncomeEventCategory.SPORADIC,
+          name: t('category.sporadicIncome'),
+          icon: <Gift size={13} />,
+          matches: (ev) => ev.category === IncomeEventCategory.SPORADIC || (!ev.isRecurring && ev.category !== IncomeEventCategory.RECURRING)
+        }
+      ];
+    } else if (timeline.type === TimelineType.INVESTMENT) {
+      allOptions = [
+        {
+          id: InvestmentEventCategory.SAVINGS,
+          name: t('category.savingsInvestment'),
+          icon: <PiggyBank size={13} />,
+          matches: (ev) => ev.category === InvestmentEventCategory.SAVINGS || ev.category === 'poupanca' || ev.category === 'savings'
+        },
+        {
+          id: InvestmentEventCategory.ASSET,
+          name: t('category.assetInvestment'),
+          icon: <Landmark size={13} />,
+          matches: (ev) => ev.category === InvestmentEventCategory.ASSET || ev.category === 'ativo' || ev.category === 'asset'
+        },
+        {
+          id: InvestmentEventCategory.OTHER,
+          name: t('category.otherInvestment'),
+          icon: <Sparkles size={13} />,
+          matches: (ev) => ev.category === InvestmentEventCategory.OTHER || ev.category === 'outro' || ev.category === 'other'
+        }
+      ];
+    } else {
+      allOptions = [
+        { id: 'schedule', name: t('category.schedule'), icon: <Calendar size={13} />, matches: (ev) => ev.category === 'schedule' || ev.eventType === 'schedule' },
+        { id: 'repetitive', name: t('category.repetitive'), icon: <Repeat size={13} />, matches: (ev) => ev.category === 'repetitive' || ev.eventType === 'repetitive' },
+        { id: 'task', name: t('category.task'), icon: <Pin size={13} />, matches: (ev) => ev.category === 'task' || ev.eventType === 'task' },
+        { id: 'note', name: t('category.note'), icon: <FileText size={13} />, matches: (ev) => ev.category === 'note' || ev.eventType === 'note' }
+      ];
+    }
+
+    const filteredOptions = allOptions.filter((opt) =>
+      timelineEvents.some((ev) => !ev.isDeleted && (opt.matches ? opt.matches(ev) : (ev.category === opt.id || ev.eventType === opt.id)))
+    );
+
+    const allTitle = timeline.type === TimelineType.INCOME || timeline.type === TimelineType.INVESTMENT
+      ? t('category.all')
+      : t('category.allTypes');
+
+    return [
+      { id: EventStatus.ALL, name: allTitle, icon: <Layers size={13} /> },
+      ...filteredOptions
+    ];
+  }, [timelineEvents, timeline.type, t]);
 
   const isBalancoView = timeline.type === TimelineType.BALANCE;
 
@@ -537,17 +738,45 @@ function VerticalTimeline({
         ((ev.description || '').toLowerCase().includes(searchQuery.toLowerCase())) ||
         (ev.labels && ev.labels.some((l) => (l || '').toLowerCase().includes(searchQuery.toLowerCase())));
 
-      let matchesStatus = selectedStatusFilter === EventStatus.ALL;
-      if (!matchesStatus) {
-        if (selectedStatusFilter === EventStatus.RECEIVED) {
-          matchesStatus = ev.status === EventStatus.RECEIVED || ev.status === EventStatus.PAID;
-        } else if (selectedStatusFilter === EventStatus.PENDING) {
-          matchesStatus = (ev.status === EventStatus.PENDING || ev.status === EventStatus.PLANNED) && (!ev.isIncome || ev.date >= todayStr);
-        } else if (selectedStatusFilter === EventStatus.OVERDUE) {
-          matchesStatus = ev.status === EventStatus.OVERDUE || (ev.isIncome && ev.date < todayStr && ev.status !== EventStatus.RECEIVED);
-        } else {
-          matchesStatus = ev.status === selectedStatusFilter;
+      // Na visualização de lista por status ou por categoria, mostrar apenas eventos até ao final do mês atual e meses anteriores
+      if (isListView) {
+        const currentMonthKey = format(todayDate, 'yyyy-MM');
+        if (ev.date && ev.date.substring(0, 7) > currentMonthKey) {
+          return false;
         }
+      }
+
+      let matchesStatus = selectedStatusFilters.length === 0;
+      if (!matchesStatus) {
+
+        const isCompleted = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
+        const isCancelled = isCancelledStatus(ev.status);
+        const isOverdue = Boolean(
+          ev.status === EventStatus.OVERDUE ||
+          (ev.date && ev.date < todayStr && !isCompleted && !isCancelled && ev.status !== EventStatus.DELETED)
+        );
+        const isPending = !isCompleted && !isCancelled && !isOverdue && ev.status !== EventStatus.DELETED;
+
+        matchesStatus = selectedStatusFilters.some((statusFilter) => {
+          if (
+            statusFilter === EventStatus.RECEIVED ||
+            statusFilter === EventStatus.PAID ||
+            statusFilter === EventStatus.COMPLETED ||
+            statusFilter === EventStatus.INVESTED ||
+            statusFilter === EventStatus.SETTLED ||
+            statusFilter === EventStatus.FINISHED ||
+            statusFilter === EventStatus.CLOSED
+          ) {
+            return isCompleted;
+          }
+          if (statusFilter === EventStatus.OVERDUE) {
+            return isOverdue;
+          }
+          if (statusFilter === EventStatus.PENDING || statusFilter === EventStatus.PLANNED) {
+            return isPending;
+          }
+          return ev.status === statusFilter;
+        });
       }
 
       let matchesCategory = true;
@@ -592,44 +821,34 @@ function VerticalTimeline({
         return false;
       }
 
-      // Financial Tabs Filter by TimelineType
-      if (isFinancialTimeline) {
-        if (timeline.type === TimelineType.BALANCE) {
-          const isNonFinancial =
-            ev.eventType === EventType.TODO ||
-            ev.timelineType === TimelineType.TODO ||
-            ev.timeline_type === TimelineType.TODO ||
-            ev.category === EventType.TODO ||
-            ev.category === 'tarefa' ||
-            ev.category === 'todo' ||
-            ev.eventType === EventType.FOLLOWUP ||
-            ev.timelineType === TimelineType.FOLLOWUP ||
-            ev.timeline_type === TimelineType.FOLLOWUP ||
-            ev.category === 'followup' ||
-            ev.eventType === EventType.REGISTER ||
-            ev.timelineType === TimelineType.DIARY ||
-            ev.timeline_type === TimelineType.DIARY;
-          if (isNonFinancial) return false;
-        } else if (timeline.type === TimelineType.INCOME) {
-          const isIncome = ev.eventType === EventType.INCOME || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
-          if (!isIncome) return false;
-        } else if (timeline.type === TimelineType.EXPENSE) {
-          const isExpense = ev.eventType === EventType.EXPENSE || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
-          if (!isExpense) return false;
-        } else if (timeline.type === TimelineType.INVESTMENT) {
-          const isInvestment = ev.eventType === EventType.INVESTMENT || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
-          if (!isInvestment) return false;
-        } else if (isLoanTimelineType(timeline.type) || normalizeTimelineType(timeline.type) === TimelineType.LOAN) {
-          const isThisLoan = ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
-          if (!isThisLoan) return false;
-        }
+      // Timeline ownership filter
+      if (timeline.type === TimelineType.BALANCE) {
+        const isNonFinancial =
+          ev.eventType === EventType.TODO ||
+          ev.timelineType === TimelineType.TODO ||
+          ev.timeline_type === TimelineType.TODO ||
+          ev.category === EventType.TODO ||
+          ev.category === 'tarefa' ||
+          ev.category === 'todo' ||
+          ev.eventType === EventType.FOLLOWUP ||
+          ev.timelineType === TimelineType.FOLLOWUP ||
+          ev.timeline_type === TimelineType.FOLLOWUP ||
+          ev.category === 'followup' ||
+          ev.eventType === EventType.REGISTER ||
+          ev.timelineType === TimelineType.DIARY ||
+          ev.timeline_type === TimelineType.DIARY;
+        if (isNonFinancial) return false;
       } else {
         const isThisTimeline = ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
         if (!isThisTimeline) return false;
       }
 
-      // Respeitar os limites dinâmicos do horizonte de tempo para todas as timelines financeiras
+      // Respeitar os limites dinâmicos do horizonte de tempo e início de cálculo para todas as timelines financeiras
       if (isFinancialTimeline && ev.date) {
+        const evMonth = ev.date.substring(0, 7);
+        if (computeFromMonth && evMonth < computeFromMonth) {
+          return false;
+        }
         const maxEndStr = format(maxDateObj, 'yyyy-MM-dd');
         const minStartStr = format(startDateObj, 'yyyy-MM-dd');
         if (ev.date > maxEndStr || ev.date < minStartStr) {
@@ -652,7 +871,7 @@ function VerticalTimeline({
   }, [
     timelineEvents,
     searchQuery,
-    selectedStatusFilter,
+    selectedStatusFilters,
     selectedCategoryFilter,
     selectedExpenseCategories,
     selectedLabelFilter,
@@ -661,6 +880,7 @@ function VerticalTimeline({
     timeline.id,
     isFinancialTimeline,
     activeFinancialTab,
+    computeFromMonth,
   ]);
 
   const availableLabels = useMemo(() => {
@@ -918,6 +1138,7 @@ function VerticalTimeline({
     (timelineEvents || []).forEach((ev) => {
       if (!ev || !ev.date || ev.isDeleted) return;
       if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
+      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
@@ -931,7 +1152,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total projected loan payments per month across all events in timeboard scope
   const monthLoansTotalMap = useMemo(() => {
@@ -939,6 +1160,7 @@ function VerticalTimeline({
     (timelineEvents || []).forEach((ev) => {
       if (!ev || !ev.date || ev.isDeleted) return;
       if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida) return;
+      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
@@ -952,7 +1174,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total projected income per month across all events in timeboard scope
   const monthIncomeTotalMap = useMemo(() => {
@@ -960,6 +1182,7 @@ function VerticalTimeline({
     (timelineEvents || []).forEach((ev) => {
       if (!ev || !ev.date || ev.isDeleted) return;
       if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
+      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
@@ -974,7 +1197,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total projected investments per month across all events in timeboard scope (for badge display)
   const monthInvestmentsTotalMap = useMemo(() => {
@@ -982,6 +1205,7 @@ function VerticalTimeline({
     (timelineEvents || []).forEach((ev) => {
       if (!ev || !ev.date || ev.isDeleted) return;
       if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
+      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
@@ -994,7 +1218,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total deductible investments from monthly income (excludes external deposits and initial contributions)
   const monthInvestmentsDeductionsMap = useMemo(() => {
@@ -1002,6 +1226,7 @@ function VerticalTimeline({
     (timelineEvents || []).forEach((ev) => {
       if (!ev || !ev.date || ev.isDeleted) return;
       if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
+      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
@@ -1017,7 +1242,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total external deposits / investments per month (excluded from monthly income deduction)
   const monthInvestmentsExternalMap = useMemo(() => {
@@ -1025,6 +1250,7 @@ function VerticalTimeline({
     (timelineEvents || []).forEach((ev) => {
       if (!ev || !ev.date || ev.isDeleted) return;
       if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
+      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
@@ -1040,7 +1266,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total realized expenses per month (only positive/paid statuses)
   const monthExpensesRealizedMap = useMemo(() => {
@@ -1048,6 +1274,7 @@ function VerticalTimeline({
     (timelineEvents || []).forEach((ev) => {
       if (!ev || !ev.date || ev.isDeleted) return;
       if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
@@ -1064,7 +1291,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total realized loan payments per month
   const monthLoansRealizedMap = useMemo(() => {
@@ -1072,6 +1299,7 @@ function VerticalTimeline({
     (timelineEvents || []).forEach((ev) => {
       if (!ev || !ev.date || ev.isDeleted) return;
       if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida) return;
+      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
@@ -1091,7 +1319,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total realized income per month
   const monthIncomeRealizedMap = useMemo(() => {
@@ -1099,6 +1327,7 @@ function VerticalTimeline({
     (timelineEvents || []).forEach((ev) => {
       if (!ev || !ev.date || ev.isDeleted) return;
       if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
@@ -1116,7 +1345,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total realized investments per month
   const monthInvestmentsRealizedMap = useMemo(() => {
@@ -1124,6 +1353,7 @@ function VerticalTimeline({
     (timelineEvents || []).forEach((ev) => {
       if (!ev || !ev.date || ev.isDeleted) return;
       if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
@@ -1139,7 +1369,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total realized deductible investments per month
   const monthInvestmentsDeductionsRealizedMap = useMemo(() => {
@@ -1147,6 +1377,7 @@ function VerticalTimeline({
     (timelineEvents || []).forEach((ev) => {
       if (!ev || !ev.date || ev.isDeleted) return;
       if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
@@ -1165,7 +1396,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total realized external investments per month
   const monthInvestmentsExternalRealizedMap = useMemo(() => {
@@ -1173,6 +1404,7 @@ function VerticalTimeline({
     (timelineEvents || []).forEach((ev) => {
       if (!ev || !ev.date || ev.isDeleted) return;
       if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
@@ -1191,7 +1423,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet]);
+  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   const monthsList = useMemo(() => {
     const monthMap = new Map();
@@ -1253,20 +1485,6 @@ function VerticalTimeline({
           selectedTimelineIds.includes(ev.timeline_id) ||
           selectedTimelineIds.includes(ev.timeline_origin_id)
         );
-      }
-      if (isFinancialTimeline) {
-        if (timeline.type === TimelineType.INCOME) {
-          return ev.eventType === EventType.INCOME || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
-        }
-        if (timeline.type === TimelineType.EXPENSE) {
-          return ev.eventType === EventType.EXPENSE || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
-        }
-        if (timeline.type === TimelineType.INVESTMENT) {
-          return ev.eventType === EventType.INVESTMENT || ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
-        }
-        if (timeline.type === TimelineType.LOAN || (timeline.type || '').toLowerCase() === 'loan' || (timeline.type || '').toLowerCase() === 'empréstimo') {
-          return ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
-        }
       }
       return ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
     };
@@ -1877,6 +2095,81 @@ function VerticalTimeline({
     );
   };
 
+  const renderFilteredStatusListView = () => {
+    if (filteredEvents.length === 0) {
+      return (
+        <div className="empty-timeline-state glass-panel" style={{ padding: '36px 20px', textAlign: 'center' }}>
+          <div className="empty-icon">
+            <Filter size={28} />
+          </div>
+          <h3>{t('timeline.noEventsFound')}</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
+            {t('timeline.noEventsFoundDesc')}
+          </p>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{ marginTop: '16px' }}
+            onClick={resetAllFilters}
+          >
+            <span>{t('status.all')}</span>
+          </button>
+        </div>
+      );
+    }
+
+    const sortedEvents = [...filteredEvents].sort((a, b) => {
+      const dateA = a.date || a.dueDate || '';
+      const dateB = b.date || b.dueDate || '';
+      return dateB.localeCompare(dateA);
+    });
+
+    const grouped = groupEventsByDate(sortedEvents);
+
+    return (
+      <div className="filtered-events-stack-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', padding: '4px 0 24px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 4px 12px 4px', borderBottom: '1px solid var(--border-glass)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: '700', color: 'var(--text-main)' }}>
+            <Filter size={15} style={{ color: 'var(--primary-light)' }} />
+            <span>{t('timeline.eventsCount', { count: filteredEvents.length })}</span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={resetAllFilters}
+            style={{ fontSize: '0.74rem', padding: '4px 10px' }}
+          >
+            {t('status.all')}
+          </button>
+        </div>
+
+        {grouped.map((dateGroup, gIdx) => (
+          <div key={`${dateGroup.date}_${gIdx}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <TimelineEventCard
+              events={dateGroup.events}
+              timelineColor={timeline.color}
+              allEvents={timeline.events || []}
+              currentTimelineId={timeline.id}
+              timelineType={timeline.type}
+              activeFinancialTab={activeFinancialTab}
+              showYear={true}
+              onEdit={onEditEvent}
+              onUpdateEventDirect={onUpdateEventDirect}
+              onDelete={onDeleteEvent}
+              onToggleTask={onToggleTask}
+              onAddChecklistItem={onAddChecklistItem}
+              onDeleteChecklistItem={onDeleteChecklistItem}
+              onToggleLoanPayment={onToggleLoanPayment}
+              onPayUpToHere={onPayUpToHere}
+              onOpenEditInstallment={onOpenEditInstallment}
+              onNavigateToTimeline={onNavigateToTimeline}
+            />
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="timeline-workspace-layout">
       {/* 🧭 Left Filter Sidebar Cockpit */}
@@ -2092,46 +2385,52 @@ function VerticalTimeline({
           </button>
         </div>
 
-        {/* 3. Estado Filter */}
+        {/* 3. Estado Filter (Multi-Selection) */}
         <div className="sidebar-section">
-          <div className="sidebar-section-title">
+          <div className="sidebar-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>{t('sidebar.status')}</span>
+            {selectedStatusFilters.length > 0 && (
+              <button
+                type="button"
+                className="sidebar-action-link"
+                onClick={selectAllStatuses}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--primary-light)',
+                  cursor: 'pointer',
+                  fontSize: '0.72rem',
+                  padding: 0,
+                  fontWeight: '700'
+                }}
+              >
+                {t('buttons.all')}
+              </button>
+            )}
           </div>
           <div className="sidebar-btn-group">
-            {([TimelineType.INCOME, TimelineType.BALANCE, TimelineType.EXPENSE, TimelineType.INVESTMENT].includes(timeline.type)
-              ? [
-                { id: EventStatus.ALL, name: t('status.all'), icon: <Layers size={13} /> },
-                { id: EventStatus.RECEIVED, name: t('status.received'), icon: <CheckCircle2 size={13} /> },
-                { id: EventStatus.PENDING, name: t('status.pending'), icon: <Clock size={13} /> },
-                { id: EventStatus.OVERDUE, name: t('status.overdue'), icon: <AlertCircle size={13} /> }
-              ]
-              : timeline.type === TimelineType.LOAN
-                ? [
-                  { id: EventStatus.ALL, name: t('status.all'), icon: <Layers size={13} /> },
-                  { id: EventStatus.PAID, name: t('status.paid'), icon: <CheckCircle2 size={13} /> },
-                  { id: EventStatus.PENDING, name: t('status.pending'), icon: <Clock size={13} /> },
-                  { id: EventStatus.OVERDUE, name: t('status.overdue'), icon: <AlertCircle size={13} /> }
-                ]
-                : [
-                  { id: EventStatus.ALL, name: t('status.all'), icon: <Layers size={13} /> },
-                  { id: EventStatus.IN_PROGRESS, name: t('status.inProgress'), icon: <Play size={13} /> },
-                  { id: EventStatus.COMPLETED, name: t('status.completed'), icon: <CheckCircle2 size={13} /> },
-                  { id: EventStatus.PLANNED, name: t('status.planned'), icon: <Calendar size={13} /> }
-                ]
-            ).map((st, stIdx) => (
-              <button
-                key={st.id || `st-${stIdx}`}
-                type="button"
-                className={`sidebar-filter-item ${selectedStatusFilter === st.id ? 'active' : ''}`}
-                onClick={() => setSelectedStatusFilter(st.id)}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {st.icon}
-                  <span>{st.name}</span>
-                </div>
-                {selectedStatusFilter === st.id && <span style={{ fontSize: '0.75rem', color: 'var(--primary-light)' }}>✓</span>}
-              </button>
-            ))}
+            {getStatusFilterOptions().map((st, stIdx) => {
+              const isAllOption = st.id === EventStatus.ALL;
+              const isSelected = isAllOption ? selectedStatusFilters.length === 0 : selectedStatusFilters.includes(st.id);
+              return (
+                <button
+                  key={st.id || `st-${stIdx}`}
+                  type="button"
+                  className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
+                  onClick={() => toggleStatusFilter(st.id)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {st.icon}
+                    <span>{st.name}</span>
+                  </div>
+                  {isSelected ? (
+                    <CheckSquare size={13} style={{ color: 'var(--primary-light)' }} />
+                  ) : (
+                    <Square size={13} style={{ color: 'var(--text-dim)' }} />
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -2180,123 +2479,105 @@ function VerticalTimeline({
 
         {/* 5. Tipo / Natureza Filter */}
         {timeline.type === TimelineType.EXPENSE ? (
-          <div className="sidebar-section">
-            <div className="sidebar-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>{t('sidebar.categoryType')}</span>
-              {selectedExpenseCategories.length > 0 && (
-                <button
-                  type="button"
-                  className="sidebar-action-link"
-                  onClick={selectAllExpenseCategories}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--primary-light)',
-                    cursor: 'pointer',
-                    fontSize: '0.72rem',
-                    padding: 0,
-                    fontWeight: '700'
-                  }}
-                >
-                  {t('buttons.all')}
-                </button>
-              )}
-            </div>
-            <div className="sidebar-btn-group" style={{ maxHeight: '320px', overflowY: 'auto', paddingRight: '2px' }}>
-              {/* Opção "Todas as Categorias" */}
-              <button
-                type="button"
-                className={`sidebar-filter-item ${selectedExpenseCategories.length === 0 ? 'active' : ''}`}
-                onClick={() => setSelectedExpenseCategories([])}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Layers size={13} />
-                  <span>{t('sidebar.allCategories')}</span>
-                </div>
-                {selectedExpenseCategories.length === 0 ? (
-                  <CheckSquare size={13} style={{ color: 'var(--primary-light)' }} />
-                ) : (
-                  <Square size={13} style={{ color: 'var(--text-dim)' }} />
-                )}
-              </button>
-
-              {/* Lista de Categorias de Despesas do Enum com Ícones e Cores */}
-              {EXPENSE_CATEGORY_ITEMS.map((cat, catIdx) => {
-                const isSelected = selectedExpenseCategories.includes(cat.id);
-                const IconComponent = cat.icon;
-                return (
+          availableExpenseCategoryItems.length > 0 && (
+            <div className="sidebar-section">
+              <div className="sidebar-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>{t('sidebar.categoryType')}</span>
+                {selectedExpenseCategories.length > 0 && (
                   <button
-                    key={cat.id || `exp-cat-${catIdx}`}
                     type="button"
-                    className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
-                    onClick={() => toggleExpenseCategory(cat.id)}
-                    style={isSelected ? { borderColor: `${cat.color}66` } : {}}
+                    className="sidebar-action-link"
+                    onClick={selectAllExpenseCategories}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--primary-light)',
+                      cursor: 'pointer',
+                      fontSize: '0.72rem',
+                      padding: 0,
+                      fontWeight: '700'
+                    }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ color: cat.color, display: 'inline-flex', alignItems: 'center' }}>
-                        <IconComponent size={13} />
-                      </span>
-                      <span>{t(`expenseCategories.${cat.id}`)}</span>
-                    </div>
-                    {isSelected ? (
-                      <CheckSquare size={13} style={{ color: cat.color }} />
-                    ) : (
-                      <Square size={13} style={{ color: 'var(--text-dim)' }} />
-                    )}
+                    {t('buttons.all')}
                   </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : timeline.type !== TimelineType.BALANCE && (
-          <div className="sidebar-section">
-            <div className="sidebar-section-title">
-              <span>{t('sidebar.categoryType')}</span>
-            </div>
-            <div className="sidebar-btn-group">
-              {(timeline.type === TimelineType.LOAN
-                ? [
-                  { id: EventStatus.ALL, name: t('category.allTypes'), icon: <Layers size={13} /> },
-                  { id: EventType.LOAN_INSTALLMENT, name: t('category.loanInstallment'), icon: <CreditCard size={13} /> },
-                  { id: EventType.AMORTIZATION, name: t('category.amortization'), icon: <TrendingDown size={13} /> }
-                ]
-                : [TimelineType.INCOME, TimelineType.INVESTMENT].includes(timeline.type)
-                  ? [
-                    { id: EventStatus.ALL, name: t('category.all'), icon: <Layers size={13} /> },
-                    ...(timeline.type === TimelineType.INCOME
-                      ? [
-                        { id: IncomeEventCategory.RECURRING, name: t('category.recurringIncome'), icon: <DollarSign size={13} /> },
-                        { id: IncomeEventCategory.SPORADIC, name: t('category.sporadicIncome'), icon: <Gift size={13} /> }
-                      ]
-                      : [
-                        { id: InvestmentEventCategory.SAVINGS, name: t('category.savingsInvestment'), icon: <PiggyBank size={13} /> },
-                        { id: InvestmentEventCategory.ASSET, name: t('category.assetInvestment'), icon: <Landmark size={13} /> },
-                        { id: InvestmentEventCategory.OTHER, name: t('category.otherInvestment'), icon: <Sparkles size={13} /> }
-                      ])
-                  ]
-                  : [
-                    { id: EventStatus.ALL, name: t('category.allTypes'), icon: <Layers size={13} /> },
-                    { id: 'schedule', name: t('category.schedule'), icon: <Calendar size={13} /> },
-                    { id: 'repetitive', name: t('category.repetitive'), icon: <Repeat size={13} /> },
-                    { id: 'task', name: t('category.task'), icon: <Pin size={13} /> },
-                    { id: 'note', name: t('category.note'), icon: <FileText size={13} /> }
-                  ]
-              ).map((cat, catIdx) => (
+                )}
+              </div>
+              <div className="sidebar-btn-group" style={{ maxHeight: '320px', overflowY: 'auto', paddingRight: '2px' }}>
+                {/* Opção "Todas as Categorias" */}
                 <button
-                  key={cat.id || `cat-filter-${catIdx}`}
                   type="button"
-                  className={`sidebar-filter-item ${selectedCategoryFilter === cat.id ? 'active' : ''}`}
-                  onClick={() => setSelectedCategoryFilter(cat.id)}
+                  className={`sidebar-filter-item ${selectedExpenseCategories.length === 0 ? 'active' : ''}`}
+                  onClick={() => setSelectedExpenseCategories([])}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {cat.icon}
-                    <span>{cat.name}</span>
+                    <Layers size={13} />
+                    <span>{t('sidebar.allCategories')}</span>
                   </div>
-                  {selectedCategoryFilter === cat.id && <span style={{ fontSize: '0.75rem', color: 'var(--primary-light)' }}>✓</span>}
+                  {selectedExpenseCategories.length === 0 ? (
+                    <CheckSquare size={13} style={{ color: 'var(--primary-light)' }} />
+                  ) : (
+                    <Square size={13} style={{ color: 'var(--text-dim)' }} />
+                  )}
                 </button>
-              ))}
+
+                {/* Lista de Categorias de Despesas que possuem eventos */}
+                {availableExpenseCategoryItems.map((cat, catIdx) => {
+                  const isSelected = selectedExpenseCategories.includes(cat.id);
+                  const IconComponent = cat.icon;
+                  return (
+                    <button
+                      key={cat.id || `exp-cat-${catIdx}`}
+                      type="button"
+                      className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
+                      onClick={() => toggleExpenseCategory(cat.id)}
+                      style={isSelected ? { borderColor: `${cat.color}66` } : {}}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ color: cat.color, display: 'inline-flex', alignItems: 'center' }}>
+                          <IconComponent size={13} />
+                        </span>
+                        <span>{t(`expenseCategories.${cat.id}`)}</span>
+                      </div>
+                      {isSelected ? (
+                        <CheckSquare size={13} style={{ color: cat.color }} />
+                      ) : (
+                        <Square size={13} style={{ color: 'var(--text-dim)' }} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )
+        ) : timeline.type !== TimelineType.BALANCE && (
+          availableCategoryOptions.length > 1 && (
+            <div className="sidebar-section">
+              <div className="sidebar-section-title">
+                <span>{t('sidebar.categoryType')}</span>
+              </div>
+              <div className="sidebar-btn-group">
+                {availableCategoryOptions.map((cat, catIdx) => (
+                  <button
+                    key={cat.id || `cat-filter-${catIdx}`}
+                    type="button"
+                    className={`sidebar-filter-item ${selectedCategoryFilter === cat.id ? 'active' : ''}`}
+                    onClick={() => {
+                      if (!isListView && cat.id !== EventStatus.ALL) {
+                        window.scrollTo({ top: 0, behavior: 'instant' });
+                      }
+                      setSelectedCategoryFilter(cat.id);
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {cat.icon}
+                      <span>{cat.name}</span>
+                    </div>
+                    {selectedCategoryFilter === cat.id && <span style={{ fontSize: '0.75rem', color: 'var(--primary-light)' }}>✓</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
         )}
 
         {/* 6. Períodos Vazios Toggle */}
@@ -2342,16 +2623,22 @@ function VerticalTimeline({
           />
         )}
 
-        {/* Render Selected Timeline View with Key Isolation per view & tab */}
-        <div key={`${timeline.id}-${activeFinancialTab || 'all'}-${groupBy}`} className="timeline-view-wrapper">
-          {groupBy === 'semana' && renderWeekView()}
-          {groupBy === 'mes' && renderMonthView()}
-          {groupBy === 'ano' && renderYearView()}
-          {groupBy === 'dia' && renderDayView()}
+        {/* Render Selected Timeline View or Filtered Status/Category Stack List */}
+        <div key={`${timeline.id}-${activeFinancialTab || 'all'}-${groupBy}-${selectedStatusFilters.join(',')}-${selectedExpenseCategories.join(',')}-${selectedCategoryFilter}`} className="timeline-view-wrapper">
+          {isListView ? (
+            renderFilteredStatusListView()
+          ) : (
+            <>
+              {groupBy === 'semana' && renderWeekView()}
+              {groupBy === 'mes' && renderMonthView()}
+              {groupBy === 'ano' && renderYearView()}
+              {groupBy === 'dia' && renderDayView()}
+            </>
+          )}
         </div>
 
-        {/* Fallback if no matching events */}
-        {filteredEvents.length === 0 && !showEmptyDays && (
+        {/* Fallback if no matching events when in normal timeline mode */}
+        {selectedStatusFilters.length === 0 && filteredEvents.length === 0 && !showEmptyDays && (
           <div className="empty-timeline-state glass-panel">
             <div className="empty-icon">
               <Calendar size={28} />

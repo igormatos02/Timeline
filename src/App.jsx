@@ -2133,12 +2133,12 @@ export default function App() {
                 </div>
                 <div>
                   <h3 className="modal-title" style={{ margin: 0, fontSize: '1.15rem' }}>
-                    Resetar Timeline
+                    {t('resetTimelineModal.title')}
                   </h3>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     {activeTimeline?.type === TimelineType.BALANCE
-                      ? 'Limpar todos os movimentos do Timeboard'
-                      : `Limpar movimentos de ${activeTimeline?.name || ''}`}
+                      ? t('resetTimelineModal.subtitleBalance')
+                      : t('resetTimelineModal.subtitleTimeline', { name: activeTimeline?.name || '' })}
                   </div>
                 </div>
               </div>
@@ -2149,7 +2149,7 @@ export default function App() {
 
             <div style={{ padding: '16px 0', fontSize: '0.9rem', color: 'var(--text-main)', lineHeight: '1.5' }}>
               <p style={{ margin: '0 0 12px 0' }}>
-                Tem a certeza que deseja <strong>resetar e apagar todos os movimentos</strong> desta timeline?
+                {t('resetTimelineModal.confirmMessage')}
               </p>
               <div
                 style={{
@@ -2161,7 +2161,7 @@ export default function App() {
                   color: TimelineColor.DANGER
                 }}
               >
-                ⚠️ Esta ação limpará todos os eventos registados e não pode ser revertida.
+                ⚠️ {t('resetTimelineModal.warningMessage')}
               </div>
             </div>
 
@@ -2171,7 +2171,7 @@ export default function App() {
                 className="btn btn-secondary"
                 onClick={() => setIsResetConfirmOpen(false)}
               >
-                Cancelar
+                {t('buttons.cancel')}
               </button>
               <button
                 type="button"
@@ -2188,7 +2188,7 @@ export default function App() {
                 }}
               >
                 <RotateCcw size={15} />
-                <span>Sim, Resetar</span>
+                <span>{t('resetTimelineModal.confirmButton')}</span>
               </button>
             </div>
           </div>

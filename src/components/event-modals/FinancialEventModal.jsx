@@ -373,7 +373,7 @@ export default function FinancialEventModal({
         accent={ACCENT}
         translationPrefix={config.translationPrefix}
         t={t}
-        label={t('modal.categoryLabel') || t('sidebar.categoryType') || 'Categoria'}
+        label={t('modal.categoryLabel')}
         isOpen={isCategoryDropdownOpen}
         onToggle={() => {
           setIsCategoryDropdownOpen(!isCategoryDropdownOpen);

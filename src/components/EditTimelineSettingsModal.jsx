@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Settings, Trash2, RotateCcw } from 'lucide-react';
+import { X, Check, Settings, Trash2, RotateCcw } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { TimelineStatus, TimelineColor, TIMELINE_COLOR_PRESETS, TimelineType, normalizeTimelineType } from '../enums/index.js';
 
@@ -130,7 +130,7 @@ export default function EditTimelineSettingsModal({
             type="button"
             className="action-icon-btn"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('common.close')}
             style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}
           >
             <X size={18} />
@@ -244,24 +244,18 @@ export default function EditTimelineSettingsModal({
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
             {onReset && (
               <button
                 type="button"
+                className="btn btn-secondary"
                 onClick={() => {
                   onReset();
                   onClose();
                 }}
                 style={{
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  border: `1px solid ${TimelineColor.ORANGE}55`,
-                  background: `${TimelineColor.ORANGE}1f`,
-                  color: TimelineColor.ORANGE,
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  fontSize: '0.86rem',
-                  display: 'flex',
+                  color: 'var(--text-muted)',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px'
                 }}
@@ -275,17 +269,13 @@ export default function EditTimelineSettingsModal({
             {onDelete && (
               <button
                 type="button"
+                className="btn btn-secondary"
                 onClick={handleDelete}
                 style={{
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  border: `1px solid ${TimelineColor.DANGER}55`,
-                  background: `${TimelineColor.DANGER}1f`,
-                  color: TimelineColor.DANGER,
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  fontSize: '0.86rem',
-                  display: 'flex',
+                  color: 'var(--danger)',
+                  borderColor: 'rgba(244, 63, 94, 0.3)',
+                  background: 'rgba(244, 63, 94, 0.08)',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px'
                 }}
@@ -296,15 +286,12 @@ export default function EditTimelineSettingsModal({
               </button>
             )}
 
+            <div style={{ flex: 1 }} />
+
             <button
               type="button"
               className="btn btn-secondary"
               onClick={onClose}
-              style={{
-                flex: 1,
-                padding: '12px',
-                borderRadius: '10px'
-              }}
             >
               {t('buttons.cancel')}
             </button>
@@ -312,17 +299,8 @@ export default function EditTimelineSettingsModal({
             <button
               type="submit"
               className="btn btn-primary"
-              style={{
-                flex: 2,
-                padding: '12px',
-                borderRadius: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
             >
-              <Sparkles size={16} />
+              <Check size={16} />
               <span>{t('buttons.save')}</span>
             </button>
           </div>

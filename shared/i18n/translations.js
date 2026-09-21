@@ -254,6 +254,16 @@ export const translations = {
       eventsCount: "{count} associated events will be removed"
     },
 
+    // Reset Timeline Modal
+    resetTimelineModal: {
+      title: "Reset Timeline",
+      subtitleBalance: "Clear all transactions in this Timeboard",
+      subtitleTimeline: "Clear transactions for {name}",
+      confirmMessage: "Are you sure you want to reset and delete all movements from this timeline?",
+      warningMessage: "This action will clear all registered events and cannot be undone.",
+      confirmButton: "Yes, Reset"
+    },
+
     // Edit Timeline Settings Modal
     editTimelineSettingsModal: {
       title: "Timeline Settings",
@@ -302,7 +312,7 @@ export const translations = {
       grouping: "Grouping",
       status: "Status",
       integratedTimelines: "Integrated Timelines",
-      categoryType: "Category / Type",
+      categoryType: "Category",
       allStates: "All States",
       allCategories: "All Categories",
       allTypes: "All Types",
@@ -803,9 +813,12 @@ export const translations = {
     expenseHeader: {
       badge: "Expenses & Outflows",
       addExpense: "New Expense",
+      addExpenseButton: "New Expense",
       resetTitle: "Clear all movements in this timeline",
       settingsTitle: "Timeline Settings",
       deleteTitle: "Delete this timeline",
+      viewSummary: "Summary",
+      viewCategories: "Categories",
       categoriesTitle: "EXPENSES BY CATEGORY",
       noExpenses: "No expenses recorded",
       noExpensesHint: "Add expenses to view the category breakdown.",
@@ -815,6 +828,10 @@ export const translations = {
       annualCommitmentLabel: "Annual Commitment:",
       ofAnnualTotal: "of {amount} annual total",
       projectedNext12Months: "projected in the next 12 months",
+      currentAccumulationTitle: "CURRENT ACCUMULATION",
+      plannedYearLabel: "Planned ({year}):",
+      paidYearLabel: "paid ({year})",
+      totalToPayYearLabel: "total to pay ({year})",
       next30DaysTitle: "NEXT 30 DAYS",
       noPendingPayments: "No pending payments",
       noPendingPaymentsHint: "No expenses due in the next 30 days.",
@@ -1572,6 +1589,16 @@ export const translations = {
       eventsCount: "{count} registos associados serão removidos"
     },
 
+    // Reset Timeline Modal
+    resetTimelineModal: {
+      title: "Resetar Linha de Tempo",
+      subtitleBalance: "Limpar todos os movimentos do Timeboard",
+      subtitleTimeline: "Limpar movimentos de {name}",
+      confirmMessage: "Tem a certeza que deseja resetar e apagar todos os movimentos desta timeline?",
+      warningMessage: "Esta ação limpará todos os eventos registados e não pode ser revertida.",
+      confirmButton: "Sim, Resetar"
+    },
+
     // Edit Timeline Settings Modal
     editTimelineSettingsModal: {
       title: "Configurações da Linha de Tempo",
@@ -1620,7 +1647,7 @@ export const translations = {
       grouping: "Agrupamento",
       status: "Estado",
       integratedTimelines: "Linhas Integradas",
-      categoryType: "Categoria / Tipo",
+      categoryType: "Categoria",
       allStates: "Todos os Estados",
       allCategories: "Todas as Categorias",
       allTypes: "Todos os Tipos",
@@ -2121,9 +2148,12 @@ export const translations = {
     expenseHeader: {
       badge: "Gastos e Despesas",
       addExpense: "Novo Gasto",
+      addExpenseButton: "Novo Gasto",
       resetTitle: "Limpar todos os movimentos desta timeline",
       settingsTitle: "Definições da Timeline",
       deleteTitle: "Excluir esta timeline",
+      viewSummary: "Resumo",
+      viewCategories: "Categorias",
       categoriesTitle: "GASTOS POR CATEGORIA",
       noExpenses: "Sem gastos registados",
       noExpensesHint: "Adicione despesas para visualizar o gráfico por categoria.",
@@ -2133,6 +2163,10 @@ export const translations = {
       annualCommitmentLabel: "Comprometido Anual:",
       ofAnnualTotal: "de {amount} totais anuais",
       projectedNext12Months: "previstos nos próximos 12 meses",
+      currentAccumulationTitle: "ACUMULAÇÃO ATUAL",
+      plannedYearLabel: "Planeado ({year}):",
+      paidYearLabel: "pago ({year})",
+      totalToPayYearLabel: "total a pagar ({year})",
       next30DaysTitle: "PRÓXIMOS 30 DIAS",
       noPendingPayments: "Sem pagamentos pendentes",
       noPendingPaymentsHint: "Não há despesas a vencer nos próximos 30 dias.",

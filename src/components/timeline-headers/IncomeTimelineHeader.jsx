@@ -45,6 +45,7 @@ export default function IncomeTimelineHeader({
 }) {
   const { t, language } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
+  const [chartMode, setChartMode] = useState('projected');
   const dateLocale = language === 'en' ? enUS : pt;
 
   // Mapa rápido de id -> tipo de timeline para classificação precisa
@@ -596,7 +597,7 @@ export default function IncomeTimelineHeader({
               const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
               if (isIncome) {
                 const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
-                if (!isReceived) return;
+                if (chartMode === 'realized' && !isReceived) return;
 
                 const foundMonth = last7Months.find((m) => m.key === evMonthKey);
                 if (foundMonth) {
@@ -628,6 +629,9 @@ export default function IncomeTimelineHeader({
                 mutedGradientTop="rgba(16, 185, 129, 0.6)"
                 mutedGradientBottom="rgba(16, 185, 129, 0.3)"
                 currentTextColor={TimelineColor.INCOME}
+                mode={chartMode}
+                onToggleMode={setChartMode}
+                accentColor={TimelineColor.INCOME}
               />
             );
           })()}

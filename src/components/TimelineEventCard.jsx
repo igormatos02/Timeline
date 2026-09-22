@@ -179,6 +179,25 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const isAmortization = checkIsAmortizationEvent(event);
   const isVirtual = Boolean(event.isVirtual || event.isReadOnly);
   const isVirtualWithdrawal = Boolean(event.isVirtualWithdrawal || (isVirtual && event.id && String(event.id).startsWith('virtual_withdrawal_')));
+  const cleanVirtualWithdrawalReason = useMemo(() => {
+    if (!isVirtualWithdrawal) return '';
+    let raw = (event.title || event.name || '').trim();
+    raw = raw
+      .replace(/^Retirada da Poupança\s*(?:\((.*)\))?$/i, '$1')
+      .replace(/^Savings Withdrawal\s*(?:\((.*)\))?$/i, '$1')
+      .replace(/^(?:Retirada|Withdrawal):\s*/i, '')
+      .replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')
+      .trim();
+    if (!raw || raw === t('withdrawalModal.savingsWithdrawalTitle')) return '';
+    return raw;
+  }, [isVirtualWithdrawal, event.title, event.name, t]);
+
+  const virtualWithdrawalDisplayTitle = useMemo(() => {
+    if (!isVirtualWithdrawal) return '';
+    return cleanVirtualWithdrawalReason
+      ? t('withdrawalModal.savingsWithdrawalWithReason', { reason: cleanVirtualWithdrawalReason })
+      : t('withdrawalModal.savingsWithdrawalTitle');
+  }, [isVirtualWithdrawal, cleanVirtualWithdrawalReason, t]);
   const isLoanInstallment =
     checkIsLoanInstallment(event) ||
     Boolean(event.isSystemLoanEvent && !isAmortization) ||
@@ -1762,7 +1781,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: 1, minWidth: 0 }}>
         {/* Ícone de Único, Recorrente ou Poupança/Retirada */}
         <span
-          title={isVirtualWithdrawal ? t('withdrawalModal.badge') : (isRecurring ? t('recurrence.recurring') : t('recurrence.once'))}
+          title={isVirtualWithdrawal ? t('withdrawalModal.depositBadge') : (isRecurring ? t('recurrence.recurring') : t('recurrence.once'))}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -1811,12 +1830,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     letterSpacing: '0.04em',
                     padding: '2px 7px',
                     borderRadius: '5px',
-                    background: isFlatPositive ? 'rgba(255, 255, 255, 0.22)' : hexToRgba(TimelineColor.INVESTMENT, 0.16),
-                    color: isFlatPositive ? TimelineColor.WHITE : TimelineColor.INVESTMENT,
-                    border: isFlatPositive ? '1px solid rgba(255, 255, 255, 0.35)' : `1px solid ${hexToRgba(TimelineColor.INVESTMENT, 0.38)}`
+                    background: isFlatPositive ? 'rgba(255, 255, 255, 0.22)' : hexToRgba(TimelineColor.INCOME, 0.16),
+                    color: isFlatPositive ? TimelineColor.WHITE : TimelineColor.INCOME,
+                    border: isFlatPositive ? '1px solid rgba(255, 255, 255, 0.35)' : `1px solid ${hexToRgba(TimelineColor.INCOME, 0.38)}`
                   }}
                 >
-                  {t('withdrawalModal.badge')}
+                  {t('withdrawalModal.depositBadge')}
                 </span>
               )}
 
@@ -1825,7 +1844,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 <form
                   onSubmit={handleSaveTitle}
                   onClick={(e) => e.stopPropagation()}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0, margin: 0, padding: 0 }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: '120px', margin: 0, padding: 0 }}
                 >
                   <input
                     type="text"
@@ -1838,79 +1857,58 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       if (e.key === 'Escape') handleCancelTitle(e);
                     }}
                     onClick={(e) => e.stopPropagation()}
+                    className="editable-title-input"
                     style={{
-                      background: 'transparent',
-                      border: 'none',
-                      borderBottom: '3px solid var(--primary-light)',
-                      borderRadius: '0px',
-                      padding: '2px 0',
+                      margin: 0,
+                      padding: '2px 6px',
                       fontSize: '0.98rem',
                       fontWeight: '700',
-                      color: 'var(--text-main)',
+                      color: isFlatPositive ? TimelineColor.WHITE : 'var(--text-main)',
+                      background: isFlatPositive ? 'rgba(0,0,0,0.25)' : 'var(--bg-glass-input)',
+                      border: '1px solid var(--border-glass)',
+                      borderRadius: '4px',
                       outline: 'none',
-                      flex: 1,
-                      minWidth: '120px'
+                      width: '100%'
                     }}
                   />
                   <button
                     type="submit"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={handleSaveTitle}
-                    style={{
-                      background: '#10b981',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '4px 6px',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center'
-                    }}
-                    title={isRecurring ? "Guardar nome (atualiza todos os meses desta despesa/receita recorrente)" : "Guardar nome"}
+                    title={t('common.save')}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px', color: isFlatPositive ? TimelineColor.WHITE : TimelineColor.SUCCESS }}
                   >
-                    <Check size={13} strokeWidth={3} />
+                    <Check size={14} />
                   </button>
                   <button
                     type="button"
-                    onMouseDown={(e) => e.preventDefault()}
                     onClick={handleCancelTitle}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      color: 'var(--text-dim)',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '4px 6px',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center'
-                    }}
-                    title="Cancelar"
+                    title={t('common.cancel')}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px', color: isFlatPositive ? TimelineColor.WHITE : 'var(--text-muted)' }}
                   >
-                    <X size={13} strokeWidth={2.5} />
+                    <X size={14} />
                   </button>
                 </form>
               ) : (
                 <h3
-                  className="event-title"
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  onClick={() => {
                     if (isAmortized || isAnchorCard || isVirtual) return;
-                    if (isLoanInstallment) {
-                      handleNavigateToTimelineOrigin();
+                    if (isLoanInstallment && originInfo && onNavigateToTimeline) {
+                      onNavigateToTimeline(originInfo.id);
                     } else {
                       setIsEditingTitle(true);
                     }
                   }}
                   title={
-                    isVirtual
-                      ? undefined
-                      : isAmortized
-                        ? 'Esta parcela foi totalmente liquidada/abatida por amortização extraordinária.'
-                        : isLoanInstallment
-                          ? `Clique para ir à timeline do ${originInfo ? originInfo.label : 'Empréstimo'}`
-                          : isRecurring
-                            ? "Clique para editar o nome (altera em todos os meses)"
-                            : "Clique para editar o nome"
+                    isVirtualWithdrawal
+                      ? virtualWithdrawalDisplayTitle
+                      : isVirtual
+                        ? undefined
+                        : isAmortized
+                          ? t('event.amortizedTooltip')
+                          : isLoanInstallment
+                            ? t('event.loanInstallmentTooltip', { label: originInfo ? originInfo.label : t('loans.loan') })
+                            : isRecurring
+                              ? t('event.editNameRecurring')
+                              : t('event.editName')
                   }
                   style={{
                     margin: 0,
@@ -1921,7 +1919,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     cursor: (isAmortized || isAnchorCard || isVirtual) ? 'default' : 'pointer'
                   }}
                 >
-                  {(event.title || '').replace(/^Retirada:\s*/i, '').replace(/^Withdrawal:\s*/i, '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')}
+                  {isVirtualWithdrawal
+                    ? virtualWithdrawalDisplayTitle
+                    : (event.title || '').replace(/^Retirada:\s*/i, '').replace(/^Withdrawal:\s*/i, '').replace(/\s*\([\d.,\s€]+?\)\s*$/i, '')
+                  }
                 </h3>
               )}
 

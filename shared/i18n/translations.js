@@ -1017,6 +1017,9 @@ export const translations = {
       amountExceedsError: "Withdrawal amount cannot exceed available pocket balance ({{max}}).",
       noBalanceError: "This pocket has no available balance to withdraw.",
       badge: "Withdrawal",
+      depositBadge: "DEPOSIT",
+      savingsWithdrawalTitle: "Savings Withdrawal",
+      savingsWithdrawalWithReason: "Savings Withdrawal ({{reason}})",
       virtualIncomeTitle: "Withdrawal: {{title}}"
     },
 
@@ -1436,7 +1439,11 @@ export const translations = {
         occurrenceDeletedSuffix: "(Deleted)",
         defaultName: "Financial Event",
         abated: "Abated",
-        partiallyAbated: "Partially Abated"
+        partiallyAbated: "Partially Abated",
+        amortizedTooltip: "This installment was fully settled/abated by extraordinary amortization.",
+        loanInstallmentTooltip: "Click to go to the timeline of {label}",
+        editNameRecurring: "Click to edit name (changes across all months)",
+        editName: "Click to edit name"
       },
       email: {
         invitationSubject: "Invitation to collaborate on Timeboard: {name}",
@@ -2474,6 +2481,9 @@ export const translations = {
       amountExceedsError: "O valor da retirada não pode ser superior ao saldo acumulado no cofrinho ({{max}}).",
       noBalanceError: "Este cofrinho não tem saldo disponível para retirada.",
       badge: "Retirada",
+      depositBadge: "DEPÓSITO",
+      savingsWithdrawalTitle: "Retirada da Poupança",
+      savingsWithdrawalWithReason: "Retirada da Poupança ({{reason}})",
       virtualIncomeTitle: "Retirada: {{title}}"
     },
 
@@ -2893,7 +2903,11 @@ export const translations = {
         occurrenceDeletedSuffix: "(Excluído)",
         defaultName: "Evento Financeiro",
         abated: "Abatida",
-        partiallyAbated: "Abatida Parcial"
+        partiallyAbated: "Abatida Parcial",
+        amortizedTooltip: "Esta parcela foi totalmente liquidada/abatida por amortização extraordinária.",
+        loanInstallmentTooltip: "Clique para ir à timeline do {label}",
+        editNameRecurring: "Clique para editar o nome (altera em todos os meses)",
+        editName: "Clique para editar o nome"
       },
       email: {
         invitationSubject: "Convite para colaborar no Timeboard: {name}",

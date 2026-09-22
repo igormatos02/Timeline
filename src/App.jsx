@@ -30,7 +30,7 @@ import { EventType, EventStatus, FollowupStatus, TimelineType, TimelineStatus, T
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
-import { RotateCcw, X, Plus } from 'lucide-react';
+import { RotateCcw, X, Plus, Database, Calculator, LocateFixed } from 'lucide-react';
 import LandingPage from './components/landing/LandingPage.jsx';
 import TimeboardsHub from './components/dashboard-hub/TimeboardsHub.jsx';
 import useAuth from './hooks/useAuth.js';
@@ -1922,22 +1922,15 @@ export default function App() {
       <Navbar
         timeboards={timeboards}
         activeTimeboardId={activeTimeboardId}
-        dbEventsCount={dbEventsCount}
-        calculatedEventsCount={calculatedEventsCount}
         onSelectTimeboard={(id) => {
           setActiveTimeboardId(id);
           setActiveTimelineId(null);
           setActiveFinancialTab(null);
         }}
-        onOpenCreateTimeboard={() => {
-          setEditingTimeboard(null);
-          setIsTimeboardModalOpen(true);
-        }}
         onOpenEditTimeboard={(tb) => {
           setEditingTimeboard(tb);
           setIsTimeboardSettingsModalOpen(true);
         }}
-        onScrollToToday={handleScrollToToday}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onNavigateToHub={handleNavigateToHub}
@@ -2276,6 +2269,81 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* 🚀 Floating Bottom Right Controls (Go to Today + Event Counts) */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '24px',
+          zIndex: 90,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: '8px'
+        }}
+      >
+        {/* Floating Go to Current Month Button */}
+        <button
+          type="button"
+          className="floating-today-btn"
+          onClick={handleScrollToToday}
+          title={t('header.goToTodayTitle')}
+        >
+          <LocateFixed size={14} />
+          <span>{t('header.goToToday')}</span>
+        </button>
+
+        {/* 📊 Floating Event Counts Badge */}
+        <div
+          className="floating-events-count-badge"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '7px 12px',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-glass)',
+            borderRadius: 'var(--radius-md, 12px)',
+            boxShadow: 'var(--shadow-lg, 0 10px 25px -5px rgba(0, 0, 0, 0.3))',
+            backdropFilter: 'blur(12px)',
+            fontSize: '0.74rem',
+            fontWeight: '700',
+            color: 'var(--text-main)',
+            userSelect: 'none',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+          }}
+        >
+          {/* DB Events Count */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+            title={t('header.dbEventsTooltip', { count: dbEventsCount })}
+          >
+            <Database size={13} style={{ color: TimelineColor.PRIMARY }} />
+            <span style={{ color: 'var(--text-main)', fontWeight: '800' }}>{dbEventsCount}</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: '600', color: 'var(--text-dim)' }}>{t('header.dbEvents')}</span>
+          </div>
+
+          <span style={{ width: '1px', height: '12px', background: 'var(--border-glass)', display: 'inline-block' }} />
+
+          {/* Calculated Events Count */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+            title={t('header.calculatedEventsTooltip', { count: calculatedEventsCount })}
+          >
+            <Calculator size={13} style={{ color: TimelineColor.SUCCESS }} />
+            <span style={{ color: 'var(--text-main)', fontWeight: '800' }}>{calculatedEventsCount}</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: '600', color: 'var(--text-dim)' }}>{t('header.calcEvents')}</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

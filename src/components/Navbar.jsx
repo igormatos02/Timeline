@@ -1,19 +1,16 @@
 import React from 'react';
-import { Clock, Plus, LayoutGrid, Sparkles, Sun, Moon, LocateFixed, User, Shield, Settings, ChevronDown, LogOut, Database, Calculator } from 'lucide-react';
+import { Clock, LayoutGrid, Sparkles, Sun, Moon, User, Shield, Settings, ChevronDown, LogOut } from 'lucide-react';
 import { getCurrentUser } from '../services/api';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { TimelineColor } from '../enums/index.js';
 import VersionBadge from './ui/VersionBadge.jsx';
+import LogoutConfirmModal from './LogoutConfirmModal.jsx';
 
 export default function Navbar({
   timeboards = [],
   activeTimeboardId,
-  dbEventsCount = 0,
-  calculatedEventsCount = 0,
   onSelectTimeboard,
-  onOpenCreateTimeboard,
   onOpenEditTimeboard,
-  onScrollToToday,
   theme,
   onToggleTheme,
   onNavigateToHub,
@@ -49,7 +46,7 @@ export default function Navbar({
           <VersionBadge style={{ marginLeft: '4px' }} />
         </div>
 
-        {/* Custom Premium Timeboard Selector Dropdown & Event Counts Badge */}
+        {/* Custom Premium Timeboard Selector Dropdown */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <TimeboardDropdownSelector
             timeboards={timeboards}
@@ -58,55 +55,6 @@ export default function Navbar({
             onSelectTimeboard={onSelectTimeboard}
             onOpenEditTimeboard={onOpenEditTimeboard}
           />
-
-          {/* 📊 Event Counts Badge (DB / Raw vs Calculated) */}
-          <div
-            className="events-count-badge"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 10px',
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-glass)',
-              borderRadius: 'var(--radius-md, 10px)',
-              boxShadow: 'var(--shadow-sm)',
-              fontSize: '0.74rem',
-              fontWeight: '700',
-              color: 'var(--text-main)',
-              userSelect: 'none'
-            }}
-          >
-            {/* DB Events Count */}
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-              title={t('header.dbEventsTooltip', { count: dbEventsCount })}
-            >
-              <Database size={13} style={{ color: TimelineColor.PRIMARY }} />
-              <span style={{ color: 'var(--text-main)', fontWeight: '800' }}>{dbEventsCount}</span>
-              <span style={{ fontSize: '0.68rem', fontWeight: '600', color: 'var(--text-dim)' }}>{t('header.dbEvents')}</span>
-            </div>
-
-            <span style={{ width: '1px', height: '12px', background: 'var(--border-glass)', display: 'inline-block' }} />
-
-            {/* Calculated Events Count */}
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-              title={t('header.calculatedEventsTooltip', { count: calculatedEventsCount })}
-            >
-              <Calculator size={13} style={{ color: TimelineColor.SUCCESS }} />
-              <span style={{ color: 'var(--text-main)', fontWeight: '800' }}>{calculatedEventsCount}</span>
-              <span style={{ fontSize: '0.68rem', fontWeight: '600', color: 'var(--text-dim)' }}>{t('header.calcEvents')}</span>
-            </div>
-          </div>
         </div>
 
         {/* Actions & User Profile */}
@@ -172,22 +120,6 @@ export default function Navbar({
             </button>
           </div>
 
-          {/* Botão Ir para Hoje / Atual */}
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={onScrollToToday}
-            style={{
-              background: 'rgba(99, 102, 241, 0.15)',
-              borderColor: 'var(--primary-light)',
-              color: 'var(--primary-light)',
-              fontWeight: '700'
-            }}
-            title={t('header.goToTodayTitle')}
-          >
-            <LocateFixed size={16} />
-            <span>{t('header.goToToday')}</span>
-          </button>
 
           {/* Theme Toggle */}
           <button
@@ -199,94 +131,10 @@ export default function Navbar({
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
 
-          {/* Novo Timeboard Button (Primary Style) */}
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={onOpenCreateTimeboard}
-            title={t('header.createTimeboardTitle')}
-          >
-            <Plus size={16} />
-            <span>{t('header.newTimeboard')}</span>
-          </button>
 
-          {/* 👤 Logged In User Pill / Avatar */}
-          <div
-            className="user-profile-badge"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '9px',
-              padding: '4px 12px 4px 6px',
-              background: 'rgba(99, 102, 241, 0.08)',
-              border: '1px solid var(--border-glass-glow)',
-              borderRadius: '9999px',
-              marginLeft: '6px',
-              cursor: 'default',
-              userSelect: 'none',
-              transition: 'all 0.2s ease'
-            }}
-            title={`Utilizador Ativo: ${currentUser.name} (${currentUser.role}) • ${currentUser.tenantName}`}
-          >
-            <div
-              style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: '50%',
-                background: `linear-gradient(135deg, ${TimelineColor.PRIMARY} 0%, ${TimelineColor.PURPLE} 100%)`,
-                color: TimelineColor.WHITE,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: '800',
-                fontSize: '0.78rem',
-                letterSpacing: '0.5px',
-                boxShadow: '0 2px 8px rgba(99, 102, 241, 0.35)',
-                position: 'relative'
-              }}
-            >
-              {currentUser.avatarInitials}
-              <span
-                style={{
-                  position: 'absolute',
-                  bottom: '-1px',
-                  right: '-1px',
-                  width: '8px',
-                  height: '8px',
-                  background: TimelineColor.SUCCESS,
-                  border: '1.5px solid var(--bg-card)',
-                  borderRadius: '50%'
-                }}
-                title="Online / Ativo"
-              />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-main)', lineHeight: 1.15 }}>
-                {currentUser.name}
-              </span>
-              <span style={{ fontSize: '0.64rem', color: 'var(--primary-light)', fontWeight: '600' }}>
-                {currentUser.tenantName}
-              </span>
-            </div>
-          </div>
 
-          {/* Logout Action Button */}
-          {onLogout && (
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={onLogout}
-              style={{
-                background: 'rgba(239, 68, 68, 0.1)',
-                borderColor: 'rgba(239, 68, 68, 0.3)',
-                color: TimelineColor.DANGER,
-                padding: '6px 10px',
-                borderRadius: '8px'
-              }}
-              title="Terminar Sessão (Logout)"
-            >
-              <LogOut size={14} />
-            </button>
-          )}
+          {/* 👤 Logged In User Dropdown */}
+          <UserDropdown currentUser={currentUser} onLogout={onLogout} />
         </div>
       </div>
     </header>
@@ -524,4 +372,212 @@ function TimeboardDropdownSelector({
     </div>
   );
 }
+
+function UserDropdown({ currentUser, onLogout }) {
+  const { t } = useTranslation();
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = React.useState(false);
+  const dropdownRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <>
+      <div
+        ref={dropdownRef}
+        style={{
+          position: 'relative',
+          display: 'inline-block'
+        }}
+      >
+        <div
+          className="user-profile-badge"
+          onClick={() => setIsOpen((prev) => !prev)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '9px',
+            padding: '4px 10px 4px 6px',
+            background: isOpen ? 'rgba(99, 102, 241, 0.16)' : 'rgba(99, 102, 241, 0.08)',
+            border: '1px solid var(--border-glass-glow)',
+            borderRadius: '9999px',
+            marginLeft: '6px',
+            cursor: 'pointer',
+            userSelect: 'none',
+            transition: 'all 0.2s ease'
+          }}
+          title={t('header.userProfile')}
+        >
+          <div
+            style={{
+              width: '30px',
+              height: '30px',
+              borderRadius: '50%',
+              background: `linear-gradient(135deg, ${TimelineColor.PRIMARY} 0%, ${TimelineColor.PURPLE} 100%)`,
+              color: TimelineColor.WHITE,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: '800',
+              fontSize: '0.78rem',
+              letterSpacing: '0.5px',
+              boxShadow: '0 2px 8px rgba(99, 102, 241, 0.35)',
+              position: 'relative'
+            }}
+          >
+            {currentUser.avatarInitials}
+            <span
+              style={{
+                position: 'absolute',
+                bottom: '-1px',
+                right: '-1px',
+                width: '8px',
+                height: '8px',
+                background: TimelineColor.SUCCESS,
+                border: '1.5px solid var(--bg-card)',
+                borderRadius: '50%'
+              }}
+              title="Online"
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-main)', lineHeight: 1.15 }}>
+              {currentUser.name}
+            </span>
+            <span style={{ fontSize: '0.64rem', color: 'var(--primary-light)', fontWeight: '600' }}>
+              {currentUser.tenantName}
+            </span>
+          </div>
+          <ChevronDown
+            size={14}
+            style={{
+              color: 'var(--text-muted)',
+              transform: isOpen ? 'rotate(180deg)' : 'none',
+              transition: 'transform 0.2s ease',
+              marginLeft: '2px'
+            }}
+          />
+        </div>
+
+        {isOpen && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 8px)',
+              right: 0,
+              width: '210px',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-glass-glow)',
+              borderRadius: '12px',
+              boxShadow: '0 16px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.15)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              padding: '6px',
+              zIndex: 9999,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '3px'
+            }}
+          >
+            {/* User Info Header */}
+            <div style={{ padding: '6px 8px 6px 8px' }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main)', lineHeight: 1.2 }}>
+                {currentUser.name}
+              </div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                {currentUser.role || 'Admin'} • {currentUser.tenantName}
+              </div>
+            </div>
+
+            <div style={{ height: '1px', background: 'var(--border-glass)', margin: '2px 0' }} />
+
+            {/* Option: Definições de Conta */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '9px',
+                padding: '8px 10px',
+                borderRadius: '8px',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-main)',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                textAlign: 'left',
+                width: '100%',
+                transition: 'background 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(99, 102, 241, 0.12)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <Settings size={15} style={{ color: 'var(--primary-light)' }} />
+              <span>{t('header.accountSettings')}</span>
+            </button>
+
+            <div style={{ height: '1px', background: 'var(--border-glass)', margin: '2px 0' }} />
+
+            {/* Option: Sair (Logout) */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                setIsLogoutModalOpen(true);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '9px',
+                padding: '8px 10px',
+                borderRadius: '8px',
+                background: 'transparent',
+                border: 'none',
+                color: TimelineColor.DANGER,
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                textAlign: 'left',
+                width: '100%',
+                transition: 'background 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <LogOut size={15} style={{ color: TimelineColor.DANGER }} />
+              <span>{t('header.logout')}</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      <LogoutConfirmModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={onLogout}
+      />
+    </>
+  );
+}
+
 

@@ -212,8 +212,7 @@ export default function LoanTimelineHeader({
       headerColor={headerColor}
       toggleColor={textColorMain}
       containerStyle={{
-        transition:
-          'padding 0.2s ease, box-shadow 0.2s ease, filter 0.3s ease',
+        transition: 'filter 0.3s ease',
         filter: isInactive
           ? 'grayscale(85%) opacity(0.85)'
           : 'none'

@@ -18,11 +18,9 @@ export default function HeaderShell({
     <div
       className={`timeline-hero glass-panel ${collapsed ? 'hero-collapsed' : ''}`}
       style={{
-        borderLeft: `4px solid ${headerColor}`,
         '--active-timeline-color': headerColor,
-        padding: collapsed ? '12px 18px' : '16px 20px',
+        padding: '14px 20px',
         marginBottom: '10px',
-        transition: 'padding 0.2s ease, box-shadow 0.2s ease',
         boxShadow: 'var(--shadow-sm)',
         ...containerStyle
       }}
@@ -35,7 +33,7 @@ export default function HeaderShell({
           flexWrap: 'wrap',
           gap: '12px',
           paddingBottom: collapsed ? '0' : '12px',
-          borderBottom: collapsed ? 'none' : '1px solid var(--border-glass)'
+          borderBottom: collapsed ? 'none' : `1px solid ${headerColor || 'var(--border-glass)'}`
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

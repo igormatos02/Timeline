@@ -19,9 +19,12 @@ import {
   Layers,
   ArrowRight,
   Share2,
-  Lock
+  Lock,
+  ChevronDown
 } from 'lucide-react';
-import { TimeboardType } from '../../enums/index.js';
+import { TimeboardType, TimelineColor } from '../../enums/index.js';
+import { useTranslation } from '../../i18n/LanguageContext.jsx';
+import LogoutConfirmModal from '../LogoutConfirmModal.jsx';
 import './TimeboardsHub.css';
 
 export default function TimeboardsHub({
@@ -38,10 +41,25 @@ export default function TimeboardsHub({
   onToggleTheme,
   language,
   onToggleLanguage,
-  t
+  t: propT
 }) {
+  const { t: hookT } = useTranslation();
+  const t = propT || hookT;
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'my' | 'shared'
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const userMenuRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Resolve my and shared lists
   const currentUserId = currentUser?.id;
@@ -262,26 +280,134 @@ export default function TimeboardsHub({
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
-          {/* User Profile Pill */}
-          <div className="hub-user-pill">
-            <div className="hub-user-avatar">
-              {currentUser?.avatarInitials || 'IM'}
+          {/* User Profile Pill & Dropdown */}
+          <div ref={userMenuRef} style={{ position: 'relative', display: 'inline-block' }}>
+            <div
+              className="hub-user-pill"
+              onClick={() => setIsUserMenuOpen((prev) => !prev)}
+              style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}
+              title={t('header.userProfile')}
+            >
+              <div className="hub-user-avatar">
+                {currentUser?.avatarInitials || 'IM'}
+              </div>
+              <span style={{ fontSize: '0.88rem', fontWeight: '600' }}>
+                {currentUser?.name || 'Igor Matos'}
+              </span>
+              <ChevronDown
+                size={14}
+                style={{
+                  color: 'var(--text-muted)',
+                  transform: isUserMenuOpen ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.2s ease',
+                  marginLeft: '2px'
+                }}
+              />
             </div>
-            <span style={{ fontSize: '0.88rem', fontWeight: '600' }}>
-              {currentUser?.name || 'Igor Matos'}
-            </span>
-          </div>
 
-          {/* Logout Button */}
-          <button
-            type="button"
-            className="hub-logout-btn"
-            onClick={onLogout}
-            title="Terminar Sessão"
-          >
-            <LogOut size={14} />
-            <span>Sair</span>
-          </button>
+            {isUserMenuOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 0,
+                  width: '210px',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-glass-glow)',
+                  borderRadius: '12px',
+                  boxShadow: '0 16px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.15)',
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)',
+                  padding: '6px',
+                  zIndex: 9999,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '3px'
+                }}
+              >
+                {/* User Info Header */}
+                <div style={{ padding: '6px 8px 6px 8px' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main)', lineHeight: 1.2 }}>
+                    {currentUser?.name || 'Igor Matos'}
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                    {currentUser?.role || 'Admin'} • {currentUser?.tenantName || 'Espaço Pessoal'}
+                  </div>
+                </div>
+
+                <div style={{ height: '1px', background: 'var(--border-glass)', margin: '2px 0' }} />
+
+                {/* Option: Definições de Conta */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '9px',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-main)',
+                    fontSize: '0.8rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    width: '100%',
+                    transition: 'background 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.12)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <Settings size={15} style={{ color: 'var(--primary-light)' }} />
+                  <span>{t('header.accountSettings')}</span>
+                </button>
+
+                <div style={{ height: '1px', background: 'var(--border-glass)', margin: '2px 0' }} />
+
+                {/* Option: Sair (Logout) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    setIsLogoutModalOpen(true);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '9px',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: TimelineColor.DANGER,
+                    fontSize: '0.8rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    width: '100%',
+                    transition: 'background 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <LogOut size={15} style={{ color: TimelineColor.DANGER }} />
+                  <span>{t('header.logout')}</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -414,6 +540,12 @@ export default function TimeboardsHub({
           </section>
         )}
       </main>
+
+      <LogoutConfirmModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={onLogout}
+      />
     </div>
   );
 }

@@ -44,7 +44,6 @@ import {
   AlertCircle,
   Play,
   CheckSquare,
-  Square,
   ListTree,
   Home,
   Car,
@@ -383,6 +382,36 @@ function VerticalTimeline({
     ];
   };
 
+  // Switch toggle renderer for sidebar filters
+  const renderFilterSwitch = (checked, activeColor = 'var(--primary)') => (
+    <span
+      style={{
+        width: '28px',
+        height: '16px',
+        borderRadius: '9999px',
+        background: checked ? activeColor : 'rgba(148, 163, 184, 0.25)',
+        position: 'relative',
+        transition: 'background 0.2s ease',
+        flexShrink: 0,
+        display: 'inline-block'
+      }}
+    >
+      <span
+        style={{
+          width: '12px',
+          height: '12px',
+          borderRadius: '50%',
+          background: TimelineColor.WHITE,
+          position: 'absolute',
+          top: '2px',
+          left: checked ? '14px' : '2px',
+          transition: 'left 0.2s ease',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)'
+        }}
+      />
+    </span>
+  );
+
   // Multi-selection of categories for Expense timeline
   const [selectedExpenseCategories, setSelectedExpenseCategories] = useState([]);
 
@@ -390,12 +419,15 @@ function VerticalTimeline({
     (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) ||
     (timeline.type !== TimelineType.EXPENSE && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos');
 
-  const isListView = selectedStatusFilters.length > 0 || isCategoryFiltered;
+  const isSearchActive = Boolean(searchQuery && searchQuery.trim().length > 0);
+
+  const isListView = selectedStatusFilters.length > 0 || isCategoryFiltered || isSearchActive;
 
   const resetAllFilters = () => {
     setSelectedStatusFilters([]);
     setSelectedExpenseCategories([]);
     setSelectedCategoryFilter(EventStatus.ALL);
+    setSearchQuery('');
   };
 
   const toggleExpenseCategory = (catId) => {
@@ -2355,7 +2387,13 @@ function VerticalTimeline({
               className="search-input"
               placeholder={t('sidebar.searchPlaceholder')}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!isListView && val.trim().length > 0) {
+                  window.scrollTo({ top: 0, behavior: 'instant' });
+                }
+                setSearchQuery(val);
+              }}
             />
           </div>
         </div>
@@ -2423,11 +2461,7 @@ function VerticalTimeline({
                     {st.icon}
                     <span>{st.name}</span>
                   </div>
-                  {isSelected ? (
-                    <CheckSquare size={13} style={{ color: 'var(--primary-light)' }} />
-                  ) : (
-                    <Square size={13} style={{ color: 'var(--text-dim)' }} />
-                  )}
+                  {renderFilterSwitch(isSelected, 'var(--primary)')}
                 </button>
               );
             })}
@@ -2469,7 +2503,7 @@ function VerticalTimeline({
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: opt.color }} />
                       <span>{opt.name}</span>
                     </div>
-                    {isSelected ? <CheckSquare size={13} style={{ color: opt.color }} /> : <Square size={13} style={{ color: 'var(--text-dim)' }} />}
+                    {renderFilterSwitch(isSelected, opt.color)}
                   </button>
                 );
               })}
@@ -2513,11 +2547,7 @@ function VerticalTimeline({
                     <Layers size={13} />
                     <span>{t('sidebar.allCategories')}</span>
                   </div>
-                  {selectedExpenseCategories.length === 0 ? (
-                    <CheckSquare size={13} style={{ color: 'var(--primary-light)' }} />
-                  ) : (
-                    <Square size={13} style={{ color: 'var(--text-dim)' }} />
-                  )}
+                  {renderFilterSwitch(selectedExpenseCategories.length === 0, 'var(--primary)')}
                 </button>
 
                 {/* Lista de Categorias de Despesas que possuem eventos */}
@@ -2538,11 +2568,7 @@ function VerticalTimeline({
                         </span>
                         <span>{t(`expenseCategories.${cat.id}`)}</span>
                       </div>
-                      {isSelected ? (
-                        <CheckSquare size={13} style={{ color: cat.color }} />
-                      ) : (
-                        <Square size={13} style={{ color: 'var(--text-dim)' }} />
-                      )}
+                      {renderFilterSwitch(isSelected, cat.color)}
                     </button>
                   );
                 })}
@@ -2556,25 +2582,28 @@ function VerticalTimeline({
                 <span>{t('sidebar.categoryType')}</span>
               </div>
               <div className="sidebar-btn-group">
-                {availableCategoryOptions.map((cat, catIdx) => (
-                  <button
-                    key={cat.id || `cat-filter-${catIdx}`}
-                    type="button"
-                    className={`sidebar-filter-item ${selectedCategoryFilter === cat.id ? 'active' : ''}`}
-                    onClick={() => {
-                      if (!isListView && cat.id !== EventStatus.ALL) {
-                        window.scrollTo({ top: 0, behavior: 'instant' });
-                      }
-                      setSelectedCategoryFilter(cat.id);
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {cat.icon}
-                      <span>{cat.name}</span>
-                    </div>
-                    {selectedCategoryFilter === cat.id && <span style={{ fontSize: '0.75rem', color: 'var(--primary-light)' }}>✓</span>}
-                  </button>
-                ))}
+                {availableCategoryOptions.map((cat, catIdx) => {
+                  const isSelected = selectedCategoryFilter === cat.id;
+                  return (
+                    <button
+                      key={cat.id || `cat-filter-${catIdx}`}
+                      type="button"
+                      className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
+                      onClick={() => {
+                        if (!isListView && cat.id !== EventStatus.ALL) {
+                          window.scrollTo({ top: 0, behavior: 'instant' });
+                        }
+                        setSelectedCategoryFilter(cat.id);
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {cat.icon}
+                        <span>{cat.name}</span>
+                      </div>
+                      {renderFilterSwitch(isSelected, 'var(--primary)')}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )
@@ -2591,9 +2620,7 @@ function VerticalTimeline({
               {showEmptyDays ? <Eye size={15} /> : <EyeOff size={15} />}
               <span>{showEmptyDays ? t('sidebar.hideEmpty') : t('sidebar.showEmpty')}</span>
             </div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              {showEmptyDays ? t('sidebar.visible') : t('sidebar.hidden')}
-            </span>
+            {renderFilterSwitch(showEmptyDays, 'var(--primary)')}
           </div>
         </div>
       </aside>
@@ -2623,8 +2650,8 @@ function VerticalTimeline({
           />
         )}
 
-        {/* Render Selected Timeline View or Filtered Status/Category Stack List */}
-        <div key={`${timeline.id}-${activeFinancialTab || 'all'}-${groupBy}-${selectedStatusFilters.join(',')}-${selectedExpenseCategories.join(',')}-${selectedCategoryFilter}`} className="timeline-view-wrapper">
+        {/* Render Selected Timeline View or Filtered Status/Category/Search Stack List */}
+        <div key={`${timeline.id}-${activeFinancialTab || 'all'}-${groupBy}-${selectedStatusFilters.join(',')}-${selectedExpenseCategories.join(',')}-${selectedCategoryFilter}-${searchQuery}`} className="timeline-view-wrapper">
           {isListView ? (
             renderFilteredStatusListView()
           ) : (

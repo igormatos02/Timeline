@@ -391,7 +391,6 @@
 }
 
 .hero-collapsed {
-  border-radius: var(--radius-sm);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
@@ -1247,4 +1246,38 @@
 
 .flat-positive-reminder:hover {
   background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+}
+
+/* Floating Current Month Button */
+.floating-today-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--primary-light);
+  color: var(--primary-light);
+  font-weight: 700;
+  font-size: 0.78rem;
+  border-radius: var(--radius-md, 12px);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.35));
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.floating-today-btn:hover {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent-purple) 100%);
+  color: var(--text-white, white) !important;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.35), 0 0 20px var(--primary-glow);
+  animation: pulseGlow 1.8s infinite;
+  transform: translateY(-2px);
+}
+
+.floating-today-btn:hover span,
+.floating-today-btn:hover svg {
+  color: var(--text-white, white) !important;
+  stroke: var(--text-white, white) !important;
 }

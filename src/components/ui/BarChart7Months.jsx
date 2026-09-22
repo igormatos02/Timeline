@@ -143,22 +143,30 @@ export default function BarChart7Months({
                 background: 'rgba(255, 255, 255, 0.04)',
                 borderRadius: '6px',
                 padding: '2px',
-                border: '1px solid var(--border-glass)'
+                border: '1px solid var(--border-glass)',
+                flexShrink: 0,
+                userSelect: 'none'
               }}
             >
               <button
                 type="button"
                 onClick={() => onToggleMode('projected')}
                 style={{
-                  padding: '2px 8px',
+                  padding: '3px 10px',
+                  minWidth: '74px',
                   borderRadius: '4px',
                   fontSize: '0.68rem',
-                  fontWeight: mode === 'projected' ? '700' : '500',
+                  fontWeight: '600',
                   border: 'none',
                   cursor: 'pointer',
                   background: mode === 'projected' ? (accentColor || goodColor || 'var(--primary)') : 'transparent',
                   color: mode === 'projected' ? TimelineColor.WHITE : 'var(--text-muted)',
-                  transition: 'all 0.15s ease'
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  transition: 'background-color 0.15s ease, color 0.15s ease'
                 }}
               >
                 {t('timeline.monthProjection')}
@@ -167,15 +175,21 @@ export default function BarChart7Months({
                 type="button"
                 onClick={() => onToggleMode('realized')}
                 style={{
-                  padding: '2px 8px',
+                  padding: '3px 10px',
+                  minWidth: '74px',
                   borderRadius: '4px',
                   fontSize: '0.68rem',
-                  fontWeight: mode === 'realized' ? '700' : '500',
+                  fontWeight: '600',
                   border: 'none',
                   cursor: 'pointer',
                   background: mode === 'realized' ? (accentColor || goodColor || 'var(--primary)') : 'transparent',
                   color: mode === 'realized' ? TimelineColor.WHITE : 'var(--text-muted)',
-                  transition: 'all 0.15s ease'
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  transition: 'background-color 0.15s ease, color 0.15s ease'
                 }}
               >
                 {t('timeline.realProjection')}

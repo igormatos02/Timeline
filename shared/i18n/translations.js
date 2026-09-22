@@ -6,20 +6,8 @@ export const translations = {
     header: {
       brandSubtitle: "Financial Management & Timelines",
       selectTimeboard: "Select Timeboard",
-      goToToday: "Go to Today",
-      goToTodayTitle: "Return to today's date / current period",
-      newTimeboard: "New Timeboard",
-      createTimeboardTitle: "Create new Timeboard",
-      toggleThemeDark: "Switch to dark theme",
-      toggleThemeLight: "Switch to light theme"
-    },
-
-    // Header / Brand
-    header: {
-      brandSubtitle: "Financial Management & Timelines",
-      selectTimeboard: "Select Timeboard",
-      goToToday: "Go to Today",
-      goToTodayTitle: "Return to today's date / current period",
+      goToToday: "CURRENT MONTH",
+      goToTodayTitle: "Focus on current month",
       newTimeboard: "New Timeboard",
       createTimeboardTitle: "Create new Timeboard",
       toggleThemeDark: "Switch to dark theme",
@@ -29,7 +17,18 @@ export const translations = {
       dbEvents: "DB",
       calcEvents: "Calc",
       dbEventsTooltip: "{{count}} events loaded from database",
-      calculatedEventsTooltip: "{{count}} calculated events (projections, recurrence & amortizations)"
+      calculatedEventsTooltip: "{{count}} calculated events (projections, recurrence & amortizations)",
+      accountSettings: "Account Settings",
+      logout: "Sign Out",
+      userProfile: "User Profile"
+    },
+
+    // Logout Modal
+    logoutModal: {
+      title: "Sign Out",
+      message: "Are you sure you want to sign out?",
+      confirmButton: "Sign Out",
+      cancelButton: "Cancel"
     },
 
     // Buttons
@@ -1353,8 +1352,8 @@ export const translations = {
     header: {
       brandSubtitle: "Gestão Financeira & Linhas Temporais",
       selectTimeboard: "Selecionar Timeboard",
-      goToToday: "Ir para Hoje",
-      goToTodayTitle: "Voltar à data de hoje / período atual",
+      goToToday: "MÊS ATUAL",
+      goToTodayTitle: "Focar no mês atual",
       newTimeboard: "Novo Timeboard",
       createTimeboardTitle: "Criar novo Timeboard",
       toggleThemeDark: "Mudar para tema escuro",
@@ -1364,7 +1363,18 @@ export const translations = {
       dbEvents: "BD",
       calcEvents: "Calc",
       dbEventsTooltip: "{{count}} eventos carregados da base de dados",
-      calculatedEventsTooltip: "{{count}} eventos calculados (projeções, recorrências e amortizações)"
+      calculatedEventsTooltip: "{{count}} eventos calculados (projeções, recorrências e amortizações)",
+      accountSettings: "Definições de conta",
+      logout: "Sair",
+      userProfile: "Perfil de Utilizador"
+    },
+
+    // Logout Modal
+    logoutModal: {
+      title: "Terminar Sessão",
+      message: "Deseja sair?",
+      confirmButton: "Sair",
+      cancelButton: "Cancelar"
     },
 
     // Buttons

@@ -17,8 +17,6 @@ import {
   TimelineType,
   isLoanTimelineType,
   IncomeEventCategory,
-  ExpensesEventCategory,
-  InvestmentEventCategory,
   LoanEventCategory,
   AmortizationEventCategory
 } from '../../enums/index.js';
@@ -35,6 +33,8 @@ export default function IncomeTimelineHeader({
   allTimelines = [],
   events = [],
   allEvents = [],
+  filteredEvents,
+  selectedCategoryFilter,
   onEdit,
   onDelete,
   onAddEvent,
@@ -63,9 +63,10 @@ export default function IncomeTimelineHeader({
 
   const headerColor = timeline.color || TimelineColor.INCOME;
   const metrics = timeline.metrics || {};
-  const dto = timeline.incomeHeaderResult || timeline.procedureMetrics || metrics.incomeHeaderResult;
+  const isFiltered = (selectedCategoryFilter && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') || (filteredEvents !== undefined);
+  const dto = !isFiltered ? (timeline.incomeHeaderResult || timeline.procedureMetrics || metrics.incomeHeaderResult) : null;
 
-  const eventsList = timeline.events || events || [];
+  const eventsList = (isFiltered && filteredEvents) ? filteredEvents : (timeline.events || events || []);
   const currentMonthStr = new Date().toISOString().substring(0, 7);
 
   // 1. RENDIMENTOS POR ORIGEM / CATEGORIA & TOTAL DO MÊS
@@ -148,7 +149,7 @@ export default function IncomeTimelineHeader({
       const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || '')) || ev.timelineType;
       const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== AmortizationEventCategory.REDUCE_TERM && ev.category !== AmortizationEventCategory.REDUCE_INSTALLMENT);
       const isLoan = isLoanInstallment || ev.eventType === EventType.LOAN || ev.eventType === EventType.AMORTIZATION || ev.isLoan || isLoanTimelineType(tlType);
-      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment || tlType === TimelineType.INVESTMENT;
+      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment || tlType === TimelineType.INVESTMENT || Boolean(ev.pocketId || ev.pocket_id);
       const isExpense = ((ev.eventType === EventType.EXPENSE || ev.isExpense || tlType === TimelineType.EXPENSE) && !isLoan && !isInvestment);
       const isIncome = (ev.eventType === EventType.INCOME || ev.isIncome || tlType === TimelineType.INCOME) && !isLoan && !isInvestment && !isExpense;
 
@@ -163,7 +164,7 @@ export default function IncomeTimelineHeader({
         annualLoans += amt;
       } else if (isExpense) {
         annualExpenses += amt;
-      } else if (isInvestment && !isExternal && !ev.isFirstOccurrence) {
+      } else if (isInvestment && !isExternal) {
         annualInvestments += amt;
       }
     }
@@ -215,7 +216,7 @@ export default function IncomeTimelineHeader({
     const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || '')) || ev.timelineType;
     const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== AmortizationEventCategory.REDUCE_TERM && ev.category !== AmortizationEventCategory.REDUCE_INSTALLMENT);
     const isLoan = isLoanInstallment || ev.eventType === EventType.LOAN || ev.eventType === EventType.AMORTIZATION || ev.isLoan || isLoanTimelineType(tlType);
-    const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment || tlType === TimelineType.INVESTMENT;
+    const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment || tlType === TimelineType.INVESTMENT || Boolean(ev.pocketId || ev.pocket_id);
     const isExpense = ((ev.eventType === EventType.EXPENSE || ev.isExpense || tlType === TimelineType.EXPENSE) && !isLoan && !isInvestment);
     const isIncome = (ev.eventType === EventType.INCOME || ev.isIncome || tlType === TimelineType.INCOME) && !isLoan && !isInvestment && !isExpense;
 
@@ -235,7 +236,7 @@ export default function IncomeTimelineHeader({
       if (isIncome && isRealized) mRealized.income += amt;
       else if (isExpense && isRealized) mRealized.expense += amt;
       else if (isLoan && isRealized) mRealized.loan += amt;
-      else if (isInvestment && !isExternal && !ev.isFirstOccurrence && isRealized) mRealized.investmentDeduction += amt;
+      else if (isInvestment && !isExternal && isRealized) mRealized.investmentDeduction += amt;
     }
 
     // Balanço Projetado (até o final do ano corrente)
@@ -248,7 +249,7 @@ export default function IncomeTimelineHeader({
       if (isIncome) mProjected.income += amt;
       else if (isExpense) mProjected.expense += amt;
       else if (isLoan) mProjected.loan += amt;
-      else if (isInvestment && !isExternal && !ev.isFirstOccurrence) mProjected.investmentDeduction += amt;
+      else if (isInvestment && !isExternal) mProjected.investmentDeduction += amt;
     }
   });
 

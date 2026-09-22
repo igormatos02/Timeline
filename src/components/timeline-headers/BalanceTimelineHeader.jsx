@@ -232,7 +232,8 @@ export default function BalanceTimelineHeader({
     const isInvestment = (
       ev.eventType === EventType.INVESTMENT ||
       tlType === TimelineType.INVESTMENT ||
-      Boolean(ev.isInvestment)
+      Boolean(ev.isInvestment) ||
+      Boolean(ev.pocketId || ev.pocket_id)
     );
 
     const isExpense = (
@@ -245,7 +246,7 @@ export default function BalanceTimelineHeader({
     if (isIncome) {
       calculatedIncome += amt;
       if (isFutureEvent) horizonFutureInflows += amt;
-    } else if (isInvestment && !ev.isExternal && !ev.is_external && !ev.isFirstOccurrence) {
+    } else if (isInvestment && !ev.isExternal && !ev.is_external) {
       calculatedInvestments += amt;
       if (isFutureEvent) horizonFutureInvestments += amt;
     } else if (isExpense) {
@@ -579,7 +580,7 @@ export default function BalanceTimelineHeader({
                     annualIncome += amt;
                   } else if (isExpense) {
                     annualExpense += amt;
-                  } else if (isInvestment && !ev.isFirstOccurrence && !ev.isExternal && !ev.is_external) {
+                  } else if (isInvestment && !ev.isExternal && !ev.is_external) {
                     annualInvestment += amt;
                   } else if (
                     hasLoanTimeline &&

@@ -32,7 +32,6 @@ import {
   Repeat,
   BookOpen,
   Filter,
-  LocateFixed,
   DollarSign,
   TrendingUp,
   TrendingDown,
@@ -674,8 +673,22 @@ function VerticalTimeline({
   }, [timelineEvents]);
 
   const availableCategoryOptions = useMemo(() => {
+    if (timeline.type === TimelineType.INVESTMENT) {
+      const pocketOptions = (pockets || []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        icon: <PiggyBank size={13} style={{ color: p.color || timeline.color || TimelineColor.INVESTMENT }} />,
+        matches: (ev) => ev.pocketId === p.id || ev.pocket_id === p.id
+      }));
+
+      return [
+        { id: EventStatus.ALL, name: t('pocket.allPockets'), icon: <Layers size={13} /> },
+        ...pocketOptions
+      ];
+    }
+
     if (!timelineEvents || timelineEvents.length === 0) {
-      const allTitle = timeline.type === TimelineType.INCOME || timeline.type === TimelineType.INVESTMENT
+      const allTitle = timeline.type === TimelineType.INCOME
         ? t('category.all')
         : t('category.allTypes');
       return [{ id: EventStatus.ALL, name: allTitle, icon: <Layers size={13} /> }];
@@ -700,37 +713,68 @@ function VerticalTimeline({
     } else if (timeline.type === TimelineType.INCOME) {
       allOptions = [
         {
-          id: IncomeEventCategory.RECURRING,
-          name: t('category.recurringIncome'),
-          icon: <DollarSign size={13} />,
-          matches: (ev) => ev.category === IncomeEventCategory.RECURRING || ev.isRecurring || ev.periodicity === EventPeriodicity.MONTHLY || ev.recurrence === 'monthly'
+          id: IncomeEventCategory.SALARY,
+          name: t('incomeCategories.salary'),
+          icon: <DollarSign size={13} style={{ color: TimelineColor.SUCCESS }} />,
+          matches: (ev) => {
+            const c = (ev.category || '').toLowerCase();
+            return c === IncomeEventCategory.SALARY || c === 'salario';
+          }
         },
         {
-          id: IncomeEventCategory.SPORADIC,
-          name: t('category.sporadicIncome'),
-          icon: <Gift size={13} />,
-          matches: (ev) => ev.category === IncomeEventCategory.SPORADIC || (!ev.isRecurring && ev.category !== IncomeEventCategory.RECURRING)
-        }
-      ];
-    } else if (timeline.type === TimelineType.INVESTMENT) {
-      allOptions = [
-        {
-          id: InvestmentEventCategory.SAVINGS,
-          name: t('category.savingsInvestment'),
-          icon: <PiggyBank size={13} />,
-          matches: (ev) => ev.category === InvestmentEventCategory.SAVINGS || ev.category === 'poupanca' || ev.category === 'savings'
+          id: IncomeEventCategory.MEAL_ALLOWANCE,
+          name: t('incomeCategories.meal_allowance'),
+          icon: <Utensils size={13} style={{ color: TimelineColor.WARNING }} />,
+          matches: (ev) => {
+            const c = (ev.category || '').toLowerCase();
+            return c === IncomeEventCategory.MEAL_ALLOWANCE || c === 'subsidio_alimentacao';
+          }
         },
         {
-          id: InvestmentEventCategory.ASSET,
-          name: t('category.assetInvestment'),
-          icon: <Landmark size={13} />,
-          matches: (ev) => ev.category === InvestmentEventCategory.ASSET || ev.category === 'ativo' || ev.category === 'asset'
+          id: IncomeEventCategory.BONUS,
+          name: t('incomeCategories.bonus'),
+          icon: <Sparkles size={13} style={{ color: TimelineColor.PURPLE }} />,
+          matches: (ev) => {
+            const c = (ev.category || '').toLowerCase();
+            return c === IncomeEventCategory.BONUS;
+          }
         },
         {
-          id: InvestmentEventCategory.OTHER,
-          name: t('category.otherInvestment'),
-          icon: <Sparkles size={13} />,
-          matches: (ev) => ev.category === InvestmentEventCategory.OTHER || ev.category === 'outro' || ev.category === 'other'
+          id: IncomeEventCategory.FREELANCE,
+          name: t('incomeCategories.freelance'),
+          icon: <Zap size={13} style={{ color: TimelineColor.CYAN }} />,
+          matches: (ev) => {
+            const c = (ev.category || '').toLowerCase();
+            return c === IncomeEventCategory.FREELANCE || c === 'freelancer';
+          }
+        },
+        {
+          id: IncomeEventCategory.INVESTMENT_RETURN,
+          name: t('incomeCategories.investment_return'),
+          icon: <TrendingUp size={13} style={{ color: TimelineColor.BLUE }} />,
+          matches: (ev) => {
+            const c = (ev.category || '').toLowerCase();
+            return c === IncomeEventCategory.INVESTMENT_RETURN || c === 'rendimentos' || c === 'dividendos';
+          }
+        },
+        {
+          id: IncomeEventCategory.RECURRING_INCOME,
+          name: t('incomeCategories.recurring_income'),
+          icon: <Repeat size={13} style={{ color: TimelineColor.EMERALD }} />,
+          matches: (ev) => {
+            const c = (ev.category || '').toLowerCase();
+            return c === IncomeEventCategory.RECURRING_INCOME || c === 'renda_recorrente' || c === 'recurring';
+          }
+        },
+        {
+          id: IncomeEventCategory.OTHER,
+          name: t('incomeCategories.other'),
+          icon: <Tag size={13} style={{ color: TimelineColor.SLATE }} />,
+          matches: (ev) => {
+            const c = (ev.category || '').toLowerCase();
+            const allKnown = Object.values(IncomeEventCategory).map((v) => v.toLowerCase());
+            return c === IncomeEventCategory.OTHER || !allKnown.includes(c);
+          }
         }
       ];
     } else {
@@ -746,7 +790,7 @@ function VerticalTimeline({
       timelineEvents.some((ev) => !ev.isDeleted && (opt.matches ? opt.matches(ev) : (ev.category === opt.id || ev.eventType === opt.id)))
     );
 
-    const allTitle = timeline.type === TimelineType.INCOME || timeline.type === TimelineType.INVESTMENT
+    const allTitle = timeline.type === TimelineType.INCOME
       ? t('category.all')
       : t('category.allTypes');
 
@@ -754,7 +798,7 @@ function VerticalTimeline({
       { id: EventStatus.ALL, name: allTitle, icon: <Layers size={13} /> },
       ...filteredOptions
     ];
-  }, [timelineEvents, timeline.type, t]);
+  }, [timelineEvents, timeline.type, timeline.color, pockets, t]);
 
   const isBalancoView = timeline.type === TimelineType.BALANCE;
 
@@ -832,7 +876,22 @@ function VerticalTimeline({
           });
         }
       } else if (selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') {
-        if (selectedCategoryFilter === EventType.LOAN_INSTALLMENT || selectedCategoryFilter === 'parcela_emprestimo' || selectedCategoryFilter === 'loan_installment' || selectedCategoryFilter === LoanEventCategory.LOAN_INSTALLMENT) {
+        if (timeline.type === TimelineType.INVESTMENT) {
+          matchesCategory = ev.pocketId === selectedCategoryFilter || ev.pocket_id === selectedCategoryFilter;
+        } else if (timeline.type === TimelineType.INCOME) {
+          const evCat = (ev.category || '').toLowerCase();
+          if (selectedCategoryFilter === IncomeEventCategory.OTHER) {
+            const allKnown = Object.values(IncomeEventCategory).map((v) => v.toLowerCase());
+            matchesCategory = evCat === IncomeEventCategory.OTHER || !allKnown.includes(evCat);
+          } else {
+            matchesCategory = evCat === selectedCategoryFilter ||
+              (selectedCategoryFilter === IncomeEventCategory.SALARY && evCat === 'salario') ||
+              (selectedCategoryFilter === IncomeEventCategory.MEAL_ALLOWANCE && evCat === 'subsidio_alimentacao') ||
+              (selectedCategoryFilter === IncomeEventCategory.FREELANCE && evCat === 'freelancer') ||
+              (selectedCategoryFilter === IncomeEventCategory.INVESTMENT_RETURN && (evCat === 'rendimentos' || evCat === 'dividendos')) ||
+              (selectedCategoryFilter === IncomeEventCategory.RECURRING_INCOME && (evCat === 'renda_recorrente' || evCat === 'recurring'));
+          }
+        } else if (selectedCategoryFilter === EventType.LOAN_INSTALLMENT || selectedCategoryFilter === 'parcela_emprestimo' || selectedCategoryFilter === 'loan_installment' || selectedCategoryFilter === LoanEventCategory.LOAN_INSTALLMENT) {
           matchesCategory = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || ev.category === 'loan_installment' || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
         } else if (selectedCategoryFilter === EventType.AMORTIZATION || selectedCategoryFilter === 'amortizacao' || selectedCategoryFilter === 'amortization' || selectedCategoryFilter === LoanEventCategory.AMORTIZATION) {
           matchesCategory = ev.eventType === EventType.AMORTIZATION || ev.category === 'amortizacao' || ev.category === 'amortization' || ev.category === AmortizationEventCategory.REDUCE_TERM || ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT || ev.category === AmortizationStrategy.REDUCE_TERM || ev.category === AmortizationStrategy.REDUCE_INSTALLMENT;
@@ -1258,7 +1317,7 @@ function VerticalTimeline({
     return map;
   }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
-  // Pre-calculate total deductible investments from monthly income (excludes external deposits and initial contributions)
+  // Pre-calculate total deductible investments from monthly income (excludes external deposits)
   const monthInvestmentsDeductionsMap = useMemo(() => {
     const map = new Map();
     (timelineEvents || []).forEach((ev) => {
@@ -1270,9 +1329,9 @@ function VerticalTimeline({
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
       const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
-      if (isExternal || ev.isFirstOccurrence) return;
+      if (isExternal) return;
 
-      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment;
+      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment || Boolean(ev.pocketId || ev.pocket_id);
 
       if (isInvestment) {
         const mKey = ev.date.substring(0, 7);
@@ -1296,7 +1355,7 @@ function VerticalTimeline({
       const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
       if (!isExternal) return;
 
-      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment;
+      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment || Boolean(ev.pocketId || ev.pocket_id);
 
       if (isInvestment) {
         const mKey = ev.date.substring(0, 7);
@@ -1421,9 +1480,9 @@ function VerticalTimeline({
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
       const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
-      if (isExternal || ev.isFirstOccurrence) return;
+      if (isExternal) return;
 
-      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment;
+      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment || Boolean(ev.pocketId || ev.pocket_id);
 
       if (isInvestment) {
         const mKey = ev.date.substring(0, 7);
@@ -1450,7 +1509,7 @@ function VerticalTimeline({
       const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
       if (!isExternal) return;
 
-      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment;
+      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment || Boolean(ev.pocketId || ev.pocket_id);
 
       if (isInvestment) {
         const mKey = ev.date.substring(0, 7);
@@ -1861,6 +1920,9 @@ function VerticalTimeline({
                   {timeline.type === TimelineType.INVESTMENT ? (() => {
                     const monthKey = format(mGroup.monthDate, 'yyyy-MM');
                     const visiblePockets = (pockets || []).filter((pocket) => {
+                      if (selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') {
+                        if (pocket.id !== selectedCategoryFilter) return false;
+                      }
                       const createdMonth = (pocket.date_created || pocket.dateCreated || '').substring(0, 7) || '1900-01';
                       const closedMonth = (pocket.date_closed || pocket.dateClosed || '').substring(0, 7) || null;
 
@@ -1873,7 +1935,13 @@ function VerticalTimeline({
                     });
 
                     const unassignedEvents = (mGroup.events || []).filter(
-                      (ev) => !ev.pocketId && !ev.pocket_id && !ev.isDeleted && !isCancelledStatus(ev.status) && ev.status !== EventStatus.DELETED
+                      (ev) => {
+                        if (ev.pocketId || ev.pocket_id || ev.isDeleted || isCancelledStatus(ev.status) || ev.status !== EventStatus.DELETED) return false;
+                        if (selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos' && selectedCategoryFilter !== 'unassigned') {
+                          return false;
+                        }
+                        return true;
+                      }
                     );
 
                     if (visiblePockets.length === 0 && unassignedEvents.length === 0) {
@@ -1919,13 +1987,17 @@ function VerticalTimeline({
                             if (ev.pocketId === pocket.id || ev.pocket_id === pocket.id) {
                               const evMonth = ev.date.substring(0, 7);
                               if (evMonth <= monthKey) {
+                                const isWithdrawal = Boolean(ev.isWithdrawal || ev.eventType === EventType.WITHDRAWAL || ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0);
+                                const multiplier = isWithdrawal ? -1 : 1;
+                                const amt = Math.abs(Number(ev.amount || 0));
+
                                 if (isFutureMonth) {
-                                  allPocketContributed += Number(ev.amount || 0);
+                                  allPocketContributed += multiplier * amt;
                                 } else {
                                   const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
                                   const isExternal = Boolean(ev.isExternal || ev.is_external);
                                   if (isReceived || isExternal) {
-                                    allPocketContributed += Number(ev.amount || 0);
+                                    allPocketContributed += multiplier * amt;
                                   }
                                 }
                               }
@@ -2016,34 +2088,70 @@ function VerticalTimeline({
                                   )}
 
                                   {onAddEventForDate && !isClosed && (
-                                    <button
-                                      type="button"
-                                      className="btn btn-primary btn-xs"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
-                                        onAddEventForDate(targetDayStr, EventType.INVESTMENT, {
-                                          pocketId: pocket.id,
-                                          pocketName: pocket.name,
-                                          title: pocket.name,
-                                          category: InvestmentEventCategory.SAVINGS
-                                        });
-                                      }}
-                                      style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '4px',
-                                        padding: '4px 10px',
-                                        borderRadius: '6px',
-                                        fontSize: '0.74rem',
-                                        fontWeight: '700',
-                                        background: timeline.color || TimelineColor.INVESTMENT,
-                                        borderColor: timeline.color || TimelineColor.INVESTMENT
-                                      }}
-                                    >
-                                      <Plus size={12} strokeWidth={2.5} />
-                                      <span>{t('buttons.addEvent')}</span>
-                                    </button>
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="btn btn-primary btn-xs"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
+                                          onAddEventForDate(targetDayStr, EventType.INVESTMENT, {
+                                            pocketId: pocket.id,
+                                            pocketName: pocket.name,
+                                            title: pocket.name,
+                                            category: InvestmentEventCategory.SAVINGS
+                                          });
+                                        }}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          padding: '4px 10px',
+                                          borderRadius: '6px',
+                                          fontSize: '0.74rem',
+                                          fontWeight: '700',
+                                          background: timeline.color || TimelineColor.INVESTMENT,
+                                          borderColor: timeline.color || TimelineColor.INVESTMENT
+                                        }}
+                                      >
+                                        <Plus size={12} strokeWidth={2.5} />
+                                        <span>{t('buttons.addEvent')}</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        className="btn btn-xs"
+                                        title={t('buttons.withdrawal')}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
+                                          onAddEventForDate(targetDayStr, EventType.EXPENSE, {
+                                            pocketId: pocket.id,
+                                            pocketName: pocket.name,
+                                            title: pocket.name,
+                                            category: ExpensesEventCategory.RESERVE,
+                                            isWithdrawal: true
+                                          });
+                                        }}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          padding: '4px 10px',
+                                          borderRadius: '6px',
+                                          fontSize: '0.74rem',
+                                          fontWeight: '700',
+                                          background: 'rgba(239, 68, 68, 0.12)',
+                                          color: TimelineColor.DANGER,
+                                          border: '1px solid rgba(239, 68, 68, 0.35)',
+                                          cursor: 'pointer',
+                                          transition: 'all 0.15s ease'
+                                        }}
+                                      >
+                                        <ArrowDownRight size={12} strokeWidth={2.4} />
+                                        <span>{t('buttons.withdrawal')}</span>
+                                      </button>
+                                    </>
                                   )}
                                 </div>
                               </div>
@@ -2785,30 +2893,6 @@ function VerticalTimeline({
           </div>
         </div>
 
-        {/* 2. Quick Focus Today Button */}
-        <div className="sidebar-section">
-          <button
-            type="button"
-            onClick={scrollToToday}
-            className="btn btn-secondary btn-sm"
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              fontWeight: '700',
-              borderColor: 'var(--primary-light)',
-              color: 'var(--primary-light)',
-              background: 'rgba(99, 102, 241, 0.12)',
-              padding: '8px 12px'
-            }}
-            title={t('sidebar.focusCurrentMonthTitle')}
-          >
-            <LocateFixed size={15} />
-            <span>{t('sidebar.focusCurrentMonth')}</span>
-          </button>
-        </div>
 
         {/* 3. Estado Filter (Multi-Selection) */}
         <div className="sidebar-section">
@@ -2966,7 +3050,7 @@ function VerticalTimeline({
           availableCategoryOptions.length > 1 && (
             <div className="sidebar-section">
               <div className="sidebar-section-title">
-                <span>{t('sidebar.categoryType')}</span>
+                <span>{timeline.type === TimelineType.INVESTMENT ? t('pocket.filterByPockets') : t('sidebar.categoryType')}</span>
               </div>
               <div className="sidebar-btn-group">
                 {availableCategoryOptions.map((cat, catIdx) => {
@@ -3018,8 +3102,10 @@ function VerticalTimeline({
         <div className="sticky-header-dock">
           {React.isValidElement(headerComponent)
             ? React.cloneElement(headerComponent, {
-              filteredEvents: timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0 ? filteredEvents : undefined,
-              selectedExpenseCategories: timeline.type === TimelineType.EXPENSE ? selectedExpenseCategories : undefined
+              filteredEvents: (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) || (timeline.type === TimelineType.INVESTMENT && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') || (timeline.type === TimelineType.INCOME && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') ? filteredEvents : undefined,
+              selectedExpenseCategories: timeline.type === TimelineType.EXPENSE ? selectedExpenseCategories : undefined,
+              selectedCategoryFilter: (timeline.type === TimelineType.INVESTMENT || timeline.type === TimelineType.INCOME) ? selectedCategoryFilter : undefined,
+              selectedPocketId: timeline.type === TimelineType.INVESTMENT && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos' ? selectedCategoryFilter : undefined
             })
             : headerComponent}
         </div>

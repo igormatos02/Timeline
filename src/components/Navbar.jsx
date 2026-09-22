@@ -2,7 +2,8 @@ import React from 'react';
 import { Clock, LayoutGrid, Sparkles, Sun, Moon, User, Shield, Settings, ChevronDown, LogOut } from 'lucide-react';
 import { getCurrentUser } from '../services/api';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { TimelineColor } from '../enums/index.js';
+import { TimelineColor, PersonRole } from '../enums/index.js';
+import { isGlobalTenant } from '../constants/tenant.js';
 import VersionBadge from './ui/VersionBadge.jsx';
 import LogoutConfirmModal from './LogoutConfirmModal.jsx';
 
@@ -54,6 +55,7 @@ export default function Navbar({
             activeTimeboardId={activeTimeboardId}
             onSelectTimeboard={onSelectTimeboard}
             onOpenEditTimeboard={onOpenEditTimeboard}
+            currentUser={currentUser}
           />
         </div>
 
@@ -146,7 +148,8 @@ function TimeboardDropdownSelector({
   activeTimeboard,
   activeTimeboardId,
   onSelectTimeboard,
-  onOpenEditTimeboard
+  onOpenEditTimeboard,
+  currentUser
 }) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
@@ -165,6 +168,9 @@ function TimeboardDropdownSelector({
   const formattedType = activeTimeboard?.type
     ? activeTimeboard.type.charAt(0).toUpperCase() + activeTimeboard.type.slice(1).toLowerCase()
     : 'Financial';
+
+  const currentUserId = currentUser?.id;
+  const isNotOwner = activeTimeboard && (activeTimeboard.isShared || (activeTimeboard.ownerId && currentUserId && activeTimeboard.ownerId !== currentUserId));
 
   return (
     <div
@@ -207,17 +213,38 @@ function TimeboardDropdownSelector({
           >
             {activeTimeboard?.name || t('header.selectTimeboard')}
           </span>
-          <span
-            style={{
-              fontSize: '0.66rem',
-              fontWeight: '600',
-              color: 'var(--primary-light)',
-              lineHeight: 1,
-              marginTop: '1px'
-            }}
-          >
-            {formattedType}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}>
+            <span
+              style={{
+                fontSize: '0.66rem',
+                fontWeight: '600',
+                color: 'var(--primary-light)',
+                lineHeight: 1
+              }}
+            >
+              {formattedType}
+            </span>
+            {isNotOwner && (
+              <span
+                style={{
+                  fontSize: '0.62rem',
+                  fontWeight: '700',
+                  color: TimelineColor.PURPLE,
+                  background: 'rgba(168, 85, 247, 0.15)',
+                  border: '1px solid rgba(168, 85, 247, 0.3)',
+                  borderRadius: '4px',
+                  padding: '1px 4px',
+                  lineHeight: 1
+                }}
+              >
+                {activeTimeboard.role === PersonRole.ADMIN
+                  ? t('timeboardSettings.entities.roles.admin')
+                  : activeTimeboard.role === PersonRole.CONTRIBUTOR
+                  ? t('timeboardSettings.entities.roles.contributor')
+                  : t('timeboardModal.typeShared')}
+              </span>
+            )}
+          </div>
         </div>
 
         <ChevronDown
@@ -452,9 +479,11 @@ function UserDropdown({ currentUser, onLogout }) {
             <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-main)', lineHeight: 1.15 }}>
               {currentUser.name}
             </span>
-            <span style={{ fontSize: '0.64rem', color: 'var(--primary-light)', fontWeight: '600' }}>
-              {currentUser.tenantName}
-            </span>
+            {!isGlobalTenant(currentUser?.tenantId, currentUser?.tenantName) && (
+              <span style={{ fontSize: '0.64rem', color: 'var(--primary-light)', fontWeight: '600' }}>
+                {currentUser.tenantName}
+              </span>
+            )}
           </div>
           <ChevronDown
             size={14}
@@ -492,9 +521,15 @@ function UserDropdown({ currentUser, onLogout }) {
               <div style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main)', lineHeight: 1.2 }}>
                 {currentUser.name}
               </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
-                {currentUser.role || 'Admin'} • {currentUser.tenantName}
-              </div>
+              {!isGlobalTenant(currentUser?.tenantId, currentUser?.tenantName) ? (
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                  {currentUser.tenantName}
+                </div>
+              ) : currentUser.email ? (
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                  {currentUser.email}
+                </div>
+              ) : null}
             </div>
 
             <div style={{ height: '1px', background: 'var(--border-glass)', margin: '2px 0' }} />

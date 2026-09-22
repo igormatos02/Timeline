@@ -21,6 +21,9 @@ export default function InvestmentTimelineHeader({
   computeStartDate = null,
   allTimelines = [],
   events = [],
+  filteredEvents,
+  selectedCategoryFilter,
+  selectedPocketId,
   pockets: propPockets = [],
   onOpenCreatePocket = null,
   onEdit,
@@ -32,15 +35,34 @@ export default function InvestmentTimelineHeader({
 }) {
   const { t, dateLocale } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
-  const pockets = propPockets || [];
+  const [chartMode, setChartMode] = useState('projected');
+
+  const isPocketFiltered = Boolean(
+    selectedPocketId ||
+    (selectedCategoryFilter &&
+      selectedCategoryFilter !== EventStatus.ALL &&
+      selectedCategoryFilter !== 'all' &&
+      selectedCategoryFilter !== 'Todos')
+  );
+  const activePocketId = selectedPocketId || (isPocketFiltered ? selectedCategoryFilter : null);
+
+  const allPockets = propPockets || [];
+  const pockets = isPocketFiltered
+    ? allPockets.filter((p) => p.id === activePocketId)
+    : allPockets;
 
   if (!timeline) return null;
 
   const headerColor = timeline.color || TimelineColor.INVESTMENT;
   const metrics = timeline.metrics || {};
-  const dto = timeline.investmentHeaderResult || timeline.procedureMetrics || metrics.investmentHeaderResult;
+  const dto = !isPocketFiltered
+    ? (timeline.investmentHeaderResult || timeline.procedureMetrics || metrics.investmentHeaderResult)
+    : null;
 
-  const eventsList = timeline.events || events || [];
+  const isFiltered = isPocketFiltered || (filteredEvents !== undefined);
+  const eventsList = (isFiltered && filteredEvents)
+    ? filteredEvents
+    : (events && events.length > 0 ? events : (timeline.events || []));
   const currentMonthStr = new Date().toISOString().substring(0, 7);
 
   // 1. POUPANÇA POR COFRINHOS
@@ -67,8 +89,11 @@ export default function InvestmentTimelineHeader({
       if (ev.pocketId === pocket.id || ev.pocket_id === pocket.id) {
         const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
         const isExternal = Boolean(ev.isExternal || ev.is_external);
+        const isWithdrawal = Boolean(ev.isWithdrawal || ev.eventType === EventType.WITHDRAWAL || ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0);
+        const multiplier = isWithdrawal ? -1 : 1;
+        const amt = Math.abs(Number(ev.amount || 0));
         if (isReceived || isExternal) {
-          pocketContributed += Number(ev.amount || 0);
+          pocketContributed += multiplier * amt;
         }
       }
     });
@@ -109,19 +134,26 @@ export default function InvestmentTimelineHeader({
   let currentMonthExternalInvested = 0;
   let annualTotalIncome = 0;
 
-  eventsList.forEach((ev) => {
+  const incomeEventsSource = isFiltered
+    ? (events && events.length > 0 ? events : (timeline.events || []))
+    : eventsList;
+
+  incomeEventsSource.forEach((ev) => {
     if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
     const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
-    const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment;
-    const isExternal = Boolean(ev.isExternal || ev.is_external);
-    const amt = Number(ev.amount || 0);
-
     if (isIncome) {
       const evMonthKey = ev.date.substring(0, 7);
       if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
-        annualTotalIncome += amt;
+        annualTotalIncome += Number(ev.amount || 0);
       }
     }
+  });
+
+  eventsList.forEach((ev) => {
+    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
+    const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment;
+    const isExternal = Boolean(ev.isExternal || ev.is_external);
+    const amt = Number(ev.amount || 0);
 
     if (isInvestment) {
       if (ev.date.startsWith(currentMonthStr)) {
@@ -166,10 +198,13 @@ export default function InvestmentTimelineHeader({
     if (isInvestment) {
       const isExternal = Boolean(ev.isExternal || ev.is_external);
       const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
+      const isWithdrawal = Boolean(ev.isWithdrawal || ev.eventType === EventType.WITHDRAWAL || ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0);
+      const multiplier = isWithdrawal ? -1 : 1;
+      const amt = Math.abs(Number(ev.amount || 0));
 
       // External deposits are added to Received / Invested without impacting other calculations
       if (isReceived || isExternal) {
-        totalInstallmentsReceived += Number(ev.amount || 0);
+        totalInstallmentsReceived += multiplier * amt;
         totalReceivedCount += 1;
       }
       if (Number(ev.initialInvestedAmount || 0) > 0 && (ev.isFirstOccurrence || !ev.isProjected)) {
@@ -183,24 +218,32 @@ export default function InvestmentTimelineHeader({
     }
   });
 
+  const selectedPocket = isPocketFiltered ? allPockets.find((p) => p.id === activePocketId) : null;
+
   let pocketsInitialSum = 0;
   let pocketsTargetSum = 0;
-  pockets.forEach((p) => {
+  allPockets.forEach((p) => {
     pocketsInitialSum += Number(p.initial_value ?? p.initialValue ?? 0);
     pocketsTargetSum += Number(p.target_value ?? p.targetValue ?? 0);
   });
 
-  const totalReceived = totalInstallmentsReceived + initialContribution + (initialContribution === 0 ? pocketsInitialSum : 0);
+  const initialValueAmount = isPocketFiltered
+    ? Number(selectedPocket?.initial_value ?? selectedPocket?.initialValue ?? 0)
+    : (timeline.initialValue ?? timeline.initial_value ?? (initialContribution > 0 ? initialContribution : pocketsInitialSum));
 
-  const targetAmount = customTarget > 0
-    ? customTarget
-    : (timeline.targetAmount || timeline.target || metrics?.targetAmount || metrics?.target || dto?.target || dto?.annual_target || pocketsTargetSum || 0);
+  const totalReceived = isPocketFiltered
+    ? initialValueAmount + totalInstallmentsReceived
+    : totalInstallmentsReceived + initialContribution + (initialContribution === 0 ? pocketsInitialSum : 0);
+
+  const targetAmount = isPocketFiltered
+    ? Number(selectedPocket?.target_value ?? selectedPocket?.targetValue ?? 0)
+    : (customTarget > 0
+        ? customTarget
+        : (timeline.targetAmount || timeline.target || metrics?.targetAmount || metrics?.target || dto?.target || dto?.annual_target || pocketsTargetSum || 0));
 
   const targetPercent = targetAmount > 0
     ? Math.min(100, Math.round((totalReceived / targetAmount) * 100))
     : 0;
-
-  const initialValueAmount = timeline.initialValue ?? timeline.initial_value ?? 0;
 
   return (
     <HeaderShell
@@ -513,13 +556,16 @@ export default function InvestmentTimelineHeader({
 
             eventsList.forEach((ev) => {
               if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-              const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment;
+              const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment || Boolean(ev.pocketId || ev.pocket_id);
               if (isInvestment) {
+                const isPaid = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
+                if (chartMode === 'realized' && !isPaid) return;
+
                 const evKey = ev.date.substring(0, 7);
                 if (computeFromMonth && evKey < computeFromMonth) return;
                 const foundMonth = last7Months.find((m) => m.key === evKey);
                 if (foundMonth) {
-                  foundMonth.total += Number(ev.amount || 0);
+                  foundMonth.total += Math.abs(Number(ev.amount || 0));
                 }
               }
             });
@@ -544,6 +590,9 @@ export default function InvestmentTimelineHeader({
                 mutedGradientTop="rgba(99, 102, 241, 0.6)"
                 mutedGradientBottom="rgba(99, 102, 241, 0.3)"
                 currentTextColor={TimelineColor.INVESTMENT}
+                mode={chartMode}
+                onToggleMode={setChartMode}
+                accentColor={TimelineColor.INVESTMENT}
               />
             );
           })()}

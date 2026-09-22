@@ -9,7 +9,6 @@ export const DEFAULT_USER = {
   name: 'Igor Matos',
   email: 'igor.matos@timeline.app',
   avatarInitials: 'IM',
-  role: 'Administrador',
   tenantId: DEFAULT_TENANT.id,
   tenantName: DEFAULT_TENANT.name
 };
@@ -71,7 +70,6 @@ export async function loginWithEmail(email, password) {
       avatarInitials: initials,
       avatarUrl: data.avatarUrl || null,
       googleId: data.googleId || null,
-      role: 'Administrador',
       tenantId: DEFAULT_TENANT.id,
       tenantName: DEFAULT_TENANT.name
     };
@@ -111,7 +109,6 @@ export async function registerWithEmail(name, email, password) {
       avatarInitials: initials,
       avatarUrl: data.avatarUrl || null,
       googleId: null,
-      role: 'Administrador',
       tenantId: DEFAULT_TENANT.id,
       tenantName: DEFAULT_TENANT.name
     };
@@ -204,7 +201,6 @@ export async function syncGoogleUser(googlePayload) {
       avatarInitials: initials,
       avatarUrl: data.avatarUrl || googlePayload.avatarUrl || null,
       googleId: data.googleId || googlePayload.googleId,
-      role: 'Administrador',
       tenantId: DEFAULT_TENANT.id,
       tenantName: DEFAULT_TENANT.name
     };

@@ -171,6 +171,17 @@
 }
 
 .sidebar-header-title {
+  position: sticky;
+  top: -16px;
+  margin: -16px -16px 0 -16px;
+  padding: 14px 16px 12px 16px;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 10;
+  border-top-left-radius: calc(var(--radius-lg) - 1px);
+  border-top-right-radius: calc(var(--radius-lg) - 1px);
+  border-bottom: 1px solid var(--border-glass);
   font-size: 0.82rem;
   font-weight: 800;
   color: var(--text-main);

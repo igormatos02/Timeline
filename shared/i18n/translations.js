@@ -594,7 +594,8 @@ export const translations = {
       typeProjects: "Projects",
       typeReminders: "Reminders",
       typeEmpty: "Empty",
-      typeCondoflow: "Condoflow"
+      typeCondoflow: "Condoflow",
+      typeShared: "Shared"
     },
 
     // Timeboard Full Settings Modal
@@ -972,7 +973,9 @@ export const translations = {
       goalReachedForecast: "🎉 Goal Reached (Forecast)!",
       reachedPercent: "{percent}% reached",
       forecastPercent: "{percent}% forecast",
-      initialContributionNote: "Initial: {amount}"
+      initialContributionNote: "Initial: {amount}",
+      filterByPockets: "Filter by Pockets",
+      allPockets: "All Pockets"
     },
 
     // Delete Pocket Modal
@@ -2000,7 +2003,8 @@ export const translations = {
       typeProjects: "Projetos (Projects)",
       typeReminders: "Lembretes (Reminders)",
       typeEmpty: "Vazio (Empty)",
-      typeCondoflow: "Condoflow"
+      typeCondoflow: "Condoflow",
+      typeShared: "Partilhado"
     },
 
     // Timeboard Full Settings Modal
@@ -2378,7 +2382,9 @@ export const translations = {
       goalReachedForecast: "🎉 Meta Atingida (Previsão)!",
       reachedPercent: "{percent}% alcançado",
       forecastPercent: "{percent}% previsto",
-      initialContributionNote: "Aporte Inicial: {amount}"
+      initialContributionNote: "Aporte Inicial: {amount}",
+      filterByPockets: "Filtrar por Cofrinhos",
+      allPockets: "Todos os Cofrinhos"
     },
 
     // Delete Pocket Modal

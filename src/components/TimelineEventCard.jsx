@@ -221,13 +221,6 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const isIncomeEvent = event.eventType === EventType.INCOME && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
   const isExpenseEvent = event.eventType === EventType.EXPENSE && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
   const isInvestmentEvent = event.eventType === EventType.INVESTMENT && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
-  const isSavingsInvestment = isInvestmentEvent && (
-    !event.category ||
-    event.category === 'savings' ||
-    event.category === InvestmentEventCategory.SAVINGS ||
-    event.category === 'investimento_poupanca' ||
-    event.category === 'poupanca'
-  );
 
   const normRec = normalizeRecurrence(event);
   const isRecurringEvent = (
@@ -2728,32 +2721,6 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
             {/* Status Pill & Action */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
-              {isSavingsInvestment && (
-                <button
-                  type="button"
-                  onClick={(e) => e.stopPropagation()}
-                  className="btn btn-sm"
-                  title={t('buttons.withdrawal')}
-                  style={{
-                    background: isCompletedInvestment ? 'rgba(255, 255, 255, 0.2)' : 'rgba(139, 92, 246, 0.12)',
-                    color: isCompletedInvestment ? TimelineColor.WHITE : TimelineColor.PRIMARY_LIGHT,
-                    border: isCompletedInvestment ? '1px solid rgba(255, 255, 255, 0.35)' : '1px solid rgba(139, 92, 246, 0.3)',
-                    borderRadius: '9999px',
-                    padding: '4px 10px',
-                    fontSize: '0.74rem',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <ArrowDownRight size={12} strokeWidth={2.4} />
-                  <span>{t('buttons.withdrawal') || 'Withdrawal'}</span>
-                </button>
-              )}
-
               {renderStatusDropdownButton(
                 {
                   className: 'btn btn-sm',

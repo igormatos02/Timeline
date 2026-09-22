@@ -22,7 +22,8 @@ import {
   Lock,
   ChevronDown
 } from 'lucide-react';
-import { TimeboardType, TimelineColor } from '../../enums/index.js';
+import { TimeboardType, TimelineColor, PersonRole } from '../../enums/index.js';
+import { isGlobalTenant } from '../../constants/tenant.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import LogoutConfirmModal from '../LogoutConfirmModal.jsx';
 import './TimeboardsHub.css';
@@ -85,45 +86,45 @@ export default function TimeboardsHub({
     if (type === TimeboardType.EMPTY || type === 'empty') {
       return {
         label: t('timeboard.empty') || 'Vazio',
-        color: '#a855f7',
+        color: TimelineColor.PURPLE,
         bg: 'rgba(168, 85, 247, 0.15)',
         border: 'rgba(168, 85, 247, 0.3)',
-        icon: <Layers size={20} style={{ color: '#a855f7' }} />
+        icon: <Layers size={20} style={{ color: TimelineColor.PURPLE }} />
       };
     }
     if (type === TimeboardType.PROJECT || type === TimeboardType.PROJECTS || type === 'projects' || type === 'project') {
       return {
         label: t('timeboard.project') || 'Projeto',
-        color: '#60a5fa',
+        color: TimelineColor.BLUE,
         bg: 'rgba(59, 130, 246, 0.15)',
         border: 'rgba(59, 130, 246, 0.3)',
-        icon: <FolderKanban size={20} style={{ color: '#60a5fa' }} />
+        icon: <FolderKanban size={20} style={{ color: TimelineColor.BLUE }} />
       };
     }
     if (type === TimeboardType.REMINDERS || type === 'reminders' || type === 'reminder') {
       return {
         label: t('timeboard.reminders') || 'Lembretes',
-        color: '#f59e0b',
+        color: TimelineColor.WARNING,
         bg: 'rgba(245, 158, 11, 0.15)',
         border: 'rgba(245, 158, 11, 0.3)',
-        icon: <Calendar size={20} style={{ color: '#f59e0b' }} />
+        icon: <Calendar size={20} style={{ color: TimelineColor.WARNING }} />
       };
     }
     if (type === TimeboardType.CONDOFLOW || type === 'condoflow') {
       return {
         label: 'Condoflow',
-        color: '#06b6d4',
+        color: TimelineColor.CYAN,
         bg: 'rgba(6, 182, 212, 0.15)',
         border: 'rgba(6, 182, 212, 0.3)',
-        icon: <LayoutGrid size={20} style={{ color: '#06b6d4' }} />
+        icon: <LayoutGrid size={20} style={{ color: TimelineColor.CYAN }} />
       };
     }
     return {
       label: t('timeboard.financial') || 'Financeiro',
-      color: '#34d399',
+      color: TimelineColor.SUCCESS,
       bg: 'rgba(16, 185, 129, 0.15)',
       border: 'rgba(16, 185, 129, 0.3)',
-      icon: <Wallet size={20} style={{ color: '#34d399' }} />
+      icon: <Wallet size={20} style={{ color: TimelineColor.SUCCESS }} />
     };
   };
 
@@ -150,7 +151,7 @@ export default function TimeboardsHub({
                   className="hub-card-badge"
                   style={{
                     background: 'rgba(168, 85, 247, 0.15)',
-                    color: '#c084fc',
+                    color: TimelineColor.PURPLE,
                     border: '1px solid rgba(168, 85, 247, 0.35)',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -159,7 +160,13 @@ export default function TimeboardsHub({
                   title="Partilhado consigo via Timeboard Members"
                 >
                   <Share2 size={11} />
-                  <span>Shared</span>
+                  <span>
+                    {tb.role === PersonRole.ADMIN
+                      ? t('timeboardSettings.entities.roles.admin')
+                      : tb.role === PersonRole.CONTRIBUTOR
+                      ? t('timeboardSettings.entities.roles.contributor')
+                      : t('timeboardModal.typeShared')}
+                  </span>
                 </span>
               )}
               <span
@@ -189,7 +196,7 @@ export default function TimeboardsHub({
             style={{
               background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.05) 100%)',
               border: '1px solid rgba(99, 102, 241, 0.3)',
-              color: '#a5b4fc',
+              color: 'var(--primary-light)',
               padding: '6px 12px',
               borderRadius: '8px',
               fontSize: '0.82rem',
@@ -218,7 +225,7 @@ export default function TimeboardsHub({
               <button
                 type="button"
                 className="hub-card-action-btn"
-                style={{ color: '#f87171' }}
+                style={{ color: TimelineColor.DANGER }}
                 title="Eliminar Timeboard"
                 onClick={() => onDeleteTimeboard(tb.id)}
               >
@@ -239,7 +246,7 @@ export default function TimeboardsHub({
           <div className="hub-brand-icon">
             <Clock size={20} />
           </div>
-          <span>Timeboard <Sparkles size={15} style={{ color: '#818cf8' }} /></span>
+          <span>Timeboard <Sparkles size={15} style={{ color: TimelineColor.PRIMARY }} /></span>
         </div>
 
         <div className="hub-header-actions">
@@ -330,9 +337,15 @@ export default function TimeboardsHub({
                   <div style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main)', lineHeight: 1.2 }}>
                     {currentUser?.name || 'Igor Matos'}
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
-                    {currentUser?.role || 'Admin'} • {currentUser?.tenantName || 'Espaço Pessoal'}
-                  </div>
+                  {!isGlobalTenant(currentUser?.tenantId, currentUser?.tenantName) ? (
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                      {currentUser.tenantName}
+                    </div>
+                  ) : currentUser?.email ? (
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                      {currentUser.email}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div style={{ height: '1px', background: 'var(--border-glass)', margin: '2px 0' }} />
@@ -430,7 +443,7 @@ export default function TimeboardsHub({
               <span className="hub-stat-lbl">My Timeboards</span>
             </div>
             <div className="hub-stat-item">
-              <span className="hub-stat-val" style={{ color: '#c084fc' }}>
+              <span className="hub-stat-val" style={{ color: TimelineColor.PURPLE }}>
                 {sharedTimeboards.length}
               </span>
               <span className="hub-stat-lbl">Shared</span>
@@ -467,14 +480,14 @@ export default function TimeboardsHub({
         <section style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6366f1' }} />
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: TimelineColor.PRIMARY }} />
               <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)' }}>
                 My Timeboards
               </h2>
               <span
                 style={{
                   background: 'rgba(99, 102, 241, 0.12)',
-                  color: '#818cf8',
+                  color: TimelineColor.PRIMARY,
                   padding: '2px 8px',
                   borderRadius: '100px',
                   fontSize: '0.78rem',
@@ -497,10 +510,10 @@ export default function TimeboardsHub({
               <div className="hub-add-icon-circle">
                 <Plus size={24} />
               </div>
-              <div style={{ fontWeight: '700', fontSize: '1.05rem', color: 'var(--text-main, #ffffff)' }}>
+              <div style={{ fontWeight: '700', fontSize: '1.05rem', color: 'var(--text-main)' }}>
                 Criar Novo Timeboard
               </div>
-              <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary, #9ca3af)', maxWidth: '220px' }}>
+              <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary, var(--text-dim))', maxWidth: '220px' }}>
                 Adicione um novo orçamento, projeto ou planeamento financeiro.
               </div>
             </div>
@@ -515,14 +528,14 @@ export default function TimeboardsHub({
           <section style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#a855f7' }} />
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: TimelineColor.PURPLE }} />
                 <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)' }}>
                   Shared Dashboards
                 </h2>
                 <span
                   style={{
                     background: 'rgba(168, 85, 247, 0.12)',
-                    color: '#c084fc',
+                    color: TimelineColor.PURPLE,
                     padding: '2px 8px',
                     borderRadius: '100px',
                     fontSize: '0.78rem',

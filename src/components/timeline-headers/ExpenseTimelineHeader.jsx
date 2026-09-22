@@ -207,7 +207,7 @@ export default function ExpenseTimelineHeader({
     const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || '')) || ev.timelineType;
     const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== AmortizationEventCategory.REDUCE_TERM && ev.category !== AmortizationEventCategory.REDUCE_INSTALLMENT);
     const isLoan = isLoanInstallment || ev.eventType === EventType.LOAN || ev.eventType === EventType.AMORTIZATION || ev.isLoan || isLoanTimelineType(tlType);
-    const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment || tlType === TimelineType.INVESTMENT;
+    const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment || tlType === TimelineType.INVESTMENT || Boolean(ev.pocketId || ev.pocket_id);
     const isExpense = ((ev.eventType === EventType.EXPENSE || ev.isExpense || tlType === TimelineType.EXPENSE) && !isLoan && !isInvestment);
     const isIncome = (ev.eventType === EventType.INCOME || ev.isIncome || tlType === TimelineType.INCOME) && !isLoan && !isInvestment && !isExpense;
 
@@ -225,7 +225,7 @@ export default function ExpenseTimelineHeader({
     if (isIncome && isRealized) mRealized.income += amt;
     else if (isExpense && isRealized) mRealized.expense += amt;
     else if (isLoan && isRealized) mRealized.loan += amt;
-    else if (isInvestment && !isExternal && !ev.isFirstOccurrence && isRealized) mRealized.investmentDeduction += amt;
+    else if (isInvestment && !isExternal && isRealized) mRealized.investmentDeduction += amt;
   });
 
   let accumulatedRealizedBalance = 0;

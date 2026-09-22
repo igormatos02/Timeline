@@ -26,7 +26,7 @@ export default function BarChart7Months({
   currentTextColor,
   formatValue = (val) => formatCurrency(val).replace(',00', ''),
   formatProjection = (val) => formatCurrency(val),
-  mode = 'projected',
+  mode = 'realized',
   onToggleMode,
   accentColor
 }) {

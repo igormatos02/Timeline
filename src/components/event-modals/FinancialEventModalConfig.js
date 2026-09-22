@@ -165,7 +165,8 @@ const investmentConfig = {
   icon: PiggyBank,
   eventType: EventType.INVESTMENT,
   categoryMeta: INVESTMENT_CATEGORY_META,
-  categoryDefault: InvestmentEventCategory.SAVINGS,
+  categoryDefault: InvestmentEventCategory.OTHER,
+  showCategories: false,
   categoryLegacyMap: {
     investimento_poupanca: InvestmentEventCategory.SAVINGS,
     investimento_patrimonio: InvestmentEventCategory.ASSETS,

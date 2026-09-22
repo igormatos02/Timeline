@@ -76,6 +76,22 @@ export default function BalanceTimelineHeader({
     return set;
   }, [allTimelines, timeline]);
 
+  const totalPocketsInitial = React.useMemo(() => {
+    let sum = 0;
+    (allTimelines || []).forEach((tl) => {
+      if (tl.type === TimelineType.INVESTMENT) {
+        if (Array.isArray(tl.pockets) && tl.pockets.length > 0) {
+          tl.pockets.forEach((p) => {
+            sum += Number(p.initial_value ?? p.initialValue ?? 0);
+          });
+        } else {
+          sum += Number(tl.initialValue ?? tl.initial_value ?? 0);
+        }
+      }
+    });
+    return sum;
+  }, [allTimelines]);
+
   const eventsList = React.useMemo(() => {
     const map = new Map();
     const addIfValid = (e) => {
@@ -157,14 +173,18 @@ export default function BalanceTimelineHeader({
 
   let calculatedIncome = 0;
   let calculatedExpenses = 0;
-  let calculatedInvestments = 0;
+  let calculatedInvestmentsDeductions = 0;
+  let calculatedInvestmentsTotal = 0;
+  let calculatedWithdrawals = 0;
   let calculatedLoanPaid = 0;
   let calculatedLoanDue = 0;
   let calculatedAmortized = 0;
 
   let horizonFutureInflows = 0;
   let horizonFutureOutflows = 0;
-  let horizonFutureInvestments = 0;
+  let horizonFutureInvestmentsDeductions = 0;
+  let horizonFutureInvestmentsTotal = 0;
+  let horizonFutureWithdrawals = 0;
   let horizonFutureAmortization = 0;
 
   eventsList.forEach((ev) => {
@@ -200,22 +220,20 @@ export default function BalanceTimelineHeader({
       ? Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0))
       : Number(ev.amount || 0);
 
-    if (amt <= 0) return;
-
     const isRealized = isFutureEvent || isPositiveStatus(ev.status) || isPositiveStatus(ev.status?.toLowerCase()) || Boolean(ev.isCompleted);
 
     if (isLoan) {
       if (isRealized) {
-        calculatedLoanPaid += amt;
+        calculatedLoanPaid += Math.abs(amt);
         if (isAmortization) {
-          calculatedAmortized += amt;
-          if (isFutureEvent) horizonFutureAmortization += amt;
+          calculatedAmortized += Math.abs(amt);
+          if (isFutureEvent) horizonFutureAmortization += Math.abs(amt);
         }
         if (isFutureEvent) {
-          horizonFutureOutflows += amt;
+          horizonFutureOutflows += Math.abs(amt);
         }
       } else {
-        calculatedLoanDue += amt;
+        calculatedLoanDue += Math.abs(amt);
       }
       return;
     }
@@ -227,31 +245,51 @@ export default function BalanceTimelineHeader({
       tlType === TimelineType.INCOME ||
       ev.category === IncomeEventCategory.RECURRING_INCOME ||
       Boolean(ev.isIncome)
-    );
+    ) && !isLoan;
 
     const isInvestment = (
       ev.eventType === EventType.INVESTMENT ||
+      ev.eventType === EventType.WITHDRAWAL ||
       tlType === TimelineType.INVESTMENT ||
       Boolean(ev.isInvestment) ||
+      Boolean(ev.isWithdrawal) ||
       Boolean(ev.pocketId || ev.pocket_id)
+    ) && !isLoan;
+
+    const isWithdrawal = Boolean(
+      ev.isWithdrawal ||
+      ev.eventType === EventType.WITHDRAWAL ||
+      (isInvestment && (ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0))
     );
+    const multiplier = isWithdrawal ? -1 : 1;
+    const absAmt = Math.abs(amt);
+    if (absAmt <= 0) return;
 
     const isExpense = (
       ev.eventType === EventType.EXPENSE ||
       tlType === TimelineType.EXPENSE ||
       ev.category === ExpenseEventCategory.RECURRING_EXPENSE ||
       Boolean(ev.isExpense)
-    ) && !isIncome && !isInvestment;
+    ) && !isIncome && !isInvestment && !isLoan;
 
     if (isIncome) {
-      calculatedIncome += amt;
-      if (isFutureEvent) horizonFutureInflows += amt;
-    } else if (isInvestment && !ev.isExternal && !ev.is_external) {
-      calculatedInvestments += amt;
-      if (isFutureEvent) horizonFutureInvestments += amt;
+      calculatedIncome += absAmt;
+      if (isFutureEvent) horizonFutureInflows += absAmt;
+    } else if (isInvestment) {
+      calculatedInvestmentsTotal += multiplier * absAmt;
+      if (isFutureEvent) horizonFutureInvestmentsTotal += multiplier * absAmt;
+
+      if (!ev.isExternal && !ev.is_external) {
+        calculatedInvestmentsDeductions += multiplier * absAmt;
+        if (isFutureEvent) horizonFutureInvestmentsDeductions += multiplier * absAmt;
+      }
+      if (isWithdrawal) {
+        calculatedWithdrawals += absAmt;
+        if (isFutureEvent) horizonFutureWithdrawals += absAmt;
+      }
     } else if (isExpense) {
-      calculatedExpenses += amt;
-      if (isFutureEvent) horizonFutureOutflows += amt;
+      calculatedExpenses += absAmt;
+      if (isFutureEvent) horizonFutureOutflows += absAmt;
     }
   });
 
@@ -266,11 +304,13 @@ export default function BalanceTimelineHeader({
 
   const totalReceived = calculatedIncome;
   const totalPaidExpenses = calculatedExpenses + calculatedLoanPaid;
-  const totalInvested = calculatedInvestments;
+  const totalInvestedDeductions = calculatedInvestmentsDeductions;
+  const totalInvested = calculatedInvestmentsTotal;
+  const totalWithdrawals = calculatedWithdrawals;
   const totalPeriodDueDebt = calculatedLoanDue;
   const totalRemainingDebt = computedRemainingDebt;
-  // Saldo Líquido do período: Entradas - Saídas (incluindo parcelas) - Investimentos
-  const netRealized = totalReceived - totalPaidExpenses - totalInvested;
+  // Saldo Líquido do período: Entradas - Saídas (incluindo parcelas) - Deduções de Investimentos
+  const netRealized = totalReceived - totalPaidExpenses - totalInvestedDeductions;
 
   const finMetrics = {
     ...rawMetrics,
@@ -441,9 +481,18 @@ export default function BalanceTimelineHeader({
                         {netVal >= 0 ? '+' : ''}{formatCurrency(netVal)}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', alignItems: 'center' }}>
                           <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.inflows')}</span>
-                          <strong style={{ color: TimelineColor.SUCCESS }}>+{formatCurrency(totalReceivedVal).replace(',00', '')}</strong>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                            <strong style={{ color: TimelineColor.SUCCESS }}>
+                              +{formatCurrency(totalReceivedVal + totalWithdrawals).replace(',00', '')}
+                            </strong>
+                            {totalWithdrawals > 0 && (
+                              <span style={{ color: 'var(--text-dim)', fontSize: '0.65rem', fontWeight: '600' }}>
+                                ({totalReceivedVal > 0 ? `+${formatCurrency(totalReceivedVal).replace(',00', '')} ${t('balanceHeader.incomeTag')}, ` : ''}+{formatCurrency(totalWithdrawals).replace(',00', '')} {t('balanceHeader.withdrawals')})
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
                           <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.outflows')}</span>
@@ -554,8 +603,6 @@ export default function BalanceTimelineHeader({
                     ? Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0))
                     : Number(ev.amount || 0);
 
-                  if (amt <= 0) return;
-
                   const isIncome = (
                     ev.eventType === EventType.INCOME ||
                     tlType === TimelineType.INCOME ||
@@ -565,9 +612,21 @@ export default function BalanceTimelineHeader({
 
                   const isInvestment = (
                     ev.eventType === EventType.INVESTMENT ||
+                    ev.eventType === EventType.WITHDRAWAL ||
                     tlType === TimelineType.INVESTMENT ||
-                    Boolean(ev.isInvestment)
+                    Boolean(ev.isInvestment) ||
+                    Boolean(ev.isWithdrawal) ||
+                    Boolean(ev.pocketId || ev.pocket_id)
                   ) && !isLoan;
+
+                  const isWithdrawal = Boolean(
+                    ev.isWithdrawal ||
+                    ev.eventType === EventType.WITHDRAWAL ||
+                    (isInvestment && (ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0))
+                  );
+                  const multiplier = isWithdrawal ? -1 : 1;
+                  const absAmt = Math.abs(amt);
+                  if (absAmt <= 0) return;
 
                   const isExpense = (
                     ev.eventType === EventType.EXPENSE ||
@@ -577,23 +636,23 @@ export default function BalanceTimelineHeader({
                   ) && !isIncome && !isInvestment && !isLoan;
 
                   if (isIncome) {
-                    annualIncome += amt;
+                    annualIncome += absAmt;
                   } else if (isExpense) {
-                    annualExpense += amt;
+                    annualExpense += absAmt;
                   } else if (isInvestment && !ev.isExternal && !ev.is_external) {
-                    annualInvestment += amt;
+                    annualInvestment += multiplier * absAmt;
                   } else if (
                     hasLoanTimeline &&
                     (annualLoan === 0 || projectionMonthsAhead > 0) &&
                     (isLoanInst || isAmortization) &&
                     activeLoanIds.has(String(ev.timelineId || ev.timeline_id || ''))
                   ) {
-                    annualLoan += amt;
+                    annualLoan += absAmt;
                   }
                 });
 
                 const expPct = annualIncome > 0 ? Math.round((annualExpense / annualIncome) * 100) : 0;
-                const invPct = annualIncome > 0 ? Math.round((annualInvestment / annualIncome) * 100) : 0;
+                const invPct = (annualIncome > 0 && annualInvestment > 0) ? Math.round((annualInvestment / annualIncome) * 100) : 0;
                 const loanPct = (hasLoanTimeline && annualIncome > 0) ? Math.round((annualLoan / annualIncome) * 100) : 0;
                 const freePct = Math.max(0, 100 - expPct - invPct - loanPct);
                 const totalCommitted = expPct + invPct + loanPct;
@@ -623,11 +682,11 @@ export default function BalanceTimelineHeader({
                               {annualNet >= 0 ? '+' : ''}{formatCurrency(annualNet)}
                             </strong>
                           </div>
-                          {(hasInvestmentTimeline || annualInvestment > 0) && (
+                          {(hasInvestmentTimeline || annualInvestment !== 0) && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.inAccount')}</span>
                               <strong style={{ color: TimelineColor.LOAN }}>
-                                +{formatCurrency(annualInvestment)}
+                                {annualInvestment >= 0 ? '+' : ''}{formatCurrency(annualInvestment)}
                               </strong>
                             </div>
                           )}
@@ -650,8 +709,8 @@ export default function BalanceTimelineHeader({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
                       <PieDonut
                         items={segments}
-                        centerColor={totalCommitted > 85 ? TimelineColor.EXPENSE : TimelineColor.CYAN}
-                        centerLabel={`${totalCommitted}%`}
+                        centerColor={TimelineColor.CYAN}
+                        centerLabel="100%"
                         centerFontSize="0.74rem"
                       />
 
@@ -717,11 +776,11 @@ export default function BalanceTimelineHeader({
                             {annualNet >= 0 ? '+' : ''}{formatCurrency(annualNet)}
                           </strong>
                         </div>
-                        {(hasInvestmentTimeline && annualInvestment > 0) && (
+                        {(hasInvestmentTimeline && annualInvestment !== 0) && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.inAccount')}</span>
                             <strong style={{ color: TimelineColor.LOAN }}>
-                              +{formatCurrency(annualInvestment)}
+                              {annualInvestment >= 0 ? '+' : ''}{formatCurrency(annualInvestment)}
                             </strong>
                           </div>
                         )}
@@ -1010,10 +1069,10 @@ export default function BalanceTimelineHeader({
             {/* Cards Projetados dinâmicos */}
             {(() => {
               const netProj = netRealized;
-              const forecastInc = projectionMonthsAhead === 0 ? totalReceived : (horizonFutureInflows > 0 ? horizonFutureInflows : totalReceived);
-              const plannedExp = projectionMonthsAhead === 0 ? totalPaidExpenses : (horizonFutureOutflows > 0 ? horizonFutureOutflows : totalPaidExpenses);
-              const plannedInv = projectionMonthsAhead === 0 ? totalInvested : (horizonFutureInvestments > 0 ? horizonFutureInvestments : totalInvested);
-              const plannedAmort = projectionMonthsAhead === 0 ? calculatedAmortized : (horizonFutureAmortization > 0 ? horizonFutureAmortization : calculatedAmortized);
+              const forecastInc = totalReceived + totalWithdrawals;
+              const plannedExp = totalPaidExpenses;
+              const plannedInv = totalInvested;
+              const plannedAmort = calculatedAmortized;
 
               return (
                 <div className="hero-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
@@ -1041,12 +1100,19 @@ export default function BalanceTimelineHeader({
                             -{formatCurrency(plannedExp)}
                           </span>
                         </div>
-                        {(hasInvestmentTimeline && plannedInv > 0) && (
+                        {(hasInvestmentTimeline || plannedInv !== 0 || totalPocketsInitial > 0) && (
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                            <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>{t('balanceHeader.investments')}</span>
-                            <span style={{ color: TimelineColor.LOAN, fontSize: '0.78rem', fontWeight: '700' }}>
-                              -{formatCurrency(plannedInv)}
-                            </span>
+                            <span style={{ fontSize: '0.69rem', color: 'var(--text-dim)' }}>{t('balanceHeader.forecastSavings')}</span>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ color: TimelineColor.LOAN, fontSize: '0.78rem', fontWeight: '700' }}>
+                                {plannedInv >= 0 ? '+' : '-'}{formatCurrency(Math.abs(plannedInv))}
+                              </span>
+                              {totalPocketsInitial > 0 && (
+                                <span style={{ color: 'var(--text-dim)', fontSize: '0.66rem', fontWeight: '600' }}>
+                                  ({t('balanceHeader.initialBalance', { amount: formatCurrency(totalPocketsInitial) })})
+                                </span>
+                              )}
+                            </div>
                           </div>
                         )}
                         {(hasLoanTimeline && plannedAmort > 0) && (

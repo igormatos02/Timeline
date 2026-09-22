@@ -117,8 +117,14 @@ export default function IncomeEvolutionChart({
 
           const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent;
           const isIncome = (ev.eventType === EventType.INCOME || ev.isIncome === true) && !isLoan;
-          const isExpense = (ev.eventType === EventType.EXPENSE || ev.isExpense === true || isLoan) && !ev.isInvestment;
-          const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment === true;
+          const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment === true || Boolean(ev.pocketId || ev.pocket_id);
+          const isWithdrawal = Boolean(
+            ev.isWithdrawal ||
+            ev.eventType === EventType.WITHDRAWAL ||
+            (isInvestment && (ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0))
+          );
+          const multiplier = isWithdrawal ? -1 : 1;
+          const absAmt = Math.abs(Number(ev.amount || 0));
           const isExternal = Boolean(ev.isExternal || ev.is_external);
 
           const isValid = chartMode === 'acumulado_real' ? isReceived : true;
@@ -132,9 +138,9 @@ export default function IncomeEvolutionChart({
               if (activeFinancialTab === 'gastos' || activeFinancialTab === 'emprestimos' || activeFinancialTab === 'jeep' || activeFinancialTab === 'dacia' || activeFinancialTab === 'casa1' || activeFinancialTab === 'casa2') eventCount++;
             }
             if (isInvestment) {
-              monthInvestment += amt;
+              monthInvestment += multiplier * absAmt;
               if (!isExternal) {
-                monthInvestmentOutflow += amt;
+                monthInvestmentOutflow += multiplier * absAmt;
               }
               if (activeFinancialTab === 'investimentos') eventCount++;
             }

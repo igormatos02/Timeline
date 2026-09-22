@@ -45,7 +45,7 @@ export default function IncomeTimelineHeader({
 }) {
   const { t, language } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
-  const [chartMode, setChartMode] = useState('projected');
+  const [chartMode, setChartMode] = useState('realized');
   const dateLocale = language === 'en' ? enUS : pt;
 
   // Mapa rápido de id -> tipo de timeline para classificação precisa

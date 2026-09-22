@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PiggyBank, Plus, Check } from 'lucide-react';
+import { format } from 'date-fns';
 import { TimelineColor } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import ModalShell from './ui/ModalShell.jsx';
@@ -41,8 +42,7 @@ export default function CreatePocketModal({
         setName(initialData?.name || '');
         setInitialValue(String(initialData?.initialValue ?? initialData?.initial_value ?? 0));
         setTargetValue(String(initialData?.targetValue ?? initialData?.target_value ?? 1000));
-        const defDate = initialData?.defaultDate || initialData?.dateCreated || initialData?.date_created;
-        setDateCreated(defDate ? defDate.substring(0, 10) : new Date().toISOString().substring(0, 10));
+        setDateCreated(format(new Date(), 'yyyy-MM-dd'));
         setDateClosed('');
         setIsClosed(false);
       }
@@ -190,33 +190,7 @@ export default function CreatePocketModal({
         />
       </div>
 
-      {/* Creation Date */}
-      <div style={{ marginBottom: '14px' }}>
-        <label
-          style={{
-            display: 'block',
-            fontSize: '0.78rem',
-            fontWeight: '700',
-            color: 'var(--text-main)',
-            marginBottom: '5px'
-          }}
-        >
-          {t('pocket.dateCreated')}
-        </label>
-        <input
-          type="date"
-          className="form-input"
-          value={dateCreated}
-          onChange={(e) => setDateCreated(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '9px 12px',
-            borderRadius: '8px',
-            fontSize: '0.85rem',
-            boxSizing: 'border-box'
-          }}
-        />
-      </div>
+
 
       {/* Close Pocket Toggle */}
       {isEditing && (

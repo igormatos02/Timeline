@@ -12,6 +12,7 @@ import {
   FollowupEventModal,
   DefaultEventModal
 } from './event-modals/index.js';
+import WithdrawalModal from './WithdrawalModal.jsx';
 
 /**
  * Dispatcher modular de popups de eventos.
@@ -21,6 +22,10 @@ export default function CreateEventModal(props) {
   const { isOpen, timeline, initialData } = props;
 
   if (!isOpen) return null;
+
+  if (initialData?.eventType === EventType.WITHDRAWAL || initialData?.isWithdrawal) {
+    return <WithdrawalModal {...props} />;
+  }
 
   const normalizedType = normalizeTimelineType(timeline?.type);
 

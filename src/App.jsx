@@ -16,6 +16,7 @@ const AmortizationModal = React.lazy(() => import('./components/AmortizationModa
 const EditInstallmentModal = React.lazy(() => import('./components/EditInstallmentModal'));
 const CreatePocketModal = React.lazy(() => import('./components/CreatePocketModal'));
 const DeletePocketModal = React.lazy(() => import('./components/DeletePocketModal'));
+const WithdrawalModal = React.lazy(() => import('./components/WithdrawalModal'));
 import {
   recalculateLoanState,
   propagateInstallmentAmountForward,
@@ -359,12 +360,29 @@ export default function App() {
   const [amortizationDefaultDate, setAmortizationDefaultDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [editingInstallment, setEditingInstallment] = useState(null);
 
+  // Withdrawal Specific Modal
+  const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
+  const [editingWithdrawal, setEditingWithdrawal] = useState(null);
+  const [withdrawalDefaultDate, setWithdrawalDefaultDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const [withdrawalDefaultPocketId, setWithdrawalDefaultPocketId] = useState(null);
+
   const handleOpenAmortizationModal = useCallback((dateStr, eventObj = null) => {
     if (dateStr) {
       setAmortizationDefaultDate(dateStr);
     }
     setEditingAmortization(eventObj || null);
     setIsAmortizationModalOpen(true);
+  }, []);
+
+  const handleOpenWithdrawalModal = useCallback((dateStr = format(new Date(), 'yyyy-MM-dd'), pocketId = null, eventObj = null) => {
+    focusedMonthRef.current = dateStr ? dateStr.substring(0, 7) : null;
+    scrollYBeforeModalRef.current = window.scrollY;
+    if (dateStr) {
+      setWithdrawalDefaultDate(dateStr);
+    }
+    setWithdrawalDefaultPocketId(pocketId || null);
+    setEditingWithdrawal(eventObj || null);
+    setIsWithdrawalModalOpen(true);
   }, []);
 
   // Theme (light is default)
@@ -1068,11 +1086,15 @@ export default function App() {
       handleOpenAmortizationModal(eventObj.date, eventObj);
       return;
     }
+    if (eventObj?.eventType === EventType.WITHDRAWAL || eventObj?.isWithdrawal) {
+      handleOpenWithdrawalModal(eventObj.date, eventObj.pocketId || eventObj.pocket_id, eventObj);
+      return;
+    }
     setEditingEvent(eventObj);
     const nature = eventObj?.isExpense ? 'expense' : eventObj?.isInvestment ? 'investment' : 'income';
     setEventModalDefaultNature(nature);
     setIsEventModalOpen(true);
-  }, [handleOpenAmortizationModal]);
+  }, [handleOpenAmortizationModal, handleOpenWithdrawalModal]);
 
   const sanitizeFutureEventStatus = (event) => {
     if (!event || !event.date) return event;
@@ -1206,11 +1228,15 @@ export default function App() {
           const isNotCancelledOrDeleted = ev.status !== EventStatus.CANCELLED && ev.status !== EventStatus.DELETED;
           if (nextAuto && ev.date && ev.date <= todayStr && isNotCancelledOrDeleted) {
             const isIncome = ev.eventType === EventType.INCOME;
+            const isWithdrawal = ev.eventType === EventType.WITHDRAWAL || Boolean(ev.isWithdrawal);
             const isInvestment = ev.eventType === EventType.INVESTMENT;
             const isAmortization = ev.eventType === EventType.AMORTIZATION;
 
             if (isIncome) {
               newStatus = EventStatus.RECEIVED;
+              newIsCompleted = true;
+            } else if (isWithdrawal) {
+              newStatus = EventStatus.WITHDRAWN;
               newIsCompleted = true;
             } else if (isInvestment) {
               newStatus = EventStatus.INVESTED;
@@ -1480,7 +1506,8 @@ export default function App() {
       }
 
       const isIncome = ev.eventType === EventType.INCOME;
-      const isInvestment = ev.eventType === EventType.INVESTMENT;
+      const isWithdrawal = ev.eventType === EventType.WITHDRAWAL || Boolean(ev.isWithdrawal);
+      const isInvestment = ev.eventType === EventType.INVESTMENT || isWithdrawal;
       const isAmortization = ev.eventType === EventType.AMORTIZATION || isAmortizationEvent(ev);
       const isReminder = ev.eventType === EventType.REMINDER || ev.timelineType === TimelineType.REMINDER || ev.timeline_type === TimelineType.REMINDER;
       const isTodo = ev.eventType === EventType.TODO || ev.timelineType === TimelineType.TODO || ev.timeline_type === TimelineType.TODO;
@@ -1500,6 +1527,7 @@ export default function App() {
       else if (isTodo) positiveStatus = EventStatus.COMPLETED;
       else if (isFollowup) positiveStatus = FollowupStatus.FINISHED;
       else if (isIncome) positiveStatus = EventStatus.RECEIVED;
+      else if (isWithdrawal) positiveStatus = EventStatus.WITHDRAWN;
       else if (isInvestment) positiveStatus = EventStatus.INVESTED;
       else if (isAmortization) positiveStatus = EventStatus.AMORTIZED;
 
@@ -2049,6 +2077,7 @@ export default function App() {
             onPayUpToHere={handlePayUpToHere}
             onOpenEditInstallment={handleOpenEditInstallment}
             onOpenAmortizationModal={handleOpenAmortizationModal}
+            onOpenWithdrawModal={handleOpenWithdrawalModal}
             onNavigateToTimeline={handleNavigateToTimeline}
             headerComponent={
               <TimelineHeader
@@ -2171,6 +2200,23 @@ export default function App() {
           initialEvent={editingAmortization}
           defaultDate={amortizationDefaultDate}
           remainingBalance={loanMetrics ? loanMetrics.remainingBalance : undefined}
+        />
+
+        {/* Withdrawal Modal */}
+        <WithdrawalModal
+          isOpen={isWithdrawalModalOpen}
+          onClose={() => {
+            setIsWithdrawalModalOpen(false);
+            setEditingWithdrawal(null);
+            setWithdrawalDefaultPocketId(null);
+          }}
+          onSave={handleSaveEvent}
+          initialData={editingWithdrawal}
+          defaultDate={withdrawalDefaultDate}
+          defaultPocketId={withdrawalDefaultPocketId}
+          pockets={pockets}
+          timeline={activeTimeline}
+          events={activeTimeline?.events || rawEvents || []}
         />
 
         <EditInstallmentModal

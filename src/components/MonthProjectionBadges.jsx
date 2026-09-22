@@ -33,7 +33,7 @@ export default function MonthProjectionBadges({
   monthRealizedInvestmentDeduction,
   monthRealizedLoan,
   monthRealizedSaldo,
-  projectionMode = 'projected',
+  projectionMode = 'realized',
   onToggleProjectionMode,
   hasIncomeTimeline,
   hasExpenseTimeline,
@@ -52,7 +52,7 @@ export default function MonthProjectionBadges({
   const { t: contextT } = useTranslation();
   const t = propT || contextT;
 
-  const [localMode, setLocalMode] = useState('projected');
+  const [localMode, setLocalMode] = useState('realized');
   const currentMode = onToggleProjectionMode ? projectionMode : localMode;
   const handleModeChange = (newMode) => {
     if (onToggleProjectionMode) {
@@ -109,9 +109,9 @@ export default function MonthProjectionBadges({
 
   const numIncome = Math.abs(Number(actualIncome || 0));
   const numExpense = Math.abs(Number(actualExpense || 0));
-  const numInvestmentInternal = Math.abs(Number(actualInvestmentInternal || 0));
-  const numInvestmentExternal = Math.abs(Number(actualInvestmentExternal || 0));
-  const numInvestmentTotal = Math.abs(Number(actualInvestmentTotal || 0));
+  const numInvestmentInternal = Number(actualInvestmentInternal || 0);
+  const numInvestmentExternal = Number(actualInvestmentExternal || 0);
+  const numInvestmentTotal = Number(actualInvestmentTotal || 0);
   const numLoan = Math.abs(Number(actualLoan || 0));
 
   const calculatedSaldo = actualSaldo !== null && actualSaldo !== undefined
@@ -250,7 +250,7 @@ export default function MonthProjectionBadges({
             border: 'none',
             color: isFutureMonth
               ? 'var(--text-dim)'
-              : (numInvestmentTotal > 0 || numInvestmentInternal > 0 || numInvestmentExternal > 0 ? TimelineColor.INVESTMENT : 'var(--text-dim)'),
+              : (numInvestmentTotal !== 0 || numInvestmentInternal !== 0 || numInvestmentExternal !== 0 ? TimelineColor.INVESTMENT : 'var(--text-dim)'),
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
@@ -258,9 +258,9 @@ export default function MonthProjectionBadges({
         >
           <PiggyBank size={12} />
           <span>
-            {formatCurrency(numInvestmentExternal > 0 ? numInvestmentInternal : (numInvestmentTotal > 0 ? numInvestmentTotal : numInvestmentInternal))}
+            {formatCurrency(numInvestmentExternal !== 0 ? numInvestmentInternal : (numInvestmentTotal !== 0 ? numInvestmentTotal : numInvestmentInternal))}
           </span>
-          {numInvestmentExternal > 0 && (
+          {numInvestmentExternal !== 0 && (
             <span
               style={{
                 display: 'inline-flex',
@@ -272,8 +272,8 @@ export default function MonthProjectionBadges({
               }}
               title={t('modal.isExternalDepositHint')}
             >
-              <span>+</span>
-              <span>{formatCurrency(numInvestmentExternal)}</span>
+              <span>{numInvestmentExternal >= 0 ? '+' : '-'}</span>
+              <span>{formatCurrency(Math.abs(numInvestmentExternal))}</span>
               <span style={{ fontSize: '0.70rem', fontWeight: '600', textTransform: 'lowercase' }}>
                 {t('timeline.externalDeposits')}
               </span>

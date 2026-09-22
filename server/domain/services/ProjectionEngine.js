@@ -272,11 +272,13 @@ export function projectEvents(rawEvents = [], options = {}) {
 
     if (isAuto && ev.date && ev.date <= todayStr && !isCancelled && !isDeleted) {
       const isIncome = ev.eventType === EventType.INCOME;
+      const isWithdrawal = ev.eventType === EventType.WITHDRAWAL || Boolean(ev.isWithdrawal);
       const isInvestment = ev.eventType === EventType.INVESTMENT;
       const isAmortization = ev.eventType === EventType.AMORTIZATION;
 
       let autoStatus = EventStatus.PAID;
       if (isIncome) autoStatus = EventStatus.RECEIVED;
+      else if (isWithdrawal) autoStatus = EventStatus.WITHDRAWN;
       else if (isInvestment) autoStatus = EventStatus.INVESTED;
       else if (isAmortization) autoStatus = EventStatus.AMORTIZED;
 

@@ -378,21 +378,23 @@ export default function FinancialEventModal({
         </div>
       )}
 
-      <CategorySelector
-        value={formData.category}
-        onChange={(category) => setFormData((prev) => ({ ...prev, category }))}
-        categoryMeta={config.categoryMeta}
-        accent={ACCENT}
-        translationPrefix={config.translationPrefix}
-        t={t}
-        label={t('modal.categoryLabel')}
-        isOpen={isCategoryDropdownOpen}
-        onToggle={() => {
-          setIsCategoryDropdownOpen(!isCategoryDropdownOpen);
-          setIsDayPickerOpen(false);
-          setIsEndMonthPickerOpen(false);
-        }}
-      />
+      {config.showCategories !== false && (
+        <CategorySelector
+          value={formData.category}
+          onChange={(category) => setFormData((prev) => ({ ...prev, category }))}
+          categoryMeta={config.categoryMeta}
+          accent={ACCENT}
+          translationPrefix={config.translationPrefix}
+          t={t}
+          label={t('modal.categoryLabel')}
+          isOpen={isCategoryDropdownOpen}
+          onToggle={() => {
+            setIsCategoryDropdownOpen(!isCategoryDropdownOpen);
+            setIsDayPickerOpen(false);
+            setIsEndMonthPickerOpen(false);
+          }}
+        />
+      )}
 
       {config.showAmount !== false && (
         <>

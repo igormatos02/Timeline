@@ -266,7 +266,8 @@ export function calcToggledStatus(event, explicitStatus = null) {
   }
 
   const isAmortization = event.eventType === EventType.AMORTIZATION || (typeof event.isAmortizationEvent === 'function' && event.isAmortizationEvent());
-  const isInvestment = event.eventType === EventType.INVESTMENT;
+  const isWithdrawal = event.eventType === EventType.WITHDRAWAL || Boolean(event.isWithdrawal);
+  const isInvestment = event.eventType === EventType.INVESTMENT || isWithdrawal;
   const isIncome = event.eventType === EventType.INCOME;
   const isReminder = event.eventType === EventType.REMINDER || event.timelineType === TimelineType.REMINDER || event.timeline_type === TimelineType.REMINDER;
   const isTodo = event.eventType === EventType.TODO || event.timelineType === TimelineType.TODO || event.timeline_type === TimelineType.TODO;
@@ -279,6 +280,7 @@ export function calcToggledStatus(event, explicitStatus = null) {
     currentStatus === EventStatus.PAID ||
     currentStatus === EventStatus.RECEIVED ||
     currentStatus === EventStatus.INVESTED ||
+    currentStatus === EventStatus.WITHDRAWN ||
     currentStatus === EventStatus.AMORTIZED ||
     currentStatus === EventStatus.COMPLETED ||
     currentStatus === EventStatus.CLOSED ||
@@ -287,7 +289,7 @@ export function calcToggledStatus(event, explicitStatus = null) {
 
   // Direct 2-way toggle:
   // If Positive -> Negative (Pending / Open / Planned / In Progress)
-  // If Negative or Cancelled -> Positive (Paid / Received / Invested / Amortized / Closed / Completed / Finished)
+  // If Negative or Cancelled -> Positive (Paid / Received / Invested / Withdrawn / Amortized / Closed / Completed / Finished)
   if (isPositive) {
     let nextNeg = isInvestment ? EventStatus.PLANNED : (isFollowup ? FollowupStatus.IN_PROGRESS : EventStatus.PENDING);
     if (isReminder) nextNeg = EventStatus.OPEN;
@@ -302,6 +304,7 @@ export function calcToggledStatus(event, explicitStatus = null) {
   else if (isTodo) positiveStatus = EventStatus.COMPLETED;
   else if (isFollowup) positiveStatus = FollowupStatus.FINISHED;
   else if (isIncome) positiveStatus = EventStatus.RECEIVED;
+  else if (isWithdrawal) positiveStatus = EventStatus.WITHDRAWN;
   else if (isInvestment) positiveStatus = EventStatus.INVESTED;
   else if (isAmortization) positiveStatus = EventStatus.AMORTIZED;
 

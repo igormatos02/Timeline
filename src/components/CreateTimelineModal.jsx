@@ -451,8 +451,8 @@ export default function CreateTimelineModal({
             />
           </div>
 
-          {/* Valor Inicial para Entradas ou Investimentos */}
-          {(formData.type === TimelineType.INCOME || formData.type === TimelineType.INVESTMENT) && (
+          {/* Valor Inicial para Entradas */}
+          {formData.type === TimelineType.INCOME && (
             <div className="form-group">
               <label className="form-label">{t('createTimelineModal.initialValueLabel')}</label>
               <input

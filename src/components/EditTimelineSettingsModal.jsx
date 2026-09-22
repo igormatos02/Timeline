@@ -22,7 +22,7 @@ export default function EditTimelineSettingsModal({
   });
 
   const resolvedType = normalizeTimelineType(initialData?.type);
-  const isIncomeOrInvestment = resolvedType === TimelineType.INCOME || resolvedType === TimelineType.INVESTMENT;
+  const isIncome = resolvedType === TimelineType.INCOME;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -190,8 +190,8 @@ export default function EditTimelineSettingsModal({
             />
           </div>
 
-          {/* Initial Value for Income / Investment */}
-          {isIncomeOrInvestment && (
+          {/* Initial Value for Income */}
+          {isIncome && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
                 {t('editTimelineSettingsModal.initialValueLabel')}

@@ -218,9 +218,15 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     event.timeline_type === TimelineType.FOLLOWUP ||
     event.category === 'followup';
 
+  const isWithdrawalEvent = Boolean(
+    event.eventType === EventType.WITHDRAWAL ||
+    event.isWithdrawal ||
+    (event.pocketId && Number(event.amount || 0) < 0)
+  );
+
   const isIncomeEvent = event.eventType === EventType.INCOME && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
   const isExpenseEvent = event.eventType === EventType.EXPENSE && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
-  const isInvestmentEvent = event.eventType === EventType.INVESTMENT && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
+  const isInvestmentEvent = (event.eventType === EventType.INVESTMENT || isWithdrawalEvent) && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
 
   const normRec = normalizeRecurrence(event);
   const isRecurringEvent = (
@@ -250,6 +256,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       effectiveStatus === EventStatus.PAID ||
       effectiveStatus === EventStatus.RECEIVED ||
       effectiveStatus === EventStatus.INVESTED ||
+      effectiveStatus === EventStatus.WITHDRAWN ||
       effectiveStatus === EventStatus.SETTLED ||
       effectiveStatus === EventStatus.COMPLETED ||
       effectiveStatus === EventStatus.AMORTIZED ||
@@ -710,7 +717,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             gap: '6px'
           }}
         >
-          {prefix}{formatCurrency(event.amount)}
+          {prefix}{formatCurrency(Math.abs(Number(event.amount || 0)))}
           <span
             onClick={(e) => {
               e.stopPropagation();
@@ -925,7 +932,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           transition: 'opacity 0.15s ease'
         }}
       >
-        {prefix}{formatCurrency(event.amount)}
+        {prefix}{formatCurrency(Math.abs(Number(event.amount || 0)))}
       </span>
     );
   };
@@ -966,6 +973,16 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         bg: meta.bg || 'rgba(16, 185, 129, 0.15)',
         color: meta.color || '#10b981',
         border: 'rgba(16, 185, 129, 0.3)'
+      };
+    }
+
+    if (isWithdrawalEvent) {
+      return {
+        label: t('withdrawalModal.badge'),
+        icon: <ArrowDownRight size={12} />,
+        bg: 'rgba(239, 68, 68, 0.15)',
+        color: TimelineColor.DANGER,
+        border: 'rgba(239, 68, 68, 0.3)'
       };
     }
 
@@ -1385,7 +1402,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     if (isInvestmentEvent) {
       if (isCompletedInvestment) {
         return {
-          label: t('status.invested'),
+          label: isWithdrawalEvent ? t('status.withdrawn') : t('status.invested'),
           icon: <CheckCircle2 size={11} />,
           bg: 'rgba(99, 102, 241, 0.15)',
           color: 'var(--primary-light)',
@@ -2219,6 +2236,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 if (isIncomeEvent) {
                   newStatus = EventStatus.RECEIVED;
                   newIsCompleted = true;
+                } else if (isWithdrawalEvent) {
+                  newStatus = EventStatus.WITHDRAWN;
+                  newIsCompleted = true;
                 } else if (isInvestmentEvent) {
                   newStatus = EventStatus.INVESTED;
                   newIsCompleted = true;
@@ -2630,7 +2650,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', paddingBottom: '0px' }}>
               <span style={{ fontSize: '0.7rem', color: isCompletedInvestment ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1 }}>
-                {event.category === 'investimento_patrimonio'
+                {isWithdrawalEvent
+                  ? t('withdrawalModal.badge')
+                  : event.category === 'investimento_patrimonio'
                   ? t('balanceHeader.inAccount')
                   : (Number(event.amount || 0) > 0 ? t('timeline.monthlyDeposit') : t('timeline.monthlyTarget'))}
               </span>
@@ -2791,7 +2813,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 ) : isCompletedInvestment ? (
                   <>
                     <CheckCircle2 size={13} style={{ color: TimelineColor.WHITE }} />
-                    <span style={{ color: TimelineColor.WHITE }}>{t('status.invested')}</span>
+                    <span style={{ color: TimelineColor.WHITE }}>{isWithdrawalEvent ? t('status.withdrawn') : t('status.invested')}</span>
                   </>
                 ) : isOverdueInvestment ? (
                   <>
@@ -2825,7 +2847,16 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   +{formatCurrency(event.amount || event.initialInvestedAmount || 0)}
                 </span>
               ) : (
-                renderEditableAmount('+', isCancelled ? TimelineColor.SLATE : isCompletedInvestment ? TimelineColor.WHITE : TimelineColor.INVESTMENT)
+                renderEditableAmount(
+                  isWithdrawalEvent ? '-' : '+',
+                  isCancelled
+                    ? TimelineColor.SLATE
+                    : isCompletedInvestment
+                    ? TimelineColor.WHITE
+                    : isWithdrawalEvent
+                    ? TimelineColor.DANGER
+                    : TimelineColor.INVESTMENT
+                )
               )}
             </div>
             <div style={{ marginLeft: 'auto' }}>

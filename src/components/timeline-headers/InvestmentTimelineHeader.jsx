@@ -35,7 +35,7 @@ export default function InvestmentTimelineHeader({
 }) {
   const { t, dateLocale } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
-  const [chartMode, setChartMode] = useState('projected');
+  const [chartMode, setChartMode] = useState('realized');
 
   const isPocketFiltered = Boolean(
     selectedPocketId ||
@@ -46,7 +46,7 @@ export default function InvestmentTimelineHeader({
   );
   const activePocketId = selectedPocketId || (isPocketFiltered ? selectedCategoryFilter : null);
 
-  const allPockets = propPockets || [];
+  const allPockets = (propPockets && propPockets.length > 0) ? propPockets : (timeline.pockets || []);
   const pockets = isPocketFiltered
     ? allPockets.filter((p) => p.id === activePocketId)
     : allPockets;
@@ -149,32 +149,52 @@ export default function InvestmentTimelineHeader({
     }
   });
 
-  eventsList.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
-    const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment;
+  const fullEventsSource = events && events.length > 0 ? events : (timeline.events || []);
+
+  const investmentEventsForAnnual = isPocketFiltered
+    ? fullEventsSource.filter((ev) => ev && (ev.pocketId === activePocketId || ev.pocket_id === activePocketId))
+    : fullEventsSource;
+
+  investmentEventsForAnnual.forEach((ev) => {
+    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+    const isInvestment =
+      ev.eventType === EventType.INVESTMENT ||
+      ev.eventType === EventType.WITHDRAWAL ||
+      ev.isInvestment ||
+      ev.isWithdrawal ||
+      Boolean(ev.pocketId || ev.pocket_id);
+    const isWithdrawal = Boolean(
+      ev.isWithdrawal ||
+      ev.eventType === EventType.WITHDRAWAL ||
+      ev.eventType === EventType.EXPENSE ||
+      ev.isExpense ||
+      Number(ev.amount || 0) < 0
+    );
+    const multiplier = isWithdrawal ? -1 : 1;
     const isExternal = Boolean(ev.isExternal || ev.is_external);
-    const amt = Number(ev.amount || 0);
+    const amt = Math.abs(Number(ev.amount || 0));
 
     if (isInvestment) {
       if (ev.date.startsWith(currentMonthStr)) {
         if (isExternal) {
-          currentMonthExternalInvested += amt;
+          currentMonthExternalInvested += multiplier * amt;
         } else {
-          currentMonthRegularInvested += amt;
+          currentMonthRegularInvested += multiplier * amt;
         }
       }
 
       const evMonthKey = ev.date.substring(0, 7);
       if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
         if (isExternal) {
-          annualExternalInvested += amt;
+          annualExternalInvested += multiplier * amt;
         } else {
-          annualRegularInvested += amt;
-          annualTotalInvested += amt;
+          annualRegularInvested += multiplier * amt;
         }
       }
     }
   });
+
+  annualTotalInvested = annualRegularInvested + annualExternalInvested;
 
   if (annualTotalIncome === 0) {
     const monthlyFallback = timeline.monthlySalary || timeline.monthlyBudget || timeline.monthlyIncome || 0;
@@ -194,7 +214,12 @@ export default function InvestmentTimelineHeader({
 
   eventsList.forEach((ev) => {
     if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
-    const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment;
+    const isInvestment =
+      ev.eventType === EventType.INVESTMENT ||
+      ev.eventType === EventType.WITHDRAWAL ||
+      ev.isInvestment ||
+      ev.isWithdrawal ||
+      Boolean(ev.pocketId || ev.pocket_id);
     if (isInvestment) {
       const isExternal = Boolean(ev.isExternal || ev.is_external);
       const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
@@ -229,17 +254,17 @@ export default function InvestmentTimelineHeader({
 
   const initialValueAmount = isPocketFiltered
     ? Number(selectedPocket?.initial_value ?? selectedPocket?.initialValue ?? 0)
-    : (timeline.initialValue ?? timeline.initial_value ?? (initialContribution > 0 ? initialContribution : pocketsInitialSum));
+    : (pocketsInitialSum > 0 ? pocketsInitialSum : Number(timeline.initialValue ?? timeline.initial_value ?? initialContribution ?? 0));
 
-  const totalReceived = isPocketFiltered
-    ? initialValueAmount + totalInstallmentsReceived
-    : totalInstallmentsReceived + initialContribution + (initialContribution === 0 ? pocketsInitialSum : 0);
+  const totalReceived = initialValueAmount + totalInstallmentsReceived;
 
   const targetAmount = isPocketFiltered
     ? Number(selectedPocket?.target_value ?? selectedPocket?.targetValue ?? 0)
     : (customTarget > 0
         ? customTarget
-        : (timeline.targetAmount || timeline.target || metrics?.targetAmount || metrics?.target || dto?.target || dto?.annual_target || pocketsTargetSum || 0));
+        : (pocketsTargetSum > 0
+            ? pocketsTargetSum
+            : Number(timeline.targetAmount || timeline.target || metrics?.targetAmount || metrics?.target || dto?.target || dto?.annual_target || 0)));
 
   const targetPercent = targetAmount > 0
     ? Math.min(100, Math.round((totalReceived / targetAmount) * 100))
@@ -508,11 +533,7 @@ export default function InvestmentTimelineHeader({
                       label={`${targetPercent}%`}
                     />
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.initialValue')}</span>
-                        <strong style={{ color: 'var(--primary-light)', fontSize: '0.86rem' }}>{formatCurrency(initialValueAmount)}</strong>
-                      </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
                       <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.receivedTotalLabel')}</span>
                         <strong style={{ color: TimelineColor.SUCCESS, fontSize: '0.86rem' }}>{formatCurrency(totalReceived)}</strong>
@@ -556,7 +577,12 @@ export default function InvestmentTimelineHeader({
 
             eventsList.forEach((ev) => {
               if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-              const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment || Boolean(ev.pocketId || ev.pocket_id);
+              const isInvestment =
+                ev.eventType === EventType.INVESTMENT ||
+                ev.eventType === EventType.WITHDRAWAL ||
+                ev.isInvestment ||
+                ev.isWithdrawal ||
+                Boolean(ev.pocketId || ev.pocket_id);
               if (isInvestment) {
                 const isPaid = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
                 if (chartMode === 'realized' && !isPaid) return;
@@ -565,7 +591,16 @@ export default function InvestmentTimelineHeader({
                 if (computeFromMonth && evKey < computeFromMonth) return;
                 const foundMonth = last7Months.find((m) => m.key === evKey);
                 if (foundMonth) {
-                  foundMonth.total += Math.abs(Number(ev.amount || 0));
+                  const isWithdrawal = Boolean(
+                    ev.isWithdrawal ||
+                    ev.eventType === EventType.WITHDRAWAL ||
+                    ev.eventType === EventType.EXPENSE ||
+                    ev.isExpense ||
+                    Number(ev.amount || 0) < 0
+                  );
+                  const multiplier = isWithdrawal ? -1 : 1;
+                  const amt = Math.abs(Number(ev.amount || 0));
+                  foundMonth.total += multiplier * amt;
                 }
               }
             });

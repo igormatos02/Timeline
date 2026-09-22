@@ -172,6 +172,7 @@ function VerticalTimeline({
   onPayUpToHere,
   onOpenEditInstallment,
   onOpenAmortizationModal,
+  onOpenWithdrawModal,
   onNavigateToTimeline,
   onCreateTimeline,
   headerComponent,
@@ -198,7 +199,7 @@ function VerticalTimeline({
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(EventStatus.ALL);
   const [selectedLabelFilter, setSelectedLabelFilter] = useState(EventStatus.ALL);
   const [showEmptyDays, setShowEmptyDays] = useState(true);
-  const [monthProjectionMode, setMonthProjectionMode] = useState('projected');
+  const [monthProjectionMode, setMonthProjectionMode] = useState('realized');
 
   // State & Ref for New Timeline Dropdown
   const [isTimelineDropdownOpen, setIsTimelineDropdownOpen] = useState(false);
@@ -845,6 +846,7 @@ function VerticalTimeline({
             statusFilter === EventStatus.PAID ||
             statusFilter === EventStatus.COMPLETED ||
             statusFilter === EventStatus.INVESTED ||
+            statusFilter === EventStatus.WITHDRAWN ||
             statusFilter === EventStatus.SETTLED ||
             statusFilter === EventStatus.FINISHED ||
             statusFilter === EventStatus.CLOSED
@@ -1307,11 +1309,26 @@ function VerticalTimeline({
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
-      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment;
+      const isInvestment =
+        ev.eventType === EventType.INVESTMENT ||
+        ev.eventType === EventType.WITHDRAWAL ||
+        ev.category === InvestmentEventCategory.SAVINGS ||
+        ev.isInvestment ||
+        ev.isWithdrawal ||
+        Boolean(ev.pocketId || ev.pocket_id);
 
       if (isInvestment) {
+        const isWithdrawal = Boolean(
+          ev.isWithdrawal ||
+          ev.eventType === EventType.WITHDRAWAL ||
+          ev.eventType === EventType.EXPENSE ||
+          ev.isExpense ||
+          Number(ev.amount || 0) < 0
+        );
+        const multiplier = isWithdrawal ? -1 : 1;
+        const amt = Math.abs(Number(ev.amount || 0));
         const mKey = ev.date.substring(0, 7);
-        map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
+        map.set(mKey, (map.get(mKey) || 0) + multiplier * amt);
       }
     });
     return map;
@@ -1331,11 +1348,26 @@ function VerticalTimeline({
       const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
       if (isExternal) return;
 
-      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment || Boolean(ev.pocketId || ev.pocket_id);
+      const isInvestment =
+        ev.eventType === EventType.INVESTMENT ||
+        ev.eventType === EventType.WITHDRAWAL ||
+        ev.category === InvestmentEventCategory.SAVINGS ||
+        ev.isInvestment ||
+        ev.isWithdrawal ||
+        Boolean(ev.pocketId || ev.pocket_id);
 
       if (isInvestment) {
+        const isWithdrawal = Boolean(
+          ev.isWithdrawal ||
+          ev.eventType === EventType.WITHDRAWAL ||
+          ev.eventType === EventType.EXPENSE ||
+          ev.isExpense ||
+          Number(ev.amount || 0) < 0
+        );
+        const multiplier = isWithdrawal ? -1 : 1;
+        const amt = Math.abs(Number(ev.amount || 0));
         const mKey = ev.date.substring(0, 7);
-        map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
+        map.set(mKey, (map.get(mKey) || 0) + multiplier * amt);
       }
     });
     return map;
@@ -1355,11 +1387,26 @@ function VerticalTimeline({
       const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
       if (!isExternal) return;
 
-      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment || Boolean(ev.pocketId || ev.pocket_id);
+      const isInvestment =
+        ev.eventType === EventType.INVESTMENT ||
+        ev.eventType === EventType.WITHDRAWAL ||
+        ev.category === InvestmentEventCategory.SAVINGS ||
+        ev.isInvestment ||
+        ev.isWithdrawal ||
+        Boolean(ev.pocketId || ev.pocket_id);
 
       if (isInvestment) {
+        const isWithdrawal = Boolean(
+          ev.isWithdrawal ||
+          ev.eventType === EventType.WITHDRAWAL ||
+          ev.eventType === EventType.EXPENSE ||
+          ev.isExpense ||
+          Number(ev.amount || 0) < 0
+        );
+        const multiplier = isWithdrawal ? -1 : 1;
+        const amt = Math.abs(Number(ev.amount || 0));
         const mKey = ev.date.substring(0, 7);
-        map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
+        map.set(mKey, (map.get(mKey) || 0) + multiplier * amt);
       }
     });
     return map;
@@ -1455,13 +1502,28 @@ function VerticalTimeline({
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
-      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment;
+      const isInvestment =
+        ev.eventType === EventType.INVESTMENT ||
+        ev.eventType === EventType.WITHDRAWAL ||
+        ev.category === InvestmentEventCategory.SAVINGS ||
+        ev.isInvestment ||
+        ev.isWithdrawal ||
+        Boolean(ev.pocketId || ev.pocket_id);
 
       if (isInvestment) {
         const mKey = ev.date.substring(0, 7);
         const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
         if (isRealized) {
-          map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
+          const isWithdrawal = Boolean(
+            ev.isWithdrawal ||
+            ev.eventType === EventType.WITHDRAWAL ||
+            ev.eventType === EventType.EXPENSE ||
+            ev.isExpense ||
+            Number(ev.amount || 0) < 0
+          );
+          const multiplier = isWithdrawal ? -1 : 1;
+          const amt = Math.abs(Number(ev.amount || 0));
+          map.set(mKey, (map.get(mKey) || 0) + multiplier * amt);
         }
       }
     });
@@ -1482,13 +1544,28 @@ function VerticalTimeline({
       const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
       if (isExternal) return;
 
-      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment || Boolean(ev.pocketId || ev.pocket_id);
+      const isInvestment =
+        ev.eventType === EventType.INVESTMENT ||
+        ev.eventType === EventType.WITHDRAWAL ||
+        ev.category === InvestmentEventCategory.SAVINGS ||
+        ev.isInvestment ||
+        ev.isWithdrawal ||
+        Boolean(ev.pocketId || ev.pocket_id);
 
       if (isInvestment) {
         const mKey = ev.date.substring(0, 7);
         const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
         if (isRealized) {
-          map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
+          const isWithdrawal = Boolean(
+            ev.isWithdrawal ||
+            ev.eventType === EventType.WITHDRAWAL ||
+            ev.eventType === EventType.EXPENSE ||
+            ev.isExpense ||
+            Number(ev.amount || 0) < 0
+          );
+          const multiplier = isWithdrawal ? -1 : 1;
+          const amt = Math.abs(Number(ev.amount || 0));
+          map.set(mKey, (map.get(mKey) || 0) + multiplier * amt);
         }
       }
     });
@@ -1509,13 +1586,28 @@ function VerticalTimeline({
       const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
       if (!isExternal) return;
 
-      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment || Boolean(ev.pocketId || ev.pocket_id);
+      const isInvestment =
+        ev.eventType === EventType.INVESTMENT ||
+        ev.eventType === EventType.WITHDRAWAL ||
+        ev.category === InvestmentEventCategory.SAVINGS ||
+        ev.isInvestment ||
+        ev.isWithdrawal ||
+        Boolean(ev.pocketId || ev.pocket_id);
 
       if (isInvestment) {
         const mKey = ev.date.substring(0, 7);
         const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
         if (isRealized) {
-          map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
+          const isWithdrawal = Boolean(
+            ev.isWithdrawal ||
+            ev.eventType === EventType.WITHDRAWAL ||
+            ev.eventType === EventType.EXPENSE ||
+            ev.isExpense ||
+            Number(ev.amount || 0) < 0
+          );
+          const multiplier = isWithdrawal ? -1 : 1;
+          const amt = Math.abs(Number(ev.amount || 0));
+          map.set(mKey, (map.get(mKey) || 0) + multiplier * amt);
         }
       }
     });
@@ -1611,7 +1703,20 @@ function VerticalTimeline({
         const isLoan = isLoanInstallment || ev.eventType === EventType.AMORTIZATION || ev.category === 'amortizacao';
         const isIncome = ev.eventType === EventType.INCOME;
         const isExpense = ev.eventType === EventType.EXPENSE || isLoan;
-        const isInvestment = ev.eventType === EventType.INVESTMENT;
+        const isInvestment =
+          ev.eventType === EventType.INVESTMENT ||
+          ev.eventType === EventType.WITHDRAWAL ||
+          ev.isInvestment ||
+          ev.isWithdrawal ||
+          Boolean(ev.pocketId || ev.pocket_id);
+        const isWithdrawal = Boolean(
+          ev.isWithdrawal ||
+          ev.eventType === EventType.WITHDRAWAL ||
+          ev.eventType === EventType.EXPENSE ||
+          ev.isExpense ||
+          Number(ev.amount || 0) < 0
+        );
+        const multiplier = isWithdrawal ? -1 : 1;
 
         const initialKey = ev.eventId || ev.seriesId || ev.id;
         let initialAmt = 0;
@@ -1622,7 +1727,7 @@ function VerticalTimeline({
 
         if (isIncome) mInc += amt;
         if (isExpense) mExp += amt;
-        if (isInvestment) mInv += amt + initialAmt;
+        if (isInvestment) mInv += multiplier * Math.abs(amt) + initialAmt;
       });
 
       runningIncome += mInc;
@@ -2125,13 +2230,16 @@ function VerticalTimeline({
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
-                                          onAddEventForDate(targetDayStr, EventType.EXPENSE, {
-                                            pocketId: pocket.id,
-                                            pocketName: pocket.name,
-                                            title: pocket.name,
-                                            category: ExpensesEventCategory.RESERVE,
-                                            isWithdrawal: true
-                                          });
+                                          if (onOpenWithdrawModal) {
+                                            onOpenWithdrawModal(targetDayStr, pocket.id);
+                                          } else if (onAddEventForDate) {
+                                            onAddEventForDate(targetDayStr, EventType.WITHDRAWAL, {
+                                              pocketId: pocket.id,
+                                              pocketName: pocket.name,
+                                              title: pocket.name,
+                                              isWithdrawal: true
+                                            });
+                                          }
                                         }}
                                         style={{
                                           display: 'inline-flex',
@@ -2623,28 +2731,6 @@ function VerticalTimeline({
   };
 
   const renderFilteredStatusListView = () => {
-    if (filteredEvents.length === 0) {
-      return (
-        <div className="empty-timeline-state glass-panel" style={{ padding: '36px 20px', textAlign: 'center' }}>
-          <div className="empty-icon">
-            <Filter size={28} />
-          </div>
-          <h3>{t('timeline.noEventsFound')}</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
-            {t('timeline.noEventsFoundDesc')}
-          </p>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            style={{ marginTop: '16px' }}
-            onClick={resetAllFilters}
-          >
-            <span>{t('status.all')}</span>
-          </button>
-        </div>
-      );
-    }
-
     const sortedEvents = [...filteredEvents].sort((a, b) => {
       const dateA = a.date || a.dueDate || '';
       const dateB = b.date || b.dueDate || '';
@@ -2670,8 +2756,19 @@ function VerticalTimeline({
           </button>
         </div>
 
-        {grouped.map((dateGroup, gIdx) => (
-          <div key={`${dateGroup.date}_${gIdx}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {filteredEvents.length === 0 ? (
+          <div style={{ padding: '48px 20px', textAlign: 'center', background: 'transparent', border: 'none' }}>
+            <div className="empty-icon">
+              <Filter size={28} />
+            </div>
+            <h3>{t('timeline.noEventsFoundUpToCurrentMonth')}</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
+              {t('timeline.noEventsFoundAdjustFiltersDesc')}
+            </p>
+          </div>
+        ) : (
+          grouped.map((dateGroup, gIdx) => (
+            <div key={`${dateGroup.date}_${gIdx}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <TimelineEventCard
               events={dateGroup.events}
               timelineColor={timeline.color}
@@ -2692,7 +2789,8 @@ function VerticalTimeline({
               onNavigateToTimeline={onNavigateToTimeline}
             />
           </div>
-        ))}
+        ))
+      )}
       </div>
     );
   };

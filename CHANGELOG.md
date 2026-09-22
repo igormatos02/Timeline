@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.5](https://github.com/igormatos02/Timeline/compare/v0.2.4...v0.2.5) (2026-09-22)
+
+
+### Features
+
+* standardize edit button across all timeline headers ([333bc1d](https://github.com/igormatos02/Timeline/commit/333bc1dcbcb651a6525a5553153f48ea4c52e9bc))
+
 ### [0.2.4](https://github.com/igormatos02/Timeline/compare/v0.2.3...v0.2.4) (2026-09-22)
 
 

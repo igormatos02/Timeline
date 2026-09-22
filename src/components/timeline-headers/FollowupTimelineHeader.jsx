@@ -107,28 +107,6 @@ export default function FollowupTimelineHeader({
       }
       right={
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {onAddEvent && (
-            <button
-              className="btn btn-primary"
-              style={{
-                background: headerColor,
-                border: 'none',
-                padding: '6px 14px',
-                fontSize: '0.8rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                borderRadius: '8px',
-                fontWeight: '700',
-                color: TimelineColor.WHITE
-              }}
-              onClick={onAddEvent}
-            >
-              <Plus size={15} />
-              {t('followupHeader.addFollowup')}
-            </button>
-          )}
-
           {onEdit && (
             <button
               type="button"

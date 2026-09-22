@@ -103,28 +103,6 @@ export default function TodoTimelineHeader({
       }
       controls={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {onAddEvent && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={onAddEvent}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 14px',
-                borderRadius: '8px',
-                fontSize: '0.82rem',
-                fontWeight: '700',
-                background: headerColor,
-                borderColor: headerColor
-              }}
-            >
-              <Plus size={15} />
-              <span>{t('todoHeader.addTask')}</span>
-            </button>
-          )}
-
           {onEdit && (
             <button
               type="button"

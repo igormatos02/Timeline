@@ -1924,23 +1924,44 @@ function VerticalTimeline({
                           );
                         })()}
 
-                        {onAddEventForDate && !isLoanTimelineOrTab && (
-                          timeline.type === TimelineType.INVESTMENT ? (
+                        {onAddEventForDate && !isLoanTimelineOrTab && !isBalancoView && (() => {
+                          const isInvestment = timeline.type === TimelineType.INVESTMENT || activeFinancialTab === 'investimentos';
+                          const addLabel = isFinancialTimeline
+                            ? (activeFinancialTab === 'gastos' || timeline.type === TimelineType.EXPENSE
+                                ? t('expenseHeader.addExpenseButton')
+                                : isInvestment
+                                  ? t('pocket.addPocket')
+                                  : t('incomeHeader.addIncome'))
+                            : timeline.type === TimelineType.REMINDER
+                              ? t('reminderHeader.addReminder')
+                              : timeline.type === TimelineType.DIARY
+                                ? t('diaryHeader.addEntry')
+                                : timeline.type === TimelineType.TODO
+                                  ? t('todoHeader.addTask')
+                                  : timeline.type === TimelineType.FOLLOWUP
+                                    ? t('followupHeader.addFollowup')
+                                    : timeline.type === TimelineType.PROJECT
+                                      ? t('projectHeader.newTaskMilestone')
+                                      : t('buttons.addEvent');
+
+                          const buttonColor = timeline.color || (isInvestment ? TimelineColor.INVESTMENT : 'var(--primary)');
+
+                          return isInvestment ? (
                             <button
                               type="button"
                               className="btn btn-primary btn-sm"
                               style={{
-                                height: '26px',
-                                padding: '0 10px',
-                                fontSize: '0.75rem',
-                                fontWeight: '700',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '4px',
-                                borderRadius: '6px',
+                                gap: '6px',
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                fontSize: '0.78rem',
+                                fontWeight: '700',
                                 cursor: 'pointer',
-                                background: timeline.color || TimelineColor.INVESTMENT,
-                                borderColor: timeline.color || TimelineColor.INVESTMENT
+                                background: buttonColor,
+                                borderColor: buttonColor,
+                                color: TimelineColor.WHITE
                               }}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1948,30 +1969,32 @@ function VerticalTimeline({
                               }}
                               title={t('pocket.addPocket')}
                             >
-                              <PiggyBank size={13} strokeWidth={2.5} />
-                              <span>{t('pocket.addPocket')}</span>
+                              <PiggyBank size={14} />
+                              <span>{addLabel}</span>
                             </button>
                           ) : (
                             <button
                               type="button"
                               className="btn btn-primary btn-sm"
                               style={{
-                                height: '26px',
-                                padding: '0 10px',
-                                fontSize: '0.75rem',
-                                fontWeight: '700',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '4px',
-                                borderRadius: '6px',
-                                cursor: 'pointer'
+                                gap: '6px',
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                fontSize: '0.78rem',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                background: buttonColor,
+                                borderColor: buttonColor,
+                                color: TimelineColor.WHITE
                               }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
                                 onAddEventForDate(
                                   targetDayStr,
-                                  timeline.type === TimelineType.EXPENSE
+                                  timeline.type === TimelineType.EXPENSE || activeFinancialTab === 'gastos'
                                     ? EventType.EXPENSE
                                     : timeline.type === TimelineType.FOLLOWUP
                                       ? EventType.FOLLOWUP
@@ -1982,11 +2005,11 @@ function VerticalTimeline({
                               }}
                               title={t('timeline.addEventMonthTitle', { month: monthTitleStr })}
                             >
-                              <Plus size={13} strokeWidth={2.5} />
-                              <span>{t('buttons.addEvent')}</span>
+                              <Plus size={14} />
+                              <span>{addLabel}</span>
                             </button>
-                          )
-                        )}
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -3245,13 +3268,15 @@ function VerticalTimeline({
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
               {t('timeline.noEventsFoundDesc')}
             </p>
-            <button
-              className="btn btn-primary btn-sm"
-              style={{ marginTop: '16px' }}
-              onClick={() => onAddEventForDate(todayStr)}
-            >
-              <Plus size={16} /> {t('timeline.addEventToday')}
-            </button>
+            {!isBalancoView && (
+              <button
+                className="btn btn-primary btn-sm"
+                style={{ marginTop: '16px' }}
+                onClick={() => onAddEventForDate(todayStr)}
+              >
+                <Plus size={16} /> {t('timeline.addEventToday')}
+              </button>
+            )}
           </div>
         )}
       </div>

@@ -39,26 +39,6 @@ export default function DefaultTimelineHeader({
       }
       right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {onAddEvent && (
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={onAddEvent}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                borderRadius: '8px',
-                fontSize: '0.78rem',
-                fontWeight: '700'
-              }}
-            >
-              <Plus size={14} />
-              <span>{t('buttons.addEvent')}</span>
-            </button>
-          )}
-
           {onEdit && (
             <button
               type="button"

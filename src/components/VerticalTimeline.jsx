@@ -72,7 +72,9 @@ import {
   Dog,
   Plane,
   Target,
-  ArrowDownRight
+  ArrowDownRight,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
 import { compareEventsWithinDay } from '../utils/eventSorting.js';
@@ -152,6 +154,10 @@ function VerticalTimeline({
   timelines = [],
   activeTimeboard = null,
   activeFinancialTab = '',
+  pockets = [],
+  onOpenCreatePocket,
+  onEditPocket,
+  onDeletePocket,
   onSelectFinancialTab,
   onEditEvent,
   onUpdateEventDirect,
@@ -1755,41 +1761,67 @@ function VerticalTimeline({
                         })()}
 
                         {onAddEventForDate && !isLoanTimelineOrTab && (
-                          <button
-                            type="button"
-                            className="btn btn-primary btn-sm"
-                            style={{
-                              height: '26px',
-                              padding: '0 10px',
-                              fontSize: '0.75rem',
-                              fontWeight: '700',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              borderRadius: '6px',
-                              cursor: 'pointer'
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
-                              onAddEventForDate(
-                                targetDayStr,
-                                timeline.type === TimelineType.EXPENSE
-                                  ? EventType.EXPENSE
-                                  : timeline.type === TimelineType.INVESTMENT
-                                    ? EventType.INVESTMENT
+                          timeline.type === TimelineType.INVESTMENT ? (
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              style={{
+                                height: '26px',
+                                padding: '0 10px',
+                                fontSize: '0.75rem',
+                                fontWeight: '700',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                background: timeline.color || TimelineColor.INVESTMENT,
+                                borderColor: timeline.color || TimelineColor.INVESTMENT
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onOpenCreatePocket) onOpenCreatePocket();
+                              }}
+                              title={t('pocket.addPocket')}
+                            >
+                              <PiggyBank size={13} strokeWidth={2.5} />
+                              <span>{t('pocket.addPocket')}</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              style={{
+                                height: '26px',
+                                padding: '0 10px',
+                                fontSize: '0.75rem',
+                                fontWeight: '700',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                borderRadius: '6px',
+                                cursor: 'pointer'
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
+                                onAddEventForDate(
+                                  targetDayStr,
+                                  timeline.type === TimelineType.EXPENSE
+                                    ? EventType.EXPENSE
                                     : timeline.type === TimelineType.FOLLOWUP
                                       ? EventType.FOLLOWUP
                                       : isReminders
                                         ? EventType.REMINDER
                                         : EventType.INCOME
-                              );
-                            }}
-                            title={t('timeline.addEventMonthTitle', { month: monthTitleStr })}
-                          >
-                            <Plus size={13} strokeWidth={2.5} />
-                            <span>{t('buttons.addEvent')}</span>
-                          </button>
+                                );
+                              }}
+                              title={t('timeline.addEventMonthTitle', { month: monthTitleStr })}
+                            >
+                              <Plus size={13} strokeWidth={2.5} />
+                              <span>{t('buttons.addEvent')}</span>
+                            </button>
+                          )
                         )}
                       </div>
                     </div>
@@ -1826,7 +1858,362 @@ function VerticalTimeline({
                     )}
                   </div>
 
-                  {hasEvents ? (
+                  {timeline.type === TimelineType.INVESTMENT ? (() => {
+                    const monthKey = format(mGroup.monthDate, 'yyyy-MM');
+                    const visiblePockets = (pockets || []).filter((pocket) => {
+                      const createdMonth = (pocket.date_created || pocket.dateCreated || '').substring(0, 7) || '1900-01';
+                      const closedMonth = (pocket.date_closed || pocket.dateClosed || '').substring(0, 7) || null;
+
+                      // Pocket starts appearing from its creation month forward
+                      if (monthKey < createdMonth) return false;
+                      // Pocket stops appearing after its closing month (if date_closed is null, it appears forever)
+                      if (closedMonth && monthKey > closedMonth) return false;
+
+                      return true;
+                    });
+
+                    const unassignedEvents = (mGroup.events || []).filter(
+                      (ev) => !ev.pocketId && !ev.pocket_id && !ev.isDeleted && !isCancelledStatus(ev.status) && ev.status !== EventStatus.DELETED
+                    );
+
+                    if (visiblePockets.length === 0 && unassignedEvents.length === 0) {
+                      return (
+                        <div
+                          className="empty-day-row"
+                          onClick={() => {
+                            if (onOpenCreatePocket) onOpenCreatePocket({ defaultDate: format(mGroup.monthDate, 'yyyy-MM-01') });
+                          }}
+                          style={{
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '12px 14px',
+                            borderRadius: '8px',
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            border: '1px dashed var(--border-glass)'
+                          }}
+                        >
+                          <PiggyBank size={18} style={{ color: timeline.color || TimelineColor.INVESTMENT }} />
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                              {t('pocket.noPockets')}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                              {t('pocket.noPocketsHint')}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {visiblePockets.map((pocket) => {
+                          const pInitial = Number(pocket.initial_value ?? pocket.initialValue ?? 0);
+                          const pTarget = Number(pocket.target_value ?? pocket.targetValue ?? 0);
+
+                          let allPocketContributed = 0;
+                          (timeline.events || []).forEach((ev) => {
+                            if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+                            if (ev.pocketId === pocket.id || ev.pocket_id === pocket.id) {
+                              const evMonth = ev.date.substring(0, 7);
+                              if (evMonth <= monthKey) {
+                                if (isFutureMonth) {
+                                  allPocketContributed += Number(ev.amount || 0);
+                                } else {
+                                  const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
+                                  const isExternal = Boolean(ev.isExternal || ev.is_external);
+                                  if (isReceived || isExternal) {
+                                    allPocketContributed += Number(ev.amount || 0);
+                                  }
+                                }
+                              }
+                            }
+                          });
+
+                          const pAccumulated = pInitial + allPocketContributed;
+                          const pPercent = pTarget > 0 ? Math.min(100, Math.round((pAccumulated / pTarget) * 100)) : 0;
+                          const isClosed = Boolean(pocket.date_closed || pocket.dateClosed);
+                          const pocketMonthEvents = (mGroup.events || []).filter(
+                            (ev) => (ev.pocketId === pocket.id || ev.pocket_id === pocket.id) && !ev.isDeleted && !isCancelledStatus(ev.status) && ev.status !== EventStatus.DELETED
+                          );
+
+                          return (
+                            <div
+                              key={pocket.id}
+                              style={{
+                                padding: '12px 14px',
+                                borderRadius: '10px',
+                                background: 'rgba(255, 255, 255, 0.02)',
+                                border: '1px solid var(--border-glass)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '10px',
+                                opacity: isClosed ? 0.75 : 1
+                              }}
+                            >
+                              {/* Linha 1 no topo: Nome do cofrinho + Status Encerrado (se houver) + Botões de Ação */}
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  flexWrap: 'wrap',
+                                  gap: '8px'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <PiggyBank size={18} style={{ color: timeline.color || TimelineColor.INVESTMENT }} />
+                                  <span style={{ fontSize: '0.92rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                                    {pocket.name}
+                                  </span>
+                                  {isClosed && (
+                                    <span
+                                      style={{
+                                        fontSize: '0.68rem',
+                                        fontWeight: '700',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        background: 'rgba(239, 68, 68, 0.15)',
+                                        color: TimelineColor.DANGER
+                                      }}
+                                    >
+                                      {t('pocket.statusClosed')}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  {onEditPocket && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onEditPocket(pocket);
+                                      }}
+                                      className="btn btn-ghost btn-xs"
+                                      title={t('common.edit')}
+                                      style={{ padding: '4px 7px', color: 'var(--text-muted)' }}
+                                    >
+                                      <Pencil size={13} />
+                                    </button>
+                                  )}
+
+                                  {onDeletePocket && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDeletePocket(pocket);
+                                      }}
+                                      className="btn btn-ghost btn-xs"
+                                      title={t('common.delete')}
+                                      style={{ padding: '4px 7px', color: TimelineColor.DANGER }}
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  )}
+
+                                  {onAddEventForDate && !isClosed && (
+                                    <button
+                                      type="button"
+                                      className="btn btn-primary btn-xs"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
+                                        onAddEventForDate(targetDayStr, EventType.INVESTMENT, {
+                                          pocketId: pocket.id,
+                                          pocketName: pocket.name,
+                                          title: pocket.name,
+                                          category: InvestmentEventCategory.SAVINGS
+                                        });
+                                      }}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '4px 10px',
+                                        borderRadius: '6px',
+                                        fontSize: '0.74rem',
+                                        fontWeight: '700',
+                                        background: timeline.color || TimelineColor.INVESTMENT,
+                                        borderColor: timeline.color || TimelineColor.INVESTMENT
+                                      }}
+                                    >
+                                      <Plus size={12} strokeWidth={2.5} />
+                                      <span>{t('buttons.addEvent')}</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Linha 2: Barra de Progresso idêntica à do evento com meta */}
+                              {pTarget > 0 && (() => {
+                                const labelTitle = isFutureMonth
+                                  ? t('pocket.goalProgressForecast', {
+                                      accumulated: formatCurrency(pAccumulated),
+                                      target: formatCurrency(pTarget)
+                                    })
+                                  : t('pocket.goalProgress', {
+                                      accumulated: formatCurrency(pAccumulated),
+                                      target: formatCurrency(pTarget)
+                                    });
+
+                                const labelPercent = isFutureMonth
+                                  ? (pPercent >= 100
+                                      ? t('pocket.goalReachedForecast')
+                                      : t('pocket.forecastPercent', { percent: pPercent }))
+                                  : (pPercent >= 100
+                                      ? t('pocket.goalReached')
+                                      : t('pocket.reachedPercent', { percent: pPercent }));
+
+                                return (
+                                  <div
+                                    style={{
+                                      width: '100%',
+                                      marginTop: '2px',
+                                      paddingTop: '6px',
+                                      borderTop: '1px solid rgba(139, 92, 246, 0.15)'
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        fontSize: '0.74rem',
+                                        fontWeight: '700',
+                                        color: isFutureMonth ? TimelineColor.PRIMARY_LIGHT : (timeline.color || TimelineColor.PRIMARY),
+                                        marginBottom: '5px'
+                                      }}
+                                    >
+                                      <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <Target size={12} />
+                                        <span>{labelTitle}</span>
+                                        {pInitial > 0 && (
+                                          <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '500', marginLeft: '4px' }}>
+                                            ({t('pocket.initialContributionNote', { amount: formatCurrency(pInitial) })})
+                                          </span>
+                                        )}
+                                      </span>
+                                      <span
+                                        style={{
+                                          color: pPercent >= 100
+                                            ? TimelineColor.SUCCESS
+                                            : isFutureMonth
+                                              ? TimelineColor.PRIMARY_LIGHT
+                                              : (timeline.color || TimelineColor.PRIMARY),
+                                          fontWeight: '800'
+                                        }}
+                                      >
+                                        {labelPercent}
+                                      </span>
+                                    </div>
+
+                                    <div
+                                      style={{
+                                        width: '100%',
+                                        height: '6px',
+                                        background: 'rgba(148, 163, 184, 0.15)',
+                                        borderRadius: '9999px',
+                                        overflow: 'hidden',
+                                        position: 'relative'
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          width: `${pPercent}%`,
+                                          height: '100%',
+                                          background: pPercent >= 100
+                                            ? `linear-gradient(90deg, ${TimelineColor.SUCCESS} 0%, ${TimelineColor.EMERALD} 100%)`
+                                            : `linear-gradient(90deg, ${timeline.color || TimelineColor.PRIMARY} 0%, ${timeline.color || TimelineColor.PRIMARY_LIGHT} 100%)`,
+                                          borderRadius: '9999px',
+                                          transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                          boxShadow: '0 0 10px rgba(99, 102, 241, 0.45)'
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+
+                              {/* Abaixo: Os eventos como já ficavam no card do mês */}
+                              {pocketMonthEvents.length > 0 ? (
+                                <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  {groupEventsByDate(pocketMonthEvents).map((dateGroup, gIdx) => (
+                                    <div key={`${dateGroup.date}_${gIdx}`}>
+                                      <TimelineEventCard
+                                        events={dateGroup.events}
+                                        timelineColor={timeline.color}
+                                        allEvents={timeline.events || []}
+                                        currentTimelineId={timeline.id}
+                                        timelineType={timeline.type}
+                                        activeFinancialTab={activeFinancialTab}
+                                        onEdit={onEditEvent}
+                                        onUpdateEventDirect={onUpdateEventDirect}
+                                        onDelete={onDeleteEvent}
+                                        onToggleTask={onToggleTask}
+                                        onAddChecklistItem={onAddChecklistItem}
+                                        onDeleteChecklistItem={onDeleteChecklistItem}
+                                        onToggleLoanPayment={onToggleLoanPayment}
+                                        onPayUpToHere={onPayUpToHere}
+                                        onOpenEditInstallment={onOpenEditInstallment}
+                                        onNavigateToTimeline={onNavigateToTimeline}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div
+                                  style={{
+                                    padding: '8px 10px',
+                                    borderRadius: '6px',
+                                    background: 'rgba(255, 255, 255, 0.01)',
+                                    border: '1px dashed var(--border-glass)',
+                                    fontSize: '0.74rem',
+                                    color: 'var(--text-dim)',
+                                    textAlign: 'center',
+                                    marginTop: '2px'
+                                  }}
+                                >
+                                  {t('timeline.noEventsMonth')}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {/* Eventos não associados a nenhum cofrinho */}
+                        {unassignedEvents.length > 0 && (
+                          <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {groupEventsByDate(unassignedEvents).map((dateGroup, gIdx) => (
+                              <div key={`unassigned_${dateGroup.date}_${gIdx}`}>
+                                <TimelineEventCard
+                                  events={dateGroup.events}
+                                  timelineColor={timeline.color}
+                                  allEvents={timeline.events || []}
+                                  currentTimelineId={timeline.id}
+                                  timelineType={timeline.type}
+                                  activeFinancialTab={activeFinancialTab}
+                                  onEdit={onEditEvent}
+                                  onUpdateEventDirect={onUpdateEventDirect}
+                                  onDelete={onDeleteEvent}
+                                  onToggleTask={onToggleTask}
+                                  onAddChecklistItem={onAddChecklistItem}
+                                  onDeleteChecklistItem={onDeleteChecklistItem}
+                                  onToggleLoanPayment={onToggleLoanPayment}
+                                  onPayUpToHere={onPayUpToHere}
+                                  onOpenEditInstallment={onOpenEditInstallment}
+                                  onNavigateToTimeline={onNavigateToTimeline}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })() : hasEvents ? (
                     (mGroup.groupedDateEvents || groupEventsByDate(mGroup.events)).map((dateGroup, gIdx) => (
                       <div
                         key={`${dateGroup.date}_${gIdx}`}

@@ -260,6 +260,8 @@ export class SupabaseFinancialEventRepository extends IRepository {
       is_obligation: Boolean(row.is_obligation || row.isObligation),
       obligationPersonId: row.obligation_person_id || row.obligationPersonId || null,
       obligation_person_id: row.obligation_person_id || row.obligationPersonId || null,
+      pocketId: row.pocket_id || null,
+      pocket_id: row.pocket_id || null,
 
       createdAt: row.created_at,
       updatedAt: row.updated_at
@@ -505,6 +507,13 @@ export class SupabaseFinancialEventRepository extends IRepository {
         uuidRegex.test(data.obligationPersonId || data.obligation_person_id)
           ? (data.obligationPersonId || data.obligation_person_id)
           : null,
+
+      pocket_id:
+        (data.pocketId && uuidRegex.test(data.pocketId))
+          ? data.pocketId
+          : (data.pocket_id && uuidRegex.test(data.pocket_id))
+            ? data.pocket_id
+            : null,
 
       created_at:
         data.createdAt ||
@@ -1048,6 +1057,43 @@ export class SupabaseFinancialEventRepository extends IRepository {
     }
 
     return !err1 || !err2;
+  }
+
+  async deleteByPocketId(pocketId) {
+    if (!pocketId) return true;
+
+    try {
+      const { data: events } = await supabase
+        .from(this.tableName)
+        .select('id, event_id')
+        .eq('pocket_id', pocketId);
+
+      if (events && events.length > 0) {
+        const idsToDelete = events.map((e) => e.id).filter(Boolean);
+        const eventIdsToDelete = events.map((e) => e.event_id).filter(Boolean);
+        const allIds = Array.from(new Set([...idsToDelete, ...eventIdsToDelete]));
+
+        if (allIds.length > 0) {
+          await supabase
+            .from('financial_event_status')
+            .delete()
+            .in('event_id', allIds);
+        }
+      }
+    } catch (err) {
+      console.warn(`Warning deleting event statuses for pocket ${pocketId}:`, err.message);
+    }
+
+    const { error } = await supabase
+      .from(this.tableName)
+      .delete()
+      .eq('pocket_id', pocketId);
+
+    if (error) {
+      console.error(`Error deleting financial events for pocket ${pocketId} from Supabase:`, error.message);
+      return false;
+    }
+    return true;
   }
 
   async updateMany(predicate, updates) {

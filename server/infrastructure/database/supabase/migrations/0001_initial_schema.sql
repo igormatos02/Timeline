@@ -160,7 +160,8 @@ CREATE TABLE IF NOT EXISTS financial_events (
   amortization_amount NUMERIC,
   is_external BOOLEAN,
   is_obligation BOOLEAN NOT NULL DEFAULT FALSE,
-  obligation_person_id UUID REFERENCES persons(id) ON DELETE SET NULL
+  obligation_person_id UUID REFERENCES persons(id) ON DELETE SET NULL,
+  pocket_id UUID REFERENCES pockets(id) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_financial_events_timeboard_id ON financial_events(timeboard_id);
@@ -168,6 +169,24 @@ CREATE INDEX IF NOT EXISTS idx_financial_events_timeline_id ON financial_events(
 CREATE INDEX IF NOT EXISTS idx_financial_events_event_id ON financial_events(event_id);
 CREATE INDEX IF NOT EXISTS idx_financial_events_obligation_person_id ON financial_events(obligation_person_id);
 CREATE INDEX IF NOT EXISTS idx_financial_events_is_obligation ON financial_events(is_obligation);
+CREATE INDEX IF NOT EXISTS idx_financial_events_pocket_id ON financial_events(pocket_id);
+
+-- ============================================================
+-- pockets
+-- ============================================================
+CREATE TABLE IF NOT EXISTS pockets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL,
+  initial_value NUMERIC(15, 2) NOT NULL DEFAULT 0,
+  target_value NUMERIC(15, 2) NOT NULL DEFAULT 0,
+  timeline_id UUID NOT NULL REFERENCES timelines(id) ON DELETE CASCADE,
+  timeboard_id UUID NOT NULL REFERENCES timeboards(id) ON DELETE CASCADE,
+  date_created TIMESTAMPTZ NOT NULL DEFAULT now(),
+  date_closed DATE
+);
+
+CREATE INDEX IF NOT EXISTS idx_pockets_timeline_id ON pockets(timeline_id);
+CREATE INDEX IF NOT EXISTS idx_pockets_timeboard_id ON pockets(timeboard_id);
 
 -- ============================================================
 -- financial_event_status

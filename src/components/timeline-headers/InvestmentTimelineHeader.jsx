@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { InvestmentEventCategory } from '../../../shared/enums/InvestmentEventCategory.js';
 import { EventStatus, EventType, isCancelledStatus, isPositiveStatus, TimelineColor } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
@@ -22,6 +21,8 @@ export default function InvestmentTimelineHeader({
   computeStartDate = null,
   allTimelines = [],
   events = [],
+  pockets: propPockets = [],
+  onOpenCreatePocket = null,
   onEdit,
   onDelete,
   onAddEvent,
@@ -31,6 +32,7 @@ export default function InvestmentTimelineHeader({
 }) {
   const { t, dateLocale } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
+  const pockets = propPockets || [];
 
   if (!timeline) return null;
 
@@ -41,60 +43,53 @@ export default function InvestmentTimelineHeader({
   const eventsList = timeline.events || events || [];
   const currentMonthStr = new Date().toISOString().substring(0, 7);
 
-  // 1. INVESTIMENTOS / POUPANÇA POR CATEGORIA & TOTAL DO MÊS
-  const validEnumValues = Object.values(InvestmentEventCategory);
+  // 1. POUPANÇA POR COFRINHOS
+  const pocketColors = [
+    TimelineColor.INVESTMENT,
+    TimelineColor.PURPLE,
+    TimelineColor.CYAN,
+    TimelineColor.SUCCESS,
+    TimelineColor.WARNING,
+    TimelineColor.PINK,
+    TimelineColor.BLUE,
+    TimelineColor.SLATE,
+    TimelineColor.PRIMARY,
+    TimelineColor.ROSE
+  ];
 
-  let monthTotalInvested = dto?.current_month_invested ?? 0;
+  let totalPocketsAccumulated = 0;
+  const rawPocketList = pockets.map((pocket, idx) => {
+    const pInitial = Number(pocket.initial_value ?? pocket.initialValue ?? 0);
+    let pocketContributed = 0;
 
-  let uiTotalInv = 0;
-  eventsList.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
-    const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment;
-    if (isInvestment && ev.date.startsWith(currentMonthStr)) {
-      uiTotalInv += Number(ev.amount || 0);
-    }
-  });
-
-  if (monthTotalInvested === 0 && uiTotalInv > 0) {
-    monthTotalInvested = uiTotalInv;
-  }
-
-  // Extrair lista de categorias diretamente do DTO vindo da Stored Procedure SQL usando os valores exatos do enum
-  let categoryList = (dto?.categories_breakdown && dto.categories_breakdown.length > 0)
-    ? dto.categories_breakdown.map((item) => ({
-      rawCat: item.category,
-      name: item.category,
-      amount: Number(item.amount || 0),
-      percent: Number(item.percent || 0)
-    }))
-    : [];
-
-  // Fallback para cálculo local se o DTO for nulo ou vazio
-  if (categoryList.length === 0) {
-    const categoryTotals = {};
     eventsList.forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
-      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment;
-      if (isInvestment && ev.date.startsWith(currentMonthStr)) {
-        const amt = Number(ev.amount || 0);
-        let cat = (ev.category || '').toLowerCase();
-        if (!validEnumValues.includes(cat)) {
-          cat = InvestmentEventCategory.OTHER;
+      if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+      if (ev.pocketId === pocket.id || ev.pocket_id === pocket.id) {
+        const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
+        const isExternal = Boolean(ev.isExternal || ev.is_external);
+        if (isReceived || isExternal) {
+          pocketContributed += Number(ev.amount || 0);
         }
-        categoryTotals[cat] = (categoryTotals[cat] || 0) + amt;
       }
     });
 
-    categoryList = Object.entries(categoryTotals)
-      .filter(([cat]) => validEnumValues.includes(cat))
-      .map(([cat, amt]) => ({
-        rawCat: cat,
-        name: cat,
-        amount: amt,
-        percent: monthTotalInvested > 0 ? Math.round((amt / monthTotalInvested) * 100) : 0
-      }))
-      .sort((a, b) => b.amount - a.amount);
-  }
+    const accumulated = pInitial + pocketContributed;
+    totalPocketsAccumulated += accumulated;
+
+    return {
+      id: pocket.id,
+      name: pocket.name,
+      amount: accumulated,
+      color: pocket.color || pocketColors[idx % pocketColors.length]
+    };
+  });
+
+  const pocketList = rawPocketList
+    .map((item) => ({
+      ...item,
+      percent: totalPocketsAccumulated > 0 ? Math.round((item.amount / totalPocketsAccumulated) * 100) : 0
+    }))
+    .sort((a, b) => b.amount - a.amount);
 
   // 2. COMPROMETIMENTO ANUAL — Aportes projetados nos próximos 12 meses vs Renda Anual
   const startDateObj = new Date();
@@ -188,11 +183,18 @@ export default function InvestmentTimelineHeader({
     }
   });
 
-  const totalReceived = totalInstallmentsReceived + initialContribution;
+  let pocketsInitialSum = 0;
+  let pocketsTargetSum = 0;
+  pockets.forEach((p) => {
+    pocketsInitialSum += Number(p.initial_value ?? p.initialValue ?? 0);
+    pocketsTargetSum += Number(p.target_value ?? p.targetValue ?? 0);
+  });
+
+  const totalReceived = totalInstallmentsReceived + initialContribution + (initialContribution === 0 ? pocketsInitialSum : 0);
 
   const targetAmount = customTarget > 0
     ? customTarget
-    : (timeline.targetAmount || timeline.target || metrics?.targetAmount || metrics?.target || dto?.target || dto?.annual_target || 0);
+    : (timeline.targetAmount || timeline.target || metrics?.targetAmount || metrics?.target || dto?.target || dto?.annual_target || pocketsTargetSum || 0);
 
   const targetPercent = targetAmount > 0
     ? Math.min(100, Math.round((totalReceived / targetAmount) * 100))
@@ -216,28 +218,6 @@ export default function InvestmentTimelineHeader({
       }
       right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {onAddEvent && (
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={onAddEvent}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                borderRadius: '8px',
-                fontSize: '0.78rem',
-                fontWeight: '700',
-                background: headerColor,
-                borderColor: headerColor
-              }}
-            >
-              <Plus size={14} />
-              <span>{t('investmentHeader.addInvestment')}</span>
-            </button>
-          )}
-
           {onEdit && (
             <button
               type="button"
@@ -331,26 +311,13 @@ export default function InvestmentTimelineHeader({
 
           {/* Grid Principal 2x2 */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-            {/* Quadrante 1: INVESTIMENTOS POR CATEGORIA (PieChart SVG & Legenda) */}
+            {/* Quadrante 1: POUPANÇA POR COFRINHOS (PieChart SVG & Legenda) */}
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 {t('investmentHeader.categoriesTitle')}
               </div>
               {(() => {
-                const categoryColors = [
-                  TimelineColor.INVESTMENT,
-                  TimelineColor.PURPLE,
-                  TimelineColor.CYAN,
-                  TimelineColor.SUCCESS,
-                  TimelineColor.WARNING,
-                  TimelineColor.PINK,
-                  TimelineColor.BLUE,
-                  TimelineColor.SLATE,
-                  TimelineColor.PRIMARY,
-                  TimelineColor.ROSE
-                ];
-
-                if (!categoryList || categoryList.length === 0) {
+                if (!pocketList || pocketList.length === 0) {
                   return (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
                       <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
@@ -381,25 +348,20 @@ export default function InvestmentTimelineHeader({
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                          {t('investmentHeader.noInvestments')}
+                          {t('investmentHeader.noPockets')}
                         </span>
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
-                          {t('investmentHeader.noInvestmentsHint')}
+                          {t('investmentHeader.noPocketsHint')}
                         </span>
                       </div>
                     </div>
                   );
                 }
 
-                const items = categoryList.map((c, i) => ({
-                  ...c,
-                  color: categoryColors[i % categoryColors.length]
-                }));
-
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                    <PieDonut items={items} />
-                    <DonutLegend items={items} />
+                    <PieDonut items={pocketList} />
+                    <DonutLegend items={pocketList} />
                   </div>
                 );
               })()}

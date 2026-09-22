@@ -14,6 +14,8 @@ const DeleteEventModal = React.lazy(() => import('./components/DeleteEventModal'
 const DeleteTimelineModal = React.lazy(() => import('./components/DeleteTimelineModal'));
 const AmortizationModal = React.lazy(() => import('./components/AmortizationModal'));
 const EditInstallmentModal = React.lazy(() => import('./components/EditInstallmentModal'));
+const CreatePocketModal = React.lazy(() => import('./components/CreatePocketModal'));
+const DeletePocketModal = React.lazy(() => import('./components/DeletePocketModal'));
 import {
   recalculateLoanState,
   propagateInstallmentAmountForward,
@@ -966,14 +968,89 @@ export default function App() {
   };
 
   // ----------------------------------------------------
+  // Pockets State & Handlers (Investment / Savings)
+  // ----------------------------------------------------
+  const [pockets, setPockets] = useState([]);
+  const [isPocketModalOpen, setIsPocketModalOpen] = useState(false);
+  const [selectedPocketForEdit, setSelectedPocketForEdit] = useState(null);
+  const [deletingPocket, setDeletingPocket] = useState(null);
+
+  const loadPockets = useCallback(async () => {
+    if (!activeTimeline?.id || activeTimeline.type !== TimelineType.INVESTMENT) return;
+    try {
+      const res = await api.getPockets({ timelineId: activeTimeline.id });
+      if (Array.isArray(res)) {
+        setPockets(res);
+      } else if (res && Array.isArray(res.data)) {
+        setPockets(res.data);
+      }
+    } catch (err) {
+      console.error('Error loading pockets:', err);
+    }
+  }, [activeTimeline?.id, activeTimeline?.type]);
+
+  useEffect(() => {
+    if (activeTimeline?.type === TimelineType.INVESTMENT) {
+      loadPockets();
+    } else {
+      setPockets([]);
+    }
+  }, [activeTimeline?.id, activeTimeline?.type, loadPockets]);
+
+  const handleOpenCreatePocket = useCallback((pocket = null) => {
+    setSelectedPocketForEdit(pocket);
+    setIsPocketModalOpen(true);
+  }, []);
+
+  const handleSavePocket = async (payload, pocketId) => {
+    try {
+      if (pocketId) {
+        await api.updatePocket(pocketId, payload);
+      } else {
+        await api.createPocket(payload);
+      }
+      await loadPockets();
+      showToast(pocketId ? t('toast.pocketUpdatedSuccess') : t('toast.pocketCreatedSuccess'), 'success');
+    } catch (err) {
+      console.error('Error saving pocket:', err);
+      showToast(err.message || t('toast.eventSaveError'), 'error');
+      throw err;
+    }
+  };
+
+  const handleRequestDeletePocket = useCallback((pocketOrId) => {
+    if (!pocketOrId) return;
+    if (typeof pocketOrId === 'object') {
+      setDeletingPocket(pocketOrId);
+    } else {
+      const found = pockets.find((p) => p.id === pocketOrId) || { id: pocketOrId, name: 'Cofrinho' };
+      setDeletingPocket(found);
+    }
+  }, [pockets]);
+
+  const handleConfirmDeletePocket = async (pocketId) => {
+    try {
+      await api.deletePocket(pocketId);
+      await loadPockets();
+      await refreshTimelines();
+      showToast(t('toast.pocketDeletedSuccess'), 'success');
+    } catch (err) {
+      console.error('Error deleting pocket:', err);
+      showToast(err.message || t('toast.eventDeleteError'), 'error');
+    } finally {
+      setDeletingPocket(null);
+    }
+  };
+
+  // ----------------------------------------------------
   // Event Handlers
   // ----------------------------------------------------
   const focusedMonthRef = React.useRef(null);
 
-  const handleOpenCreateEvent = useCallback((dateStr = format(new Date(), 'yyyy-MM-dd'), nature = 'income') => {
+  const handleOpenCreateEvent = useCallback((dateStr = format(new Date(), 'yyyy-MM-dd'), nature = 'income', presetData = null) => {
     focusedMonthRef.current = dateStr ? dateStr.substring(0, 7) : null;
     scrollYBeforeModalRef.current = window.scrollY;
-    setEditingEvent(null);
+    setEditingEvent(presetData);
     setSelectedDateForNewEvent(dateStr);
     setEventModalDefaultNature(nature);
     setIsEventModalOpen(true);
@@ -1840,7 +1917,7 @@ export default function App() {
   };
 
   const handleAddEventForDate = useCallback(
-    (dateStr, nature) => handleOpenCreateEvent(dateStr, nature || (activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income')),
+    (dateStr, nature, presetData = null) => handleOpenCreateEvent(dateStr, nature || (activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income'), presetData),
     [handleOpenCreateEvent, activeFinancialTab]
   );
 
@@ -1945,6 +2022,10 @@ export default function App() {
             timelines={activeTimeboardTimelines}
             activeTimeboard={activeTimeboard}
             activeFinancialTab={activeFinancialTab}
+            pockets={pockets}
+            onOpenCreatePocket={handleOpenCreatePocket}
+            onEditPocket={handleOpenCreatePocket}
+            onDeletePocket={handleRequestDeletePocket}
             onSelectFinancialTab={(tabKey) => {
               setActiveFinancialTab(tabKey);
               setActiveTimelineId(tabKey);
@@ -1977,6 +2058,10 @@ export default function App() {
                 events={activeTimeline?.events || rawEvents}
                 allEvents={rawEvents}
                 activeFinancialTab={activeFinancialTab}
+                pockets={pockets}
+                onOpenCreatePocket={handleOpenCreatePocket}
+                onEditPocket={handleOpenCreatePocket}
+                onDeletePocket={handleRequestDeletePocket}
                 onSelectFinancialTab={setActiveFinancialTab}
                 onEdit={handleOpenEditTimeline}
                 onToggleStatus={handleToggleTimelineStatus}
@@ -1985,6 +2070,15 @@ export default function App() {
                 onOpenAmortizationModal={() => handleOpenAmortizationModal()}
                 onScrollToOverdue={handleScrollToOverdue}
                 onSaveComputeStartDate={handleSaveComputeStartDate}
+                onAddEvent={(opts) => {
+                  if (opts && typeof opts === 'object' && !opts.nativeEvent) {
+                    const presetDate = opts.date || format(new Date(), 'yyyy-MM-dd');
+                    const nature = opts.nature || (activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income');
+                    handleOpenCreateEvent(presetDate, nature, opts);
+                  } else {
+                    handleOpenCreateEvent(format(new Date(), 'yyyy-MM-dd'), activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income');
+                  }
+                }}
               />
             }
           />
@@ -2101,6 +2195,33 @@ export default function App() {
           timeline={deletingTimeline}
           onConfirmDelete={handleConfirmDeleteTimeline}
         />
+
+        {/* Pocket Modal */}
+        {isPocketModalOpen && (
+          <CreatePocketModal
+            isOpen={isPocketModalOpen}
+            onClose={() => {
+              setIsPocketModalOpen(false);
+              setSelectedPocketForEdit(null);
+            }}
+            onSave={handleSavePocket}
+            initialData={selectedPocketForEdit}
+            timeline={activeTimeline}
+            timeboardId={activeTimeboardId}
+          />
+        )}
+
+        {/* Delete Pocket Confirmation Modal */}
+        {deletingPocket && (
+          <DeletePocketModal
+            isOpen={Boolean(deletingPocket)}
+            onClose={() => setDeletingPocket(null)}
+            pocket={deletingPocket}
+            timeline={activeTimeline}
+            allEvents={rawEvents}
+            onConfirmDelete={handleConfirmDeletePocket}
+          />
+        )}
       </Suspense>
 
       {/* Reset Timeline Confirmation Modal */}

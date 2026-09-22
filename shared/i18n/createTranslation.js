@@ -27,7 +27,7 @@ export function createT(language = 'en') {
     if (typeof result === 'string') {
       let interpolated = result;
       for (const [pKey, pVal] of Object.entries(params)) {
-        interpolated = interpolated.replace(new RegExp(`\\{${pKey}\\}`, 'g'), pVal);
+        interpolated = interpolated.replace(new RegExp(`\\{{1,2}${pKey}\\}{1,2}`, 'g'), pVal);
       }
       return interpolated;
     }

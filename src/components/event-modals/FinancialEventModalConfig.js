@@ -175,7 +175,7 @@ const investmentConfig = {
   useBreakdown: false,
   showAmount: true,
   showAutomatic: true,
-  showInitialTarget: true,
+  showInitialTarget: false,
   showIsExternal: true,
   includeSnakeObligation: false,
   subtitleKey: 'timeline.investments',

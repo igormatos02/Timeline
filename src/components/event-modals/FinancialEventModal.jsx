@@ -36,6 +36,8 @@ export default function FinancialEventModal({
   const [breakdownItems, setBreakdownItems] = useState([]);
   const [obligationError, setObligationError] = useState(false);
 
+  const isEditing = Boolean(initialData?.id || initialData?.eventId);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -54,7 +56,8 @@ export default function FinancialEventModal({
     isExternal: false,
     category: config.categoryDefault,
     isObligation: false,
-    obligationPersonId: ''
+    obligationPersonId: '',
+    pocketId: null
   });
 
   useModalEscape(isOpen, onClose, [
@@ -94,7 +97,7 @@ export default function FinancialEventModal({
       initialYear = new Date().getFullYear();
     }
 
-    if (initialData) {
+    if (isEditing) {
       const initRecurrence = normalizeRecurrence(initialData);
       const initPeriodicity = normalizePeriodicity(initialData.periodicity || initialData.aggregation);
       const endRecDate = initialData.limitDate || initialData.limit_date || initialData.recurrenceEndDate || initialData.endDate || '';
@@ -130,7 +133,8 @@ export default function FinancialEventModal({
         isExternal: cfg.showIsExternal ? Boolean(initialData.isExternal !== undefined ? initialData.isExternal : initialData.is_external) : false,
         category: cat,
         isObligation: Boolean(initialData.isObligation || initialData.is_obligation),
-        obligationPersonId: initialData.obligationPersonId || initialData.obligation_person_id || ''
+        obligationPersonId: initialData.obligationPersonId || initialData.obligation_person_id || '',
+        pocketId: initialData.pocketId || initialData.pocket_id || null
       });
       setUpdateScope(EventUpdateMode.SUBSEQUENT);
       if (cfg.useBreakdown) {
@@ -146,33 +150,39 @@ export default function FinancialEventModal({
         setEndMonthPickerYear(initialYear);
       }
 
+      let cat = initialData?.category || cfg.categoryDefault;
+      if (cfg.categoryLegacyMap && cfg.categoryLegacyMap[cat]) {
+        cat = cfg.categoryLegacyMap[cat];
+      }
+
       setFormData({
-        title: '',
-        description: '',
+        title: initialData?.title || initialData?.name || initialData?.pocketName || '',
+        description: initialData?.description || initialData?.notes || '',
         date: targetDate,
         dayOfMonth: parsedDay,
-        time: '09:00',
-        status: cfg.defaultStatus,
-        recurrence: EventRecurrence.RECURRING,
-        periodicity: EventPeriodicity.MONTHLY,
-        recurrenceEndDate: defaultEndMonth,
-        amount: '',
+        time: initialData?.time || '09:00',
+        status: initialData?.status || cfg.defaultStatus,
+        recurrence: initialData?.recurrence || EventRecurrence.RECURRING,
+        periodicity: initialData?.periodicity || EventPeriodicity.MONTHLY,
+        recurrenceEndDate: initialData?.recurrenceEndDate || defaultEndMonth,
+        amount: initialData?.amount !== undefined ? initialData.amount : '',
         initialInvestedAmount: '',
         targetAmount: '',
-        labelsInput: '',
-        isAutomatic: false,
-        isExternal: false,
-        category: cfg.categoryDefault,
-        isObligation: false,
-        obligationPersonId: ''
+        labelsInput: Array.isArray(initialData?.labels) ? initialData.labels.join(', ') : '',
+        isAutomatic: Boolean(initialData?.isAutomatic),
+        isExternal: cfg.showIsExternal ? Boolean(initialData?.isExternal !== undefined ? initialData.isExternal : initialData?.is_external) : false,
+        category: cat,
+        isObligation: Boolean(initialData?.isObligation || initialData?.is_obligation),
+        obligationPersonId: initialData?.obligationPersonId || initialData?.obligation_person_id || '',
+        pocketId: initialData?.pocketId || initialData?.pocket_id || null
       });
       setUpdateScope(EventUpdateMode.SINGLE);
       if (cfg.useBreakdown) {
-        setBreakdownItems([]);
+        setBreakdownItems(initialData?.breakdownItems ? JSON.parse(JSON.stringify(initialData.breakdownItems)) : []);
       }
     }
     setObligationError(false);
-  }, [initialData, defaultDate, isOpen, eventType]);
+  }, [initialData, defaultDate, isOpen, eventType, isEditing]);
 
   const totalBreakdownAmount = breakdownItems.reduce(
     (acc, it) => acc + (parseFloat(it.amount) || 0), 0
@@ -227,14 +237,14 @@ export default function FinancialEventModal({
       : null;
 
     const payload = {
-      ...(initialData || {}),
+      ...(isEditing ? (initialData || {}) : {}),
       name: formData.title.trim(),
       title: formData.title.trim(),
       description: formData.description ? formData.description.trim() : '',
       notes: formData.description ? formData.description.trim() : '',
       date: finalDate,
       time: formData.time,
-      status: initialData ? (initialData.status || config.defaultStatus) : config.defaultStatus,
+      status: isEditing && initialData ? (initialData.status || config.defaultStatus) : config.defaultStatus,
       recurrence: formData.recurrence,
       periodicity: formData.periodicity || EventPeriodicity.MONTHLY,
       isRecurring,
@@ -252,7 +262,9 @@ export default function FinancialEventModal({
       isAutomatic: config.showAutomatic !== false ? Boolean(formData.isAutomatic) : false,
       isObligation: Boolean(formData.isObligation),
       obligationPersonId: formData.isObligation ? formData.obligationPersonId : null,
-      updateScope: (initialData?.seriesId || initialData?.eventId || initialData?.isRecurring || isRecurring) ? updateScope : undefined
+      pocketId: formData.pocketId || initialData?.pocketId || initialData?.pocket_id || null,
+      pocket_id: formData.pocketId || initialData?.pocketId || initialData?.pocket_id || null,
+      updateScope: (isEditing && (initialData?.seriesId || initialData?.eventId || initialData?.isRecurring || isRecurring)) ? updateScope : undefined
     };
 
     if (config.useBreakdown) {
@@ -281,7 +293,7 @@ export default function FinancialEventModal({
       accent={ACCENT}
       icon={config.icon}
       title={
-        initialData
+        isEditing
           ? (t(config.titleKeys?.editKey) || config.titleKeys?.editFallback || 'Editar')
           : (t(config.titleKeys?.newKey) || config.titleKeys?.newFallback || 'Novo')
       }
@@ -307,7 +319,7 @@ export default function FinancialEventModal({
               fontWeight: '800'
             }}
           >
-            {initialData
+            {isEditing
               ? (t('modal.saveChanges') || 'Salvar Alterações')
               : (t(config.titleKeys?.addKey) || config.titleKeys?.addFallback || 'Adicionar Evento')}
           </button>
@@ -448,7 +460,7 @@ export default function FinancialEventModal({
         </div>
       )}
 
-      {!initialData && (
+      {!isEditing && (
         <>
           <RecurrenceSelector
             value={formData.recurrence}
@@ -540,7 +552,7 @@ export default function FinancialEventModal({
         />
       )}
 
-      {initialData && (initialData.seriesId || initialData.eventId || initialData.isRecurring || formData.periodicity === EventPeriodicity.RECURRING || formData.periodicity === EventPeriodicity.PERIOD) && (
+      {isEditing && (initialData?.seriesId || initialData?.eventId || initialData?.isRecurring || formData.periodicity === EventPeriodicity.RECURRING || formData.periodicity === EventPeriodicity.PERIOD) && (
         <ToggleSwitch
           checked={updateScope === EventUpdateMode.SUBSEQUENT}
           onChange={(val) => setUpdateScope(val ? EventUpdateMode.SUBSEQUENT : EventUpdateMode.SINGLE)}

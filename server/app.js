@@ -8,6 +8,7 @@ import { personsRouter } from './interfaces/http/routes/personsRoutes.js';
 import { authRouter } from './interfaces/http/routes/authRoutes.js';
 import { todoRouter } from './interfaces/http/routes/todoRoutes.js';
 import { followupRouter } from './interfaces/http/routes/followupRoutes.js';
+import { pocketRouter } from './interfaces/http/routes/pocketRoutes.js';
 
 export const app = express();
 
@@ -24,6 +25,7 @@ app.use('/api/loans', loansRouter);
 app.use('/api/persons', personsRouter);
 app.use('/api/todos', todoRouter);
 app.use('/api/followups', followupRouter);
+app.use('/api/pockets', pocketRouter);
 
 // Dynamic version endpoint reading package.json on demand
 app.get('/api/version', (req, res) => {

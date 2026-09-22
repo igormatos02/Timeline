@@ -2680,7 +2680,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 </div>
               )}
 
-              {event.category !== 'investimento_patrimonio' && Number(event.initialInvestedAmount || 0) > 0 && (event.isFirstOccurrence === true || (!event.isProjected && !event.eventId || event.seriesId) || (event.isFirstOccurrence !== false && !event.isProjected)) && (
+              {!event.pocketId && !event.pocket_id && event.category !== 'investimento_patrimonio' && Number(event.initialInvestedAmount || 0) > 0 && (event.isFirstOccurrence === true || (!event.isProjected && !event.eventId || event.seriesId) || (event.isFirstOccurrence !== false && !event.isProjected)) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isCompletedInvestment ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
                   <span style={{ fontSize: '0.68rem', color: isCompletedInvestment ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                     {t('timeline.initialContribution')}:
@@ -2691,7 +2691,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 </div>
               )}
 
-              {event.category !== 'investimento_patrimonio' && Number(event.targetAmount || 0) > 0 && (
+              {!event.pocketId && !event.pocket_id && event.category !== 'investimento_patrimonio' && Number(event.targetAmount || 0) > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isCompletedInvestment ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
                   <span style={{ fontSize: '0.68rem', color: isCompletedInvestment ? TimelineColor.WHITE : TimelineColor.INVESTMENT, textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
                     <Target size={11} /> {t('timeline.goal')}:
@@ -2867,7 +2867,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           </div>
 
           {/* 🎯 Barra de Progresso da Meta de Poupança / Investimento */}
-          {Number(event.targetAmount || 0) > 0 && (() => {
+          {!event.pocketId && !event.pocket_id && Number(event.targetAmount || 0) > 0 && (() => {
             const seriesId = event.eventId || event.seriesId || event.id;
             let baseInitial = Number(event.initialInvestedAmount || 0);
             if (!baseInitial) {

@@ -99,6 +99,8 @@ export class TimelineEvent {
     is_obligation,
     obligationPersonId = null,
     obligation_person_id,
+    pocketId = null,
+    pocket_id = null,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString(),
     created_at,
@@ -219,6 +221,8 @@ export class TimelineEvent {
     this.breakdownItems = Array.isArray(breakdown_items) ? breakdown_items : (Array.isArray(breakdownItems) ? breakdownItems : []);
     this.isObligation = Boolean(isObligation || is_obligation);
     this.obligationPersonId = obligationPersonId || obligation_person_id || null;
+    this.pocketId = pocketId !== undefined ? pocketId : (pocket_id !== undefined ? pocket_id : null);
+    this.pocket_id = this.pocketId;
     this.createdAt = created_at || createdAt;
     this.updatedAt = updated_at || updatedAt;
   }

@@ -780,3 +780,53 @@ export async function payUpTo(payload) {
   return res.json();
 }
 
+// ==========================================
+// Pockets API
+// ==========================================
+
+export async function getPockets(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_BASE}/pockets?${query}` : `${API_BASE}/pockets`;
+  const res = await fetch(url, { headers: getHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch pockets');
+  return res.json();
+}
+
+export async function getPocketById(id) {
+  const res = await fetch(`${API_BASE}/pockets/${id}`, { headers: getHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch pocket');
+  return res.json();
+}
+
+export async function createPocket(pocketData) {
+  const res = await fetch(`${API_BASE}/pockets`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      tenantId: getActiveTenantId(),
+      ...pocketData
+    })
+  });
+  if (!res.ok) throw new Error('Failed to create pocket');
+  return res.json();
+}
+
+export async function updatePocket(id, updates) {
+  const res = await fetch(`${API_BASE}/pockets/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) throw new Error('Failed to update pocket');
+  return res.json();
+}
+
+export async function deletePocket(id) {
+  const res = await fetch(`${API_BASE}/pockets/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to delete pocket');
+  return res.json();
+}
+

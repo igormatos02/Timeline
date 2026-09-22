@@ -81,7 +81,10 @@ export const translations = {
       timelineCreateError: "Error creating timeline: {error}",
       allPreviousPaid: "All previous installments are already marked as paid.",
       payUpToSuccess: "{count} installment(s) successfully marked as paid!",
-      payUpToError: "Error updating installments in the database."
+      payUpToError: "Error updating installments in the database.",
+      pocketCreatedSuccess: "Pocket created successfully!",
+      pocketUpdatedSuccess: "Pocket updated successfully!",
+      pocketDeletedSuccess: "Pocket deleted successfully!"
     },
 
     // Timeline Rows & Cards
@@ -937,6 +940,54 @@ export const translations = {
       initialValue: "Initial Value"
     },
 
+    // Pocket / Cofrinho
+    pocket: {
+      pockets: "Pockets & Goals",
+      addPocket: "Add Pocket",
+      newPocket: "New Pocket",
+      editPocket: "Edit Pocket",
+      name: "Pocket Name",
+      namePlaceholder: "e.g. Emergency Fund, Vacation 2027",
+      initialValue: "Initial Value (€)",
+      initialValuePlaceholder: "e.g. 1000.00",
+      targetValue: "Target / Goal (€)",
+      targetValuePlaceholder: "e.g. 5000.00",
+      dateCreated: "Creation Date",
+      dateClosed: "Closing Date",
+      progress: "Progress",
+      addEvent: "Add Event",
+      accumulated: "Accumulated:",
+      target: "Target:",
+      initial: "Initial:",
+      statusActive: "Active",
+      statusClosed: "Closed",
+      noPockets: "No savings pockets created yet",
+      noPocketsHint: "Create pockets to organize and track specific savings objectives.",
+      deleteConfirm: "Are you sure you want to delete this pocket?",
+      closePocket: "Close Pocket",
+      reopenPocket: "Reopen Pocket",
+      goalProgress: "Goal Progress ({accumulated} of {target})",
+      goalProgressForecast: "Goal Forecast ({accumulated} of {target})",
+      goalReached: "🎉 Goal Reached!",
+      goalReachedForecast: "🎉 Goal Reached (Forecast)!",
+      reachedPercent: "{percent}% reached",
+      forecastPercent: "{percent}% forecast",
+      initialContributionNote: "Initial: {amount}"
+    },
+
+    // Delete Pocket Modal
+    deletePocketModal: {
+      title: "Delete Pocket",
+      subtitle: "Confirm deletion of savings pocket",
+      confirmMessage: "Are you sure you want to delete this pocket?",
+      warningNote: "Warning: Deleting this pocket will permanently delete all associated events, contributions and statuses from the database.",
+      eventsCount: "Associated events:",
+      initialValue: "Initial value:",
+      targetValue: "Target:",
+      cancel: "Cancel",
+      confirm: "Delete Pocket"
+    },
+
     // Investment Timeline Header
     investmentHeader: {
       badge: "Savings & Investments",
@@ -944,7 +995,9 @@ export const translations = {
       resetTitle: "Clear all movements in this timeline",
       settingsTitle: "Timeline Settings",
       deleteTitle: "Delete this timeline",
-      categoriesTitle: "INVESTMENTS BY CATEGORY",
+      categoriesTitle: "SAVINGS BY POCKET",
+      noPockets: "No pockets recorded",
+      noPocketsHint: "Create pockets to view the savings breakdown.",
       noInvestments: "No investments recorded",
       noInvestmentsHint: "Add contributions to view the category breakdown.",
       annualProjectionTitle: "ANNUAL CONTRIBUTION PROJECTION",
@@ -1287,7 +1340,14 @@ export const translations = {
         obligationPersonIdRequired: "Obligation person ID is required when isObligation is true",
         breakdownNameRequired: "Breakdown name is required",
         breakdownAmountRequired: "Valid breakdown amount is required",
-        timeboardIdQueryParamRequired: "timeboardId query parameter is required"
+        timeboardIdQueryParamRequired: "timeboardId query parameter is required",
+        pocketNameRequired: "Pocket name is required",
+        pocketTimelineIdRequired: "timelineId is required for pocket",
+        pocketTimeboardIdRequired: "timeboardId is required for pocket",
+        pocketNotFound: "Pocket not found"
+      },
+      pocket: {
+        defaultName: "New Pocket"
       },
       service: {
         googleUserFallback: "Google User",
@@ -1427,7 +1487,10 @@ export const translations = {
       timelineCreateError: "Erro ao criar linha de tempo: {error}",
       allPreviousPaid: "Todas as prestações anteriores já estão pagas.",
       payUpToSuccess: "{count} prestações marcadas como pagas com sucesso!",
-      payUpToError: "Erro ao atualizar prestações na base de dados."
+      payUpToError: "Erro ao atualizar prestações na base de dados.",
+      pocketCreatedSuccess: "Cofrinho criado com sucesso!",
+      pocketUpdatedSuccess: "Cofrinho atualizado com sucesso!",
+      pocketDeletedSuccess: "Cofrinho eliminado com sucesso!"
     },
 
     // Timeline Rows & Cards
@@ -2283,6 +2346,54 @@ export const translations = {
       initialValue: "Valor Inicial"
     },
 
+    // Pocket / Cofrinho
+    pocket: {
+      pockets: "Cofrinhos & Metas",
+      addPocket: "Adicionar Cofrinho",
+      newPocket: "Novo Cofrinho",
+      editPocket: "Editar Cofrinho",
+      name: "Nome do Cofrinho",
+      namePlaceholder: "ex.: Reserva de Emergência, Férias 2027",
+      initialValue: "Valor Inicial (€)",
+      initialValuePlaceholder: "ex.: 1000.00",
+      targetValue: "Valor Alvo / Meta (€)",
+      targetValuePlaceholder: "ex.: 5000.00",
+      dateCreated: "Data de Criação",
+      dateClosed: "Data de Encerramento",
+      progress: "Progresso",
+      addEvent: "Adicionar Evento",
+      accumulated: "Acumulado:",
+      target: "Meta:",
+      initial: "Inicial:",
+      statusActive: "Ativo",
+      statusClosed: "Encerrado",
+      noPockets: "Nenhum cofrinho criado ainda",
+      noPocketsHint: "Crie cofrinhos para organizar e acompanhar objetivos específicos de poupança.",
+      deleteConfirm: "Tem certeza de que deseja excluir este cofrinho?",
+      closePocket: "Encerrar Cofrinho",
+      reopenPocket: "Reabrir Cofrinho",
+      goalProgress: "Progresso da Meta ({accumulated} de {target})",
+      goalProgressForecast: "Previsão de Progresso da Meta ({accumulated} de {target})",
+      goalReached: "🎉 Meta Atingida!",
+      goalReachedForecast: "🎉 Meta Atingida (Previsão)!",
+      reachedPercent: "{percent}% alcançado",
+      forecastPercent: "{percent}% previsto",
+      initialContributionNote: "Aporte Inicial: {amount}"
+    },
+
+    // Delete Pocket Modal
+    deletePocketModal: {
+      title: "Eliminar Cofrinho",
+      subtitle: "Confirmar eliminação do cofrinho",
+      confirmMessage: "Tem certeza de que deseja eliminar este cofrinho?",
+      warningNote: "Atenção: Ao excluir este cofrinho, todos os eventos, aportes e estados associados a ele serão permanentemente eliminados da base de dados.",
+      eventsCount: "Eventos associados:",
+      initialValue: "Valor inicial:",
+      targetValue: "Meta:",
+      cancel: "Cancelar",
+      confirm: "Eliminar Cofrinho"
+    },
+
     // Investment Timeline Header
     investmentHeader: {
       badge: "Poupança & Investimentos",
@@ -2290,7 +2401,9 @@ export const translations = {
       resetTitle: "Limpar todos os movimentos desta timeline",
       settingsTitle: "Definições da Timeline",
       deleteTitle: "Excluir esta timeline",
-      categoriesTitle: "INVESTIMENTOS POR CATEGORIA",
+      categoriesTitle: "POUPANÇA POR COFRINHOS",
+      noPockets: "Sem cofrinhos registados",
+      noPocketsHint: "Crie cofrinhos para visualizar o gráfico por cofrinhos.",
       noInvestments: "Sem investimentos registados",
       noInvestmentsHint: "Adicione aportes para visualizar o gráfico por categoria.",
       annualProjectionTitle: "PROJEÇÃO ANUAL DE APORTES",
@@ -2633,7 +2746,14 @@ export const translations = {
         obligationPersonIdRequired: "ID da pessoa responsável é obrigatório quando isObligation é verdadeiro",
         breakdownNameRequired: "Nome do desmembramento é obrigatório",
         breakdownAmountRequired: "Valor válido do desmembramento é obrigatório",
-        timeboardIdQueryParamRequired: "Parâmetro de consulta timeboardId é obrigatório"
+        timeboardIdQueryParamRequired: "Parâmetro de consulta timeboardId é obrigatório",
+        pocketNameRequired: "O nome do pocket é obrigatório",
+        pocketTimelineIdRequired: "timelineId é obrigatório para o pocket",
+        pocketTimeboardIdRequired: "timeboardId é obrigatório para o pocket",
+        pocketNotFound: "Pocket não encontrado"
+      },
+      pocket: {
+        defaultName: "Novo Pocket"
       },
       service: {
         googleUserFallback: "Utilizador Google",

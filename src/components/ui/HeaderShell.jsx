@@ -5,24 +5,34 @@ import { useTranslation } from '../../i18n/LanguageContext.jsx';
 export default function HeaderShell({
   collapsed,
   onToggle,
+  onToggleCollapse,
   headerColor,
+  accentColor,
   left,
+  header,
   right,
+  actions,
   children,
   toggleColor,
-  containerStyle
+  containerStyle,
+  style
 }) {
   const { t } = useTranslation();
+  const actualOnToggle = onToggle || onToggleCollapse;
+  const actualColor = headerColor || accentColor;
+  const actualLeft = left || header;
+  const actualRight = right || actions;
+  const actualStyle = { ...containerStyle, ...style };
 
   return (
     <div
       className={`timeline-hero glass-panel ${collapsed ? 'hero-collapsed' : ''}`}
       style={{
-        '--active-timeline-color': headerColor,
+        '--active-timeline-color': actualColor,
         padding: '14px 20px',
         marginBottom: '10px',
         boxShadow: 'var(--shadow-sm)',
-        ...containerStyle
+        ...actualStyle
       }}
     >
       <div
@@ -33,13 +43,13 @@ export default function HeaderShell({
           flexWrap: 'wrap',
           gap: '12px',
           paddingBottom: collapsed ? '0' : '12px',
-          borderBottom: collapsed ? 'none' : `1px solid ${headerColor || 'var(--border-glass)'}`
+          borderBottom: collapsed ? 'none' : `1px solid ${actualColor || 'var(--border-glass)'}`
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             type="button"
-            onClick={onToggle}
+            onClick={actualOnToggle}
             aria-label={collapsed ? t('header.expandHeader') : t('header.collapseHeader')}
             title={collapsed ? t('header.expandHeader') : t('header.collapseHeader')}
             style={{
@@ -60,11 +70,11 @@ export default function HeaderShell({
             {collapsed ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
           </button>
 
-          {left}
+          {actualLeft}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {right}
+          {actualRight}
         </div>
       </div>
 

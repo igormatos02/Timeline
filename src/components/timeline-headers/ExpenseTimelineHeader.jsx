@@ -354,20 +354,25 @@ export default function ExpenseTimelineHeader({
           {onEdit && (
             <button
               type="button"
-              className="btn btn-secondary btn-sm"
               onClick={onEdit}
-              title={t('expenseHeader.settingsTitle')}
+              title={t('common.edit')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px',
-                padding: '6px 10px',
+                gap: '6px',
+                background: 'rgba(99, 102, 241, 0.1)',
+                border: '1px solid rgba(99, 102, 241, 0.2)',
+                color: 'var(--primary-light)',
+                cursor: 'pointer',
+                padding: '6px 12px',
                 borderRadius: '8px',
-                fontSize: '0.74rem'
+                fontSize: '0.78rem',
+                fontWeight: '600',
+                transition: 'background-color 0.15s ease, border-color 0.15s ease'
               }}
             >
-              <Settings size={13} />
-              <span>{t('buttons.edit')}</span>
+              <Settings size={14} />
+              <span>{t('common.edit')}</span>
             </button>
           )}
         </div>

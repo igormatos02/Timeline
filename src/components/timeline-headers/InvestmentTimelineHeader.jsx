@@ -242,21 +242,24 @@ export default function InvestmentTimelineHeader({
             <button
               type="button"
               onClick={onEdit}
-              title={t('investmentHeader.settingsTitle')}
+              title={t('common.edit')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                gap: '6px',
                 background: 'rgba(99, 102, 241, 0.1)',
                 border: '1px solid rgba(99, 102, 241, 0.2)',
                 color: 'var(--primary-light)',
                 cursor: 'pointer',
-                padding: '6px 8px',
+                padding: '6px 12px',
                 borderRadius: '8px',
-                transition: 'all 0.15s ease'
+                fontSize: '0.78rem',
+                fontWeight: '600',
+                transition: 'background-color 0.15s ease, border-color 0.15s ease'
               }}
             >
-              <Settings size={15} />
+              <Settings size={14} />
+              <span>{t('common.edit')}</span>
             </button>
           )}
         </div>

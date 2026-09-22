@@ -91,11 +91,11 @@ export default function FollowupTimelineHeader({
 
   return (
     <HeaderShell
-      accentColor={headerColor}
+      timeline={timeline}
       collapsed={collapsed}
-      onToggleCollapse={() => setIsCollapsed((prev) => !prev)}
-      style={{ borderTop: `3px solid ${headerColor}` }}
-      header={
+      onToggle={() => setIsCollapsed(!collapsed)}
+      headerColor={headerColor}
+      left={
         <HeaderTitleBlock
           color={headerColor}
           name={timeline.name || t('followupHeader.defaultTitle')}
@@ -105,7 +105,7 @@ export default function FollowupTimelineHeader({
           onOpenSettings={onEdit}
         />
       }
-      actions={
+      right={
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {onAddEvent && (
             <button
@@ -126,6 +126,31 @@ export default function FollowupTimelineHeader({
             >
               <Plus size={15} />
               {t('followupHeader.addFollowup')}
+            </button>
+          )}
+
+          {onEdit && (
+            <button
+              type="button"
+              onClick={onEdit}
+              title={t('common.edit')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'rgba(99, 102, 241, 0.1)',
+                border: '1px solid rgba(99, 102, 241, 0.2)',
+                color: 'var(--primary-light)',
+                cursor: 'pointer',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                fontWeight: '600',
+                transition: 'background-color 0.15s ease, border-color 0.15s ease'
+              }}
+            >
+              <Settings size={14} />
+              <span>{t('common.edit')}</span>
             </button>
           )}
         </div>

@@ -17,6 +17,7 @@ import {
   TimelineColor,
   TimelineType,
   isLoanTimelineType,
+  normalizeTimelineType,
   LoanEventCategory,
   AmortizationEventCategory
 } from '../../enums/index.js';
@@ -254,7 +255,10 @@ export default function ExpenseTimelineHeader({
     accumulatedRealizedBalance += monthNet;
   });
 
-  const initialValueAmount = Number(timeline.initialValue ?? timeline.initial_value ?? 0);
+  const incomeTimeline = (allTimelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.INCOME);
+  const incomeInitialValue = Number(incomeTimeline?.initialValue ?? incomeTimeline?.initial_value ?? 0);
+  const ownInitialValue = Number(timeline.initialValue ?? timeline.initial_value ?? 0);
+  const initialValueAmount = incomeInitialValue || ownInitialValue;
   const currentAccumulation = initialValueAmount + accumulatedRealizedBalance;
 
   // Gastos Planeados e Pagos do Ano Corrente (Jan - Dez)

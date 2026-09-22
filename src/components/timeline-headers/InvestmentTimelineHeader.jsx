@@ -12,7 +12,7 @@ import { TIMELINE_COLOR_PRESETS, getPaletteTheme } from '../../../shared/config/
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
-import { DonutChart, PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
+import { DonutChart } from '../ui/DonutChart.jsx';
 import BarChart7Months from '../ui/BarChart7Months.jsx';
 import IncomeEvolutionChart from '../IncomeEvolutionChart.jsx';
 import { computeMonthDiff } from '../../utils/timelineCharts.js';
@@ -390,7 +390,7 @@ export default function InvestmentTimelineHeader({
             <>
               {/* Grid Principal 2x2 */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-                {/* Quadrante 1: POUPANÇA POR COFRINHOS (PieChart SVG & Legenda) */}
+                {/* Quadrante 1: POUPANÇA POR COFRINHOS (Linhas de Progresso por Cofrinho) */}
                 <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {t('investmentHeader.categoriesTitle')}
@@ -398,49 +398,106 @@ export default function InvestmentTimelineHeader({
                   {(() => {
                     if (!pocketList || pocketList.length === 0) {
                       return (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
-                          <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
-                            <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                              <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
-                            </svg>
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                width: '42px',
-                                height: '42px',
-                                borderRadius: '50%',
-                                background: 'var(--bg-card)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                border: '1px solid var(--border-glass)',
-                                fontSize: '0.7rem',
-                                fontWeight: '700',
-                                color: 'var(--text-dim)'
-                              }}
-                            >
-                              0%
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                            <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                              {t('investmentHeader.noPockets')}
-                            </span>
-                            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
-                              {t('investmentHeader.noPocketsHint')}
-                            </span>
-                          </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '4px', padding: '6px 0' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                            {t('investmentHeader.noPockets')}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
+                            {t('investmentHeader.noPocketsHint')}
+                          </span>
                         </div>
                       );
                     }
 
                     return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                        <PieDonut items={pocketList} />
-                        <DonutLegend items={pocketList} />
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px',
+                          marginTop: '2px',
+                          maxHeight: '120px',
+                          overflowY: 'auto',
+                          paddingRight: pocketList.length > 3 ? '4px' : '0'
+                        }}
+                      >
+                        {pocketList.map((item) => (
+                          <div
+                            key={item.id}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '4px'
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                fontSize: '0.76rem'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                                <span
+                                  style={{
+                                    width: '8px',
+                                    height: '8px',
+                                    borderRadius: '50%',
+                                    background: item.color,
+                                    flexShrink: 0
+                                  }}
+                                />
+                                <span
+                                  style={{
+                                    color: 'var(--text-main)',
+                                    fontWeight: '600',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis'
+                                  }}
+                                  title={item.name}
+                                >
+                                  {item.name}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                <span style={{ color: 'var(--text-dim)', fontSize: '0.72rem' }}>
+                                  {formatCurrency(item.amount)}
+                                </span>
+                                <span
+                                  style={{
+                                    color: 'var(--text-main)',
+                                    fontWeight: '700',
+                                    fontSize: '0.76rem'
+                                  }}
+                                >
+                                  {item.percent}%
+                                </span>
+                              </div>
+                            </div>
+
+                            <div
+                              style={{
+                                width: '100%',
+                                height: '6px',
+                                background: 'rgba(255, 255, 255, 0.08)',
+                                borderRadius: '9999px',
+                                overflow: 'hidden'
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: `${Math.min(100, Math.max(0, item.percent))}%`,
+                                  height: '100%',
+                                  background: item.color,
+                                  borderRadius: '9999px',
+                                  transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     );
                   })()}

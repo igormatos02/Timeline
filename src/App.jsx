@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { format, parseISO, addMonths, subMonths, startOfMonth, endOfMonth, differenceInCalendarMonths } from 'date-fns';
 import Navbar from './components/Navbar';
 import TimelineHeader from './components/TimelineHeader';
@@ -463,6 +463,61 @@ export default function App() {
     });
   }, [timelines, activeTimeboardId]);
 
+  // Derive in-memory virtual income events from withdrawal events.
+  // Each WITHDRAWAL creates a corresponding INCOME-type ghost event on the income timeline
+  // so the user sees the money "returning" as income. These events are never persisted.
+  const virtualWithdrawalEvents = useMemo(() => {
+    if (!Array.isArray(rawEvents) || rawEvents.length === 0) return [];
+    const incomeTimeline = (activeTimeboardTimelines || []).find((tl) => tl.type === TimelineType.INCOME);
+    if (!incomeTimeline) return [];
+
+    const virtual = [];
+    rawEvents.forEach((ev) => {
+      if (!ev || ev.isDeleted) return;
+      const isWithdrawal = ev.eventType === EventType.WITHDRAWAL || Boolean(ev.isWithdrawal);
+      if (!isWithdrawal) return;
+      const amt = Math.abs(Number(ev.amount || 0));
+      const isPositive = isPositiveStatus(ev.status) || Boolean(ev.isCompleted) || ev.status === EventStatus.WITHDRAWN;
+      virtual.push({
+        ...ev,
+        id: `virtual_withdrawal_${ev.id}`,
+        originalWithdrawalId: ev.id,
+        pocketId: null,
+        pocket_id: null,
+        pocket: null,
+        eventId: null,
+        seriesId: null,
+        // Show as income on the income timeline
+        eventType: EventType.INCOME,
+        isIncome: true,
+        isWithdrawal: false,
+        isInvestment: false,
+        category: null,
+        categoryName: null,
+        labels: [],
+        status: isPositive ? EventStatus.RECEIVED : EventStatus.PENDING,
+        isCompleted: isPositive,
+        amount: amt,
+        title: ev.title || ev.name || '',
+        name: ev.title || ev.name || '',
+        timelineId: incomeTimeline.id,
+        timeline_id: incomeTimeline.id,
+        timelineOriginId: incomeTimeline.id,
+        // Mark as virtual — blocks editing and deletion in the UI
+        isVirtual: true,
+        isReadOnly: true,
+        isVirtualWithdrawal: true
+      });
+    });
+    return virtual;
+  }, [rawEvents, activeTimeboardTimelines]);
+
+  // Events used for display — rawEvents enriched with virtual withdrawal income events
+  const displayEvents = useMemo(() => {
+    if (!virtualWithdrawalEvents.length) return rawEvents;
+    return [...rawEvents, ...virtualWithdrawalEvents];
+  }, [rawEvents, virtualWithdrawalEvents]);
+
   // Dynamic active timeline representation for the selected tab
   const activeTimeline = React.useMemo(() => {
     if (!activeTimeboard || activeTimeboardTimelines.length === 0) return null;
@@ -479,7 +534,7 @@ export default function App() {
 
     const isLoanType = isLoanTimelineType(currentSelected?.type);
 
-    let computedEvents = rawEvents || [];
+    let computedEvents = displayEvents || [];
     const loanTimelines = activeTimeboardTimelines.filter((tl) => isLoanTimelineType(tl.type));
 
     if (loanTimelines.length > 0) {
@@ -504,7 +559,7 @@ export default function App() {
       timelines: activeTimeboardTimelines,
       events: computedEvents
     };
-  }, [activeTimeboard, activeTimeboardTimelines, activeFinancialTab, activeTimelineId, rawEvents]);
+  }, [activeTimeboard, activeTimeboardTimelines, activeFinancialTab, activeTimelineId, displayEvents]);
 
   // Contagem de eventos da base de dados (templates únicos) e calculados (projeções/ocorrências)
   const dbEventsCount = React.useMemo(() => {
@@ -993,10 +1048,27 @@ export default function App() {
   const [selectedPocketForEdit, setSelectedPocketForEdit] = useState(null);
   const [deletingPocket, setDeletingPocket] = useState(null);
 
+  const investmentTimeline = useMemo(() => {
+    return (activeTimeboardTimelines || []).find(
+      (tl) => normalizeTimelineType(tl?.type) === TimelineType.INVESTMENT
+    );
+  }, [activeTimeboardTimelines]);
+
   const loadPockets = useCallback(async () => {
-    if (!activeTimeline?.id || activeTimeline.type !== TimelineType.INVESTMENT) return;
+    const targetTimelineId = (normalizeTimelineType(activeTimeline?.type) === TimelineType.INVESTMENT)
+      ? activeTimeline?.id
+      : investmentTimeline?.id;
+
+    if (!targetTimelineId && !activeTimeboard?.id) {
+      setPockets([]);
+      return;
+    }
+
     try {
-      const res = await api.getPockets({ timelineId: activeTimeline.id });
+      const params = targetTimelineId
+        ? { timelineId: targetTimelineId }
+        : { timeboardId: activeTimeboard.id };
+      const res = await api.getPockets(params);
       if (Array.isArray(res)) {
         setPockets(res);
       } else if (res && Array.isArray(res.data)) {
@@ -1005,15 +1077,15 @@ export default function App() {
     } catch (err) {
       console.error('Error loading pockets:', err);
     }
-  }, [activeTimeline?.id, activeTimeline?.type]);
+  }, [activeTimeline?.id, activeTimeline?.type, investmentTimeline?.id, activeTimeboard?.id]);
 
   useEffect(() => {
-    if (activeTimeline?.type === TimelineType.INVESTMENT) {
+    if (activeTimeboard?.id) {
       loadPockets();
     } else {
       setPockets([]);
     }
-  }, [activeTimeline?.id, activeTimeline?.type, loadPockets]);
+  }, [activeTimeboard?.id, investmentTimeline?.id, loadPockets]);
 
   const handleOpenCreatePocket = useCallback((pocket = null) => {
     setSelectedPocketForEdit(pocket);
@@ -2084,8 +2156,8 @@ export default function App() {
                 timeboard={activeTimeboard}
                 timeline={activeTimeline}
                 allTimelines={activeTimeboardTimelines}
-                events={activeTimeline?.events || rawEvents}
-                allEvents={rawEvents}
+                events={activeTimeline?.events || displayEvents}
+                allEvents={displayEvents}
                 activeFinancialTab={activeFinancialTab}
                 pockets={pockets}
                 onOpenCreatePocket={handleOpenCreatePocket}

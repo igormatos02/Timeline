@@ -827,6 +827,8 @@ export const translations = {
       deleteTitle: "Delete this timeline",
       viewSummary: "Summary",
       viewCategories: "Categories",
+      summaryView: "Summary",
+      evolutionView: "Evolution Chart",
       categoriesTitle: "EXPENSES BY CATEGORY",
       noExpenses: "No expenses recorded",
       noExpensesHint: "Add expenses to view the category breakdown.",
@@ -980,7 +982,8 @@ export const translations = {
       forecastPercent: "{percent}% forecast",
       initialContributionNote: "Initial: {amount}",
       filterByPockets: "Filter by Pockets",
-      allPockets: "All Pockets"
+      allPockets: "All Pockets",
+      startingMonth: "Starting Month"
     },
 
     // Delete Pocket Modal
@@ -1013,7 +1016,8 @@ export const translations = {
       saveButton: "Save Withdrawal",
       amountExceedsError: "Withdrawal amount cannot exceed available pocket balance ({{max}}).",
       noBalanceError: "This pocket has no available balance to withdraw.",
-      badge: "Withdrawal"
+      badge: "Withdrawal",
+      virtualIncomeTitle: "Withdrawal: {{title}}"
     },
 
     // Investment Timeline Header
@@ -1058,11 +1062,11 @@ export const translations = {
       summaryView: "Summary",
       evolutionView: "Evolution Graph",
       currentBalanceTitle: "Balance up to ({month})",
-      projectedBalanceTitle: "Balance Projected up to ({month})",
+      projectedBalanceTitle: "Balance up to ({month})",
       netRealizedAccumulated: "Accumulated Net Balance:",
       netProjectedAccumulated: "Accumulated Projected Net Balance:",
-      inflows: "Inflows:",
-      outflows: "Outflows:",
+      inflows: "Received:",
+      outflows: "Spent:",
       inAccount: "Saved:",
       due: "Due:",
       annualIncomeBreakdown: "ANNUAL INCOME BREAKDOWN",
@@ -1335,7 +1339,20 @@ export const translations = {
       months: "months",
       horizon: "Horizon:",
       year: "Year",
-      years: "Years"
+      years: "Years",
+      today: "TODAY",
+      realized: "Realized",
+      settled: "Settled",
+      currentMonth: "Current Month",
+      projection: "Projection",
+      netBalance: "Net Balance:",
+      totalOutflows: "Total Outflows:",
+      totalInvestments: "Total Contributions:",
+      totalInflows: "Total Inflows:",
+      inflowsVsOutflows: "Inflows vs Outflows:",
+      realizedAccumulated: "Realized Accumulated:",
+      totalAccumulated: "Total Accumulated:",
+      movementsRecorded: "{count} movement(s) recorded"
     },
 
     // Backend
@@ -2265,6 +2282,8 @@ export const translations = {
       deleteTitle: "Excluir esta timeline",
       viewSummary: "Resumo",
       viewCategories: "Categorias",
+      summaryView: "Resumo",
+      evolutionView: "Gráfico de Evolução",
       categoriesTitle: "GASTOS POR CATEGORIA",
       noExpenses: "Sem gastos registados",
       noExpensesHint: "Adicione despesas para visualizar o gráfico por categoria.",
@@ -2418,7 +2437,8 @@ export const translations = {
       forecastPercent: "{percent}% previsto",
       initialContributionNote: "Aporte Inicial: {amount}",
       filterByPockets: "Filtrar por Cofrinhos",
-      allPockets: "Todos os Cofrinhos"
+      allPockets: "Todos os Cofrinhos",
+      startingMonth: "Mês de Início"
     },
 
     // Delete Pocket Modal
@@ -2451,7 +2471,8 @@ export const translations = {
       saveButton: "Salvar Retirada",
       amountExceedsError: "O valor da retirada não pode ser superior ao saldo acumulado no cofrinho ({{max}}).",
       noBalanceError: "Este cofrinho não tem saldo disponível para retirada.",
-      badge: "Retirada"
+      badge: "Retirada",
+      virtualIncomeTitle: "Retirada: {{title}}"
     },
 
     // Investment Timeline Header
@@ -2496,11 +2517,11 @@ export const translations = {
       summaryView: "Resumo",
       evolutionView: "Gráfico de Evolução",
       currentBalanceTitle: "Balanço até ({month})",
-      projectedBalanceTitle: "Balanço Projetado até ({month})",
+      projectedBalanceTitle: "Balanço até ({month})",
       netRealizedAccumulated: "Saldo Líquido Acumulado:",
       netProjectedAccumulated: "Saldo Líquido Projetado Acumulado:",
-      inflows: "Entradas:",
-      outflows: "Saídas:",
+      inflows: "Recebido:",
+      outflows: "Gasto:",
       inAccount: "Poupado:",
       due: "Devido:",
       annualIncomeBreakdown: "DISTRIBUIÇÃO ANUAL DE RENDIMENTOS",
@@ -2773,7 +2794,20 @@ export const translations = {
       months: "meses",
       horizon: "Horizonte:",
       year: "Ano",
-      years: "Anos"
+      years: "Anos",
+      today: "HOJE",
+      realized: "Realizado",
+      settled: "Liquidado",
+      currentMonth: "Mês Atual",
+      projection: "Projeção",
+      netBalance: "Balanço Líquido:",
+      totalOutflows: "Total Saídas:",
+      totalInvestments: "Total Aportes:",
+      totalInflows: "Total Entradas:",
+      inflowsVsOutflows: "Entradas vs Saídas:",
+      realizedAccumulated: "Acumulado Real:",
+      totalAccumulated: "Total Acumulado:",
+      movementsRecorded: "{count} movimento(s) registado(s)"
     },
 
     // Backend

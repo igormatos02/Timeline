@@ -34,6 +34,7 @@ import {
   normalizeTimelineType,
   LoanAmortizationSystem
 } from '../enums/index.js';
+import { findPaletteByColor } from '../../shared/config/colorPalettes.js';
 import { getTimelineTypeOptions } from '../utils/timelineConfig.jsx';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
@@ -899,23 +900,28 @@ export default function CreateTimelineModal({
           {/* Seletor de Cor */}
           <div className="form-group">
             <label className="form-label">{t('createTimelineModal.colorLabel')}</label>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
-              {colors.map((c) => (
-                <div
-                  key={c}
-                  onClick={() => setFormData({ ...formData, color: c })}
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    backgroundColor: c,
-                    cursor: 'pointer',
-                    border: formData.color === c ? `3px solid ${TimelineColor.WHITE}` : '2px solid transparent',
-                    boxShadow: formData.color === c ? `0 0 12px ${c}` : 'none',
-                    transition: 'all 0.2s'
-                  }}
-                />
-              ))}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '6px', flexWrap: 'wrap' }}>
+              {colors.map((c) => {
+                const palette = findPaletteByColor(c);
+                const paletteTitle = palette ? palette.name : c;
+                return (
+                  <div
+                    key={c}
+                    onClick={() => setFormData({ ...formData, color: c })}
+                    title={paletteTitle}
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      backgroundColor: c,
+                      cursor: 'pointer',
+                      border: formData.color === c ? `3px solid ${TimelineColor.WHITE}` : '2px solid transparent',
+                      boxShadow: formData.color === c ? `0 0 12px ${c}` : 'none',
+                      transition: 'all 0.2s'
+                    }}
+                  />
+                );
+              })}
             </div>
           </div>
 

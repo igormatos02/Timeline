@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Sparkles,
   Plus,
@@ -20,6 +20,7 @@ import {
   isPositiveStatus,
   isCancelledStatus
 } from '../../enums/index.js';
+import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
@@ -55,9 +56,13 @@ export default function ReminderTimelineHeader({
   const { t, language, dateLocale } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
 
+  const paletteTheme = useMemo(() => {
+    return getPaletteTheme(timeline?.color, TimelineColor.REMINDER);
+  }, [timeline?.color]);
+
   if (!timeline) return null;
 
-  const headerColor = timeline.color || TimelineColor.REMINDER;
+  const headerColor = paletteTheme.primary;
   const rawEventsList = timeline.events || events || [];
   const eventsList = rawEventsList.filter((ev) => {
     if (!ev || !ev.date || ev.isDeleted) return false;
@@ -443,21 +448,22 @@ export default function ReminderTimelineHeader({
                 monthVsPrevLabel={t('reminderHeader.monthVsPrevMonth')}
                 diffPercentStr={diffPercentStr}
                 isGoodChange={isDiffPositive}
-                goodColor={TimelineColor.WARNING}
+                goodColor={paletteTheme.primary}
                 sparklesLabel={t('reminderHeader.annualProjectionLabel')}
                 projection={annualTotalReminders}
-                sparklesColor={TimelineColor.WARNING}
-                projectionColor={TimelineColor.WARNING}
-                currentGradient="linear-gradient(180deg, rgba(245, 158, 11, 1) 0%, rgba(217, 119, 6, 1) 100%)"
-                mutedGradientTop="rgba(245, 158, 11, 0.6)"
-                mutedGradientBottom="rgba(245, 158, 11, 0.25)"
-                currentTextColor={TimelineColor.WARNING}
+                sparklesColor={paletteTheme.primary}
+                projectionColor={paletteTheme.primary}
+                currentGradient={`linear-gradient(180deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`}
+                mutedGradientTop={paletteTheme.primary}
+                mutedGradientBottom={paletteTheme.secondary}
+                currentTextColor={paletteTheme.primary}
                 formatValue={(val) => String(val)}
                 formatProjection={(val) => (
                   val === 1
                     ? t('reminderHeader.remindersCountOne', { count: val })
                     : t('reminderHeader.remindersCountOther', { count: val })
                 )}
+                accentColor={paletteTheme.primary}
               />
             );
           })()}

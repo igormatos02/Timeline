@@ -15,9 +15,12 @@ import { format, parseISO, addMonths } from 'date-fns';
 import { formatCurrency } from '../utils/formatCurrency';
 import { EventType, EventStatus, TimelineType, TimelineColor, isPositiveStatus } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
+import { getPaletteTheme } from '../../shared/config/colorPalettes.js';
 
 export default function IncomeEvolutionChart({
   timeline = {},
+  timelines = [],
+  allTimelines = [],
   events = [],
   todayStr = format(new Date(), 'yyyy-MM-dd'),
   activeFinancialTab = null,
@@ -34,7 +37,33 @@ export default function IncomeEvolutionChart({
   // Hover state for interactive tooltips
   const [hoveredData, setHoveredData] = useState(null);
 
-  const baseSalary = Number(timeline?.monthlySalary || 3300.00);
+  const activeTimelineList = allTimelines?.length > 0 ? allTimelines : (timelines?.length > 0 ? timelines : []);
+  const incomeTimeline = activeTimelineList.find((t) => t?.type === TimelineType.INCOME);
+  const expenseTimeline = activeTimelineList.find((t) => t?.type === TimelineType.EXPENSE);
+  const investmentTimeline = activeTimelineList.find((t) => t?.type === TimelineType.INVESTMENT);
+
+  // Overall Statistics for the active view
+  const isBalance = timeline?.type === TimelineType.BALANCE;
+  const isExpense = timeline?.type === TimelineType.EXPENSE || timeline?.type === TimelineType.LOAN;
+  const isInvestment = timeline?.type === TimelineType.INVESTMENT;
+  const isIncome = timeline?.type === TimelineType.INCOME;
+
+  const paletteTheme = useMemo(() => {
+    const fallback = isExpense ? TimelineColor.EXPENSE : isInvestment ? TimelineColor.INVESTMENT : isBalance ? TimelineColor.CYAN : TimelineColor.INCOME;
+    return getPaletteTheme(timeline?.color, fallback);
+  }, [timeline?.color, isExpense, isInvestment, isBalance]);
+
+  const incomePalette = useMemo(() => {
+    return getPaletteTheme(incomeTimeline?.color, TimelineColor.INCOME);
+  }, [incomeTimeline?.color]);
+
+  const expensePalette = useMemo(() => {
+    return getPaletteTheme(expenseTimeline?.color, TimelineColor.EXPENSE);
+  }, [expenseTimeline?.color]);
+
+  const investmentPalette = useMemo(() => {
+    return getPaletteTheme(investmentTimeline?.color, TimelineColor.INVESTMENT);
+  }, [investmentTimeline?.color]);
 
   // ----------------------------------------------------
   // Generate projection dataset across selected mode & horizon
@@ -73,18 +102,30 @@ export default function IncomeEvolutionChart({
 
     const data = [];
     let runningTotal = 0;
-    if (activeFinancialTab === 'investimentos') {
-      const seenInitial = new Set();
-      (events || []).forEach((ev) => {
-        const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment === true;
-        if (isInvestment && ev.initialInvestedAmount) {
-          const key = ev.eventId || ev.seriesId || ev.id;
-          if (!seenInitial.has(key)) {
-            runningTotal += Number(ev.initialInvestedAmount) || 0;
-            seenInitial.add(key);
+    if (activeFinancialTab === 'investimentos' || isInvestment) {
+      let pocketsSum = 0;
+      if (Array.isArray(timeline?.pockets) && timeline.pockets.length > 0) {
+        timeline.pockets.forEach((p) => {
+          pocketsSum += Number(p.initial_value ?? p.initialValue ?? 0);
+        });
+      }
+      if (pocketsSum > 0) {
+        runningTotal += pocketsSum;
+      } else if (Number(timeline?.initialValue ?? timeline?.initial_value ?? 0) > 0) {
+        runningTotal += Number(timeline?.initialValue ?? timeline?.initial_value);
+      } else {
+        const seenInitial = new Set();
+        (events || []).forEach((ev) => {
+          const isInvestmentEv = ev.eventType === EventType.INVESTMENT || ev.isInvestment === true || Boolean(ev.pocketId || ev.pocket_id);
+          if (isInvestmentEv && ev.initialInvestedAmount) {
+            const key = ev.pocketId || ev.pocket_id || ev.eventId || ev.seriesId || ev.id;
+            if (!seenInitial.has(key)) {
+              runningTotal += Number(ev.initialInvestedAmount) || 0;
+              seenInitial.add(key);
+            }
           }
-        }
-      });
+        });
+      }
     }
 
     // Index existing known events by YYYY-MM
@@ -116,12 +157,12 @@ export default function IncomeEvolutionChart({
           const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
 
           const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent;
-          const isIncome = (ev.eventType === EventType.INCOME || ev.isIncome === true) && !isLoan;
-          const isInvestment = ev.eventType === EventType.INVESTMENT || ev.isInvestment === true || Boolean(ev.pocketId || ev.pocket_id);
+          const isIncomeEv = (ev.eventType === EventType.INCOME || ev.isIncome === true) && !isLoan;
+          const isInvestmentEv = ev.eventType === EventType.INVESTMENT || ev.isInvestment === true || Boolean(ev.pocketId || ev.pocket_id);
           const isWithdrawal = Boolean(
             ev.isWithdrawal ||
             ev.eventType === EventType.WITHDRAWAL ||
-            (isInvestment && (ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0))
+            (isInvestmentEv && (ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0))
           );
           const multiplier = isWithdrawal ? -1 : 1;
           const absAmt = Math.abs(Number(ev.amount || 0));
@@ -129,15 +170,15 @@ export default function IncomeEvolutionChart({
 
           const isValid = chartMode === 'acumulado_real' ? isReceived : true;
           if (isValid) {
-            if (isIncome) {
+            if (isIncomeEv) {
               monthIncome += amt;
               if (activeFinancialTab === 'entradas') eventCount++;
             }
-            if (isExpense || isLoan) {
+            if (ev.eventType === EventType.EXPENSE || ev.isExpense || isLoan) {
               monthExpense += amt;
               if (activeFinancialTab === 'gastos' || activeFinancialTab === 'emprestimos' || activeFinancialTab === 'jeep' || activeFinancialTab === 'dacia' || activeFinancialTab === 'casa1' || activeFinancialTab === 'casa2') eventCount++;
             }
-            if (isInvestment) {
+            if (isInvestmentEv) {
               monthInvestment += multiplier * absAmt;
               if (!isExternal) {
                 monthInvestmentOutflow += multiplier * absAmt;
@@ -184,13 +225,7 @@ export default function IncomeEvolutionChart({
     }
 
     return data;
-  }, [timeline?.startDate, events, horizonYears, todayStr, chartMode, activeFinancialTab]);
-
-  // Overall Statistics for the active view
-  const isBalance = timeline?.type === TimelineType.BALANCE;
-  const isExpense = timeline?.type === TimelineType.EXPENSE || timeline?.type === TimelineType.LOAN;
-  const isInvestment = timeline?.type === TimelineType.INVESTMENT;
-  const isIncome = timeline?.type === TimelineType.INCOME;
+  }, [timeline?.startDate, timeline?.type, events, horizonYears, todayStr, chartMode, activeFinancialTab, computeStartDate, dateLocale]);
 
   const maxCumulative = chartData.length > 0 ? chartData[chartData.length - 1].runningTotal : 0;
   const maxMonthly = Math.max(...chartData.map((d) => Math.abs(d.monthTotal)), 1);
@@ -263,8 +298,7 @@ export default function IncomeEvolutionChart({
   const todayX = todayIndex >= 0 && chartMode !== 'acumulado_real' ? getX(todayIndex) : null;
 
   // Active theme color definitions
-  const activeColor = isExpense ? TimelineColor.EXPENSE : isInvestment ? TimelineColor.INVESTMENT : TimelineColor.INCOME;
-  const activeGradId = isExpense ? 'roseBarGrad' : isInvestment ? 'indigoBarGrad' : 'emeraldBarGrad';
+  const activeColor = paletteTheme.primary;
   
   const handleMouseMove = (e) => {
     if (!chartData || chartData.length === 0) return;
@@ -327,16 +361,16 @@ export default function IncomeEvolutionChart({
                 padding: '4px 12px',
                 fontSize: '0.78rem',
                 borderRadius: '6px',
-                background: chartMode === 'variante' ? (isExpense ? `linear-gradient(135deg, ${TimelineColor.EXPENSE} 0%, ${TimelineColor.DANGER} 100%)` : isInvestment ? `linear-gradient(135deg, ${TimelineColor.INVESTMENT} 0%, ${TimelineColor.PURPLE} 100%)` : `linear-gradient(135deg, ${TimelineColor.INCOME} 0%, ${TimelineColor.EMERALD} 100%)`) : 'transparent',
+                background: chartMode === 'variante' ? `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)` : 'transparent',
                 color: chartMode === 'variante' ? 'var(--text-white)' : 'var(--text-muted)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px'
               }}
-              title={t('evolutionChart.monthlyVariation') || 'Monthly Variation'}
+              title={t('evolutionChart.monthlyVariation')}
             >
               <BarChart2 size={13} />
-              <span>{t('evolutionChart.monthlyVariation') || 'Monthly Variation'}</span>
+              <span>{t('evolutionChart.monthlyVariation')}</span>
             </button>
             <button
               type="button"
@@ -346,16 +380,16 @@ export default function IncomeEvolutionChart({
                 padding: '4px 12px',
                 fontSize: '0.78rem',
                 borderRadius: '6px',
-                background: chartMode === 'acumulado_real' ? `linear-gradient(135deg, ${TimelineColor.INCOME} 0%, ${TimelineColor.EMERALD} 100%)` : 'transparent',
+                background: chartMode === 'acumulado_real' ? `linear-gradient(135deg, ${incomePalette.primary} 0%, ${incomePalette.secondary} 100%)` : 'transparent',
                 color: chartMode === 'acumulado_real' ? 'var(--text-white)' : 'var(--text-muted)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px'
               }}
-              title={t('evolutionChart.historicalReal') || 'Historical Received'}
+              title={t('evolutionChart.historicalReal')}
             >
               <Sparkles size={13} />
-              <span>{t('evolutionChart.historicalReal') || 'Historical Received'}</span>
+              <span>{t('evolutionChart.historicalReal')}</span>
             </button>
             <button
               type="button"
@@ -365,16 +399,16 @@ export default function IncomeEvolutionChart({
                 padding: '4px 12px',
                 fontSize: '0.78rem',
                 borderRadius: '6px',
-                background: chartMode === 'acumulativo' ? `linear-gradient(135deg, ${TimelineColor.LOAN} 0%, ${TimelineColor.PRIMARY} 100%)` : 'transparent',
+                background: chartMode === 'acumulativo' ? `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)` : 'transparent',
                 color: chartMode === 'acumulativo' ? 'var(--text-white)' : 'var(--text-muted)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px'
               }}
-              title={t('evolutionChart.cumulativeProjection') || 'Cumulative Projection'}
+              title={t('evolutionChart.cumulativeProjection')}
             >
               <TrendingUp size={13} />
-              <span>{t('evolutionChart.cumulativeProjection') || 'Cumulative Projection'}</span>
+              <span>{t('evolutionChart.cumulativeProjection')}</span>
             </button>
           </div>
         </div>
@@ -383,7 +417,7 @@ export default function IncomeEvolutionChart({
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-              {isBalance ? (t('evolutionChart.avgMonthlyBalance') || 'Average Balance / Month') : isExpense ? (t('evolutionChart.avgMonthlyExpense') || 'Average Expense / Month') : isInvestment ? (t('evolutionChart.avgMonthlyInvestment') || 'Average Contribution / Month') : (t('evolutionChart.avgMonthlyIncome') || 'Average Income / Month')}
+              {isBalance ? t('evolutionChart.avgMonthlyBalance') : isExpense ? t('evolutionChart.avgMonthlyExpense') : isInvestment ? t('evolutionChart.avgMonthlyInvestment') : t('evolutionChart.avgMonthlyIncome')}
             </span>
             <span
               style={{
@@ -401,7 +435,7 @@ export default function IncomeEvolutionChart({
 
           <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-glass)', paddingLeft: '12px' }}>
             <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-              {chartMode === 'variante' ? (t('evolutionChart.monthlyPeak') || 'Monthly Peak') : (t('evolutionChart.totalInPeriod') || 'Total in Period')}
+              {chartMode === 'variante' ? t('evolutionChart.monthlyPeak') : t('evolutionChart.totalInPeriod')}
             </span>
             <span
               style={{
@@ -431,7 +465,7 @@ export default function IncomeEvolutionChart({
             <Calendar size={14} style={{ color: TimelineColor.SUCCESS }} />
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '0.68rem', fontWeight: '700', color: TimelineColor.SUCCESS, textTransform: 'uppercase' }}>
-                {t('evolutionChart.realizedHistory') || 'Realized History'}
+                {t('evolutionChart.realizedHistory')}
               </span>
               <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--text-main)' }}>
                 {chartData.length > 0 ? `${chartData[0].label} — ${chartData[chartData.length - 1].label}` : ''} ({chartData.length} {t('evolutionChart.months')})
@@ -478,32 +512,34 @@ export default function IncomeEvolutionChart({
           onMouseLeave={() => setHoveredData(null)}
         >
           <defs>
-            {/* Emerald Gradient (Green - Entradas / Balanço Positivo) */}
-            <linearGradient id="emeraldBarGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={TimelineColor.INCOME} stopOpacity="0.9" />
-              <stop offset="100%" stopColor={TimelineColor.EMERALD} stopOpacity="0.45" />
+            {/* Custom Bar Gradient for current timeline */}
+            <linearGradient id="customBarGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={paletteTheme.primary} stopOpacity="0.9" />
+              <stop offset="100%" stopColor={paletteTheme.secondary} stopOpacity="0.45" />
             </linearGradient>
 
-            <linearGradient id="emeraldAreaGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={TimelineColor.INCOME} stopOpacity="0.4" />
-              <stop offset="100%" stopColor={TimelineColor.INCOME} stopOpacity="0.02" />
+            {/* Custom Area Gradient for current timeline */}
+            <linearGradient id="customAreaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={paletteTheme.primary} stopOpacity="0.4" />
+              <stop offset="100%" stopColor={paletteTheme.primary} stopOpacity="0.02" />
             </linearGradient>
 
-            {/* Rose Gradient (Red - Gastos / Balanço Negativo) */}
-            <linearGradient id="roseBarGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={TimelineColor.EXPENSE} stopOpacity="0.9" />
-              <stop offset="100%" stopColor={TimelineColor.DANGER} stopOpacity="0.45" />
+            {/* Origin Income Bar Gradient */}
+            <linearGradient id="incomeBarGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={incomePalette.primary} stopOpacity="0.9" />
+              <stop offset="100%" stopColor={incomePalette.secondary} stopOpacity="0.45" />
             </linearGradient>
 
-            <linearGradient id="roseAreaGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={TimelineColor.EXPENSE} stopOpacity="0.4" />
-              <stop offset="100%" stopColor={TimelineColor.EXPENSE} stopOpacity="0.02" />
+            {/* Origin Expense Bar Gradient */}
+            <linearGradient id="expenseBarGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={expensePalette.primary} stopOpacity="0.9" />
+              <stop offset="100%" stopColor={expensePalette.secondary} stopOpacity="0.45" />
             </linearGradient>
 
-            {/* Indigo Gradient (Investimentos) */}
-            <linearGradient id="indigoBarGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={TimelineColor.INVESTMENT} stopOpacity="0.9" />
-              <stop offset="100%" stopColor={TimelineColor.PURPLE} stopOpacity="0.45" />
+            {/* Origin Investment Bar Gradient */}
+            <linearGradient id="investmentBarGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={investmentPalette.primary} stopOpacity="0.9" />
+              <stop offset="100%" stopColor={investmentPalette.secondary} stopOpacity="0.45" />
             </linearGradient>
 
             {/* Amber Gradient for Peaks */}
@@ -531,7 +567,7 @@ export default function IncomeEvolutionChart({
           })}
 
           {/* Zero Baseline for Balance Mode */}
-          {isBalanco && (
+          {isBalance && (
             <line
               x1={padding.left}
               y1={getZeroY()}
@@ -561,7 +597,7 @@ export default function IncomeEvolutionChart({
           })}
 
           {/* Y Axis Reference Labels */}
-          {isBalanco ? (
+          {isBalance ? (
             [-1, -0.5, 0, 0.5, 1].map((step) => {
               const val = step > 0 ? (step * maxPositiveBalanco) : (Math.abs(step) * minNegativeBalanco);
               const y = getYMonthly(val);
@@ -649,7 +685,7 @@ export default function IncomeEvolutionChart({
                 textAnchor="middle"
                 fontFamily="inherit"
               >
-                📍 HOJE
+                📍 {t('evolutionChart.today')}
               </text>
             </g>
           )}
@@ -672,7 +708,7 @@ export default function IncomeEvolutionChart({
           {/* MODE 1 & 2: Acumulado Real & Projeção Acumulativa (Area and Line) */}
           {(chartMode === 'acumulativo' || chartMode === 'acumulado_real') && (
             <g pointerEvents="none">
-              <path d={cumulativeAreaPath} fill={isGastos ? 'url(#roseAreaGrad)' : 'url(#emeraldAreaGrad)'} />
+              <path d={cumulativeAreaPath} fill="url(#customAreaGrad)" />
               <path
                 d={cumulativePath}
                 fill="none"
@@ -718,36 +754,25 @@ export default function IncomeEvolutionChart({
 
                 let barY = zeroY;
                 let barHeight = 0;
-                let barFill = 'url(#emeraldBarGrad)';
+                let barFill = 'url(#customBarGrad)';
 
-                if (isBalanco) {
+                if (isBalance) {
                   if (d.monthTotal >= 0) {
                     const topY = getYMonthly(d.monthTotal);
                     barY = topY;
                     barHeight = Math.max(2, zeroY - topY);
-                    barFill = 'url(#emeraldBarGrad)'; // Verde para positivo
+                    barFill = 'url(#incomeBarGrad)'; // Cor da timeline de Entrada de origem
                   } else {
                     const bottomY = getYMonthly(d.monthTotal);
                     barY = zeroY;
                     barHeight = Math.max(2, bottomY - zeroY);
-                    barFill = 'url(#roseBarGrad)'; // Vermelho para negativo
+                    barFill = 'url(#expenseBarGrad)'; // Cor da timeline de Gastos de origem
                   }
-                } else if (isGastos) {
-                  const topY = getYMonthly(d.monthTotal);
-                  barY = topY;
-                  barHeight = Math.max(2, padding.top + graphHeight - topY);
-                  barFill = 'url(#roseBarGrad)'; // Vermelho para saídas
-                } else if (isInvest) {
-                  const topY = getYMonthly(d.monthTotal);
-                  barY = topY;
-                  barHeight = Math.max(2, padding.top + graphHeight - topY);
-                  barFill = 'url(#indigoBarGrad)'; // Roxo para investimentos
                 } else {
-                  // Entradas
                   const topY = getYMonthly(d.monthTotal);
                   barY = topY;
                   barHeight = Math.max(2, padding.top + graphHeight - topY);
-                  barFill = 'url(#emeraldBarGrad)'; // Verde para entradas
+                  barFill = 'url(#customBarGrad)'; // Cor da paleta da própria timeline
                 }
 
                 return (
@@ -836,39 +861,39 @@ export default function IncomeEvolutionChart({
                   fontWeight: '700'
                 }}
               >
-                {chartMode === 'acumulado_real' ? 'Realizado' : hoveredData.isPast ? 'Liquidado' : hoveredData.isCurrent ? 'Mês Atual' : 'Projeção'}
+                {chartMode === 'acumulado_real' ? t('evolutionChart.realized') : hoveredData.isPast ? t('evolutionChart.settled') : hoveredData.isCurrent ? t('evolutionChart.currentMonth') : t('evolutionChart.projection')}
               </span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
                 <span style={{ color: 'var(--text-dim)' }}>
-                  {isBalanco ? 'Balanço Líquido:' : isGastos ? 'Total Saídas:' : isInvest ? 'Total Aportes:' : 'Total Entradas:'}
+                  {isBalance ? t('evolutionChart.netBalance') : isExpense ? t('evolutionChart.totalOutflows') : isInvestment ? t('evolutionChart.totalInvestments') : t('evolutionChart.totalInflows')}
                 </span>
                 <span
                   style={{
                     fontWeight: '800',
-                    color: isBalanco
+                    color: isBalance
                       ? (hoveredData.monthTotal >= 0 ? TimelineColor.SUCCESS : TimelineColor.EXPENSE)
-                      : (isGastos ? TimelineColor.EXPENSE : isInvest ? TimelineColor.INVESTMENT : TimelineColor.INCOME)
+                      : activeColor
                   }}
                 >
-                  {isBalanco && hoveredData.monthTotal > 0 ? '+' : isGastos && hoveredData.monthTotal > 0 ? '-' : ''}
+                  {isBalance && hoveredData.monthTotal > 0 ? '+' : isExpense && hoveredData.monthTotal > 0 ? '-' : ''}
                   {formatCurrency(hoveredData.monthTotal)}
                 </span>
               </div>
 
-              {isBalanco && (
+              {isBalance && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                  <span>Entradas vs Saídas:</span>
+                  <span>{t('evolutionChart.inflowsVsOutflows')}</span>
                   <span>
-                    <span style={{ color: TimelineColor.SUCCESS }}>+{formatCurrency(hoveredData.monthIncome)}</span> / <span style={{ color: TimelineColor.EXPENSE }}>-{formatCurrency(hoveredData.monthExpense)}</span>
+                    <span style={{ color: incomePalette.primary }}>+{formatCurrency(hoveredData.monthIncome)}</span> / <span style={{ color: expensePalette.primary }}>-{formatCurrency(hoveredData.monthExpense)}</span>
                   </span>
                 </div>
               )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                <span style={{ color: 'var(--text-dim)' }}>{chartMode === 'acumulado_real' ? 'Acumulado Real:' : 'Total Acumulado:'}</span>
+                <span style={{ color: 'var(--text-dim)' }}>{chartMode === 'acumulado_real' ? t('evolutionChart.realizedAccumulated') : t('evolutionChart.totalAccumulated')}</span>
                 <span style={{ fontWeight: '800', color: activeColor }}>
                   {formatCurrency(hoveredData.runningTotal)}
                 </span>
@@ -876,7 +901,7 @@ export default function IncomeEvolutionChart({
 
               {hoveredData.eventCount > 0 && (
                 <div style={{ marginTop: '2px', fontSize: '0.68rem', color: 'var(--text-dim)', textAlign: 'right', borderTop: '1px solid var(--border-glass)', paddingTop: '4px' }}>
-                  {hoveredData.eventCount} movimento(s) registado(s)
+                  {t('evolutionChart.movementsRecorded', { count: hoveredData.eventCount })}
                 </div>
               )}
             </div>

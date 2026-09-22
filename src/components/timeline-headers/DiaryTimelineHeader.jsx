@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Plus,
   Settings,
@@ -20,6 +20,7 @@ import {
   isCancelledStatus
 } from '../../enums/index.js';
 import { DIARY_MOOD_CONFIG } from '../event-modals/DiaryEventModal.jsx';
+import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
@@ -39,9 +40,13 @@ export default function DiaryTimelineHeader({
   const { t, dateLocale } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
 
+  const paletteTheme = useMemo(() => {
+    return getPaletteTheme(timeline?.color, TimelineColor.DIARY);
+  }, [timeline?.color]);
+
   if (!timeline) return null;
 
-  const headerColor = timeline.color || TimelineColor.DIARY;
+  const headerColor = paletteTheme.primary;
   const rawEventsList = timeline.events || events || [];
   const eventsList = rawEventsList.filter((ev) => {
     if (!ev || !ev.date || ev.isDeleted) return false;
@@ -263,8 +268,8 @@ export default function DiaryTimelineHeader({
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
                 <DonutChart
                   percent={annualTotalEntries > 0 ? Math.min(100, Math.round((annualTotalEntries / 365) * 100)) : 0}
-                  sliceColor={TimelineColor.DIARY}
-                  remainingColor="rgba(236, 72, 153, 0.15)"
+                  sliceColor={paletteTheme.primary}
+                  remainingColor={`${paletteTheme.primary}26`}
                   label={`${annualTotalEntries}`}
                   centerFontSize="0.84rem"
                 />
@@ -273,7 +278,7 @@ export default function DiaryTimelineHeader({
                   <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
                     {t('diaryHeader.annualEntriesDesc') || 'Registrados nos últimos 12 meses:'}
                   </div>
-                  <div style={{ fontSize: '1.05rem', fontWeight: '800', color: TimelineColor.DIARY }}>
+                  <div style={{ fontSize: '1.05rem', fontWeight: '800', color: paletteTheme.primary }}>
                     {annualTotalEntries} {annualTotalEntries === 1 ? 'registro' : 'registros'}
                   </div>
                   <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
@@ -318,17 +323,18 @@ export default function DiaryTimelineHeader({
                 monthVsPrevLabel={t('diaryHeader.monthVsPrevMonth')}
                 diffPercentStr={diffPercentStr}
                 isGoodChange={isDiffPositive}
-                goodColor={TimelineColor.DIARY}
+                goodColor={paletteTheme.primary}
                 sparklesLabel={t('diaryHeader.annualProjectionLabel')}
                 projection={annualTotalEntries}
-                sparklesColor={TimelineColor.DIARY}
-                projectionColor={TimelineColor.DIARY}
-                currentGradient={`linear-gradient(180deg, ${TimelineColor.DIARY} 0%, rgba(219, 39, 119, 1) 100%)`}
-                mutedGradientTop="rgba(236, 72, 153, 0.6)"
-                mutedGradientBottom="rgba(236, 72, 153, 0.25)"
-                currentTextColor={TimelineColor.DIARY}
+                sparklesColor={paletteTheme.primary}
+                projectionColor={paletteTheme.primary}
+                currentGradient={`linear-gradient(180deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`}
+                mutedGradientTop={paletteTheme.primary}
+                mutedGradientBottom={paletteTheme.secondary}
+                currentTextColor={paletteTheme.primary}
                 formatValue={(val) => String(val)}
                 formatProjection={(val) => `${val} registros`}
+                accentColor={paletteTheme.primary}
               />
             );
           })()}

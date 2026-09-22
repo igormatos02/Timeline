@@ -81,6 +81,7 @@ import MonthProjectionBadges from './MonthProjectionBadges.jsx';
 import FloatingTaskStack from './FloatingTaskStack';
 import { getGroupingForPeriodicity } from '../utils/loanCalculations';
 import { formatCurrency } from '../utils/formatCurrency';
+import { getPaletteTheme } from '../../shared/config/colorPalettes.js';
 import {
   EventType,
   EventStatus,
@@ -200,6 +201,10 @@ function VerticalTimeline({
   const [selectedLabelFilter, setSelectedLabelFilter] = useState(EventStatus.ALL);
   const [showEmptyDays, setShowEmptyDays] = useState(true);
   const [monthProjectionMode, setMonthProjectionMode] = useState('realized');
+
+  const paletteTheme = useMemo(() => {
+    return getPaletteTheme(timeline?.color, TimelineColor.PRIMARY);
+  }, [timeline?.color]);
 
   // State & Ref for New Timeline Dropdown
   const [isTimelineDropdownOpen, setIsTimelineDropdownOpen] = useState(false);
@@ -1138,7 +1143,7 @@ function VerticalTimeline({
         <div className="timeline-spine" />
         <div
           className="timeline-spine-gradient"
-          style={{ background: timeline.color || 'var(--timeline-line-active)' }}
+          style={{ background: `linear-gradient(180deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)` }}
         />
 
         {/* Botão Carregar Mais Futuro */}
@@ -1168,7 +1173,7 @@ function VerticalTimeline({
                 <div
                   className={`day-node-dot ${isCurrentWeek ? 'is-today-node' : hasEvents ? 'has-events' : ''
                     }`}
-                  style={hasEvents && !isCurrentWeek ? { backgroundColor: timeline.color } : {}}
+                  style={hasEvents && !isCurrentWeek ? { backgroundColor: paletteTheme.primary } : {}}
                 />
               </div>
 
@@ -1193,6 +1198,7 @@ function VerticalTimeline({
                           events={dateGroup.events}
                           timelineColor={timeline.color}
                           allEvents={timeline.events || []}
+                          timelines={effectiveTimelines || timelines}
                           currentTimelineId={timeline.id}
                           timelineType={timeline.type}
                           activeFinancialTab={activeFinancialTab}
@@ -1348,26 +1354,26 @@ function VerticalTimeline({
       const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
       if (isExternal) return;
 
+      const isWithdrawal = Boolean(
+        ev.isWithdrawal ||
+        ev.eventType === EventType.WITHDRAWAL ||
+        ev.isVirtualWithdrawal ||
+        (ev.id && String(ev.id).startsWith('virtual_withdrawal_')) ||
+        (ev.eventType === EventType.EXPENSE && (Boolean(ev.pocketId || ev.pocket_id) || ev.isInvestment)) ||
+        Number(ev.amount || 0) < 0
+      );
+      if (isWithdrawal) return;
+
       const isInvestment =
         ev.eventType === EventType.INVESTMENT ||
-        ev.eventType === EventType.WITHDRAWAL ||
         ev.category === InvestmentEventCategory.SAVINGS ||
         ev.isInvestment ||
-        ev.isWithdrawal ||
         Boolean(ev.pocketId || ev.pocket_id);
 
       if (isInvestment) {
-        const isWithdrawal = Boolean(
-          ev.isWithdrawal ||
-          ev.eventType === EventType.WITHDRAWAL ||
-          ev.eventType === EventType.EXPENSE ||
-          ev.isExpense ||
-          Number(ev.amount || 0) < 0
-        );
-        const multiplier = isWithdrawal ? -1 : 1;
         const amt = Math.abs(Number(ev.amount || 0));
         const mKey = ev.date.substring(0, 7);
-        map.set(mKey, (map.get(mKey) || 0) + multiplier * amt);
+        map.set(mKey, (map.get(mKey) || 0) + amt);
       }
     });
     return map;
@@ -1544,28 +1550,28 @@ function VerticalTimeline({
       const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
       if (isExternal) return;
 
+      const isWithdrawal = Boolean(
+        ev.isWithdrawal ||
+        ev.eventType === EventType.WITHDRAWAL ||
+        ev.isVirtualWithdrawal ||
+        (ev.id && String(ev.id).startsWith('virtual_withdrawal_')) ||
+        (ev.eventType === EventType.EXPENSE && (Boolean(ev.pocketId || ev.pocket_id) || ev.isInvestment)) ||
+        Number(ev.amount || 0) < 0
+      );
+      if (isWithdrawal) return;
+
       const isInvestment =
         ev.eventType === EventType.INVESTMENT ||
-        ev.eventType === EventType.WITHDRAWAL ||
         ev.category === InvestmentEventCategory.SAVINGS ||
         ev.isInvestment ||
-        ev.isWithdrawal ||
         Boolean(ev.pocketId || ev.pocket_id);
 
       if (isInvestment) {
         const mKey = ev.date.substring(0, 7);
         const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
         if (isRealized) {
-          const isWithdrawal = Boolean(
-            ev.isWithdrawal ||
-            ev.eventType === EventType.WITHDRAWAL ||
-            ev.eventType === EventType.EXPENSE ||
-            ev.isExpense ||
-            Number(ev.amount || 0) < 0
-          );
-          const multiplier = isWithdrawal ? -1 : 1;
           const amt = Math.abs(Number(ev.amount || 0));
-          map.set(mKey, (map.get(mKey) || 0) + multiplier * amt);
+          map.set(mKey, (map.get(mKey) || 0) + amt);
         }
       }
     });
@@ -1747,7 +1753,7 @@ function VerticalTimeline({
         <div className="timeline-spine" />
         <div
           className="timeline-spine-gradient"
-          style={{ background: timeline.color || 'var(--timeline-line-active)' }}
+          style={{ background: `linear-gradient(180deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)` }}
         />
 
         {/* Botão Carregar Mais Futuro */}
@@ -1810,7 +1816,7 @@ function VerticalTimeline({
                           ? 'rgba(148, 163, 184, 0.25)'
                           : (isFutureMonth
                             ? 'rgba(148, 163, 184, 0.4)'
-                            : timeline.color),
+                            : paletteTheme.primary),
                         borderColor: isNotComputedMonth
                           ? 'rgba(148, 163, 184, 0.25)'
                           : (isFutureMonth ? 'rgba(148, 163, 184, 0.3)' : undefined)
@@ -1944,7 +1950,7 @@ function VerticalTimeline({
                                       ? t('projectHeader.newTaskMilestone')
                                       : t('buttons.addEvent');
 
-                          const buttonColor = timeline.color || (isInvestment ? TimelineColor.INVESTMENT : 'var(--primary)');
+                          const buttonColor = paletteTheme.primary;
 
                           return isInvestment ? (
                             <button
@@ -1959,13 +1965,13 @@ function VerticalTimeline({
                                 fontSize: '0.78rem',
                                 fontWeight: '700',
                                 cursor: 'pointer',
-                                background: buttonColor,
-                                borderColor: buttonColor,
+                                background: `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`,
+                                borderColor: paletteTheme.primary,
                                 color: TimelineColor.WHITE
                               }}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (onOpenCreatePocket) onOpenCreatePocket();
+                                if (onOpenCreatePocket) onOpenCreatePocket({ defaultDate: format(mGroup.monthDate, 'yyyy-MM-01') });
                               }}
                               title={t('pocket.addPocket')}
                             >
@@ -1985,8 +1991,8 @@ function VerticalTimeline({
                                 fontSize: '0.78rem',
                                 fontWeight: '700',
                                 cursor: 'pointer',
-                                background: buttonColor,
-                                borderColor: buttonColor,
+                                background: `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`,
+                                borderColor: paletteTheme.primary,
                                 color: TimelineColor.WHITE
                               }}
                               onClick={(e) => {
@@ -2033,6 +2039,7 @@ function VerticalTimeline({
                         monthRealizedSaldo={mMonthRealizedSaldo}
                         projectionMode={monthProjectionMode}
                         onToggleProjectionMode={setMonthProjectionMode}
+                        timelines={effectiveTimelines || timelines}
                         hasIncomeTimeline={hasIncomeTimeline}
                         hasExpenseTimeline={hasExpenseTimeline}
                         hasLoanTimeline={hasLoanTimeline}
@@ -2323,7 +2330,7 @@ function VerticalTimeline({
                                         justifyContent: 'space-between',
                                         fontSize: '0.74rem',
                                         fontWeight: '700',
-                                        color: isFutureMonth ? TimelineColor.PRIMARY_LIGHT : (timeline.color || TimelineColor.PRIMARY),
+                                        color: isFutureMonth ? TimelineColor.PRIMARY_LIGHT : paletteTheme.primary,
                                         marginBottom: '5px'
                                       }}
                                     >
@@ -2342,7 +2349,7 @@ function VerticalTimeline({
                                             ? TimelineColor.SUCCESS
                                             : isFutureMonth
                                               ? TimelineColor.PRIMARY_LIGHT
-                                              : (timeline.color || TimelineColor.PRIMARY),
+                                              : paletteTheme.primary,
                                           fontWeight: '800'
                                         }}
                                       >
@@ -2366,7 +2373,7 @@ function VerticalTimeline({
                                           height: '100%',
                                           background: pPercent >= 100
                                             ? `linear-gradient(90deg, ${TimelineColor.SUCCESS} 0%, ${TimelineColor.EMERALD} 100%)`
-                                            : `linear-gradient(90deg, ${timeline.color || TimelineColor.PRIMARY} 0%, ${timeline.color || TimelineColor.PRIMARY_LIGHT} 100%)`,
+                                            : `linear-gradient(90deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`,
                                           borderRadius: '9999px',
                                           transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                                           boxShadow: '0 0 10px rgba(99, 102, 241, 0.45)'
@@ -2386,6 +2393,7 @@ function VerticalTimeline({
                                         events={dateGroup.events}
                                         timelineColor={timeline.color}
                                         allEvents={timeline.events || []}
+                                        timelines={effectiveTimelines || timelines}
                                         currentTimelineId={timeline.id}
                                         timelineType={timeline.type}
                                         activeFinancialTab={activeFinancialTab}
@@ -2432,6 +2440,7 @@ function VerticalTimeline({
                                   events={dateGroup.events}
                                   timelineColor={timeline.color}
                                   allEvents={timeline.events || []}
+                                  timelines={effectiveTimelines || timelines}
                                   currentTimelineId={timeline.id}
                                   timelineType={timeline.type}
                                   activeFinancialTab={activeFinancialTab}
@@ -2462,6 +2471,7 @@ function VerticalTimeline({
                           events={dateGroup.events}
                           timelineColor={timeline.color}
                           allEvents={timeline.events || []}
+                          timelines={effectiveTimelines || timelines}
                           currentTimelineId={timeline.id}
                           timelineType={timeline.type}
                           activeFinancialTab={activeFinancialTab}
@@ -2547,7 +2557,7 @@ function VerticalTimeline({
         <div className="timeline-spine" />
         <div
           className="timeline-spine-gradient"
-          style={{ background: timeline.color || 'var(--timeline-line-active)' }}
+          style={{ background: `linear-gradient(180deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)` }}
         />
 
         {/* Botão Carregar Mais Futuro */}
@@ -2573,7 +2583,7 @@ function VerticalTimeline({
                 <div
                   className={`day-node-dot ${isCurrentYear ? 'is-today-node' : totalEventsInYear > 0 ? 'has-events' : ''
                     }`}
-                  style={totalEventsInYear > 0 && !isCurrentYear ? { backgroundColor: timeline.color } : {}}
+                  style={totalEventsInYear > 0 && !isCurrentYear ? { backgroundColor: paletteTheme.primary } : {}}
                 />
               </div>
 
@@ -2615,6 +2625,7 @@ function VerticalTimeline({
                                 events={dateGroup.events}
                                 timelineColor={timeline.color}
                                 allEvents={timeline.events || []}
+                                timelines={effectiveTimelines || timelines}
                                 currentTimelineId={timeline.id}
                                 timelineType={timeline.type}
                                 activeFinancialTab={activeFinancialTab}
@@ -2662,7 +2673,7 @@ function VerticalTimeline({
         <div className="timeline-spine" />
         <div
           className="timeline-spine-gradient"
-          style={{ background: timeline.color || 'var(--timeline-line-active)' }}
+          style={{ background: `linear-gradient(180deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)` }}
         />
 
         {/* Botão Carregar Mais Futuro */}
@@ -2708,7 +2719,7 @@ function VerticalTimeline({
                       ? `${t('timeline.eventsCount', { count: dayEvents.length })}`
                       : t('timeline.noEventsDay')
                   }
-                  style={hasEvents && !isTodayNode ? { backgroundColor: timeline.color } : {}}
+                  style={hasEvents && !isTodayNode ? { backgroundColor: paletteTheme.primary } : {}}
                 />
               </div>
 
@@ -2718,6 +2729,7 @@ function VerticalTimeline({
                     events={dayEvents}
                     timelineColor={timeline.color}
                     allEvents={timeline.events || []}
+                    timelines={effectiveTimelines || timelines}
                     currentTimelineId={timeline.id}
                     timelineType={timeline.type}
                     activeFinancialTab={activeFinancialTab}
@@ -2796,6 +2808,7 @@ function VerticalTimeline({
               events={dateGroup.events}
               timelineColor={timeline.color}
               allEvents={timeline.events || []}
+              timelines={effectiveTimelines || timelines}
               currentTimelineId={timeline.id}
               timelineType={timeline.type}
               activeFinancialTab={activeFinancialTab}

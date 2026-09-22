@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Check, Settings, Trash2, RotateCcw } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { TimelineStatus, TimelineColor, TIMELINE_COLOR_PRESETS, TimelineType, normalizeTimelineType } from '../enums/index.js';
+import { findPaletteByColor } from '../../shared/config/colorPalettes.js';
 
 export default function EditTimelineSettingsModal({
   isOpen,
@@ -223,23 +224,28 @@ export default function EditTimelineSettingsModal({
             <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
               {t('editTimelineSettingsModal.colorLabel')}
             </label>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-              {colors.map((c) => (
-                <div
-                  key={c}
-                  onClick={() => setFormData({ ...formData, color: c })}
-                  style={{
-                    width: '30px',
-                    height: '30px',
-                    borderRadius: '50%',
-                    backgroundColor: c,
-                    cursor: 'pointer',
-                    border: formData.color === c ? `3px solid ${TimelineColor.WHITE}` : '2px solid transparent',
-                    boxShadow: formData.color === c ? `0 0 12px ${c}` : 'none',
-                    transition: 'all 0.2s'
-                  }}
-                />
-              ))}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '4px', flexWrap: 'wrap' }}>
+              {colors.map((c) => {
+                const palette = findPaletteByColor(c);
+                const paletteTitle = palette ? palette.name : c;
+                return (
+                  <div
+                    key={c}
+                    onClick={() => setFormData({ ...formData, color: c })}
+                    title={paletteTitle}
+                    style={{
+                      width: '30px',
+                      height: '30px',
+                      borderRadius: '50%',
+                      backgroundColor: c,
+                      cursor: 'pointer',
+                      border: formData.color === c ? `3px solid ${TimelineColor.WHITE}` : '2px solid transparent',
+                      boxShadow: formData.color === c ? `0 0 12px ${c}` : 'none',
+                      transition: 'all 0.2s'
+                    }}
+                  />
+                );
+              })}
             </div>
           </div>
 

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { PiggyBank, Plus, Check } from 'lucide-react';
-import { format } from 'date-fns';
+import React, { useState, useEffect, useMemo } from 'react';
+import { PiggyBank, Plus, Check, Calendar } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { pt as ptLocale, enUS } from 'date-fns/locale';
 import { TimelineColor } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import ModalShell from './ui/ModalShell.jsx';
@@ -14,7 +15,8 @@ export default function CreatePocketModal({
   timeline = null,
   timeboardId = null
 }) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const dateLocale = language === 'en' ? enUS : ptLocale;
   const isEditing = Boolean(initialData?.id);
   const accentColor = timeline?.color || TimelineColor.INVESTMENT;
 
@@ -26,6 +28,16 @@ export default function CreatePocketModal({
   const [isClosed, setIsClosed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Formatted month/year label derived from dateCreated state
+  const createdMonthLabel = useMemo(() => {
+    try {
+      const d = dateCreated ? parseISO(dateCreated) : new Date();
+      return format(d, 'MMMM yyyy', { locale: dateLocale });
+    } catch {
+      return format(new Date(), 'MMMM yyyy', { locale: dateLocale });
+    }
+  }, [dateCreated, dateLocale]);
 
   useEffect(() => {
     if (isOpen) {
@@ -42,7 +54,9 @@ export default function CreatePocketModal({
         setName(initialData?.name || '');
         setInitialValue(String(initialData?.initialValue ?? initialData?.initial_value ?? 0));
         setTargetValue(String(initialData?.targetValue ?? initialData?.target_value ?? 1000));
-        setDateCreated(format(new Date(), 'yyyy-MM-dd'));
+        // Use defaultDate from context (e.g. when clicking "Add Pocket" from a specific month row)
+        const defaultDate = initialData?.defaultDate || initialData?.date || null;
+        setDateCreated(defaultDate ? defaultDate.substring(0, 10) : format(new Date(), 'yyyy-MM-dd'));
         setDateClosed('');
         setIsClosed(false);
       }
@@ -189,7 +203,40 @@ export default function CreatePocketModal({
           accent={accentColor}
         />
       </div>
-
+      {/* Creation Month Badge — shown only when creating */}
+      {!isEditing && (
+        <div style={{ marginBottom: '14px' }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: '0.78rem',
+              fontWeight: '700',
+              color: 'var(--text-main)',
+              marginBottom: '5px'
+            }}
+          >
+            {t('pocket.startingMonth')}
+          </label>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '7px',
+              padding: '7px 14px',
+              borderRadius: '20px',
+              background: `${accentColor}18`,
+              border: `1px solid ${accentColor}40`,
+              color: accentColor,
+              fontSize: '0.85rem',
+              fontWeight: '700',
+              textTransform: 'capitalize'
+            }}
+          >
+            <Calendar size={14} />
+            {createdMonthLabel}
+          </div>
+        </div>
+      )}
 
 
       {/* Close Pocket Toggle */}

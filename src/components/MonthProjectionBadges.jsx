@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Sparkles, DollarSign, TrendingDown, PiggyBank, Landmark, Scale, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { formatCurrency as defaultFormatCurrency } from '../utils/formatCurrency.js';
-import { TimelineColor } from '../../shared/enums/index.js';
+import {
+  TimelineColor,
+  TimelineType,
+  normalizeTimelineType,
+  isLoanTimelineType
+} from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 /**
@@ -35,6 +40,7 @@ export default function MonthProjectionBadges({
   monthRealizedSaldo,
   projectionMode = 'realized',
   onToggleProjectionMode,
+  timelines = [],
   hasIncomeTimeline,
   hasExpenseTimeline,
   hasInvestmentTimeline,
@@ -51,6 +57,26 @@ export default function MonthProjectionBadges({
 }) {
   const { t: contextT } = useTranslation();
   const t = propT || contextT;
+
+  const incomeColor = useMemo(() => {
+    const tl = (timelines || []).find((x) => normalizeTimelineType(x?.type) === TimelineType.INCOME);
+    return tl?.color || TimelineColor.INCOME;
+  }, [timelines]);
+
+  const expenseColor = useMemo(() => {
+    const tl = (timelines || []).find((x) => normalizeTimelineType(x?.type) === TimelineType.EXPENSE);
+    return tl?.color || TimelineColor.EXPENSE;
+  }, [timelines]);
+
+  const investmentColor = useMemo(() => {
+    const tl = (timelines || []).find((x) => normalizeTimelineType(x?.type) === TimelineType.INVESTMENT);
+    return tl?.color || TimelineColor.INVESTMENT;
+  }, [timelines]);
+
+  const loanColor = useMemo(() => {
+    const tl = (timelines || []).find((x) => isLoanTimelineType(x?.type));
+    return tl?.color || TimelineColor.LOAN;
+  }, [timelines]);
 
   const [localMode, setLocalMode] = useState('realized');
   const currentMode = onToggleProjectionMode ? projectionMode : localMode;
@@ -206,7 +232,7 @@ export default function MonthProjectionBadges({
             border: 'none',
             color: isFutureMonth
               ? 'var(--text-dim)'
-              : (numIncome > 0 ? TimelineColor.INCOME : 'var(--text-dim)'),
+              : (numIncome > 0 ? incomeColor : 'var(--text-dim)'),
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
@@ -228,7 +254,7 @@ export default function MonthProjectionBadges({
             border: 'none',
             color: isFutureMonth
               ? 'var(--text-dim)'
-              : (numExpense > 0 ? TimelineColor.EXPENSE : 'var(--text-dim)'),
+              : (numExpense > 0 ? expenseColor : 'var(--text-dim)'),
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
@@ -250,33 +276,20 @@ export default function MonthProjectionBadges({
             border: 'none',
             color: isFutureMonth
               ? 'var(--text-dim)'
-              : (numInvestmentTotal !== 0 || numInvestmentInternal !== 0 || numInvestmentExternal !== 0 ? TimelineColor.INVESTMENT : 'var(--text-dim)'),
+              : (numInvestmentTotal !== 0 || numInvestmentInternal !== 0 || numInvestmentExternal !== 0 ? investmentColor : 'var(--text-dim)'),
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
           title={isRealizedMode ? t('timeline.monthRealizedInvestmentTitle') : t('timeline.monthInvestmentTitle')}
         >
           <PiggyBank size={12} />
-          <span>
-            {formatCurrency(numInvestmentExternal !== 0 ? numInvestmentInternal : (numInvestmentTotal !== 0 ? numInvestmentTotal : numInvestmentInternal))}
-          </span>
-          {numInvestmentExternal !== 0 && (
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '3px',
-                fontWeight: '700',
-                color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)',
-                opacity: 0.95
-              }}
-              title={t('modal.isExternalDepositHint')}
-            >
-              <span>{numInvestmentExternal >= 0 ? '+' : '-'}</span>
-              <span>{formatCurrency(Math.abs(numInvestmentExternal))}</span>
-              <span style={{ fontSize: '0.70rem', fontWeight: '600', textTransform: 'lowercase' }}>
-                {t('timeline.externalDeposits')}
-              </span>
+          {numInvestmentExternal !== 0 ? (
+            <span>
+              (- {formatCurrency(Math.abs(numInvestmentInternal))} ⇌ {formatCurrency(Math.abs(numInvestmentExternal))})
+            </span>
+          ) : (
+            <span>
+              -{formatCurrency(Math.abs(numInvestmentTotal !== 0 ? numInvestmentTotal : numInvestmentInternal))}
             </span>
           )}
         </span>
@@ -293,14 +306,14 @@ export default function MonthProjectionBadges({
             border: 'none',
             color: isFutureMonth
               ? 'var(--text-dim)'
-              : (numLoan > 0 ? TimelineColor.LOAN : 'var(--text-dim)'),
+              : (numLoan > 0 ? loanColor : 'var(--text-dim)'),
             fontWeight: '800',
             fontSize: '0.76rem'
           }}
           title={isRealizedMode ? t('timeline.monthRealizedLoanTitle') : t('timeline.monthLoanTitle')}
         >
           <Landmark size={12} />
-          <span>{formatCurrency(numLoan)}</span>
+          <span>-{formatCurrency(numLoan)}</span>
         </span>
       )}
 

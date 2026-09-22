@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { EventPriority, EventStatus, TimelineColor } from '../../enums/index.js';
+import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 import { DonutChart, PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
@@ -27,7 +28,10 @@ export default function TodoTimelineHeader({
   const { t } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
 
-  const headerColor = timeline?.color || TimelineColor.TODO;
+  const paletteTheme = useMemo(() => {
+    return getPaletteTheme(timeline?.color, TimelineColor.TODO);
+  }, [timeline?.color]);
+  const headerColor = paletteTheme.primary;
   const rawEventsList = timeline?.events || events || [];
   const todoList = useMemo(() => {
     return rawEventsList.filter((ev) => {
@@ -172,7 +176,7 @@ export default function TodoTimelineHeader({
                 style={{
                   width: `${completionRate}%`,
                   height: '100%',
-                  background: `linear-gradient(90deg, ${TimelineColor.BLUE} 0%, ${TimelineColor.SUCCESS} 100%)`,
+                  background: `linear-gradient(90deg, ${paletteTheme.primary} 0%, ${TimelineColor.SUCCESS} 100%)`,
                   borderRadius: '3px',
                   transition: 'width 0.3s ease'
                 }}
@@ -197,10 +201,10 @@ export default function TodoTimelineHeader({
               <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>
                 {t('todoHeader.pending')}
               </span>
-              <Clock size={16} style={{ color: TimelineColor.BLUE }} />
+              <Clock size={16} style={{ color: paletteTheme.primary }} />
             </div>
             <div style={{ margin: '8px 0' }}>
-              <div style={{ fontSize: '1.4rem', fontWeight: '800', color: TimelineColor.BLUE }}>
+              <div style={{ fontSize: '1.4rem', fontWeight: '800', color: paletteTheme.primary }}>
                 {pendingCount}
               </div>
               <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '2px' }}>

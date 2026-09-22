@@ -35,14 +35,23 @@ export const TimelineColor = Object.freeze({
 });
 
 export const TIMELINE_COLOR_PRESETS = Object.freeze([
-  TimelineColor.LOAN,       // Indigo
-  TimelineColor.BALANCE,    // Sky Blue
-  TimelineColor.INCOME,     // Emerald
-  TimelineColor.EXPENSE,    // Rose
-  TimelineColor.REMINDER,   // Amber
-  TimelineColor.PROJECT,    // Purple
-  TimelineColor.CYAN,       // Cyan
-  TimelineColor.BLUE        // Blue
+  TimelineColor.LOAN,       // Indigo (#6366f1)
+  TimelineColor.BALANCE,    // Sky Blue (#0ea5e9)
+  TimelineColor.INCOME,     // Emerald (#10b981)
+  TimelineColor.EXPENSE,    // Rose (#f43f5e)
+  TimelineColor.INVESTMENT, // Violet (#8b5cf6)
+  TimelineColor.REMINDER,   // Amber (#f59e0b)
+  TimelineColor.DIARY,      // Pink (#ec4899)
+  TimelineColor.TODO,       // Blue (#3b82f6)
+  TimelineColor.FOLLOWUP,   // Cyan (#06b6d4)
+  TimelineColor.PROJECT,    // Purple (#a855f7)
+  '#8f7193',                // Purple Custom
+  '#a68069',                // Brown
+  '#5086c1',                // Blue Custom
+  '#96c4c4',                // Light Blue
+  '#c63637',                // Red
+  '#c999af',                // Pink Custom
+  '#756f4b'                 // Caqui
 ]);
 
 /**

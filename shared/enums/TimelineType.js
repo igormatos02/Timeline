@@ -29,14 +29,13 @@ export function isSingleInstanceTimelineType(type) {
   return SINGLE_INSTANCE_TIMELINE_TYPES.has(normalizeTimelineType(type));
 }
 
-/**
- * Normaliza qualquer valor para o TimelineType enum canónico.
- * @param {string} type
- * @returns {string}
- */
 export function normalizeTimelineType(type) {
   if (!type) return '';
   const t = String(type).trim().toLowerCase();
+  if (t === 'investment' || t === 'investments') return TimelineType.INVESTMENT;
+  if (t === 'expense' || t === 'expenses') return TimelineType.EXPENSE;
+  if (t === 'income' || t === 'incomes') return TimelineType.INCOME;
+  if (t === 'loan' || t === 'loans') return TimelineType.LOAN;
   return VALID_TIMELINE_TYPES.has(t) ? t : '';
 }
 

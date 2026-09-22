@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Sparkles,
   Plus,
@@ -8,11 +8,13 @@ import {
 import { format } from 'date-fns';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { EventStatus, EventType, isCancelledStatus, isPositiveStatus, TimelineColor } from '../../enums/index.js';
+import { TIMELINE_COLOR_PRESETS, getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 import { DonutChart, PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
 import BarChart7Months from '../ui/BarChart7Months.jsx';
+import IncomeEvolutionChart from '../IncomeEvolutionChart.jsx';
 import { computeMonthDiff } from '../../utils/timelineCharts.js';
 
 export default function InvestmentTimelineHeader({
@@ -21,6 +23,7 @@ export default function InvestmentTimelineHeader({
   computeStartDate = null,
   allTimelines = [],
   events = [],
+  allEvents = [],
   filteredEvents,
   selectedCategoryFilter,
   selectedPocketId,
@@ -36,6 +39,11 @@ export default function InvestmentTimelineHeader({
   const { t, dateLocale } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
   const [chartMode, setChartMode] = useState('realized');
+
+  const paletteTheme = useMemo(() => {
+    return getPaletteTheme(timeline?.color, TimelineColor.INVESTMENT);
+  }, [timeline?.color]);
+  const headerColor = paletteTheme.primary;
 
   const isPocketFiltered = Boolean(
     selectedPocketId ||
@@ -53,7 +61,6 @@ export default function InvestmentTimelineHeader({
 
   if (!timeline) return null;
 
-  const headerColor = timeline.color || TimelineColor.INVESTMENT;
   const metrics = timeline.metrics || {};
   const dto = !isPocketFiltered
     ? (timeline.investmentHeaderResult || timeline.procedureMetrics || metrics.investmentHeaderResult)
@@ -66,18 +73,7 @@ export default function InvestmentTimelineHeader({
   const currentMonthStr = new Date().toISOString().substring(0, 7);
 
   // 1. POUPANÇA POR COFRINHOS
-  const pocketColors = [
-    TimelineColor.INVESTMENT,
-    TimelineColor.PURPLE,
-    TimelineColor.CYAN,
-    TimelineColor.SUCCESS,
-    TimelineColor.WARNING,
-    TimelineColor.PINK,
-    TimelineColor.BLUE,
-    TimelineColor.SLATE,
-    TimelineColor.PRIMARY,
-    TimelineColor.ROSE
-  ];
+  const pocketColors = paletteTheme.colors && paletteTheme.colors.length > 1 ? paletteTheme.colors : TIMELINE_COLOR_PRESETS;
 
   let totalPocketsAccumulated = 0;
   const rawPocketList = pockets.map((pocket, idx) => {
@@ -134,17 +130,22 @@ export default function InvestmentTimelineHeader({
   let currentMonthExternalInvested = 0;
   let annualTotalIncome = 0;
 
-  const incomeEventsSource = isFiltered
-    ? (events && events.length > 0 ? events : (timeline.events || []))
-    : eventsList;
+  const incomeEventsSource = (allEvents && allEvents.length > 0)
+    ? allEvents
+    : (isFiltered ? (events && events.length > 0 ? events : (timeline.events || [])) : eventsList);
 
   incomeEventsSource.forEach((ev) => {
     if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
-    const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
+    const isWithdrawal = ev.eventType === EventType.WITHDRAWAL || Boolean(ev.isWithdrawal);
+    const isVirtualWithdrawal = Boolean(ev.isVirtualWithdrawal) || (ev.id && String(ev.id).startsWith('virtual_withdrawal_'));
+    if (isWithdrawal && ev.id && incomeEventsSource.some((other) => other && other.id === `virtual_withdrawal_${ev.id}`)) {
+      return;
+    }
+    const isIncome = isWithdrawal || isVirtualWithdrawal || ev.eventType === EventType.INCOME || ev.isIncome;
     if (isIncome) {
       const evMonthKey = ev.date.substring(0, 7);
       if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
-        annualTotalIncome += Number(ev.amount || 0);
+        annualTotalIncome += Math.abs(Number(ev.amount || 0));
       }
     }
   });
@@ -157,6 +158,7 @@ export default function InvestmentTimelineHeader({
 
   investmentEventsForAnnual.forEach((ev) => {
     if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+    if (ev.isVirtualWithdrawal || (ev.id && String(ev.id).startsWith('virtual_withdrawal_'))) return;
     const isInvestment =
       ev.eventType === EventType.INVESTMENT ||
       ev.eventType === EventType.WITHDRAWAL ||
@@ -345,8 +347,8 @@ export default function InvestmentTimelineHeader({
                     fontSize: '0.74rem',
                     fontWeight: activeViewMode === 'summary' ? '800' : '600',
                     cursor: 'pointer',
-                    background: activeViewMode === 'summary' ? 'rgba(99, 102, 241, 0.18)' : 'transparent',
-                    color: activeViewMode === 'summary' ? TimelineColor.INVESTMENT : 'var(--text-muted)'
+                    background: activeViewMode === 'summary' ? `${paletteTheme.primary}2e` : 'transparent',
+                    color: activeViewMode === 'summary' ? paletteTheme.primary : 'var(--text-muted)'
                   }}
                 >
                   <Layers size={13} />
@@ -366,8 +368,8 @@ export default function InvestmentTimelineHeader({
                     fontSize: '0.74rem',
                     fontWeight: activeViewMode === 'graph' ? '800' : '600',
                     cursor: 'pointer',
-                    background: activeViewMode === 'graph' ? 'rgba(99, 102, 241, 0.18)' : 'transparent',
-                    color: activeViewMode === 'graph' ? TimelineColor.INVESTMENT : 'var(--text-muted)'
+                    background: activeViewMode === 'graph' ? `${paletteTheme.primary}2e` : 'transparent',
+                    color: activeViewMode === 'graph' ? paletteTheme.primary : 'var(--text-muted)'
                   }}
                 >
                   <Sparkles size={13} />
@@ -377,260 +379,285 @@ export default function InvestmentTimelineHeader({
             </div>
           )}
 
-          {/* Grid Principal 2x2 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-            {/* Quadrante 1: POUPANÇA POR COFRINHOS (PieChart SVG & Legenda) */}
-            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {t('investmentHeader.categoriesTitle')}
-              </div>
-              {(() => {
-                if (!pocketList || pocketList.length === 0) {
-                  return (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
-                      <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
-                        <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                          <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
-                        </svg>
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            width: '42px',
-                            height: '42px',
-                            borderRadius: '50%',
-                            background: 'var(--bg-card)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            border: '1px solid var(--border-glass)',
-                            fontSize: '0.7rem',
-                            fontWeight: '700',
-                            color: 'var(--text-dim)'
-                          }}
-                        >
-                          0%
+          {activeViewMode === 'graph' ? (
+            <IncomeEvolutionChart
+              timeline={timeline}
+              allTimelines={allTimelines}
+              events={eventsList}
+              computeStartDate={computeStartDate}
+            />
+          ) : (
+            <>
+              {/* Grid Principal 2x2 */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+                {/* Quadrante 1: POUPANÇA POR COFRINHOS (PieChart SVG & Legenda) */}
+                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {t('investmentHeader.categoriesTitle')}
+                  </div>
+                  {(() => {
+                    if (!pocketList || pocketList.length === 0) {
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
+                          <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
+                            <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                              <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                            </svg>
+                            <div
+                              style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                width: '42px',
+                                height: '42px',
+                                borderRadius: '50%',
+                                background: 'var(--bg-card)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                border: '1px solid var(--border-glass)',
+                                fontSize: '0.7rem',
+                                fontWeight: '700',
+                                color: 'var(--text-dim)'
+                              }}
+                            >
+                              0%
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                              {t('investmentHeader.noPockets')}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
+                              {t('investmentHeader.noPocketsHint')}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                        <PieDonut items={pocketList} />
+                        <DonutLegend items={pocketList} />
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Quadrante 2: COMPROMETIMENTO ANUAL (Aportes vs Renda — Donut Chart) */}
+                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {t('investmentHeader.annualProjectionTitle')}
+                  </div>
+                  {(() => {
+                    if (annualTotalInvested === 0 && annualTotalIncome === 0) {
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
+                          <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
+                            <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                              <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                            </svg>
+                            <div
+                              style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                width: '42px',
+                                height: '42px',
+                                borderRadius: '50%',
+                                background: 'var(--bg-card)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                border: '1px solid var(--border-glass)',
+                                fontSize: '0.7rem',
+                                fontWeight: '700',
+                                color: 'var(--text-dim)'
+                              }}
+                            >
+                              0%
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                              {t('investmentHeader.noInvestments')}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
+                              {t('investmentHeader.noInvestmentsHint')}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    const sliceColor = annualCommitmentPercent > 60 ? TimelineColor.WARNING : paletteTheme.primary;
+
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                        <DonutChart
+                          percent={annualCommitmentPercent}
+                          sliceColor={sliceColor}
+                          remainingColor="rgba(255, 255, 255, 0.08)"
+                          title={`${t('investmentHeader.annualProjectionTitle')}: ${annualCommitmentPercent}%`}
+                          label={`${annualCommitmentPercent}%`}
+                        />
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                          <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
+                            {t('investmentHeader.projectionNext12Months')}
+                          </div>
+                          <div style={{ fontSize: '0.94rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                            {formatCurrency(annualTotalInvested)}
+                          </div>
+                          {annualTotalIncome > 0 ? (
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                              {t('investmentHeader.annualTarget', { amount: formatCurrency(annualTotalIncome) })}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                              {t('investmentHeader.projectionNext12Months')}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                          {t('investmentHeader.noPockets')}
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
-                          {t('investmentHeader.noPocketsHint')}
-                        </span>
+                    );
+                  })()}
+                </div>
+
+                {/* Quadrante 3: ATUAL (Valor Inicial, Total Aportado & Target) */}
+                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {t('investmentHeader.currentTitle')}
+                  </div>
+                  {(() => {
+                    const targetReachedLabel = t('investmentHeader.targetReached', { percent: targetPercent });
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                        <DonutChart
+                          percent={targetPercent}
+                          sliceColor={paletteTheme.primary}
+                          remainingColor={`${paletteTheme.primary}33`}
+                          title={targetReachedLabel}
+                          label={`${targetPercent}%`}
+                        />
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                          <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.receivedTotalLabel')}</span>
+                            <strong style={{ color: TimelineColor.SUCCESS, fontSize: '0.86rem' }}>{formatCurrency(totalReceived)}</strong>
+                          </div>
+                          <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.targetLabel')}</span>
+                            <strong style={{ color: paletteTheme.primary, fontSize: '0.86rem' }}>{formatCurrency(targetAmount)}</strong>
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                            {targetReachedLabel}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  );
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Rodapé com Comparações, Projeção Anual & Gráfico de Colunas dos últimos 6 meses + mês atual */}
+              {(() => {
+                const timeboardComputeStart = timeboard?.computeFrom || timeboard?.compute_from;
+                const ownComputeStart = timeline?.computeStartDate || timeline?.compute_start_date || timeline?.computeFrom || timeline?.compute_from;
+                const rawComputeStart = computeStartDate || timeboardComputeStart || ownComputeStart;
+                const computeFromMonth = rawComputeStart && String(rawComputeStart) !== '1900-01' && !String(rawComputeStart).startsWith('1900-01') && String(rawComputeStart) !== 'all'
+                  ? String(rawComputeStart).substring(0, 7)
+                  : null;
+
+                const currentDateObj = new Date();
+                const last7Months = [];
+                for (let i = 6; i >= 0; i--) {
+                  const year = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - i, 1).getFullYear();
+                  const month = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - i, 1).getMonth() + 1;
+                  const monthStr = String(month).padStart(2, '0');
+                  const key = `${year}-${monthStr}`;
+
+                  const d = new Date(year, month - 1, 1);
+                  const label = format(d, 'MMM', { locale: dateLocale }).replace('.', '').toUpperCase();
+                  const isNotComputed = Boolean(computeFromMonth && key < computeFromMonth);
+                  last7Months.push({ key, label, total: 0, isNotComputed });
                 }
 
-                return (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                    <PieDonut items={pocketList} />
-                    <DonutLegend items={pocketList} />
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Quadrante 2: COMPROMETIMENTO ANUAL (Aportes vs Renda — Donut Chart) */}
-            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {t('investmentHeader.annualProjectionTitle')}
-              </div>
-              {(() => {
-                if (annualTotalInvested === 0 && annualTotalIncome === 0) {
-                  return (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
-                      <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
-                        <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                          <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
-                        </svg>
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            width: '42px',
-                            height: '42px',
-                            borderRadius: '50%',
-                            background: 'var(--bg-card)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            border: '1px solid var(--border-glass)',
-                            fontSize: '0.7rem',
-                            fontWeight: '700',
-                            color: 'var(--text-dim)'
-                          }}
-                        >
-                          0%
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                          {t('investmentHeader.noInvestments')}
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
-                          {t('investmentHeader.noInvestmentsHint')}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                }
-
-                const sliceColor = annualCommitmentPercent > 60 ? TimelineColor.WARNING : TimelineColor.INVESTMENT;
-
-                return (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                    <DonutChart
-                      percent={annualCommitmentPercent}
-                      sliceColor={sliceColor}
-                      remainingColor="rgba(255, 255, 255, 0.08)"
-                      title={`${t('investmentHeader.annualProjectionTitle')}: ${annualCommitmentPercent}%`}
-                      label={`${annualCommitmentPercent}%`}
-                    />
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
-                        {t('investmentHeader.projectionNext12Months')}
-                      </div>
-                      <div style={{ fontSize: '0.94rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                        {formatCurrency(annualTotalInvested)}
-                      </div>
-                      {annualTotalIncome > 0 ? (
-                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                          {t('investmentHeader.annualTarget', { amount: formatCurrency(annualTotalIncome) })}
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                          {t('investmentHeader.projectionNext12Months')}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Quadrante 3: ATUAL (Valor Inicial, Total Aportado & Target) */}
-            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {t('investmentHeader.currentTitle')}
-              </div>
-              {(() => {
-                const targetReachedLabel = t('investmentHeader.targetReached', { percent: targetPercent });
-                return (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                    <DonutChart
-                      percent={targetPercent}
-                      sliceColor={TimelineColor.INVESTMENT}
-                      remainingColor="rgba(139, 92, 246, 0.2)"
-                      title={targetReachedLabel}
-                      label={`${targetPercent}%`}
-                    />
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.receivedTotalLabel')}</span>
-                        <strong style={{ color: TimelineColor.SUCCESS, fontSize: '0.86rem' }}>{formatCurrency(totalReceived)}</strong>
-                      </div>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.targetLabel')}</span>
-                        <strong style={{ color: TimelineColor.INVESTMENT, fontSize: '0.86rem' }}>{formatCurrency(targetAmount)}</strong>
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '2px' }}>
-                        {targetReachedLabel}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-
-          {/* Rodapé com Comparações, Projeção Anual & Gráfico de Colunas dos últimos 6 meses + mês atual */}
-          {(() => {
-            const timeboardComputeStart = timeboard?.computeFrom || timeboard?.compute_from;
-            const ownComputeStart = timeline?.computeStartDate || timeline?.compute_start_date || timeline?.computeFrom || timeline?.compute_from;
-            const rawComputeStart = computeStartDate || timeboardComputeStart || ownComputeStart;
-            const computeFromMonth = rawComputeStart && String(rawComputeStart) !== '1900-01' && !String(rawComputeStart).startsWith('1900-01') && String(rawComputeStart) !== 'all'
-              ? String(rawComputeStart).substring(0, 7)
-              : null;
-
-            const currentDateObj = new Date();
-            const last7Months = [];
-            for (let i = 6; i >= 0; i--) {
-              const year = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - i, 1).getFullYear();
-              const month = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - i, 1).getMonth() + 1;
-              const monthStr = String(month).padStart(2, '0');
-              const key = `${year}-${monthStr}`;
-
-              const d = new Date(year, month - 1, 1);
-              const label = format(d, 'MMM', { locale: dateLocale }).replace('.', '').toUpperCase();
-              const isNotComputed = Boolean(computeFromMonth && key < computeFromMonth);
-              last7Months.push({ key, label, total: 0, isNotComputed });
-            }
-
-            eventsList.forEach((ev) => {
-              if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-              const isInvestment =
-                ev.eventType === EventType.INVESTMENT ||
-                ev.eventType === EventType.WITHDRAWAL ||
-                ev.isInvestment ||
-                ev.isWithdrawal ||
-                Boolean(ev.pocketId || ev.pocket_id);
-              if (isInvestment) {
-                const isPaid = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
-                if (chartMode === 'realized' && !isPaid) return;
-
-                const evKey = ev.date.substring(0, 7);
-                if (computeFromMonth && evKey < computeFromMonth) return;
-                const foundMonth = last7Months.find((m) => m.key === evKey);
-                if (foundMonth) {
-                  const isWithdrawal = Boolean(
-                    ev.isWithdrawal ||
+                eventsList.forEach((ev) => {
+                  if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+                  const isInvestment =
+                    ev.eventType === EventType.INVESTMENT ||
                     ev.eventType === EventType.WITHDRAWAL ||
-                    ev.eventType === EventType.EXPENSE ||
-                    ev.isExpense ||
-                    Number(ev.amount || 0) < 0
-                  );
-                  const multiplier = isWithdrawal ? -1 : 1;
-                  const amt = Math.abs(Number(ev.amount || 0));
-                  foundMonth.total += multiplier * amt;
-                }
-              }
-            });
+                    ev.isInvestment ||
+                    ev.isWithdrawal ||
+                    Boolean(ev.pocketId || ev.pocket_id);
+                  if (isInvestment) {
+                    const isPaid = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
+                    if (chartMode === 'realized' && !isPaid) return;
 
-            const { diffPercentStr, isDiffPositive } = computeMonthDiff(last7Months);
+                    const evKey = ev.date.substring(0, 7);
+                    if (computeFromMonth && evKey < computeFromMonth) return;
+                    const foundMonth = last7Months.find((m) => m.key === evKey);
+                    if (foundMonth) {
+                      const isWithdrawal = Boolean(
+                        ev.isWithdrawal ||
+                        ev.eventType === EventType.WITHDRAWAL ||
+                        ev.eventType === EventType.EXPENSE ||
+                        ev.isExpense ||
+                        Number(ev.amount || 0) < 0
+                      );
+                      const multiplier = isWithdrawal ? -1 : 1;
+                      const amt = Math.abs(Number(ev.amount || 0));
+                      foundMonth.total += multiplier * amt;
+                    }
+                  }
+                });
 
-            const annualProj = annualRegularInvested + annualExternalInvested;
+                // Add pocket initial values as contributions in their creation month
+                allPockets.forEach((pocket) => {
+                  const pInitial = Number(pocket.initial_value ?? pocket.initialValue ?? 0);
+                  if (pInitial <= 0) return;
+                  const createdRaw = pocket.date_created || pocket.dateCreated || '';
+                  if (!createdRaw) return;
+                  const createdKey = createdRaw.substring(0, 7);
+                  if (computeFromMonth && createdKey < computeFromMonth) return;
+                  const foundMonth = last7Months.find((m) => m.key === createdKey);
+                  if (foundMonth) {
+                    foundMonth.total += pInitial;
+                  }
+                });
 
-            return (
-              <BarChart7Months
-                months={last7Months}
-                chartTitle={t('investmentHeader.chartTitle')}
-                monthVsPrevLabel={t('investmentHeader.monthVsPrevMonth')}
-                diffPercentStr={diffPercentStr}
-                isGoodChange={isDiffPositive}
-                goodColor={TimelineColor.INVESTMENT}
-                sparklesLabel={t('investmentHeader.annualProjectionLabel')}
-                projection={annualProj}
-                sparklesColor={TimelineColor.INVESTMENT}
-                projectionColor={TimelineColor.INVESTMENT}
-                currentGradient={`linear-gradient(180deg, ${TimelineColor.INVESTMENT} 0%, rgba(139, 92, 246, 0.8) 100%)`}
-                mutedGradientTop="rgba(99, 102, 241, 0.6)"
-                mutedGradientBottom="rgba(99, 102, 241, 0.3)"
-                currentTextColor={TimelineColor.INVESTMENT}
-                mode={chartMode}
-                onToggleMode={setChartMode}
-                accentColor={TimelineColor.INVESTMENT}
-              />
-            );
-          })()}
+                const { diffPercentStr, isDiffPositive } = computeMonthDiff(last7Months);
+
+                const annualProj = annualRegularInvested + annualExternalInvested;
+
+                return (
+                  <BarChart7Months
+                    months={last7Months}
+                    chartTitle={t('investmentHeader.chartTitle')}
+                    monthVsPrevLabel={t('investmentHeader.monthVsPrevMonth')}
+                    diffPercentStr={diffPercentStr}
+                    isGoodChange={isDiffPositive}
+                    goodColor={paletteTheme.primary}
+                    sparklesLabel={t('investmentHeader.annualProjectionLabel')}
+                    projection={annualProj}
+                    sparklesColor={paletteTheme.primary}
+                    projectionColor={paletteTheme.primary}
+                    currentGradient={`linear-gradient(180deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`}
+                    mutedGradientTop={paletteTheme.primary}
+                    mutedGradientBottom={paletteTheme.secondary}
+                    currentTextColor={paletteTheme.primary}
+                    mode={chartMode}
+                    onToggleMode={setChartMode}
+                    accentColor={paletteTheme.primary}
+                  />
+                );
+              })()}
+            </>
+          )}
         </div>
       )}
     </HeaderShell>

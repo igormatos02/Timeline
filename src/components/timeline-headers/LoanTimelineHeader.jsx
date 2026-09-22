@@ -19,7 +19,8 @@ import { format, parseISO, differenceInCalendarDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
-import { LoanAmortizationSystem, TimelineColor } from '../../enums/index.js';
+import { LoanAmortizationSystem, TimelineColor, TimelineStatus } from '../../enums/index.js';
+import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import { DonutChart } from '../ui/DonutChart.jsx';
 import CopyIdButton from '../ui/CopyIdButton.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
@@ -37,15 +38,19 @@ export default function LoanTimelineHeader({
   const { t } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
 
+  const paletteTheme = useMemo(() => {
+    return getPaletteTheme(timeline?.color, TimelineColor.PRIMARY);
+  }, [timeline?.color]);
+
   if (!timeline) return null;
 
   const isInactive =
-    timeline.status === 'inactive' ||
-    timeline.status === 'INACTIVE';
+    timeline.status === TimelineStatus.INACTIVE ||
+    timeline.status === 'inactive';
 
   const headerColor = isInactive
     ? TimelineColor.SLATE
-    : (timeline.color || TimelineColor.PRIMARY);
+    : paletteTheme.primary;
 
   /*
    * getLoanMetrics() is responsible for reading the TimelineEvent
@@ -186,7 +191,7 @@ export default function LoanTimelineHeader({
 
   const textColorLight = isInactive
     ? TimelineColor.SLATE
-    : 'var(--primary-light)';
+    : paletteTheme.primary;
 
   const textColorGreen = isInactive
     ? TimelineColor.SLATE
@@ -786,8 +791,8 @@ export default function LoanTimelineHeader({
                   width: `${progressPercent}%`,
                   background: isInactive
                     ? TimelineColor.SLATE
-                    : `linear-gradient(90deg, ${TimelineColor.PRIMARY} 0%, ${TimelineColor.PRIMARY_LIGHT} 100%)`,
-                  boxShadow: isInactive ? 'none' : '0 0 10px rgba(99, 102, 241, 0.45)'
+                    : `linear-gradient(90deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`,
+                  boxShadow: isInactive ? 'none' : `0 0 10px ${paletteTheme.primary}45`
                 }}
               />
             </div>

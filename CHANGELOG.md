@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.4](https://github.com/igormatos02/Timeline/compare/v0.2.3...v0.2.4) (2026-09-22)
+
+
+### Features
+
+* add list mode for status and category filters with planned and realized chart view ([a443b5c](https://github.com/igormatos02/Timeline/commit/a443b5c3cfb3c9a784917a2ab9ed7d7871aed553))
+* add projection mode dropdown, uncomputed month indicators, and enforce canonical enums ([aefdf0c](https://github.com/igormatos02/Timeline/commit/aefdf0c6fd70d21e54abfe21c1c3d4de9bdeeeb9))
+* improve topbar navigation, user menu and timeline header stability ([f330159](https://github.com/igormatos02/Timeline/commit/f330159a8e6765e5c20aef648bdb713aef3fea2f))
+
 ### [0.2.3](https://github.com/igormatos02/Timeline/compare/v0.2.2...v0.2.3) (2026-09-14)
 
 

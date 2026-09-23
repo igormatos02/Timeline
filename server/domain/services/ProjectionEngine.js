@@ -4,12 +4,31 @@ import {
   EventPeriodicity,
   EventRecurrence,
   EventType,
+  TimelineType,
   LoanEventCategory,
   AmortizationEventCategory,
   isCancelledStatus,
   normalizePeriodicity,
   normalizeRecurrence
 } from '../../../shared/enums/index.js';
+
+function checkIsLoan(ev) {
+  if (!ev) return false;
+  return Boolean(
+    ev.eventType === EventType.LOAN_INSTALLMENT ||
+    ev.category === LoanEventCategory.LOAN_INSTALLMENT ||
+    ev.isSystemLoanEvent ||
+    ev.eventType === EventType.AMORTIZATION ||
+    ev.category === AmortizationEventCategory.REDUCE_TERM ||
+    ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
+    ev.timelineType === TimelineType.LOAN ||
+    ev.timeline_type === TimelineType.LOAN ||
+    ev.installmentNumber ||
+    ev.installment_number ||
+    (ev.timelineId && String(ev.timelineId).startsWith('tl-loan-')) ||
+    (ev.timelineOriginId && String(ev.timelineOriginId).startsWith('tl-loan-'))
+  );
+}
 
 function advanceDateByPeriodicity(curDate, periodicity, dayOfMonth) {
   const p = normalizePeriodicity(periodicity);
@@ -42,9 +61,17 @@ function advanceDateByPeriodicity(curDate, periodicity, dayOfMonth) {
  * applying period boundaries, overrides (sobrepositionOver), and termination versions.
  */
 export function projectEvents(rawEvents = [], options = {}) {
-  const horizonEndDate = typeof options === 'string' ? options : (options.endDate || '2056-12-31');
+  const horizonEndDate = typeof options === 'string' ? options : (options.loanEndDate || options.endDate || '2056-12-31');
   const filterStartDate = options.startDate || null;
   const filterEndDate = options.endDate || horizonEndDate;
+
+  // Non-loan recurring events project up to 10 years ahead (120 months) from current year
+  const defaultRecurringHorizonStr = format(addYears(new Date(), 10), 'yyyy-12-31');
+  const recurringHorizonDate = parseISO(
+    (options && options.recurringEndDate)
+      ? options.recurringEndDate
+      : (options && options.endDate && options.endDate < defaultRecurringHorizonStr ? options.endDate : defaultRecurringHorizonStr)
+  );
 
   const rawUniqueEvents = [];
   const recurringSeriesMap = new Map(); // seriesId -> array of versions
@@ -52,15 +79,7 @@ export function projectEvents(rawEvents = [], options = {}) {
 
   // 1. Classify raw events
   for (const ev of rawEvents) {
-    const isLoan =
-      ev.eventType === EventType.LOAN_INSTALLMENT ||
-      ev.category === LoanEventCategory.LOAN_INSTALLMENT ||
-      ev.isSystemLoanEvent ||
-      ev.eventType === EventType.AMORTIZATION ||
-      ev.category === AmortizationEventCategory.REDUCE_TERM ||
-      ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
-      (ev.timelineId && String(ev.timelineId).startsWith('tl-loan-')) ||
-      (ev.timelineOriginId && String(ev.timelineOriginId).startsWith('tl-loan-'));
+    const isLoan = checkIsLoan(ev);
 
     const normalizedRec = normalizeRecurrence(ev);
     const isRecurringEvent =
@@ -144,7 +163,7 @@ export function projectEvents(rawEvents = [], options = {}) {
       baseDate = new Date(2026, 0, 1);
     }
 
-    const horizonDate = parseISO(horizonEndDate);
+    const horizonDate = recurringHorizonDate;
     const dayOfMonth = rootVersion.dayOfMonth || baseDate.getDate() || 1;
 
     // A meta (targetAmount) da série de investimento deve ser sempre a da maior versão
@@ -299,7 +318,12 @@ export function projectEvents(rawEvents = [], options = {}) {
 
   return finalEvents.filter((ev) => {
     if (filterStartDate && ev.date < filterStartDate) return false;
-    if (filterEndDate && ev.date > filterEndDate) return false;
+    const isLoanEv = checkIsLoan(ev);
+    if (isLoanEv) {
+      if (ev.date > horizonEndDate) return false;
+    } else {
+      if (filterEndDate && ev.date > filterEndDate) return false;
+    }
     return true;
   });
 }

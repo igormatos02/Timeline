@@ -15,6 +15,7 @@ export default function ProjectTimelineHeader({
   timeline,
   allTimelines = [],
   events = [],
+  filteredEvents,
   onEdit,
   onDelete,
   onAddEvent
@@ -25,8 +26,9 @@ export default function ProjectTimelineHeader({
   if (!timeline) return null;
 
   const headerColor = timeline.color || TimelineColor.PROJECT;
-  const totalTasks = events.length;
-  const completedTasks = events.filter((e) => e.isCompleted || e.status === EventStatus.COMPLETED).length;
+  const rawEvents = filteredEvents !== undefined ? filteredEvents : events;
+  const totalTasks = rawEvents.length;
+  const completedTasks = rawEvents.filter((e) => e.isCompleted || e.status === EventStatus.COMPLETED).length;
   const pendingTasks = totalTasks - completedTasks;
 
   return (

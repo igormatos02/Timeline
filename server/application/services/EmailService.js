@@ -36,7 +36,11 @@ class EmailService {
     const client = this.getClient();
     const finalAcceptUrl = acceptUrl || `${this.appUrl}/?inviteTimeboardId=${encodeURIComponent(timeboardId)}&email=${encodeURIComponent(toEmail)}`;
 
-    const roleLabel = role === PersonRole.ADMIN ? t('backend.email.roleAdmin') : t('backend.email.roleContributor');
+    const roleLabel = role === PersonRole.ADMIN
+      ? t('backend.email.roleAdmin')
+      : role === PersonRole.INDIVIDUAL
+      ? t('backend.email.roleIndividual')
+      : t('backend.email.roleContributor');
     const cleanInviterName = inviterName || t('backend.email.defaultInviter');
     const cleanTbName = timeboardName || t('backend.email.timeboardLabel');
 

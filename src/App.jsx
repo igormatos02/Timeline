@@ -29,7 +29,7 @@ import {
 import { formatCurrency } from './utils/formatCurrency';
 import { generateUUID } from './utils/uuid.js';
 import * as api from './services/api';
-import { EventType, EventStatus, FollowupStatus, TimelineType, TimelineStatus, TimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem } from './enums/index.js';
+import { EventType, EventStatus, FollowupStatus, TimelineType, TimelineStatus, TimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem, PersonRole } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
@@ -221,6 +221,37 @@ export default function App() {
   }, [currentUser?.id]);
 
   const [rawEvents, setRawEvents] = useState([]);
+  const [currentUserPerson, setCurrentUserPerson] = useState(null);
+  const [timeboardPersons, setTimeboardPersons] = useState([]);
+
+  const reloadPersons = useCallback(() => {
+    if (!activeTimeboardId || !currentUser?.id) {
+      setCurrentUserPerson(null);
+      setTimeboardPersons([]);
+      return;
+    }
+    api.fetchPersons({ timeboardId: activeTimeboardId })
+      .then((persons) => {
+        if (Array.isArray(persons)) {
+          setTimeboardPersons(persons);
+          const match = persons.find(
+            (p) => (p.userId && p.userId === currentUser.id) ||
+                   (p.user_id && p.user_id === currentUser.id) ||
+                   (p.email && currentUser.email && p.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim())
+          );
+          setCurrentUserPerson(match || null);
+        } else {
+          setTimeboardPersons([]);
+        }
+      })
+      .catch(() => {
+        setTimeboardPersons([]);
+      });
+  }, [activeTimeboardId, currentUser?.id, currentUser?.email]);
+
+  useEffect(() => {
+    reloadPersons();
+  }, [reloadPersons]);
 
   // Modal states
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
@@ -514,9 +545,45 @@ export default function App() {
 
   // Events used for display — rawEvents enriched with virtual withdrawal income events
   const displayEvents = useMemo(() => {
-    if (!virtualWithdrawalEvents.length) return rawEvents;
-    return [...rawEvents, ...virtualWithdrawalEvents];
-  }, [rawEvents, virtualWithdrawalEvents]);
+    let events = !virtualWithdrawalEvents.length ? rawEvents : [...rawEvents, ...virtualWithdrawalEvents];
+
+    const isIndividual = activeTimeboard?.role === PersonRole.INDIVIDUAL || currentUserPerson?.role === PersonRole.INDIVIDUAL;
+    if (isIndividual) {
+      const currentPersonId = activeTimeboard?.personId || currentUserPerson?.id;
+      const currentObligatorId = (
+        activeTimeboard?.obligatorIdentification ||
+        currentUserPerson?.obligatorIdentification ||
+        currentUserPerson?.obligator_identification ||
+        ''
+      ).trim().toLowerCase();
+
+      events = events.filter((ev) => {
+        if (!ev) return false;
+        if (!ev.isObligation && !ev.is_obligation) return false;
+
+        const evPersonId = ev.obligationPersonId || ev.obligation_person_id;
+        if (currentPersonId && evPersonId && String(evPersonId) === String(currentPersonId)) {
+          return true;
+        }
+
+        const evObligatorId = (
+          ev.obligatorIdentification ||
+          ev.obligator_identification ||
+          ev.obligationPerson?.obligatorIdentification ||
+          ev.obligationPerson?.obligator_identification ||
+          ''
+        ).trim().toLowerCase();
+
+        if (currentObligatorId && evObligatorId && evObligatorId === currentObligatorId) {
+          return true;
+        }
+
+        return false;
+      });
+    }
+
+    return events;
+  }, [rawEvents, virtualWithdrawalEvents, activeTimeboard, currentUserPerson]);
 
   // Dynamic active timeline representation for the selected tab
   const activeTimeline = React.useMemo(() => {
@@ -2123,6 +2190,7 @@ export default function App() {
             activeTimeboard={activeTimeboard}
             activeFinancialTab={activeFinancialTab}
             pockets={pockets}
+            persons={timeboardPersons}
             onOpenCreatePocket={handleOpenCreatePocket}
             onEditPocket={handleOpenCreatePocket}
             onDeletePocket={handleRequestDeletePocket}
@@ -2219,6 +2287,7 @@ export default function App() {
           onClose={() => {
             setIsTimeboardSettingsModalOpen(false);
             setEditingTimeboard(null);
+            reloadPersons();
           }}
           timeboard={timeboards.find((t) => t.id === (editingTimeboard?.id || activeTimeboardId)) || editingTimeboard || activeTimeboard}
           onSaveTimeboard={handleSaveTimeboard}

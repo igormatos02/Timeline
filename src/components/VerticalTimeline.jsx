@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   format,
   parseISO,
@@ -73,7 +73,12 @@ import {
   Target,
   ArrowDownRight,
   Pencil,
-  Trash2
+  Trash2,
+  ChevronDown,
+  Users,
+  User,
+  Building2,
+  UserCheck
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
 import { compareEventsWithinDay } from '../utils/eventSorting.js';
@@ -98,6 +103,7 @@ import {
   AmortizationStrategy,
   EventPeriodicity,
   FollowupStatus,
+  PersonType,
   normalizePeriodicity,
   normalizeTimelineType,
   isLoanTimelineType,
@@ -155,6 +161,7 @@ function VerticalTimeline({
   activeTimeboard = null,
   activeFinancialTab = '',
   pockets = [],
+  persons = [],
   onOpenCreatePocket,
   onEditPocket,
   onDeletePocket,
@@ -198,9 +205,24 @@ function VerticalTimeline({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusFilters, setSelectedStatusFilters] = useState([]);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(EventStatus.ALL);
+  const [selectedEntityId, setSelectedEntityId] = useState(null);
   const [selectedLabelFilter, setSelectedLabelFilter] = useState(EventStatus.ALL);
   const [showEmptyDays, setShowEmptyDays] = useState(true);
   const [monthProjectionMode, setMonthProjectionMode] = useState('realized');
+  const [collapsedSections, setCollapsedSections] = useState({
+    timelines: false,
+    status: false,
+    integratedTimelines: false,
+    categories: false,
+    entities: false
+  });
+
+  const toggleSectionCollapse = (key) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
 
   const paletteTheme = useMemo(() => {
     return getPaletteTheme(timeline?.color, TimelineColor.PRIMARY);
@@ -224,6 +246,7 @@ function VerticalTimeline({
     setSelectedCategoryFilter(EventStatus.ALL);
     setSelectedStatusFilters([]);
     setSelectedExpenseCategories([]);
+    setSelectedEntityId(null);
   }, [timeline?.id]);
 
   const isFinancial = activeTimeboard?.type === TimeboardType.FINANCIAL || isFinancialTimeline;
@@ -661,10 +684,159 @@ function VerticalTimeline({
       !ev.date
     );
 
-  const pendingFloatingTasks = allEvents.filter(isFloatingTask);
+  const isEventMatchingEntity = useCallback((ev, targetEntityId) => {
+    if (!targetEntityId) return true;
+    if (!ev) return false;
+    const target = String(targetEntityId).trim().toLowerCase();
+
+    // Direct IDs and foreign keys across schemas
+    const candidateIds = [
+      ev.obligationPersonId,
+      ev.obligation_person_id,
+      ev.personId,
+      ev.person_id,
+      ev.obligationPerson?.id,
+      ev.obligationPerson?.personId,
+      ev.obligation_person?.id,
+      ev.obligation_person?.person_id,
+      ev.person?.id
+    ].filter(Boolean).map((v) => String(v).trim().toLowerCase());
+
+    if (candidateIds.includes(target)) return true;
+
+    // Names
+    const candidateNames = [
+      ev.obligationPersonName,
+      ev.obligation_person_name,
+      ev.obligationPerson?.personName,
+      ev.obligationPerson?.person_name,
+      ev.obligationPerson?.name,
+      ev.obligation_person?.personName,
+      ev.obligation_person?.person_name,
+      ev.obligation_person?.name,
+      ev.person?.name,
+      ev.person?.personName
+    ].filter(Boolean).map((v) => String(v).trim().toLowerCase());
+
+    if (candidateNames.some((n) => n === target || n.includes(target) || target.includes(n))) return true;
+
+    // Identifications / NIF / CPF
+    const candidateCodes = [
+      ev.obligatorIdentification,
+      ev.obligator_identification,
+      ev.obligationIdentifier,
+      ev.obligation_identifier,
+      ev.obligationPerson?.obligatorIdentification,
+      ev.obligationPerson?.obligator_identification,
+      ev.obligationPerson?.identification,
+      ev.obligation_person?.obligatorIdentification,
+      ev.obligation_person?.obligator_identification,
+      ev.obligation_person?.identification
+    ].filter(Boolean).map((v) => String(v).trim().toLowerCase());
+
+    if (candidateCodes.includes(target)) return true;
+
+    // Cross reference with timeboardPersons
+    for (const pid of candidateIds) {
+      const matched = (persons || []).find((p) => String(p.id).trim().toLowerCase() === pid);
+      if (matched) {
+        const mName = String(matched.personName || matched.person_name || matched.name || '').trim().toLowerCase();
+        const mCode = String(matched.obligatorIdentification || matched.obligator_identification || matched.identification || '').trim().toLowerCase();
+        if (mName && (mName === target || mName.includes(target) || target.includes(mName))) return true;
+        if (mCode && mCode === target) return true;
+      }
+    }
+
+    // Reverse: if targetEntityId is person id, check if candidate names match that person
+    const targetPerson = (persons || []).find((p) => String(p.id).trim().toLowerCase() === target);
+    if (targetPerson) {
+      const tpName = String(targetPerson.personName || targetPerson.person_name || targetPerson.name || '').trim().toLowerCase();
+      const tpCode = String(targetPerson.obligatorIdentification || targetPerson.obligator_identification || targetPerson.identification || '').trim().toLowerCase();
+      if (tpName && candidateNames.some((n) => n === tpName || n.includes(tpName) || tpName.includes(n))) return true;
+      if (tpCode && candidateCodes.includes(tpCode)) return true;
+    }
+
+    return false;
+  }, [persons]);
+
+  const pendingFloatingTasks = useMemo(() => {
+    return allEvents.filter((ev) => {
+      if (!isFloatingTask(ev)) return false;
+      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return false;
+      return true;
+    });
+  }, [allEvents, selectedEntityId, isEventMatchingEntity]);
 
   // Events that belong on the timeline (have dates, or completed, or non-floating)
   const timelineEvents = allEvents.filter((ev) => !isFloatingTask(ev));
+
+  // Extract unique entities referenced across timeline events
+  const timelineEntities = useMemo(() => {
+    if (!timelineEvents || timelineEvents.length === 0) return [];
+    const entityMap = new Map();
+
+    timelineEvents.forEach((ev) => {
+      if (!ev || ev.isDeleted) return;
+      const pId = ev.obligationPersonId || ev.obligation_person_id;
+      const pObj = ev.obligationPerson || ev.obligation_person;
+
+      if (pId) {
+        const idKey = String(pId);
+        if (!entityMap.has(idKey)) {
+          const matched = (persons || []).find((p) => String(p.id) === idKey);
+          const matchedName = matched?.personName || matched?.person_name || matched?.name || '';
+          const pObjName = pObj?.personName || pObj?.person_name || pObj?.name || '';
+          const evName = ev.obligationPersonName || ev.obligation_person_name || '';
+          const idCode = matched?.obligatorIdentification || matched?.obligator_identification || matched?.identification || pObj?.obligatorIdentification || pObj?.obligator_identification || pObj?.identification || ev.obligatorIdentification || ev.obligator_identification || ev.obligationIdentifier || ev.obligation_identifier || '';
+
+          const finalName = matchedName || pObjName || evName || idCode || idKey;
+          const finalType = matched?.type || pObj?.type || PersonType.PERSON;
+
+          entityMap.set(idKey, {
+            id: idKey,
+            name: finalName,
+            type: finalType,
+            identification: idCode
+          });
+        }
+      } else if (pObj && (pObj.id || pObj.personName || pObj.person_name || pObj.name)) {
+        const idKey = String(pObj.id || pObj.personName || pObj.person_name || pObj.name);
+        if (!entityMap.has(idKey)) {
+          const pObjName = pObj.personName || pObj.person_name || pObj.name || '';
+          const evName = ev.obligationPersonName || ev.obligation_person_name || '';
+          const idCode = pObj.obligatorIdentification || pObj.obligator_identification || pObj.identification || ev.obligatorIdentification || ev.obligator_identification || '';
+          const finalName = pObjName || evName || idCode || idKey;
+
+          entityMap.set(idKey, {
+            id: idKey,
+            name: finalName,
+            type: pObj.type || PersonType.PERSON,
+            identification: idCode
+          });
+        }
+      } else if (ev.obligationPersonName || ev.obligation_person_name || ev.obligatorIdentification || ev.obligator_identification) {
+        const idKey = String(ev.obligationPersonName || ev.obligation_person_name || ev.obligatorIdentification || ev.obligator_identification);
+        if (!entityMap.has(idKey)) {
+          const finalName = ev.obligationPersonName || ev.obligation_person_name || ev.obligatorIdentification || ev.obligator_identification || idKey;
+          entityMap.set(idKey, {
+            id: idKey,
+            name: finalName,
+            type: PersonType.PERSON,
+            identification: ev.obligatorIdentification || ev.obligator_identification || ''
+          });
+        }
+      }
+    });
+
+    return Array.from(entityMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+  }, [timelineEvents, persons]);
+
+
+  const getEntityIcon = (type) => {
+    if (type === PersonType.ORGANIZATION) return <Building2 size={13} style={{ color: TimelineColor.CYAN }} />;
+    if (type === PersonType.MEMBER) return <UserCheck size={13} style={{ color: TimelineColor.SUCCESS }} />;
+    return <User size={13} style={{ color: TimelineColor.PRIMARY }} />;
+  };
 
   // Only display categories in the sidebar filter that have at least one existing event
   const availableExpenseCategoryItems = useMemo(() => {
@@ -925,6 +1097,10 @@ function VerticalTimeline({
         return false;
       }
 
+      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) {
+        return false;
+      }
+
       // Timeline ownership filter
       if (timeline.type === TimelineType.BALANCE) {
         const isNonFinancial =
@@ -978,6 +1154,7 @@ function VerticalTimeline({
     selectedStatusFilters,
     selectedCategoryFilter,
     selectedExpenseCategories,
+    selectedEntityId,
     selectedLabelFilter,
     selectedTimelineIds,
     timeline.type,
@@ -1245,6 +1422,7 @@ function VerticalTimeline({
       if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
       if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
+      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
@@ -1257,7 +1435,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
+  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total projected loan payments per month across all events in timeboard scope
   const monthLoansTotalMap = useMemo(() => {
@@ -1266,7 +1444,7 @@ function VerticalTimeline({
       if (!ev || !ev.date || ev.isDeleted) return;
       if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida) return;
       if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
-      if (!isEventTimelineActive(ev)) return;
+      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
@@ -1279,7 +1457,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
+  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total projected income per month across all events in timeboard scope
   const monthIncomeTotalMap = useMemo(() => {
@@ -1289,6 +1467,7 @@ function VerticalTimeline({
       if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
       if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
+      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
@@ -1302,7 +1481,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
+  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total projected investments per month across all events in timeboard scope (for badge display)
   const monthInvestmentsTotalMap = useMemo(() => {
@@ -1311,7 +1490,7 @@ function VerticalTimeline({
       if (!ev || !ev.date || ev.isDeleted) return;
       if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
       if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
-      if (!isEventTimelineActive(ev)) return;
+      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
@@ -1338,7 +1517,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
+  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total deductible investments from monthly income (excludes external deposits)
   const monthInvestmentsDeductionsMap = useMemo(() => {
@@ -1348,6 +1527,7 @@ function VerticalTimeline({
       if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
       if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
+      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
@@ -1377,7 +1557,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
+  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total external deposits / investments per month (excluded from monthly income deduction)
   const monthInvestmentsExternalMap = useMemo(() => {
@@ -1387,6 +1567,7 @@ function VerticalTimeline({
       if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
       if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
+      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
@@ -1416,7 +1597,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
+  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total realized expenses per month (only positive/paid statuses)
   const monthExpensesRealizedMap = useMemo(() => {
@@ -1426,6 +1607,7 @@ function VerticalTimeline({
       if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
       if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
+      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
@@ -1441,7 +1623,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
+  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total realized loan payments per month
   const monthLoansRealizedMap = useMemo(() => {
@@ -1451,6 +1633,7 @@ function VerticalTimeline({
       if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida) return;
       if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
+      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
@@ -1469,7 +1652,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
+  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total realized income per month
   const monthIncomeRealizedMap = useMemo(() => {
@@ -1479,6 +1662,7 @@ function VerticalTimeline({
       if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
       if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
+      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
@@ -1495,7 +1679,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
+  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total realized investments per month
   const monthInvestmentsRealizedMap = useMemo(() => {
@@ -1505,6 +1689,7 @@ function VerticalTimeline({
       if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
       if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
+      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
@@ -1534,7 +1719,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
+  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total realized deductible investments per month
   const monthInvestmentsDeductionsRealizedMap = useMemo(() => {
@@ -1544,6 +1729,7 @@ function VerticalTimeline({
       if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
       if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
+      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
@@ -1576,7 +1762,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
+  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   // Pre-calculate total realized external investments per month
   const monthInvestmentsExternalRealizedMap = useMemo(() => {
@@ -1586,6 +1772,7 @@ function VerticalTimeline({
       if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
       if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
       if (!isEventTimelineActive(ev)) return;
+      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
       if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
         if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
       }
@@ -1618,7 +1805,7 @@ function VerticalTimeline({
       }
     });
     return map;
-  }, [timelineEvents, selectedTimelineIds, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
+  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
   const monthsList = useMemo(() => {
     const monthMap = new Map();
@@ -2843,10 +3030,24 @@ function VerticalTimeline({
         {/* 🌟 0. Timelines do Timeboard vindas da Base de Dados */}
         {((timelines && timelines.length > 0) || (timeline?.timelines && timeline.timelines.length > 0)) && (
           <div className="sidebar-section">
-            <div className="sidebar-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>{t('sidebar.timelines')}</span>
+            <div
+              className="sidebar-section-title"
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              onClick={() => toggleSectionCollapse('timelines')}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ChevronDown
+                  size={13}
+                  style={{
+                    transform: collapsedSections['timelines'] ? 'rotate(-90deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.18s ease',
+                    color: 'var(--text-muted)'
+                  }}
+                />
+                <span>{t('sidebar.timelines')}</span>
+              </div>
               {onCreateTimeline && (
-                <div ref={timelineDropdownRef} style={{ position: 'relative', display: 'inline-block' }}>
+                <div ref={timelineDropdownRef} onClick={(e) => e.stopPropagation()} style={{ position: 'relative', display: 'inline-block' }}>
                   <button
                     type="button"
                     onClick={() => setIsTimelineDropdownOpen((prev) => !prev)}
@@ -2938,7 +3139,8 @@ function VerticalTimeline({
                 </div>
               )}
             </div>
-            <div className="sidebar-btn-group">
+            {!collapsedSections['timelines'] && (
+              <div className="sidebar-btn-group">
               {((timelines && timelines.length > 0) ? timelines : (timeline?.timelines || [])).map((tl, tlIdx) => {
                 const isActive = activeFinancialTab === tl.id || timeline?.id === tl.id;
                 const tlColor = tl.color;
@@ -3004,8 +3206,9 @@ function VerticalTimeline({
                 );
               })}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
         {/* 1. Search Box */}
         <div className="sidebar-section">
@@ -3030,13 +3233,30 @@ function VerticalTimeline({
 
         {/* 3. Estado Filter (Multi-Selection) */}
         <div className="sidebar-section">
-          <div className="sidebar-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{t('sidebar.status')}</span>
+          <div
+            className="sidebar-section-title"
+            style={{ cursor: 'pointer', userSelect: 'none' }}
+            onClick={() => toggleSectionCollapse('status')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <ChevronDown
+                size={13}
+                style={{
+                  transform: collapsedSections['status'] ? 'rotate(-90deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.18s ease',
+                  color: 'var(--text-muted)'
+                }}
+              />
+              <span>{t('sidebar.status')}</span>
+            </div>
             {selectedStatusFilters.length > 0 && (
               <button
                 type="button"
                 className="sidebar-action-link"
-                onClick={selectAllStatuses}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  selectAllStatuses();
+                }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -3051,36 +3271,55 @@ function VerticalTimeline({
               </button>
             )}
           </div>
-          <div className="sidebar-btn-group">
-            {getStatusFilterOptions().map((st, stIdx) => {
-              const isAllOption = st.id === EventStatus.ALL;
-              const isSelected = isAllOption ? selectedStatusFilters.length === 0 : selectedStatusFilters.includes(st.id);
-              return (
-                <button
-                  key={st.id || `st-${stIdx}`}
-                  type="button"
-                  className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
-                  onClick={() => toggleStatusFilter(st.id)}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {st.icon}
-                    <span>{st.name}</span>
-                  </div>
-                  {renderFilterSwitch(isSelected, 'var(--primary)')}
-                </button>
-              );
-            })}
-          </div>
+          {!collapsedSections['status'] && (
+            <div className="sidebar-btn-group">
+              {getStatusFilterOptions().map((st, stIdx) => {
+                const isAllOption = st.id === EventStatus.ALL;
+                const isSelected = isAllOption ? selectedStatusFilters.length === 0 : selectedStatusFilters.includes(st.id);
+                return (
+                  <button
+                    key={st.id || `st-${stIdx}`}
+                    type="button"
+                    className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
+                    onClick={() => toggleStatusFilter(st.id)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {st.icon}
+                      <span>{st.name}</span>
+                    </div>
+                    {renderFilterSwitch(isSelected, 'var(--primary)')}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* 4. Timelines Filter (Multi-Selection for Balance) */}
         {timeline.type === TimelineType.BALANCE && (
           <div className="sidebar-section">
-            <div className="sidebar-section-title">
-              <span>{t('sidebar.integratedTimelines')}</span>
+            <div
+              className="sidebar-section-title"
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              onClick={() => toggleSectionCollapse('integratedTimelines')}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ChevronDown
+                  size={13}
+                  style={{
+                    transform: collapsedSections['integratedTimelines'] ? 'rotate(-90deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.18s ease',
+                    color: 'var(--text-muted)'
+                  }}
+                />
+                <span>{t('sidebar.integratedTimelines')}</span>
+              </div>
               <button
                 type="button"
-                onClick={selectAllTimelines}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  selectAllTimelines();
+                }}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -3093,26 +3332,28 @@ function VerticalTimeline({
                 {selectedTimelineIds.length === availableCreditOptions.length ? t('buttons.deselectAll') : t('buttons.all')}
               </button>
             </div>
-            <div className="sidebar-btn-group">
-              {availableCreditOptions.map((opt, optIdx) => {
-                const isSelected = selectedTimelineIds.includes(opt.id);
-                return (
-                  <button
-                    key={opt.id || `opt-credit-${optIdx}`}
-                    type="button"
-                    className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
-                    onClick={() => toggleTimelineSelection(opt.id)}
-                    style={isSelected ? { borderColor: opt.color } : { opacity: 0.6 }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: opt.color }} />
-                      <span>{opt.name}</span>
-                    </div>
-                    {renderFilterSwitch(isSelected, opt.color)}
-                  </button>
-                );
-              })}
-            </div>
+            {!collapsedSections['integratedTimelines'] && (
+              <div className="sidebar-btn-group">
+                {availableCreditOptions.map((opt, optIdx) => {
+                  const isSelected = selectedTimelineIds.includes(opt.id);
+                  return (
+                    <button
+                      key={opt.id || `opt-credit-${optIdx}`}
+                      type="button"
+                      className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
+                      onClick={() => toggleTimelineSelection(opt.id)}
+                      style={isSelected ? { borderColor: opt.color } : { opacity: 0.6 }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: opt.color }} />
+                        <span>{opt.name}</span>
+                      </div>
+                      {renderFilterSwitch(isSelected, opt.color)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -3120,13 +3361,30 @@ function VerticalTimeline({
         {timeline.type === TimelineType.EXPENSE ? (
           availableExpenseCategoryItems.length > 0 && (
             <div className="sidebar-section">
-              <div className="sidebar-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>{t('sidebar.categoryType')}</span>
+              <div
+                className="sidebar-section-title"
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+                onClick={() => toggleSectionCollapse('categories')}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <ChevronDown
+                    size={13}
+                    style={{
+                      transform: collapsedSections['categories'] ? 'rotate(-90deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.18s ease',
+                      color: 'var(--text-muted)'
+                    }}
+                  />
+                  <span>{t('sidebar.categoryType')}</span>
+                </div>
                 {selectedExpenseCategories.length > 0 && (
                   <button
                     type="button"
                     className="sidebar-action-link"
-                    onClick={selectAllExpenseCategories}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      selectAllExpenseCategories();
+                    }}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -3141,80 +3399,190 @@ function VerticalTimeline({
                   </button>
                 )}
               </div>
-              <div className="sidebar-btn-group" style={{ maxHeight: '320px', overflowY: 'auto', paddingRight: '2px' }}>
-                {/* Opção "Todas as Categorias" */}
-                <button
-                  type="button"
-                  className={`sidebar-filter-item ${selectedExpenseCategories.length === 0 ? 'active' : ''}`}
-                  onClick={() => setSelectedExpenseCategories([])}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Layers size={13} />
-                    <span>{t('sidebar.allCategories')}</span>
-                  </div>
-                  {renderFilterSwitch(selectedExpenseCategories.length === 0, 'var(--primary)')}
-                </button>
+              {!collapsedSections['categories'] && (
+                <div className="sidebar-btn-group" style={{ maxHeight: '320px', overflowY: 'auto', paddingRight: '2px' }}>
+                  {/* Opção "Todas as Categorias" */}
+                  <button
+                    type="button"
+                    className={`sidebar-filter-item ${selectedExpenseCategories.length === 0 ? 'active' : ''}`}
+                    onClick={() => setSelectedExpenseCategories([])}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Layers size={13} />
+                      <span>{t('sidebar.allCategories')}</span>
+                    </div>
+                    {renderFilterSwitch(selectedExpenseCategories.length === 0, 'var(--primary)')}
+                  </button>
 
-                {/* Lista de Categorias de Despesas que possuem eventos */}
-                {availableExpenseCategoryItems.map((cat, catIdx) => {
-                  const isSelected = selectedExpenseCategories.includes(cat.id);
-                  const IconComponent = cat.icon;
-                  return (
-                    <button
-                      key={cat.id || `exp-cat-${catIdx}`}
-                      type="button"
-                      className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
-                      onClick={() => toggleExpenseCategory(cat.id)}
-                      style={isSelected ? { borderColor: `${cat.color}66` } : {}}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ color: cat.color, display: 'inline-flex', alignItems: 'center' }}>
-                          <IconComponent size={13} />
-                        </span>
-                        <span>{t(`expenseCategories.${cat.id}`)}</span>
-                      </div>
-                      {renderFilterSwitch(isSelected, cat.color)}
-                    </button>
-                  );
-                })}
-              </div>
+                  {/* Lista de Categorias de Despesas que possuem eventos */}
+                  {availableExpenseCategoryItems.map((cat, catIdx) => {
+                    const isSelected = selectedExpenseCategories.includes(cat.id);
+                    const IconComponent = cat.icon;
+                    return (
+                      <button
+                        key={cat.id || `exp-cat-${catIdx}`}
+                        type="button"
+                        className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
+                        onClick={() => toggleExpenseCategory(cat.id)}
+                        style={isSelected ? { borderColor: `${cat.color}66` } : {}}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ color: cat.color, display: 'inline-flex', alignItems: 'center' }}>
+                            <IconComponent size={13} />
+                          </span>
+                          <span>{t(`expenseCategories.${cat.id}`)}</span>
+                        </div>
+                        {renderFilterSwitch(isSelected, cat.color)}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )
         ) : timeline.type !== TimelineType.BALANCE && (
           availableCategoryOptions.length > 1 && (
             <div className="sidebar-section">
-              <div className="sidebar-section-title">
-                <span>{timeline.type === TimelineType.INVESTMENT ? t('pocket.filterByPockets') : t('sidebar.categoryType')}</span>
+              <div
+                className="sidebar-section-title"
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+                onClick={() => toggleSectionCollapse('categories')}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <ChevronDown
+                    size={13}
+                    style={{
+                      transform: collapsedSections['categories'] ? 'rotate(-90deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.18s ease',
+                      color: 'var(--text-muted)'
+                    }}
+                  />
+                  <span>{timeline.type === TimelineType.INVESTMENT ? t('pocket.filterByPockets') : t('sidebar.categoryType')}</span>
+                </div>
               </div>
-              <div className="sidebar-btn-group">
-                {availableCategoryOptions.map((cat, catIdx) => {
-                  const isSelected = selectedCategoryFilter === cat.id;
+              {!collapsedSections['categories'] && (
+                <div className="sidebar-btn-group">
+                  {availableCategoryOptions.map((cat, catIdx) => {
+                    const isSelected = selectedCategoryFilter === cat.id;
+                    return (
+                      <button
+                        key={cat.id || `cat-filter-${catIdx}`}
+                        type="button"
+                        className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
+                        onClick={() => {
+                          if (!isListView && cat.id !== EventStatus.ALL) {
+                            window.scrollTo({ top: 0, behavior: 'instant' });
+                          }
+                          setSelectedCategoryFilter(cat.id);
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {cat.icon}
+                          <span>{cat.name}</span>
+                        </div>
+                        {renderFilterSwitch(isSelected, 'var(--primary)')}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        )}
+
+        {/* 🌟 6. Entidades / Individuals Filter (Single Selection) */}
+        {timelineEntities.length > 0 && (
+          <div className="sidebar-section">
+            <div
+              className="sidebar-section-title"
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              onClick={() => toggleSectionCollapse('entities')}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ChevronDown
+                  size={13}
+                  style={{
+                    transform: collapsedSections['entities'] ? 'rotate(-90deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.18s ease',
+                    color: 'var(--text-muted)'
+                  }}
+                />
+                <span>{t('sidebar.entities')}</span>
+              </div>
+              {selectedEntityId && (
+                <button
+                  type="button"
+                  className="sidebar-action-link"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedEntityId(null);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--primary-light)',
+                    cursor: 'pointer',
+                    fontSize: '0.72rem',
+                    padding: 0,
+                    fontWeight: '700'
+                  }}
+                >
+                  {t('buttons.all')}
+                </button>
+              )}
+            </div>
+
+            {!collapsedSections['entities'] && (
+              <div className="sidebar-btn-group" style={{ maxHeight: '260px', overflowY: 'auto', paddingRight: '2px' }}>
+                {/* Opção "Todas as Entidades" */}
+                <button
+                  type="button"
+                  className={`sidebar-filter-item ${!selectedEntityId ? 'active' : ''}`}
+                  onClick={() => setSelectedEntityId(null)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Users size={13} />
+                    <span>{t('sidebar.allEntities')}</span>
+                  </div>
+                  {renderFilterSwitch(!selectedEntityId, 'var(--primary)')}
+                </button>
+
+                {/* Lista de Entidades que possuem eventos nesta timeline */}
+                {timelineEntities.map((ent) => {
+                  const isSelected = String(selectedEntityId) === String(ent.id);
                   return (
                     <button
-                      key={cat.id || `cat-filter-${catIdx}`}
+                      key={ent.id}
                       type="button"
                       className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
-                      onClick={() => {
-                        if (!isListView && cat.id !== EventStatus.ALL) {
-                          window.scrollTo({ top: 0, behavior: 'instant' });
-                        }
-                        setSelectedCategoryFilter(cat.id);
-                      }}
+                      onClick={() => setSelectedEntityId((prev) => (String(prev) === String(ent.id) ? null : ent.id))}
+                      title={ent.name}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {cat.icon}
-                        <span>{cat.name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
+                          {getEntityIcon(ent.type)}
+                        </span>
+                        <span
+                          style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            fontSize: '0.8rem'
+                          }}
+                        >
+                          {ent.name}
+                        </span>
                       </div>
                       {renderFilterSwitch(isSelected, 'var(--primary)')}
                     </button>
                   );
                 })}
               </div>
-            </div>
-          )
+            )}
+          </div>
         )}
 
-        {/* 6. Períodos Vazios Toggle */}
+        {/* 7. Períodos Vazios Toggle */}
         <div className="sidebar-section">
           <div
             className="sidebar-filter-item"
@@ -3236,10 +3604,13 @@ function VerticalTimeline({
         <div className="sticky-header-dock">
           {React.isValidElement(headerComponent)
             ? React.cloneElement(headerComponent, {
-              filteredEvents: (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) || (timeline.type === TimelineType.INVESTMENT && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') || (timeline.type === TimelineType.INCOME && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') ? filteredEvents : undefined,
+              filteredEvents: Boolean(selectedEntityId) || (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) || (timeline.type === TimelineType.INVESTMENT && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') || (timeline.type === TimelineType.INCOME && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') ? filteredEvents : undefined,
+              events: Boolean(selectedEntityId) ? filteredEvents : undefined,
+              allEvents: Boolean(selectedEntityId) ? (timeline.type === TimelineType.BALANCE ? filteredEvents : undefined) : undefined,
               selectedExpenseCategories: timeline.type === TimelineType.EXPENSE ? selectedExpenseCategories : undefined,
               selectedCategoryFilter: (timeline.type === TimelineType.INVESTMENT || timeline.type === TimelineType.INCOME) ? selectedCategoryFilter : undefined,
               selectedPocketId: timeline.type === TimelineType.INVESTMENT && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos' ? selectedCategoryFilter : undefined,
+              selectedEntityId,
               monthExpensesTotalMap,
               monthLoansTotalMap,
               monthIncomeTotalMap,

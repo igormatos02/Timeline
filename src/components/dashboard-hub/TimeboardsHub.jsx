@@ -163,6 +163,8 @@ export default function TimeboardsHub({
                   <span>
                     {tb.role === PersonRole.ADMIN
                       ? t('timeboardSettings.entities.roles.admin')
+                      : tb.role === PersonRole.INDIVIDUAL
+                      ? t('timeboardSettings.entities.roles.individual')
                       : tb.role === PersonRole.CONTRIBUTOR
                       ? t('timeboardSettings.entities.roles.contributor')
                       : t('timeboardModal.typeShared')}

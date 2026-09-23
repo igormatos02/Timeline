@@ -334,6 +334,11 @@ export class FinancialEventService {
       if (filter.status && ev.status !== filter.status) return false;
       if (filter.startDate && ev.date < filter.startDate) return false;
       if (filter.endDate && ev.date > filter.endDate) return false;
+      if (filter.obligationPersonId && String(ev.obligationPersonId || ev.obligation_person_id) !== String(filter.obligationPersonId)) return false;
+      if (filter.obligatorIdentification) {
+        const evObligatorId = String(ev.obligatorIdentification || ev.obligator_identification || '').trim().toLowerCase();
+        if (evObligatorId !== String(filter.obligatorIdentification).trim().toLowerCase()) return false;
+      }
       return true;
     });
 

@@ -308,7 +308,12 @@ export default function TimeboardSettingsModal({
     try {
       setPersons((prev) => prev.map((p) => (p.id === personId ? { ...p, role: newRole } : p)));
       await api.updatePerson(personId, { role: newRole, timeboardId: timeboard.id });
-      showToast(`Função atualizada para ${newRole === PersonRole.ADMIN ? 'Administrador' : 'Colaborador'}.`);
+      const roleName = newRole === PersonRole.ADMIN
+        ? t('timeboardSettings.entities.roles.admin')
+        : newRole === PersonRole.INDIVIDUAL
+        ? t('timeboardSettings.entities.roles.individual')
+        : t('timeboardSettings.entities.roles.contributor');
+      showToast(t('timeboardSettings.entities.roleUpdatedToast', { role: roleName }));
     } catch (err) {
       console.error('Failed to change role:', err);
       loadPersons(timeboard.id);
@@ -1903,17 +1908,17 @@ export default function TimeboardSettingsModal({
               {/* Role Selector (Premium Custom Cards Selector) - Only for Members */}
               {entityForm.type === PersonType.MEMBER && (
                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
-                    {t('timeboardSettings.entities.form.roleLabel') || 'Função (Role) *'}
+                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                    {t('timeboardSettings.entities.form.roleLabel')}
                   </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
                     {/* Admin Option */}
                     <div
                       onClick={() => setEntityForm({ ...entityForm, role: PersonRole.ADMIN })}
                       style={{
                         padding: '12px',
                         borderRadius: '10px',
-                        border: entityForm.role === PersonRole.ADMIN ? '1.5px solid #f59e0b' : '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
+                        border: entityForm.role === PersonRole.ADMIN ? `1.5px solid ${TimelineColor.WARNING}` : '1px solid var(--border-glass)',
                         background: entityForm.role === PersonRole.ADMIN ? 'rgba(245, 158, 11, 0.12)' : 'rgba(255, 255, 255, 0.03)',
                         cursor: 'pointer',
                         display: 'flex',
@@ -1924,18 +1929,18 @@ export default function TimeboardSettingsModal({
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fbbf24', fontWeight: '700', fontSize: '0.86rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: TimelineColor.WARNING, fontWeight: '700', fontSize: '0.86rem' }}>
                           <Crown size={15} />
-                          <span>{t('timeboardSettings.entities.roles.admin') || 'Administrador'}</span>
+                          <span>{t('timeboardSettings.entities.roles.admin')}</span>
                         </div>
                         {entityForm.role === PersonRole.ADMIN && (
-                          <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>
+                          <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: TimelineColor.WARNING, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg-app)' }}>
                             <Check size={11} strokeWidth={3} />
                           </div>
                         )}
                       </div>
                       <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        Acesso total e gestão
+                        {t('timeboardSettings.entities.rolesDesc.admin')}
                       </span>
                     </div>
 
@@ -1945,7 +1950,7 @@ export default function TimeboardSettingsModal({
                       style={{
                         padding: '12px',
                         borderRadius: '10px',
-                        border: entityForm.role === PersonRole.CONTRIBUTOR ? '1.5px solid #6366f1' : '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
+                        border: entityForm.role === PersonRole.CONTRIBUTOR ? `1.5px solid ${TimelineColor.PRIMARY}` : '1px solid var(--border-glass)',
                         background: entityForm.role === PersonRole.CONTRIBUTOR ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.03)',
                         cursor: 'pointer',
                         display: 'flex',
@@ -1956,18 +1961,50 @@ export default function TimeboardSettingsModal({
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#a5b4fc', fontWeight: '700', fontSize: '0.86rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: TimelineColor.PRIMARY_LIGHT, fontWeight: '700', fontSize: '0.86rem' }}>
                           <Users size={15} />
-                          <span>{t('timeboardSettings.entities.roles.contributor') || 'Colaborador'}</span>
+                          <span>{t('timeboardSettings.entities.roles.contributor')}</span>
                         </div>
                         {entityForm.role === PersonRole.CONTRIBUTOR && (
-                          <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                          <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: TimelineColor.PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-main)' }}>
                             <Check size={11} strokeWidth={3} />
                           </div>
                         )}
                       </div>
                       <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        Editar e visualizar eventos
+                        {t('timeboardSettings.entities.rolesDesc.contributor')}
+                      </span>
+                    </div>
+
+                    {/* Individual Option */}
+                    <div
+                      onClick={() => setEntityForm({ ...entityForm, role: PersonRole.INDIVIDUAL })}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '10px',
+                        border: entityForm.role === PersonRole.INDIVIDUAL ? `1.5px solid ${TimelineColor.CYAN}` : '1px solid var(--border-glass)',
+                        background: entityForm.role === PersonRole.INDIVIDUAL ? 'rgba(6, 182, 212, 0.12)' : 'rgba(255, 255, 255, 0.03)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px',
+                        transition: 'all 0.2s ease',
+                        boxShadow: entityForm.role === PersonRole.INDIVIDUAL ? '0 0 16px rgba(6, 182, 212, 0.2)' : 'none'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: TimelineColor.CYAN, fontWeight: '700', fontSize: '0.86rem' }}>
+                          <UserCheck size={15} />
+                          <span>{t('timeboardSettings.entities.roles.individual')}</span>
+                        </div>
+                        {entityForm.role === PersonRole.INDIVIDUAL && (
+                          <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: TimelineColor.CYAN, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg-app)' }}>
+                            <Check size={11} strokeWidth={3} />
+                          </div>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        {t('timeboardSettings.entities.rolesDesc.individual')}
                       </span>
                     </div>
                   </div>
@@ -2259,18 +2296,18 @@ export default function TimeboardSettingsModal({
 
               {/* Role Selection */}
               <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ fontSize: '0.84rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
-                  {t('timeboardSettings.entities.inviteModal.roleLabel') || 'Função / Permissão a Conceder'}
+                <label style={{ fontSize: '0.84rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                  {t('timeboardSettings.entities.inviteModal.roleLabel')}
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
                   {/* Contributor Option */}
                   <div
                     onClick={() => setInviteRole(PersonRole.CONTRIBUTOR)}
                     style={{
                       padding: '12px',
                       borderRadius: '10px',
-                      border: inviteRole === PersonRole.CONTRIBUTOR ? '1.5px solid #6366f1' : '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
-                      background: inviteRole === PersonRole.CONTRIBUTOR ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-app, rgba(255, 255, 255, 0.02))',
+                      border: inviteRole === PersonRole.CONTRIBUTOR ? `1.5px solid ${TimelineColor.PRIMARY}` : '1px solid var(--border-glass)',
+                      background: inviteRole === PersonRole.CONTRIBUTOR ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-app)',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
@@ -2280,18 +2317,50 @@ export default function TimeboardSettingsModal({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#a5b4fc', fontWeight: '700', fontSize: '0.86rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: TimelineColor.PRIMARY_LIGHT, fontWeight: '700', fontSize: '0.86rem' }}>
                         <Users size={15} />
-                        <span>{t('timeboardSettings.entities.roles.contributor') || 'Colaborador'}</span>
+                        <span>{t('timeboardSettings.entities.roles.contributor')}</span>
                       </div>
                       {inviteRole === PersonRole.CONTRIBUTOR && (
-                        <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                        <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: TimelineColor.PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-main)' }}>
                           <Check size={11} strokeWidth={3} />
                         </div>
                       )}
                     </div>
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                      Editar & visualizar eventos
+                      {t('timeboardSettings.entities.rolesDesc.contributor')}
+                    </span>
+                  </div>
+
+                  {/* Individual Option */}
+                  <div
+                    onClick={() => setInviteRole(PersonRole.INDIVIDUAL)}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '10px',
+                      border: inviteRole === PersonRole.INDIVIDUAL ? `1.5px solid ${TimelineColor.CYAN}` : '1px solid var(--border-glass)',
+                      background: inviteRole === PersonRole.INDIVIDUAL ? 'rgba(6, 182, 212, 0.12)' : 'var(--bg-app)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      transition: 'all 0.2s ease',
+                      boxShadow: inviteRole === PersonRole.INDIVIDUAL ? '0 0 16px rgba(6, 182, 212, 0.2)' : 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: TimelineColor.CYAN, fontWeight: '700', fontSize: '0.86rem' }}>
+                        <UserCheck size={15} />
+                        <span>{t('timeboardSettings.entities.roles.individual')}</span>
+                      </div>
+                      {inviteRole === PersonRole.INDIVIDUAL && (
+                        <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: TimelineColor.CYAN, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg-app)' }}>
+                          <Check size={11} strokeWidth={3} />
+                        </div>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      {t('timeboardSettings.entities.rolesDesc.individual')}
                     </span>
                   </div>
 
@@ -2301,8 +2370,8 @@ export default function TimeboardSettingsModal({
                     style={{
                       padding: '12px',
                       borderRadius: '10px',
-                      border: inviteRole === PersonRole.ADMIN ? '1.5px solid #f59e0b' : '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
-                      background: inviteRole === PersonRole.ADMIN ? 'rgba(245, 158, 11, 0.12)' : 'var(--bg-app, rgba(255, 255, 255, 0.02))',
+                      border: inviteRole === PersonRole.ADMIN ? `1.5px solid ${TimelineColor.WARNING}` : '1px solid var(--border-glass)',
+                      background: inviteRole === PersonRole.ADMIN ? 'rgba(245, 158, 11, 0.12)' : 'var(--bg-app)',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
@@ -2312,18 +2381,18 @@ export default function TimeboardSettingsModal({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fbbf24', fontWeight: '700', fontSize: '0.86rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: TimelineColor.WARNING, fontWeight: '700', fontSize: '0.86rem' }}>
                         <Crown size={15} />
-                        <span>{t('timeboardSettings.entities.roles.admin') || 'Administrador'}</span>
+                        <span>{t('timeboardSettings.entities.roles.admin')}</span>
                       </div>
                       {inviteRole === PersonRole.ADMIN && (
-                        <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>
+                        <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: TimelineColor.WARNING, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg-app)' }}>
                           <Check size={11} strokeWidth={3} />
                         </div>
                       )}
                     </div>
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                      Acesso total e gestão
+                      {t('timeboardSettings.entities.rolesDesc.admin')}
                     </span>
                   </div>
                 </div>
@@ -2429,7 +2498,11 @@ function CustomRoleDropdown({ currentRole, onChange, t }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
-  const isAdmin = currentRole === PersonRole.ADMIN;
+  const roleName = currentRole === PersonRole.ADMIN
+    ? t('timeboardSettings.entities.roles.admin')
+    : currentRole === PersonRole.INDIVIDUAL
+    ? t('timeboardSettings.entities.roles.individual')
+    : t('timeboardSettings.entities.roles.contributor');
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -2468,13 +2541,13 @@ function CustomRoleDropdown({ currentRole, onChange, t }) {
           transition: 'color 0.15s ease'
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.color = 'var(--primary, #6366f1)';
+          e.currentTarget.style.color = TimelineColor.PRIMARY;
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.color = 'var(--text-main)';
         }}
       >
-        <span>{isAdmin ? (t('timeboardSettings.entities.roles.admin') || 'Administrador') : (t('timeboardSettings.entities.roles.contributor') || 'Colaborador')}</span>
+        <span>{roleName}</span>
         <ChevronDown
           size={13}
           style={{
@@ -2493,9 +2566,9 @@ function CustomRoleDropdown({ currentRole, onChange, t }) {
             top: 'calc(100% + 6px)',
             left: 0,
             zIndex: 1400,
-            minWidth: '210px',
-            background: 'var(--bg-card, #1e293b)',
-            border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.18))',
+            minWidth: '220px',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-glass)',
             borderRadius: '12px',
             boxShadow: '0 16px 36px rgba(0, 0, 0, 0.7), 0 0 20px rgba(99, 102, 241, 0.15)',
             padding: '6px',
@@ -2516,7 +2589,7 @@ function CustomRoleDropdown({ currentRole, onChange, t }) {
               padding: '8px 10px',
               borderRadius: '8px',
               cursor: 'pointer',
-              background: isAdmin ? 'rgba(245, 158, 11, 0.15)' : 'transparent',
+              background: currentRole === PersonRole.ADMIN ? 'rgba(245, 158, 11, 0.15)' : 'transparent',
               transition: 'all 0.15s ease'
             }}
           >
@@ -2527,7 +2600,7 @@ function CustomRoleDropdown({ currentRole, onChange, t }) {
                   height: '26px',
                   borderRadius: '6px',
                   background: 'rgba(245, 158, 11, 0.2)',
-                  color: '#fbbf24',
+                  color: TimelineColor.WARNING,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
@@ -2536,15 +2609,15 @@ function CustomRoleDropdown({ currentRole, onChange, t }) {
                 <Crown size={14} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: isAdmin ? '#fbbf24' : 'var(--text-main, #fff)' }}>
-                  {t('timeboardSettings.entities.roles.admin') || 'Administrador'}
+                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: currentRole === PersonRole.ADMIN ? TimelineColor.WARNING : 'var(--text-main)' }}>
+                  {t('timeboardSettings.entities.roles.admin')}
                 </span>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                  Acesso total
+                  {t('timeboardSettings.entities.rolesDesc.admin')}
                 </span>
               </div>
             </div>
-            {isAdmin && <Check size={15} style={{ color: '#fbbf24' }} />}
+            {currentRole === PersonRole.ADMIN && <Check size={15} style={{ color: TimelineColor.WARNING }} />}
           </div>
 
           {/* Contributor Option */}
@@ -2557,7 +2630,7 @@ function CustomRoleDropdown({ currentRole, onChange, t }) {
               padding: '8px 10px',
               borderRadius: '8px',
               cursor: 'pointer',
-              background: !isAdmin ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+              background: currentRole === PersonRole.CONTRIBUTOR ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
               transition: 'all 0.15s ease'
             }}
           >
@@ -2568,7 +2641,7 @@ function CustomRoleDropdown({ currentRole, onChange, t }) {
                   height: '26px',
                   borderRadius: '6px',
                   background: 'rgba(99, 102, 241, 0.2)',
-                  color: '#a5b4fc',
+                  color: TimelineColor.PRIMARY_LIGHT,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
@@ -2577,15 +2650,56 @@ function CustomRoleDropdown({ currentRole, onChange, t }) {
                 <Users size={14} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: !isAdmin ? '#a5b4fc' : 'var(--text-main, #fff)' }}>
-                  {t('timeboardSettings.entities.roles.contributor') || 'Colaborador'}
+                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: currentRole === PersonRole.CONTRIBUTOR ? TimelineColor.PRIMARY_LIGHT : 'var(--text-main)' }}>
+                  {t('timeboardSettings.entities.roles.contributor')}
                 </span>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                  Editar & Visualizar
+                  {t('timeboardSettings.entities.rolesDesc.contributor')}
                 </span>
               </div>
             </div>
-            {!isAdmin && <Check size={15} style={{ color: '#818cf8' }} />}
+            {currentRole === PersonRole.CONTRIBUTOR && <Check size={15} style={{ color: TimelineColor.PRIMARY_LIGHT }} />}
+          </div>
+
+          {/* Individual Option */}
+          <div
+            onClick={() => handleSelect(PersonRole.INDIVIDUAL)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '8px 10px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              background: currentRole === PersonRole.INDIVIDUAL ? 'rgba(6, 182, 212, 0.15)' : 'transparent',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '6px',
+                  background: 'rgba(6, 182, 212, 0.2)',
+                  color: TimelineColor.CYAN,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <UserCheck size={14} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: currentRole === PersonRole.INDIVIDUAL ? TimelineColor.CYAN : 'var(--text-main)' }}>
+                  {t('timeboardSettings.entities.roles.individual')}
+                </span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                  {t('timeboardSettings.entities.rolesDesc.individual')}
+                </span>
+              </div>
+            </div>
+            {currentRole === PersonRole.INDIVIDUAL && <Check size={15} style={{ color: TimelineColor.CYAN }} />}
           </div>
         </div>
       )}

@@ -8,7 +8,7 @@ import { financialEventStatusRepository } from '../../infrastructure/database/su
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
 import { userRepository } from '../../infrastructure/database/supabase/SupabaseUserRepository.js';
 import { emailService } from './EmailService.js';
-import { TimeboardType, TimelineType, TimelineStatus, EventPeriodicity, InvitationStatus } from '../../../shared/enums/index.js';
+import { TimeboardType, TimelineType, TimelineStatus, EventPeriodicity, InvitationStatus, PersonRole } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -39,19 +39,29 @@ export class TimeboardService {
     const myRaw = await timeboardRepository.findByOwnerId(userId);
     const myTimeboards = myRaw.map((tb) => ({
       ...tb,
+      role: PersonRole.ADMIN,
       timelines: timelines.filter((tl) => tl.timeboardId === tb.id)
     }));
 
     // 2. Shared Timeboards: from timeboard_members where user_id = userId
     const sharedRaw = await timeboardMemberRepository.getSharedTimeboardsForUser(userId);
+    const userPersons = await personRepository.getByUserId(userId);
+    const personByTb = new Map(userPersons.map((p) => [p.timeboardId, p]));
+
     const myIds = new Set(myTimeboards.map((t) => t.id));
     const sharedTimeboards = sharedRaw
       .filter((tb) => !myIds.has(tb.id))
-      .map((tb) => ({
-        ...tb,
-        isShared: true,
-        timelines: timelines.filter((tl) => tl.timeboardId === tb.id)
-      }));
+      .map((tb) => {
+        const matchingPerson = personByTb.get(tb.id);
+        return {
+          ...tb,
+          isShared: true,
+          role: matchingPerson?.role || PersonRole.CONTRIBUTOR,
+          personId: matchingPerson?.id || null,
+          obligatorIdentification: matchingPerson?.obligatorIdentification || null,
+          timelines: timelines.filter((tl) => tl.timeboardId === tb.id)
+        };
+      });
 
     return {
       myTimeboards,
@@ -148,13 +158,20 @@ export class TimeboardService {
               await personRepository.update(matchingPerson.id, { userId: userId });
             }
           } else {
+            let invRole = PersonRole.CONTRIBUTOR;
+            try {
+              const invitations = await timeboardInvitationRepository.getByTimeboardId(timeboardId);
+              const matchingInv = invitations.find((inv) => inv.email && inv.email.toLowerCase().trim() === cleanEmail);
+              if (matchingInv?.role) invRole = matchingInv.role;
+            } catch (e) { }
+
             await personRepository.create({
               timeboardId: timeboardId,
               type: PersonType.MEMBER,
               name: acceptingUser?.name || cleanEmail.split('@')[0],
               email: cleanEmail,
               userId: userId,
-              role: PersonRole.CONTRIBUTOR
+              role: invRole
             });
           }
         } catch (err) {

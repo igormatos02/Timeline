@@ -239,6 +239,8 @@ function TimeboardDropdownSelector({
               >
                 {activeTimeboard.role === PersonRole.ADMIN
                   ? t('timeboardSettings.entities.roles.admin')
+                  : activeTimeboard.role === PersonRole.INDIVIDUAL
+                  ? t('timeboardSettings.entities.roles.individual')
                   : activeTimeboard.role === PersonRole.CONTRIBUTOR
                   ? t('timeboardSettings.entities.roles.contributor')
                   : t('timeboardModal.typeShared')}

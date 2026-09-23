@@ -81,6 +81,25 @@ export class SupabasePersonRepository extends IRepository {
     }
   }
 
+  async getByUserId(userId) {
+    if (!userId) return [];
+    try {
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) {
+        console.warn(`[SupabasePersonRepository] getByUserId fallback: ${error.message}`);
+        return [];
+      }
+      return (data || []).map(rowToEntity);
+    } catch (err) {
+      console.warn(`[SupabasePersonRepository] getByUserId catch: ${err.message}`);
+      return [];
+    }
+  }
+
   async getById(id) {
     try {
       const { data, error } = await supabase

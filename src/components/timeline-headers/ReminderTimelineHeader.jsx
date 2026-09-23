@@ -48,6 +48,7 @@ export default function ReminderTimelineHeader({
   timeline,
   allTimelines = [],
   events = [],
+  filteredEvents,
   onEdit,
   onDelete,
   onAddEvent,
@@ -63,7 +64,7 @@ export default function ReminderTimelineHeader({
   if (!timeline) return null;
 
   const headerColor = paletteTheme.primary;
-  const rawEventsList = timeline.events || events || [];
+  const rawEventsList = filteredEvents !== undefined ? filteredEvents : (timeline.events || events || []);
   const eventsList = rawEventsList.filter((ev) => {
     if (!ev || !ev.date || ev.isDeleted) return false;
     const evTimelineId = ev.timelineId || ev.timeline_id;

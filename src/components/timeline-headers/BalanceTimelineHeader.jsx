@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Calendar,
@@ -45,6 +45,9 @@ import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 
 function Last6MonthsTimeSeriesChart({ series = [], t }) {
   const [hoveredKey, setHoveredKey] = useState(null);
+  const rawId = useId();
+  const gradId = 'tsGrad_' + rawId.replace(/[^a-zA-Z0-9_-]/g, '');
+
   const activeMonth = series.find((m) => m.key === hoveredKey) || series[series.length - 1];
 
   const svgWidth = 260;
@@ -57,32 +60,39 @@ function Last6MonthsTimeSeriesChart({ series = [], t }) {
   const bottomY = 56;
   const plotSpan = bottomY - topY; // 40px
 
-  const maxVal = Math.max(...series.map((m) => m.net), 0);
-  const minVal = Math.min(...series.map((m) => m.net), 0);
+  const safeNets = (series || []).map((m) => {
+    const val = Number(m?.net);
+    return Number.isFinite(val) ? val : 0;
+  });
+  const maxVal = Math.max(...safeNets, 0);
+  const minVal = Math.min(...safeNets, 0);
 
   // Escala linear exata com zero estritamente ancorado
   const getY = (val) => {
+    const safeVal = Number.isFinite(val) ? val : 0;
     if (maxVal === 0 && minVal === 0) {
       return (topY + bottomY) / 2;
     }
     if (minVal >= 0) {
       const range = maxVal || 1;
-      return bottomY - (val / range) * plotSpan;
+      return bottomY - (safeVal / range) * plotSpan;
     }
     if (maxVal <= 0) {
       const range = Math.abs(minVal) || 1;
-      return topY + (Math.abs(val) / range) * plotSpan;
+      return topY + (Math.abs(safeVal) / range) * plotSpan;
     }
     const totalRange = maxVal - minVal;
-    return topY + ((maxVal - val) / totalRange) * plotSpan;
+    if (totalRange <= 0) return (topY + bottomY) / 2;
+    return topY + ((maxVal - safeVal) / totalRange) * plotSpan;
   };
 
   const zeroY = getY(0);
 
-  const points = series.map((m, idx) => {
+  const points = (series || []).map((m, idx) => {
+    const safeNet = Number.isFinite(Number(m?.net)) ? Number(m.net) : 0;
     const x = padX + idx * stepX;
-    const y = getY(m.net);
-    return { ...m, x, y };
+    const y = getY(safeNet);
+    return { ...m, net: safeNet, x, y };
   });
 
   const pathD = points.reduce((acc, pt, idx, arr) => {
@@ -91,6 +101,14 @@ function Last6MonthsTimeSeriesChart({ series = [], t }) {
     const cX = prev.x + (pt.x - prev.x) / 2;
     return `${acc} C ${cX} ${prev.y}, ${cX} ${pt.y}, ${pt.x} ${pt.y}`;
   }, '');
+
+  const isAllPositive = points.every((p) => p.net >= 0);
+  const isAllNegative = points.every((p) => p.net < 0);
+  const strokeColor = isAllPositive
+    ? TimelineColor.SUCCESS
+    : isAllNegative
+      ? TimelineColor.EXPENSE
+      : `url(#${gradId})`;
 
   const formatCompact = (val) => {
     const abs = Math.abs(val);
@@ -121,11 +139,18 @@ function Last6MonthsTimeSeriesChart({ series = [], t }) {
           style={{ width: '100%', height: '100%', display: 'block', overflow: 'visible' }}
         >
           <defs>
-            <linearGradient id="tsLineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <linearGradient
+              id={gradId}
+              gradientUnits="userSpaceOnUse"
+              x1={padX}
+              y1="0"
+              x2={padX + usableWidth}
+              y2="0"
+            >
               {points.map((pt, idx) => {
                 const pct = (idx / Math.max(1, points.length - 1)) * 100;
                 const color = pt.net >= 0 ? TimelineColor.SUCCESS : TimelineColor.EXPENSE;
-                return <stop key={pt.key} offset={`${pct}%`} stopColor={color} />;
+                return <stop key={pt.key || idx} offset={`${pct}%`} stopColor={color} />;
               })}
             </linearGradient>
           </defs>
@@ -155,7 +180,7 @@ function Last6MonthsTimeSeriesChart({ series = [], t }) {
           <path
             d={pathD}
             fill="none"
-            stroke="url(#tsLineGrad)"
+            stroke={strokeColor}
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -230,6 +255,7 @@ export default function BalanceTimelineHeader({
   allTimelines = [],
   events = [],
   allEvents = [],
+  filteredEvents,
   pockets = [],
   onEdit,
   _onDelete,
@@ -290,6 +316,9 @@ export default function BalanceTimelineHeader({
   }, [allTimelines, timeline]);
 
   const eventsList = React.useMemo(() => {
+    if (filteredEvents !== undefined) {
+      return filteredEvents;
+    }
     const map = new Map();
     const addIfValid = (e) => {
       if (!e || !e.id) return;
@@ -316,7 +345,7 @@ export default function BalanceTimelineHeader({
       }
     });
     return Array.from(map.values());
-  }, [events, timeline?.events, allTimelines, validTimelineIds]);
+  }, [filteredEvents, events, timeline?.events, allTimelines, validTimelineIds]);
 
   const [fetchedPockets, setFetchedPockets] = useState([]);
 
@@ -455,7 +484,9 @@ export default function BalanceTimelineHeader({
       loanMap = new Map();
       investDeductionsMap = new Map();
 
-      const sourceEvents = (allEvents && allEvents.length > 0) ? allEvents : (eventsList || []);
+      const sourceEvents = (filteredEvents !== undefined)
+        ? filteredEvents
+        : ((allEvents && allEvents.length > 0) ? allEvents : (eventsList || []));
       (sourceEvents || []).forEach((ev) => {
         if (!ev || !ev.date || ev.isDeleted) return;
         if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
@@ -509,10 +540,15 @@ export default function BalanceTimelineHeader({
       const monthKey = format(d, 'yyyy-MM');
       const monthLabel = format(d, 'MMM', { locale: dateLocale });
 
-      const income = hasIncomeTimeline ? (incomeMap.get(monthKey) || 0) : 0;
-      const expense = hasExpenseTimeline ? (expenseMap.get(monthKey) || 0) : 0;
-      const loan = hasLoanTimeline ? (loanMap.get(monthKey) || 0) : 0;
-      const investDeduction = hasInvestmentTimeline ? (investDeductionsMap.get(monthKey) || 0) : 0;
+      const rawIncome = hasIncomeTimeline ? (incomeMap.get(monthKey) || 0) : 0;
+      const rawExpense = hasExpenseTimeline ? (expenseMap.get(monthKey) || 0) : 0;
+      const rawLoan = hasLoanTimeline ? (loanMap.get(monthKey) || 0) : 0;
+      const rawInvestDeduction = hasInvestmentTimeline ? (investDeductionsMap.get(monthKey) || 0) : 0;
+
+      const income = Number.isFinite(Number(rawIncome)) ? Number(rawIncome) : 0;
+      const expense = Number.isFinite(Number(rawExpense)) ? Number(rawExpense) : 0;
+      const loan = Number.isFinite(Number(rawLoan)) ? Number(rawLoan) : 0;
+      const investDeduction = Number.isFinite(Number(rawInvestDeduction)) ? Number(rawInvestDeduction) : 0;
 
       // Saldo projetado do mês = Entradas - (Despesas + Empréstimos + Deduções de Poupança/Investimento)
       const projectedSaldo = income - (expense + loan + investDeduction);

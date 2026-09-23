@@ -317,6 +317,9 @@ export const translations = {
       status: "Status",
       integratedTimelines: "Integrated Timelines",
       categoryType: "Category",
+      entities: "Entities",
+      allEntities: "All Entities",
+      individuals: "Individuals",
       allStates: "All States",
       allCategories: "All Categories",
       allTypes: "All Types",
@@ -331,7 +334,7 @@ export const translations = {
       balanceTimeline: "Balance Timeline",
       incomeTimeline: "Income Timeline",
       expenseTimeline: "Expenses Timeline",
-      investmentTimeline: "Investments Timeline",
+      investmentTimeline: "Savings Timeline",
       loanTimeline: "Loan Timeline",
       projectTimeline: "Project Timeline",
       reminderTimeline: "Reminder Timeline",
@@ -654,7 +657,13 @@ export const translations = {
         roles: {
           owner: "Owner",
           admin: "Administrator",
-          contributor: "Contributor"
+          contributor: "Contributor",
+          individual: "Individual"
+        },
+        rolesDesc: {
+          admin: "Full access and management",
+          contributor: "Edit and view events",
+          individual: "View only events where assigned as obligator"
         },
         types: {
           person: "Person",
@@ -695,7 +704,16 @@ export const translations = {
           saveButton: "Save Entity",
           cancelButton: "Cancel"
         },
-        deleteConfirm: "Are you sure you want to remove this entity from the timeboard?"
+        deleteConfirm: "Are you sure you want to remove this entity from the timeboard?",
+        roleUpdatedToast: "Role updated to {role}.",
+        inviteModal: {
+          title: "Send Access Invitation",
+          subtitle: "Invite this member to access Timeboard",
+          emailLabel: "Member Email Address *",
+          roleLabel: "Role / Permission to Grant",
+          sendButton: "Send Invitation",
+          sendingButton: "Sending..."
+        }
       },
       settingsTab: {
         title: "Advanced Configurations",
@@ -1078,7 +1096,7 @@ export const translations = {
       noProjectedIncomeHint: "Add inflows to view annual distribution.",
       totalAnnualProjected: "Total Annual Projected",
       totalPeriodProjected: "Total Projected in Period",
-      last6MonthsBalance: "Balances of Last 6 Months",
+      last6MonthsBalance: "Last 6 Months Balance",
       last6MonthsTimeSeries: "Last 6 Months Time Series",
       balanceLabel: "Balance:",
       expensesLegend: "Expenses",
@@ -1459,6 +1477,7 @@ export const translations = {
         copyright: "All rights reserved.",
         roleAdmin: "Admin",
         roleContributor: "Contributor",
+        roleIndividual: "Individual",
         defaultInviter: "A team member",
         emailSendError: "Error sending invitation email via Brevo: {error}"
       }
@@ -1781,6 +1800,9 @@ export const translations = {
       status: "Estado",
       integratedTimelines: "Linhas Integradas",
       categoryType: "Categoria",
+      entities: "Entidades",
+      allEntities: "Todas as Entidades",
+      individuals: "Indivíduos",
       allStates: "Todos os Estados",
       allCategories: "Todas as Categorias",
       allTypes: "Todos os Tipos",
@@ -1794,15 +1816,15 @@ export const translations = {
       hidden: "Oculto",
       balanceTimeline: "Linha de Balanço",
       incomeTimeline: "Linha de Entrada",
-      expenseTimeline: "Linha de Saída / Despesas",
-      investmentTimeline: "Linha de Investimentos",
-      loanTimeline: "Linha de Crédito / Empréstimo",
+      expenseTimeline: "Linha de Despesas",
+      investmentTimeline: "Linha de Poupança",
+      loanTimeline: "Linha Empréstimo",
       projectTimeline: "Projetos",
       reminderTimeline: "Lembretes",
       diaryTimeline: "Diário",
-      todoTimeline: "Lista de Tarefas / To Do",
-      followupTimeline: "Acompanhamento / Follow-up",
-      goalsTimeline: "Metas / Objetivos",
+      todoTimeline: "Lista de Tarefas",
+      followupTimeline: "Acompanhamento",
+      goalsTimeline: "Metas",
       customTimeline: "Personalizada"
     },
 
@@ -2118,7 +2140,13 @@ export const translations = {
         roles: {
           owner: "Proprietário",
           admin: "Administrador",
-          contributor: "Colaborador"
+          contributor: "Colaborador",
+          individual: "Individual"
+        },
+        rolesDesc: {
+          admin: "Acesso total e gestão",
+          contributor: "Editar e visualizar eventos",
+          individual: "Visualizar apenas eventos onde é o obrigado"
         },
         types: {
           person: "Pessoa",
@@ -2159,7 +2187,16 @@ export const translations = {
           saveButton: "Guardar Entidade",
           cancelButton: "Cancelar"
         },
-        deleteConfirm: "Tem a certeza que deseja remover esta entidade do timeboard?"
+        deleteConfirm: "Tem a certeza que deseja remover esta entidade do timeboard?",
+        roleUpdatedToast: "Função atualizada para {role}.",
+        inviteModal: {
+          title: "Enviar Convite de Acesso",
+          subtitle: "Convide este membro para aceder ao Timeboard",
+          emailLabel: "Endereço de Email do Membro *",
+          roleLabel: "Função / Permissão a Conceder",
+          sendButton: "Enviar Convite",
+          sendingButton: "A enviar..."
+        }
       },
       settingsTab: {
         title: "Configurações Avançadas",
@@ -2542,7 +2579,7 @@ export const translations = {
       noProjectedIncomeHint: "Adicione entradas para visualizar a distribuição anual.",
       totalAnnualProjected: "Total Anual Projetado",
       totalPeriodProjected: "Total Projetado no Período",
-      last6MonthsBalance: "Saldos dos Últimos 6 Meses",
+      last6MonthsBalance: "Balanço dos Últimos 6 Meses",
       last6MonthsTimeSeries: "Série Temporal dos Últimos 6 Meses",
       balanceLabel: "Saldo:",
       expensesLegend: "Gastos",
@@ -2563,7 +2600,7 @@ export const translations = {
       plusYears: "+{count} Anos",
       today: "Hoje ({month})",
       projectToTitle: "Projetar até {date}",
-      projectedBalance: "Balanço Projetado",
+      projectedBalance: "Saldo Projetado",
       forecastInflows: "Entradas Previstas:",
       forecastOutflows: "Saídas Previstas:",
       forecastSavings: "Poupado previsto:",
@@ -2923,6 +2960,7 @@ export const translations = {
         copyright: "Todos os direitos reservados.",
         roleAdmin: "Administrador",
         roleContributor: "Colaborador",
+        roleIndividual: "Individual",
         defaultInviter: "Um membro da equipa",
         emailSendError: "Erro ao enviar email de convite via Brevo: {error}"
       }

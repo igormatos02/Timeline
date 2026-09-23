@@ -1,29 +1,24 @@
 import React, { useState, useMemo } from 'react';
 import {
-  ListTodo,
-  Plus,
   Settings,
   CheckCircle2,
   Clock,
-  AlertTriangle,
-  Flame,
-  Check,
-  Tag
+  AlertTriangle
 } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { EventPriority, EventStatus, TimelineColor } from '../../enums/index.js';
 import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
-import { DonutChart, PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
 
 export default function TodoTimelineHeader({
   timeline,
-  allTimelines = [],
+  allTimelines: _allTimelines = [],
   events = [],
+  filteredEvents,
   onEdit,
-  onDelete,
-  onAddEvent
+  onDelete: _onDelete,
+  onAddEvent: _onAddEvent
 }) {
   const { t } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
@@ -32,7 +27,7 @@ export default function TodoTimelineHeader({
     return getPaletteTheme(timeline?.color, TimelineColor.TODO);
   }, [timeline?.color]);
   const headerColor = paletteTheme.primary;
-  const rawEventsList = timeline?.events || events || [];
+  const rawEventsList = filteredEvents !== undefined ? filteredEvents : (timeline?.events || events || []);
   const todoList = useMemo(() => {
     return rawEventsList.filter((ev) => {
       if (!ev || ev.isDeleted) return false;
@@ -57,26 +52,6 @@ export default function TodoTimelineHeader({
 
   const obligationsCount = todoList.filter((item) => item.isObligation).length;
 
-  // Status breakdown for Donut chart
-  const statusSegments = useMemo(() => {
-    if (totalCount === 0) return [];
-    return [
-      {
-        name: t('todoHeader.completed'),
-        amount: completedCount,
-        count: completedCount,
-        percent: completionRate,
-        color: TimelineColor.SUCCESS
-      },
-      {
-        name: t('todoHeader.pending'),
-        amount: pendingCount,
-        count: pendingCount,
-        percent: 100 - completionRate,
-        color: TimelineColor.BLUE
-      }
-    ].filter((s) => s.count > 0);
-  }, [completedCount, pendingCount, totalCount, completionRate, t]);
 
   // Priority distribution
   const priorityBreakdown = useMemo(() => {
@@ -105,8 +80,8 @@ export default function TodoTimelineHeader({
           id={timeline.id}
         />
       }
-      controls={
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+      right={
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {onEdit && (
             <button
               type="button"

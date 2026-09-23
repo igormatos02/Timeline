@@ -19,6 +19,7 @@ export default function FollowupTimelineHeader({
   timeline,
   allTimelines = [],
   events = [],
+  filteredEvents,
   onEdit,
   onDelete,
   onAddEvent
@@ -27,7 +28,7 @@ export default function FollowupTimelineHeader({
   const [collapsed, setIsCollapsed] = useState(false);
 
   const headerColor = timeline?.color || TimelineColor.FOLLOWUP;
-  const rawEventsList = timeline?.events || events || [];
+  const rawEventsList = filteredEvents !== undefined ? filteredEvents : (timeline?.events || events || []);
 
   const followupList = useMemo(() => {
     return rawEventsList.filter((ev) => {

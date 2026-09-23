@@ -29,6 +29,7 @@ export default function LoanTimelineHeader({
   timeline,
   allTimelines = [],
   events = [],
+  filteredEvents,
   onEdit,
   onToggleStatus,
   onDelete,
@@ -149,7 +150,9 @@ export default function LoanTimelineHeader({
     if (fromContract > 0) return fromContract * 12;
 
     // 3. Scan timeline.events for any loan installment
-    const evList = timeline.events || [];
+    const evList = (filteredEvents !== undefined)
+      ? filteredEvents
+      : (timeline.events || events || []);
     const sample = evList.find(
       (ev) => ev && (ev.eventType === 'loan_installment' || ev.isSystemLoanEvent) &&
         ev.eventType !== 'amortization'
@@ -161,7 +164,9 @@ export default function LoanTimelineHeader({
   const annualIncomeProjected = (() => {
     // timeline.events contains ALL computed events (income, expense, loan installments etc.)
     // set by App.jsx: { ...currentSelected, events: computedEvents }
-    const evList = timeline.events || [];
+    const evList = (filteredEvents !== undefined)
+      ? filteredEvents
+      : (timeline.events || events || []);
     const now = new Date();
     const sy = now.getFullYear();
     const sm = now.getMonth();

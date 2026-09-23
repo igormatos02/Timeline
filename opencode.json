@@ -8,8 +8,8 @@
                 "baseURL": "http://localhost:11434/v1"
             },
             "models": {
-                "devstral-small-2-24b-8k:latest": {
-                    "name": "Devstral Small 2 24B 8K",
+                "devstral-opencode": {
+                    "name": "Devstral Small 2 24B",
                     "limit": {
                         "context": 4096,
                         "input": 3072,
@@ -19,6 +19,6 @@
             }
         }
     },
-    "model": "ollama/devstral-small-2-24b-8k:latest",
+    "model": "ollama/devstral-opencode",
     "lsp": true
 }

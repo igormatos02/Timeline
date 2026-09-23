@@ -775,6 +775,9 @@ function VerticalTimeline({
       !ev.date
     );
 
+  const personsRef = React.useRef(persons);
+  personsRef.current = persons;
+
   const isEventMatchingEntity = useCallback((ev, targetEntityId) => {
     if (!targetEntityId) return true;
     if (!ev) return false;
@@ -827,28 +830,31 @@ function VerticalTimeline({
 
     if (candidateCodes.includes(target)) return true;
 
-    // Cross reference with timeboardPersons
-    for (const pid of candidateIds) {
-      const matched = (persons || []).find((p) => String(p.id).trim().toLowerCase() === pid);
-      if (matched) {
-        const mName = String(matched.personName || matched.person_name || matched.name || '').trim().toLowerCase();
-        const mCode = String(matched.obligatorIdentification || matched.obligator_identification || matched.identification || '').trim().toLowerCase();
-        if (mName && (mName === target || mName.includes(target) || target.includes(mName))) return true;
-        if (mCode && mCode === target) return true;
+    // Cross reference with timeboardPersons (only if persons loaded)
+    const currentPersons = personsRef.current;
+    if (currentPersons && currentPersons.length > 0) {
+      for (const pid of candidateIds) {
+        const matched = currentPersons.find((p) => String(p.id).trim().toLowerCase() === pid);
+        if (matched) {
+          const mName = String(matched.personName || matched.person_name || matched.name || '').trim().toLowerCase();
+          const mCode = String(matched.obligatorIdentification || matched.obligator_identification || matched.identification || '').trim().toLowerCase();
+          if (mName && (mName === target || mName.includes(target) || target.includes(mName))) return true;
+          if (mCode && mCode === target) return true;
+        }
+      }
+
+      // Reverse: if targetEntityId is person id, check if candidate names match that person
+      const targetPerson = currentPersons.find((p) => String(p.id).trim().toLowerCase() === target);
+      if (targetPerson) {
+        const tpName = String(targetPerson.personName || targetPerson.person_name || targetPerson.name || '').trim().toLowerCase();
+        const tpCode = String(targetPerson.obligatorIdentification || targetPerson.obligator_identification || targetPerson.identification || '').trim().toLowerCase();
+        if (tpName && candidateNames.some((n) => n === tpName || n.includes(tpName) || tpName.includes(n))) return true;
+        if (tpCode && candidateCodes.includes(tpCode)) return true;
       }
     }
 
-    // Reverse: if targetEntityId is person id, check if candidate names match that person
-    const targetPerson = (persons || []).find((p) => String(p.id).trim().toLowerCase() === target);
-    if (targetPerson) {
-      const tpName = String(targetPerson.personName || targetPerson.person_name || targetPerson.name || '').trim().toLowerCase();
-      const tpCode = String(targetPerson.obligatorIdentification || targetPerson.obligator_identification || targetPerson.identification || '').trim().toLowerCase();
-      if (tpName && candidateNames.some((n) => n === tpName || n.includes(tpName) || tpName.includes(n))) return true;
-      if (tpCode && candidateCodes.includes(tpCode)) return true;
-    }
-
     return false;
-  }, [persons]);
+  }, []);
 
   const pendingFloatingTasks = useMemo(() => {
     return allEvents.filter((ev) => {
@@ -897,14 +903,30 @@ function VerticalTimeline({
       if (pId) {
         const idKey = String(pId);
         if (!entityMap.has(idKey)) {
-          const matched = (persons || []).find((p) => String(p.id) === idKey);
-          const matchedName = matched?.personName || matched?.person_name || matched?.name || '';
+          // Try to enhance with persons data if available
+          let matchedName = '';
+          let finalType = PersonType.PERSON;
+          let idCode = '';
+
+          if (persons && persons.length > 0) {
+            const matched = persons.find((p) => String(p.id) === idKey);
+            if (matched) {
+              matchedName = matched.personName || matched.person_name || matched.name || '';
+              finalType = matched.type || PersonType.PERSON;
+              idCode = matched.obligatorIdentification || matched.obligator_identification || matched.identification || '';
+            }
+          }
+
           const pObjName = pObj?.personName || pObj?.person_name || pObj?.name || '';
           const evName = ev.obligationPersonName || ev.obligation_person_name || '';
-          const idCode = matched?.obligatorIdentification || matched?.obligator_identification || matched?.identification || pObj?.obligatorIdentification || pObj?.obligator_identification || pObj?.identification || ev.obligatorIdentification || ev.obligator_identification || ev.obligationIdentifier || ev.obligation_identifier || '';
+          if (!idCode) {
+            idCode = pObj?.obligatorIdentification || pObj?.obligator_identification || pObj?.identification || ev.obligatorIdentification || ev.obligator_identification || ev.obligationIdentifier || ev.obligation_identifier || '';
+          }
 
           const finalName = matchedName || pObjName || evName || idCode || idKey;
-          const finalType = matched?.type || pObj?.type || PersonType.PERSON;
+          if (!finalType || finalType === PersonType.PERSON) {
+            finalType = pObj?.type || PersonType.PERSON;
+          }
 
           entityMap.set(idKey, {
             id: idKey,
@@ -943,7 +965,7 @@ function VerticalTimeline({
     });
 
     return Array.from(entityMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
-  }, [timelineEvents, persons, timeline.id, timeline.type]);
+  }, [timelineEvents, timeline.id, timeline.type]);
 
 
   const getEntityIcon = (type) => {
@@ -3763,7 +3785,7 @@ function VerticalTimeline({
         )}
 
         {/* Render Selected Timeline View or Filtered Status/Category/Search Stack List */}
-        <div key={`${timeline.id}-${activeFinancialTab || 'all'}-${groupBy}-${selectedStatusFilters.join(',')}-${selectedExpenseCategories.join(',')}-${selectedCategoryFilter}-${searchQuery}`} className="timeline-view-wrapper">
+        <div key={`${timeline.id}-${activeFinancialTab || 'all'}-${groupBy}-${selectedStatusFilters.join(',')}-${selectedExpenseCategories.join(',')}-${selectedCategoryFilter}-${searchQuery}-${selectedEntityId || ''}`} className="timeline-view-wrapper">
           {isListView ? (
             renderFilteredStatusListView()
           ) : (

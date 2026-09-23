@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Sparkles, DollarSign, TrendingDown, PiggyBank, Landmark, Scale, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { Clock, DollarSign, TrendingDown, PiggyBank, Landmark, Scale, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { formatCurrency as defaultFormatCurrency } from '../utils/formatCurrency.js';
 import {
   TimelineColor,
@@ -163,21 +163,20 @@ export default function MonthProjectionBadges({
             appearance: 'none',
             WebkitAppearance: 'none',
             MozAppearance: 'none',
-            background: isRealizedMode ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255, 255, 255, 0.05)',
-            border: `1px solid ${isRealizedMode ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-glass)'}`,
+            background: 'var(--primary)',
+            border: 'none',
             borderRadius: '6px',
             padding: '2px 22px 2px 24px',
             fontSize: '0.72rem',
             fontWeight: '700',
-            color: isRealizedMode
-              ? TimelineColor.INCOME
-              : (isNotComputedMonth || isFutureMonth ? 'var(--text-dim)' : 'var(--text-muted)'),
+            color: TimelineColor.WHITE,
             textTransform: 'uppercase',
             letterSpacing: '0.04em',
             cursor: 'pointer',
             outline: 'none',
             height: '24px',
             lineHeight: '20px',
+            boxShadow: '0 2px 8px rgba(99, 102, 241, 0.35)',
             transition: 'all 0.15s ease'
           }}
           title={t('timeline.selectProjectionMode')}
@@ -196,17 +195,17 @@ export default function MonthProjectionBadges({
               position: 'absolute',
               left: '7px',
               pointerEvents: 'none',
-              color: TimelineColor.INCOME
+              color: TimelineColor.WHITE
             }}
           />
         ) : (
-          <Sparkles
+          <Clock
             size={12}
             style={{
               position: 'absolute',
               left: '7px',
               pointerEvents: 'none',
-              color: isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)'
+              color: TimelineColor.WHITE
             }}
           />
         )}
@@ -216,7 +215,7 @@ export default function MonthProjectionBadges({
             position: 'absolute',
             right: '6px',
             pointerEvents: 'none',
-            color: isRealizedMode ? TimelineColor.INCOME : 'var(--text-dim)'
+            color: TimelineColor.WHITE
           }}
         />
       </div>

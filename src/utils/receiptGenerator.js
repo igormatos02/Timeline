@@ -13,7 +13,17 @@ import { EventType } from '../enums/index.js';
  * - Se o ano de cont_year for igual ao ano corrente -> usa cont_year
  * - Se o ano de cont_year for diferente do ano corrente -> reseta para ${anoCorrente}01
  */
-export function computeReceiptNumber(timeline) {
+export function computeReceiptNumber(timeline, event = null) {
+  // Regra Nova: Se o evento já tiver em seu status cont_year, usa o cont_year do status do evento
+  const eventContYear = event?.contYear !== undefined && event?.contYear !== null
+    ? Number(event.contYear)
+    : (event?.cont_year !== undefined && event?.cont_year !== null ? Number(event.cont_year) : 0);
+
+  if (eventContYear && eventContYear > 0) {
+    return eventContYear;
+  }
+
+  // Regra Anterior: Baseado na timeline
   const currentYear = new Date().getFullYear();
   const rawContYear = timeline?.contYear !== undefined && timeline?.contYear !== null
     ? Number(timeline.contYear)
@@ -34,6 +44,28 @@ export function computeReceiptNumber(timeline) {
   return Number(`${currentYear}01`);
 }
 
+/**
+ * Computa o próximo valor a ser salvo na timeline após a impressão ($cont + 1):
+ * Ex: se gerou 202601 -> próximo é 202602
+ */
+export function computeNextReceiptNumber(currentReceiptNum) {
+  const currentYear = new Date().getFullYear();
+  if (!currentReceiptNum) {
+    return Number(`${currentYear}02`);
+  }
+
+  const strVal = String(currentReceiptNum);
+  if (strVal.length > 4) {
+    const yearPart = strVal.substring(0, 4);
+    const countPart = strVal.substring(4);
+    const nextCount = parseInt(countPart, 10) + 1;
+    const paddedCount = String(nextCount).padStart(countPart.length, '0');
+    return Number(`${yearPart}${paddedCount}`);
+  }
+
+  return Number(currentReceiptNum) + 1;
+}
+
 export function buildReceiptHtml({
   event,
   timeboard,
@@ -41,6 +73,7 @@ export function buildReceiptHtml({
   receiptNumber = null,
   currentUser,
   obligationPerson,
+  persons = [],
   language = 'pt',
   t
 }) {
@@ -59,9 +92,14 @@ export function buildReceiptHtml({
   const payerLabel = t('receipt.paidBy');
   const receiverLabel = isIncome ? t('receipt.receivedBy') : t('receipt.paidTo');
 
-  const obligatorName = obligationPerson?.name || obligationPerson?.personName || event?.obligationPersonName || event?.obligation_person_name || '';
-  const obligatorIdCode = obligationPerson?.obligatorIdentification || obligationPerson?.obligator_identification || obligationPerson?.identification || event?.obligatorIdentification || event?.obligator_identification || event?.obligationIdentifier || '';
-  const obligatorTaxId = obligationPerson?.taxId || obligationPerson?.tax_id || '';
+  const personId = obligationPerson?.id || event?.obligationPersonId || event?.obligation_person_id;
+  const livePerson = (personId && Array.isArray(persons) && persons.length > 0)
+    ? (persons.find((p) => p.id === personId) || obligationPerson)
+    : obligationPerson;
+
+  const obligatorName = livePerson?.name || livePerson?.personName || event?.obligationPersonName || event?.obligation_person_name || '';
+  const obligatorIdCode = livePerson?.obligatorIdentification || livePerson?.obligator_identification || livePerson?.identification || livePerson?.taxId || livePerson?.tax_id || event?.obligatorIdentification || event?.obligator_identification || event?.obligationIdentifier || '';
+  const obligatorTaxId = livePerson?.taxId || livePerson?.tax_id || '';
   const obligatorDetails = [
     obligatorName,
     obligatorIdCode ? `ID: ${obligatorIdCode}` : '',

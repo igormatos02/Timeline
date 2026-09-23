@@ -104,7 +104,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   onNavigateToTimeline,
   onPrintReceipt,
   timelineColor,
-  timelines = []
+  timelines = [],
+  persons = []
 }) {
   const { t, language } = useTranslation();
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
@@ -153,6 +154,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const isObligationEvent = Boolean(event.isObligation || event.is_obligation);
   const obligationPersonId = event.obligationPersonId || event.obligation_person_id;
   const obligationPerson = React.useMemo(() => {
+    if (obligationPersonId && Array.isArray(persons) && persons.length > 0) {
+      const matchInPersons = persons.find((p) => p.id === obligationPersonId);
+      if (matchInPersons) return matchInPersons;
+    }
     if (event.obligationPerson || event.obligation_person) {
       return event.obligationPerson || event.obligation_person;
     }
@@ -165,7 +170,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       }
     }
     return null;
-  }, [event.obligationPerson, event.obligation_person, isObligationEvent, obligationPersonId, event.timeboardId, event.timeboard_id]);
+  }, [persons, event.obligationPerson, event.obligation_person, isObligationEvent, obligationPersonId, event.timeboardId, event.timeboard_id]);
 
   React.useEffect(() => {
     setLocalAuto(Boolean(event.automatic || event.isAutomatic));
@@ -2477,8 +2482,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         </button>
       )}
 
-      {/* Botão Imprimir Recibo - Para qualquer evento com obligator */}
-      {isObligationEvent && onPrintReceipt && (
+      {/* Botão Imprimir Recibo - Apenas para evento com obligator e status positivo */}
+      {isObligationEvent && onPrintReceipt && isPositiveStatus(effectiveStatus) && (
         <button
           type="button"
           className="action-icon-btn"
@@ -4684,7 +4689,8 @@ export const TimelineEventCard = React.memo(function TimelineEventCard({
   onPayUpToHere,
   onOpenEditInstallment,
   onNavigateToTimeline,
-  onPrintReceipt
+  onPrintReceipt,
+  persons = []
 }) {
   const eventList = React.useMemo(() => {
     const list = Array.isArray(events) ? [...events] : (event ? [event] : []);
@@ -4806,6 +4812,7 @@ export const TimelineEventCard = React.memo(function TimelineEventCard({
             onNavigateToTimeline={onNavigateToTimeline}
             onPrintReceipt={onPrintReceipt}
             timelineColor={timelineColor || baseColor}
+            persons={persons}
           />
         ))}
       </div>

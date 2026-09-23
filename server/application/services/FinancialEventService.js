@@ -76,7 +76,7 @@ export class FinancialEventService {
       rawEvents = await eventRepository.getAllWithStatuses();
     }
 
-    const statusMap = await financialEventStatusRepository.getStatusMap();
+    const fullStatusMap = await financialEventStatusRepository.getFullStatusMap();
 
     // Mapear também os status dinâmicos que vieram no join dos rawEvents
     const joinedStatusMap = new Map();
@@ -85,7 +85,7 @@ export class FinancialEventService {
         for (const st of rawEv.statusesList) {
           if (st && st.year && st.month) {
             const keyByEvId = `${st.year}_${st.month}_${st.event_id}`;
-            joinedStatusMap.set(keyByEvId, st.status);
+            joinedStatusMap.set(keyByEvId, st);
           }
         }
       }
@@ -101,13 +101,19 @@ export class FinancialEventService {
         const targetId = rawEv.eventId || rawEv.id;
         const key = `${year}_${month}_${targetId}`;
         const keyById = `${year}_${month}_${rawEv.id}`;
-        let matchedStatus = statusMap.get(key) || statusMap.get(keyById) || joinedStatusMap.get(key) || joinedStatusMap.get(keyById);
+        const matchedRecord = fullStatusMap.get(key) || fullStatusMap.get(keyById) || joinedStatusMap.get(key) || joinedStatusMap.get(keyById);
+        const matchedStatus = matchedRecord?.status || (typeof matchedRecord === 'string' ? matchedRecord : null);
         if (matchedStatus) {
           rawEv.status = matchedStatus;
           rawEv.isCompleted = isPositiveStatus(matchedStatus);
           if (matchedStatus === EventStatus.DELETED) {
             rawEv.isDeleted = true;
           }
+        }
+        if (matchedRecord && (matchedRecord.cont_year != null || matchedRecord.contYear != null)) {
+          const cy = matchedRecord.cont_year != null ? matchedRecord.cont_year : matchedRecord.contYear;
+          rawEv.contYear = Number(cy);
+          rawEv.cont_year = Number(cy);
         }
       }
     }
@@ -127,13 +133,13 @@ export class FinancialEventService {
         const keyByStrippedId = ev.id && String(ev.id).includes('_') ? `${year}_${month}_${String(ev.id).split('_')[0]}` : null;
         const keyByStrippedTargetId = targetId && String(targetId).includes('_') ? `${year}_${month}_${String(targetId).split('_')[0]}` : null;
 
-        let matchedStatus =
-          statusMap.get(key) ||
-          statusMap.get(keyById) ||
-          (keyBySob ? statusMap.get(keyBySob) : null) ||
-          (keyBySeries ? statusMap.get(keyBySeries) : null) ||
-          (keyByStrippedId ? statusMap.get(keyByStrippedId) : null) ||
-          (keyByStrippedTargetId ? statusMap.get(keyByStrippedTargetId) : null) ||
+        const matchedRecord =
+          fullStatusMap.get(key) ||
+          fullStatusMap.get(keyById) ||
+          (keyBySob ? fullStatusMap.get(keyBySob) : null) ||
+          (keyBySeries ? fullStatusMap.get(keyBySeries) : null) ||
+          (keyByStrippedId ? fullStatusMap.get(keyByStrippedId) : null) ||
+          (keyByStrippedTargetId ? fullStatusMap.get(keyByStrippedTargetId) : null) ||
           joinedStatusMap.get(key) ||
           joinedStatusMap.get(keyById) ||
           (keyBySob ? joinedStatusMap.get(keyBySob) : null) ||
@@ -141,12 +147,20 @@ export class FinancialEventService {
           (keyByStrippedId ? joinedStatusMap.get(keyByStrippedId) : null) ||
           (keyByStrippedTargetId ? joinedStatusMap.get(keyByStrippedTargetId) : null);
 
+        const matchedStatus = matchedRecord?.status || (typeof matchedRecord === 'string' ? matchedRecord : null);
+
         if (matchedStatus) {
           ev.status = matchedStatus;
           ev.isCompleted = isPositiveStatus(matchedStatus);
         } else {
           ev.status = ev.status || EventStatus.PENDING;
           ev.isCompleted = isPositiveStatus(ev.status);
+        }
+
+        if (matchedRecord && (matchedRecord.cont_year != null || matchedRecord.contYear != null)) {
+          const cy = matchedRecord.cont_year != null ? matchedRecord.cont_year : matchedRecord.contYear;
+          ev.contYear = Number(cy);
+          ev.cont_year = Number(cy);
         }
       } else {
         ev.status = ev.status || EventStatus.PENDING;
@@ -814,6 +828,46 @@ export class FinancialEventService {
     }
 
     return { ...targetEvent, id, date: targetDate, ...toggled };
+  }
+
+  async setEventStatus(id, options = {}) {
+    const rootId = String(id).includes('_') ? String(id).split('_')[0] : id;
+    const dateSuffix = String(id).includes('_') ? String(id).split('_')[1] : null;
+
+    let targetEvent = await eventRepository.getById(rootId);
+    let targetDate = options.date || dateSuffix || targetEvent?.date;
+
+    if (!targetEvent) {
+      const allCandidateEvents = await eventRepository.getAllWithStatuses();
+      targetEvent = allCandidateEvents.find(
+        (e) => e.id === id || e.eventId === id || e.id === rootId || e.eventId === rootId || e.sobrepositionOver === rootId
+      );
+      if (!targetEvent) {
+        throw new Error(`${t('backend.validation.eventNotFound')}: ${id}`);
+      }
+      targetDate = options.date || dateSuffix || targetEvent.date;
+    }
+
+    const targetEventId = targetEvent.eventId || targetEvent.id;
+    const effectiveStatus = options.status || targetEvent.status || EventStatus.PAID;
+
+    await this._syncStatus(targetDate, targetEventId, effectiveStatus, {
+      timelineId: options.timelineId || targetEvent.timelineId || targetEvent.timeline_id,
+      timeboardId: options.timeboardId || targetEvent.timeboardId || targetEvent.timeboard_id,
+      contYear: options.contYear !== undefined ? options.contYear : options.cont_year,
+      cont_year: options.cont_year !== undefined ? options.cont_year : options.contYear
+    });
+
+    const contYearVal = options.contYear !== undefined ? options.contYear : options.cont_year;
+    return {
+      ...targetEvent,
+      id,
+      date: targetDate,
+      status: effectiveStatus,
+      isCompleted: isPositiveStatus(effectiveStatus),
+      contYear: contYearVal !== undefined && contYearVal !== null ? Number(contYearVal) : (targetEvent.contYear || null),
+      cont_year: contYearVal !== undefined && contYearVal !== null ? Number(contYearVal) : (targetEvent.cont_year || null)
+    };
   }
 
   async deleteEvent(id, options = {}) {

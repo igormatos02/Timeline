@@ -138,8 +138,9 @@ const EXPENSE_CATEGORY_ITEMS = [
   { id: ExpensesEventCategory.SERVICES, icon: CreditCard, color: TimelineColor.SLATE },
 ];
 
+import * as api from '../services/api.js';
 import ReceiptModal from './modals/ReceiptModal.jsx';
-import { buildReceiptHtml, computeReceiptNumber } from '../utils/receiptGenerator.js';
+import { buildReceiptHtml, computeReceiptNumber, computeNextReceiptNumber } from '../utils/receiptGenerator.js';
 
 const groupEventsByDate = (events = []) => {
   const groups = [];
@@ -226,11 +227,60 @@ function VerticalTimeline({
   const [receiptModalData, setReceiptModalData] = useState(null);
   const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
 
+  const handleReceiptPrint = useCallback(async () => {
+    if (!receiptModalData || !receiptModalData.receiptNumber || !receiptModalData.timelineId) return;
+    const { receiptNumber, timelineId, targetEvent } = receiptModalData;
+
+    // Se o evento já possuía cont_year, não avança o contador da timeline
+    const hadEventContYear = Boolean(
+      (targetEvent?.contYear && targetEvent.contYear > 0) ||
+      (targetEvent?.cont_year && targetEvent.cont_year > 0)
+    );
+
+    // Salvar o receiptNumber no status do evento na tabela financial_event_status
+    if (targetEvent?.id) {
+      targetEvent.contYear = receiptNumber;
+      targetEvent.cont_year = receiptNumber;
+      try {
+        await api.setEventStatus(targetEvent.id, {
+          date: targetEvent.date,
+          status: targetEvent.status,
+          contYear: receiptNumber,
+          cont_year: receiptNumber,
+          timelineId: targetEvent.timelineId || timelineId,
+          timeboardId: activeTimeboard?.id
+        });
+      } catch (err) {
+        console.error('Error saving cont_year in event status:', err);
+      }
+    }
+
+    // Se o evento ainda NÃO tinha cont_year próprio, incrementa o contador da timeline
+    if (!hadEventContYear) {
+      const nextReceiptNumber = computeNextReceiptNumber(receiptNumber);
+
+      // Atualiza imediatamente em memória a timeline ativa
+      if (timeline && (timeline.id === timelineId || String(timeline.id) === String(timelineId))) {
+        timeline.contYear = nextReceiptNumber;
+        timeline.cont_year = nextReceiptNumber;
+      }
+
+      try {
+        await api.updateTimeline(timelineId, {
+          contYear: nextReceiptNumber,
+          cont_year: nextReceiptNumber
+        });
+      } catch (err) {
+        console.error('Error updating timeline cont_year after print:', err);
+      }
+    }
+  }, [receiptModalData, timeline, activeTimeboard]);
+
   const handleOpenReceipt = useCallback((targetEvent, targetPerson) => {
     setIsGeneratingReceipt(true);
     setTimeout(() => {
       try {
-        const receiptNumber = computeReceiptNumber(timeline);
+        const receiptNumber = computeReceiptNumber(timeline, targetEvent);
         const html = buildReceiptHtml({
           event: targetEvent,
           timeboard: activeTimeboard,
@@ -238,13 +288,17 @@ function VerticalTimeline({
           receiptNumber,
           currentUser,
           obligationPerson: targetPerson,
+          persons,
           language,
           t
         });
         setReceiptModalData({
           isOpen: true,
           htmlContent: html,
-          title: t('receipt.printReceipt')
+          title: t('receipt.printReceipt'),
+          receiptNumber,
+          timelineId: timeline?.id,
+          targetEvent
         });
       } catch (err) {
         console.error('Error generating receipt HTML:', err);
@@ -252,7 +306,7 @@ function VerticalTimeline({
         setIsGeneratingReceipt(false);
       }
     }, 450);
-  }, [activeTimeboard, timeline, currentUser, language, t]);
+  }, [activeTimeboard, timeline, currentUser, language, t, persons]);
 
   const toggleSectionCollapse = (key) => {
     setCollapsedSections((prev) => ({
@@ -1448,6 +1502,7 @@ function VerticalTimeline({
                           onOpenEditInstallment={onOpenEditInstallment}
                           onNavigateToTimeline={onNavigateToTimeline}
                           onPrintReceipt={handleOpenReceipt}
+                          persons={persons}
                         />
                       </div>
                     ))
@@ -2645,6 +2700,7 @@ function VerticalTimeline({
                                         currentTimelineId={timeline.id}
                                         timelineType={timeline.type}
                                         activeFinancialTab={activeFinancialTab}
+                                        persons={persons}
                                         onEdit={onEditEvent}
                                         onUpdateEventDirect={onUpdateEventDirect}
                                         onDelete={onDeleteEvent}
@@ -2736,6 +2792,7 @@ function VerticalTimeline({
                           onOpenEditInstallment={onOpenEditInstallment}
                           onNavigateToTimeline={onNavigateToTimeline}
                           onPrintReceipt={handleOpenReceipt}
+                          persons={persons}
                         />
                       </div>
                     ))
@@ -3748,6 +3805,7 @@ function VerticalTimeline({
             onClose={() => setReceiptModalData(null)}
             htmlContent={receiptModalData.htmlContent}
             title={receiptModalData.title}
+            onPrint={handleReceiptPrint}
           />
         )}
 

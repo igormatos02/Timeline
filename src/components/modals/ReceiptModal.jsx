@@ -7,7 +7,8 @@ export default function ReceiptModal({
   isOpen,
   onClose,
   htmlContent,
-  title
+  title,
+  onPrint
 }) {
   const { t } = useTranslation();
   const iframeRef = useRef(null);
@@ -18,6 +19,9 @@ export default function ReceiptModal({
     if (iframeRef.current && iframeRef.current.contentWindow) {
       iframeRef.current.contentWindow.focus();
       iframeRef.current.contentWindow.print();
+    }
+    if (onPrint) {
+      onPrint();
     }
   };
 

@@ -74,7 +74,9 @@ function entityToRow(data) {
   }
   if (data.contYear !== undefined) row.cont_year = data.contYear !== null && data.contYear !== '' ? Number(data.contYear) : null;
   if (data.cont_year !== undefined) row.cont_year = data.cont_year !== null && data.cont_year !== '' ? Number(data.cont_year) : null;
-  row.tenant_id = data.tenantId || data.tenant_id || '9e3c3070-d4db-43be-ab03-3f852a9a81da';
+  if (data.tenantId !== undefined || data.tenant_id !== undefined) {
+    row.tenant_id = data.tenantId || data.tenant_id;
+  }
   return row;
 }
 
@@ -229,6 +231,9 @@ export class SupabaseTimelineRepository extends IRepository {
 
   async create(data) {
     const row = entityToRow(data);
+    if (!row.tenant_id) {
+      row.tenant_id = '9e3c3070-d4db-43be-ab03-3f852a9a81da';
+    }
     const { data: created, error } = await supabase.from(TABLE).insert(row).select().single();
     if (error) throw new Error(`Supabase create [timelines]: ${error.message}`);
     return rowToEntity(created);

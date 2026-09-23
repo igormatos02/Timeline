@@ -66,6 +66,24 @@ eventsRouter.post('/:id/toggle-payment', async (req, res) => {
   }
 });
 
+// POST /api/events/:id/status (Updates or sets status and options like cont_year in financial_event_status)
+eventsRouter.post('/:id/status', async (req, res) => {
+  try {
+    const { date, status, contYear, cont_year, timelineId, timeboardId } = req.body;
+    const result = await eventService.setEventStatus(req.params.id, {
+      date,
+      status,
+      contYear: contYear !== undefined ? contYear : cont_year,
+      cont_year: cont_year !== undefined ? cont_year : contYear,
+      timelineId,
+      timeboardId
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // DELETE /api/events/:id
 eventsRouter.delete('/:id', async (req, res) => {
   try {

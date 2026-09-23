@@ -40,6 +40,10 @@ export class EventService {
     return financialEventService.toggleEventPayment(id, explicitStatus);
   }
 
+  async setEventStatus(id, options = {}) {
+    return financialEventService.setEventStatus(id, options);
+  }
+
   async deleteEvent(id, options = {}) {
     return financialEventService.deleteEvent(id, options);
   }

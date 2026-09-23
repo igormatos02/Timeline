@@ -2293,6 +2293,16 @@ export default function App() {
           timeboard={timeboards.find((t) => t.id === (editingTimeboard?.id || activeTimeboardId)) || editingTimeboard || activeTimeboard}
           onSaveTimeboard={handleSaveTimeboard}
           onDeleteTimeboard={handleDeleteTimeboard}
+          onEntitySaved={(savedEntity) => {
+            if (!savedEntity || !savedEntity.id) return;
+            setTimeboardPersons((prev) => {
+              const exists = prev.some((p) => p.id === savedEntity.id);
+              if (exists) {
+                return prev.map((p) => (p.id === savedEntity.id ? { ...p, ...savedEntity } : p));
+              }
+              return [...prev, savedEntity];
+            });
+          }}
         />
 
         <CreateTimelineModal

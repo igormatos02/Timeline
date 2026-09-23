@@ -42,7 +42,8 @@ export default function TimeboardSettingsModal({
   onClose,
   timeboard,
   onSaveTimeboard,
-  onDeleteTimeboard
+  onDeleteTimeboard,
+  onEntitySaved
 }) {
   const { t, dateLocale } = useTranslation();
   const currentMonthKey = new Date().toISOString().substring(0, 7);
@@ -282,12 +283,16 @@ export default function TimeboardSettingsModal({
     try {
       if (editingEntity && editingEntity.id) {
         const updated = await api.updatePerson(editingEntity.id, payload);
-        setPersons((prev) => prev.map((p) => (p.id === editingEntity.id ? { ...p, ...updated } : p)));
+        const resolvedUpdated = { ...editingEntity, ...payload, ...updated };
+        setPersons((prev) => prev.map((p) => (p.id === editingEntity.id ? resolvedUpdated : p)));
         showToast(`Entidade "${effectivePersonName}" atualizada com sucesso.`);
+        if (onEntitySaved) onEntitySaved(resolvedUpdated);
       } else {
         const created = await api.createPerson(payload);
-        setPersons((prev) => [...prev, created]);
+        const resolvedCreated = { ...payload, ...created };
+        setPersons((prev) => [...prev, resolvedCreated]);
         showToast(`Entidade "${effectivePersonName}" adicionada com sucesso.`);
+        if (onEntitySaved) onEntitySaved(resolvedCreated);
       }
       setIsEntityModalOpen(false);
       setEditingEntity(null);

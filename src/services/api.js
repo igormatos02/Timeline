@@ -646,6 +646,16 @@ export async function toggleEventPayment(id, status = null) {
   return res.json();
 }
 
+export async function setEventStatus(id, payload = {}) {
+  const res = await fetch(`${API_BASE}/events/${id}/status`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('Failed to update event status');
+  return res.json();
+}
+
 export async function deleteEvent(id, options = {}) {
   const res = await fetch(`${API_BASE}/events/${id}`, {
     method: 'DELETE',

@@ -44,6 +44,16 @@ export class SupabaseFinancialEventStatusRepository {
     return map;
   }
 
+  async getFullStatusMap(filter = null) {
+    const records = await this.getAll(filter);
+    const map = new Map();
+    for (const r of records) {
+      const key = `${r.year}_${r.month}_${r.event_id}`;
+      map.set(key, r);
+    }
+    return map;
+  }
+
   async upsertStatus(year, month, eventId, status, options = {}) {
     if (!year || !month || !eventId || !status) return null;
 
@@ -60,6 +70,10 @@ export class SupabaseFinancialEventStatusRepository {
     }
     if (options.timeboardId || options.timeboard_id) {
       row.timeboard_id = String(options.timeboardId || options.timeboard_id);
+    }
+    const contYearVal = options.contYear !== undefined ? options.contYear : options.cont_year;
+    if (contYearVal !== undefined && contYearVal !== null && contYearVal !== '') {
+      row.cont_year = Number(contYearVal);
     }
 
     const { data, error } = await supabase

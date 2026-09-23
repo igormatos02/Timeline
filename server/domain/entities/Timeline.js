@@ -32,6 +32,7 @@ export class Timeline {
     installmentAmount = 0,
     totalInstallments = 0,
     dueDay = 1,
+    contYear = null,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
   }) {
@@ -42,6 +43,7 @@ export class Timeline {
     this.type = type;
     this.color = color;
     this.description = description;
+    this.contYear = contYear !== null && contYear !== undefined ? Number(contYear) : null;
     this.isSystemDefault = Boolean(isSystemDefault);
     this.canDelete = this.isSystemDefault ? false : (canDelete !== undefined && canDelete !== null ? Boolean(canDelete) : true);
     this.startDate = startDate;

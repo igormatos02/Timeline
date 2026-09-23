@@ -2188,6 +2188,7 @@ export default function App() {
             timeline={activeTimeline}
             timelines={activeTimeboardTimelines}
             activeTimeboard={activeTimeboard}
+            currentUser={currentUser}
             activeFinancialTab={activeFinancialTab}
             pockets={pockets}
             persons={timeboardPersons}

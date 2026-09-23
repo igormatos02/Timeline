@@ -1481,6 +1481,29 @@ export const translations = {
         defaultInviter: "A team member",
         emailSendError: "Error sending invitation email via Brevo: {error}"
       }
+    },
+
+    receipt: {
+      printReceipt: "Print Receipt",
+      generatingReceipt: "Generating receipt...",
+      receiptTitle: "RECEIPT",
+      stubTitle: "COUNTERFOIL / STUB",
+      receiptOfIncome: "Receipt of Inflow / Income",
+      receiptOfExpense: "Receipt of Payment / Expense",
+      receiptOfGeneric: "Receipt of Movement",
+      receivedFrom: "Received from:",
+      paidBy: "Paid by:",
+      paidTo: "Paid to:",
+      receivedBy: "Received by:",
+      dateOfPayment: "Date of Movement:",
+      value: "Amount:",
+      concept: "Concept / Description:",
+      timeboard: "Timeboard:",
+      issuer: "Issued by (Administrator):",
+      signaturePlaceholder: "Signature",
+      print: "Print",
+      download: "Download PDF",
+      close: "Close"
     }
   },
 
@@ -2964,6 +2987,29 @@ export const translations = {
         defaultInviter: "Um membro da equipa",
         emailSendError: "Erro ao enviar email de convite via Brevo: {error}"
       }
+    },
+
+    receipt: {
+      printReceipt: "Imprimir Recibo",
+      generatingReceipt: "A gerar recibo...",
+      receiptTitle: "RECIBO",
+      stubTitle: "CANHOTO",
+      receiptOfIncome: "Recibo de Recebimento",
+      receiptOfExpense: "Recibo de Pagamento",
+      receiptOfGeneric: "Recibo de Movimento",
+      receivedFrom: "Recebido de:",
+      paidBy: "Pago por:",
+      paidTo: "Pago a:",
+      receivedBy: "Recebido por:",
+      dateOfPayment: "Data do Pagamento:",
+      value: "Valor:",
+      concept: "Conceito / Descrição:",
+      timeboard: "Timeboard:",
+      issuer: "Emitido por (Administrador):",
+      signaturePlaceholder: "Assinatura",
+      print: "Imprimir",
+      download: "Descarregar PDF",
+      close: "Fechar"
     }
   }
 };

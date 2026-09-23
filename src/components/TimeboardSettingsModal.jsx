@@ -262,10 +262,6 @@ export default function TimeboardSettingsModal({
       alert(t('timeboardSettings.entities.form.personNameRequired') || 'O Nome da Pessoa é obrigatório.');
       return;
     }
-    if (!effectiveObligatorId) {
-      alert(t('timeboardSettings.entities.form.obligatorIdRequired') || 'A Identificação do Obrigado é obrigatória.');
-      return;
-    }
 
     setIsSavingEntity(true);
     const payload = {
@@ -273,8 +269,8 @@ export default function TimeboardSettingsModal({
       type: entityForm.type,
       personName: effectivePersonName,
       name: effectivePersonName,
-      obligatorIdentification: effectiveObligatorId,
-      taxId: effectiveObligatorId,
+      obligatorIdentification: effectiveObligatorId || null,
+      taxId: effectiveObligatorId || null,
       email: entityForm.email.trim() || null,
       phone: entityForm.phone.trim() || null,
       birthDate: entityForm.birthDate || null,
@@ -1801,11 +1797,10 @@ export default function TimeboardSettingsModal({
               {/* Obligator Identification */}
               <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
-                  {t('timeboardSettings.entities.form.obligatorIdentificationLabel') || 'Identificação do Obrigado *'}
+                  {t('timeboardSettings.entities.form.obligatorIdentificationLabel') || 'Identificação do Obrigado'}
                 </label>
                 <input
                   type="text"
-                  required
                   value={entityForm.obligatorIdentification}
                   onChange={(e) => setEntityForm({ ...entityForm, obligatorIdentification: e.target.value })}
                   placeholder={t('timeboardSettings.entities.form.obligatorIdentificationPlaceholder') || 'Ex: NIF, CPF, BI ou Nº de Documento'}
@@ -2104,7 +2099,7 @@ export default function TimeboardSettingsModal({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSavingEntity || !entityForm.personName?.trim() || !entityForm.obligatorIdentification?.trim()}
+                  disabled={isSavingEntity || !entityForm.personName?.trim()}
                   style={{
                     background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
                     border: 'none',

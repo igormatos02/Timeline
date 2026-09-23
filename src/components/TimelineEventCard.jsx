@@ -48,7 +48,8 @@ import {
   Bell,
   ListTree,
   Loader2,
-  Flag
+  Flag,
+  Printer
 } from 'lucide-react';
 import { isLoanInstallment as checkIsLoanInstallment, isAmortizationEvent as checkIsAmortizationEvent } from '../utils/loanCalculations';
 import { formatCurrency } from '../utils/formatCurrency';
@@ -101,6 +102,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   onPayUpToHere,
   onOpenEditInstallment,
   onNavigateToTimeline,
+  onPrintReceipt,
   timelineColor,
   timelines = []
 }) {
@@ -2475,6 +2477,31 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         </button>
       )}
 
+      {/* Botão Imprimir Recibo - Para qualquer evento com obligator */}
+      {isObligationEvent && onPrintReceipt && (
+        <button
+          type="button"
+          className="action-icon-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPrintReceipt(event, obligationPerson);
+          }}
+          title={t('receipt.printReceipt')}
+          style={{
+            padding: '3px 5px',
+            borderRadius: '5px',
+            color: isFlatPositive ? TimelineColor.WHITE : 'var(--primary-light)',
+            background: isFlatPositive ? 'rgba(255, 255, 255, 0.22)' : 'rgba(99, 102, 241, 0.15)',
+            border: isFlatPositive ? '1px solid rgba(255, 255, 255, 0.35)' : '1px solid rgba(99, 102, 241, 0.35)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            cursor: 'pointer'
+          }}
+        >
+          <Printer size={13} style={{ color: isFlatPositive ? TimelineColor.WHITE : 'var(--primary-light)' }} />
+        </button>
+      )}
+
       {/* Botão Editar Evento - Não permitido para parcelas de empréstimo ou eventos virtuais */}
       {onEdit && !isLoanInstallment && !isVirtual && (
         <button
@@ -4656,7 +4683,8 @@ export const TimelineEventCard = React.memo(function TimelineEventCard({
   onToggleLoanPayment,
   onPayUpToHere,
   onOpenEditInstallment,
-  onNavigateToTimeline
+  onNavigateToTimeline,
+  onPrintReceipt
 }) {
   const eventList = React.useMemo(() => {
     const list = Array.isArray(events) ? [...events] : (event ? [event] : []);
@@ -4776,6 +4804,7 @@ export const TimelineEventCard = React.memo(function TimelineEventCard({
             onPayUpToHere={onPayUpToHere}
             onOpenEditInstallment={onOpenEditInstallment}
             onNavigateToTimeline={onNavigateToTimeline}
+            onPrintReceipt={onPrintReceipt}
             timelineColor={timelineColor || baseColor}
           />
         ))}

@@ -52,9 +52,6 @@ export class Person {
     if (!data.personName || typeof data.personName !== 'string' || data.personName.trim() === '') {
       throw new Error(t('backend.validation.personNameRequired'));
     }
-    if (!data.obligatorIdentification || typeof data.obligatorIdentification !== 'string' || data.obligatorIdentification.trim() === '') {
-      throw new Error(t('backend.validation.obligatorIdentificationRequired'));
-    }
     if (!data.timeboardId) {
       throw new Error(t('backend.validation.timeboardIdRequired'));
     }

@@ -29,6 +29,7 @@ function rowToEntity(row) {
     aggregation: row.aggregation || row.periodicity,
     periodicity: row.periodicity || row.aggregation,
     initialValue: row.initial_value !== null && row.initial_value !== undefined ? Number(row.initial_value) : 0,
+    contYear: row.cont_year !== null && row.cont_year !== undefined ? Number(row.cont_year) : null,
     tenantId: row.tenant_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -71,6 +72,8 @@ function entityToRow(data) {
   if (data.aggregation !== undefined || data.periodicity !== undefined) {
     row.aggregation = data.aggregation || data.periodicity || 'monthly';
   }
+  if (data.contYear !== undefined) row.cont_year = data.contYear !== null && data.contYear !== '' ? Number(data.contYear) : null;
+  if (data.cont_year !== undefined) row.cont_year = data.cont_year !== null && data.cont_year !== '' ? Number(data.cont_year) : null;
   row.tenant_id = data.tenantId || data.tenant_id || '9e3c3070-d4db-43be-ab03-3f852a9a81da';
   return row;
 }

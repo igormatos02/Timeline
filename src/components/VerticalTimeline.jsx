@@ -78,7 +78,9 @@ import {
   Users,
   User,
   Building2,
-  UserCheck
+  UserCheck,
+  Loader2,
+  Printer
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
 import { compareEventsWithinDay } from '../utils/eventSorting.js';
@@ -134,8 +136,10 @@ const EXPENSE_CATEGORY_ITEMS = [
   { id: ExpensesEventCategory.TRAVEL, icon: Plane, color: TimelineColor.CYAN },
   { id: ExpensesEventCategory.PERSONAL_CARE, icon: Sparkles, color: TimelineColor.ROSE },
   { id: ExpensesEventCategory.SERVICES, icon: CreditCard, color: TimelineColor.SLATE },
-  { id: ExpensesEventCategory.OTHER, icon: ShoppingCart, color: TimelineColor.SLATE }
 ];
+
+import ReceiptModal from './modals/ReceiptModal.jsx';
+import { buildReceiptHtml, computeReceiptNumber } from '../utils/receiptGenerator.js';
 
 const groupEventsByDate = (events = []) => {
   const groups = [];
@@ -159,6 +163,7 @@ function VerticalTimeline({
   timeline,
   timelines = [],
   activeTimeboard = null,
+  currentUser = null,
   activeFinancialTab = '',
   pockets = [],
   persons = [],
@@ -216,6 +221,38 @@ function VerticalTimeline({
     categories: false,
     entities: false
   });
+
+  // Receipt Modal and Generation Overlay State
+  const [receiptModalData, setReceiptModalData] = useState(null);
+  const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
+
+  const handleOpenReceipt = useCallback((targetEvent, targetPerson) => {
+    setIsGeneratingReceipt(true);
+    setTimeout(() => {
+      try {
+        const receiptNumber = computeReceiptNumber(timeline);
+        const html = buildReceiptHtml({
+          event: targetEvent,
+          timeboard: activeTimeboard,
+          timeline,
+          receiptNumber,
+          currentUser,
+          obligationPerson: targetPerson,
+          language,
+          t
+        });
+        setReceiptModalData({
+          isOpen: true,
+          htmlContent: html,
+          title: t('receipt.printReceipt')
+        });
+      } catch (err) {
+        console.error('Error generating receipt HTML:', err);
+      } finally {
+        setIsGeneratingReceipt(false);
+      }
+    }, 450);
+  }, [activeTimeboard, timeline, currentUser, language, t]);
 
   const toggleSectionCollapse = (key) => {
     setCollapsedSections((prev) => ({
@@ -775,8 +812,31 @@ function VerticalTimeline({
     if (!timelineEvents || timelineEvents.length === 0) return [];
     const entityMap = new Map();
 
+    // Helper to test if an event belongs to this timeline's scope
+    const isEventBelongingToCurrentTimeline = (ev) => {
+      if (!ev || ev.isDeleted) return false;
+      if (timeline.type === TimelineType.BALANCE) {
+        const isNonFinancial =
+          ev.eventType === EventType.TODO ||
+          ev.timelineType === TimelineType.TODO ||
+          ev.timeline_type === TimelineType.TODO ||
+          ev.category === EventType.TODO ||
+          ev.category === 'tarefa' ||
+          ev.category === 'todo' ||
+          ev.eventType === EventType.FOLLOWUP ||
+          ev.timelineType === TimelineType.FOLLOWUP ||
+          ev.timeline_type === TimelineType.FOLLOWUP ||
+          ev.category === 'followup' ||
+          ev.eventType === EventType.REGISTER ||
+          ev.timelineType === TimelineType.DIARY ||
+          ev.timeline_type === TimelineType.DIARY;
+        return !isNonFinancial;
+      }
+      return ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
+    };
+
     timelineEvents.forEach((ev) => {
-      if (!ev || ev.isDeleted) return;
+      if (!isEventBelongingToCurrentTimeline(ev)) return;
       const pId = ev.obligationPersonId || ev.obligation_person_id;
       const pObj = ev.obligationPerson || ev.obligation_person;
 
@@ -829,7 +889,7 @@ function VerticalTimeline({
     });
 
     return Array.from(entityMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
-  }, [timelineEvents, persons]);
+  }, [timelineEvents, persons, timeline.id, timeline.type]);
 
 
   const getEntityIcon = (type) => {
@@ -1387,6 +1447,7 @@ function VerticalTimeline({
                           onPayUpToHere={onPayUpToHere}
                           onOpenEditInstallment={onOpenEditInstallment}
                           onNavigateToTimeline={onNavigateToTimeline}
+                          onPrintReceipt={handleOpenReceipt}
                         />
                       </div>
                     ))
@@ -2594,6 +2655,7 @@ function VerticalTimeline({
                                         onPayUpToHere={onPayUpToHere}
                                         onOpenEditInstallment={onOpenEditInstallment}
                                         onNavigateToTimeline={onNavigateToTimeline}
+                                        onPrintReceipt={handleOpenReceipt}
                                       />
                                     </div>
                                   ))}
@@ -2641,6 +2703,7 @@ function VerticalTimeline({
                                   onPayUpToHere={onPayUpToHere}
                                   onOpenEditInstallment={onOpenEditInstallment}
                                   onNavigateToTimeline={onNavigateToTimeline}
+                                  onPrintReceipt={handleOpenReceipt}
                                 />
                               </div>
                             ))}
@@ -2672,6 +2735,7 @@ function VerticalTimeline({
                           onPayUpToHere={onPayUpToHere}
                           onOpenEditInstallment={onOpenEditInstallment}
                           onNavigateToTimeline={onNavigateToTimeline}
+                          onPrintReceipt={handleOpenReceipt}
                         />
                       </div>
                     ))
@@ -2824,6 +2888,7 @@ function VerticalTimeline({
                                 onPayUpToHere={onPayUpToHere}
                                 onOpenEditInstallment={onOpenEditInstallment}
                                 onNavigateToTimeline={onNavigateToTimeline}
+                                onPrintReceipt={handleOpenReceipt}
                               />
                             </div>
                           ))
@@ -2928,6 +2993,7 @@ function VerticalTimeline({
                     onPayUpToHere={onPayUpToHere}
                     onOpenEditInstallment={onOpenEditInstallment}
                     onNavigateToTimeline={onNavigateToTimeline}
+                    onPrintReceipt={handleOpenReceipt}
                   />
                 ) : (
                   <div
@@ -3010,6 +3076,7 @@ function VerticalTimeline({
               onPayUpToHere={onPayUpToHere}
               onOpenEditInstallment={onOpenEditInstallment}
               onNavigateToTimeline={onNavigateToTimeline}
+              onPrintReceipt={handleOpenReceipt}
             />
           </div>
         ))
@@ -3671,6 +3738,42 @@ function VerticalTimeline({
                 <Plus size={16} /> {t('timeline.addEventToday')}
               </button>
             )}
+          </div>
+        )}
+
+        {/* Modal de Impressão / Pré-visualização do Recibo */}
+        {receiptModalData && receiptModalData.isOpen && (
+          <ReceiptModal
+            isOpen={receiptModalData.isOpen}
+            onClose={() => setReceiptModalData(null)}
+            htmlContent={receiptModalData.htmlContent}
+            title={receiptModalData.title}
+          />
+        )}
+
+        {/* Overlay elegante enquanto gera o documento */}
+        {isGeneratingReceipt && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.65)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 10000,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px'
+            }}
+          >
+            <Loader2 size={36} className="spin" style={{ color: 'var(--primary-light)' }} />
+            <div style={{ color: TimelineColor.WHITE, fontSize: '1rem', fontWeight: '700' }}>
+              {t('receipt.generatingReceipt')}
+            </div>
           </div>
         )}
       </div>

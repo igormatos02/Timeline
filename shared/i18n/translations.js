@@ -1503,7 +1503,8 @@ export const translations = {
       signaturePlaceholder: "Signature",
       print: "Print",
       download: "Download PDF",
-      close: "Close"
+      close: "Close",
+      receiptNumber: "Rec. {number}"
     }
   },
 
@@ -3009,7 +3010,8 @@ export const translations = {
       signaturePlaceholder: "Assinatura",
       print: "Imprimir",
       download: "Descarregar PDF",
-      close: "Fechar"
+      close: "Fechar",
+      receiptNumber: "Rec. {number}"
     }
   }
 };

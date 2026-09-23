@@ -8,41 +8,17 @@
                 "baseURL": "http://localhost:11434/v1"
             },
             "models": {
-                "devstral-small-2-24b-8k": {
+                "devstral-small-2-24b-8k:latest": {
                     "name": "Devstral Small 2 24B 8K",
                     "limit": {
-                        "context": 8192,
-                        "input": 8192,
-                        "output": 4096
+                        "context": 4096,
+                        "input": 3072,
+                        "output": 1024
                     }
                 }
             }
         }
     },
-    "model": "ollama/devstral-small-2-24b-8k",
-    "lsp": true,
-    "instructions": [
-        "AGENTS.md"
-    ],
-    "references": {
-        "express": {
-            "repository": "expressjs/express",
-            "description": "Express.js documentation"
-        },
-        "node": {
-            "repository": "nodejs/node",
-            "description": "Node.js internals"
-        }
-    },
-    "mcp": {
-        "node": {
-            "type": "local",
-            "command": [
-                "npx",
-                "-y",
-                "@anthropic-ai/mcp-server-node"
-            ],
-            "enabled": true
-        }
-    }
+    "model": "ollama/devstral-small-2-24b-8k:latest",
+    "lsp": true
 }

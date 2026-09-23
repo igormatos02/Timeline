@@ -1785,7 +1785,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         marginBottom: '2px'
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: 1, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
         {/* Ícone de Único, Recorrente ou Poupança/Retirada */}
         <span
           title={isVirtualWithdrawal ? t('withdrawalModal.depositBadge') : (isRecurring ? t('recurrence.recurring') : t('recurrence.once'))}
@@ -1795,8 +1795,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             justifyContent: 'center',
             color: isFlatPositive ? TimelineColor.WHITE : (isVirtualWithdrawal ? TimelineColor.INVESTMENT : 'var(--primary-light)'),
             opacity: isFlatPositive ? 1 : 0.85,
-            flexShrink: 0,
-            marginTop: '2px'
+            flexShrink: 0
           }}
         >
           {isVirtualWithdrawal ? (
@@ -2067,30 +2066,36 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       : (t('modal.obligation') || 'Obrigação')
                   }
                 >
-                  {/* Linha de cima: Obligation ID */}
-                  {personIdCode ? (
+                  {/* Linha de cima: Person Name - bold */}
+                  {personDisplayName ? (
                     <div
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '4px',
                         fontSize: '0.84rem',
-                        fontWeight: '800',
-                        color: 'var(--text-main, #ffffff)',
+                        fontWeight: '700',
+                        color: isFlatPositive ? TimelineColor.WHITE : 'var(--text-main)',
                         lineHeight: 1.2
                       }}
                     >
-                      <FileCheck2 size={13} style={{ color: cardTheme.color || '#f59e0b', flexShrink: 0 }} />
-                      <span>{personIdCode}</span>
+                      {personType === PersonType.ORGANIZATION ? (
+                        <Building2 size={13} style={{ color: cardTheme.color || '#f59e0b', flexShrink: 0 }} />
+                      ) : personType === PersonType.MEMBER ? (
+                        <UserCheck size={13} style={{ color: cardTheme.color || '#f59e0b', flexShrink: 0 }} />
+                      ) : (
+                        <User size={13} style={{ color: cardTheme.color || '#f59e0b', flexShrink: 0 }} />
+                      )}
+                      <span>{personDisplayName}</span>
                     </div>
-                  ) : !personDisplayName ? (
+                  ) : (
                     <div
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '4px',
                         fontSize: '0.74rem',
-                        fontWeight: '800',
+                        fontWeight: '700',
                         color: cardTheme.color || '#f59e0b',
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em',
@@ -2100,29 +2105,23 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       <FileCheck2 size={12} style={{ color: cardTheme.color || '#f59e0b', flexShrink: 0 }} />
                       <span>{t('modal.obligation') || 'Obrigação'}</span>
                     </div>
-                  ) : null}
+                  )}
 
-                  {/* Linha de baixo: Person Name com ícone de user */}
-                  {personDisplayName && (
+                  {/* Linha de baixo: Obligation ID - sem negrito */}
+                  {personIdCode && (
                     <div
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '4px',
-                        fontSize: '0.78rem',
-                        fontWeight: '600',
-                        color: 'var(--text-muted, #94a3b8)',
+                        fontSize: '0.74rem',
+                        fontWeight: '400',
+                        color: isFlatPositive ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)',
                         lineHeight: 1.2
                       }}
                     >
-                      {personType === PersonType.ORGANIZATION ? (
-                        <Building2 size={12} style={{ opacity: 0.85, flexShrink: 0 }} />
-                      ) : personType === PersonType.MEMBER ? (
-                        <UserCheck size={12} style={{ opacity: 0.85, flexShrink: 0 }} />
-                      ) : (
-                        <User size={12} style={{ opacity: 0.85, flexShrink: 0 }} />
-                      )}
-                      <span>{personDisplayName}</span>
+                      <FileCheck2 size={11} style={{ opacity: 0.7, flexShrink: 0 }} />
+                      <span>{personIdCode}</span>
                     </div>
                   )}
                 </div>
@@ -2130,135 +2129,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             })()}
           </div>
 
-          {/* Categoria do Evento debaixo do título (com opção de troca rápida) */}
-          {event.category && !isRegisterEvent && !isVirtual && (
-            <div
-              ref={categoryDropdownRef}
-              style={{ position: 'relative', display: 'inline-flex' }}
-            >
-              <div
-                onClick={(e) => {
-                  if (isLoanInstallment) return;
-                  e.stopPropagation();
-                  setIsCategoryDropdownOpen((prev) => !prev);
-                }}
-                title={!isLoanInstallment ? (t('timeline.changeCategory') || 'Clique para alterar a categoria') : undefined}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '0.76rem',
-                  color: 'var(--text-main, #ffffff)',
-                  fontWeight: '600',
-                  lineHeight: '1.2',
-                  cursor: !isLoanInstallment ? 'pointer' : 'default',
-                  padding: '2px 5px',
-                  borderRadius: '4px',
-                  background: isCategoryDropdownOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-                  transition: 'background var(--transition-fast)'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isLoanInstallment) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                }}
-                onMouseLeave={(e) => {
-                  if (!isLoanInstallment) e.currentTarget.style.background = isCategoryDropdownOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent';
-                }}
-              >
-                {catMeta?.icon && (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      color: catMeta.color || '#818cf8'
-                    }}
-                  >
-                    {catMeta.icon}
-                  </span>
-                )}
-                <span style={{ color: 'var(--text-main, #ffffff)', fontWeight: '600' }}>
-                  {catMeta?.label || event.category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-                </span>
-                {!isLoanInstallment && (
-                  <ChevronDown size={10} style={{ opacity: 0.7, marginLeft: '1px' }} />
-                )}
-              </div>
 
-              {isCategoryDropdownOpen && (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    position: 'absolute',
-                    top: catOpenUpwards ? undefined : 'calc(100% + 4px)',
-                    bottom: catOpenUpwards ? 'calc(100% + 4px)' : undefined,
-                    left: 0,
-                    zIndex: 999999,
-                    background: 'var(--bg-card, #1e2230)',
-                    border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.12))',
-                    borderRadius: '8px',
-                    boxShadow: '0 10px 28px rgba(0, 0, 0, 0.5)',
-                    padding: '6px',
-                    minWidth: '190px',
-                    maxHeight: '260px',
-                    overflowY: 'auto',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px'
-                  }}
-                >
-                  {getCategoryOptionsForEvent().map((opt) => {
-                    const isSelected = event.category === opt.key;
-                    const IconComponent = opt.meta?.icon;
-                    return (
-                      <button
-                        key={opt.key}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelectCategory(opt.key);
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '6px 10px',
-                          borderRadius: '6px',
-                          background: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                          color: isSelected ? 'var(--primary-light, #818cf8)' : 'var(--text-main, #ffffff)',
-                          border: isSelected ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
-                          fontSize: '0.80rem',
-                          fontWeight: isSelected ? '700' : '600',
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          width: '100%',
-                          transition: 'all var(--transition-fast)'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isSelected) {
-                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isSelected) {
-                            e.currentTarget.style.background = 'transparent';
-                          }
-                        }}
-                      >
-                        {IconComponent && (
-                          <span style={{ color: opt.meta?.color || '#818cf8', display: 'flex', alignItems: 'center' }}>
-                            <IconComponent size={13} />
-                          </span>
-                        )}
-                        <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isSelected ? 'var(--primary-light, #818cf8)' : 'var(--text-main, #ffffff)', fontWeight: '600' }}>
-                          {opt.label}
-                        </span>
-                        {isSelected && <Check size={12} style={{ color: 'var(--primary-light, #818cf8)' }} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>
@@ -2577,11 +2448,16 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           {/* Linha 1: [icone] [titulo do evento] [lables] */}
           {renderCardInnerHeader()}
 
-          {/* Linha 2: [status text] (left) e [b status] (right, apenas não virtual) */}
+          {/* Linha 2: [receipt number or empty] (left) e [b status] (right, apenas não virtual) */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
-            <span style={{ fontSize: '0.7rem', color: isReceivedIncome ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', paddingBottom: '0px', marginBottom: '0px', lineHeight: 1 }}>
-              {isReceivedIncome ? t('status.received') : t('status.toReceive')}
-            </span>
+            {(event.cont_year != null && event.cont_year > 0) ? (
+              <span style={{ fontSize: '0.7rem', color: isReceivedIncome ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', paddingBottom: '0px', marginBottom: '0px', lineHeight: 1, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <FileText size={10} />
+                {t('receipt.receiptNumber', { number: event.cont_year })}
+              </span>
+            ) : (
+              <span style={{ fontSize: '0.7rem', lineHeight: 1 }}>&nbsp;</span>
+            )}
             {!isVirtual && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
                 {renderStatusDropdownButton(
@@ -2700,12 +2576,17 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           {/* Linha 1: [icone] [titulo do evento] [lables] */}
           {renderCardInnerHeader()}
 
-          {/* Linha 2: [motivo] (left) e [b status] (right) */}
+          {/* Linha 2: [receipt number or empty] (left) e [b status] (right) */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', paddingBottom: '0px' }}>
-              <span style={{ fontSize: '0.7rem', color: isPaidExpense ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1 }}>
-                {t(`status.${EventStatus.TO_PAY}`)}
-              </span>
+              {(event.cont_year != null && event.cont_year > 0) ? (
+                <span style={{ fontSize: '0.7rem', color: isPaidExpense ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <FileText size={10} />
+                  {t('receipt.receiptNumber', { number: event.cont_year })}
+                </span>
+              ) : (
+                <span style={{ fontSize: '0.7rem', lineHeight: 1 }}>&nbsp;</span>
+              )}
               {event.priority && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isPaidExpense ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
                   <span style={{ fontSize: '0.68rem', color: isPaidExpense ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
@@ -2831,16 +2712,17 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           {/* Linha 1: [icone] [titulo do evento] [lables] */}
           {renderCardInnerHeader()}
 
-          {/* Linha 2: [motivo] (left) e [b status] (right) */}
+          {/* Linha 2: [receipt number or category label] (left) e [b status] (right) */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', paddingBottom: '0px' }}>
-              <span style={{ fontSize: '0.7rem', color: isCompletedInvestment ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1 }}>
-                {isWithdrawalEvent
-                  ? t('withdrawalModal.badge')
-                  : event.category === 'investimento_patrimonio'
-                  ? t('balanceHeader.inAccount')
-                  : (Number(event.amount || 0) > 0 ? t('timeline.monthlyDeposit') : t('timeline.monthlyTarget'))}
-              </span>
+              {(event.cont_year != null && event.cont_year > 0) ? (
+                <span style={{ fontSize: '0.7rem', color: isCompletedInvestment ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <FileText size={10} />
+                  {t('receipt.receiptNumber', { number: event.cont_year })}
+                </span>
+              ) : (
+                <span style={{ fontSize: '0.7rem', lineHeight: 1 }}>&nbsp;</span>
+              )}
 
               {event.category === 'investimento_patrimonio' && Number(event.initialInvestedAmount || 0) > 0 && Number(event.amount || 0) > 0 && Number(event.initialInvestedAmount) !== Number(event.amount) && (
                 <>

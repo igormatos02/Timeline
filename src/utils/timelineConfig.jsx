@@ -110,16 +110,23 @@ export function getTimelineTypeOptions() {
  * Generates the dropdown options dynamically from TimelineType, filtering out single-instance types already present.
  * @param {Array} existingTimelines
  * @param {Function} t - translation function
+ * @param {string} timeboardType - type of timeboard (e.g., 'condoflow')
  * @returns {Array<{key: string, type: string, label: string, icon: React.ReactElement, color: string}>}
  */
-export function getTimelineDropdownOptions(existingTimelines = [], t) {
+export function getTimelineDropdownOptions(existingTimelines = [], t, timeboardType = null) {
   const currentTypes = new Set(
     (existingTimelines || []).map((tl) => normalizeTimelineType(tl.type))
   );
 
+  // Types not allowed in condoflow timeboards
+  const condoflowDisallowed = new Set([TimelineType.TODO, TimelineType.FOLLOWUP]);
+
   return Object.values(TimelineType)
     .filter((type) => {
       if (isSingleInstanceTimelineType(type) && currentTypes.has(type)) {
+        return false;
+      }
+      if (timeboardType === 'condoflow' && condoflowDisallowed.has(type)) {
         return false;
       }
       return true;

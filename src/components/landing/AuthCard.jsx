@@ -15,8 +15,10 @@ import {
   Send
 } from 'lucide-react';
 import * as api from '../../services/api.js';
+import { useTranslation } from '../../i18n/LanguageContext.jsx';
 
-export default function AuthCard({ onAuthSuccess, initialEmail = '', pendingInvite = null, t }) {
+export default function AuthCard({ onAuthSuccess, initialEmail = '', pendingInvite = null }) {
+  const { t } = useTranslation();
   const [authMode, setAuthMode] = useState(initialEmail ? 'register' : 'login'); // 'login' | 'register' | 'forgot'
   const [name, setName] = useState('');
   const [email, setEmail] = useState(initialEmail || '');
@@ -127,10 +129,10 @@ export default function AuthCard({ onAuthSuccess, initialEmail = '', pendingInvi
           </div>
           <div>
             <div style={{ color: '#ffffff', fontWeight: '700', fontSize: '0.86rem' }}>
-              Convite para Timeboard Recebido! 🎉
+              {t('landing.badge')} {t('auth.googleButton')}
             </div>
             <div style={{ color: '#cbd5e1', fontSize: '0.78rem', marginTop: '2px', lineHeight: 1.4 }}>
-              Inicie sessão ou crie a sua conta para aceder diretamente ao dashboard partilhado.
+              {t('landing.subtitle')}
             </div>
           </div>
         </div>

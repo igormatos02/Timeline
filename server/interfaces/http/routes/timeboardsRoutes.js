@@ -141,7 +141,7 @@ timeboardsRouter.get('/:id', async (req, res) => {
 // POST /api/timeboards
 timeboardsRouter.post('/', async (req, res) => {
   try {
-    const newTimeboard = await timeboardService.createTimeboard(req.body);
+    const newTimeboard = await timeboardService.createTimeboard(req.body, req.body.locale);
     res.status(201).json(newTimeboard);
   } catch (err) {
     res.status(400).json({ error: err.message });

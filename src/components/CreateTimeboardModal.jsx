@@ -1,8 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, LayoutGrid, ChevronDown, Trash2 } from 'lucide-react';
+import { X, Sparkles, LayoutGrid, Trash2, DollarSign, Plus, Home } from 'lucide-react';
 import { TimeboardType } from '../../shared/enums/TimeboardType.js';
 import { TimelineColor } from '../../shared/enums/TimelineColor.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
+
+const TEMPLATES = [
+  {
+    value: TimeboardType.CONDOFLOW,
+    icon: Home,
+    color: '#a68069',
+    titleKey: 'templateCondoflow',
+    descKey: 'templateCondoflowDesc',
+    namePlaceholderKey: 'namePlaceholderCondoflow',
+    descriptionPlaceholderKey: 'descriptionPlaceholderCondoflow'
+  },
+  {
+    value: TimeboardType.FINANCIAL,
+    icon: DollarSign,
+    color: '#10b981',
+    titleKey: 'templateFinancial',
+    descKey: 'templateFinancialDesc',
+    namePlaceholderKey: 'namePlaceholderFinancial',
+    descriptionPlaceholderKey: 'descriptionPlaceholderFinancial'
+  },
+  {
+    value: TimeboardType.EMPTY,
+    icon: Plus,
+    color: '#64748b',
+    titleKey: 'templateEmpty',
+    descKey: 'templateEmptyDesc',
+    namePlaceholderKey: 'namePlaceholderEmpty',
+    descriptionPlaceholderKey: 'descriptionPlaceholderEmpty'
+  }
+];
 
 export default function CreateTimeboardModal({
   isOpen,
@@ -130,6 +160,63 @@ export default function CreateTimeboardModal({
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Timeboard Template */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
+              {t('timeboardModal.templateLabel')}
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+              {TEMPLATES.map((tmpl) => {
+                const Icon = tmpl.icon;
+                const isSelected = formData.type === tmpl.value;
+                const isDisabled = Boolean(initialData);
+                return (
+                  <button
+                    key={tmpl.value}
+                    type="button"
+                    onClick={() => !isDisabled && setFormData({ 
+                      ...formData, 
+                      type: tmpl.value,
+                      name: '',
+                      description: ''
+                    })}
+                    disabled={isDisabled}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                      padding: '14px 12px',
+                      borderRadius: '12px',
+                      border: `2px solid ${isSelected ? tmpl.color : 'var(--border-glass)'}`,
+                      background: isSelected ? `${tmpl.color}1f` : (isDisabled ? 'rgba(148, 163, 184, 0.1)' : 'var(--bg-glass)'),
+                      color: isDisabled ? 'var(--text-dim)' : 'var(--text-main)',
+                      cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      fontSize: '0.8rem',
+                      fontWeight: '600',
+                      textAlign: 'left',
+                      transition: 'all 0.15s ease',
+                      boxSizing: 'border-box',
+                      minHeight: '100px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                      <div style={{ background: isSelected ? tmpl.color : 'var(--bg-input)', padding: '8px', borderRadius: '8px', display: 'flex' }}>
+                        <Icon size={18} style={{ color: isSelected ? 'white' : tmpl.color }} />
+                      </div>
+                      <span style={{ fontWeight: '700', color: isSelected ? tmpl.color : (isDisabled ? 'var(--text-dim)' : 'var(--text-main)') }}>
+                        {t(`timeboardModal.${tmpl.titleKey}`)}
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.72rem', fontWeight: '400', color: isDisabled ? 'var(--text-dim)' : 'var(--text-muted)', lineHeight: '1.4' }}>
+                      {t(`timeboardModal.${tmpl.descKey}`)}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Timeboard Name */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
@@ -140,16 +227,16 @@ export default function CreateTimeboardModal({
               style={{
                 width: '100%',
                 padding: '12px 14px',
-                background: 'rgba(0, 0, 0, 0.25)',
+                background: '#ffffff',
                 border: '1px solid var(--border-glass)',
                 borderRadius: '10px',
-                color: 'var(--text-main)',
+                color: '#090d16',
                 fontSize: '0.95rem',
-                fontWeight: '600',
+                fontWeight: '500',
                 outline: 'none',
                 boxSizing: 'border-box'
               }}
-              placeholder={t('timeboardModal.namePlaceholder')}
+              placeholder={t(`timeboardModal.${TEMPLATES.find(t => t.value === formData.type)?.namePlaceholderKey || 'namePlaceholder'}`)}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -167,78 +254,21 @@ export default function CreateTimeboardModal({
               style={{
                 width: '100%',
                 padding: '12px 14px',
-                background: 'rgba(0, 0, 0, 0.25)',
+                background: '#ffffff',
                 border: '1px solid var(--border-glass)',
                 borderRadius: '10px',
-                color: 'var(--text-main)',
-                fontSize: '0.9rem',
+                color: '#090d16',
+                fontSize: '0.95rem',
+                fontWeight: '500',
                 outline: 'none',
                 boxSizing: 'border-box',
-                resize: 'none'
+                resize: 'none',
+                fontFamily: 'inherit'
               }}
-              placeholder={t('timeboardModal.descriptionPlaceholder')}
+              placeholder={t(`timeboardModal.${TEMPLATES.find(t => t.value === formData.type)?.descriptionPlaceholderKey || 'descriptionPlaceholder'}`)}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
-          </div>
-
-          {/* Timeboard Type */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
-              {t('timeboardModal.typeLabel')}
-            </label>
-            <div style={{ position: 'relative' }}>
-              <select
-                className="form-input"
-                disabled={Boolean(initialData)}
-                style={{
-                  width: '100%',
-                  padding: '10px 36px 10px 12px',
-                  borderRadius: '8px',
-                  boxSizing: 'border-box',
-                  background: initialData ? 'rgba(148, 163, 184, 0.1)' : 'var(--bg-glass)',
-                  color: initialData ? 'var(--text-dim)' : 'var(--text-main)',
-                  border: '1px solid var(--border-glass)',
-                  cursor: initialData ? 'not-allowed' : 'pointer',
-                  fontSize: '0.9rem',
-                  fontWeight: '600',
-                  appearance: 'none',
-                  WebkitAppearance: 'none'
-                }}
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                required
-              >
-                <option value={TimeboardType.FINANCIAL} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
-                  {t('timeboardModal.typeFinancial')}
-                </option>
-                <option value={TimeboardType.EMPTY} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
-                  {t('timeboardModal.typeEmpty')}
-                </option>
-                <option value={TimeboardType.PROJECTS} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
-                  {t('timeboardModal.typeProjects')}
-                </option>
-                <option value={TimeboardType.REMINDERS} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
-                  {t('timeboardModal.typeReminders')}
-                </option>
-                <option value={TimeboardType.CONDOFLOW} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
-                  {t('timeboardModal.typeCondoflow')}
-                </option>
-              </select>
-              <div
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  pointerEvents: 'none',
-                  color: 'var(--text-dim)',
-                  display: 'flex'
-                }}
-              >
-                <ChevronDown size={16} />
-              </div>
-            </div>
           </div>
 
           {/* Action Buttons */}

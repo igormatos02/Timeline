@@ -244,7 +244,7 @@ export async function fetchTimeboards(userId = null) {
   return res.json();
 }
 
-export async function createTimeboard(timeboardData) {
+export async function createTimeboard(timeboardData, locale) {
   const current = getCurrentUser();
   const res = await fetch(`${API_BASE}/timeboards`, {
     method: 'POST',
@@ -252,6 +252,7 @@ export async function createTimeboard(timeboardData) {
     body: JSON.stringify({
       tenantId: getActiveTenantId(),
       ownerId: current ? current.id : null,
+      locale: locale || 'en',
       ...timeboardData
     })
   });

@@ -354,8 +354,8 @@ function VerticalTimeline({
     : null;
 
   const timelineOptions = useMemo(() => {
-    return getTimelineDropdownOptions(timelines, t);
-  }, [timelines, t]);
+    return getTimelineDropdownOptions(timelines, t, activeTimeboard?.type);
+  }, [timelines, t, activeTimeboard?.type]);
 
   // Multi-selection of timelines for Balance view (derived dynamically from real timelines)
   const availableCreditOptions = useMemo(() => {

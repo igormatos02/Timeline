@@ -1,4 +1,5 @@
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
+import { timeboardRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardRepository.js';
 import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
 import { financialEventStatusRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventStatusRepository.js';
 import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
@@ -13,7 +14,7 @@ import {
   loanDomainService,
   balanceDomainService
 } from '../../domain/services/timelines/financial/index.js';
-import { TimelineType, normalizeTimelineType } from '../../../shared/enums/index.js';
+import { TimelineType, normalizeTimelineType, TimeboardType } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -185,6 +186,42 @@ export class TimelineService {
   async createTimeline(data) {
     const type = normalizeTimelineType(data.type || TimelineType.CUSTOM);
     const timeboardId = data.timeboardId || data.timeboard_id;
+
+    if (timeboardId) {
+      const timeboard = await timeboardRepository.getById(timeboardId);
+      if (timeboard && timeboard.type === TimeboardType.CONDOFLOW) {
+        const allowedTypes = [TimelineType.DIARY, TimelineType.REMINDER, TimelineType.LOAN];
+        if (!allowedTypes.includes(type)) {
+          throw new Error(
+            t('backend.validation.condoflowTimelineNotAllowed') ||
+            `Condoflow timeboards only allow Diary, Reminder, and Loan timelines.`
+          );
+        }
+
+        const existingTimelines = await timelineRepository.getAllByTimeboardId(timeboardId);
+        const existingOfType = existingTimelines.filter(
+          (tl) => normalizeTimelineType(tl.type) === type
+        );
+
+        if (type === TimelineType.DIARY || type === TimelineType.REMINDER) {
+          if (existingOfType.length > 0) {
+            throw new Error(
+              t('backend.validation.condoflowTimelineLimit') ||
+              `Condoflow timeboards allow only one ${type} timeline.`
+            );
+          }
+        }
+
+        if (type === TimelineType.LOAN) {
+          if (existingOfType.length >= 5) {
+            throw new Error(
+              t('backend.validation.condoflowLoanLimit') ||
+              `Condoflow timeboards allow a maximum of 5 Loan timelines.`
+            );
+          }
+        }
+      }
+    }
 
     const singleInstanceTypes = [
       TimelineType.BALANCE,

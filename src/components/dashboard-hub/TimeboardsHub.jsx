@@ -6,11 +6,8 @@ import {
   Search,
   Settings,
   Trash2,
-  ExternalLink,
   Wallet,
   FolderKanban,
-  User,
-  Users,
   LogOut,
   Moon,
   Sun,
@@ -19,7 +16,6 @@ import {
   Layers,
   ArrowRight,
   Share2,
-  Lock,
   ChevronDown
 } from 'lucide-react';
 import { TimeboardType, TimelineColor, PersonRole } from '../../enums/index.js';
@@ -47,7 +43,7 @@ export default function TimeboardsHub({
   const { t: hookT } = useTranslation();
   const t = propT || hookT;
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'my' | 'shared'
+  
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const userMenuRef = React.useRef(null);
@@ -85,7 +81,7 @@ export default function TimeboardsHub({
   const getTypeDetails = (type) => {
     if (type === TimeboardType.EMPTY || type === 'empty') {
       return {
-        label: t('timeboard.empty') || 'Vazio',
+        label: t('timeboardsHub.typeEmpty'),
         color: TimelineColor.PURPLE,
         bg: 'rgba(168, 85, 247, 0.15)',
         border: 'rgba(168, 85, 247, 0.3)',
@@ -94,7 +90,7 @@ export default function TimeboardsHub({
     }
     if (type === TimeboardType.PROJECT || type === TimeboardType.PROJECTS || type === 'projects' || type === 'project') {
       return {
-        label: t('timeboard.project') || 'Projeto',
+        label: t('timeboardsHub.typeProject'),
         color: TimelineColor.BLUE,
         bg: 'rgba(59, 130, 246, 0.15)',
         border: 'rgba(59, 130, 246, 0.3)',
@@ -103,7 +99,7 @@ export default function TimeboardsHub({
     }
     if (type === TimeboardType.REMINDERS || type === 'reminders' || type === 'reminder') {
       return {
-        label: t('timeboard.reminders') || 'Lembretes',
+        label: t('timeboardsHub.typeReminders'),
         color: TimelineColor.WARNING,
         bg: 'rgba(245, 158, 11, 0.15)',
         border: 'rgba(245, 158, 11, 0.3)',
@@ -112,7 +108,7 @@ export default function TimeboardsHub({
     }
     if (type === TimeboardType.CONDOFLOW || type === 'condoflow') {
       return {
-        label: 'Condoflow',
+        label: t('timeboardsHub.typeCondoflow'),
         color: TimelineColor.CYAN,
         bg: 'rgba(6, 182, 212, 0.15)',
         border: 'rgba(6, 182, 212, 0.3)',
@@ -120,7 +116,7 @@ export default function TimeboardsHub({
       };
     }
     return {
-      label: t('timeboard.financial') || 'Financeiro',
+      label: t('timeboardsHub.typeFinancial'),
       color: TimelineColor.SUCCESS,
       bg: 'rgba(16, 185, 129, 0.15)',
       border: 'rgba(16, 185, 129, 0.3)',
@@ -162,11 +158,11 @@ export default function TimeboardsHub({
                   <Share2 size={11} />
                   <span>
                     {tb.role === PersonRole.ADMIN
-                      ? t('timeboardSettings.entities.roles.admin')
+                      ? t('timeboardsHub.roles.admin')
                       : tb.role === PersonRole.INDIVIDUAL
-                      ? t('timeboardSettings.entities.roles.individual')
+                      ? t('timeboardsHub.roles.individual')
                       : tb.role === PersonRole.CONTRIBUTOR
-                      ? t('timeboardSettings.entities.roles.contributor')
+                      ? t('timeboardsHub.roles.contributor')
                       : t('timeboardModal.typeShared')}
                   </span>
                 </span>
@@ -187,7 +183,7 @@ export default function TimeboardsHub({
           <div className="hub-card-body" style={{ marginTop: '14px' }}>
             <h3 className="hub-card-title">{tb.name}</h3>
             <p className="hub-card-desc">
-              {tb.description || 'Sem descrição definida para este timeboard.'}
+              {tb.description || t('timeboardsHub.noDescription')}
             </p>
           </div>
         </div>
@@ -210,7 +206,7 @@ export default function TimeboardsHub({
             }}
             onClick={() => onSelectTimeboard(tb.id)}
           >
-            <span>Abrir Timeboard</span>
+            <span>{t('timeboardsHub.openButton')}</span>
             <ArrowRight size={14} />
           </button>
 
@@ -218,7 +214,7 @@ export default function TimeboardsHub({
             <button
               type="button"
               className="hub-card-action-btn"
-              title="Definições do Timeboard"
+              title={t('timeboardsHub.settingsTitle')}
               onClick={() => onOpenEditTimeboard(tb)}
             >
               <Settings size={15} />
@@ -228,7 +224,7 @@ export default function TimeboardsHub({
                 type="button"
                 className="hub-card-action-btn"
                 style={{ color: TimelineColor.DANGER }}
-                title="Eliminar Timeboard"
+                title={t('timeboardsHub.deleteTitle')}
                 onClick={() => onDeleteTimeboard(tb.id)}
               >
                 <Trash2 size={15} />
@@ -432,23 +428,23 @@ export default function TimeboardsHub({
         <section className="hub-hero-banner">
           <div>
             <h1 className="hub-greeting-title">
-              Olá, {currentUser?.name ? currentUser.name.split(' ')[0] : 'Igor'} 👋
+              {t('timeboardsHub.greetingTitle', { name: currentUser?.name ? currentUser.name.split(' ')[0] : 'Igor' })}
             </h1>
             <p className="hub-greeting-subtitle">
-              Selecione um Timeboard para abrir a timeline ou crie um novo espaço de trabalho.
+              {t('timeboardsHub.greetingSubtitle')}
             </p>
           </div>
 
           <div className="hub-stats-row">
             <div className="hub-stat-item">
               <span className="hub-stat-val">{myTimeboards.length}</span>
-              <span className="hub-stat-lbl">My Timeboards</span>
+              <span className="hub-stat-lbl">{t('timeboardsHub.stats.myTimeboards')}</span>
             </div>
             <div className="hub-stat-item">
               <span className="hub-stat-val" style={{ color: TimelineColor.PURPLE }}>
                 {sharedTimeboards.length}
               </span>
-              <span className="hub-stat-lbl">Shared</span>
+              <span className="hub-stat-lbl">{t('timeboardsHub.stats.shared')}</span>
             </div>
           </div>
         </section>
@@ -460,7 +456,7 @@ export default function TimeboardsHub({
             <input
               type="text"
               className="hub-search-input"
-              placeholder="Pesquisar Timeboard..."
+              placeholder={t('timeboardsHub.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -473,7 +469,7 @@ export default function TimeboardsHub({
               onClick={onOpenCreateTimeboard}
             >
               <Plus size={16} />
-              <span>Novo Timeboard</span>
+              <span>{t('timeboardsHub.createButton')}</span>
             </button>
           </div>
         </section>
@@ -484,7 +480,7 @@ export default function TimeboardsHub({
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: TimelineColor.PRIMARY }} />
               <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                My Timeboards
+                {t('timeboardsHub.myTimeboards')}
               </h2>
               <span
                 style={{
@@ -513,10 +509,10 @@ export default function TimeboardsHub({
                 <Plus size={24} />
               </div>
               <div style={{ fontWeight: '700', fontSize: '1.05rem', color: 'var(--text-main)' }}>
-                Criar Novo Timeboard
+                {t('timeboardsHub.createTitle')}
               </div>
               <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary, var(--text-dim))', maxWidth: '220px' }}>
-                Adicione um novo orçamento, projeto ou planeamento financeiro.
+                {t('timeboardsHub.createDesc')}
               </div>
             </div>
 
@@ -532,7 +528,7 @@ export default function TimeboardsHub({
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: TimelineColor.PURPLE }} />
                 <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                  Shared Dashboards
+                  {t('timeboardsHub.sharedDashboards')}
                 </h2>
                 <span
                   style={{

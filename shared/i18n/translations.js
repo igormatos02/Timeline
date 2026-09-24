@@ -585,6 +585,48 @@ export const translations = {
       other: "Other Reminders"
     },
 
+    // Landing Page
+    landing: {
+      badge: "Financial Management & Interactive Timelines",
+      title: "Where time meets <span>financial clarity</span>.",
+      subtitle: "Plan income, expenses, loans and investments on an intuitive timeline. Control obligations by member, company or person in a single intelligent ecosystem.",
+      pills: {
+        amortization: "Real-time Amortization Calculation",
+        entities: "Multi-Entities & Obligations",
+        projections: "Projections & Annual Goals"
+      },
+      featuresTitle: "Built for total control and strategic vision",
+      featuresSubtitle: "Everything you need to manage multiple budgets, investments and financial timelines.",
+      features: {
+        timeline: {
+          title: "Visual Financial Timeline",
+          desc: "Interactive monthly view with projected vs realized balances, color-coded by category."
+        },
+        multiEntity: {
+          title: "Multi-Entity Management",
+          desc: "Separate finances by person, company or family member with role-based access."
+        },
+        loans: {
+          title: "Smart Loan & Amortization Engine",
+          desc: "Price/SAC systems, extraordinary amortizations, real-time balance projection."
+        },
+        investments: {
+          title: "Investments & Savings Tracking",
+          desc: "Pockets, contributions, returns, internal/external classification, performance metrics."
+        },
+        projections: {
+          title: "Projections & Scenarios",
+          desc: "Monthly/annual forecasting, what-if scenarios, goal tracking with visual indicators."
+        },
+        reminders: {
+          title: "Reminders & Diary",
+          desc: "Recurring alerts, birthdays, maintenance, appointments — all on the timeline."
+        }
+      },
+      cta: "Start Free",
+      footer: "Timeboard — Financial clarity through time."
+    },
+
     // Timeboard Modal
     timeboardModal: {
       newTitle: "Create Timeboard",
@@ -594,16 +636,133 @@ export const translations = {
       newSubtitle: "Create a new Timeboard to group your timelines",
       editSubtitle: "Update Timeboard information",
       nameLabel: "Timeboard Name *",
-      namePlaceholder: "e.g., Main Timeboard, Personal Finances, Projects...",
+      namePlaceholder: "e.g., My Timeboard",
       descriptionLabel: "Description",
       descriptionPlaceholder: "Brief description of objectives or scope...",
-      typeLabel: "Timeboard Type *",
-      typeFinancial: "Financial",
-      typeProjects: "Projects",
-      typeReminders: "Reminders",
+      templateLabel: "Template *",
+      templateCondoflow: "Condoflow",
+      templateCondoflowDesc: "Manage condominiums: balance, receivables, expenses, diary & reminders",
+      templateFinancial: "Financial",
+      templateFinancialDesc: "Personal finance management: income, expenses, savings, investments & loans",
+      templateEmpty: "Empty",
+      templateEmptyDesc: "Start from scratch — fully customizable for any use case",
+      namePlaceholderCondoflow: "e.g., Condomínio Residencial, Condomínio Comercial...",
+      namePlaceholderFinancial: "e.g., Personal Finances, Family Budget, Investment Portfolio...",
+      namePlaceholderEmpty: "e.g., My Custom Timeboard, Project Alpha...",
+      descriptionPlaceholderCondoflow: "Describe the condominium, units, and management scope...",
+      descriptionPlaceholderFinancial: "Describe your financial goals, accounts, and tracking preferences...",
+      descriptionPlaceholderEmpty: "Describe the purpose and scope of this timeboard...",
+      templateShared: "Shared"
+    },
+
+    // Landing Page
+    landing: {
+      badge: "Financial Management & Interactive Timelines",
+      title: "Where time meets <span>financial clarity</span>.",
+      subtitle: "Plan income, expenses, loans and investments on an intuitive timeline. Control obligations by member, company or person in a single intelligent ecosystem.",
+      pills: {
+        amortization: "Real-time Amortization Calculation",
+        entities: "Multi-Entities & Obligations",
+        projections: "Projections & Annual Goals"
+      },
+      featuresTitle: "Built for total control and strategic vision",
+      featuresSubtitle: "Everything you need to manage multiple budgets, investments and financial timelines.",
+      features: {
+        timeline: {
+          title: "Visual Financial Timeline",
+          desc: "Interactive monthly view with projected vs realized balances, color-coded by category."
+        },
+        multiEntity: {
+          title: "Multi-Entity Management",
+          desc: "Separate finances by person, company or family member with role-based access."
+        },
+        loans: {
+          title: "Smart Loan & Amortization Engine",
+          desc: "Price/SAC systems, extraordinary amortizations, real-time balance projection."
+        },
+        investments: {
+          title: "Investments & Savings Tracking",
+          desc: "Pockets, contributions, returns, internal/external classification, performance metrics."
+        },
+        projections: {
+          title: "Projections & Scenarios",
+          desc: "Monthly/annual forecasting, what-if scenarios, goal tracking with visual indicators."
+        },
+        reminders: {
+          title: "Reminders & Diary",
+          desc: "Recurring alerts, birthdays, maintenance, appointments — all on the timeline."
+        }
+      },
+      cta: "Start Free",
+      footer: "Timeboard — Financial clarity through time."
+    },
+
+    // Auth Card
+    auth: {
+      loginTitle: "Welcome back",
+      loginSubtitle: "Sign in to access your financial timeline",
+      registerTitle: "Create your account",
+      registerSubtitle: "Start managing your finances with Timeboard",
+      forgotTitle: "Forgot password?",
+      forgotSubtitle: "Enter your email to receive a reset link",
+      nameLabel: "Full Name",
+      namePlaceholder: "e.g., John Doe",
+      emailLabel: "Email Address",
+      emailPlaceholder: "e.g., john@example.com",
+      passwordLabel: "Password",
+      passwordPlaceholder: "••••••••",
+      rememberMe: "Remember me",
+      forgotLink: "Forgot password?",
+      loginButton: "Sign In",
+      registerButton: "Create Account",
+      sendResetButton: "Send Reset Link",
+      googleButton: "Continue with Google",
+      orDivider: "or",
+      noAccount: "Don't have an account?",
+      hasAccount: "Already have an account?",
+      signUpLink: "Sign up",
+      signInLink: "Sign in",
+      errors: {
+        emailRequired: "Please enter your email address.",
+        passwordRequired: "Please enter your password.",
+        nameRequired: "Please enter your name.",
+        googleAuthFailed: "Failed to authenticate with Google.",
+        requestFailed: "An error occurred while processing your request."
+      },
+      success: {
+        resetSent: "We've sent a password reset link to your email!"
+      }
+    },
+
+    // Timeboards Hub
+    timeboardsHub: {
+      greetingTitle: "Hello, {name} 👋",
+      greetingSubtitle: "Select a Timeboard to open the timeline or create a new workspace.",
+      myTimeboards: "My Timeboards",
+      sharedTimeboards: "Shared Timeboards",
+      sharedDashboards: "Shared Dashboards",
+      searchPlaceholder: "Search Timeboard...",
+      createButton: "New Timeboard",
+      createTitle: "Create New Timeboard",
+      createDesc: "Add a new budget, project or financial plan.",
+      openButton: "Open Timeboard",
+      settingsTitle: "Timeboard Settings",
+      deleteTitle: "Delete Timeboard",
+      noDescription: "No description set for this timeboard.",
       typeEmpty: "Empty",
+      typeProject: "Project",
+      typeReminders: "Reminders",
       typeCondoflow: "Condoflow",
-      typeShared: "Shared"
+      typeFinancial: "Financial",
+      roles: {
+        admin: "Administrator",
+        individual: "Individual",
+        contributor: "Contributor"
+      },
+      stats: {
+        myTimeboards: "My Timeboards",
+        shared: "Shared"
+      }
     },
 
     // Timeboard Full Settings Modal
@@ -1416,7 +1575,10 @@ export const translations = {
         pocketNameRequired: "Pocket name is required",
         pocketTimelineIdRequired: "timelineId is required for pocket",
         pocketTimeboardIdRequired: "timeboardId is required for pocket",
-        pocketNotFound: "Pocket not found"
+        pocketNotFound: "Pocket not found",
+        condoflowTimelineNotAllowed: "Condoflow timeboards only allow Diary, Reminder, and Loan timelines.",
+        condoflowTimelineLimit: "Condoflow timeboards allow only one {type} timeline.",
+        condoflowLoanLimit: "Condoflow timeboards allow a maximum of 5 Loan timelines."
       },
       pocket: {
         defaultName: "New Pocket"
@@ -1437,7 +1599,19 @@ export const translations = {
         projects: "My Projects",
         projectsDescription: "Project planning, milestones and tasks timeline",
         reminders: "My Reminders",
-        remindersDescription: "Schedule reminders, alerts and notes"
+        remindersDescription: "Schedule reminders, alerts and notes",
+        condoflowBalance: "Balance",
+        condoflowBalanceDescription: "Consolidated view of condominium finances",
+        condoflowIncome: "Receivables",
+        condoflowIncomeDescription: "Management of condo fees and receivables",
+        condoflowExpenses: "Expenses",
+        condoflowExpensesDescription: "Management of condominium expenses",
+        condoflowSavings: "Savings",
+        condoflowSavingsDescription: "Reserve fund and investments",
+        condoflowDiary: "Diary",
+        condoflowDiaryDescription: "Daily notes and occurrences",
+        condoflowReminder: "Reminders",
+        condoflowReminderDescription: "Schedule alerts and reminders"
       },
       loan: {
         amortizationTitle: "Extraordinary Amortization ({name})",
@@ -2101,16 +2275,133 @@ export const translations = {
       newSubtitle: "Crie um novo Timeboard para agrupar as suas linhas temporais",
       editSubtitle: "Atualize as informações do Timeboard",
       nameLabel: "Nome do Timeboard *",
-      namePlaceholder: "Ex: Timeboard Principal, Finanças Pessoais...",
+      namePlaceholder: "Ex: Meu Timeboard",
       descriptionLabel: "Descrição",
       descriptionPlaceholder: "Breve descrição dos objetivos ou escopo...",
-      typeLabel: "Tipo de Timeboard *",
-      typeFinancial: "Financeiro (Financial)",
-      typeProjects: "Projetos (Projects)",
-      typeReminders: "Lembretes (Reminders)",
-      typeEmpty: "Vazio (Empty)",
+      templateLabel: "Template *",
+      templateCondoflow: "Condoflow",
+      templateCondoflowDesc: "Gerir condomínios: balanço, recebimentos, gastos, diário e lembretes",
+      templateFinancial: "Financeiro",
+      templateFinancialDesc: "Gestão financeira pessoal: entradas, gastos, poupança, investimentos e empréstimos",
+      templateEmpty: "Vazio",
+      templateEmptyDesc: "Começar do zero — totalmente personalizável para qualquer uso",
+      namePlaceholderCondoflow: "Ex: Condomínio Residencial, Condomínio Comercial...",
+      namePlaceholderFinancial: "Ex: Finanças Pessoais, Orçamento Familiar, Carteira de Investimentos...",
+      namePlaceholderEmpty: "Ex: Meu Timeboard Personalizado, Projeto Alpha...",
+      descriptionPlaceholderCondoflow: "Descreva o condomínio, unidades e escopo de gestão...",
+      descriptionPlaceholderFinancial: "Descreva seus objetivos financeiros, contas e preferências...",
+      descriptionPlaceholderEmpty: "Descreva o propósito e escopo deste timeboard...",
+      templateShared: "Partilhado"
+    },
+
+    // Landing Page
+    landing: {
+      badge: "Gestão Financeira & Linhas Temporais Interativas",
+      title: "Onde o tempo encontra a <span>clareza financeira</span>.",
+      subtitle: "Planeie receitas, despesas, empréstimos e investimentos numa linha temporal intuitiva. Controle obrigações por membro, empresa ou pessoa num único ecossistema inteligente.",
+      pills: {
+        amortization: "Cálculo de Amortizações em Tempo Real",
+        entities: "Multi-Entidades & Obrigações",
+        projections: "Projeções & Metas Anuais"
+      },
+      featuresTitle: "Construído para controlo total e visão estratégica",
+      featuresSubtitle: "Tudo o que precisa para gerir múltiplos orçamentos, investimentos e cronogramas financeiros.",
+      features: {
+        timeline: {
+          title: "Linha Temporal Financeira Visual",
+          desc: "Vista mensal interativa com saldos projetados vs realizados, coloridos por categoria."
+        },
+        multiEntity: {
+          title: "Gestão Multi-Entidades",
+          desc: "Separe finanças por pessoa, empresa ou familiar com acesso baseado em funções."
+        },
+        loans: {
+          title: "Motor Inteligente de Empréstimos & Amortização",
+          desc: "Sistemas Price/SAC, amortizações extraordinárias, projeção de saldo em tempo real."
+        },
+        investments: {
+          title: "Investimentos & Poupança",
+          desc: "Pockets, aportes, rendimentos, classificação interna/externa, métricas de performance."
+        },
+        projections: {
+          title: "Projeções & Cenários",
+          desc: "Previsão mensal/anual, cenários what-if, acompanhamento de metas com indicadores visuais."
+        },
+        reminders: {
+          title: "Lembretes & Diário",
+          desc: "Alertas recorrentes, aniversários, manutenções, compromissos — tudo na timeline."
+        }
+      },
+      cta: "Começar Grátis",
+      footer: "Timeboard — Clareza financeira através do tempo."
+    },
+
+    // Auth Card
+    auth: {
+      loginTitle: "Bem-vindo de volta",
+      loginSubtitle: "Inicie sessão para aceder à sua linha temporal financeira",
+      registerTitle: "Criar a sua conta",
+      registerSubtitle: "Comece a gerir as suas finanças com o Timeboard",
+      forgotTitle: "Esqueceu a palavra-passe?",
+      forgotSubtitle: "Introduza o seu email para receber um link de recuperação",
+      nameLabel: "Nome Completo",
+      namePlaceholder: "Ex: João Silva",
+      emailLabel: "Endereço de Email",
+      emailPlaceholder: "Ex: joao@exemplo.com",
+      passwordLabel: "Palavra-passe",
+      passwordPlaceholder: "••••••••",
+      rememberMe: "Lembrar-me",
+      forgotLink: "Esqueceu a palavra-passe?",
+      loginButton: "Entrar",
+      registerButton: "Criar Conta",
+      sendResetButton: "Enviar Link de Recuperação",
+      googleButton: "Continuar com a Google",
+      orDivider: "ou",
+      noAccount: "Ainda não tem conta?",
+      hasAccount: "Já tem conta?",
+      signUpLink: "Registar",
+      signInLink: "Entrar",
+      errors: {
+        emailRequired: "Por favor introduza o seu endereço de email.",
+        passwordRequired: "Por favor introduza a sua palavra-passe.",
+        nameRequired: "Por favor introduza o seu nome.",
+        googleAuthFailed: "Falha ao autenticar com a Google.",
+        requestFailed: "Ocorreu um erro ao processar o pedido."
+      },
+      success: {
+        resetSent: "Enviámos um link de recuperação para o seu email!"
+      }
+    },
+
+    // Timeboards Hub
+    timeboardsHub: {
+      greetingTitle: "Olá, {name} 👋",
+      greetingSubtitle: "Selecione um Timeboard para abrir a timeline ou crie um novo espaço de trabalho.",
+      myTimeboards: "Meus Timeboards",
+      sharedTimeboards: "Timeboards Partilhados",
+      sharedDashboards: "Dashboards Partilhados",
+      searchPlaceholder: "Pesquisar Timeboard...",
+      createButton: "Novo Timeboard",
+      createTitle: "Criar Novo Timeboard",
+      createDesc: "Adicione um novo orçamento, projeto ou planeamento financeiro.",
+      openButton: "Abrir Timeboard",
+      settingsTitle: "Definições do Timeboard",
+      deleteTitle: "Eliminar Timeboard",
+      noDescription: "Sem descrição definida para este timeboard.",
+      typeEmpty: "Vazio",
+      typeProject: "Projeto",
+      typeReminders: "Lembretes",
       typeCondoflow: "Condoflow",
-      typeShared: "Partilhado"
+      typeFinancial: "Financeiro",
+      roles: {
+        admin: "Administrador",
+        individual: "Individual",
+        contributor: "Colaborador"
+      },
+      stats: {
+        myTimeboards: "Meus Timeboards",
+        shared: "Partilhados"
+      }
     },
 
     // Timeboard Full Settings Modal
@@ -2426,6 +2717,48 @@ export const translations = {
       random_event: "Evento Aleatório",
       appointment: "Compromisso",
       other: "Outro"
+    },
+
+    // Landing Page
+    landing: {
+      badge: "Gestão Financeira & Linhas Temporais Interativas",
+      title: "Onde o tempo encontra a <span>clareza financeira</span>.",
+      subtitle: "Planeie receitas, despesas, empréstimos e investimentos numa linha temporal intuitiva. Controle obrigações por membro, empresa ou pessoa num único ecossistema inteligente.",
+      pills: {
+        amortization: "Cálculo de Amortizações em Tempo Real",
+        entities: "Multi-Entidades & Obrigações",
+        projections: "Projeções & Metas Anuais"
+      },
+      featuresTitle: "Construído para controlo total e visão estratégica",
+      featuresSubtitle: "Tudo o que precisa para gerir múltiplos orçamentos, investimentos e cronogramas financeiros.",
+      features: {
+        timeline: {
+          title: "Linha Temporal Financeira Visual",
+          desc: "Vista mensal interativa com saldos projetados vs realizados, coloridos por categoria."
+        },
+        multiEntity: {
+          title: "Gestão Multi-Entidades",
+          desc: "Separe finanças por pessoa, empresa ou familiar com acesso baseado em funções."
+        },
+        loans: {
+          title: "Motor Inteligente de Empréstimos & Amortização",
+          desc: "Sistemas Price/SAC, amortizações extraordinárias, projeção de saldo em tempo real."
+        },
+        investments: {
+          title: "Investimentos & Poupança",
+          desc: "Pockets, aportes, rendimentos, classificação interna/externa, métricas de performance."
+        },
+        projections: {
+          title: "Projeções & Cenários",
+          desc: "Previsão mensal/anual, cenários what-if, acompanhamento de metas com indicadores visuais."
+        },
+        reminders: {
+          title: "Lembretes & Diário",
+          desc: "Alertas recorrentes, aniversários, manutenções, compromissos — tudo na timeline."
+        }
+      },
+      cta: "Começar Grátis",
+      footer: "Timeboard — Clareza financeira através do tempo."
     },
 
     // Income Timeline Header
@@ -2923,7 +3256,10 @@ export const translations = {
         pocketNameRequired: "O nome do pocket é obrigatório",
         pocketTimelineIdRequired: "timelineId é obrigatório para o pocket",
         pocketTimeboardIdRequired: "timeboardId é obrigatório para o pocket",
-        pocketNotFound: "Pocket não encontrado"
+        pocketNotFound: "Pocket não encontrado",
+        condoflowTimelineNotAllowed: "Timeboards Condoflow permitem apenas timelines de Diário, Lembrete e Empréstimo.",
+        condoflowTimelineLimit: "Timeboards Condoflow permitem apenas uma timeline do tipo {type}.",
+        condoflowLoanLimit: "Timeboards Condoflow permitem no máximo 5 timelines de Empréstimo."
       },
       pocket: {
         defaultName: "Novo Pocket"
@@ -2944,7 +3280,19 @@ export const translations = {
         projects: "Meus Projetos",
         projectsDescription: "Planeamento de projetos, marcos e cronograma de tarefas",
         reminders: "Meus Lembretes",
-        remindersDescription: "Agendar lembretes, alertas e notas"
+        remindersDescription: "Agendar lembretes, alertas e notas",
+        condoflowBalance: "Balanço",
+        condoflowBalanceDescription: "Visão consolidada das finanças do condomínio",
+        condoflowIncome: "Recebimentos",
+        condoflowIncomeDescription: "Gestão de quotas e recebimentos do condomínio",
+        condoflowExpenses: "Gastos",
+        condoflowExpensesDescription: "Gestão de despesas do condomínio",
+        condoflowSavings: "Poupança",
+        condoflowSavingsDescription: "Fundo de reserva e investimentos",
+        condoflowDiary: "Diário",
+        condoflowDiaryDescription: "Notas e ocorrências diárias",
+        condoflowReminder: "Lembretes",
+        condoflowReminderDescription: "Agendar alertas e lembretes"
       },
       loan: {
         amortizationTitle: "Amortização Extraordinária ({name})",

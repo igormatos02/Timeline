@@ -8,7 +8,7 @@ import { financialEventStatusRepository } from '../../infrastructure/database/su
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
 import { userRepository } from '../../infrastructure/database/supabase/SupabaseUserRepository.js';
 import { emailService } from './EmailService.js';
-import { TimeboardType, TimelineType, TimelineStatus, EventPeriodicity, InvitationStatus, PersonRole } from '../../../shared/enums/index.js';
+import { TimeboardType, TimelineType, TimelineStatus, EventPeriodicity, InvitationStatus, PersonRole, PersonType } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -257,7 +257,8 @@ export class TimeboardService {
     };
   }
 
-  async createTimeboard(data) {
+  async createTimeboard(data, locale = 'en') {
+    const t = createT(locale);
     const ownerId = data.ownerId || data.owner_id || data.userId || data.user_id || null;
     const createdTimeboard = await timeboardRepository.create({
       ...data,
@@ -269,6 +270,7 @@ export class TimeboardService {
     const isFinancial = createdTimeboard.type === TimeboardType.FINANCIAL;
     const isProjects = createdTimeboard.type === TimeboardType.PROJECTS;
     const isReminders = createdTimeboard.type === TimeboardType.REMINDERS;
+    const isCondoflow = createdTimeboard.type === TimeboardType.CONDOFLOW;
     const defaultTenantId = createdTimeboard.tenantId || '9e3c3070-d4db-43be-ab03-3f852a9a81da';
 
     let defaultTimelines = [];
@@ -359,6 +361,65 @@ export class TimeboardService {
           description: t('backend.timeline.remindersDescription'),
           isSystemDefault: true,
           canDelete: false,
+          status: TimelineStatus.ACTIVE,
+          periodicity: EventPeriodicity.MONTHLY,
+          startDate: '2026-01-01',
+          endDate: '2027-04-30',
+          tenantId: defaultTenantId
+        }
+      ];
+    } else if (isCondoflow) {
+      defaultTimelines = [
+        {
+          timeboardId: createdTimeboard.id,
+          name: t('backend.timeline.condoflowBalance'),
+          type: TimelineType.BALANCE,
+          color: '#a68069',
+          description: t('backend.timeline.condoflowBalanceDescription'),
+          isSystemDefault: true,
+          canDelete: false,
+          status: TimelineStatus.ACTIVE,
+          periodicity: EventPeriodicity.MONTHLY,
+          startDate: '2026-01-01',
+          endDate: '2027-04-30',
+          tenantId: defaultTenantId
+        },
+        {
+          timeboardId: createdTimeboard.id,
+          name: t('backend.timeline.condoflowIncome'),
+          type: TimelineType.INCOME,
+          color: '#10b981',
+          description: t('backend.timeline.condoflowIncomeDescription'),
+          isSystemDefault: false,
+          canDelete: true,
+          status: TimelineStatus.ACTIVE,
+          periodicity: EventPeriodicity.MONTHLY,
+          startDate: '2026-01-01',
+          endDate: '2027-04-30',
+          tenantId: defaultTenantId
+        },
+        {
+          timeboardId: createdTimeboard.id,
+          name: t('backend.timeline.condoflowExpenses'),
+          type: TimelineType.EXPENSE,
+          color: '#f43f5e',
+          description: t('backend.timeline.condoflowExpensesDescription'),
+          isSystemDefault: false,
+          canDelete: true,
+          status: TimelineStatus.ACTIVE,
+          periodicity: EventPeriodicity.MONTHLY,
+          startDate: '2026-01-01',
+          endDate: '2027-04-30',
+          tenantId: defaultTenantId
+        },
+        {
+          timeboardId: createdTimeboard.id,
+          name: t('backend.timeline.condoflowSavings'),
+          type: TimelineType.INVESTMENT,
+          color: '#8b5cf6',
+          description: t('backend.timeline.condoflowSavingsDescription'),
+          isSystemDefault: false,
+          canDelete: true,
           status: TimelineStatus.ACTIVE,
           periodicity: EventPeriodicity.MONTHLY,
           startDate: '2026-01-01',

@@ -2019,7 +2019,7 @@ export default function App() {
       setActiveTimeboardId(newTb.id);
 
       try {
-        const createdTb = await api.createTimeboard(newTb);
+        const createdTb = await api.createTimeboard(newTb, language);
         if (createdTb && createdTb.id) {
           setTimeboards((prev) => prev.map((tb) => (tb.id === newTb.id ? { ...tb, ...createdTb } : tb)));
           setMyTimeboards((prev) => prev.map((tb) => (tb.id === newTb.id ? { ...tb, ...createdTb } : tb)));

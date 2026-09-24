@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Users,
   User,
   Building2,
   UserCheck,
@@ -8,11 +7,17 @@ import {
   Check,
   AlertCircle,
   FileCheck2,
-  Sparkles
+  Search
 } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { PersonType } from '../enums/index.js';
+import { PersonType, TimelineColor } from '../enums/index.js';
 import * as api from '../services/api.js';
+
+// Persons come from the API with personName (legacy objects may still use name / person_name)
+const getPersonName = (p) => p?.personName || p?.person_name || p?.name || p?.email || '';
+
+// Case and accent insensitive text used by the person search ("catia" matches "Cátia")
+const normalizeSearch = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
 export default function ObligationSelector({
   isObligation = false,
@@ -24,7 +29,7 @@ export default function ObligationSelector({
   timeboardId,
   error = false,
   showError = false,
-  accentColor = '#f59e0b',
+  accentColor = TimelineColor.WARNING,
   t: customT
 }) {
   const { t: contextT } = useTranslation();
@@ -37,6 +42,7 @@ export default function ObligationSelector({
   const [persons, setPersons] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [personSearch, setPersonSearch] = useState('');
   const dropdownRef = useRef(null);
 
   // Load persons for current timeboard
@@ -51,7 +57,7 @@ export default function ObligationSelector({
             const sorted = [...list].sort((a, b) => {
               const typeComp = (a.type || PersonType.PERSON || '').toLowerCase().localeCompare((b.type || PersonType.PERSON || '').toLowerCase());
               if (typeComp !== 0) return typeComp;
-              return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+              return getPersonName(a).localeCompare(getPersonName(b), undefined, { sensitivity: 'base' });
             });
             setPersons(sorted);
           }
@@ -74,6 +80,7 @@ export default function ObligationSelector({
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsDropdownOpen(false);
+        setPersonSearch('');
       }
     };
     if (isDropdownOpen) {
@@ -83,6 +90,21 @@ export default function ObligationSelector({
   }, [isDropdownOpen]);
 
   const selectedPerson = persons.find((p) => p.id === obligationPersonId);
+  const searchTerm = normalizeSearch(personSearch);
+  const filteredPersons = searchTerm
+    ? persons.filter((p) => normalizeSearch(getPersonName(p)).includes(searchTerm) || normalizeSearch(p.email).includes(searchTerm))
+    : persons;
+
+  const closeDropdown = () => {
+    setIsDropdownOpen(false);
+    setPersonSearch('');
+  };
+
+  const selectPerson = (personId) => {
+    handleSelectPerson(personId);
+    closeDropdown();
+  };
+  const accent = accentColor || TimelineColor.WARNING;
 
   const getPersonIcon = (type) => {
     if (type === PersonType.ORGANIZATION) return <Building2 size={15} />;
@@ -91,96 +113,115 @@ export default function ObligationSelector({
   };
 
   const getPersonBadge = (type) => {
-    if (type === PersonType.ORGANIZATION) {
-      return {
-        label: t('timeboardSettings.entities.types.organization') || 'Empresa',
-        color: '#60a5fa',
-        bg: 'rgba(59, 130, 246, 0.15)',
-        border: 'rgba(59, 130, 246, 0.3)'
-      };
-    }
-    if (type === PersonType.MEMBER) {
-      return {
-        label: t('timeboardSettings.entities.types.member') || 'Membro',
-        color: '#a78bfa',
-        bg: 'rgba(139, 92, 246, 0.15)',
-        border: 'rgba(139, 92, 246, 0.3)'
-      };
-    }
-    return {
-      label: t('timeboardSettings.entities.types.person') || 'Pessoa',
-      color: '#34d399',
-      bg: 'rgba(16, 185, 129, 0.15)',
-      border: 'rgba(16, 185, 129, 0.3)'
-    };
+    const color = type === PersonType.ORGANIZATION
+      ? TimelineColor.BLUE
+      : type === PersonType.MEMBER
+        ? TimelineColor.PURPLE
+        : TimelineColor.SUCCESS;
+    const labelKey = type === PersonType.ORGANIZATION
+      ? 'timeboardSettings.entities.types.organization'
+      : type === PersonType.MEMBER
+        ? 'timeboardSettings.entities.types.member'
+        : 'timeboardSettings.entities.types.person';
+    return { label: t(labelKey), color, bg: `${color}26`, border: `${color}4d` };
+  };
+
+  const renderPersonAvatar = (person, size) => {
+    const badge = getPersonBadge(person.type);
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: person.type === PersonType.ORGANIZATION ? '6px' : '50%',
+          background: badge.bg,
+          color: badge.color,
+          border: `1px solid ${badge.border}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0
+        }}
+      >
+        {getPersonIcon(person.type)}
+      </div>
+    );
+  };
+
+  const renderTypeBadge = (type) => {
+    const badge = getPersonBadge(type);
+    return (
+      <span
+        style={{
+          fontSize: '0.68rem',
+          fontWeight: '700',
+          padding: '2px 6px',
+          borderRadius: '4px',
+          background: badge.bg,
+          color: badge.color,
+          border: `1px solid ${badge.border}`,
+          whiteSpace: 'nowrap'
+        }}
+      >
+        {badge.label}
+      </span>
+    );
   };
 
   return (
     <div
       className="obligation-selector-container"
       style={{
-        borderRadius: '12px',
-        background: isObligation
-          ? 'linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0.02) 100%)'
-          : 'var(--bg-glass, rgba(255, 255, 255, 0.03))',
-        border: isObligation
-          ? '1px solid rgba(245, 158, 11, 0.35)'
-          : '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
-        padding: '14px 16px',
-        marginBottom: '16px',
-        transition: 'all 0.25s ease',
-        boxShadow: isObligation ? '0 0 20px rgba(245, 158, 11, 0.1)' : 'none'
+        borderRadius: '10px',
+        background: 'var(--bg-glass)',
+        border: `1px solid ${isObligation ? `${accent}59` : 'var(--border-glass)'}`,
+        padding: '12px 14px',
+        marginBottom: '14px',
+        transition: 'border-color 0.2s ease'
       }}
     >
       {/* Header Switch Row */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '12px'
-        }}
-      >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div
             style={{
-              width: '32px',
-              height: '32px',
+              width: '28px',
+              height: '28px',
               borderRadius: '8px',
-              background: isObligation ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-              color: isObligation ? '#fbbf24' : 'var(--text-dim, #94a3b8)',
+              background: isObligation ? `${accent}26` : 'var(--bg-input)',
+              color: isObligation ? accent : 'var(--text-dim)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              transition: 'all 0.2s ease'
+              flexShrink: 0
             }}
           >
-            <FileCheck2 size={18} />
+            <FileCheck2 size={16} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.86rem', fontWeight: '700', color: isObligation ? '#fbbf24' : 'var(--text-main, #ffffff)' }}>
-                {t('modal.isObligation') || 'É Obrigação?'}
+              <span style={{ fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                {t('modal.isObligation')}
               </span>
               {isObligation && (
                 <span
                   style={{
-                    fontSize: '0.68rem',
+                    fontSize: '0.66rem',
                     fontWeight: '800',
-                    background: 'rgba(245, 158, 11, 0.2)',
-                    color: '#fbbf24',
+                    background: `${accent}26`,
+                    color: accent,
                     padding: '1px 6px',
                     borderRadius: '4px',
                     textTransform: 'uppercase',
                     letterSpacing: '0.5px'
                   }}
                 >
-                  Obrigação
+                  {t('modal.obligationBadge')}
                 </span>
               )}
             </div>
-            <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--text-dim, #94a3b8)', lineHeight: 1.2 }}>
-              {t('modal.isObligationDesc') || 'Vincule este evento financeiro a uma pessoa, membro ou empresa'}
+            <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>
+              {t('modal.isObligationDesc')}
             </p>
           </div>
         </div>
@@ -190,6 +231,7 @@ export default function ObligationSelector({
           type="button"
           role="switch"
           aria-checked={isObligation}
+          aria-label={t('modal.isObligation')}
           onClick={() => {
             const nextVal = !isObligation;
             handleToggle(nextVal);
@@ -198,10 +240,10 @@ export default function ObligationSelector({
             }
           }}
           style={{
-            width: '44px',
-            height: '24px',
+            width: '40px',
+            height: '22px',
             borderRadius: '9999px',
-            background: isObligation ? (accentColor || '#f59e0b') : 'rgba(148, 163, 184, 0.25)',
+            background: isObligation ? accent : 'var(--border-glass)',
             border: 'none',
             cursor: 'pointer',
             position: 'relative',
@@ -213,124 +255,82 @@ export default function ObligationSelector({
           <span
             style={{
               display: 'block',
-              width: '18px',
-              height: '18px',
+              width: '16px',
+              height: '16px',
               borderRadius: '50%',
-              background: '#ffffff',
+              background: TimelineColor.WHITE,
               position: 'absolute',
               top: '3px',
-              left: isObligation ? '22px' : '4px',
+              left: isObligation ? '21px' : '3px',
               transition: 'left 0.2s ease',
-              boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
+              boxShadow: 'var(--shadow-sm)'
             }}
           />
         </button>
       </div>
 
-      {/* Person Selection Box when isObligation is True */}
+      {/* Person Selection when isObligation is True (same look as the other modal fields) */}
       {isObligation && (
-        <div
-          style={{
-            marginTop: '14px',
-            paddingTop: '12px',
-            borderTop: '1px dashed rgba(245, 158, 11, 0.25)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            animation: 'fadeIn 0.2s ease-out'
-          }}
-        >
+        <div style={{ marginTop: '12px' }}>
           <label
             style={{
-              fontSize: '0.8rem',
+              display: 'block',
+              fontSize: '0.78rem',
               fontWeight: '700',
-              color: hasError ? '#f87171' : 'var(--text-main, #e2e8f0)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
+              marginBottom: '6px',
+              color: hasError ? TimelineColor.DANGER : 'var(--text-main)'
             }}
           >
-            <span>{t('modal.obligationPersonLabel') || 'Pessoa / Membro / Empresa Responsável *'}</span>
+            {t('modal.obligationPersonLabel')}
           </label>
 
-          {/* Custom Dropdown Trigger */}
           <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
-            <div
-              onClick={() => setIsDropdownOpen((prev) => !prev)}
+            <button
+              type="button"
+              onClick={() => (isDropdownOpen ? closeDropdown() : setIsDropdownOpen(true))}
               style={{
                 width: '100%',
-                background: 'var(--bg-input, rgba(0, 0, 0, 0.35))',
-                border: hasError
-                  ? '1.5px solid #ef4444'
-                  : isDropdownOpen
-                  ? '1.5px solid #f59e0b'
-                  : '1px solid rgba(245, 158, 11, 0.3)',
-                borderRadius: '10px',
-                padding: '10px 14px',
-                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                transition: 'all 0.15s ease',
-                boxShadow: isDropdownOpen ? '0 0 12px rgba(245, 158, 11, 0.2)' : 'none'
+                padding: '8px 12px',
+                borderRadius: '10px',
+                background: 'var(--bg-glass)',
+                border: `1px solid ${hasError ? TimelineColor.DANGER : isDropdownOpen ? accent : 'var(--border-glass)'}`,
+                boxShadow: isDropdownOpen ? `0 0 12px ${accent}33` : 'none',
+                color: 'var(--text-main)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxSizing: 'border-box',
+                textAlign: 'left'
               }}
             >
               {selectedPerson ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: selectedPerson.type === PersonType.ORGANIZATION ? '6px' : '50%',
-                      background: getPersonBadge(selectedPerson.type).bg,
-                      color: getPersonBadge(selectedPerson.type).color,
-                      border: `1px solid ${getPersonBadge(selectedPerson.type).border}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}
-                  >
-                    {getPersonIcon(selectedPerson.type)}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                    <span style={{ fontWeight: '700', fontSize: '0.88rem', color: 'var(--text-main, #ffffff)', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                      {selectedPerson.name}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '0.7rem',
-                        fontWeight: '700',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        background: getPersonBadge(selectedPerson.type).bg,
-                        color: getPersonBadge(selectedPerson.type).color,
-                        border: `1px solid ${getPersonBadge(selectedPerson.type).border}`
-                      }}
-                    >
-                      {getPersonBadge(selectedPerson.type).label}
-                    </span>
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', minWidth: 0 }}>
+                  {renderPersonAvatar(selectedPerson, '28px')}
+                  <span style={{ fontWeight: '700', fontSize: '0.86rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {getPersonName(selectedPerson)}
+                  </span>
+                  {renderTypeBadge(selectedPerson.type)}
                 </div>
               ) : (
-                <span style={{ fontSize: '0.86rem', color: hasError ? '#f87171' : 'var(--text-dim, #94a3b8)' }}>
-                  {t('modal.obligationPersonPlaceholder') || 'Selecione uma pessoa ou empresa...'}
+                <span style={{ fontSize: '0.86rem', color: hasError ? TimelineColor.DANGER : 'var(--text-dim)' }}>
+                  {t('modal.obligationPersonPlaceholder')}
                 </span>
               )}
 
               <ChevronDown
                 size={16}
                 style={{
-                  color: isObligation ? '#fbbf24' : 'var(--text-dim)',
+                  color: 'var(--text-muted)',
                   transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                   transition: 'transform 0.2s ease',
                   flexShrink: 0,
                   marginLeft: '8px'
                 }}
               />
-            </div>
+            </button>
 
-            {/* Custom Dropdown Popover */}
             {isDropdownOpen && (
               <div
                 style={{
@@ -339,96 +339,109 @@ export default function ObligationSelector({
                   left: 0,
                   right: 0,
                   zIndex: 1500,
-                  background: 'var(--bg-card, #1e293b)',
-                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-glass)',
                   borderRadius: '12px',
-                  boxShadow: '0 16px 36px rgba(0, 0, 0, 0.75), 0 0 20px rgba(245, 158, 11, 0.15)',
+                  boxShadow: 'var(--shadow-sm)',
                   padding: '6px',
-                  maxHeight: '230px',
+                  maxHeight: '260px',
                   overflowY: 'auto',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '4px',
-                  backdropFilter: 'blur(16px)',
-                  animation: 'fadeIn 0.15s ease-out'
+                  gap: '2px'
                 }}
               >
+                {/* Search field (filters by name / email) */}
+                <div style={{ position: 'sticky', top: '-6px', background: 'var(--bg-card)', padding: '0 0 6px', zIndex: 1 }}>
+                  <div style={{ position: 'relative' }}>
+                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+                    <input
+                      type="text"
+                      autoFocus
+                      value={personSearch}
+                      onChange={(e) => setPersonSearch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (filteredPersons.length > 0) selectPerson(filteredPersons[0].id);
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          closeDropdown();
+                        }
+                      }}
+                      placeholder={t('modal.searchPerson')}
+                      aria-label={t('modal.searchPerson')}
+                      style={{
+                        width: '100%',
+                        padding: '6px 10px 6px 30px',
+                        fontSize: '0.78rem',
+                        borderRadius: '6px',
+                        background: 'var(--bg-glass)',
+                        border: '1px solid var(--border-glass)',
+                        color: 'var(--text-main)',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
+
                 {isLoading ? (
                   <div style={{ padding: '12px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                    Carregando entidades...
+                    {t('modal.loadingPersons')}
                   </div>
                 ) : persons.length === 0 ? (
                   <div style={{ padding: '14px', textAlign: 'center', fontSize: '0.82rem', color: 'var(--text-dim)' }}>
-                    {t('modal.noPersonsAvailable') || 'Nenhuma entidade cadastrada neste timeboard.'}
+                    {t('modal.noPersonsAvailable')}
+                  </div>
+                ) : filteredPersons.length === 0 ? (
+                  <div style={{ padding: '14px', textAlign: 'center', fontSize: '0.82rem', color: 'var(--text-dim)' }}>
+                    {t('modal.noPersonsFound')}
                   </div>
                 ) : (
-                  persons.map((p) => {
+                  filteredPersons.map((p) => {
                     const isSelected = p.id === obligationPersonId;
-                    const badge = getPersonBadge(p.type);
-
+                    const name = getPersonName(p);
                     return (
-                      <div
+                      <button
                         key={p.id}
-                        onClick={() => {
-                          handleSelectPerson(p.id);
-                          setIsDropdownOpen(false);
-                        }}
+                        type="button"
+                        onClick={() => selectPerson(p.id)}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
+                          gap: '8px',
+                          width: '100%',
                           padding: '8px 10px',
                           borderRadius: '8px',
+                          border: 'none',
                           cursor: 'pointer',
-                          background: isSelected ? 'rgba(245, 158, 11, 0.15)' : 'transparent',
+                          textAlign: 'left',
+                          background: isSelected ? `${accent}1f` : 'transparent',
                           transition: 'background 0.15s ease'
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div
-                            style={{
-                              width: '26px',
-                              height: '26px',
-                              borderRadius: p.type === PersonType.ORGANIZATION ? '6px' : '50%',
-                              background: badge.bg,
-                              color: badge.color,
-                              border: `1px solid ${badge.border}`,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            {getPersonIcon(p.type)}
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.86rem', fontWeight: '700', color: isSelected ? '#fbbf24' : 'var(--text-main, #ffffff)' }}>
-                              {p.name}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                          {renderPersonAvatar(p, '26px')}
+                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                            <span style={{ fontSize: '0.84rem', fontWeight: '700', color: isSelected ? accent : 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {name}
                             </span>
-                            {p.email && (
-                              <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                            {p.email && p.email !== name && (
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {p.email}
                               </span>
                             )}
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span
-                            style={{
-                              fontSize: '0.68rem',
-                              fontWeight: '700',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              background: badge.bg,
-                              color: badge.color,
-                              border: `1px solid ${badge.border}`
-                            }}
-                          >
-                            {badge.label}
-                          </span>
-                          {isSelected && <Check size={14} style={{ color: '#fbbf24' }} />}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                          {renderTypeBadge(p.type)}
+                          {isSelected && <Check size={14} style={{ color: accent }} />}
                         </div>
-                      </div>
+                      </button>
                     );
                   })
                 )}
@@ -436,21 +449,10 @@ export default function ObligationSelector({
             )}
           </div>
 
-          {/* Validation Error Message */}
           {hasError && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                color: '#f87171',
-                fontSize: '0.78rem',
-                fontWeight: '600',
-                marginTop: '2px'
-              }}
-            >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: TimelineColor.DANGER, fontSize: '0.76rem', fontWeight: '600', marginTop: '6px' }}>
               <AlertCircle size={14} />
-              <span>{t('modal.obligationPersonRequired') || 'Por favor, selecione uma entidade responsável por esta obrigação.'}</span>
+              <span>{t('modal.obligationPersonRequired')}</span>
             </div>
           )}
         </div>

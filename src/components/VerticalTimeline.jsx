@@ -36,7 +36,6 @@ import {
   TrendingUp,
   TrendingDown,
   Scale,
-  ShoppingCart,
   PiggyBank,
   Landmark,
   CheckCircle2,
@@ -80,7 +79,9 @@ import {
   Building2,
   UserCheck,
   Loader2,
-  Printer
+  Printer,
+  Wallet,
+  ReceiptEuro
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
 import { compareEventsWithinDay } from '../utils/eventSorting.js';
@@ -119,6 +120,7 @@ import {
 } from '../enums/index.js';
 import { getTimelineDropdownOptions } from '../utils/timelineConfig.jsx';
 import { makeDiaryT } from '../utils/diaryLabels.js';
+import { pocketHasTarget, isPocketMovementRealized } from '../utils/pocketUtils.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 const EXPENSE_CATEGORY_ITEMS = [
@@ -1281,6 +1283,18 @@ function VerticalTimeline({
           }
         },
         {
+          id: IncomeEventCategory.CONDO_PAYMENT,
+          name: t('incomeCategories.condo_payment'),
+          icon: <Home size={13} style={{ color: TimelineColor.CONDOFLOW }} />,
+          matches: (ev) => (ev.category || '').toLowerCase() === IncomeEventCategory.CONDO_PAYMENT
+        },
+        {
+          id: IncomeEventCategory.RESERVE_FUND,
+          name: t('incomeCategories.reserve_fund'),
+          icon: <ShieldCheck size={13} style={{ color: TimelineColor.INVESTMENT }} />,
+          matches: (ev) => (ev.category || '').toLowerCase() === IncomeEventCategory.RESERVE_FUND
+        },
+        {
           id: IncomeEventCategory.OTHER,
           name: t('incomeCategories.other'),
           icon: <Tag size={13} style={{ color: TimelineColor.SLATE }} />,
@@ -1321,7 +1335,20 @@ function VerticalTimeline({
   const currentMonthEnd = endOfMonth(todayDate);
 
   const effectivePastYears = Math.max(1, pastHorizonYears);
-  const startDateObj = subMonths(currentMonthStart, effectivePastYears * 12);
+  // Events are shown from the month they start in: extend the past horizon to the earliest event of this timeline
+  const earliestEventDate = useMemo(() => {
+    let earliest = null;
+    timelineEvents.forEach((ev) => {
+      if (!ev || !ev.date || ev.isDeleted || !isEventBelongingToCurrentTimeline(ev)) return;
+      if (!earliest || ev.date < earliest) earliest = ev.date;
+    });
+    return earliest;
+  }, [timelineEvents, isEventBelongingToCurrentTimeline]);
+  const horizonStartDateObj = subMonths(currentMonthStart, effectivePastYears * 12);
+  const earliestEventMonthStart = earliestEventDate ? startOfMonth(parseISO(earliestEventDate)) : null;
+  const startDateObj = earliestEventMonthStart && earliestEventMonthStart < horizonStartDateObj
+    ? earliestEventMonthStart
+    : horizonStartDateObj;
   const maxDateObj = addMonths(currentMonthEnd, Math.max(1, futureHorizonYears) * 12);
 
   // Filter events based on search query, status, category, and label
@@ -1463,12 +1490,9 @@ function VerticalTimeline({
         if (!isThisTimeline) return false;
       }
 
-      // Respeitar os limites dinâmicos do horizonte de tempo e início de cálculo para todas as timelines financeiras
+      // Respeitar os limites do horizonte de tempo. Eventos anteriores ao início de cálculo continuam visíveis
+      // (a partir do mês em que começam); esses meses aparecem esbatidos e não entram nos totais.
       if (isFinancialTimeline && ev.date) {
-        const evMonth = ev.date.substring(0, 7);
-        if (computeFromMonth && evMonth < computeFromMonth) {
-          return false;
-        }
         const maxEndStr = format(maxDateObj, 'yyyy-MM-dd');
         const minStartStr = format(startDateObj, 'yyyy-MM-dd');
         if (ev.date > maxEndStr || ev.date < minStartStr) {
@@ -2676,12 +2700,9 @@ function VerticalTimeline({
 
                                 if (isFutureMonth) {
                                   allPocketContributed += multiplier * amt;
-                                } else {
-                                  const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
-                                  const isExternal = Boolean(ev.isExternal || ev.is_external);
-                                  if (isReceived || isExternal) {
-                                    allPocketContributed += multiplier * amt;
-                                  }
+                                } else if (isPocketMovementRealized(ev, todayStr)) {
+                                  // Received movements, or external deposits already due
+                                  allPocketContributed += multiplier * amt;
                                 }
                               }
                             }
@@ -2843,7 +2864,7 @@ function VerticalTimeline({
                               </div>
 
                               {/* Linha 2: Barra de Progresso idêntica à do evento com meta */}
-                              {pTarget > 0 && (() => {
+                              {pocketHasTarget(pocket) && pTarget > 0 && (() => {
                                 const labelTitle = isFutureMonth
                                   ? t('pocket.goalProgressForecast', {
                                       accumulated: formatCurrency(pAccumulated),
@@ -3539,9 +3560,9 @@ function VerticalTimeline({
                 const getTimelineIcon = (type) => {
                   switch (type) {
                     case TimelineType.INCOME:
-                      return <DollarSign size={14} style={{ color: tlColor }} />;
+                      return <Wallet size={14} style={{ color: tlColor }} />;
                     case TimelineType.EXPENSE:
-                      return <ShoppingCart size={14} style={{ color: tlColor }} />;
+                      return <ReceiptEuro size={14} style={{ color: tlColor }} />;
                     case TimelineType.INVESTMENT:
                       return <PiggyBank size={14} style={{ color: tlColor }} />;
                     case TimelineType.LOAN:

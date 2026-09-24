@@ -2495,6 +2495,7 @@ export default function App() {
           onClose={() => setIsEventModalOpen(false)}
           onSave={handleSaveEvent}
           initialData={editingEvent}
+          pockets={pockets}
           defaultDate={selectedDateForNewEvent}
           timeline={activeTimeline}
           timeboardId={activeTimeboardId}

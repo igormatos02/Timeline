@@ -37,10 +37,14 @@ export class PocketService {
       }
     }
 
+    // Target is optional: a pocket without target is stored with target_value 0
+    const rawHasTarget = data.hasTarget !== undefined ? data.hasTarget : data.has_target;
+    const hasTarget = rawHasTarget === undefined || rawHasTarget === null ? true : Boolean(rawHasTarget);
     const payload = {
       name: String(data.name).trim(),
       initialValue: Number(data.initialValue !== undefined ? data.initialValue : (data.initial_value !== undefined ? data.initial_value : 0)),
-      targetValue: Number(data.targetValue !== undefined ? data.targetValue : (data.target_value !== undefined ? data.target_value : 0)),
+      hasTarget,
+      targetValue: hasTarget ? Number(data.targetValue !== undefined ? data.targetValue : (data.target_value !== undefined ? data.target_value : 0)) : 0,
       timelineId,
       timeboardId,
       dateCreated: data.dateCreated || data.date_created || new Date().toISOString(),
@@ -67,6 +71,15 @@ export class PocketService {
     if (payload.initial_value !== undefined) payload.initial_value = Number(payload.initial_value) || 0;
     if (payload.targetValue !== undefined) payload.targetValue = Number(payload.targetValue) || 0;
     if (payload.target_value !== undefined) payload.target_value = Number(payload.target_value) || 0;
+    const rawHasTarget = payload.hasTarget !== undefined ? payload.hasTarget : payload.has_target;
+    if (rawHasTarget !== undefined) {
+      payload.hasTarget = Boolean(rawHasTarget);
+      delete payload.has_target;
+      if (!payload.hasTarget) {
+        payload.targetValue = 0;
+        delete payload.target_value;
+      }
+    }
     if (payload.dateClosed !== undefined) payload.dateClosed = payload.dateClosed;
     else if (payload.date_closed !== undefined) payload.date_closed = payload.date_closed;
 

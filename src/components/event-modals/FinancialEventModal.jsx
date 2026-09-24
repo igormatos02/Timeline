@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Zap,
   Repeat,
-  ExternalLink
+  ExternalLink,
+  Scissors
 } from 'lucide-react';
 import { format, parseISO, addMonths, getDaysInMonth } from 'date-fns';
 import { EventRecurrence, EventPeriodicity, EventUpdateMode, normalizeRecurrence, normalizePeriodicity } from '../../../shared/enums/index.js';
@@ -14,16 +15,19 @@ import CategorySelector from '../ui/CategorySelector.jsx';
 import RecurrenceSelector from '../ui/RecurrenceSelector.jsx';
 import PeriodicitySelector from '../ui/PeriodicitySelector.jsx';
 import MonthPickerPopover from '../ui/MonthPickerPopover.jsx';
-import DayPickerPopover from '../ui/DayPickerPopover.jsx';
+import DueDatePicker, { clampDueDate } from '../ui/DueDatePicker.jsx';
 import ToggleSwitch from '../ui/ToggleSwitch.jsx';
 import BreakdownItems from '../ui/BreakdownItems.jsx';
 import ObligationSelector from '../ObligationSelector.jsx';
-import { EVENT_MODAL_CONFIG } from './FinancialEventModalConfig.js';
+import { EVENT_MODAL_CONFIG, resolveEventModalConfig } from './FinancialEventModalConfig.js';
+import CategoryBoxSelector from '../ui/CategoryBoxSelector.jsx';
+import { useTimeboard } from '../../context/TimeboardContext.jsx';
 
 export default function FinancialEventModal({
-  isOpen, onClose, onSave, initialData, defaultDate, timeline, timeboardId, eventType = 'income'
+  isOpen, onClose, onSave, initialData, defaultDate, timeline, timeboardId, eventType = 'income', pockets = []
 }) {
-  const config = EVENT_MODAL_CONFIG[eventType] || EVENT_MODAL_CONFIG.income;
+  const { isCondoflow } = useTimeboard();
+  const config = resolveEventModalConfig(EVENT_MODAL_CONFIG[eventType] || EVENT_MODAL_CONFIG.income, isCondoflow);
   const ACCENT = config.accent;
   const { t, dateLocale } = useTranslation();
   const titleInputRef = useRef(null);
@@ -34,6 +38,11 @@ export default function FinancialEventModal({
   const [endMonthPickerYear, setEndMonthPickerYear] = useState(new Date().getFullYear());
   const [updateScope, setUpdateScope] = useState(EventUpdateMode.SINGLE);
   const [breakdownItems, setBreakdownItems] = useState([]);
+  // Breakdown (subparts) works like the amount editor on the event card: the "split" option appears
+  // after clicking the amount, and the breakdown box only after clicking "split".
+  const [isAmountFocused, setIsAmountFocused] = useState(false);
+  const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
+
   const [obligationError, setObligationError] = useState(false);
 
   const isEditing = Boolean(initialData?.id || initialData?.eventId);
@@ -60,6 +69,25 @@ export default function FinancialEventModal({
     pocketId: null
   });
 
+  // Deposits into a pocket: allowed between the pocket creation date and its closing date (if any)
+  const activePocket = (pockets || []).find((p) => String(p.id) === String(formData.pocketId || initialData?.pocketId || initialData?.pocket_id || ''));
+  const pocketCreated = activePocket?.dateCreated || activePocket?.date_created || null;
+  const pocketClosed = activePocket?.dateClosed || activePocket?.date_closed || null;
+  const pocketDateRange = {
+    minDate: pocketCreated ? String(pocketCreated).substring(0, 10) : null,
+    maxDate: pocketClosed ? String(pocketClosed).substring(0, 10) : null
+  };
+
+  // Keep the chosen date inside the pocket range (e.g. when "add" was clicked in a month before the pocket existed)
+  useEffect(() => {
+    if (!isOpen || (!pocketDateRange.minDate && !pocketDateRange.maxDate) || !formData.date) return;
+    const clamped = clampDueDate({ date: formData.date, day: formData.dayOfMonth }, pocketDateRange.minDate, pocketDateRange.maxDate);
+    const currentBase = format(parseISO(formData.date), 'yyyy-MM-01');
+    if (clamped.date !== currentBase || clamped.day !== Number(formData.dayOfMonth)) {
+      setFormData((prev) => ({ ...prev, date: clamped.date, dayOfMonth: clamped.day }));
+    }
+  }, [isOpen, formData.date, formData.dayOfMonth, pocketDateRange.minDate, pocketDateRange.maxDate]);
+
   useModalEscape(isOpen, onClose, [
     [isDayPickerOpen, setIsDayPickerOpen],
     [isEndMonthPickerOpen, setIsEndMonthPickerOpen],
@@ -81,7 +109,7 @@ export default function FinancialEventModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    const cfg = EVENT_MODAL_CONFIG[eventType] || EVENT_MODAL_CONFIG.income;
+    const cfg = resolveEventModalConfig(EVENT_MODAL_CONFIG[eventType] || EVENT_MODAL_CONFIG.income, isCondoflow);
 
     const today = format(new Date(), 'yyyy-MM-dd');
     const targetDate = initialData?.date || defaultDate || today;
@@ -112,6 +140,10 @@ export default function FinancialEventModal({
       if (cfg.categoryLegacyMap && cfg.categoryLegacyMap[cat]) {
         cat = cfg.categoryLegacyMap[cat];
       }
+      // Selection boxes only offer their own categories: anything else falls back to the default one
+      if (cfg.useCategoryBoxes && !cfg.categoryMeta[cat]) {
+        cat = cfg.categoryDefault;
+      }
 
       setFormData({
         title: initialData.title || initialData.name || '',
@@ -139,6 +171,8 @@ export default function FinancialEventModal({
       setUpdateScope(EventUpdateMode.SUBSEQUENT);
       if (cfg.useBreakdown) {
         setBreakdownItems(initialData.breakdownItems ? JSON.parse(JSON.stringify(initialData.breakdownItems)) : []);
+        setIsBreakdownOpen(Array.isArray(initialData.breakdownItems) && initialData.breakdownItems.length > 0);
+        setIsAmountFocused(false);
       }
     } else {
       let defaultEndMonth = format(addMonths(parseISO(targetDate), 6), 'yyyy-MM');
@@ -153,6 +187,10 @@ export default function FinancialEventModal({
       let cat = initialData?.category || cfg.categoryDefault;
       if (cfg.categoryLegacyMap && cfg.categoryLegacyMap[cat]) {
         cat = cfg.categoryLegacyMap[cat];
+      }
+      // Selection boxes only offer their own categories: anything else falls back to the default one
+      if (cfg.useCategoryBoxes && !cfg.categoryMeta[cat]) {
+        cat = cfg.categoryDefault;
       }
 
       setFormData({
@@ -170,7 +208,11 @@ export default function FinancialEventModal({
         targetAmount: '',
         labelsInput: Array.isArray(initialData?.labels) ? initialData.labels.join(', ') : '',
         isAutomatic: Boolean(initialData?.isAutomatic),
-        isExternal: cfg.showIsExternal ? Boolean(initialData?.isExternal !== undefined ? initialData.isExternal : initialData?.is_external) : false,
+        isExternal: cfg.showIsExternal
+          ? (initialData?.isExternal !== undefined || initialData?.is_external !== undefined
+            ? Boolean(initialData?.isExternal !== undefined ? initialData.isExternal : initialData.is_external)
+            : Boolean(cfg.defaultIsExternal))
+          : false,
         category: cat,
         isObligation: Boolean(initialData?.isObligation || initialData?.is_obligation),
         obligationPersonId: initialData?.obligationPersonId || initialData?.obligation_person_id || '',
@@ -179,10 +221,12 @@ export default function FinancialEventModal({
       setUpdateScope(EventUpdateMode.SINGLE);
       if (cfg.useBreakdown) {
         setBreakdownItems(initialData?.breakdownItems ? JSON.parse(JSON.stringify(initialData.breakdownItems)) : []);
+        setIsBreakdownOpen(Array.isArray(initialData?.breakdownItems) && initialData.breakdownItems.length > 0);
+        setIsAmountFocused(false);
       }
     }
     setObligationError(false);
-  }, [initialData, defaultDate, isOpen, eventType, isEditing]);
+  }, [initialData, defaultDate, isOpen, eventType, isEditing, isCondoflow]);
 
   const totalBreakdownAmount = breakdownItems.reduce(
     (acc, it) => acc + (parseFloat(it.amount) || 0), 0
@@ -378,26 +422,8 @@ export default function FinancialEventModal({
         </div>
       )}
 
-      {config.showCategories !== false && (
-        <CategorySelector
-          value={formData.category}
-          onChange={(category) => setFormData((prev) => ({ ...prev, category }))}
-          categoryMeta={config.categoryMeta}
-          accent={ACCENT}
-          translationPrefix={config.translationPrefix}
-          t={t}
-          label={t('modal.categoryLabel')}
-          isOpen={isCategoryDropdownOpen}
-          onToggle={() => {
-            setIsCategoryDropdownOpen(!isCategoryDropdownOpen);
-            setIsDayPickerOpen(false);
-            setIsEndMonthPickerOpen(false);
-          }}
-        />
-      )}
-
       {config.showAmount !== false && (
-        <>
+        <div onFocus={() => setIsAmountFocused(true)}>
           <EuroInput
             label={t(config.amountLabelKey) || config.amountLabelFallback}
             value={displayedAmount}
@@ -414,9 +440,24 @@ export default function FinancialEventModal({
                 ({breakdownItems.length} {(t('modal.subparts') || 'Subpartes').toLowerCase()})
               </span>
             ) : null}
+            marginBottom={config.useBreakdown && isAmountFocused && !isBreakdownOpen ? '6px' : '14px'}
           />
 
-          {config.useBreakdown && (
+          {config.useBreakdown && isAmountFocused && !isBreakdownOpen && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setIsBreakdownOpen(true)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', padding: '4px 10px' }}
+              >
+                <Scissors size={13} />
+                <span>{t('actionSplitValue')}</span>
+              </button>
+            </div>
+          )}
+
+          {config.useBreakdown && isBreakdownOpen && (
             <BreakdownItems
               items={breakdownItems}
               onChange={setBreakdownItems}
@@ -425,7 +466,37 @@ export default function FinancialEventModal({
               initialAmount={formData.amount}
             />
           )}
-        </>
+        </div>
+      )}
+
+      {config.showCategories !== false && config.useCategoryBoxes && (
+        <CategoryBoxSelector
+          value={formData.category}
+          onChange={(category) => setFormData((prev) => ({ ...prev, category }))}
+          categoryMeta={config.categoryMeta}
+          translationPrefix={config.translationPrefix}
+          descriptionPrefix={config.categoryDescriptionPrefix}
+          label={t('modal.categoryLabel')}
+          t={t}
+        />
+      )}
+
+      {config.showCategories !== false && !config.useCategoryBoxes && (
+        <CategorySelector
+          value={formData.category}
+          onChange={(category) => setFormData((prev) => ({ ...prev, category }))}
+          categoryMeta={config.categoryMeta}
+          accent={ACCENT}
+          translationPrefix={config.translationPrefix}
+          t={t}
+          label={t('modal.categoryLabel')}
+          isOpen={isCategoryDropdownOpen}
+          onToggle={() => {
+            setIsCategoryDropdownOpen(!isCategoryDropdownOpen);
+            setIsDayPickerOpen(false);
+            setIsEndMonthPickerOpen(false);
+          }}
+        />
       )}
 
       {config.showInitialTarget && (
@@ -518,16 +589,15 @@ export default function FinancialEventModal({
         </>
       )}
 
-      <DayPickerPopover
-        label={t('modal.dayOfMonth') || config.dayLabelFallback}
-        value={formData.dayOfMonth}
-        onChange={(day) => setFormData((prev) => ({ ...prev, dayOfMonth: day }))}
+      <DueDatePicker
+        date={formData.date}
+        day={formData.dayOfMonth}
+        minDate={pocketDateRange.minDate}
+        maxDate={pocketDateRange.maxDate}
+        onChange={({ date, day }) => setFormData((prev) => ({ ...prev, date, dayOfMonth: day }))}
         accent={ACCENT}
-        dateLocale={dateLocale}
-        baseDate={formData.date}
-        isOpen={isDayPickerOpen}
-        onToggle={() => {
-          setIsDayPickerOpen(!isDayPickerOpen);
+        dayLabel={t('modal.dayOfMonth')}
+        onOpen={() => {
           setIsEndMonthPickerOpen(false);
           setIsCategoryDropdownOpen(false);
         }}
@@ -566,6 +636,7 @@ export default function FinancialEventModal({
 
       {config.showObligations !== false && (
         <ObligationSelector
+          accentColor={ACCENT}
           isObligation={formData.isObligation}
           obligationPersonId={formData.obligationPersonId}
           onToggleObligation={(val) => {

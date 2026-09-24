@@ -29,9 +29,10 @@ import {
   Bell,
   Cake,
   Calendar,
-  Clock
+  Clock,
+  Undo2
 } from 'lucide-react';
-import { EventStatus, EventType, IncomeEventCategory, ExpenseEventCategory, InvestmentEventCategory, ReminderEventCategory } from '../../../shared/enums/index.js';
+import { EventStatus, EventType, IncomeEventCategory, ExpenseEventCategory, InvestmentEventCategory, ReminderEventCategory, TimelineColor } from '../../../shared/enums/index.js';
 
 export const INCOME_CATEGORY_META = {
   [IncomeEventCategory.SALARY]: { icon: DollarSign, color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
@@ -42,6 +43,61 @@ export const INCOME_CATEGORY_META = {
   [IncomeEventCategory.RECURRING_INCOME]: { icon: Repeat, color: '#14b8a6', bg: 'rgba(20, 184, 166, 0.15)' },
   [IncomeEventCategory.OTHER]: { icon: Tag, color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' }
 };
+
+// Condominium (condoflow) income categories, shown as selection boxes (order matters)
+export const CONDO_INCOME_CATEGORY_META = {
+  [IncomeEventCategory.CONDO_PAYMENT]: { icon: Home, color: TimelineColor.CONDOFLOW, bg: `${TimelineColor.CONDOFLOW}26` },
+  [IncomeEventCategory.RESERVE_FUND]: { icon: ShieldCheck, color: TimelineColor.INVESTMENT, bg: `${TimelineColor.INVESTMENT}26` },
+  [IncomeEventCategory.OTHER]: { icon: Tag, color: TimelineColor.SLATE, bg: `${TimelineColor.SLATE}26` }
+};
+
+// Condominium (condoflow) account deposit categories (investment / savings timeline), shown as selection boxes
+export const CONDO_INVESTMENT_CATEGORY_META = {
+  [InvestmentEventCategory.CONDO_PAYMENT]: { icon: Home, color: TimelineColor.CONDOFLOW, bg: `${TimelineColor.CONDOFLOW}26` },
+  [InvestmentEventCategory.RESERVE_FUND]: { icon: ShieldCheck, color: TimelineColor.INVESTMENT, bg: `${TimelineColor.INVESTMENT}26` },
+  [InvestmentEventCategory.REFUND]: { icon: Undo2, color: TimelineColor.CYAN, bg: `${TimelineColor.CYAN}26` },
+  [InvestmentEventCategory.OTHER]: { icon: Tag, color: TimelineColor.SLATE, bg: `${TimelineColor.SLATE}26` }
+};
+
+/**
+ * Adjusts a modal config to the active timeboard. On condominium (condoflow) timeboards:
+ * - income: Condominium Payment (default), Reserve Fund and Other
+ * - account deposits (investment): Condominium Payment (default), Reserve Fund, Refund and Other
+ * both chosen with selection boxes.
+ */
+export function resolveEventModalConfig(config, isCondoflow) {
+  if (!isCondoflow) return config;
+  if (config?.eventType === EventType.INVESTMENT) {
+    return {
+      ...config,
+      showCategories: true,
+      categoryMeta: CONDO_INVESTMENT_CATEGORY_META,
+      categoryDefault: InvestmentEventCategory.CONDO_PAYMENT,
+      categoryLegacyMap: null,
+      useCategoryBoxes: true,
+      translationPrefix: 'condoInvestmentCategories',
+      categoryDescriptionPrefix: 'condoInvestmentCategoryDesc',
+      // Condominium account deposits come from outside (owners' payments): external by default
+      defaultIsExternal: true,
+      // Condominium account deposits are called "entries" (not investments)
+      titleKeys: {
+        ...config.titleKeys,
+        newKey: 'modal.condoDepositNew',
+        editKey: 'modal.condoDepositEdit',
+        addKey: 'modal.condoDepositAdd'
+      }
+    };
+  }
+  if (config?.eventType !== EventType.INCOME) return config;
+  return {
+    ...config,
+    categoryMeta: CONDO_INCOME_CATEGORY_META,
+    categoryDefault: IncomeEventCategory.CONDO_PAYMENT,
+    categoryLegacyMap: null,
+    useCategoryBoxes: true,
+    categoryDescriptionPrefix: 'condoIncomeCategoryDesc'
+  };
+}
 
 export const EXPENSE_CATEGORY_META = {
   [ExpenseEventCategory.FOOD]: { icon: Utensils, color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.15)' },

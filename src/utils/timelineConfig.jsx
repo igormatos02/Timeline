@@ -1,15 +1,15 @@
 import React from 'react';
 import {
   Scale,
-  TrendingUp,
-  ShoppingCart,
   PiggyBank,
   CreditCard,
   Bell,
   BookOpen,
   CheckSquare,
   ListTree,
-  Layers
+  Layers,
+  Wallet,
+  ReceiptEuro
 } from 'lucide-react';
 import {
   TimelineType,
@@ -62,9 +62,9 @@ export function getTimelineTypeIconComponent(type) {
     case TimelineType.BALANCE:
       return Scale;
     case TimelineType.INCOME:
-      return TrendingUp;
+      return Wallet;
     case TimelineType.EXPENSE:
-      return ShoppingCart;
+      return ReceiptEuro;
     case TimelineType.INVESTMENT:
       return PiggyBank;
     case TimelineType.LOAN:

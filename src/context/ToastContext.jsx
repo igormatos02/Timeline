@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { TimelineColor } from '../enums/index.js';
 
 const ToastContext = createContext({
   showToast: () => {},
@@ -32,12 +33,15 @@ export function ToastProvider({ children }) {
       {/* Toast Render Container */}
       <div
         style={{
+          // Bottom center: keeps the card status buttons (right side) free to click
           position: 'fixed',
           bottom: '24px',
-          right: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
           zIndex: 10000,
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'center',
           gap: '10px',
           maxWidth: '380px',
           width: 'calc(100vw - 48px)',
@@ -58,18 +62,11 @@ export function ToastProvider({ children }) {
                 gap: '12px',
                 padding: '14px 18px',
                 borderRadius: '12px',
-                background: isSuccess
-                  ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95))'
-                  : isError
-                  ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(185, 28, 28, 0.95))'
-                  : 'linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(29, 78, 216, 0.95))',
-                color: '#ffffff',
-                boxShadow: isSuccess
-                  ? '0 10px 25px -5px rgba(16, 185, 129, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3)'
-                  : isError
-                  ? '0 10px 25px -5px rgba(239, 68, 68, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3)'
-                  : '0 10px 25px -5px rgba(59, 130, 246, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                width: '100%',
+                background: `${isSuccess ? TimelineColor.SUCCESS : isError ? TimelineColor.DANGER : TimelineColor.BLUE}f2`,
+                color: TimelineColor.WHITE,
+                boxShadow: 'var(--shadow-sm)',
+                border: `1px solid ${TimelineColor.WHITE}33`,
                 backdropFilter: 'blur(8px)',
                 WebkitBackdropFilter: 'blur(8px)',
                 animation: 'toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
@@ -90,7 +87,7 @@ export function ToastProvider({ children }) {
                 style={{
                   background: 'transparent',
                   border: 'none',
-                  color: 'rgba(255, 255, 255, 0.8)',
+                  color: `${TimelineColor.WHITE}cc`,
                   cursor: 'pointer',
                   padding: '2px',
                   display: 'flex',

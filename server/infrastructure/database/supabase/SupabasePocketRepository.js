@@ -21,6 +21,7 @@ export class SupabasePocketRepository extends IPocketRepository {
       initial_value: Number(row.initial_value || 0),
       targetValue: Number(row.target_value || 0),
       target_value: Number(row.target_value || 0),
+      has_target: row.has_target,
       timelineId: row.timeline_id,
       timeline_id: row.timeline_id,
       timeboardId: row.timeboard_id,
@@ -41,6 +42,9 @@ export class SupabasePocketRepository extends IPocketRepository {
 
     if (data.targetValue !== undefined) row.target_value = Number(data.targetValue) || 0;
     else if (data.target_value !== undefined) row.target_value = Number(data.target_value) || 0;
+
+    if (data.hasTarget !== undefined) row.has_target = Boolean(data.hasTarget);
+    else if (data.has_target !== undefined) row.has_target = Boolean(data.has_target);
 
     if (data.timelineId !== undefined) row.timeline_id = data.timelineId;
     else if (data.timeline_id !== undefined) row.timeline_id = data.timeline_id;

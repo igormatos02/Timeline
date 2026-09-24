@@ -485,6 +485,21 @@ export const translations = {
 
     // Modal Events
     modal: {
+      condoDepositNew: "New Entry",
+      condoDepositEdit: "Edit Entry",
+      condoDepositAdd: "Add Entry",
+      year: "Year",
+      month: "Month",
+      selectYear: "Select year",
+      selectMonth: "Select month",
+      selectDay: "Select day",
+      monthWithDays: "{{month}} ({{count}} days)",
+      dayValue: "Day {{day}}",
+      searchPerson: "Search person...",
+      noPersonsFound: "No person found.",
+      obligationBadge: "Obligation",
+      loadingPersons: "Loading entities...",
+      recurrence: "Recurrence",
       editIncome: "Edit Income",
       newIncome: "New Income Event",
       incomeTitleLabel: "Income Title *",
@@ -589,6 +604,8 @@ export const translations = {
 
     // Income Categories
     incomeCategories: {
+      condo_payment: "Condominium Payment",
+      reserve_fund: "Reserve Fund",
       salary: "Salary / Wages",
       meal_allowance: "Meal Allowance",
       bonus: "Bonus & Commissions",
@@ -598,8 +615,18 @@ export const translations = {
       other: "Other Income"
     },
 
+    // Descriptions of the condominium income categories (selection boxes)
+    condoIncomeCategoryDesc: {
+      condo_payment: "Monthly fees paid by the owners",
+      reserve_fund: "Contributions to the common reserve fund",
+      other: "Other condominium income"
+    },
+
     // Investment Categories
     investmentCategories: {
+      condo_payment: "Condominium Payment",
+      reserve_fund: "Reserve Fund",
+      refund: "Refund",
       savings: "Savings & Deposits",
       stocks: "Stocks & Equities",
       funds: "Funds & ETFs",
@@ -607,6 +634,22 @@ export const translations = {
       crypto: "Crypto & Digital Assets",
       assets: "Assets & Equity",
       other: "Other Investments"
+    },
+
+    // Names of the condominium account deposit categories
+    condoInvestmentCategories: {
+      condo_payment: "Condominium Payment",
+      reserve_fund: "Reserve Fund",
+      refund: "Refund",
+      other: "Other"
+    },
+
+    // Descriptions of the condominium account deposit categories (selection boxes)
+    condoInvestmentCategoryDesc: {
+      condo_payment: "Monthly fees deposited in the account",
+      reserve_fund: "Contributions to the common reserve fund",
+      refund: "Refunds received by the condominium",
+      other: "Other deposits in the account"
     },
 
     // Reminder Categories
@@ -1113,6 +1156,8 @@ export const translations = {
       other: "Other"
     },
     incomeCategories: {
+      condo_payment: "Condominium Payment",
+      reserve_fund: "Reserve Fund",
       salary: "Salary",
       meal_allowance: "Meal Allowance",
       bonus: "Bonus",
@@ -1122,6 +1167,9 @@ export const translations = {
       other: "Other"
     },
     investmentCategories: {
+      condo_payment: "Condominium Payment",
+      reserve_fund: "Reserve Fund",
+      refund: "Refund",
       savings: "Savings",
       stocks: "Stocks",
       funds: "Funds & ETFs",
@@ -1185,6 +1233,8 @@ export const translations = {
 
     // Pocket / Cofrinho
     pocket: {
+      hasTarget: "Set a target",
+      hasTargetHint: "Turn off if this pocket has no target amount",
       pockets: "Pockets & Goals",
       addPocket: "Add Pocket",
       newPocket: "New Pocket",
@@ -1260,6 +1310,7 @@ export const translations = {
 
     // Investment Timeline Header
     investmentHeader: {
+      externalDepositsLabel: "External deposits: {{amount}} (not committed)",
       badge: "Savings & Investments",
       addInvestment: "New Contribution",
       resetTitle: "Clear all movements in this timeline",
@@ -2332,6 +2383,21 @@ export const translations = {
 
     // Modal Events
     modal: {
+      condoDepositNew: "Nova Entrada",
+      condoDepositEdit: "Editar Entrada",
+      condoDepositAdd: "Adicionar Entrada",
+      year: "Ano",
+      month: "Mês",
+      selectYear: "Selecionar ano",
+      selectMonth: "Selecionar mês",
+      selectDay: "Selecionar dia",
+      monthWithDays: "{{month}} ({{count}} dias)",
+      dayValue: "Dia {{day}}",
+      searchPerson: "Pesquisar pessoa...",
+      noPersonsFound: "Nenhuma pessoa encontrada.",
+      obligationBadge: "Obrigação",
+      loadingPersons: "A carregar entidades...",
+      recurrence: "Recorrência",
       editIncome: "Editar Entrada",
       newIncome: "Nova Entrada",
       incomeTitleLabel: "Título do Rendimento *",
@@ -2436,6 +2502,8 @@ export const translations = {
 
     // Income Categories
     incomeCategories: {
+      condo_payment: "Pagamento de Condomínio",
+      reserve_fund: "Fundo de Reserva",
       salary: "Salário / Vencimento",
       meal_allowance: "Subsídio de Alimentação",
       bonus: "Bónus / Comissões",
@@ -2445,8 +2513,18 @@ export const translations = {
       other: "Outras Entradas"
     },
 
+    // Descriptions of the condominium income categories (selection boxes)
+    condoIncomeCategoryDesc: {
+      condo_payment: "Quotas mensais dos condóminos",
+      reserve_fund: "Contribuições para o fundo comum de reserva",
+      other: "Outras entradas do condomínio"
+    },
+
     // Investment Categories
     investmentCategories: {
+      condo_payment: "Pagamento de Condomínio",
+      reserve_fund: "Fundo de Reserva",
+      refund: "Reembolso",
       savings: "Poupança & Depósitos",
       stocks: "Ações & Bolsa",
       funds: "Fundos & ETFs",
@@ -2454,6 +2532,22 @@ export const translations = {
       crypto: "Criptoativos",
       assets: "Património & Bens",
       other: "Outros Investimentos"
+    },
+
+    // Names of the condominium account deposit categories
+    condoInvestmentCategories: {
+      condo_payment: "Pagamento de Condomínio",
+      reserve_fund: "Fundo de Reserva",
+      refund: "Reembolso",
+      other: "Outros"
+    },
+
+    // Descriptions of the condominium account deposit categories (selection boxes)
+    condoInvestmentCategoryDesc: {
+      condo_payment: "Quotas mensais depositadas na conta",
+      reserve_fund: "Contribuições para o fundo comum de reserva",
+      refund: "Reembolsos recebidos pelo condomínio",
+      other: "Outros depósitos na conta"
     },
 
     // Reminder Categories
@@ -2916,6 +3010,8 @@ export const translations = {
       other: "Outros Gastos"
     },
     incomeCategories: {
+      condo_payment: "Pagamento de Condomínio",
+      reserve_fund: "Fundo de Reserva",
       salary: "Salário",
       meal_allowance: "Subsídio de Alimentação",
       bonus: "Bónus / Gratificação",
@@ -2925,6 +3021,9 @@ export const translations = {
       other: "Outras Entradas"
     },
     investmentCategories: {
+      condo_payment: "Pagamento de Condomínio",
+      reserve_fund: "Fundo de Reserva",
+      refund: "Reembolso",
       savings: "Poupança",
       stocks: "Ações",
       funds: "Fundos / ETFs",
@@ -3030,6 +3129,8 @@ export const translations = {
 
     // Pocket / Cofrinho
     pocket: {
+      hasTarget: "Definir meta",
+      hasTargetHint: "Desligue se este cofrinho não tiver um valor objetivo",
       pockets: "Cofrinhos & Metas",
       addPocket: "Adicionar Cofrinho",
       newPocket: "Novo Cofrinho",
@@ -3105,6 +3206,7 @@ export const translations = {
 
     // Investment Timeline Header
     investmentHeader: {
+      externalDepositsLabel: "Depósitos externos: {{amount}} (não comprometidos)",
       badge: "Poupança & Investimentos",
       addInvestment: "Novo Aporte",
       resetTitle: "Limpar todos os movimentos desta timeline",

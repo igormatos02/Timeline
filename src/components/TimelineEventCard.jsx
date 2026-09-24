@@ -50,7 +50,9 @@ import {
   Loader2,
   Flag,
   Printer,
-  Lock
+  Lock,
+  Wallet,
+  ReceiptEuro
 } from 'lucide-react';
 import { isLoanInstallment as checkIsLoanInstallment, isAmortizationEvent as checkIsAmortizationEvent } from '../utils/loanCalculations';
 import { formatCurrency } from '../utils/formatCurrency';
@@ -1785,7 +1787,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       const p = getPaletteTheme(originColor || TimelineColor.EXPENSE, TimelineColor.EXPENSE);
       return {
         label: originName || t('sidebar.expenseTimeline'),
-        icon: <ShoppingCart size={11} strokeWidth={2.4} />,
+        icon: <ReceiptEuro size={11} strokeWidth={2.4} />,
         bg: hexToRgba(p.light, 0.22),
         color: p.primary,
         border: hexToRgba(p.medium, 0.40),
@@ -1809,7 +1811,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       const p = getPaletteTheme(originColor || TimelineColor.INCOME, TimelineColor.INCOME);
       return {
         label: originName || t('sidebar.incomeTimeline'),
-        icon: <DollarSign size={11} strokeWidth={2.4} />,
+        icon: <Wallet size={11} strokeWidth={2.4} />,
         bg: hexToRgba(p.light, 0.22),
         color: p.primary,
         border: hexToRgba(p.medium, 0.40),

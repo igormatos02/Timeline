@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useMemo } from 'react';
+import { pt, enUS } from 'date-fns/locale';
 import { createT } from '../../shared/i18n/index.js';
 
 const LanguageContext = createContext({
@@ -25,9 +26,11 @@ export const LanguageProvider = ({ children }) => {
   };
 
   const t = useMemo(() => createT(language), [language]);
+  // date-fns locale matching the UI language (used to format month / day names)
+  const dateLocale = language === 'pt' ? pt : enUS;
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, t, dateLocale }}>
       {children}
     </LanguageContext.Provider>
   );

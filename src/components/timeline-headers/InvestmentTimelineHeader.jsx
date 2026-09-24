@@ -16,6 +16,7 @@ import { DonutChart } from '../ui/DonutChart.jsx';
 import BarChart7Months from '../ui/BarChart7Months.jsx';
 import IncomeEvolutionChart from '../IncomeEvolutionChart.jsx';
 import { computeMonthDiff } from '../../utils/timelineCharts.js';
+import { pocketHasTarget, isPocketMovementRealized } from '../../utils/pocketUtils.js';
 
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
 
@@ -76,6 +77,7 @@ export default function InvestmentTimelineHeader({
     ? filteredEvents
     : (events && events.length > 0 ? events : (timeline.events || []));
   const currentMonthStr = new Date().toISOString().substring(0, 7);
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
 
   // 1. POUPANÇA POR COFRINHOS
   const pocketColors = paletteTheme.colors && paletteTheme.colors.length > 1 ? paletteTheme.colors : TIMELINE_COLOR_PRESETS;
@@ -88,12 +90,11 @@ export default function InvestmentTimelineHeader({
     eventsList.forEach((ev) => {
       if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
       if (ev.pocketId === pocket.id || ev.pocket_id === pocket.id) {
-        const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
-        const isExternal = Boolean(ev.isExternal || ev.is_external);
         const isWithdrawal = Boolean(ev.isWithdrawal || ev.eventType === EventType.WITHDRAWAL || ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0);
         const multiplier = isWithdrawal ? -1 : 1;
         const amt = Math.abs(Number(ev.amount || 0));
-        if (isReceived || isExternal) {
+        // Received movements, or external deposits already due (future ones are only planned)
+        if (isPocketMovementRealized(ev, todayStr)) {
           pocketContributed += multiplier * amt;
         }
       }
@@ -208,8 +209,9 @@ export default function InvestmentTimelineHeader({
     annualTotalIncome = monthlyFallback * 12;
   }
 
+  // Only regular deposits commit the income: external deposits (money coming from outside) do not
   const annualCommitmentPercent = annualTotalIncome > 0
-    ? Math.min(100, Math.round((annualTotalInvested / annualTotalIncome) * 100))
+    ? Math.min(100, Math.round((Math.max(0, annualRegularInvested) / annualTotalIncome) * 100))
     : 0;
 
   // 3. ATUAL: TOTAL RECEBIDO / APORTADO (INCLUINDO APORTE INICIAL & DEPÓSITOS EXTERNOS) & TARGET
@@ -228,14 +230,12 @@ export default function InvestmentTimelineHeader({
       ev.isWithdrawal ||
       Boolean(ev.pocketId || ev.pocket_id);
     if (isInvestment) {
-      const isExternal = Boolean(ev.isExternal || ev.is_external);
-      const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
       const isWithdrawal = Boolean(ev.isWithdrawal || ev.eventType === EventType.WITHDRAWAL || ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0);
       const multiplier = isWithdrawal ? -1 : 1;
       const amt = Math.abs(Number(ev.amount || 0));
 
-      // External deposits are added to Received / Invested without impacting other calculations
-      if (isReceived || isExternal) {
+      // External deposits are added to Received / Invested once their date has arrived
+      if (isPocketMovementRealized(ev, todayStr)) {
         totalInstallmentsReceived += multiplier * amt;
         totalReceivedCount += 1;
       }
@@ -256,7 +256,7 @@ export default function InvestmentTimelineHeader({
   let pocketsTargetSum = 0;
   allPockets.forEach((p) => {
     pocketsInitialSum += Number(p.initial_value ?? p.initialValue ?? 0);
-    pocketsTargetSum += Number(p.target_value ?? p.targetValue ?? 0);
+    if (pocketHasTarget(p)) pocketsTargetSum += Number(p.target_value ?? p.targetValue ?? 0);
   });
 
   const initialValueAmount = isPocketFiltered
@@ -265,13 +265,18 @@ export default function InvestmentTimelineHeader({
 
   const totalReceived = initialValueAmount + totalInstallmentsReceived;
 
+  // A selected pocket without target shows only what was saved (no target donut)
+  const showTarget = !isPocketFiltered || pocketHasTarget(selectedPocket);
   const targetAmount = isPocketFiltered
-    ? Number(selectedPocket?.target_value ?? selectedPocket?.targetValue ?? 0)
+    ? (showTarget ? Number(selectedPocket?.target_value ?? selectedPocket?.targetValue ?? 0) : 0)
     : (customTarget > 0
         ? customTarget
         : (pocketsTargetSum > 0
             ? pocketsTargetSum
             : Number(timeline.targetAmount || timeline.target || metrics?.targetAmount || metrics?.target || dto?.target || dto?.annual_target || 0)));
+
+  // Without any target (no pocket with target and no timeline target) the quadrant shows only what was saved
+  const hasAnyTarget = showTarget && targetAmount > 0;
 
   const targetPercent = targetAmount > 0
     ? Math.min(100, Math.round((totalReceived / targetAmount) * 100))
@@ -577,8 +582,13 @@ export default function InvestmentTimelineHeader({
                             {t('investmentHeader.projectionNext12Months')}
                           </div>
                           <div style={{ fontSize: '0.94rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                            {formatCurrency(annualTotalInvested)}
+                            {formatCurrency(annualRegularInvested)}
                           </div>
+                          {annualExternalInvested !== 0 && (
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                              {t('investmentHeader.externalDepositsLabel', { amount: formatCurrency(annualExternalInvested) })}
+                            </div>
+                          )}
                           {annualTotalIncome > 0 ? (
                             <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
                               {t('investmentHeader.annualTarget', { amount: formatCurrency(annualTotalIncome) })}
@@ -599,7 +609,13 @@ export default function InvestmentTimelineHeader({
                   <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {t('investmentHeader.currentTitle')}
                   </div>
-                  {(() => {
+                  {!hasAnyTarget && (
+                    <div style={{ fontSize: '0.76rem', color: 'var(--text-main)', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>{t('investmentHeader.receivedTotalLabel')}</span>
+                      <strong style={{ color: TimelineColor.SUCCESS, fontSize: '0.86rem' }}>{formatCurrency(totalReceived)}</strong>
+                    </div>
+                  )}
+                  {hasAnyTarget && (() => {
                     const targetReachedLabel = t('investmentHeader.targetReached', { percent: targetPercent });
                     return (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>

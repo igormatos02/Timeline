@@ -5,6 +5,10 @@ export const InvestmentEventCategory = Object.freeze({
   FUNDS: 'funds',
   CRYPTO: 'crypto',
   REAL_ESTATE: 'real_estate',
+  // Condominium (condoflow) account deposit categories
+  CONDO_PAYMENT: 'condo_payment',
+  RESERVE_FUND: 'reserve_fund',
+  REFUND: 'refund',
   OTHER: 'other'
 });
 

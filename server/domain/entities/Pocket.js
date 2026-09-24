@@ -14,6 +14,8 @@ export class Pocket {
     initial_value,
     targetValue = 0,
     target_value,
+    hasTarget,
+    has_target,
     timelineId,
     timeline_id,
     timeboardId,
@@ -29,6 +31,10 @@ export class Pocket {
     this.initial_value = this.initialValue;
     this.targetValue = Number(target_value !== undefined ? target_value : (targetValue !== undefined ? targetValue : 0));
     this.target_value = this.targetValue;
+    // Pockets without an explicit value (legacy rows) keep their target
+    const rawHasTarget = has_target !== undefined && has_target !== null ? has_target : hasTarget;
+    this.hasTarget = rawHasTarget === undefined || rawHasTarget === null ? true : Boolean(rawHasTarget);
+    this.has_target = this.hasTarget;
     this.timelineId = timelineId || timeline_id || null;
     this.timeline_id = this.timelineId;
     this.timeboardId = timeboardId || timeboard_id || null;

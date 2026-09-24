@@ -13,15 +13,22 @@ import {
   FollowupTimelineHeader,
   DefaultTimelineHeader
 } from './timeline-headers/index.js';
+import IndividualTimelineHeader from './timeline-headers/IndividualTimelineHeader.jsx';
 
 /**
  * Dispatcher do cabeçalho da timeline.
  * Renderiza o cabeçalho dedicado para cada tipo de timeline do enum TimelineType.
  */
 function TimelineHeader(props) {
-  const { timeline } = props;
+  const { timeline, selectedEntityId, isIndividualView, onToggleIndividualView } = props;
 
   if (!timeline) return null;
+
+  // When an obligator is selected and the user switches to individual view,
+  // replace the regular header with the IndividualTimelineHeader.
+  if (selectedEntityId && isIndividualView) {
+    return <IndividualTimelineHeader {...props} />;
+  }
 
   if (isLoanTimelineType(timeline.type)) {
     return <LoanTimelineHeader {...props} />;

@@ -28,6 +28,7 @@ import BarChart7Months from '../ui/BarChart7Months.jsx';
 import IncomeEvolutionChart from '../IncomeEvolutionChart.jsx';
 import { computeMonthDiff } from '../../utils/timelineCharts.js';
 import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
+import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
 
 export default function IncomeTimelineHeader({
   timeline,
@@ -43,7 +44,10 @@ export default function IncomeTimelineHeader({
   onReset,
   activeViewMode = 'summary',
   setActiveViewMode,
-  computeStartDate = null
+  computeStartDate = null,
+  selectedEntityId,
+  isIndividualView,
+  onToggleIndividualView
 }) {
   const { t, language } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
@@ -333,6 +337,11 @@ export default function IncomeTimelineHeader({
       }
       right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <EntityViewSwitch
+            selectedEntityId={selectedEntityId}
+            isIndividualView={isIndividualView}
+            onToggle={onToggleIndividualView}
+          />
           {onEdit && (
             <button
               type="button"

@@ -115,6 +115,14 @@ export default function App() {
     return null;
   });
 
+  // Individual vs Global view mode when filtering by obligator
+  const [isIndividualView, setIsIndividualView] = useState(false);
+
+  // Reset individual view when switching timelines
+  useEffect(() => {
+    setIsIndividualView(false);
+  }, [activeTimelineId]);
+
   // Financial Sub-Tabs State
   const [activeFinancialTab, setActiveFinancialTab] = useState(() => {
     try {
@@ -2277,6 +2285,8 @@ export default function App() {
                 onOpenAmortizationModal={() => handleOpenAmortizationModal()}
                 onScrollToOverdue={handleScrollToOverdue}
                 onSaveComputeStartDate={handleSaveComputeStartDate}
+                isIndividualView={isIndividualView}
+                onToggleIndividualView={setIsIndividualView}
                 onAddEvent={(opts) => {
                   if (opts && typeof opts === 'object' && !opts.nativeEvent) {
                     const presetDate = opts.date || format(new Date(), 'yyyy-MM-dd');

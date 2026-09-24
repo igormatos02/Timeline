@@ -249,6 +249,8 @@ function Last6MonthsTimeSeriesChart({ series = [], t }) {
   );
 }
 
+import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
+
 export default function BalanceTimelineHeader({
   timeline,
   timeboard = null,
@@ -274,6 +276,9 @@ export default function BalanceTimelineHeader({
   hasIncomeTimeline: propHasIncomeTimeline,
   hasInvestmentTimeline: propHasInvestmentTimeline,
   computeFromMonth: propComputeFromMonth
+  selectedEntityId,
+  isIndividualView,
+  onToggleIndividualView
 }) {
   const { t, language } = useTranslation();
   const dateLocale = language === 'en' ? enUS : pt;
@@ -810,6 +815,11 @@ export default function BalanceTimelineHeader({
       }
       right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <EntityViewSwitch
+            selectedEntityId={selectedEntityId}
+            isIndividualView={isIndividualView}
+            onToggle={onToggleIndividualView}
+          />
           {onEdit && (
             <button
               type="button"

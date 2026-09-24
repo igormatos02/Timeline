@@ -15,12 +15,17 @@ import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 import { DonutChart, PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
 
+import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
+
 export default function FollowupTimelineHeader({
   timeline,
   allTimelines = [],
   events = [],
   filteredEvents,
   onEdit,
+  selectedEntityId,
+  isIndividualView,
+  onToggleIndividualView,
   onDelete,
   onAddEvent
 }) {

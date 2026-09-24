@@ -11,12 +11,17 @@ import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 
+import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
+
 export default function TodoTimelineHeader({
   timeline,
   allTimelines: _allTimelines = [],
   events = [],
   filteredEvents,
   onEdit,
+  selectedEntityId,
+  isIndividualView,
+  onToggleIndividualView,
   onDelete: _onDelete,
   onAddEvent: _onAddEvent
 }) {
@@ -82,6 +87,11 @@ export default function TodoTimelineHeader({
       }
       right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <EntityViewSwitch
+            selectedEntityId={selectedEntityId}
+            isIndividualView={isIndividualView}
+            onToggle={onToggleIndividualView}
+          />
           {onEdit && (
             <button
               type="button"

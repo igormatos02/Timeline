@@ -546,7 +546,7 @@ function VerticalTimeline({
 
   const isSearchActive = Boolean(searchQuery && searchQuery.trim().length > 0);
 
-  const isListView = selectedStatusFilters.length > 0 || isCategoryFiltered || isSearchActive;
+  const isListView = selectedStatusFilters.length > 0 || isCategoryFiltered || isSearchActive || Boolean(selectedEntityId);
 
   const resetAllFilters = () => {
     setSelectedStatusFilters([]);

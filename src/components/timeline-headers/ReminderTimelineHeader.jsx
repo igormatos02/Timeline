@@ -44,12 +44,17 @@ export const REMINDER_CATEGORY_ICONS = {
   [ReminderEventCategory.OTHER]: Tag
 };
 
+import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
+
 export default function ReminderTimelineHeader({
   timeline,
   allTimelines = [],
   events = [],
   filteredEvents,
   onEdit,
+  selectedEntityId,
+  isIndividualView,
+  onToggleIndividualView,
   onDelete,
   onAddEvent,
   onReset
@@ -211,6 +216,11 @@ export default function ReminderTimelineHeader({
       }
       right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <EntityViewSwitch
+            selectedEntityId={selectedEntityId}
+            isIndividualView={isIndividualView}
+            onToggle={onToggleIndividualView}
+          />
           {onEdit && (
             <button
               type="button"

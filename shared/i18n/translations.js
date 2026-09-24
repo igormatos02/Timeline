@@ -20,7 +20,9 @@ export const translations = {
       calculatedEventsTooltip: "{{count}} calculated events (projections, recurrence & amortizations)",
       accountSettings: "Account Settings",
       logout: "Sign Out",
-      userProfile: "User Profile"
+      userProfile: "User Profile",
+      viewGlobal: "Global View",
+      viewIndividual: "Individual View"
     },
 
     // Logout Modal
@@ -1734,7 +1736,9 @@ export const translations = {
       calculatedEventsTooltip: "{{count}} eventos calculados (projeções, recorrências e amortizações)",
       accountSettings: "Definições de conta",
       logout: "Sair",
-      userProfile: "Perfil de Utilizador"
+      userProfile: "Perfil de Utilizador",
+      viewGlobal: "Visão Global",
+      viewIndividual: "Visão Individual"
     },
 
     // Logout Modal

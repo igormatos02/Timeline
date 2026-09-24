@@ -25,12 +25,17 @@ import { DonutChart } from '../ui/DonutChart.jsx';
 import CopyIdButton from '../ui/CopyIdButton.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 
+import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
+
 export default function LoanTimelineHeader({
   timeline,
   allTimelines = [],
   events = [],
   filteredEvents,
   onEdit,
+  selectedEntityId,
+  isIndividualView,
+  onToggleIndividualView,
   onToggleStatus,
   onDelete,
   onAddEvent,

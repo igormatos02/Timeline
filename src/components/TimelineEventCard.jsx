@@ -49,7 +49,8 @@ import {
   ListTree,
   Loader2,
   Flag,
-  Printer
+  Printer,
+  Lock
 } from 'lucide-react';
 import { isLoanInstallment as checkIsLoanInstallment, isAmortizationEvent as checkIsAmortizationEvent } from '../utils/loanCalculations';
 import { formatCurrency } from '../utils/formatCurrency';
@@ -121,6 +122,13 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
     // Immediate 0ms visual feedback
     const isCurrPositive = isPositiveStatus(event.status) || event.status === FollowupStatus.FINISHED || Boolean(event.isCompleted);
+    const isFinancialLocked = event.eventType === EventType.INCOME || event.eventType === EventType.EXPENSE || event.eventType === EventType.INVESTMENT;
+
+    // If it's a positive financial event and no explicit status is passed (or attempting to revert to negative): block it
+    if (isFinancialLocked && isCurrPositive && !explicitStatus) {
+      return;
+    }
+
     const nextStatus = explicitStatus || (isCurrPositive
       ? (event.eventType === EventType.INVESTMENT ? EventStatus.PLANNED : EventStatus.PENDING)
       : (event.eventType === EventType.INCOME ? EventStatus.RECEIVED : EventStatus.PAID));
@@ -424,6 +432,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     (isReminderEvent && isCompleted)
   );
 
+  const isFinancialLockedType = isIncomeEvent || isExpenseEvent || isInvestmentEvent;
+  const isLockedPositive = isFinancialLockedType && (isReceivedIncome || isPaidExpense || isCompletedInvestment || isPositiveStatus(effectiveStatus));
+
   const renderStatusDropdownButton = (buttonProps, children) => {
     if (isFutureMonth) {
       return (
@@ -444,6 +455,26 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             gap: '5px'
           }}
           title=""
+        >
+          {children}
+        </div>
+      );
+    }
+
+    if (isLockedPositive) {
+      return (
+        <div
+          className="btn btn-sm"
+          style={{
+            ...buttonProps?.style,
+            boxShadow: 'none',
+            cursor: 'default',
+            userSelect: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}
+          title={t('timeline.lockedPositiveNotice')}
         >
           {children}
         </div>
@@ -838,6 +869,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       return (
         <span
           onClick={(e) => {
+            if (isLockedPositive || isCancelled) return;
             e.stopPropagation();
             if (isDesmembramentoExpanded) {
               handleCancelDesmembramento(e);
@@ -845,12 +877,16 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               openDesmembramento(e);
             }
           }}
-          title="Valor desmembrado em subpartes. Clique para ver/editar as subpartes abaixo."
+          title={
+            (isLockedPositive || isCancelled)
+              ? t('timeline.lockedPositiveNotice')
+              : t('timeline.breakdownValueTooltip')
+          }
           style={{
             fontSize: '1.05rem',
             fontWeight: '800',
             color: defaultColor,
-            cursor: 'pointer',
+            cursor: (isLockedPositive || isCancelled) ? 'default' : 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px'
@@ -859,6 +895,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           {prefix}{formatCurrency(Math.abs(Number(event.amount || 0)))}
           <span
             onClick={(e) => {
+              if (isLockedPositive || isCancelled) return;
               e.stopPropagation();
               if (isDesmembramentoExpanded) {
                 handleCancelDesmembramento(e);
@@ -869,7 +906,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             style={{
               fontSize: '0.72rem',
               fontWeight: '700',
-              color: isDesmembramentoExpanded ? '#ffffff' : 'var(--primary-light)',
+              color: isDesmembramentoExpanded ? TimelineColor.WHITE : 'var(--primary-light)',
               background: isDesmembramentoExpanded ? 'var(--primary)' : 'rgba(99, 102, 241, 0.14)',
               border: '1px solid rgba(99, 102, 241, 0.4)',
               borderRadius: '9999px',
@@ -877,21 +914,29 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '5px',
-              cursor: 'pointer',
+              cursor: (isLockedPositive || isCancelled) ? 'default' : 'pointer',
               transition: 'all 0.15s ease',
               boxShadow: isDesmembramentoExpanded ? '0 2px 8px rgba(99, 102, 241, 0.35)' : 'none'
             }}
-            title={isDesmembramentoExpanded ? "Clique para fechar o desmembramento" : "Clique para abrir e ver/editar as subpartes"}
+            title={
+              (isLockedPositive || isCancelled)
+                ? t('timeline.lockedPositiveNotice')
+                : isDesmembramentoExpanded
+                  ? t('timeline.breakdownCloseTooltip')
+                  : t('timeline.breakdownOpenTooltip')
+            }
           >
             <Layers size={11} />
-            <span>{event.breakdownItems.length} subpartes</span>
-            <span style={{ fontSize: '0.65rem', opacity: 0.85 }}>{isDesmembramentoExpanded ? '▲' : '▼'}</span>
+            <span>{t('timeline.subpartsCount', { count: event.breakdownItems.length })}</span>
+            {!isLockedPositive && !isCancelled && (
+              <span style={{ fontSize: '0.65rem', opacity: 0.85 }}>{isDesmembramentoExpanded ? '▲' : '▼'}</span>
+            )}
           </span>
         </span>
       );
     }
 
-    if (isEditingAmount) {
+    if (isEditingAmount && !isLockedPositive && !isCancelled) {
       return (
         <form
           onSubmit={handleSaveAmount}
@@ -1050,20 +1095,23 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     return (
       <span
         onClick={(e) => {
+          if (isLockedPositive || isCancelled) return;
           e.stopPropagation();
           setPropagateSubsequent(true);
           setIsEditingAmount(true);
         }}
         title={
-          isRecurring
-            ? 'Clique para editar o valor (propaga para todos os meses seguintes)'
-            : 'Clique para editar o valor'
+          isLockedPositive
+            ? t('timeline.lockedPositiveNotice')
+            : isRecurring
+              ? t('timeline.clickToEditAmountPropagate')
+              : t('timeline.clickToEditAmount')
         }
         style={{
           fontSize: '1.05rem',
           fontWeight: '800',
           color: defaultColor,
-          cursor: 'pointer',
+          cursor: (isLockedPositive || isCancelled) ? 'default' : 'pointer',
           display: 'inline-flex',
           alignItems: 'center',
           gap: '5px',
@@ -1846,7 +1894,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               )}
 
               {/* Título do evento limpo e editável ao clicar */}
-              {isEditingTitle ? (
+              {isEditingTitle && !isLockedPositive && !isCancelled ? (
                 <form
                   onSubmit={handleSaveTitle}
                   onClick={(e) => e.stopPropagation()}
@@ -1896,7 +1944,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               ) : (
                 <h3
                   onClick={() => {
-                    if (isAmortized || isAnchorCard || isVirtual) return;
+                    if (isAmortized || isAnchorCard || isVirtual || isLockedPositive || isCancelled) return;
                     if (isLoanInstallment && originInfo && onNavigateToTimeline) {
                       onNavigateToTimeline(originInfo.id);
                     } else {
@@ -1904,17 +1952,19 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     }
                   }}
                   title={
-                    isVirtualWithdrawal
-                      ? virtualWithdrawalDisplayTitle
-                      : isVirtual
-                        ? undefined
-                        : isAmortized
-                          ? t('event.amortizedTooltip')
-                          : isLoanInstallment
-                            ? t('event.loanInstallmentTooltip', { label: originInfo ? originInfo.label : t('loans.loan') })
-                            : isRecurring
-                              ? t('event.editNameRecurring')
-                              : t('event.editName')
+                    isLockedPositive
+                      ? t('timeline.lockedPositiveNotice')
+                      : isVirtualWithdrawal
+                        ? virtualWithdrawalDisplayTitle
+                        : isVirtual
+                          ? undefined
+                          : isAmortized
+                            ? t('event.amortizedTooltip')
+                            : isLoanInstallment
+                              ? t('event.loanInstallmentTooltip', { label: originInfo ? originInfo.label : t('loans.loan') })
+                              : isRecurring
+                                ? t('event.editNameRecurring')
+                                : t('event.editName')
                   }
                   style={{
                     margin: 0,
@@ -1922,7 +1972,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     fontWeight: '700',
                     color: isFlatPositive ? TimelineColor.WHITE : ((isAmortized || isCancelled) ? 'var(--text-dim)' : 'var(--text-main)'),
                     textDecoration: (isAmortized || isCancelled) ? 'line-through' : 'none',
-                    cursor: (isAmortized || isAnchorCard || isVirtual) ? 'default' : 'pointer'
+                    cursor: (isAmortized || isAnchorCard || isVirtual || isLockedPositive || isCancelled) ? 'default' : 'pointer'
                   }}
                 >
                   {isVirtualWithdrawal
@@ -2205,7 +2255,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       })()}
 
       {/* Botão de Desmembrar Valor */}
-      {!isLoanInstallment && !isFollowupEvent && !isAnchorCard && !isVirtual && (onUpdateEventDirect || onEdit) && (() => {
+      {!isLoanInstallment && !isFollowupEvent && !isAnchorCard && !isVirtual && !isLockedPositive && !isCancelled && (onUpdateEventDirect || onEdit) && (() => {
         const allSubparts = Array.isArray(event.breakdownItems) ? event.breakdownItems : [];
         const hasBreakdown = allSubparts.length > 0;
 
@@ -2242,8 +2292,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         );
       })()}
 
-      {/* Botão / Indicador de Evento Automático (Apenas para Eventos Recorrentes / Parcelamentos) */}
-      {isRecurringEvent && (
+      {/* Botão / Indicador de Evento Automático (Apenas para Eventos Recorrentes / Parcelamentos e não trancados/cancelados) */}
+      {isRecurringEvent && !isLockedPositive && !isCancelled && (
         <button
           type="button"
           className="action-icon-btn"
@@ -2291,9 +2341,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               updateScope: 'all_series'
             });
           }}
-          title={localAuto ? "⚡ Movimento Automático Ativo: Liquida automaticamente na data de vencimento (Clique para desligar em toda a série)" : "⚙️ Movimento Manual: Clique para ativar a liquidação automática em toda a série"}
+          title={localAuto ? t('event.autoMovementActiveTitle') : t('event.autoMovementManualTitle')}
           style={{
-            color: localAuto ? '#fbbf24' : 'var(--text-dim)',
+            color: localAuto ? TimelineColor.WARNING : 'var(--text-dim)',
             background: localAuto ? 'rgba(251, 191, 36, 0.16)' : 'transparent',
             border: localAuto ? '1px solid rgba(251, 191, 36, 0.4)' : '1px solid transparent',
             borderRadius: '5px',
@@ -2305,9 +2355,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             transition: 'all 0.15s ease'
           }}
         >
-          <Zap size={12} fill={localAuto ? '#fbbf24' : 'none'} />
+          <Zap size={12} fill={localAuto ? TimelineColor.WARNING : 'none'} />
           {localAuto && (
-            <span style={{ fontSize: '0.62rem', fontWeight: '800', letterSpacing: '0.02em', color: '#fbbf24' }}>
+            <span style={{ fontSize: '0.62rem', fontWeight: '800', letterSpacing: '0.02em', color: TimelineColor.WARNING }}>
               AUTO
             </span>
           )}
@@ -2323,16 +2373,18 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           onClick={(e) => {
             e.stopPropagation();
             if (isCancelled) {
-              handleStatusToggle(
-                e,
-                isReminderEvent
-                  ? EventStatus.OPEN
+              const uncancelledStatus = isIncomeEvent
+                ? EventStatus.RECEIVED
+                : isExpenseEvent
+                  ? EventStatus.PAID
                   : isInvestmentEvent
-                    ? EventStatus.PLANNED
-                    : isFollowupEvent
-                      ? FollowupStatus.IN_PROGRESS
-                      : EventStatus.PENDING
-              );
+                    ? EventStatus.INVESTED
+                    : isReminderEvent
+                      ? EventStatus.OPEN
+                      : isFollowupEvent
+                        ? FollowupStatus.IN_PROGRESS
+                        : EventStatus.PENDING;
+              handleStatusToggle(e, uncancelledStatus);
             } else {
               handleStatusToggle(e, EventStatus.CANCELLED);
             }
@@ -2378,8 +2430,25 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         </button>
       )}
 
-      {/* Botão Editar Evento - Não permitido para parcelas de empréstimo ou eventos virtuais */}
-      {onEdit && !isLoanInstallment && !isVirtual && (
+      {/* Indicador de Cadeado (Trancado) para eventos financeiros positivos */}
+      {isLockedPositive && (
+        <span
+          title={t('timeline.lockedPositiveNotice')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '3px 5px',
+            borderRadius: '5px',
+            color: isFlatPositive ? TimelineColor.WHITE : 'var(--text-dim)',
+            opacity: 0.9
+          }}
+        >
+          <Lock size={13} />
+        </span>
+      )}
+
+      {/* Botão Editar Evento - Não permitido para parcelas de empréstimo, eventos virtuais ou eventos trancados/cancelados */}
+      {onEdit && !isLoanInstallment && !isVirtual && !isLockedPositive && !isCancelled && (
         <button
           type="button"
           className="action-icon-btn"
@@ -2516,6 +2585,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     <>
                       <CheckCircle2 size={13} style={{ color: TimelineColor.WHITE }} />
                       <span style={{ color: TimelineColor.WHITE }}>{t('status.received')}</span>
+                      <Lock size={11} style={{ color: TimelineColor.WHITE, marginLeft: '2px' }} />
                     </>
                   ) : isOverdueIncome ? (
                     <>
@@ -2653,6 +2723,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   <>
                     <CheckCircle2 size={13} style={{ color: TimelineColor.WHITE }} />
                     <span style={{ color: TimelineColor.WHITE }}>{t('status.paid')}</span>
+                    <Lock size={11} style={{ color: TimelineColor.WHITE, marginLeft: '2px' }} />
                   </>
                 ) : isOverdueExpense ? (
                   <>
@@ -2881,6 +2952,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   <>
                     <CheckCircle2 size={13} style={{ color: TimelineColor.WHITE }} />
                     <span style={{ color: TimelineColor.WHITE }}>{isWithdrawalEvent ? t('status.withdrawn') : t('status.invested')}</span>
+                    <Lock size={11} style={{ color: TimelineColor.WHITE, marginLeft: '2px' }} />
                   </>
                 ) : isOverdueInvestment ? (
                   <>

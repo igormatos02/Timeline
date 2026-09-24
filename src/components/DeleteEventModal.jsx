@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, AlertTriangle, X, Calendar, DollarSign, Repeat } from 'lucide-react';
+import { Trash2, X, Calendar, Repeat } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../utils/formatCurrency';
-import { EventRecurrence, EventPeriodicity, EventType, EventDeletionMode, normalizeRecurrence } from '../enums/index.js';
+import { EventRecurrence, EventType, EventDeletionMode, TimelineColor, normalizeRecurrence } from '../enums/index.js';
+import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 export default function DeleteEventModal({
   isOpen,
@@ -11,13 +12,40 @@ export default function DeleteEventModal({
   event,
   onConfirmDelete
 }) {
+  const { t } = useTranslation();
+
+  const isIncome = event?.eventType === EventType.INCOME;
+  const isExpense = event?.eventType === EventType.EXPENSE;
+  const isInvestment = event?.eventType === EventType.INVESTMENT;
+  const isFinancial = isIncome || isExpense || isInvestment;
+
+  const normRec = event ? normalizeRecurrence(event) : null;
+  const isRecurring =
+    event &&
+    (normRec === EventRecurrence.RECURRING || normRec === EventRecurrence.LIMITED || Boolean(event.seriesId)) &&
+    normRec !== EventRecurrence.ONCE &&
+    event.category !== 'saida_esporadica' &&
+    event.category !== 'entrada_esporadica' &&
+    event.category !== 'amortizacao' &&
+    !event.isAmortization;
+
+  const showScopeOptions = isFinancial || isRecurring;
+
+  const currentMonth = format(new Date(), 'yyyy-MM');
+  const eventMonth = event?.date ? event.date.substring(0, 7) : '';
+  const isFutureMonth = Boolean(eventMonth && eventMonth > currentMonth);
+
   const [deletionMode, setDeletionMode] = useState(EventDeletionMode.EVERYTHING);
 
   useEffect(() => {
     if (isOpen) {
-      setDeletionMode(EventDeletionMode.EVERYTHING);
+      if (isFutureMonth && showScopeOptions) {
+        setDeletionMode(EventDeletionMode.FROM_NOW_ON);
+      } else {
+        setDeletionMode(EventDeletionMode.EVERYTHING);
+      }
     }
-  }, [isOpen, event]);
+  }, [isOpen, event, isFutureMonth, showScopeOptions]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -29,22 +57,6 @@ export default function DeleteEventModal({
   }, [isOpen, onClose]);
 
   if (!isOpen || !event) return null;
-
-  const isIncome = event.eventType === EventType.INCOME;
-  const isExpense = event.eventType === EventType.EXPENSE;
-  const isInvestment = event.eventType === EventType.INVESTMENT;
-  const isFinancial = isIncome || isExpense || isInvestment;
-
-  const normRec = normalizeRecurrence(event);
-  const isRecurring =
-    (normRec === EventRecurrence.RECURRING || normRec === EventRecurrence.LIMITED || Boolean(event.seriesId)) &&
-    normRec !== EventRecurrence.ONCE &&
-    event.category !== 'saida_esporadica' &&
-    event.category !== 'entrada_esporadica' &&
-    event.category !== 'amortizacao' &&
-    !event.isAmortization;
-
-  const showScopeOptions = isFinancial || isRecurring;
 
   const formattedDate = event.date
     ? format(parseISO(event.date), "d 'de' MMMM 'de' yyyy", { locale: pt })
@@ -76,17 +88,17 @@ export default function DeleteEventModal({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#f43f5e'
+                color: TimelineColor.EXPENSE
               }}
             >
               <Trash2 size={18} strokeWidth={2.2} />
             </div>
             <div>
               <h2 className="modal-title" style={{ fontSize: '1.2rem', margin: 0 }}>
-                Eliminar Registo
+                {t('deleteEventModal.title')}
               </h2>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
-                Escolha o âmbito da eliminação
+                {t('deleteEventModal.subtitle')}
               </p>
             </div>
           </div>
@@ -118,7 +130,7 @@ export default function DeleteEventModal({
                 style={{
                   fontSize: '0.96rem',
                   fontWeight: '800',
-                  color: isIncome ? '#10b981' : isExpense ? '#f43f5e' : isInvestment ? 'var(--primary-light)' : 'var(--text-main)'
+                  color: isIncome ? TimelineColor.INCOME : isExpense ? TimelineColor.EXPENSE : isInvestment ? 'var(--primary-light)' : 'var(--text-main)'
                 }}
               >
                 {isIncome ? '+' : isExpense ? '-' : ''}{formatCurrency(event.amount)}
@@ -147,85 +159,55 @@ export default function DeleteEventModal({
                   fontWeight: '700'
                 }}
               >
-                <Repeat size={11} /> Recorrente
+                <Repeat size={11} /> {t('deleteEventModal.recurringBadge')}
               </span>
             )}
           </div>
         </div>
 
-        {/* 3 Scope Selector Options with EventDeletionMode */}
+        {/* Scope Selector Options with EventDeletionMode */}
         {showScopeOptions ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
-            {/* Opção 1: Apenas este mês (EventDeletionMode.ONLY_THIS) */}
-            <div
-              onClick={() => setDeletionMode(EventDeletionMode.ONLY_THIS)}
-              style={{
-                background: deletionMode === EventDeletionMode.ONLY_THIS ? 'rgba(6, 182, 212, 0.12)' : 'var(--bg-app)',
-                border: deletionMode === EventDeletionMode.ONLY_THIS ? '2px solid #06b6d4' : '1px solid var(--border-glass)',
-                borderRadius: '10px',
-                padding: '10px 14px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <input
-                type="radio"
-                name="deletionMode"
-                checked={deletionMode === EventDeletionMode.ONLY_THIS}
-                onChange={() => setDeletionMode(EventDeletionMode.ONLY_THIS)}
-                style={{ accentColor: '#06b6d4', cursor: 'pointer' }}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: deletionMode === EventDeletionMode.ONLY_THIS ? '#06b6d4' : 'var(--text-main)' }}>
-                  Apenas este mês ({formattedDate || 'Ocorrência selecionada'})
-                </span>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  Oculta este mês com flag de exclusão. Os meses anteriores e futuros continuam normais.
-                </span>
+            {/* Opção 1: Deste mês em diante (EventDeletionMode.FROM_NOW_ON) - Apenas se superior ao mês corrente */}
+            {isFutureMonth && (
+              <div
+                onClick={() => setDeletionMode(EventDeletionMode.FROM_NOW_ON)}
+                style={{
+                  background: deletionMode === EventDeletionMode.FROM_NOW_ON ? 'rgba(244, 63, 94, 0.12)' : 'var(--bg-app)',
+                  border: deletionMode === EventDeletionMode.FROM_NOW_ON ? `2px solid ${TimelineColor.EXPENSE}` : '1px solid var(--border-glass)',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <input
+                  type="radio"
+                  name="deletionMode"
+                  checked={deletionMode === EventDeletionMode.FROM_NOW_ON}
+                  onChange={() => setDeletionMode(EventDeletionMode.FROM_NOW_ON)}
+                  style={{ accentColor: TimelineColor.EXPENSE, cursor: 'pointer' }}
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontSize: '0.84rem', fontWeight: '700', color: deletionMode === EventDeletionMode.FROM_NOW_ON ? TimelineColor.EXPENSE : 'var(--text-main)' }}>
+                    {t('deleteEventModal.fromNowOnTitle')}
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    {t('deleteEventModal.fromNowOnDesc')}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Opção 2: Deste mês em diante (EventDeletionMode.FROM_NOW_ON) */}
-            <div
-              onClick={() => setDeletionMode(EventDeletionMode.FROM_NOW_ON)}
-              style={{
-                background: deletionMode === EventDeletionMode.FROM_NOW_ON ? 'rgba(244, 63, 94, 0.12)' : 'var(--bg-app)',
-                border: deletionMode === EventDeletionMode.FROM_NOW_ON ? '2px solid #f43f5e' : '1px solid var(--border-glass)',
-                borderRadius: '10px',
-                padding: '10px 14px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <input
-                type="radio"
-                name="deletionMode"
-                checked={deletionMode === EventDeletionMode.FROM_NOW_ON}
-                onChange={() => setDeletionMode(EventDeletionMode.FROM_NOW_ON)}
-                style={{ accentColor: '#f43f5e', cursor: 'pointer' }}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.84rem', fontWeight: '700', color: deletionMode === EventDeletionMode.FROM_NOW_ON ? '#f43f5e' : 'var(--text-main)' }}>
-                  Deste mês em diante (Subsequentes)
-                </span>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  Cria versão de encerramento para cessar a série deste mês para a frente. O histórico anterior é preservado.
-                </span>
-              </div>
-            </div>
-
-            {/* Opção 3: Apagar tudo / toda a série (EventDeletionMode.EVERYTHING) */}
+            {/* Opção 2: Apagar toda a série (EventDeletionMode.EVERYTHING) */}
             <div
               onClick={() => setDeletionMode(EventDeletionMode.EVERYTHING)}
               style={{
                 background: deletionMode === EventDeletionMode.EVERYTHING ? 'rgba(220, 38, 38, 0.16)' : 'var(--bg-app)',
-                border: deletionMode === EventDeletionMode.EVERYTHING ? '2px solid #dc2626' : '1px solid var(--border-glass)',
+                border: deletionMode === EventDeletionMode.EVERYTHING ? `2px solid ${TimelineColor.EXPENSE}` : '1px solid var(--border-glass)',
                 borderRadius: '10px',
                 padding: '10px 14px',
                 cursor: 'pointer',
@@ -240,21 +222,21 @@ export default function DeleteEventModal({
                 name="deletionMode"
                 checked={deletionMode === EventDeletionMode.EVERYTHING}
                 onChange={() => setDeletionMode(EventDeletionMode.EVERYTHING)}
-                style={{ accentColor: '#dc2626', cursor: 'pointer' }}
+                style={{ accentColor: TimelineColor.EXPENSE, cursor: 'pointer' }}
               />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.84rem', fontWeight: '800', color: deletionMode === EventDeletionMode.EVERYTHING ? '#ef4444' : 'var(--text-main)' }}>
-                  Apagar toda a série (Histórico + Futuro)
+                <span style={{ fontSize: '0.84rem', fontWeight: '800', color: deletionMode === EventDeletionMode.EVERYTHING ? TimelineColor.EXPENSE : 'var(--text-main)' }}>
+                  {t('deleteEventModal.everythingTitle')}
                 </span>
-                <span style={{ fontSize: '0.72rem', color: '#f87171' }}>
-                  ⚠️ Remove completamente todos os registos e versões deste evento/série.
+                <span style={{ fontSize: '0.72rem', color: TimelineColor.EXPENSE }}>
+                  {t('deleteEventModal.everythingDesc')}
                 </span>
               </div>
             </div>
           </div>
         ) : (
           <p style={{ margin: '0 0 16px 0', fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
-            Tem a certeza que deseja eliminar este movimento? Esta ação não pode ser desfeita.
+            {t('deleteEventModal.confirmSingle')}
           </p>
         )}
 
@@ -266,14 +248,14 @@ export default function DeleteEventModal({
             onClick={onClose}
             style={{ padding: '8px 16px', fontSize: '0.86rem' }}
           >
-            Cancelar
+            {t('common.cancel')}
           </button>
           <button
             type="button"
             onClick={handleDelete}
             style={{
-              background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
-              color: '#ffffff',
+              background: TimelineColor.EXPENSE,
+              color: TimelineColor.WHITE,
               border: '1px solid rgba(255, 255, 255, 0.2)',
               borderRadius: 'var(--radius-sm, 8px)',
               padding: '8px 18px',
@@ -288,7 +270,7 @@ export default function DeleteEventModal({
             }}
           >
             <Trash2 size={15} />
-            <span>Eliminar</span>
+            <span>{t('common.delete')}</span>
           </button>
         </div>
       </div>

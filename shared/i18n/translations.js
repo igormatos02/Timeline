@@ -62,6 +62,16 @@ export const translations = {
       copyId: "Copy ID",
       copied: "Copied!"
     },
+    deleteEventModal: {
+      title: "Delete Record",
+      subtitle: "Choose the scope of deletion",
+      recurringBadge: "Recurring",
+      fromNowOnTitle: "From this month onwards (Subsequent)",
+      fromNowOnDesc: "Creates an ending version to stop the series from this month forward. Previous history is preserved.",
+      everythingTitle: "Delete entire series (History + Future)",
+      everythingDesc: "⚠️ Completely removes all records and versions of this event/series.",
+      confirmSingle: "Are you sure you want to delete this movement? This action cannot be undone."
+    },
 
     // Toast Notifications
     toast: {
@@ -89,6 +99,15 @@ export const translations = {
 
     // Timeline Rows & Cards
     timeline: {
+      lockedPositiveNotice: "Locked — Positive financial events cannot be edited or reverted",
+      cannotEditLockedEvent: "This event is in a positive state and locked. It cannot be edited, only cancelled.",
+      cannotDeleteLockedEvent: "This event is in a positive state and locked. It cannot be deleted, only cancelled.",
+      clickToEditAmount: "Click to edit amount",
+      clickToEditAmountPropagate: "Click to edit amount (propagates to all subsequent months)",
+      breakdownValueTooltip: "Amount split into subparts. Click to view subparts below.",
+      breakdownCloseTooltip: "Click to close breakdown",
+      breakdownOpenTooltip: "Click to open and view subparts",
+      subpartsCount: "{count} subparts",
       eventsCount: "{count} event(s)",
       noEventsMonth: "No events recorded for this month",
       noEventsWeek: "No events recorded for this week",
@@ -774,6 +793,7 @@ export const translations = {
       tabs: {
         general: "General",
         entities: "Entities & Persons",
+        reports: "Reports",
         settings: "Settings"
       },
       general: {
@@ -788,7 +808,7 @@ export const translations = {
         printTemplateLabel: "Print Template",
         printTemplatePlaceholder: "Print Template for receipts and reports...",
         idLabel: "Timeboard ID",
-        typeLabel: "Timeboard Type (Read-only)",
+        typeLabel: "Timeboard Type",
         typeLockedNotice: "🔒 The timeboard type cannot be modified after creation.",
         saveButton: "Save Changes",
         dangerZone: "Danger Zone",
@@ -879,6 +899,10 @@ export const translations = {
           sendButton: "Send Invitation",
           sendingButton: "Sending..."
         }
+      },
+      reports: {
+        title: "Reports",
+        subtitle: "View and generate reports for this timeboard"
       },
       settingsTab: {
         title: "Advanced Configurations",
@@ -1566,6 +1590,7 @@ export const translations = {
         timelineNotFound: "Timeline not found",
         timelineSystemCannotBeDeleted: "System timeline cannot be deleted",
         eventNotFound: "Event not found",
+        eventLockedPositive: "Positive financial events are permanently locked and cannot be modified or reverted to pending.",
         loanNotFound: "Loan not found",
         personNameRequired: "personName is required",
         obligatorIdentificationRequired: "obligatorIdentification is required",
@@ -1641,7 +1666,9 @@ export const translations = {
         amortizedTooltip: "This installment was fully settled/abated by extraordinary amortization.",
         loanInstallmentTooltip: "Click to go to the timeline of {label}",
         editNameRecurring: "Click to edit name (changes across all months)",
-        editName: "Click to edit name"
+        editName: "Click to edit name",
+        autoMovementActiveTitle: "⚡ Automatic Movement Active: Automatically settles on due date (Click to disable across entire series)",
+        autoMovementManualTitle: "⚙️ Manual Movement: Click to enable automatic settlement across entire series"
       },
       email: {
         invitationSubject: "Invitation to collaborate on Timeboard: {name}",
@@ -1749,6 +1776,16 @@ export const translations = {
       copyId: "Copiar ID",
       copied: "Copiado!"
     },
+    deleteEventModal: {
+      title: "Eliminar Registo",
+      subtitle: "Escolha o âmbito da eliminação",
+      recurringBadge: "Recorrente",
+      fromNowOnTitle: "Deste mês em diante (Subsequentes)",
+      fromNowOnDesc: "Cria versão de encerramento para cessar a série deste mês para a frente. O histórico anterior é preservado.",
+      everythingTitle: "Apagar toda a série (Histórico + Futuro)",
+      everythingDesc: "⚠️ Remove completamente todos os registos e versões deste evento/série.",
+      confirmSingle: "Tem a certeza que deseja eliminar este movimento? Esta ação não pode ser desfeita."
+    },
 
     // Toast Notifications
     toast: {
@@ -1776,6 +1813,15 @@ export const translations = {
 
     // Timeline Rows & Cards
     timeline: {
+      lockedPositiveNotice: "Trancado — Eventos financeiros positivos não podem ser alterados ou revertidos",
+      cannotEditLockedEvent: "Este evento está em estado positivo e trancado. Não pode ser editado, apenas cancelado.",
+      cannotDeleteLockedEvent: "Este evento está em estado positivo e trancado. Não pode ser eliminado, apenas cancelado.",
+      clickToEditAmount: "Clique para editar o valor",
+      clickToEditAmountPropagate: "Clique para editar o valor (propaga para todos os meses seguintes)",
+      breakdownValueTooltip: "Valor desmembrado em subpartes. Clique para ver as subpartes abaixo.",
+      breakdownCloseTooltip: "Clique para fechar o desmembramento",
+      breakdownOpenTooltip: "Clique para abrir e ver as subpartes",
+      subpartsCount: "{count} subpartes",
       eventsCount: "{count} evento(s)",
       noEventsMonth: "Sem eventos registados neste mês",
       noEventsWeek: "Sem eventos registados nesta semana",
@@ -2417,6 +2463,7 @@ export const translations = {
       tabs: {
         general: "Geral",
         entities: "Entidades & Pessoas",
+        reports: "Relatórios",
         settings: "Configurações"
       },
       general: {
@@ -2431,7 +2478,7 @@ export const translations = {
         printTemplateLabel: "Template de Impressão",
         printTemplatePlaceholder: "Template de Impressão para recibos e relatórios...",
         idLabel: "ID do Timeboard",
-        typeLabel: "Tipo de Timeboard (Apenas Leitura)",
+        typeLabel: "Tipo de Timeboard",
         typeLockedNotice: "🔒 O tipo de timeboard não pode ser alterado após a criação.",
         saveButton: "Guardar Alterações",
         dangerZone: "Zona de Perigo",
@@ -2522,6 +2569,10 @@ export const translations = {
           sendButton: "Enviar Convite",
           sendingButton: "A enviar..."
         }
+      },
+      reports: {
+        title: "Relatórios",
+        subtitle: "Visualizar e gerar relatórios deste timeboard"
       },
       settingsTab: {
         title: "Configurações Avançadas",
@@ -3251,6 +3302,7 @@ export const translations = {
         timelineNotFound: "Timeline não encontrada",
         timelineSystemCannotBeDeleted: "Timeline do sistema não pode ser eliminada",
         eventNotFound: "Evento não encontrado",
+        eventLockedPositive: "Eventos financeiros positivos estão permanentemente trancados e não podem ser alterados nem revertidos para pendente.",
         loanNotFound: "Empréstimo não encontrado",
         personNameRequired: "personName é obrigatório",
         obligatorIdentificationRequired: "obligatorIdentification é obrigatório",
@@ -3326,7 +3378,9 @@ export const translations = {
         amortizedTooltip: "Esta parcela foi totalmente liquidada/abatida por amortização extraordinária.",
         loanInstallmentTooltip: "Clique para ir à timeline do {label}",
         editNameRecurring: "Clique para editar o nome (altera em todos os meses)",
-        editName: "Clique para editar o nome"
+        editName: "Clique para editar o nome",
+        autoMovementActiveTitle: "⚡ Movimento Automático Ativo: Liquida automaticamente na data de vencimento (Clique para desligar em toda a série)",
+        autoMovementManualTitle: "⚙️ Movimento Manual: Clique para ativar a liquidação automática em toda a série"
       },
       email: {
         invitationSubject: "Convite para colaborar no Timeboard: {name}",

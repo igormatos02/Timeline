@@ -520,6 +520,17 @@ export class FinancialEventService {
     const seriesRootEvent = allRawEvents.find((e) => (e.eventId && e.eventId === targetSeriesId) || e.id === targetSeriesId);
     const existing = existingDirect || seriesRootEvent;
 
+    const isFinancialType = existing?.eventType === EventType.INCOME || existing?.eventType === EventType.EXPENSE || existing?.eventType === EventType.INVESTMENT;
+    const isExistingPositive = existing && isPositiveStatus(existing.status);
+
+    if (isFinancialType && isExistingPositive) {
+      if (directUpdates.status === EventStatus.CANCELLED) {
+        // cancellation is allowed
+      } else if (directUpdates.status && !isPositiveStatus(directUpdates.status)) {
+        throw new Error(t('backend.validation.eventLockedPositive'));
+      }
+    }
+
     const existingVersion = existing
       ? Number(existing.version !== undefined ? existing.version : (existing.eventVersion !== undefined ? existing.eventVersion : (existing.event_version || 0)))
       : 0;

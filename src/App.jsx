@@ -29,7 +29,7 @@ import {
 import { formatCurrency } from './utils/formatCurrency';
 import { generateUUID } from './utils/uuid.js';
 import * as api from './services/api';
-import { EventType, EventStatus, FollowupStatus, TimelineType, TimelineStatus, TimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem, PersonRole } from './enums/index.js';
+import { EventType, EventStatus, FollowupStatus, TimelineType, TimelineStatus, TimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isCancelledStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem, PersonRole } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
@@ -1216,6 +1216,15 @@ export default function App() {
   const handleOpenEditEvent = useCallback((eventObj) => {
     focusedMonthRef.current = eventObj?.date ? eventObj.date.substring(0, 7) : null;
     scrollYBeforeModalRef.current = window.scrollY;
+
+    const isFinancialLocked =
+      (eventObj?.eventType === EventType.INCOME || eventObj?.eventType === EventType.EXPENSE || eventObj?.eventType === EventType.INVESTMENT) &&
+      (isPositiveStatus(eventObj?.status) || isCancelledStatus(eventObj?.status));
+    if (isFinancialLocked) {
+      showToast(t('timeline.cannotEditLockedEvent'), 'warning');
+      return;
+    }
+
     if (
       eventObj?.eventType === EventType.AMORTIZATION ||
       eventObj?.category === AmortizationEventCategory.REDUCE_TERM ||
@@ -1653,6 +1662,14 @@ export default function App() {
       const isFollowup = ev.eventType === EventType.FOLLOWUP || ev.timelineType === TimelineType.FOLLOWUP || ev.timeline_type === TimelineType.FOLLOWUP;
 
       const isCurrPositive = isPositiveStatus(ev.status) || ev.status === FollowupStatus.FINISHED || Boolean(ev.isCompleted);
+      const isFinancialLockedType = isIncome || ev.eventType === EventType.EXPENSE || isInvestment;
+
+      if (isFinancialLockedType && isCurrPositive) {
+        return {
+          nextStatus: ev.status,
+          nextCompleted: true
+        };
+      }
 
       if (isCurrPositive) {
         return {

@@ -289,8 +289,14 @@ export function calcToggledStatus(event, explicitStatus = null) {
 
   // Direct 2-way toggle:
   // If Positive -> Negative (Pending / Open / Planned / In Progress)
-  // If Negative or Cancelled -> Positive (Paid / Received / Invested / Withdrawn / Amortized / Closed / Completed / Finished)
+  // NOTE: Positive Income, Expense, and Investment events are locked and cannot revert to negative
   if (isPositive) {
+    if (isIncome || isInvestment || event.eventType === EventType.EXPENSE) {
+      return {
+        status: currentStatus,
+        isCompleted: true
+      };
+    }
     let nextNeg = isInvestment ? EventStatus.PLANNED : (isFollowup ? FollowupStatus.IN_PROGRESS : EventStatus.PENDING);
     if (isReminder) nextNeg = EventStatus.OPEN;
     return {

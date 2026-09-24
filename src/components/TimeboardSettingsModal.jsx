@@ -34,13 +34,36 @@ import {
   Bold,
   Italic,
   Strikethrough,
-  RotateCcw
+  RotateCcw,
+  Home,
+  DollarSign
 } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { PersonRole, PersonType, TimeboardType, InvitationStatus, TimelineColor } from '../enums/index.js';
 import * as api from '../services/api.js';
 import MonthPickerPopover from './ui/MonthPickerPopover.jsx';
 import CopyIdButton from './ui/CopyIdButton.jsx';
+
+const TIMEBOARD_TYPE_TEMPLATES = {
+  [TimeboardType.CONDOFLOW]: {
+    icon: Home,
+    color: TimelineColor.CONDOFLOW,
+    titleKey: 'templateCondoflow',
+    descKey: 'templateCondoflowDesc'
+  },
+  [TimeboardType.FINANCIAL]: {
+    icon: DollarSign,
+    color: TimelineColor.FINANCIAL,
+    titleKey: 'templateFinancial',
+    descKey: 'templateFinancialDesc'
+  },
+  [TimeboardType.EMPTY]: {
+    icon: Plus,
+    color: TimelineColor.EMPTY,
+    titleKey: 'templateEmpty',
+    descKey: 'templateEmptyDesc'
+  }
+};
 
 export default function TimeboardSettingsModal({
   isOpen,
@@ -835,20 +858,26 @@ export default function TimeboardSettingsModal({
               active={activeTab === 'general'}
               onClick={() => setActiveTab('general')}
               icon={<Sliders size={18} />}
-              label={t('timeboardSettings.tabs.general') || 'Geral'}
+              label={t('timeboardSettings.tabs.general')}
             />
             <TabButton
               active={activeTab === 'entities'}
               onClick={() => setActiveTab('entities')}
               icon={<Users size={18} />}
-              label={t('timeboardSettings.tabs.entities') || 'Entidades & Membros'}
+              label={t('timeboardSettings.tabs.entities')}
               badge={fullPersonsList.length > 0 ? fullPersonsList.length : null}
+            />
+            <TabButton
+              active={activeTab === 'reports'}
+              onClick={() => setActiveTab('reports')}
+              icon={<FileText size={18} />}
+              label={t('timeboardSettings.tabs.reports')}
             />
             <TabButton
               active={activeTab === 'settings'}
               onClick={() => setActiveTab('settings')}
               icon={<Settings size={18} />}
-              label={t('timeboardSettings.tabs.settings') || 'Configurações'}
+              label={t('timeboardSettings.tabs.settings')}
             />
           </div>
 
@@ -924,32 +953,45 @@ export default function TimeboardSettingsModal({
                     )}
                   </div>
 
-                  {/* Type (Locked / Read-only) */}
-                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted, #94a3b8)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Lock size={14} style={{ color: 'var(--text-muted)' }} />
-                      {t('timeboardSettings.general.typeLabel') || 'Tipo de Timeboard (Apenas Leitura)'}
+                  {/* Timeboard Type */}
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-main)' }}>
+                      {t('timeboardSettings.general.typeLabel')}
                     </label>
-                    <div
-                      style={{
-                        background: 'rgba(0, 0, 0, 0.25)',
-                        border: '1px dashed var(--border-glass, rgba(255, 255, 255, 0.15))',
-                        borderRadius: '10px',
-                        padding: '12px 16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        color: 'var(--text-muted, #94a3b8)',
-                        fontSize: '0.92rem'
-                      }}
-                    >
-                      <span style={{ fontWeight: '600', color: 'var(--text-main, #cbd5e1)', textTransform: 'capitalize' }}>
-                        {generalForm.type || 'financial'}
-                      </span>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        {t('timeboardSettings.general.typeLockedNotice') || '🔒 O tipo de timeboard não pode ser alterado após a criação.'}
-                      </span>
-                    </div>
+
+                    {(() => {
+                      const tmpl = TIMEBOARD_TYPE_TEMPLATES[generalForm.type] || TIMEBOARD_TYPE_TEMPLATES[TimeboardType.FINANCIAL];
+                      const Icon = tmpl.icon;
+                      return (
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'flex-start',
+                            gap: '8px',
+                            padding: '14px 16px',
+                            borderRadius: '12px',
+                            border: `2px solid ${tmpl.color}`,
+                            background: `${tmpl.color}1f`,
+                            color: 'var(--text-main)',
+                            maxWidth: '320px',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                            <div style={{ background: tmpl.color, padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Icon size={18} style={{ color: TimelineColor.WHITE }} />
+                            </div>
+                            <span style={{ fontWeight: '700', color: tmpl.color, fontSize: '0.88rem' }}>
+                              {t(`timeboardModal.${tmpl.titleKey}`)}
+                            </span>
+                          </div>
+                          <p style={{ margin: 0, fontSize: '0.74rem', fontWeight: '400', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                            {t(`timeboardModal.${tmpl.descKey}`)}
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Print Template Rich Text Editor */}
@@ -1497,7 +1539,21 @@ export default function TimeboardSettingsModal({
               </div>
             )}
 
-            {/* TAB 3: CONFIGURAÇÕES DO TIMEBOARD (COMPUTE FROM) */}
+            {/* TAB: RELATÓRIOS / REPORTS */}
+            {activeTab === 'reports' && (
+              <div style={{ maxWidth: '720px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                    {t('timeboardSettings.reports.title')}
+                  </h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    {t('timeboardSettings.reports.subtitle')}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: CONFIGURAÇÕES DO TIMEBOARD (COMPUTE FROM) */}
             {activeTab === 'settings' && (
               <form
                 onSubmit={handleSaveSettings}

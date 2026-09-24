@@ -13,6 +13,9 @@ export const TimelineColor = Object.freeze({
   FOLLOWUP: '#06b6d4',
   GOALS: '#10b981',
   CUSTOM: '#6366f1',
+  CONDOFLOW: '#a68069',
+  EMPTY: '#64748b',
+  FINANCIAL: '#10b981',
 
   // Palette & Status Colors
   PRIMARY: '#6366f1',

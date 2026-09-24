@@ -279,6 +279,15 @@ export async function deleteTimeboard(id) {
   return res.json();
 }
 
+export async function fetchTimeboard(timeboardId) {
+  if (!timeboardId) return null;
+  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}`, {
+    headers: getHeaders()
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 // Timeboard Members (Shared Dashboards)
 export async function fetchTimeboardMembers(timeboardId) {
   if (!timeboardId) return [];

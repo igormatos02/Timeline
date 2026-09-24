@@ -8,7 +8,7 @@ const TEMPLATES = [
   {
     value: TimeboardType.CONDOFLOW,
     icon: Home,
-    color: '#a68069',
+    color: TimelineColor.CONDOFLOW,
     titleKey: 'templateCondoflow',
     descKey: 'templateCondoflowDesc',
     namePlaceholderKey: 'namePlaceholderCondoflow',
@@ -17,7 +17,7 @@ const TEMPLATES = [
   {
     value: TimeboardType.FINANCIAL,
     icon: DollarSign,
-    color: '#10b981',
+    color: TimelineColor.FINANCIAL,
     titleKey: 'templateFinancial',
     descKey: 'templateFinancialDesc',
     namePlaceholderKey: 'namePlaceholderFinancial',
@@ -26,7 +26,7 @@ const TEMPLATES = [
   {
     value: TimeboardType.EMPTY,
     icon: Plus,
-    color: '#64748b',
+    color: TimelineColor.EMPTY,
     titleKey: 'templateEmpty',
     descKey: 'templateEmptyDesc',
     namePlaceholderKey: 'namePlaceholderEmpty',
@@ -244,13 +244,15 @@ export default function CreateTimeboardModal({
             />
           </div>
 
-          {/* Description */}
+          {/* Description / Condo Name */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
-              {t('timeboardModal.descriptionLabel')}
+              {formData.type === 'condoflow'
+                ? t('timeboardModal.condoNameLabel')
+                : t('timeboardModal.descriptionLabel')}
             </label>
-            <textarea
-              rows={3}
+            <input
+              type="text"
               style={{
                 width: '100%',
                 padding: '12px 14px',
@@ -261,14 +263,20 @@ export default function CreateTimeboardModal({
                 fontSize: '0.95rem',
                 fontWeight: '500',
                 outline: 'none',
-                boxSizing: 'border-box',
-                resize: 'none',
-                fontFamily: 'inherit'
+                boxSizing: 'border-box'
               }}
-              placeholder={t(`timeboardModal.${TEMPLATES.find(t => t.value === formData.type)?.descriptionPlaceholderKey || 'descriptionPlaceholder'}`)}
+              placeholder={formData.type === 'condoflow'
+                ? t('timeboardModal.condoNamePlaceholder')
+                : t(`timeboardModal.${TEMPLATES.find(t => t.value === formData.type)?.descriptionPlaceholderKey || 'descriptionPlaceholder'}`)}
+              maxLength={formData.type === 'condoflow' ? 100 : undefined}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
+            {formData.type === 'condoflow' && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'right' }}>
+                {formData.description?.length || 0}/100
+              </span>
+            )}
           </div>
 
           {/* Action Buttons */}

@@ -18,6 +18,8 @@ function rowToEntity(row) {
     type: row.type,
     currency: row.Currency || row.currency || 'EUR',
     computeFrom: row.compute_from || row.computeFrom || null,
+    printTemplate: row.print_template || row.printTemplate || null,
+    print_template: row.print_template || row.printTemplate || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   });
@@ -46,6 +48,10 @@ function entityToRow(data, isCreate = false) {
   if (data.type !== undefined) row.type = data.type;
   if (data.currency !== undefined) row.Currency = data.currency;
   if (data.Currency !== undefined) row.Currency = data.Currency;
+
+  if (data.printTemplate !== undefined || data.print_template !== undefined) {
+    row.print_template = data.print_template ?? data.printTemplate;
+  }
 
   const rawComputeFrom = data.computeFrom !== undefined ? data.computeFrom : data.compute_from;
   if (rawComputeFrom !== undefined) {

@@ -107,8 +107,15 @@ export function buildReceiptHtml({
   ].filter(Boolean).join(' • ');
 
   const adminName = currentUser?.name || currentUser?.user_metadata?.full_name || currentUser?.email || t('email.roleAdmin');
-  const timeboardName = timeboard?.name || t('receipt.timeboard');
-  const timeboardDesc = timeboard?.description || '';
+  const timeboardName = timeboard?.description || t('receipt.timeboard');
+  const rawPrintTemplate = timeboard?.print_template ?? timeboard?.printTemplate ?? '';
+  const timeboardDesc = rawPrintTemplate
+    ? String(rawPrintTemplate)
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/~~(.*?)~~/g, '<del>$1</del>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n/g, '<br>')
+    : '';
 
   const partyA = isIncome
     ? { role: payerLabel, entity: obligatorDetails || '' }

@@ -1976,8 +1976,12 @@ export default function App() {
   const handleSaveTimeboard = async (formData) => {
     const targetId = formData?.id || editingTimeboard?.id;
     if (targetId) {
+      // Ensure print_template takes precedence over printTemplate
+      const printTemplateValue = formData.print_template ?? formData.printTemplate ?? null;
       const updated = {
         ...formData,
+        print_template: printTemplateValue,
+        printTemplate: printTemplateValue,
         tenantId: formData?.tenantId || editingTimeboard?.tenantId || DEFAULT_TENANT.id
       };
       setTimeboards((prev) =>
@@ -1989,12 +1993,18 @@ export default function App() {
       try {
         const saved = await api.updateTimeboard(targetId, updated);
         if (saved) {
+          const freshSaved = {
+            ...saved,
+            print_template: saved.print_template ?? saved.printTemplate ?? printTemplateValue,
+            printTemplate: saved.printTemplate ?? saved.print_template ?? printTemplateValue
+          };
           setTimeboards((prev) =>
-            prev.map((tb) => (tb.id === targetId ? { ...tb, ...saved } : tb))
+            prev.map((tb) => (tb.id === targetId ? { ...tb, ...freshSaved } : tb))
           );
           setMyTimeboards((prev) =>
-            prev.map((tb) => (tb.id === targetId ? { ...tb, ...saved } : tb))
+            prev.map((tb) => (tb.id === targetId ? { ...tb, ...freshSaved } : tb))
           );
+          setEditingTimeboard((prev) => (prev?.id === targetId ? { ...prev, ...freshSaved } : prev));
         }
         return saved;
       } catch (err) {
@@ -2121,8 +2131,13 @@ export default function App() {
             setEditingTimeboard(null);
             setIsTimeboardModalOpen(true);
           }}
-          onOpenEditTimeboard={(tb) => {
-            setEditingTimeboard(tb);
+          onOpenEditTimeboard={async (tb) => {
+            try {
+              const fresh = await api.fetchTimeboard(tb.id);
+              setEditingTimeboard(fresh || tb);
+            } catch {
+              setEditingTimeboard(tb);
+            }
             setIsTimeboardSettingsModalOpen(true);
           }}
           onDeleteTimeboard={handleDeleteTimeboard}
@@ -2171,8 +2186,13 @@ export default function App() {
           setActiveTimelineId(null);
           setActiveFinancialTab(null);
         }}
-        onOpenEditTimeboard={(tb) => {
-          setEditingTimeboard(tb);
+        onOpenEditTimeboard={async (tb) => {
+          try {
+            const fresh = await api.fetchTimeboard(tb.id);
+            setEditingTimeboard(fresh || tb);
+          } catch {
+            setEditingTimeboard(tb);
+          }
           setIsTimeboardSettingsModalOpen(true);
         }}
         theme={theme}

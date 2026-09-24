@@ -11,12 +11,12 @@ import {
   LogOut,
   Moon,
   Sun,
-  LayoutGrid,
   Calendar,
   Layers,
   ArrowRight,
   Share2,
-  ChevronDown
+  ChevronDown,
+  Home
 } from 'lucide-react';
 import { TimeboardType, TimelineColor, PersonRole } from '../../enums/index.js';
 import { isGlobalTenant } from '../../constants/tenant.js';
@@ -82,10 +82,10 @@ export default function TimeboardsHub({
     if (type === TimeboardType.EMPTY || type === 'empty') {
       return {
         label: t('timeboardsHub.typeEmpty'),
-        color: TimelineColor.PURPLE,
-        bg: 'rgba(168, 85, 247, 0.15)',
-        border: 'rgba(168, 85, 247, 0.3)',
-        icon: <Layers size={20} style={{ color: TimelineColor.PURPLE }} />
+        color: TimelineColor.EMPTY,
+        bg: `rgba(100, 116, 139, 0.15)`,
+        border: `rgba(100, 116, 139, 0.3)`,
+        icon: <Layers size={20} style={{ color: TimelineColor.EMPTY }} />
       };
     }
     if (type === TimeboardType.PROJECT || type === TimeboardType.PROJECTS || type === 'projects' || type === 'project') {
@@ -109,18 +109,18 @@ export default function TimeboardsHub({
     if (type === TimeboardType.CONDOFLOW || type === 'condoflow') {
       return {
         label: t('timeboardsHub.typeCondoflow'),
-        color: TimelineColor.CYAN,
-        bg: 'rgba(6, 182, 212, 0.15)',
-        border: 'rgba(6, 182, 212, 0.3)',
-        icon: <LayoutGrid size={20} style={{ color: TimelineColor.CYAN }} />
+        color: TimelineColor.CONDOFLOW,
+        bg: 'rgba(166, 128, 105, 0.15)',
+        border: 'rgba(166, 128, 105, 0.3)',
+        icon: <Home size={20} style={{ color: TimelineColor.CONDOFLOW }} />
       };
     }
     return {
       label: t('timeboardsHub.typeFinancial'),
-      color: TimelineColor.SUCCESS,
+      color: TimelineColor.FINANCIAL,
       bg: 'rgba(16, 185, 129, 0.15)',
       border: 'rgba(16, 185, 129, 0.3)',
-      icon: <Wallet size={20} style={{ color: TimelineColor.SUCCESS }} />
+      icon: <Wallet size={20} style={{ color: TimelineColor.FINANCIAL }} />
     };
   };
 

@@ -30,12 +30,17 @@ import {
   RefreshCw,
   Copy,
   Link,
-  Calendar
+  Calendar,
+  Bold,
+  Italic,
+  Strikethrough,
+  RotateCcw
 } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { PersonRole, PersonType, TimeboardType, InvitationStatus, TimelineColor } from '../enums/index.js';
 import * as api from '../services/api.js';
 import MonthPickerPopover from './ui/MonthPickerPopover.jsx';
+import CopyIdButton from './ui/CopyIdButton.jsx';
 
 export default function TimeboardSettingsModal({
   isOpen,
@@ -48,6 +53,86 @@ export default function TimeboardSettingsModal({
   const { t, dateLocale } = useTranslation();
   const currentMonthKey = new Date().toISOString().substring(0, 7);
 
+  // Markdown conversion functions for print_template rich text editor
+  const markdownToHtml = (md) => {
+    if (!md) return '';
+    let html = String(md)
+      .replace(/&/g, '&')
+      .replace(/</g, '<')
+      .replace(/>/g, '>');
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/~~(.*?)~~/g, '<del>$1</del>');
+    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    html = html.replace(/\n/g, '<br>');
+    return html;
+  };
+
+  const htmlToMarkdown = (html) => {
+    if (!html) return '';
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+
+    function traverse(node) {
+      if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const tag = node.tagName.toLowerCase();
+        let inner = '';
+        node.childNodes.forEach((child) => { inner += traverse(child); });
+        if (tag === 'strong' || tag === 'b' || node.style?.fontWeight === 'bold' || Number(node.style?.fontWeight) >= 700) return inner ? `**${inner}**` : '';
+        if (tag === 'em' || tag === 'i' || node.style?.fontStyle === 'italic') return inner ? `*${inner}*` : '';
+        if (tag === 'del' || tag === 's' || tag === 'strike' || node.style?.textDecoration?.includes('line-through')) return inner ? `~~${inner}~~` : '';
+        if (tag === 'br') return '\n';
+        if (tag === 'div' || tag === 'p') return inner ? `\n${inner}` : '';
+        return inner;
+      }
+      return '';
+    }
+
+    return traverse(tempDiv).replace(/^\n+/, '');
+  };
+
+  // Print template rich text editor formatting
+  const applyPrintTemplateFormatting = (formatType) => {
+    if (!printTemplateEditorRef.current) return;
+    printTemplateEditorRef.current.focus();
+
+    switch (formatType) {
+      case 'bold':
+        document.execCommand('bold', false, null);
+        break;
+      case 'italic':
+        document.execCommand('italic', false, null);
+        break;
+      case 'strikethrough':
+        document.execCommand('strikeThrough', false, null);
+        break;
+      case 'normal':
+        document.execCommand('removeFormat', false, null);
+        break;
+      default:
+        break;
+    }
+
+    handlePrintTemplateInput();
+  };
+
+  const handlePrintTemplateInput = () => {
+    if (!printTemplateEditorRef.current) return;
+    const plainText = printTemplateEditorRef.current.innerText || '';
+    const currentLen = plainText.length;
+    setPrintTemplateCharCount(currentLen);
+
+    const md = htmlToMarkdown(printTemplateEditorRef.current.innerHTML);
+    setGeneralForm((prev) => ({ ...prev, print_template: md }));
+  };
+
+  const handlePrintTemplatePaste = (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text);
+    handlePrintTemplateInput();
+  };
+
   // Active Tab: 'general' | 'entities' | 'settings'
   const [activeTab, setActiveTab] = useState('general');
 
@@ -55,10 +140,16 @@ export default function TimeboardSettingsModal({
   const [generalForm, setGeneralForm] = useState({
     name: '',
     description: '',
-    type: TimeboardType.FINANCIAL
+    type: TimeboardType.FINANCIAL,
+    print_template: ''
   });
   const [isSavingGeneral, setIsSavingGeneral] = useState(false);
   const [generalSaveSuccess, setGeneralSaveSuccess] = useState(false);
+
+  // Print template rich text editor state
+  const printTemplateEditorRef = useRef(null);
+  const [printTemplateCharCount, setPrintTemplateCharCount] = useState(0);
+  const MAX_PRINT_TEMPLATE_LENGTH = 500;
 
   // Settings tab form state (Compute From)
   const [computeMode, setComputeMode] = useState('all'); // 'all' | 'current' | 'custom'
@@ -96,24 +187,16 @@ export default function TimeboardSettingsModal({
   const [inviteRole, setInviteRole] = useState(PersonRole.CONTRIBUTOR);
   const [isSendingInvite, setIsSendingInvite] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-  const [copiedTimeboardId, setCopiedTimeboardId] = useState(false);
-
-  const handleCopyTimeboardId = (e) => {
-    e?.stopPropagation?.();
-    if (timeboard?.id) {
-      navigator.clipboard.writeText(String(timeboard.id));
-      setCopiedTimeboardId(true);
-      setTimeout(() => setCopiedTimeboardId(false), 1800);
-    }
-  };
 
   // Sync state when timeboard or isOpen changes
   useEffect(() => {
     if (isOpen && timeboard) {
+      const printTemplateMd = timeboard.printTemplate ?? timeboard.print_template ?? '';
       setGeneralForm({
         name: timeboard.name || '',
         description: timeboard.description || '',
-        type: timeboard.type || TimeboardType.FINANCIAL
+        type: timeboard.type || TimeboardType.FINANCIAL,
+        print_template: printTemplateMd
       });
 
       const rawCompute = timeboard.computeFrom || timeboard.compute_from;
@@ -136,7 +219,17 @@ export default function TimeboardSettingsModal({
 
       loadPersons(timeboard.id);
     }
-  }, [isOpen, timeboard?.id, activeTab]);
+  }, [isOpen, timeboard?.id, activeTab, timeboard?.printTemplate, timeboard?.print_template]);
+
+  // Initialize print template editor when ref is available and tab is general
+  useEffect(() => {
+    if (isOpen && activeTab === 'general' && printTemplateEditorRef.current) {
+      const printTemplateMd = generalForm.print_template || timeboard?.printTemplate || timeboard?.print_template || '';
+      printTemplateEditorRef.current.innerHTML = markdownToHtml(printTemplateMd);
+      const plainText = printTemplateEditorRef.current.innerText || '';
+      setPrintTemplateCharCount(plainText.length);
+    }
+  }, [isOpen, activeTab, timeboard?.id, timeboard?.printTemplate, timeboard?.print_template]);
 
   const loadPersons = async (timeboardId) => {
     if (!timeboardId) return;
@@ -172,10 +265,13 @@ export default function TimeboardSettingsModal({
     if (!generalForm.name.trim()) return;
     setIsSavingGeneral(true);
     try {
+      const printVal = generalForm.print_template?.trim() || '';
       await onSaveTimeboard({
         ...timeboard,
         name: generalForm.name.trim(),
-        description: generalForm.description.trim()
+        description: generalForm.description.trim(),
+        print_template: printVal,
+        printTemplate: printVal
       });
       setGeneralSaveSuccess(true);
       setTimeout(() => setGeneralSaveSuccess(false), 2500);
@@ -768,65 +864,14 @@ export default function TimeboardSettingsModal({
                   <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--text-muted, #94a3b8)' }}>
                     {t('timeboardSettings.general.subtitle') || 'Parâmetros básicos deste espaço Timeboard'}
                   </p>
-
-                  {timeboard?.id && (
-                    <div style={{ marginTop: '10px' }}>
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          padding: '4px 10px',
-                          borderRadius: '8px',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.12))',
-                          color: 'var(--text-muted, #94a3b8)',
-                          fontFamily: 'monospace',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                      >
-                        <span style={{ userSelect: 'all' }}>ID: {timeboard.id}</span>
-                        <button
-                          type="button"
-                          onClick={handleCopyTimeboardId}
-                          title={copiedTimeboardId ? 'Copiado!' : 'Copiar ID do Timeboard'}
-                          style={{
-                            background: copiedTimeboardId ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.06)',
-                            border: `1px solid ${copiedTimeboardId ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-glass, rgba(255, 255, 255, 0.12))'}`,
-                            color: copiedTimeboardId ? '#10b981' : 'var(--text-main, #cbd5e1)',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '0.72rem',
-                            fontWeight: '600',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          {copiedTimeboardId ? (
-                            <>
-                              <Check size={12} strokeWidth={2.5} />
-                              <span>{t('common.copied') || 'Copiado'}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy size={12} />
-                              <span>{t('common.copy') || 'Copiar'}</span>
-                            </>
-                          )}
-                        </button>
-                      </span>
-                    </div>
-                  )}
                 </div>
 
-                <form onSubmit={handleSaveGeneral} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <form onSubmit={handleSaveGeneral} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {/* Name */}
                   <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-main, #e2e8f0)' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-main, #e2e8f0)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {t('timeboardSettings.general.nameLabel') || 'Nome do Timeboard *'}
+                      {timeboard.id && <CopyIdButton id={timeboard.id} />}
                     </label>
                     <input
                       type="text"
@@ -836,37 +881,47 @@ export default function TimeboardSettingsModal({
                       placeholder={t('timeboardSettings.general.namePlaceholder') || 'Ex: Timeboard Principal, Finanças Pessoais...'}
                       className="form-control"
                       style={{
-                        background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
+                        background: '#ffffff',
                         border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
                         borderRadius: '10px',
                         padding: '12px 16px',
-                        color: 'var(--text-main, #fff)',
+                        color: '#000000',
                         fontSize: '0.95rem'
                       }}
                     />
                   </div>
 
-                  {/* Description */}
+                  {/* Description / Condo Name */}
                   <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-main, #e2e8f0)' }}>
-                      {t('timeboardSettings.general.descriptionLabel') || 'Descrição'}
+                      {generalForm.type === 'condoflow'
+                        ? (t('timeboardSettings.general.condoNameLabel') || 'Nome do Condomínio')
+                        : (t('timeboardSettings.general.descriptionLabel') || 'Descrição')}
                     </label>
-                    <textarea
-                      rows={3}
+                    <input
+                      type="text"
                       value={generalForm.description}
                       onChange={(e) => setGeneralForm({ ...generalForm, description: e.target.value })}
-                      placeholder={t('timeboardSettings.general.descriptionPlaceholder') || 'Breve descrição dos objetivos ou escopo...'}
+                      placeholder={generalForm.type === 'condoflow'
+                        ? (t('timeboardSettings.general.condoNamePlaceholder') || 'Ex: Condomínio Residencial, Condomínio Comercial...')
+                        : (t('timeboardSettings.general.descriptionPlaceholder') || 'Breve descrição dos objetivos ou escopo...')}
+                      maxLength={generalForm.type === 'condoflow' ? 100 : undefined}
                       className="form-control"
                       style={{
-                        background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
+                        background: '#ffffff',
                         border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
                         borderRadius: '10px',
                         padding: '12px 16px',
-                        color: 'var(--text-main, #fff)',
+                        color: '#000000',
                         fontSize: '0.92rem',
                         resize: 'vertical'
                       }}
                     />
+                    {generalForm.type === 'condoflow' && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted, #94a3b8)', textAlign: 'right' }}>
+                        {generalForm.description?.length || 0}/100
+                      </span>
+                    )}
                   </div>
 
                   {/* Type (Locked / Read-only) */}
@@ -893,6 +948,153 @@ export default function TimeboardSettingsModal({
                       </span>
                       <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         {t('timeboardSettings.general.typeLockedNotice') || '🔒 O tipo de timeboard não pode ser alterado após a criação.'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Print Template Rich Text Editor */}
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-main, #e2e8f0)' }}>
+                      {t('timeboardSettings.general.printTemplateLabel') || 'Print Template'}
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      {/* Toolbar */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '4px',
+                          background: 'rgba(255, 255, 255, 0.04)',
+                          padding: '2px 4px',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border-glass)',
+                          alignSelf: 'flex-end'
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => applyPrintTemplateFormatting('bold')}
+                          title={t('diaryModal.bold') || 'Negrito'}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--text-main)',
+                            padding: '4px 7px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <Bold size={13} strokeWidth={2.5} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPrintTemplateFormatting('italic')}
+                          title={t('diaryModal.italic') || 'Itálico'}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--text-main)',
+                            padding: '4px 7px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <Italic size={13} strokeWidth={2.5} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPrintTemplateFormatting('strikethrough')}
+                          title={t('diaryModal.strikethrough') || 'Riscado'}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--text-main)',
+                            padding: '4px 7px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <Strikethrough size={13} strokeWidth={2.5} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPrintTemplateFormatting('normal')}
+                          title={t('diaryModal.normal') || 'Limpar formatação'}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--text-dim)',
+                            padding: '4px 6px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.7rem',
+                            fontWeight: '700'
+                          }}
+                        >
+                          Normal
+                        </button>
+                      </div>
+
+                      {/* Editor */}
+                      <div style={{ position: 'relative', marginTop: '8px' }}>
+                        <div
+                          ref={printTemplateEditorRef}
+                          contentEditable
+                          suppressContentEditableWarning
+                          onInput={handlePrintTemplateInput}
+                          onPaste={handlePrintTemplatePaste}
+                          style={{
+                            minHeight: '100px',
+                            maxHeight: '180px',
+                            overflowY: 'auto',
+                            background: '#ffffff',
+                            border: '1px solid var(--border-glass)',
+                            borderRadius: '8px',
+                            padding: '10px 14px',
+                            color: '#090d16',
+                            fontSize: '0.88rem',
+                            lineHeight: '1.6',
+                            outline: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                        {!printTemplateCharCount && (
+                          <div
+                            onClick={() => printTemplateEditorRef.current?.focus()}
+                            style={{
+                              position: 'absolute',
+                              top: '10px',
+                              left: '14px',
+                              color: 'var(--text-dim)',
+                              fontSize: '0.86rem',
+                              pointerEvents: 'none',
+                              userSelect: 'none'
+                            }}
+                          >
+                            {t('timeboardSettings.general.printTemplatePlaceholder') || 'Template name for receipts and reports...'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Character counter */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        fontSize: '0.72rem',
+                        fontWeight: '700',
+                        color: printTemplateCharCount > MAX_PRINT_TEMPLATE_LENGTH * 0.9 ? '#f59e0b' : 'var(--text-dim)',
+                        marginTop: '2px'
+                      }}
+                    >
+                      <span>
+                        {printTemplateCharCount} / {MAX_PRINT_TEMPLATE_LENGTH} caracteres
                       </span>
                     </div>
                   </div>
@@ -925,53 +1127,6 @@ export default function TimeboardSettingsModal({
                     </button>
                   </div>
                 </form>
-
-                {/* Danger Zone */}
-                <div
-                  style={{
-                    marginTop: '24px',
-                    padding: '20px 24px',
-                    background: 'rgba(239, 68, 68, 0.04)',
-                    border: '1px solid rgba(239, 68, 68, 0.2)',
-                    borderRadius: '14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                    <AlertTriangle size={22} style={{ color: '#ef4444', flexShrink: 0, marginTop: '2px' }} />
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700', color: '#f87171' }}>
-                        {t('timeboardSettings.general.deleteTimeboardTitle') || 'Eliminar este Timeboard'}
-                      </h4>
-                      <p style={{ margin: '3px 0 0', fontSize: '0.82rem', color: 'var(--text-muted, #94a3b8)' }}>
-                        {t('timeboardSettings.general.deleteTimeboardDesc') || 'Remove permanentemente este timeboard, todas as suas timelines e eventos associados.'}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleDeleteTimeboard}
-                    style={{
-                      background: 'rgba(239, 68, 68, 0.15)',
-                      border: '1px solid rgba(239, 68, 68, 0.3)',
-                      color: '#ef4444',
-                      padding: '10px 18px',
-                      borderRadius: '8px',
-                      fontWeight: '700',
-                      fontSize: '0.86rem',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <Trash2 size={16} />
-                    <span>{t('timeboardSettings.general.deleteButton') || 'Eliminar Timeboard'}</span>
-                  </button>
-                </div>
               </div>
             )}
 
@@ -1576,6 +1731,54 @@ export default function TimeboardSettingsModal({
                     )}
                   </button>
                 </div>
+
+                {/* Danger Zone - Delete Timeboard */}
+                <div
+                  style={{
+                    marginTop: '24px',
+                    padding: '20px 24px',
+                    background: 'rgba(239, 68, 68, 0.04)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    borderRadius: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                    <AlertTriangle size={22} style={{ color: '#ef4444', flexShrink: 0, marginTop: '2px' }} />
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700', color: '#f87171' }}>
+                        {t('timeboardSettings.general.deleteTimeboardTitle') || 'Eliminar este Timeboard'}
+                      </h4>
+                      <p style={{ margin: '3px 0 0', fontSize: '0.82rem', color: 'var(--text-muted, #94a3b8)' }}>
+                        {t('timeboardSettings.general.deleteTimeboardDesc') || 'Remove permanentemente este timeboard, todas as suas timelines e eventos associados.'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDeleteTimeboard}
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      color: '#ef4444',
+                      padding: '10px 18px',
+                      borderRadius: '8px',
+                      fontWeight: '700',
+                      fontSize: '0.86rem',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <Trash2 size={16} />
+                    <span>{t('timeboardSettings.general.deleteButton') || 'Eliminar Timeboard'}</span>
+                  </button>
+                </div>
+
               </form>
             )}
           </div>
@@ -1583,7 +1786,7 @@ export default function TimeboardSettingsModal({
       </div>
 
       {/* Sub-Modal / Drawer: Add/Edit Entity */}
-      {isEntityModalOpen && (
+        {isEntityModalOpen && (
         <div
           className="modal-overlay"
           style={{

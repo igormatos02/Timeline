@@ -20,6 +20,8 @@ export class Timeboard {
     currency = 'EUR',
     computeFrom = null,
     compute_from = null,
+    printTemplate = null,
+    print_template = null,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
   }) {
@@ -34,6 +36,8 @@ export class Timeboard {
     this.currency = currency;
     this.computeFrom = computeFrom || compute_from || null;
     this.compute_from = this.computeFrom;
+    this.printTemplate = printTemplate ?? print_template ?? null;
+    this.print_template = this.printTemplate;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }

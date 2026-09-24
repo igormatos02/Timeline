@@ -115,13 +115,9 @@ export default function App() {
     return null;
   });
 
-  // Individual vs Global view mode when filtering by obligator
+  // Individual vs Global view mode when filtering by obligator.
+  // Kept across timeline switches, together with the entity filter.
   const [isIndividualView, setIsIndividualView] = useState(false);
-
-  // Reset individual view when switching timelines
-  useEffect(() => {
-    setIsIndividualView(false);
-  }, [activeTimelineId]);
 
   // Financial Sub-Tabs State
   const [activeFinancialTab, setActiveFinancialTab] = useState(() => {

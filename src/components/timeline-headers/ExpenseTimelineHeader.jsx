@@ -46,7 +46,7 @@ export default function ExpenseTimelineHeader({
   onAddEvent,
   onReset,
   activeViewMode = 'summary',
-  setActiveViewMode
+  setActiveViewMode,
   selectedEntityId,
   isIndividualView,
   onToggleIndividualView

@@ -337,7 +337,7 @@ function VerticalTimeline({
     setSelectedCategoryFilter(EventStatus.ALL);
     setSelectedStatusFilters([]);
     setSelectedExpenseCategories([]);
-    setSelectedEntityId(null);
+    // The entity filter is intentionally kept when switching timelines.
   }, [timeline?.id]);
 
   const isFinancial = activeTimeboard?.type === TimeboardType.FINANCIAL || isFinancialTimeline;
@@ -867,33 +867,33 @@ function VerticalTimeline({
   // Events that belong on the timeline (have dates, or completed, or non-floating)
   const timelineEvents = allEvents.filter((ev) => !isFloatingTask(ev));
 
+  // Helper to test if an event belongs to this timeline's scope
+  const isEventBelongingToCurrentTimeline = useCallback((ev) => {
+    if (!ev || ev.isDeleted) return false;
+    if (timeline.type === TimelineType.BALANCE) {
+      const isNonFinancial =
+        ev.eventType === EventType.TODO ||
+        ev.timelineType === TimelineType.TODO ||
+        ev.timeline_type === TimelineType.TODO ||
+        ev.category === EventType.TODO ||
+        ev.category === 'tarefa' ||
+        ev.category === 'todo' ||
+        ev.eventType === EventType.FOLLOWUP ||
+        ev.timelineType === TimelineType.FOLLOWUP ||
+        ev.timeline_type === TimelineType.FOLLOWUP ||
+        ev.category === 'followup' ||
+        ev.eventType === EventType.REGISTER ||
+        ev.timelineType === TimelineType.DIARY ||
+        ev.timeline_type === TimelineType.DIARY;
+      return !isNonFinancial;
+    }
+    return ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
+  }, [timeline.id, timeline.type]);
+
   // Extract unique entities referenced across timeline events
   const timelineEntities = useMemo(() => {
     if (!timelineEvents || timelineEvents.length === 0) return [];
     const entityMap = new Map();
-
-    // Helper to test if an event belongs to this timeline's scope
-    const isEventBelongingToCurrentTimeline = (ev) => {
-      if (!ev || ev.isDeleted) return false;
-      if (timeline.type === TimelineType.BALANCE) {
-        const isNonFinancial =
-          ev.eventType === EventType.TODO ||
-          ev.timelineType === TimelineType.TODO ||
-          ev.timeline_type === TimelineType.TODO ||
-          ev.category === EventType.TODO ||
-          ev.category === 'tarefa' ||
-          ev.category === 'todo' ||
-          ev.eventType === EventType.FOLLOWUP ||
-          ev.timelineType === TimelineType.FOLLOWUP ||
-          ev.timeline_type === TimelineType.FOLLOWUP ||
-          ev.category === 'followup' ||
-          ev.eventType === EventType.REGISTER ||
-          ev.timelineType === TimelineType.DIARY ||
-          ev.timeline_type === TimelineType.DIARY;
-        return !isNonFinancial;
-      }
-      return ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
-    };
 
     timelineEvents.forEach((ev) => {
       if (!isEventBelongingToCurrentTimeline(ev)) return;
@@ -965,7 +965,27 @@ function VerticalTimeline({
     });
 
     return Array.from(entityMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
-  }, [timelineEvents, timeline.id, timeline.type]);
+  }, [timelineEvents, isEventBelongingToCurrentTimeline]);
+
+  const selectedEntity = useMemo(() => {
+    if (!selectedEntityId) return null;
+    return timelineEntities.find((ent) => String(ent.id) === String(selectedEntityId)) || null;
+  }, [timelineEntities, selectedEntityId]);
+
+  // Events of this timeline belonging to the selected entity, independent of
+  // search/status/category/label filters (used by the individual header).
+  // Capped at the end of the current month, like the entity list view.
+  const currentMonthKey = format(todayDate, 'yyyy-MM');
+  const entityEvents = useMemo(() => {
+    if (!selectedEntityId) return [];
+    return timelineEvents.filter((ev) => {
+      if (!isEventBelongingToCurrentTimeline(ev)) return false;
+      const evMonth = ev.date ? ev.date.substring(0, 7) : null;
+      if (evMonth && computeFromMonth && evMonth < computeFromMonth) return false;
+      if (evMonth && evMonth > currentMonthKey) return false;
+      return isEventMatchingEntity(ev, selectedEntityId);
+    });
+  }, [timelineEvents, selectedEntityId, computeFromMonth, currentMonthKey, isEventBelongingToCurrentTimeline, isEventMatchingEntity]);
 
 
   const getEntityIcon = (type) => {
@@ -3757,6 +3777,8 @@ function VerticalTimeline({
               selectedCategoryFilter: (timeline.type === TimelineType.INVESTMENT || timeline.type === TimelineType.INCOME) ? selectedCategoryFilter : undefined,
               selectedPocketId: timeline.type === TimelineType.INVESTMENT && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos' ? selectedCategoryFilter : undefined,
               selectedEntityId,
+              selectedEntity,
+              entityEvents,
               monthExpensesTotalMap,
               monthLoansTotalMap,
               monthIncomeTotalMap,

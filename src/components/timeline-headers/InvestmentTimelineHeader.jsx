@@ -36,7 +36,7 @@ export default function InvestmentTimelineHeader({
   onAddEvent,
   onReset,
   activeViewMode = 'summary',
-  setActiveViewMode
+  setActiveViewMode,
   selectedEntityId,
   isIndividualView,
   onToggleIndividualView

@@ -275,7 +275,7 @@ export default function BalanceTimelineHeader({
   hasLoanTimeline: propHasLoanTimeline,
   hasIncomeTimeline: propHasIncomeTimeline,
   hasInvestmentTimeline: propHasInvestmentTimeline,
-  computeFromMonth: propComputeFromMonth
+  computeFromMonth: propComputeFromMonth,
   selectedEntityId,
   isIndividualView,
   onToggleIndividualView

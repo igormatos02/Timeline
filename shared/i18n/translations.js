@@ -1026,6 +1026,13 @@ export const translations = {
       projectedNext12Months: "projected in the next 12 months",
     },
 
+    // Individual (per-entity) Timeline Header
+    individualHeader: {
+      debtBalance: "Outstanding Balance",
+      debtBalanceHint: "{{count}} overdue or pending obligations",
+      noPendingObligations: "No pending obligations for {{name}}"
+    },
+
     // Expense Timeline Header
     expenseHeader: {
       badge: "Expenses & Outflows",
@@ -2696,6 +2703,13 @@ export const translations = {
       annualCommitmentLabel: "Comprometimento Anual",
       ofAnnualTotal: "de {amount} total anual",
       projectedNext12Months: "projetado nos próximos 12 meses",
+    },
+
+    // Individual (per-entity) Timeline Header
+    individualHeader: {
+      debtBalance: "Saldo Devedor",
+      debtBalanceHint: "{{count}} obrigações em atraso ou pendentes",
+      noPendingObligations: "Nenhuma obrigação pendente para {{name}}"
     },
 
     // Expense Timeline Header

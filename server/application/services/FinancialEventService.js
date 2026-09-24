@@ -1,9 +1,11 @@
-import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
+import { eventRepository } from '../../infrastructure/database/supabase/SupabaseEventRepository.js';
 import { financialEventStatusRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventStatusRepository.js';
 import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { todoRepository } from '../../infrastructure/database/supabase/SupabaseTodoRepository.js';
 import { todoService } from './TodoService.js';
+import { diaryRepository } from '../../infrastructure/database/supabase/SupabaseDiaryRepository.js';
+import { diaryService } from './DiaryService.js';
 import { followupRepository } from '../../infrastructure/database/supabase/SupabaseFollowupRepository.js';
 import { followupService } from './FollowupService.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
@@ -75,6 +77,9 @@ export class FinancialEventService {
     } else {
       rawEvents = await eventRepository.getAllWithStatuses();
     }
+
+    // Diary entries live in the 'diaries' table; ignore any legacy copies left in financial_events
+    rawEvents = rawEvents.filter((ev) => ev.eventType !== EventType.REGISTER);
 
     const fullStatusMap = await financialEventStatusRepository.getFullStatusMap();
 
@@ -297,6 +302,23 @@ export class FinancialEventService {
       console.warn('Error including to_do items in getAllEvents:', err.message);
     }
 
+    // Load diary entries from diaries table and map them to projected timeline events
+    try {
+      const diaries = filter.timeboardId
+        ? await diaryRepository.getByTimeboardId(filter.timeboardId)
+        : (filter.timelineId ? await diaryRepository.getByTimelineId(filter.timelineId) : await diaryRepository.getAll());
+      for (const diary of diaries) {
+        if (!diary || !diary.id || !diary.date) continue;
+        const mapped = this._diaryToEvent(diary);
+        if (!mapped.timeboardId && mapped.timelineId && timelineToTimeboard.has(mapped.timelineId)) {
+          mapped.timeboardId = timelineToTimeboard.get(mapped.timelineId);
+        }
+        projectedEvents.push(mapped);
+      }
+    } catch (err) {
+      console.warn('Error including diaries in getAllEvents:', err.message);
+    }
+
     // Load Follow-up items from followup table and map them to projected timeline events
     try {
       const projectedFollowups = await followupService.getProjectedFollowups();
@@ -366,8 +388,43 @@ export class FinancialEventService {
     });
   }
 
+  // Maps a diary entry to the generic timeline event shape used by the frontend
+  _diaryToEvent(diary) {
+    if (!diary) return null;
+    return {
+      id: diary.id,
+      eventId: diary.id,
+      timelineId: diary.timelineId,
+      timelineOriginId: diary.timelineId,
+      timeboardId: diary.timeboardId,
+      title: diary.name,
+      name: diary.name,
+      description: diary.description || '',
+      notes: diary.notes || '',
+      labels: diary.labels || [],
+      category: diary.mood,
+      mood: diary.mood,
+      date: diary.date,
+      status: EventStatus.COMPLETED,
+      isCompleted: true,
+      eventType: EventType.REGISTER,
+      timelineType: TimelineType.DIARY,
+      recurrence: EventRecurrence.ONCE,
+      isRecurring: false,
+      tenantId: diary.tenantId,
+      createdAt: diary.createdAt,
+      updatedAt: diary.updatedAt
+    };
+  }
+
+  _isDiaryPayload(data) {
+    return data?.eventType === EventType.REGISTER || data?.timelineType === TimelineType.DIARY || data?.timeline_type === TimelineType.DIARY;
+  }
+
   async getEventById(id) {
     if (!id) return null;
+    const directDiary = await diaryRepository.getById(id);
+    if (directDiary) return this._diaryToEvent(directDiary);
     const directFollowup = await followupRepository.getById(id);
     if (directFollowup) return directFollowup;
     const directTodo = await todoRepository.getById(id);
@@ -413,6 +470,9 @@ export class FinancialEventService {
     if (sanitizedData.eventType === EventType.TODO || sanitizedData.timelineType === TimelineType.TODO) {
       return todoService.createTodo(sanitizedData);
     }
+    if (this._isDiaryPayload(sanitizedData)) {
+      return this._diaryToEvent(await diaryService.createDiary(sanitizedData));
+    }
 
     const isRecurring =
       sanitizedData.recurrence === EventRecurrence.RECURRING ||
@@ -439,21 +499,6 @@ export class FinancialEventService {
       }
     }
 
-    const isRegister = sanitizedData.eventType === EventType.REGISTER;
-    if (isRegister) {
-      const allRawEvents = await eventRepository.getAll();
-      const duplicate = allRawEvents.find((e) => {
-        if (e.isDeleted || e.status === EventStatus.DELETED) return false;
-        const sameTimeline = String(e.timelineId || e.timelineOriginId || e.timeline_id) === String(timelineId);
-        const sameDate = String(e.date) === String(sanitizedData.date);
-        return sameTimeline && sameDate;
-      });
-
-      if (duplicate) {
-        throw new Error(t('diaryModal.duplicateDayError'));
-      }
-    }
-
     const payload = {
       ...sanitizedData,
       timelineId,
@@ -463,9 +508,9 @@ export class FinancialEventService {
       version: isLoanInstallment ? 0 : (sanitizedData.version !== undefined ? Number(sanitizedData.version) : 0),
       eventVersion: isLoanInstallment ? 0 : (sanitizedData.eventVersion !== undefined ? Number(sanitizedData.eventVersion) : 0),
       event_version: isLoanInstallment ? 0 : (sanitizedData.event_version !== undefined ? Number(sanitizedData.event_version) : 0),
-      recurrence: isLoanInstallment || isRegister ? EventRecurrence.ONCE : (sanitizedData.recurrence || (isRecurring ? EventRecurrence.RECURRING : EventRecurrence.ONCE)),
+      recurrence: isLoanInstallment ? EventRecurrence.ONCE : (sanitizedData.recurrence || (isRecurring ? EventRecurrence.RECURRING : EventRecurrence.ONCE)),
       periodicity: sanitizedData.periodicity || EventPeriodicity.MONTHLY,
-      isRecurring: isLoanInstallment || isRegister ? false : Boolean(isRecurring)
+      isRecurring: isLoanInstallment ? false : Boolean(isRecurring)
     };
 
     const created = await eventRepository.create(payload);
@@ -495,22 +540,13 @@ export class FinancialEventService {
       return todoService.updateTodo(id, directUpdates);
     }
 
+    const isDiaryDirect = await diaryRepository.getById(id);
+    if (isDiaryDirect) {
+      return this._diaryToEvent(await diaryService.updateDiary(id, directUpdates));
+    }
+
     const allRawEvents = await eventRepository.getAll();
     const existingDirect = (await eventRepository.getById(id)) || allRawEvents.find((e) => e.id === id);
-
-    const isRegister = directUpdates.eventType === EventType.REGISTER || existingDirect?.eventType === EventType.REGISTER;
-    if (isRegister && directUpdates.date && directUpdates.date !== existingDirect?.date) {
-      const duplicate = allRawEvents.find((e) => {
-        if (e.id === id || e.eventId === id || e.isDeleted || e.status === EventStatus.DELETED) return false;
-        const sameTimeline = String(e.timelineId || e.timelineOriginId || e.timeline_id) === String(existingDirect?.timelineId || directUpdates.timelineId);
-        const sameDate = String(e.date) === String(directUpdates.date);
-        return sameTimeline && sameDate;
-      });
-
-      if (duplicate) {
-        throw new Error(t('diaryModal.duplicateDayError'));
-      }
-    }
 
     const loanTlId = directUpdates.timelineId || directUpdates.timelineOriginId || existingDirect?.timelineId || existingDirect?.timelineOriginId;
     const isLoan = Boolean(loanTlId && (directUpdates.isLoanEvent?.() || existingDirect?.isLoanEvent?.() || directUpdates.isSystemLoanEvent || existingDirect?.isSystemLoanEvent || directUpdates.eventType === EventType.AMORTIZATION || existingDirect?.eventType === EventType.AMORTIZATION));
@@ -890,6 +926,11 @@ export class FinancialEventService {
     const todoItem = await todoRepository.getById(id);
     if (todoItem) {
       return todoService.deleteTodo(id);
+    }
+
+    const diaryItem = await diaryRepository.getById(id);
+    if (diaryItem) {
+      return diaryService.deleteDiary(id);
     }
 
     const deletionMode = options.deletionMode || options.deleteScope || EventDeletionMode.ONLY_THIS;

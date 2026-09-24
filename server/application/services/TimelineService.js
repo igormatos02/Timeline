@@ -1,9 +1,10 @@
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { timeboardRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardRepository.js';
-import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
+import { eventRepository } from '../../infrastructure/database/supabase/SupabaseEventRepository.js';
 import { financialEventStatusRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventStatusRepository.js';
 import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
 import { todoRepository } from '../../infrastructure/database/supabase/SupabaseTodoRepository.js';
+import { diaryRepository } from '../../infrastructure/database/supabase/SupabaseDiaryRepository.js';
 import { followupRepository } from '../../infrastructure/database/supabase/SupabaseFollowupRepository.js';
 import { financialEventService } from './FinancialEventService.js';
 import { projectEvents } from '../../domain/services/ProjectionEngine.js';
@@ -309,6 +310,9 @@ export class TimelineService {
     if (todoRepository.deleteByTimelineId) {
       await todoRepository.deleteByTimelineId(id);
     }
+
+    // Excluir registos do Diário associados à timeline (se existirem)
+    await diaryRepository.deleteByTimelineId(id);
 
     // 6. Excluir Follow-ups associados à timeline (se existirem)
     if (followupRepository.deleteByTimelineId) {

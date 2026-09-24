@@ -3,7 +3,7 @@ import { timeboardMemberRepository } from '../../infrastructure/database/supabas
 import { timeboardInvitationRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardInvitationRepository.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
-import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
+import { eventRepository } from '../../infrastructure/database/supabase/SupabaseEventRepository.js';
 import { financialEventStatusRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventStatusRepository.js';
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
 import { userRepository } from '../../infrastructure/database/supabase/SupabaseUserRepository.js';

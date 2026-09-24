@@ -1,6 +1,6 @@
 import { pocketRepository } from '../../infrastructure/database/supabase/SupabasePocketRepository.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
-import { financialEventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
+import { eventRepository as financialEventRepository } from '../../infrastructure/database/supabase/SupabaseEventRepository.js';
 import { Pocket } from '../../domain/entities/Pocket.js';
 import { createT } from '../../../shared/i18n/index.js';
 

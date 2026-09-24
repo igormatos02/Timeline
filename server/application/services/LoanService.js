@@ -1,5 +1,5 @@
 import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
-import { financialEventRepository as eventRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventRepository.js';
+import { eventRepository } from '../../infrastructure/database/supabase/SupabaseEventRepository.js';
 import { EventType, EventStatus } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 

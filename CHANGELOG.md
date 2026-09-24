@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.3.0](https://github.com/igormatos02/Timeline/compare/v0.2.5...v0.3.0) (2026-09-24)
+
+
+### Features
+
+* add individual role and collapsible sidebar with entity filtering ([25e6464](https://github.com/igormatos02/Timeline/commit/25e6464e81b42ee930c386ac4d7d2226ad712927))
+* add pockets management and savings distribution by pocket ([fbea0c1](https://github.com/igormatos02/Timeline/commit/fbea0c12882f3f3f4fcb829177053bc77df6d8a2))
+* adding condoflow timeboard ([8ad4d82](https://github.com/igormatos02/Timeline/commit/8ad4d828961918ac75c696b61b6d9dddfe013f8c))
+* adding receipt ([5e5ff24](https://github.com/igormatos02/Timeline/commit/5e5ff2420ee6c667247b1ad2e0df4cf10196ba29))
+* clearance declarations in the individual view (condoflow) ([f1074b0](https://github.com/igormatos02/Timeline/commit/f1074b08d75273a31dea996d998848a3a61b0424))
+* enhance balance calculations with pocket withdrawals and update savings labels ([d8eeefd](https://github.com/igormatos02/Timeline/commit/d8eeefd67d2061571ad26399e2b07e4ccd6d8512))
+* enhance investment projections, header charts and sticky filter sidebar ([d9121e5](https://github.com/igormatos02/Timeline/commit/d9121e57d6e4df16406d4560a3c845fc277ed53f))
+* highlight accumulated net balance and refine balance header styling ([1881b78](https://github.com/igormatos02/Timeline/commit/1881b78c60229fbfba34f224cb20e3e8be951605))
+
+
+### Bug Fixes
+
+* balance calculation ([a183d98](https://github.com/igormatos02/Timeline/commit/a183d98e2bbeb533971b718c48431b05b96a62fa))
+* fixing balance values ([3cfc14d](https://github.com/igormatos02/Timeline/commit/3cfc14d099c86593ee7f60ab91f75990433ffada))
+* fixing broken code ([614b511](https://github.com/igormatos02/Timeline/commit/614b511abfe2e5bf12954276a1fc723ebba50da7))
+* fixing filter by obligator ([c5be448](https://github.com/igormatos02/Timeline/commit/c5be448bc02e7f8d2ed946ce3c767aeea25fc59c))
+* fixing navigation ([e894a53](https://github.com/igormatos02/Timeline/commit/e894a53aa2d22127853eeb20dc8e2fedb0383776))
+* fixing projectes button ([6e35df2](https://github.com/igormatos02/Timeline/commit/6e35df28d72e73b8e01ffe518187ae1b711895c7))
+* fixing recept number ([521a200](https://github.com/igormatos02/Timeline/commit/521a200b79c149312b3823d3ade405b0907fb476))
+* fixing recept number part2 ([c026fe2](https://github.com/igormatos02/Timeline/commit/c026fe258525e639a16fe377a27df20507f090f0))
+* individual view debt balance and keep entity filter across timelines ([62f760e](https://github.com/igormatos02/Timeline/commit/62f760e7037beab89d3fedbbb228deb314502a2b))
+* remove redundant timeline header buttons ([26ee9f9](https://github.com/igormatos02/Timeline/commit/26ee9f92bcd327ce7ef3d17de246130dff90ebba))
+* timeboard settings modal jsx and print template persistence ([26dea6d](https://github.com/igormatos02/Timeline/commit/26dea6d84fd6dede22a94880f7aafd42b36196a8))
+
 ### [0.2.5](https://github.com/igormatos02/Timeline/compare/v0.2.4...v0.2.5) (2026-09-22)
 
 

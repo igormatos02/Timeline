@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileCheck } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { EventStatus, TimelineColor, getDefaultTimelineColor, isCancelledStatus, isPositiveStatus } from '../../enums/index.js';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -22,7 +22,8 @@ export default function IndividualTimelineHeader({
   selectedEntity = null,
   selectedEntityId,
   isIndividualView,
-  onToggleIndividualView
+  onToggleIndividualView,
+  onOpenClearance
 }) {
   const { t } = useTranslation();
   const [collapsed, setIsCollapsed] = useState(false);
@@ -55,7 +56,27 @@ export default function IndividualTimelineHeader({
         />
       }
       right={
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {onOpenClearance && (
+            <button
+              type="button"
+              id="individual-get-clearance"
+              className="btn btn-primary btn-sm"
+              onClick={onOpenClearance}
+              disabled={hasDebt}
+              title={hasDebt ? t('individualHeader.getClearanceDisabled') : t('individualHeader.getClearance')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                opacity: hasDebt ? 0.5 : 1,
+                cursor: hasDebt ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <FileCheck size={14} />
+              <span>{t('individualHeader.getClearance')}</span>
+            </button>
+          )}
           <EntityViewSwitch
             selectedEntityId={selectedEntityId}
             isIndividualView={isIndividualView}

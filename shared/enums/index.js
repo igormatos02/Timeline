@@ -24,3 +24,4 @@ export { TimelineColor, TIMELINE_COLOR_PRESETS, getDefaultTimelineColor } from '
 export { LoanAmortizationSystem } from './LoanAmortizationSystem.js';
 export { FollowupStatus, normalizeFollowupStatus } from './FollowupStatus.js';
 
+export { ClearanceDocumentType } from './ClearanceDocumentType.js';

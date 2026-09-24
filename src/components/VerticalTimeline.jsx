@@ -92,6 +92,7 @@ import { getPaletteTheme } from '../../shared/config/colorPalettes.js';
 import {
   EventType,
   EventStatus,
+  ClearanceDocumentType,
   EventStatusLabel,
   TimelineType,
   TimelineStatus,
@@ -140,7 +141,7 @@ const EXPENSE_CATEGORY_ITEMS = [
 
 import * as api from '../services/api.js';
 import ReceiptModal from './modals/ReceiptModal.jsx';
-import { buildReceiptHtml, computeReceiptNumber, computeNextReceiptNumber } from '../utils/receiptGenerator.js';
+import { buildReceiptHtml, buildClearanceHtml, buildCondoClearanceHtml, computeReceiptNumber, computeNextReceiptNumber } from '../utils/receiptGenerator.js';
 
 const groupEventsByDate = (events = []) => {
   const groups = [];
@@ -226,6 +227,7 @@ function VerticalTimeline({
   // Receipt Modal and Generation Overlay State
   const [receiptModalData, setReceiptModalData] = useState(null);
   const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
+  const [generatingLabelKey, setGeneratingLabelKey] = useState('receipt.generatingReceipt');
 
   const handleReceiptPrint = useCallback(async () => {
     if (!receiptModalData || !receiptModalData.receiptNumber || !receiptModalData.timelineId) return;
@@ -277,6 +279,7 @@ function VerticalTimeline({
   }, [receiptModalData, timeline, activeTimeboard]);
 
   const handleOpenReceipt = useCallback((targetEvent, targetPerson) => {
+    setGeneratingLabelKey('receipt.generatingReceipt');
     setIsGeneratingReceipt(true);
     setTimeout(() => {
       try {
@@ -972,6 +975,14 @@ function VerticalTimeline({
     return timelineEntities.find((ent) => String(ent.id) === String(selectedEntityId)) || null;
   }, [timelineEntities, selectedEntityId]);
 
+  // On timeline switch, keep the entity filter only if the entity exists in the new timeline.
+  React.useEffect(() => {
+    if (selectedEntityId && !selectedEntity) {
+      setSelectedEntityId(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeline?.id]);
+
   // Events of this timeline belonging to the selected entity, independent of
   // search/status/category/label filters (used by the individual header).
   // Capped at the end of the current month, like the entity list view.
@@ -986,6 +997,77 @@ function VerticalTimeline({
       return isEventMatchingEntity(ev, selectedEntityId);
     });
   }, [timelineEvents, selectedEntityId, computeFromMonth, currentMonthKey, isEventBelongingToCurrentTimeline, isEventMatchingEntity]);
+
+  // Clearance certificate: income-side timelines declare the entity owes nothing to the timeboard;
+  // expense timelines declare the timeboard owes nothing to the entity.
+  const handleOpenClearance = useCallback(() => {
+    if (!selectedEntity) return;
+    setGeneratingLabelKey('clearance.generating');
+    setIsGeneratingReceipt(true);
+    setTimeout(() => {
+      try {
+        const matchedPerson = (persons || []).find((p) => String(p.id) === String(selectedEntity.id));
+        const obligationPerson = matchedPerson || {
+          id: selectedEntity.id,
+          name: selectedEntity.name,
+          identification: selectedEntity.identification
+        };
+        const isExpenseTimeline = timeline?.type === TimelineType.EXPENSE;
+        const isCondoDeclaration = isExpenseTimeline || timeline?.type === TimelineType.INCOME || timeline?.type === TimelineType.INVESTMENT;
+        const documentType = isExpenseTimeline ? ClearanceDocumentType.SERVICE_PROVIDER : ClearanceDocumentType.OWNER;
+        let html;
+        let title = t('clearance.title');
+        if (isCondoDeclaration) {
+          const currentYear = format(todayDate, 'yyyy');
+          const settledStatus = isExpenseTimeline ? EventStatus.PAID : EventStatus.RECEIVED;
+          const charges = entityEvents
+            .filter((ev) => ev.date && ev.date.startsWith(currentYear) && !isCancelledStatus(ev.status) && ev.status !== EventStatus.DELETED)
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .map((ev) => {
+              let statusKey = EventStatus.PENDING;
+              if (isPositiveStatus(ev.status)) statusKey = ev.status;
+              else if (ev.isCompleted) statusKey = settledStatus;
+              else if (ev.date < todayStr) statusKey = EventStatus.OVERDUE;
+              return { date: ev.date, amount: ev.amount, statusLabel: t(`status.${statusKey}`) };
+            });
+          const serviceDescription = Array.from(new Set(
+            entityEvents.map((ev) => (ev.title || '').trim()).filter(Boolean)
+          )).join(', ');
+          html = buildCondoClearanceHtml({
+            timeboard: activeTimeboard,
+            currentUser,
+            obligationPerson,
+            persons,
+            charges,
+            documentType,
+            serviceDescription,
+            language,
+            t
+          });
+          title = isExpenseTimeline ? t('clearance.providerTitle') : t('clearance.condoTitle');
+        } else {
+          html = buildClearanceHtml({
+            timeboard: activeTimeboard,
+            currentUser,
+            obligationPerson,
+            persons,
+            timeboardIsCreditor: true,
+            language,
+            t
+          });
+        }
+        setReceiptModalData({
+          isOpen: true,
+          htmlContent: html,
+          title
+        });
+      } catch (err) {
+        console.error('Error generating clearance HTML:', err);
+      } finally {
+        setIsGeneratingReceipt(false);
+      }
+    }, 450);
+  }, [selectedEntity, entityEvents, todayStr, persons, activeTimeboard, currentUser, timeline?.type, language, t]);
 
 
   const getEntityIcon = (type) => {
@@ -3779,6 +3861,7 @@ function VerticalTimeline({
               selectedEntityId,
               selectedEntity,
               entityEvents,
+              onOpenClearance: timeline.type !== TimelineType.BALANCE ? handleOpenClearance : undefined,
               monthExpensesTotalMap,
               monthLoansTotalMap,
               monthIncomeTotalMap,
@@ -3874,7 +3957,7 @@ function VerticalTimeline({
           >
             <Loader2 size={36} className="spin" style={{ color: 'var(--primary-light)' }} />
             <div style={{ color: TimelineColor.WHITE, fontSize: '1rem', fontWeight: '700' }}>
-              {t('receipt.generatingReceipt')}
+              {t(generatingLabelKey)}
             </div>
           </div>
         )}

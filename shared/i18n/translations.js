@@ -1030,7 +1030,9 @@ export const translations = {
     individualHeader: {
       debtBalance: "Outstanding Balance",
       debtBalanceHint: "{{count}} overdue or pending obligations",
-      noPendingObligations: "No pending obligations for {{name}}"
+      noPendingObligations: "No pending obligations for {{name}}",
+      getClearance: "Get clearance certificate",
+      getClearanceDisabled: "Only available when there are no pending obligations"
     },
 
     // Expense Timeline Header
@@ -1721,6 +1723,39 @@ export const translations = {
       download: "Download PDF",
       close: "Close",
       receiptNumber: "Rec. {number}"
+    },
+
+    // Clearance certificate (Comprovativo de Quitação)
+    clearance: {
+      title: "Clearance Certificate",
+      badge: "CLEARANCE",
+      generating: "Generating certificate...",
+      debtor: "Debtor:",
+      creditor: "Creditor:",
+      issueDate: "Date of Issue:",
+      outstandingBalance: "Outstanding Balance:",
+      statementObligatorOwesNothing: "It is hereby declared that {{obligator}} has no outstanding amounts owed to {{timeboard}}, all obligations being settled as of {{date}}.",
+      statementTimeboardOwesNothing: "It is hereby declared that {{timeboard}} has no outstanding amounts owed to {{obligator}}, all obligations being settled as of {{date}}.",
+      condoTitle: "Clearance Declaration and Condominium Charges",
+      condoLabel: "Condominium:",
+      condoIntro: "For all due purposes, it is hereby declared that the owner of the unit identified below:",
+      owner: "Owner:",
+      taxId: "Tax identification:",
+      unit: "Unit:",
+      condoStatement: "is, as of the date of this declaration, up to date with the condominium charges until {{date}}.",
+      chargesTitle: "Current charges — current year",
+      colMonth: "Month/Year",
+      colValue: "Amount",
+      colStatus: "Status",
+      noCharges: "No charges recorded for the current year.",
+      issuedOnRequest: "This declaration is issued at the request of the interested party, for whatever purposes they deem appropriate.",
+      stamp: "Condominium stamp",
+      providerTitle: "Services Clearance Declaration",
+      providerIntro: "For all due purposes, it is hereby declared that the condominium identified above has made payments to the following entity:",
+      provider: "Service provider:",
+      service: "Service:",
+      providerStatement: "It is hereby declared that the payments for the services rendered by the provider identified above are settled until {{date}}.",
+      paymentsTitle: "Payments made — current year"
     }
   },
 
@@ -2709,7 +2744,9 @@ export const translations = {
     individualHeader: {
       debtBalance: "Saldo Devedor",
       debtBalanceHint: "{{count}} obrigações em atraso ou pendentes",
-      noPendingObligations: "Nenhuma obrigação pendente para {{name}}"
+      noPendingObligations: "Nenhuma obrigação pendente para {{name}}",
+      getClearance: "Obter comprovativo de quitação",
+      getClearanceDisabled: "Disponível apenas quando não existem obrigações pendentes"
     },
 
     // Expense Timeline Header
@@ -3442,6 +3479,39 @@ export const translations = {
       download: "Descarregar PDF",
       close: "Fechar",
       receiptNumber: "Rec. {number}"
+    },
+
+    // Comprovativo de Quitação
+    clearance: {
+      title: "Comprovativo de Quitação",
+      badge: "QUITAÇÃO",
+      generating: "A gerar comprovativo...",
+      debtor: "Devedor:",
+      creditor: "Credor:",
+      issueDate: "Data de Emissão:",
+      outstandingBalance: "Saldo em Dívida:",
+      statementObligatorOwesNothing: "Declara-se, para os devidos efeitos, que {{obligator}} não tem qualquer valor em dívida para com {{timeboard}}, encontrando-se todas as obrigações liquidadas à data de {{date}}.",
+      statementTimeboardOwesNothing: "Declara-se, para os devidos efeitos, que {{timeboard}} não tem qualquer valor em dívida para com {{obligator}}, encontrando-se todas as obrigações liquidadas à data de {{date}}.",
+      condoTitle: "Declaração de Quitação e Encargos de Condomínio",
+      condoLabel: "Condomínio:",
+      condoIntro: "Para os devidos efeitos, declara-se que o(a) proprietário(a) da fração abaixo identificada:",
+      owner: "Proprietário:",
+      taxId: "Identificação fiscal:",
+      unit: "Fração:",
+      condoStatement: "se encontra, à data da presente declaração, com a situação relativa aos encargos de condomínio regularizada até {{date}}.",
+      chargesTitle: "Encargos correntes — ano corrente",
+      colMonth: "Mês/Ano",
+      colValue: "Valor",
+      colStatus: "Estado",
+      noCharges: "Sem encargos registados no ano corrente.",
+      issuedOnRequest: "A presente declaração é emitida a pedido do interessado, para os fins que entender convenientes.",
+      stamp: "Carimbo do condomínio",
+      providerTitle: "Declaração de Quitação de Serviços",
+      providerIntro: "Para os devidos efeitos, declara-se que o Condomínio acima identificado efetuou pagamentos à seguinte entidade:",
+      provider: "Prestador de serviços:",
+      service: "Serviço:",
+      providerStatement: "Declara-se que os pagamentos relativos aos serviços prestados pelo prestador acima identificado se encontram regularizados até {{date}}.",
+      paymentsTitle: "Pagamentos efetuados — ano corrente"
     }
   }
 };

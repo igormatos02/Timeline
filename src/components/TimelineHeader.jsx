@@ -1,5 +1,5 @@
 import React from 'react';
-import { TimelineType, isLoanTimelineType } from '../enums/index.js';
+import { TimelineType, TimeboardType, isLoanTimelineType } from '../enums/index.js';
 import {
   BalanceTimelineHeader,
   IncomeTimelineHeader,
@@ -19,14 +19,20 @@ import IndividualTimelineHeader from './timeline-headers/IndividualTimelineHeade
  * Dispatcher do cabeçalho da timeline.
  * Renderiza o cabeçalho dedicado para cada tipo de timeline do enum TimelineType.
  */
-function TimelineHeader(props) {
-  const { timeline, selectedEntityId, isIndividualView, onToggleIndividualView } = props;
+function TimelineHeader(rawProps) {
+  const { timeline, timeboard, selectedEntityId, isIndividualView } = rawProps;
 
   if (!timeline) return null;
 
+  // The individual view is only available on condoflow timeboards.
+  const isCondoflow = timeboard?.type === TimeboardType.CONDOFLOW;
+  const props = isCondoflow
+    ? rawProps
+    : { ...rawProps, isIndividualView: false, onToggleIndividualView: undefined };
+
   // When an obligator is selected and the user switches to individual view,
   // replace the regular header with the IndividualTimelineHeader.
-  if (selectedEntityId && isIndividualView) {
+  if (isCondoflow && selectedEntityId && isIndividualView) {
     return <IndividualTimelineHeader {...props} />;
   }
 

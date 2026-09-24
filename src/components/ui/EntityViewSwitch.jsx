@@ -9,12 +9,13 @@ import { useTranslation } from '../../i18n/LanguageContext.jsx';
  * Props:
  *   selectedEntityId  - the currently active obligator filter id (null = not shown)
  *   isIndividualView  - boolean, controlled from app level
- *   onToggle          - (bool) => void, called when the user switches modes
+ *   onToggle          - (bool) => void, called when the user switches modes (null = not shown)
  */
 export default function EntityViewSwitch({ selectedEntityId, isIndividualView, onToggle }) {
   const { t } = useTranslation();
 
-  if (!selectedEntityId) return null;
+  // Hidden when no obligator is selected or the timeboard does not support the individual view.
+  if (!selectedEntityId || !onToggle) return null;
 
   return (
     <div

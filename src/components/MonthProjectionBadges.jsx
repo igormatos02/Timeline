@@ -53,6 +53,7 @@ export default function MonthProjectionBadges({
   showLoan = true,
   showBalance = true,
   formatCurrency = defaultFormatCurrency,
+  showProgress = false,
   t: propT
 }) {
   const { t: contextT } = useTranslation();
@@ -144,6 +145,13 @@ export default function MonthProjectionBadges({
     ? Number(actualSaldo)
     : (numIncome - (numExpense + numInvestmentInternal + numLoan));
 
+  // Month progress: how much of the planned movements (all flows, absolute) has already been realized
+  const sumFlows = (inc, exp, inv, ln) => [inc, exp, inv, ln].reduce((acc, v) => acc + Math.abs(Number(v || 0)), 0);
+  const plannedFlows = sumFlows(monthProjectedIncome, monthProjectedExpense, monthProjectedInvestment, monthProjectedLoan);
+  const realizedFlows = sumFlows(monthRealizedIncome, monthRealizedExpense, monthRealizedInvestment, monthRealizedLoan);
+  const progressPercent = plannedFlows > 0 ? Math.min(100, Math.round((realizedFlows / plannedFlows) * 100)) : 0;
+  const shouldShowProgress = showProgress && plannedFlows > 0 && !isNotComputedMonth;
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: '100%', opacity: isNotComputedMonth ? 0.82 : 1 }}>
       {/* 🏷️ Dropdown Seletor: Month Projection vs Real Projection */}
@@ -176,7 +184,7 @@ export default function MonthProjectionBadges({
             outline: 'none',
             height: '24px',
             lineHeight: '20px',
-            boxShadow: '0 2px 8px rgba(99, 102, 241, 0.35)',
+            boxShadow: 'var(--shadow-glow)',
             transition: 'all 0.15s ease'
           }}
           title={t('timeline.selectProjectionMode')}
@@ -326,7 +334,7 @@ export default function MonthProjectionBadges({
             marginLeft: 'auto',
             padding: '2px 8px',
             borderRadius: '6px',
-            background: calculatedSaldo >= 0 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
+            background: `${calculatedSaldo >= 0 ? TimelineColor.INCOME : TimelineColor.EXPENSE}1f`,
             border: 'none',
             color: calculatedSaldo >= 0 ? TimelineColor.INCOME : TimelineColor.EXPENSE,
             fontWeight: '800',
@@ -337,6 +345,35 @@ export default function MonthProjectionBadges({
           <Scale size={12} />
           <span>{t('timeline.balance')}: {calculatedSaldo >= 0 ? '+' : ''}{formatCurrency(calculatedSaldo)}</span>
         </span>
+      )}
+
+      {/* 6. Barra de progresso fina: realizado vs planeado no mês */}
+      {shouldShowProgress && (
+        <div
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progressPercent}
+          aria-label={t('timeline.monthProgressTitle', { percent: progressPercent })}
+          title={t('timeline.monthProgressTitle', { percent: progressPercent })}
+          style={{
+            flexBasis: '100%',
+            height: '3px',
+            borderRadius: '999px',
+            background: 'var(--border-glass)',
+            overflow: 'hidden'
+          }}
+        >
+          <div
+            style={{
+              width: `${progressPercent}%`,
+              height: '100%',
+              borderRadius: '999px',
+              background: progressPercent >= 100 ? TimelineColor.SUCCESS : 'var(--primary)',
+              transition: 'width 0.3s ease'
+            }}
+          />
+        </div>
       )}
     </div>
   );

@@ -2560,6 +2560,7 @@ function VerticalTimeline({
                         isFutureMonth={isFutureMonth}
                         isNotComputedMonth={isNotComputedMonth}
                         formatCurrency={formatCurrency}
+                        showProgress={!isReadOnly}
                         t={t}
                       />
                     )}

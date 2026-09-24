@@ -18,6 +18,7 @@ import {
   EventPriority,
   EventPeriodicity,
   EventRecurrence,
+  DiaryPublishStatus,
   EventDeletionMode,
   EventUpdateMode,
   AmortizationStrategy,
@@ -378,8 +379,10 @@ export class FinancialEventService {
       return true;
     });
 
-    // Lazy load: for REGISTER events or DIARY timelines, omit description from list payload to save memory
+    // Lazy load: for REGISTER events or DIARY timelines, omit description from list payload to save memory.
+    // Published condominium posts keep it: individual users read them directly in the timeline.
     return filteredEvents.map((ev) => {
+      if (ev.publishStatus === DiaryPublishStatus.PUBLISHED) return ev;
       if (ev.eventType === EventType.REGISTER || ev.timelineType === TimelineType.DIARY) {
         const { description, ...rest } = ev;
         return { ...rest, hasDescription: Boolean(description) };
@@ -404,6 +407,7 @@ export class FinancialEventService {
       labels: diary.labels || [],
       category: diary.mood,
       mood: diary.mood,
+      publishStatus: diary.publishStatus,
       date: diary.date,
       status: EventStatus.COMPLETED,
       isCompleted: true,

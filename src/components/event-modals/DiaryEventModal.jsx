@@ -21,9 +21,13 @@ import {
   EventType,
   EventRecurrence,
   EventStatus,
-  DiaryMood
+  DiaryMood,
+  DiaryPublishStatus,
+  TimelineColor
 } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
+import { useTimeboard } from '../../context/TimeboardContext.jsx';
+import { makeDiaryT } from '../../utils/diaryLabels.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import ModalShell from '../ui/ModalShell.jsx';
 import DayPickerPopover from '../ui/DayPickerPopover.jsx';
@@ -199,6 +203,8 @@ export default function DiaryEventModal({
 }) {
   const { t, dateLocale } = useTranslation();
   const { showToast } = useToast();
+  const { isCondoflow } = useTimeboard();
+  const dt = makeDiaryT(t, isCondoflow);
   const editorRef = useRef(null);
 
   const todayDateObj = useMemo(() => new Date(), []);
@@ -221,6 +227,8 @@ export default function DiaryEventModal({
   });
   const [isDayPickerOpen, setIsDayPickerOpen] = useState(false);
   const [selectedMood, setSelectedMood] = useState(DiaryMood.GOOD);
+  // Condominium posts: publication state (only published posts are visible to individual users)
+  const [publishStatus, setPublishStatus] = useState(initialData?.publishStatus || DiaryPublishStatus.UNPUBLISHED);
   const [description, setDescription] = useState('');
   const [charCount, setCharCount] = useState(0);
   const [isLoadingDescription, setIsLoadingDescription] = useState(false);
@@ -292,6 +300,7 @@ export default function DiaryEventModal({
     setBaseMonthPrefix(monthPrefix);
     setDayOfMonth(parsedDay);
     setIsDayPickerOpen(false);
+    setPublishStatus(initialData?.publishStatus || DiaryPublishStatus.UNPUBLISHED);
     setSelectedMood(
       Object.values(DiaryMood).includes(initialMood) ? initialMood : DiaryMood.GOOD
     );
@@ -421,13 +430,13 @@ export default function DiaryEventModal({
     if (e) e.preventDefault();
 
     if (!title.trim()) {
-      showToast(t('diaryModal.titleRequired') || 'Por favor, insira o título do registro.', 'warning');
+      showToast(dt('diaryModal.titleRequired'), 'warning');
       return;
     }
 
     if (isDuplicateDay) {
       showToast(
-        t('diaryModal.duplicateDayError') || 'Já existe um registro para este dia no Diário. Só é permitido 1 registro por dia.',
+        dt('diaryModal.duplicateDayError'),
         'warning'
       );
       return;
@@ -445,6 +454,7 @@ export default function DiaryEventModal({
         name: title.trim(),
         date: computedDate,
         category: selectedMood,
+        ...(isCondoflow ? { publishStatus } : {}),
         description: finalMd.slice(0, MAX_DESCRIPTION_LENGTH),
         eventType: EventType.REGISTER,
         timelineType: TimelineType.DIARY,
@@ -481,10 +491,10 @@ export default function DiaryEventModal({
       maxWidth="580px"
       title={
         initialData
-          ? t('diaryModal.editTitle') || 'Editar Registro no Diário'
-          : t('diaryModal.newTitle') || 'Novo Registro no Diário'
+          ? dt('diaryModal.editTitle')
+          : dt('diaryModal.newTitle')
       }
-      subtitle={t('diaryHeader.badge') || 'Diário Pessoal'}
+      subtitle={dt('diaryHeader.badge')}
       footer={
         <>
           <button
@@ -498,7 +508,7 @@ export default function DiaryEventModal({
               fontWeight: '600'
             }}
           >
-            {t('diaryModal.cancel') || 'Cancelar'}
+            {dt('diaryModal.cancel')}
           </button>
           <button
             type="submit"
@@ -518,7 +528,7 @@ export default function DiaryEventModal({
                 <span>{t('buttons.saving') || 'A guardar...'}</span>
               </span>
             ) : (
-              t('diaryModal.save') || 'Salvar Registro'
+              dt('diaryModal.save')
             )}
           </button>
         </>
@@ -537,7 +547,7 @@ export default function DiaryEventModal({
               justifyContent: 'space-between'
             }}
           >
-            <span>{t('diaryModal.nameLabel') || 'Título / Resumo do Dia *'}</span>
+            <span>{dt('diaryModal.nameLabel')}</span>
           </label>
           <input
             type="text"
@@ -545,7 +555,7 @@ export default function DiaryEventModal({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={
-              t('diaryModal.namePlaceholder') || 'Como foi o seu dia?...'
+              dt('diaryModal.namePlaceholder')
             }
             required
             autoFocus
@@ -570,7 +580,7 @@ export default function DiaryEventModal({
               setDayOfMonth(day);
               if (takenDaysSet.has(Number(day))) {
                 showToast(
-                  t('diaryModal.duplicateDayError') || 'Já existe um registro para este dia no Diário. Só é permitido 1 registro por dia.',
+                  dt('diaryModal.duplicateDayError'),
                   'warning'
                 );
               }
@@ -601,79 +611,129 @@ export default function DiaryEventModal({
             >
               <AlertCircle size={15} style={{ flexShrink: 0 }} />
               <span>
-                {t('diaryModal.duplicateDayError') ||
-                  'Já existe um registro para este dia no Diário. Só é permitido 1 registro por dia.'}
+                {dt('diaryModal.duplicateDayError')}
               </span>
             </div>
           )}
         </div>
 
-        {/* Mood Selector (Ultra-compact Segmented Control) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <label
+        {/* Mood Selector (Ultra-compact Segmented Control) — not used on condominium timeboards */}
+        {!isCondoflow && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label
+                style={{
+                  fontSize: '0.78rem',
+                  fontWeight: '600',
+                  color: 'var(--text-main)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>{t('diaryMood.moodLabel') || 'Mood'}</span>
+              </label>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: '500' }}>
+                {t(activeMoodMeta.labelKey) || activeMoodMeta.fallbackLabel}
+              </span>
+            </div>
+
+            <div
               style={{
-                fontSize: '0.78rem',
-                fontWeight: '600',
-                color: 'var(--text-main)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '4px',
+                padding: '3px',
+                borderRadius: '8px',
+                background: 'var(--bg-glass)',
+                border: '1px solid var(--border-glass)'
               }}
             >
-              <span>{t('diaryMood.moodLabel') || 'Mood'}</span>
+              {Object.values(DiaryMood).map((moodKey) => {
+                const cfg = DIARY_MOOD_CONFIG[moodKey];
+                const isSelected = selectedMood === moodKey;
+
+                return (
+                  <button
+                    key={moodKey}
+                    type="button"
+                    onClick={() => setSelectedMood(moodKey)}
+                    style={{
+                      flex: 1,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '6px 8px',
+                      borderRadius: '6px',
+                      border: isSelected ? '1px solid var(--border-glass)' : '1px solid transparent',
+                      background: isSelected ? 'var(--bg-card-hover)' : 'transparent',
+                      color: isSelected ? 'var(--text-main)' : 'var(--text-muted)',
+                      fontSize: '0.78rem',
+                      fontWeight: isSelected ? '600' : '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span style={{ fontSize: '0.95rem', lineHeight: 1 }}>{cfg.emoji}</span>
+                    <span style={{ whiteSpace: 'nowrap' }}>
+                      {t(cfg.labelKey) || cfg.fallbackLabel}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Publication state (condominium posts only) */}
+        {isCondoflow && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '0.78rem', fontWeight: '600', color: 'var(--text-main)' }}>
+              {t('diaryPublish.label')}
             </label>
-            <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: '500' }}>
-              {t(activeMoodMeta.labelKey) || activeMoodMeta.fallbackLabel}
-            </span>
+            <div
+              role="group"
+              aria-label={t('diaryPublish.label')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px',
+                borderRadius: '8px',
+                background: 'var(--bg-glass)',
+                border: '1px solid var(--border-glass)'
+              }}
+            >
+              {[DiaryPublishStatus.UNPUBLISHED, DiaryPublishStatus.PUBLISHED].map((statusKey) => {
+                const isSelected = publishStatus === statusKey;
+                return (
+                  <button
+                    key={statusKey}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => setPublishStatus(statusKey)}
+                    style={{
+                      flex: 1,
+                      padding: '6px 8px',
+                      borderRadius: '6px',
+                      border: isSelected ? '1px solid var(--border-glass)' : '1px solid transparent',
+                      background: isSelected ? 'var(--bg-card-hover)' : 'transparent',
+                      color: isSelected
+                        ? (statusKey === DiaryPublishStatus.PUBLISHED ? TimelineColor.SUCCESS : 'var(--text-main)')
+                        : 'var(--text-muted)',
+                      fontSize: '0.78rem',
+                      fontWeight: isSelected ? '600' : '500',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {t(`diaryPublish.${statusKey}`)}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '3px',
-              borderRadius: '8px',
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid var(--border-glass)'
-            }}
-          >
-            {Object.values(DiaryMood).map((moodKey) => {
-              const cfg = DIARY_MOOD_CONFIG[moodKey];
-              const isSelected = selectedMood === moodKey;
-
-              return (
-                <button
-                  key={moodKey}
-                  type="button"
-                  onClick={() => setSelectedMood(moodKey)}
-                  style={{
-                    flex: 1,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    padding: '6px 8px',
-                    borderRadius: '6px',
-                    border: isSelected ? '1px solid var(--border-glass)' : '1px solid transparent',
-                    background: isSelected ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-                    color: isSelected ? 'var(--text-main)' : 'var(--text-muted)',
-                    fontSize: '0.78rem',
-                    fontWeight: isSelected ? '600' : '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <span style={{ fontSize: '0.95rem', lineHeight: 1 }}>{cfg.emoji}</span>
-                  <span style={{ whiteSpace: 'nowrap' }}>
-                    {t(cfg.labelKey) || cfg.fallbackLabel}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        )}
 
         {/* Description Field with WYSIWYG Rich Text Editor & 900 Char Limit */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -693,7 +753,7 @@ export default function DiaryEventModal({
                 color: 'var(--text-main)'
               }}
             >
-              {t('diaryModal.descriptionLabel') || 'Relato do Diário'}
+              {dt('diaryModal.descriptionLabel')}
             </label>
 
             {/* Rich Text Toolbar */}
@@ -711,7 +771,7 @@ export default function DiaryEventModal({
               <button
                 type="button"
                 onClick={() => applyFormatting('bold')}
-                title={t('diaryModal.bold') || 'Negrito'}
+                title={dt('diaryModal.bold')}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -728,7 +788,7 @@ export default function DiaryEventModal({
               <button
                 type="button"
                 onClick={() => applyFormatting('italic')}
-                title={t('diaryModal.italic') || 'Itálico'}
+                title={dt('diaryModal.italic')}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -745,7 +805,7 @@ export default function DiaryEventModal({
               <button
                 type="button"
                 onClick={() => applyFormatting('strikethrough')}
-                title={t('diaryModal.strikethrough') || 'Riscado'}
+                title={dt('diaryModal.strikethrough')}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -762,7 +822,7 @@ export default function DiaryEventModal({
               <button
                 type="button"
                 onClick={() => applyFormatting('normal')}
-                title={t('diaryModal.normal') || 'Limpar formatação'}
+                title={dt('diaryModal.normal')}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -796,7 +856,7 @@ export default function DiaryEventModal({
                 }}
               >
                 <Loader2 size={16} className="animate-spin" />
-                <span>{t('diaryModal.loadingDescription') || 'Carregando relato...'}</span>
+                <span>{dt('diaryModal.loadingDescription')}</span>
               </div>
             ) : (
               <div style={{ position: 'relative' }}>
@@ -834,8 +894,7 @@ export default function DiaryEventModal({
                       userSelect: 'none'
                     }}
                   >
-                    {t('diaryModal.descriptionPlaceholder') ||
-                      'Escreva sobre o seu dia, reflexões ou momentos...'}
+                    {dt('diaryModal.descriptionPlaceholder')}
                   </div>
                 )}
               </div>

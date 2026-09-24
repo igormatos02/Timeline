@@ -55,6 +55,7 @@ export const translations = {
 
     // Common
     common: {
+      updateFailed: "Could not save the change: {{message}}",
       save: "Save",
       cancel: "Cancel",
       delete: "Delete",
@@ -147,6 +148,8 @@ export const translations = {
       noLoanMonth: "No installment or amortization this month",
       noTabRecords: "No records in this tab for this month",
       noTimeboards: "No Timeboards",
+      reminders: "Reminders",
+      posts: "Posts",
       noTimelines: "No timelines created in this timeboard yet.",
       createTimeline: "Create Timeline",
       projectMoreFuture: "Load +12 Future Months",
@@ -1417,6 +1420,9 @@ export const translations = {
       annualEntriesTitle: "ANNUAL ENTRIES",
       annualEntriesDesc: "Recorded in the last 12 months:",
       annualCount: "{count} entries",
+      annualCountOne: "{count} entry",
+      thisMonth: "This month:",
+      daysRecorded: "days recorded",
       chartTitle: "DIARY ENTRIES EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)",
       monthVsPrevMonth: "This month vs previous month:",
       annualProjectionLabel: "Total recorded entries:"
@@ -1742,6 +1748,52 @@ export const translations = {
       receiptNumber: "Rec. {number}"
     },
 
+    // Publication state of condominium posts
+    diaryPublish: {
+      label: "Publication",
+      published: "Published",
+      unpublished: "Not published",
+      cancelled: "Cancelled",
+      clickToToggle: "Click to publish / unpublish"
+    },
+
+    // Condominium (condoflow) timeboards call diary entries "posts"
+    condoPost: {
+      sidebar: {
+        diaryTimeline: "Posts"
+      },
+      diaryHeader: {
+        badge: "Condominium Posts",
+        addEntry: "New Post",
+        resetTitle: "Clear all posts",
+        noEntries: "No posts yet",
+        noEntriesHint: "Add posts to share condominium news and notices.",
+        annualEntriesTitle: "POSTS IN THE YEAR",
+        annualEntriesDesc: "Published in the last 12 months:",
+        annualCount: "{{count}} posts",
+        annualCountOne: "{{count}} post",
+        chartTitle: "POSTS EVOLUTION (LAST 6 MONTHS + CURRENT MONTH)",
+        annualProjectionLabel: "Total posts:",
+        daysRecorded: "days with posts"
+      },
+      diaryModal: {
+        newTitle: "New Post",
+        editTitle: "Edit Post",
+        titleLabel: "Post title *",
+        nameLabel: "Post title *",
+        titlePlaceholder: "What is this post about?...",
+        namePlaceholder: "What is this post about?...",
+        descriptionLabel: "Post content",
+        descriptionPlaceholder: "Write the post for the condominium...",
+        duplicateDayError: "A post already exists for this day.",
+        titleRequired: "Please enter the post title.",
+        dateRequired: "Please choose the post day.",
+        notFound: "Post not found.",
+        loadingDescription: "Loading post...",
+        save: "Publish Post"
+      }
+    },
+
     // Printable movement history (individual view)
     history: {
       title: "Movement History",
@@ -1850,6 +1902,7 @@ export const translations = {
 
     // Common
     common: {
+      updateFailed: "Não foi possível gravar a alteração: {{message}}",
       save: "Guardar",
       cancel: "Cancelar",
       delete: "Excluir",
@@ -1942,6 +1995,8 @@ export const translations = {
       noLoanMonth: "Nenhuma parcela ou amortização neste mês",
       noTabRecords: "Sem registos nesta aba para este mês",
       noTimeboards: "Sem Timeboards",
+      reminders: "Lembretes",
+      posts: "Posts",
       noTimelines: "Nenhuma timeline criada neste timeboard ainda.",
       createTimeline: "Criar Timeline",
       projectMoreFuture: "Carregar +12 Meses Futuros",
@@ -3210,6 +3265,9 @@ export const translations = {
       annualEntriesTitle: "REGISTROS NO ANO",
       annualEntriesDesc: "Registrados nos últimos 12 meses:",
       annualCount: "{count} registros",
+      annualCountOne: "{count} registro",
+      thisMonth: "Este mês:",
+      daysRecorded: "dias registrados",
       chartTitle: "EVOLUÇÃO DOS REGISTROS (ÚLTIMOS 6 MESES + MÊS ATUAL)",
       monthVsPrevMonth: "Este mês vs mês anterior:",
       annualProjectionLabel: "Total de registros:"
@@ -3533,6 +3591,52 @@ export const translations = {
       download: "Descarregar PDF",
       close: "Fechar",
       receiptNumber: "Rec. {number}"
+    },
+
+    // Estado de publicação dos posts do condomínio
+    diaryPublish: {
+      label: "Publicação",
+      published: "Publicado",
+      unpublished: "Não publicado",
+      cancelled: "Cancelado",
+      clickToToggle: "Clique para publicar / despublicar"
+    },
+
+    // Timeboards de condomínio (condoflow) chamam aos registos do diário "posts"
+    condoPost: {
+      sidebar: {
+        diaryTimeline: "Posts"
+      },
+      diaryHeader: {
+        badge: "Posts do Condomínio",
+        addEntry: "Novo Post",
+        resetTitle: "Limpar todos os posts",
+        noEntries: "Sem posts",
+        noEntriesHint: "Adicione posts para partilhar avisos e novidades do condomínio.",
+        annualEntriesTitle: "POSTS NO ANO",
+        annualEntriesDesc: "Publicados nos últimos 12 meses:",
+        annualCount: "{{count}} posts",
+        annualCountOne: "{{count}} post",
+        chartTitle: "EVOLUÇÃO DOS POSTS (ÚLTIMOS 6 MESES + MÊS ATUAL)",
+        annualProjectionLabel: "Total de posts:",
+        daysRecorded: "dias com posts"
+      },
+      diaryModal: {
+        newTitle: "Novo Post",
+        editTitle: "Editar Post",
+        titleLabel: "Título do post *",
+        nameLabel: "Título do post *",
+        titlePlaceholder: "Sobre o que é este post?...",
+        namePlaceholder: "Sobre o que é este post?...",
+        descriptionLabel: "Conteúdo do post",
+        descriptionPlaceholder: "Escreva o post para o condomínio...",
+        duplicateDayError: "Já existe um post para este dia.",
+        titleRequired: "Por favor, insira o título do post.",
+        dateRequired: "Por favor, escolha o dia do post.",
+        notFound: "Post não encontrado.",
+        loadingDescription: "A carregar post...",
+        save: "Publicar Post"
+      }
     },
 
     // Histórico de movimentações imprimível (visão individual)

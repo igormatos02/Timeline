@@ -24,6 +24,7 @@ export class SupabaseDiaryRepository extends IDiaryRepository {
       notes: row.notes || '',
       date: row.date || null,
       mood: row.mood || null,
+      publishStatus: row.publish_status || null,
       tenantId: row.tenant_id || null,
       createdAt: row.created_at,
       updatedAt: row.updated_at
@@ -43,6 +44,7 @@ export class SupabaseDiaryRepository extends IDiaryRepository {
     if (data.notes !== undefined) row.notes = data.notes;
     if (data.date !== undefined) row.date = data.date ? String(data.date).substring(0, 10) : null;
     if (data.mood !== undefined) row.mood = data.mood;
+    if (data.publishStatus !== undefined) row.publish_status = data.publishStatus;
     if (data.tenantId !== undefined) row.tenant_id = data.tenantId;
     if (data.tenant_id !== undefined) row.tenant_id = data.tenant_id;
     row.updated_at = new Date().toISOString();

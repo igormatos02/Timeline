@@ -13,10 +13,12 @@ import {
 } from 'lucide-react';
 import {
   TimelineType,
+  TimeboardType,
   getDefaultTimelineColor,
   isSingleInstanceTimelineType,
   normalizeTimelineType
 } from '../enums/index.js';
+import { makeDiaryT } from './diaryLabels.js';
 
 /**
  * Returns the translation key for a given TimelineType enum.
@@ -126,7 +128,7 @@ export function getTimelineDropdownOptions(existingTimelines = [], t, timeboardT
       if (isSingleInstanceTimelineType(type) && currentTypes.has(type)) {
         return false;
       }
-      if (timeboardType === 'condoflow' && condoflowDisallowed.has(type)) {
+      if (timeboardType === TimeboardType.CONDOFLOW && condoflowDisallowed.has(type)) {
         return false;
       }
       return true;
@@ -134,7 +136,7 @@ export function getTimelineDropdownOptions(existingTimelines = [], t, timeboardT
     .map((type) => ({
       key: type,
       type,
-      label: t(getTimelineTypeLabelKey(type)),
+      label: makeDiaryT(t, timeboardType === TimeboardType.CONDOFLOW)(getTimelineTypeLabelKey(type)),
       icon: getTimelineTypeIcon(type, 14),
       color: getDefaultTimelineColor(type)
     }));

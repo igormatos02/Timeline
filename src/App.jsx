@@ -3,6 +3,7 @@ import { format, parseISO, addMonths, subMonths, startOfMonth, endOfMonth, diffe
 import Navbar from './components/Navbar';
 import TimelineHeader from './components/TimelineHeader';
 import { PermissionsProvider } from './context/PermissionsContext.jsx';
+import { TimeboardProvider } from './context/TimeboardContext.jsx';
 import { computeBalanceTotals, computePocketsInitialTotal } from './utils/balanceMetrics.js';
 import VerticalTimeline from './components/VerticalTimeline';
 
@@ -31,7 +32,7 @@ import {
 import { formatCurrency } from './utils/formatCurrency';
 import { generateUUID } from './utils/uuid.js';
 import * as api from './services/api';
-import { EventType, EventStatus, FollowupStatus, TimelineType, TimelineStatus, TimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isCancelledStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem, PersonRole } from './enums/index.js';
+import { EventType, EventStatus, FollowupStatus, TimelineType, TimelineStatus, TimelineColor, getDefaultTimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isCancelledStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem, PersonRole, TimeboardType, DiaryPublishStatus } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
@@ -566,8 +567,48 @@ export default function App() {
         ''
       ).trim().toLowerCase();
 
+      // Shared notices: open reminders and all diary entries of the timeboard are visible to
+      // individual users in whatever timeline they are viewing.
+      const timelineTypeById = new Map((activeTimeboardTimelines || []).map((tl) => [String(tl.id), normalizeTimelineType(tl.type)]));
+      const timelineColorById = new Map((activeTimeboardTimelines || []).map((tl) => [String(tl.id), tl.color || getDefaultTimelineColor(normalizeTimelineType(tl.type))]));
+      const getNoticeType = (ev) => {
+        const tlType = timelineTypeById.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || ''));
+        if (ev.eventType === EventType.REGISTER || tlType === TimelineType.DIARY) return TimelineType.DIARY;
+        if (ev.eventType === EventType.REMINDER || tlType === TimelineType.REMINDER) return TimelineType.REMINDER;
+        return null;
+      };
+      const isOpenReminder = (ev) => (
+        !ev.isDeleted &&
+        ev.status !== EventStatus.DELETED &&
+        !isCancelledStatus(ev.status) &&
+        !isPositiveStatus(ev.status) &&
+        !ev.isCompleted
+      );
+      const notices = [];
+
       events = events.filter((ev) => {
         if (!ev) return false;
+
+        const noticeType = getNoticeType(ev);
+        if (noticeType) {
+          const isVisiblePost = noticeType === TimelineType.DIARY &&
+            (activeTimeboard?.type !== TimeboardType.CONDOFLOW || ev.publishStatus === DiaryPublishStatus.PUBLISHED);
+          if (isVisiblePost || (noticeType === TimelineType.REMINDER && isOpenReminder(ev))) {
+            const noticeTimelineId = ev.timelineId || ev.timelineOriginId || ev.timeline_id;
+            // Keep the color configured on the notice's own timeline (reminders / diary)
+            const noticeColor = timelineColorById.get(String(noticeTimelineId)) || getDefaultTimelineColor(noticeType);
+            notices.push({
+              ...ev,
+              isSharedNotice: true,
+              timelineType: noticeType,
+              noticeTimelineId,
+              timelineOriginColor: noticeColor,
+              timelineColor: noticeColor
+            });
+          }
+          return false;
+        }
+
         if (!ev.isObligation && !ev.is_obligation) return false;
 
         const evPersonId = ev.obligationPersonId || ev.obligation_person_id;
@@ -589,16 +630,18 @@ export default function App() {
 
         return false;
       });
+
+      events = [...events, ...notices];
     }
 
     return events;
-  }, [rawEvents, virtualWithdrawalEvents, activeTimeboard, currentUserPerson, isIndividualRole]);
+  }, [rawEvents, virtualWithdrawalEvents, activeTimeboard, activeTimeboardTimelines, currentUserPerson, isIndividualRole]);
 
   // Individual-role users only see the timelines they take part in (those holding their obligations)
   const visibleTimelines = React.useMemo(() => {
     if (!isIndividualRole) return activeTimeboardTimelines;
     const ownTimelineIds = new Set(
-      (displayEvents || []).map((ev) => ev.timelineId || ev.timeline_id).filter(Boolean).map(String)
+      (displayEvents || []).filter((ev) => !ev.isSharedNotice).map((ev) => ev.timelineId || ev.timeline_id).filter(Boolean).map(String)
     );
     return activeTimeboardTimelines.filter((tl) => ownTimelineIds.has(String(tl.id)));
   }, [isIndividualRole, activeTimeboardTimelines, displayEvents]);
@@ -619,7 +662,10 @@ export default function App() {
 
     const isLoanType = isLoanTimelineType(currentSelected?.type);
 
-    let computedEvents = displayEvents || [];
+    // Shared notices (individual role) are shown as events of the timeline being viewed
+    let computedEvents = (displayEvents || []).map((ev) => (ev.isSharedNotice
+      ? { ...ev, timelineId: currentSelected.id, timelineOriginId: currentSelected.id, timeline_id: currentSelected.id }
+      : ev));
     const loanTimelines = activeTimeboardTimelines.filter((tl) => isLoanTimelineType(tl.type));
 
     if (loanTimelines.length > 0) {
@@ -1413,8 +1459,15 @@ export default function App() {
     saveAsync();
   };
 
-  const handleUpdateEventDirect = useCallback(async (updatedEvent) => {
-    if (!updatedEvent || !updatedEvent.id) return;
+  const handleUpdateEventDirect = useCallback(async (rawUpdatedEvent) => {
+    if (!rawUpdatedEvent || !rawUpdatedEvent.id) return;
+
+    // Shared notices are shown inside another timeline: restore their own timeline before saving
+    let updatedEvent = rawUpdatedEvent;
+    if (rawUpdatedEvent.isSharedNotice) {
+      const { isSharedNotice: _isSharedNotice, noticeTimelineId, timelineOriginColor: _originColor, timelineColor: _color, ...rest } = rawUpdatedEvent;
+      updatedEvent = { ...rest, timelineId: noticeTimelineId, timelineOriginId: noticeTimelineId, timeline_id: noticeTimelineId };
+    }
 
     const targetSeriesId = updatedEvent.seriesId || updatedEvent.eventId;
     const isAutoChange = updatedEvent.automatic !== undefined;
@@ -1495,9 +1548,12 @@ export default function App() {
       });
       await refreshTimelines();
     } catch (err) {
+      // The optimistic change was not saved: reload the real state from the server and tell the user
       console.error('Error updating event directly:', err);
+      showToast(t('common.updateFailed', { message: err?.message || '' }), 'error');
+      await fetchEventsForVisiblePeriod(pastHorizonYears, futureHorizonYears, true);
     }
-  }, [refreshTimelines]);
+  }, [refreshTimelines, showToast, t, fetchEventsForVisiblePeriod, pastHorizonYears, futureHorizonYears]);
 
   const handleRequestDeleteEvent = useCallback((eventOrId) => {
     scrollYBeforeModalRef.current = window.scrollY;
@@ -2258,6 +2314,7 @@ export default function App() {
   // 3. Timeline Workspace View (When a specific timeboard is active)
   return (
     <PermissionsProvider isReadOnly={isIndividualRole}>
+    <TimeboardProvider timeboardType={activeTimeboard?.type}>
     <div className="app-container">
       {/* Navbar */}
       <Navbar
@@ -2771,6 +2828,7 @@ export default function App() {
         </div>
       </div>
     </div>
+    </TimeboardProvider>
     </PermissionsProvider>
   );
 }

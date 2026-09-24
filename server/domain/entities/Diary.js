@@ -1,4 +1,4 @@
-import { DiaryMood } from '../../../shared/enums/index.js';
+import { DiaryMood, DiaryPublishStatus } from '../../../shared/enums/index.js';
 
 /**
  * Domain Entity: Diary
@@ -15,6 +15,7 @@ export class Diary {
     notes = '',
     date = null,
     mood = DiaryMood.GOOD,
+    publishStatus = DiaryPublishStatus.UNPUBLISHED,
     tenantId = null,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
@@ -28,6 +29,7 @@ export class Diary {
     this.notes = notes || '';
     this.date = date ? String(date).substring(0, 10) : null;
     this.mood = mood || DiaryMood.GOOD;
+    this.publishStatus = publishStatus || DiaryPublishStatus.UNPUBLISHED;
     this.tenantId = tenantId || null;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;

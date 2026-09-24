@@ -26,3 +26,4 @@ export { FollowupStatus, normalizeFollowupStatus } from './FollowupStatus.js';
 
 export { ClearanceDocumentType } from './ClearanceDocumentType.js';
 export { HistoryPeriod, HISTORY_PERIOD_MONTHS } from './HistoryPeriod.js';
+export { DiaryPublishStatus } from './DiaryPublishStatus.js';

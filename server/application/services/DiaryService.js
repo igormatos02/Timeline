@@ -1,6 +1,6 @@
 import { diaryRepository } from '../../infrastructure/database/supabase/SupabaseDiaryRepository.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
-import { DiaryMood } from '../../../shared/enums/index.js';
+import { DiaryMood, DiaryPublishStatus } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -40,6 +40,10 @@ export class DiaryService {
     if (data.date !== undefined) payload.date = data.date ? String(data.date).substring(0, 10) : null;
     const mood = data.mood ?? data.category;
     if (mood !== undefined) payload.mood = mood || DiaryMood.GOOD;
+    const publishStatus = data.publishStatus ?? data.publish_status;
+    if (publishStatus !== undefined) {
+      payload.publishStatus = Object.values(DiaryPublishStatus).includes(publishStatus) ? publishStatus : DiaryPublishStatus.UNPUBLISHED;
+    }
     return payload;
   }
 
@@ -65,6 +69,7 @@ export class DiaryService {
     return diaryRepository.create({
       ...payload,
       mood: payload.mood || DiaryMood.GOOD,
+      publishStatus: payload.publishStatus || DiaryPublishStatus.UNPUBLISHED,
       timeboardId,
       timelineId,
       tenantId: data.tenantId || data.tenant_id || null

@@ -36,6 +36,8 @@ import {
 } from '../enums/index.js';
 import { findPaletteByColor } from '../../shared/config/colorPalettes.js';
 import { getTimelineTypeOptions } from '../utils/timelineConfig.jsx';
+import { makeDiaryT } from '../utils/diaryLabels.js';
+import { useTimeboard } from '../context/TimeboardContext.jsx';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 const TIMELINE_TYPE_OPTIONS = getTimelineTypeOptions();
@@ -49,6 +51,9 @@ export default function CreateTimelineModal({
   existingTimelines = []
 }) {
   const { t, dateLocale } = useTranslation();
+  // Condominium timeboards call the diary timeline "Posts"
+  const { isCondoflow } = useTimeboard();
+  const dt = makeDiaryT(t, isCondoflow);
   const getTodayStr = () => new Date().toISOString().substring(0, 10);
   const getTodayMonthStr = () => new Date().toISOString().substring(0, 7);
 
@@ -149,7 +154,7 @@ export default function CreateTimelineModal({
       const typeMeta = TIMELINE_TYPE_OPTIONS.find((opt) => opt.type === resolvedType) || TIMELINE_TYPE_OPTIONS[0];
 
       setFormData({
-        name: typeMeta.type === TimelineType.LOAN ? '' : (t(typeMeta.labelKey) || ''),
+        name: typeMeta.type === TimelineType.LOAN ? '' : dt(typeMeta.labelKey),
         description: '',
         startDate: getTodayMonthStr(),
         totalInstallments: '',
@@ -346,8 +351,8 @@ export default function CreateTimelineModal({
             <HeaderIcon size={22} style={{ color: formData.color || TimelineColor.PRIMARY }} />
             <h2 className="modal-title">
               {isEditing
-                ? t('createTimelineModal.editTitle', { type: t(currentTypeMeta.labelKey) })
-                : t('createTimelineModal.newTitle', { type: t(currentTypeMeta.labelKey) })}
+                ? t('createTimelineModal.editTitle', { type: dt(currentTypeMeta.labelKey) })
+                : t('createTimelineModal.newTitle', { type: dt(currentTypeMeta.labelKey) })}
             </h2>
           </div>
           <button className="modal-close-btn" onClick={onClose}>
@@ -377,7 +382,7 @@ export default function CreateTimelineModal({
                 }}
               >
                 <HeaderIcon size={18} />
-                <span>{t(currentTypeMeta.labelKey)}</span>
+                <span>{dt(currentTypeMeta.labelKey)}</span>
               </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -413,13 +418,13 @@ export default function CreateTimelineModal({
                       ...prev,
                       type: newType,
                       color: newMeta.defaultColor,
-                      name: newType === TimelineType.LOAN ? '' : (t(newMeta.labelKey) || '')
+                      name: newType === TimelineType.LOAN ? '' : dt(newMeta.labelKey)
                     }));
                   }}
                 >
                   {TIMELINE_TYPE_OPTIONS.filter((opt) => !opt.singleInstance || !existingTypesSet.has(opt.type)).map((opt) => (
                     <option key={opt.type} value={opt.type}>
-                      {t(opt.labelKey)}
+                      {dt(opt.labelKey)}
                     </option>
                   ))}
                 </select>

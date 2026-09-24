@@ -22,6 +22,8 @@ import {
 import { DIARY_MOOD_CONFIG } from '../event-modals/DiaryEventModal.jsx';
 import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
+import { useTimeboard } from '../../context/TimeboardContext.jsx';
+import { makeDiaryT } from '../../utils/diaryLabels.js';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 import { DonutChart, PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
@@ -44,6 +46,8 @@ export default function DiaryTimelineHeader({
   onReset
 }) {
   const { t, dateLocale } = useTranslation();
+  const { isCondoflow } = useTimeboard();
+  const dt = makeDiaryT(t, isCondoflow);
   const [collapsed, setIsCollapsed] = useState(false);
 
   const paletteTheme = useMemo(() => {
@@ -134,7 +138,7 @@ export default function DiaryTimelineHeader({
           color={headerColor}
           icon={<BookOpen size={18} />}
           name={timeline.name}
-          badge={t('diaryHeader.badge') || 'Diário Pessoal'}
+          badge={dt('diaryHeader.badge')}
           iconBackground="rgba(236, 72, 153, 0.12)"
           badgeBackground="rgba(236, 72, 153, 0.12)"
           description={timeline.description}
@@ -180,77 +184,79 @@ export default function DiaryTimelineHeader({
         <div style={{ paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {/* Grid Principal Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-            {/* Quadrante 1: DISTRIBUIÇÃO DE MOOD (PieDonut & Legenda) */}
-            <div
-              style={{
-                background: 'rgba(255, 255, 255, 0.02)',
-                padding: '14px',
-                borderRadius: '10px',
-                border: '1px solid var(--border-glass)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px'
-              }}
-            >
+            {/* Quadrante 1: DISTRIBUIÇÃO DE MOOD (PieDonut & Legenda) — not used on condominium timeboards */}
+            {!isCondoflow && (
               <div
                 style={{
-                  fontSize: '0.74rem',
-                  fontWeight: '800',
-                  color: 'var(--text-dim)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-glass)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
                 }}
               >
-                {t('diaryHeader.moodDistributionTitle') || 'DISTRIBUIÇÃO DE MOOD'}
-              </div>
+                <div
+                  style={{
+                    fontSize: '0.74rem',
+                    fontWeight: '800',
+                    color: 'var(--text-dim)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}
+                >
+                  {dt('diaryHeader.moodDistributionTitle')}
+                </div>
 
-              {moodList.length === 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
-                  <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
-                    <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                      <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
-                    </svg>
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: '50%',
-                        background: 'var(--bg-card)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '1px solid var(--border-glass)',
-                        fontSize: '0.7rem',
-                        fontWeight: '700',
-                        color: 'var(--text-dim)'
-                      }}
-                    >
-                      0
+                {moodList.length === 0 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
+                    <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
+                      <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                        <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                      </svg>
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '50%',
+                          background: 'var(--bg-card)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: '1px solid var(--border-glass)',
+                          fontSize: '0.7rem',
+                          fontWeight: '700',
+                          color: 'var(--text-dim)'
+                        }}
+                      >
+                        0
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                        {dt('diaryHeader.noEntries')}
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
+                        {dt('diaryHeader.noEntriesHint')}
+                      </span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                      {t('diaryHeader.noEntries') || 'Sem registros no diário'}
-                    </span>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
-                      {t('diaryHeader.noEntriesHint') || 'Adicione registros diários para acompanhar seu histórico emocional.'}
-                    </span>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                    <PieDonut items={moodList} centerLabel={String(totalActiveEntries)} />
+                    <DonutLegend
+                      items={moodList}
+                      nameFormatter={(item) => item.name}
+                    />
                   </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                  <PieDonut items={moodList} centerLabel={String(totalActiveEntries)} />
-                  <DonutLegend
-                    items={moodList}
-                    nameFormatter={(item) => item.name}
-                  />
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* Quadrante 2: REGISTROS NO ANO & MÊS ATUAL */}
             <div
@@ -273,7 +279,7 @@ export default function DiaryTimelineHeader({
                   letterSpacing: '0.5px'
                 }}
               >
-                {t('diaryHeader.annualEntriesTitle') || 'REGISTROS NO ANO'}
+                {dt('diaryHeader.annualEntriesTitle')}
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
@@ -287,13 +293,13 @@ export default function DiaryTimelineHeader({
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                   <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
-                    {t('diaryHeader.annualEntriesDesc') || 'Registrados nos últimos 12 meses:'}
+                    {dt('diaryHeader.annualEntriesDesc')}
                   </div>
                   <div style={{ fontSize: '1.05rem', fontWeight: '800', color: paletteTheme.primary }}>
-                    {annualTotalEntries} {annualTotalEntries === 1 ? 'registro' : 'registros'}
+                    {annualTotalEntries === 1 ? dt('diaryHeader.annualCountOne', { count: annualTotalEntries }) : dt('diaryHeader.annualCount', { count: annualTotalEntries })}
                   </div>
                   <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                    Este mês: <strong>{currentMonthEntries}</strong> dias registrados
+                    {dt('diaryHeader.thisMonth')} <strong>{currentMonthEntries}</strong> {dt('diaryHeader.daysRecorded')}
                   </div>
                 </div>
               </div>
@@ -330,12 +336,12 @@ export default function DiaryTimelineHeader({
             return (
               <BarChart7Months
                 months={last7Months}
-                chartTitle={t('diaryHeader.chartTitle') || 'HISTÓRICO DE REGISTROS (ÚLTIMOS 6 MESES + MÊS ATUAL)'}
-                monthVsPrevLabel={t('diaryHeader.monthVsPrevMonth')}
+                chartTitle={dt('diaryHeader.chartTitle')}
+                monthVsPrevLabel={dt('diaryHeader.monthVsPrevMonth')}
                 diffPercentStr={diffPercentStr}
                 isGoodChange={isDiffPositive}
                 goodColor={paletteTheme.primary}
-                sparklesLabel={t('diaryHeader.annualProjectionLabel')}
+                sparklesLabel={dt('diaryHeader.annualProjectionLabel')}
                 projection={annualTotalEntries}
                 sparklesColor={paletteTheme.primary}
                 projectionColor={paletteTheme.primary}
@@ -344,7 +350,7 @@ export default function DiaryTimelineHeader({
                 mutedGradientBottom={paletteTheme.secondary}
                 currentTextColor={paletteTheme.primary}
                 formatValue={(val) => String(val)}
-                formatProjection={(val) => `${val} registros`}
+                formatProjection={(val) => dt('diaryHeader.annualCount', { count: val })}
                 accentColor={paletteTheme.primary}
               />
             );

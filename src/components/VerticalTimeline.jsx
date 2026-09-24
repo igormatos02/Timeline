@@ -100,6 +100,7 @@ import {
   TimelineStatus,
   TimeboardType,
   TimelineColor,
+  getDefaultTimelineColor,
   IncomeEventCategory,
   ExpensesEventCategory,
   InvestmentEventCategory,
@@ -117,6 +118,7 @@ import {
   isNegativeStatus
 } from '../enums/index.js';
 import { getTimelineDropdownOptions } from '../utils/timelineConfig.jsx';
+import { makeDiaryT } from '../utils/diaryLabels.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 const EXPENSE_CATEGORY_ITEMS = [
@@ -239,6 +241,9 @@ function VerticalTimeline({
   }, [lockedEntityId, selectedEntityId]);
   const [selectedLabelFilter, setSelectedLabelFilter] = useState(EventStatus.ALL);
   const [showEmptyDays, setShowEmptyDays] = useState(true);
+  // Individual view: switches for the shared reminders / diary posts (on by default)
+  const [showSharedReminders, setShowSharedReminders] = useState(true);
+  const [showSharedPosts, setShowSharedPosts] = useState(true);
   const [monthProjectionMode, setMonthProjectionMode] = useState('realized');
   const [collapsedSections, setCollapsedSections] = useState({
     timelines: false,
@@ -580,6 +585,8 @@ function VerticalTimeline({
     setSelectedExpenseCategories([]);
     setSelectedCategoryFilter(EventStatus.ALL);
     setSearchQuery('');
+    setShowSharedReminders(true);
+    setShowSharedPosts(true);
   };
 
   const toggleExpenseCategory = (catId) => {
@@ -806,6 +813,8 @@ function VerticalTimeline({
   personsRef.current = persons;
 
   const isEventMatchingEntity = useCallback((ev, targetEntityId) => {
+    // Shared notices (reminders / diaries shown to individual users) belong to every entity view
+    if (ev?.isSharedNotice) return true;
     if (!targetEntityId) return true;
     if (!ev) return false;
     const target = String(targetEntityId).trim().toLowerCase();
@@ -1020,6 +1029,7 @@ function VerticalTimeline({
 
     const rows = timelineEvents
       .filter((ev) => (
+        !ev.isSharedNotice &&
         isEventBelongingToCurrentTimeline(ev) &&
         ev.date && ev.date >= fromDate && ev.date <= todayStr &&
         ev.status !== EventStatus.DELETED &&
@@ -1063,6 +1073,7 @@ function VerticalTimeline({
   const entityEvents = useMemo(() => {
     if (!selectedEntityId) return [];
     return timelineEvents.filter((ev) => {
+      if (ev.isSharedNotice) return false;
       if (!isEventBelongingToCurrentTimeline(ev)) return false;
       const evMonth = ev.date ? ev.date.substring(0, 7) : null;
       if (evMonth && computeFromMonth && evMonth < computeFromMonth) return false;
@@ -1077,6 +1088,7 @@ function VerticalTimeline({
   const entityYearEvents = useMemo(() => {
     if (!selectedEntityId) return [];
     return timelineEvents.filter((ev) => {
+      if (ev.isSharedNotice) return false;
       if (!isEventBelongingToCurrentTimeline(ev)) return false;
       if (!ev.date || !ev.date.startsWith(currentYearKey)) return false;
       if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return false;
@@ -1316,6 +1328,10 @@ function VerticalTimeline({
   const filteredEvents = useMemo(() => {
     if (!timelineEvents) return [];
     return timelineEvents.filter((ev) => {
+      if (ev.isSharedNotice) {
+        if (ev.timelineType === TimelineType.REMINDER && !showSharedReminders) return false;
+        if (ev.timelineType === TimelineType.DIARY && !showSharedPosts) return false;
+      }
       const matchesSearch =
         searchQuery === '' ||
         ((ev.title || '').toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -1486,7 +1502,25 @@ function VerticalTimeline({
     isFinancialTimeline,
     activeFinancialTab,
     computeFromMonth,
+    showSharedReminders,
+    showSharedPosts,
   ]);
+
+  // Shared notice types present in this timeline and the color of their own timeline
+  const sharedNoticeToggles = useMemo(() => {
+    const colors = new Map();
+    timelineEvents.forEach((ev) => {
+      if (ev.isSharedNotice && !colors.has(ev.timelineType)) {
+        colors.set(ev.timelineType, ev.timelineOriginColor || getDefaultTimelineColor(ev.timelineType));
+      }
+    });
+    return [
+      { type: TimelineType.REMINDER, label: t('timeline.reminders'), isOn: showSharedReminders, toggle: () => setShowSharedReminders((v) => !v) },
+      { type: TimelineType.DIARY, label: t('timeline.posts'), isOn: showSharedPosts, toggle: () => setShowSharedPosts((v) => !v) }
+    ]
+      .filter((item) => colors.has(item.type))
+      .map((item) => ({ ...item, color: colors.get(item.type) }));
+  }, [timelineEvents, showSharedReminders, showSharedPosts, t]);
 
   const availableLabels = useMemo(() => {
     return Array.from(new Set(allEvents.flatMap((ev) => ev.labels || [])));
@@ -2454,7 +2488,7 @@ function VerticalTimeline({
                             : timeline.type === TimelineType.REMINDER
                               ? t('reminderHeader.addReminder')
                               : timeline.type === TimelineType.DIARY
-                                ? t('diaryHeader.addEntry')
+                                ? makeDiaryT(t, activeTimeboard?.type === TimeboardType.CONDOFLOW)('diaryHeader.addEntry')
                                 : timeline.type === TimelineType.TODO
                                   ? t('todoHeader.addTask')
                                   : timeline.type === TimelineType.FOLLOWUP
@@ -3302,14 +3336,37 @@ function VerticalTimeline({
             <Filter size={15} style={{ color: 'var(--primary-light)' }} />
             <span>{t('timeline.eventsCount', { count: filteredEvents.length })}</span>
           </div>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={resetAllFilters}
-            style={{ fontSize: '0.74rem', padding: '4px 10px' }}
-          >
-            {t('status.all')}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {/* Switches for the shared reminders / diary posts (individual view) */}
+            {sharedNoticeToggles.map((item) => (
+              <button
+                key={item.type}
+                type="button"
+                className="btn btn-sm"
+                aria-pressed={item.isOn}
+                onClick={item.toggle}
+                title={item.label}
+                style={{
+                  fontSize: '0.74rem',
+                  padding: '4px 10px',
+                  border: `1px solid ${item.color}`,
+                  background: item.isOn ? item.color : 'transparent',
+                  color: item.isOn ? TimelineColor.WHITE : item.color,
+                  opacity: item.isOn ? 1 : 0.75
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={resetAllFilters}
+              style={{ fontSize: '0.74rem', padding: '4px 10px' }}
+            >
+              {t('status.all')}
+            </button>
+          </div>
         </div>
 
         {filteredEvents.length === 0 ? (
@@ -3917,20 +3974,22 @@ function VerticalTimeline({
           </div>
         )}
 
-        {/* 7. Períodos Vazios Toggle */}
-        <div className="sidebar-section">
-          <div
-            className="sidebar-filter-item"
-            onClick={() => setShowEmptyDays(!showEmptyDays)}
-            style={{ cursor: 'pointer' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {showEmptyDays ? <Eye size={15} /> : <EyeOff size={15} />}
-              <span>{showEmptyDays ? t('sidebar.hideEmpty') : t('sidebar.showEmpty')}</span>
+        {/* 7. Períodos Vazios Toggle (not available to read-only users, who only get the status filter) */}
+        {!isReadOnly && (
+          <div className="sidebar-section">
+            <div
+              className="sidebar-filter-item"
+              onClick={() => setShowEmptyDays(!showEmptyDays)}
+              style={{ cursor: 'pointer' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {showEmptyDays ? <Eye size={15} /> : <EyeOff size={15} />}
+                <span>{showEmptyDays ? t('sidebar.hideEmpty') : t('sidebar.showEmpty')}</span>
+              </div>
+              {renderFilterSwitch(showEmptyDays, 'var(--primary)')}
             </div>
-            {renderFilterSwitch(showEmptyDays, 'var(--primary)')}
           </div>
-        </div>
+        )}
       </aside>
 
       {/* 📜 Right Timeline Content Stream */}

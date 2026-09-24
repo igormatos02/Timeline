@@ -73,6 +73,7 @@ import {
   InvestmentEventCategory,
   ReminderEventCategory,
   DiaryMood,
+  DiaryPublishStatus,
   isCancelledStatus,
   isPositiveStatus,
   isNegativeStatus,
@@ -87,6 +88,8 @@ import { useTranslation } from '../i18n/LanguageContext.jsx';
 import * as api from '../services/api.js';
 import { compareEventsWithinDay } from '../utils/eventSorting.js';
 import { usePermissions } from '../context/PermissionsContext.jsx';
+import { useTimeboard } from '../context/TimeboardContext.jsx';
+import { makeDiaryT } from '../utils/diaryLabels.js';
 
 const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   event,
@@ -112,6 +115,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const { t, language } = useTranslation();
   // Read-only users (individual role) cannot change events; they can only view and add notes.
   const { isReadOnly } = usePermissions();
+  // Condominium timeboards do not use the diary mood
+  const { isCondoflow } = useTimeboard();
   const onEdit = isReadOnly ? undefined : onEditProp;
   const onUpdateEventDirect = isReadOnly ? undefined : onUpdateEventDirectProp;
   const onSaveNotes = onUpdateEventDirectProp;
@@ -245,6 +250,14 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     event.category === 'mood_neutral' ||
     event.category === 'mood_bad' ||
     event.category === 'mood_terrible';
+  // Condominium (condoflow) diary entries are "posts" with a publication state
+  const isCondoPost = isCondoflow && isRegisterEvent;
+  const postPublishStatus = event.publishStatus || DiaryPublishStatus.UNPUBLISHED;
+  const isCancelledPost = isCondoPost && postPublishStatus === DiaryPublishStatus.CANCELLED;
+  const setPostPublishStatus = (e, nextStatus) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (onUpdateEventDirect) onUpdateEventDirect({ ...event, publishStatus: nextStatus });
+  };
 
   const isTodoTimeline = timelineType === TimelineType.TODO;
   const isTodoEvent =
@@ -449,7 +462,38 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const isFinancialLockedType = isIncomeEvent || isExpenseEvent || isInvestmentEvent;
   const isLockedPositive = isFinancialLockedType && (isReceivedIncome || isPaidExpense || isCompletedInvestment || isPositiveStatus(effectiveStatus));
 
+  // Removes lock icons from a status label (read-only users see the status as a plain indicator)
+  const stripLockIcons = (node) => React.Children.map(node, (child) => {
+    if (!React.isValidElement(child)) return child;
+    if (child.type === Lock) return null;
+    if (child.props && child.props.children !== undefined) {
+      return React.cloneElement(child, undefined, stripLockIcons(child.props.children));
+    }
+    return child;
+  });
+
   const renderStatusDropdownButton = (buttonProps, children) => {
+    // Read-only users: status is an indicator, not a button (reminders show no status at all)
+    if (isReadOnly) {
+      if (isReminderEvent) return null;
+      return (
+        <span
+          style={{
+            ...buttonProps?.style,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px',
+            cursor: 'default',
+            pointerEvents: 'none',
+            userSelect: 'none',
+            boxShadow: 'none'
+          }}
+        >
+          {stripLockIcons(children)}
+        </span>
+      );
+    }
+
     if (isFutureMonth) {
       return (
         <div
@@ -1812,7 +1856,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     if (isRegisterEvent || event.timelineType === TimelineType.DIARY) {
       const p = getPaletteTheme(originColor || TimelineColor.DIARY, TimelineColor.DIARY);
       return {
-        label: originName || t('sidebar.diaryTimeline'),
+        label: originName || makeDiaryT(t, isCondoflow)('sidebar.diaryTimeline'),
         icon: <BookOpen size={11} strokeWidth={2.4} />,
         bg: hexToRgba(p.light, 0.22),
         color: p.primary,
@@ -2232,7 +2276,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       )}
 
       {/* Botão de Notas (também disponível para utilizadores só de leitura) */}
-      {(onEdit || isReadOnly) && !isAnchorCard && (() => {
+      {(onEdit || isReadOnly) && !isAnchorCard && !isCondoPost && (() => {
         const allNotes = Array.isArray(event.notes)
           ? event.notes.filter(Boolean)
           : (event.description && !event.description.toLowerCase().includes('transferência bancária de vencimento') && event.description.trim() ? [event.description.trim()] : []);
@@ -2269,7 +2313,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       })()}
 
       {/* Botão de Desmembrar Valor */}
-      {!isLoanInstallment && !isFollowupEvent && !isAnchorCard && !isVirtual && !isLockedPositive && !isCancelled && (onUpdateEventDirect || onEdit) && (() => {
+      {!isLoanInstallment && !isFollowupEvent && !isAnchorCard && !isCondoPost && !isVirtual && !isLockedPositive && !isCancelled && (onUpdateEventDirect || onEdit) && (() => {
         const allSubparts = Array.isArray(event.breakdownItems) ? event.breakdownItems : [];
         const hasBreakdown = allSubparts.length > 0;
 
@@ -2378,8 +2422,30 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         </button>
       )}
 
+      {/* Botão Cancelar / Reativar Post (condoflow): reativar volta a "não publicado" */}
+      {isCondoPost && onUpdateEventDirect && (
+        <button
+          type="button"
+          className="action-icon-btn"
+          onClick={(e) => setPostPublishStatus(e, isCancelledPost ? DiaryPublishStatus.UNPUBLISHED : DiaryPublishStatus.CANCELLED)}
+          title={isCancelledPost ? t('actionReactivateEvent') : t('actionCancelEvent')}
+          style={{
+            padding: '3px 5px',
+            borderRadius: '5px',
+            color: isCancelledPost ? TimelineColor.WARNING : 'var(--text-dim)',
+            background: isCancelledPost ? `${TimelineColor.WARNING}24` : 'transparent',
+            border: `1px solid ${isCancelledPost ? `${TimelineColor.WARNING}59` : 'transparent'}`,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center'
+          }}
+        >
+          <Ban size={13} />
+        </button>
+      )}
+
       {/* Botão Cancelar / Reativar Evento */}
-      {!isAnchorCard && !isLoanInstallment && onToggleLoanPayment && (
+      {!isAnchorCard && !isLoanInstallment && !isCondoPost && onToggleLoanPayment && (
         <button
           type="button"
           className="action-icon-btn"
@@ -2444,8 +2510,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         </button>
       )}
 
-      {/* Indicador de Cadeado (Trancado) para eventos financeiros positivos */}
-      {isLockedPositive && (
+      {/* Indicador de Cadeado (Trancado) para eventos financeiros positivos (oculto para utilizadores só de leitura) */}
+      {isLockedPositive && !isReadOnly && (
         <span
           title={t('timeline.lockedPositiveNotice')}
           style={{
@@ -3521,10 +3587,26 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           {/* Linha 1: [icone] [titulo do evento] [lables] */}
           {renderCardInnerHeader()}
 
+          {/* Texto completo do post para utilizadores só de leitura (lido diretamente na timeline) */}
+          {isCondoPost && isReadOnly && event.description && (
+            <div
+              style={{
+                fontSize: '0.84rem',
+                lineHeight: 1.55,
+                color: 'var(--text-main)',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                margin: '6px 0 4px'
+              }}
+            >
+              {renderFormattedMarkdown(event.description)}
+            </div>
+          )}
+
           {/* Linha 2: Mood Badge (left) e Ações (right) */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginTop: '2px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {(() => {
+              {!isCondoflow && (() => {
                 const moodCfg = DIARY_MOOD_CONFIG[event.category] || DIARY_MOOD_CONFIG[DiaryMood.GOOD];
                 return (
                   <div
@@ -3549,6 +3631,38 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             </div>
 
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
+                {isCondoPost && !isReadOnly && (() => {
+                  const isPublished = postPublishStatus === DiaryPublishStatus.PUBLISHED;
+                  const statusColor = isCancelledPost ? TimelineColor.SLATE : (isPublished ? TimelineColor.SUCCESS : TimelineColor.WARNING);
+                  const pillStyle = {
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    borderRadius: '9999px',
+                    padding: '4px 12px',
+                    fontSize: '0.76rem',
+                    fontWeight: '700',
+                    background: `${statusColor}24`,
+                    color: statusColor,
+                    border: `1px solid ${statusColor}59`
+                  };
+                  const label = t(`diaryPublish.${postPublishStatus}`);
+                  if (isCancelledPost || !onUpdateEventDirect) {
+                    return <span style={{ ...pillStyle, cursor: 'default' }}>{isCancelledPost ? <Ban size={13} /> : null}{label}</span>;
+                  }
+                  return (
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      title={t('diaryPublish.clickToToggle')}
+                      onClick={(e) => setPostPublishStatus(e, isPublished ? DiaryPublishStatus.UNPUBLISHED : DiaryPublishStatus.PUBLISHED)}
+                      style={{ ...pillStyle, cursor: 'pointer' }}
+                    >
+                      {isPublished ? <CheckCircle2 size={13} /> : <Clock size={13} />}
+                      <span>{label}</span>
+                    </button>
+                  );
+                })()}
               {renderActionButtons()}
             </div>
           </div>
@@ -3997,11 +4111,14 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
           {/* Linha 2: [motivo/tipo] (left) e [b status] (right) */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
+            {/* Reminders show neither the type label nor the priority */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', paddingBottom: '0px' }}>
-              <span style={{ fontSize: '0.7rem', color: isFlatPositive ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1 }}>
-                {isReminderEvent ? t('timeline.reminders') : t('common.event')}
-              </span>
-              {event.priority && (
+              {!isReminderEvent && (
+                <span style={{ fontSize: '0.7rem', color: isFlatPositive ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1 }}>
+                  {t('common.event')}
+                </span>
+              )}
+              {event.priority && !isReminderEvent && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isFlatPositive ? '1px solid rgba(255, 255, 255, 0.25)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
                   <span style={{ fontSize: '0.68rem', color: isFlatPositive ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                     {t('timeline.priority')}:
@@ -4635,7 +4752,7 @@ function hexToRgba(hex, alpha = 1) {
   return hex;
 }
 
-export const TimelineEventCard = React.memo(function TimelineEventCard({
+const TimelineEventDayCard = React.memo(function TimelineEventDayCard({
   events,
   event,
   timelineColor,
@@ -4681,9 +4798,14 @@ export const TimelineEventCard = React.memo(function TimelineEventCard({
 
   const isBalance = timelineType === TimelineType.BALANCE;
 
+  // Shared notices (reminders / diaries shown to individual users) keep the color of their own timeline
+  const sharedNoticeColor = eventList.every((ev) => ev.isSharedNotice && ev.timelineOriginColor === firstEvent.timelineOriginColor)
+    ? firstEvent.timelineOriginColor
+    : null;
+
   const baseColor = isBalance
     ? TimelineColor.SLATE
-    : (timelineColor || firstEvent.timelineColor || TimelineColor.PRIMARY);
+    : (sharedNoticeColor || timelineColor || firstEvent.timelineColor || TimelineColor.PRIMARY);
 
   const paletteTheme = getPaletteTheme(baseColor, TimelineColor.PRIMARY);
 
@@ -4777,12 +4899,44 @@ export const TimelineEventCard = React.memo(function TimelineEventCard({
             onOpenEditInstallment={onOpenEditInstallment}
             onNavigateToTimeline={onNavigateToTimeline}
             onPrintReceipt={onPrintReceipt}
-            timelineColor={timelineColor || baseColor}
+            timelineColor={sharedNoticeColor || timelineColor || baseColor}
             persons={persons}
           />
         ))}
       </div>
     </div>
+  );
+});
+
+/**
+ * Day card entry point. Shared notices (reminders / diaries shown to individual users) never share
+ * a frame with the user's own events: a mixed day is rendered as one card for the own events and one
+ * card per notice origin, so each keeps the color of its own timeline.
+ */
+export const TimelineEventCard = React.memo(function TimelineEventCard(props) {
+  const { events, event } = props;
+  const groups = React.useMemo(() => {
+    const list = Array.isArray(events) ? events : (event ? [event] : []);
+    const own = list.filter((ev) => !ev.isSharedNotice);
+    const notices = list.filter((ev) => ev.isSharedNotice);
+    if (own.length === 0 || notices.length === 0) return null;
+    const byColor = new Map();
+    notices.forEach((ev) => {
+      const key = ev.timelineOriginColor || '';
+      if (!byColor.has(key)) byColor.set(key, []);
+      byColor.get(key).push(ev);
+    });
+    return [own, ...byColor.values()];
+  }, [events, event]);
+
+  if (!groups) return <TimelineEventDayCard {...props} />;
+
+  return (
+    <>
+      {groups.map((groupEvents, idx) => (
+        <TimelineEventDayCard key={idx} {...props} event={undefined} events={groupEvents} />
+      ))}
+    </>
   );
 });
 

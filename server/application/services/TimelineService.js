@@ -328,6 +328,14 @@ export class TimelineService {
     if (!timeline) throw new Error(t('backend.validation.timelineNotFound'));
 
     const events = await eventRepository.getAll((ev) => ev.timelineId === timelineId);
+
+    // Statuses belong to the events being cleared: remove them too (by timeline and by event / series ids)
+    const statusIds = [...new Set(events.flatMap((ev) => [ev.id, ev.eventId]).filter(Boolean).map(String))];
+    if (statusIds.length > 0) {
+      await financialEventStatusRepository.deleteAllStatusForEvent(statusIds);
+    }
+    await financialEventStatusRepository.deleteByTimelineId(timelineId);
+
     for (const ev of events) {
       await eventRepository.delete(ev.id);
     }

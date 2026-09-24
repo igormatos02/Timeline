@@ -60,6 +60,30 @@ export class FinancialEventService {
     }
   }
 
+  // When a single (non-recurring) event moves to another month, its status row must follow it:
+  // delete the old month's row and, unless a new status is being set, recreate it in the new month.
+  async _moveMonthStatus(ids, fromDate, toDate, newStatus, options = {}) {
+    if (!fromDate || !toDate) return;
+    const fromKey = String(fromDate).substring(0, 7);
+    const toKey = String(toDate).substring(0, 7);
+    if (fromKey === toKey) return;
+    const cleanIds = [...new Set((ids || []).filter(Boolean).map(String))];
+    if (cleanIds.length === 0) return;
+
+    const fromYear = parseInt(fromKey.substring(0, 4), 10);
+    const fromMonth = parseInt(fromKey.substring(5, 7), 10);
+    let previousStatus = null;
+    for (const eventId of cleanIds) {
+      const rows = await financialEventStatusRepository.getAll({ year: fromYear, month: fromMonth, eventId });
+      if (rows.length > 0 && !previousStatus) previousStatus = rows[0].status;
+    }
+    await financialEventStatusRepository.deleteStatus(fromYear, fromMonth, cleanIds);
+
+    if (!newStatus && previousStatus) {
+      await this._syncStatus(toDate, cleanIds[0], previousStatus, options);
+    }
+  }
+
   async getAllEvents(filter = {}) {
     let rawEvents = [];
     if (filter.timeboardId) {
@@ -723,6 +747,18 @@ export class FinancialEventService {
         is_recurring: isRecurring,
         isRecurring: isRecurring
       };
+      if (!isRecurring && directUpdates.date && existingDirect?.date && directUpdates.date !== existingDirect.date) {
+        await this._moveMonthStatus(
+          [targetSeriesId, existingDirect.id, existingDirect.eventId],
+          existingDirect.date,
+          directUpdates.date,
+          directUpdates.status,
+          {
+            timelineId: existingDirect.timelineId || existingDirect.timeline_id,
+            timeboardId: existingDirect.timeboardId || existingDirect.timeboard_id
+          }
+        );
+      }
       if (directUpdates.status) {
         const targetDate = directUpdates.date || existingDirect?.date;
         await this._syncStatus(targetDate, targetSeriesId, directUpdates.status, {
@@ -951,7 +987,7 @@ export class FinancialEventService {
       if (directEvent.date) {
         const year = parseInt(directEvent.date.substring(0, 4), 10);
         const month = parseInt(directEvent.date.substring(5, 7), 10);
-        await financialEventStatusRepository.deleteStatus(year, month, id);
+        await financialEventStatusRepository.deleteStatus(year, month, [id, directEvent.eventId].filter(Boolean));
       }
       return eventRepository.delete(id);
     }
@@ -966,7 +1002,7 @@ export class FinancialEventService {
       if (directEvent.date) {
         const year = parseInt(directEvent.date.substring(0, 4), 10);
         const month = parseInt(directEvent.date.substring(5, 7), 10);
-        await financialEventStatusRepository.deleteStatus(year, month, id);
+        await financialEventStatusRepository.deleteStatus(year, month, [id, directEvent.eventId].filter(Boolean));
       }
       return eventRepository.delete(id);
     }

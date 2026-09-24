@@ -93,6 +93,8 @@ import {
   EventType,
   EventStatus,
   ClearanceDocumentType,
+  HISTORY_PERIOD_MONTHS,
+  HistoryPeriod,
   EventStatusLabel,
   TimelineType,
   TimelineStatus,
@@ -141,7 +143,9 @@ const EXPENSE_CATEGORY_ITEMS = [
 
 import * as api from '../services/api.js';
 import ReceiptModal from './modals/ReceiptModal.jsx';
-import { buildReceiptHtml, buildClearanceHtml, buildCondoClearanceHtml, computeReceiptNumber, computeNextReceiptNumber } from '../utils/receiptGenerator.js';
+import HistoryPrintModal from './modals/HistoryPrintModal.jsx';
+import { usePermissions } from '../context/PermissionsContext.jsx';
+import { buildReceiptHtml, buildClearanceHtml, buildCondoClearanceHtml, buildHistoryHtml, computeReceiptNumber, computeNextReceiptNumber } from '../utils/receiptGenerator.js';
 
 const groupEventsByDate = (events = []) => {
   const groups = [];
@@ -162,6 +166,7 @@ const groupEventsByDate = (events = []) => {
 };
 
 function VerticalTimeline({
+  lockedEntityId = null,
   timeline,
   timelines = [],
   activeTimeboard = null,
@@ -169,27 +174,27 @@ function VerticalTimeline({
   activeFinancialTab = '',
   pockets = [],
   persons = [],
-  onOpenCreatePocket,
-  onEditPocket,
-  onDeletePocket,
+  onOpenCreatePocket: onOpenCreatePocketProp,
+  onEditPocket: onEditPocketProp,
+  onDeletePocket: onDeletePocketProp,
   onSelectFinancialTab,
   onEditEvent,
   onUpdateEventDirect,
   onDeleteEvent,
   onToggleTask,
-  onAddEventForDate,
-  onCompleteFloatingTask,
-  onAddFloatingTask,
-  onUpdateFloatingTaskPriority,
+  onAddEventForDate: onAddEventForDateProp,
+  onCompleteFloatingTask: onCompleteFloatingTaskProp,
+  onAddFloatingTask: onAddFloatingTaskProp,
+  onUpdateFloatingTaskPriority: onUpdateFloatingTaskPriorityProp,
   onAddChecklistItem,
   onDeleteChecklistItem,
   onToggleLoanPayment,
   onPayUpToHere,
   onOpenEditInstallment,
-  onOpenAmortizationModal,
-  onOpenWithdrawModal,
+  onOpenAmortizationModal: onOpenAmortizationModalProp,
+  onOpenWithdrawModal: onOpenWithdrawModalProp,
   onNavigateToTimeline,
-  onCreateTimeline,
+  onCreateTimeline: onCreateTimelineProp,
   headerComponent,
   futureHorizonYears = 1,
   pastHorizonYears = 1,
@@ -197,6 +202,18 @@ function VerticalTimeline({
   onLoadMorePast
 }) {
   const { language, t } = useTranslation();
+  // Read-only users (individual role) cannot create or change anything on the timeline.
+  const { isReadOnly } = usePermissions();
+  const onOpenCreatePocket = isReadOnly ? undefined : onOpenCreatePocketProp;
+  const onEditPocket = isReadOnly ? undefined : onEditPocketProp;
+  const onDeletePocket = isReadOnly ? undefined : onDeletePocketProp;
+  const onAddEventForDate = isReadOnly ? undefined : onAddEventForDateProp;
+  const onCompleteFloatingTask = isReadOnly ? undefined : onCompleteFloatingTaskProp;
+  const onAddFloatingTask = isReadOnly ? undefined : onAddFloatingTaskProp;
+  const onUpdateFloatingTaskPriority = isReadOnly ? undefined : onUpdateFloatingTaskPriorityProp;
+  const onOpenAmortizationModal = isReadOnly ? undefined : onOpenAmortizationModalProp;
+  const onOpenWithdrawModal = isReadOnly ? undefined : onOpenWithdrawModalProp;
+  const onCreateTimeline = isReadOnly ? undefined : onCreateTimelineProp;
   const dateLocale = language === 'en' ? enUS : pt;
 
   const isFinancialTimeline = [
@@ -212,7 +229,14 @@ function VerticalTimeline({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusFilters, setSelectedStatusFilters] = useState([]);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(EventStatus.ALL);
-  const [selectedEntityId, setSelectedEntityId] = useState(null);
+  const [selectedEntityId, setSelectedEntityId] = useState(lockedEntityId);
+
+  // Individual-role users are always filtered to their own entity
+  React.useEffect(() => {
+    if (lockedEntityId && String(selectedEntityId) !== String(lockedEntityId)) {
+      setSelectedEntityId(lockedEntityId);
+    }
+  }, [lockedEntityId, selectedEntityId]);
   const [selectedLabelFilter, setSelectedLabelFilter] = useState(EventStatus.ALL);
   const [showEmptyDays, setShowEmptyDays] = useState(true);
   const [monthProjectionMode, setMonthProjectionMode] = useState('realized');
@@ -972,11 +996,60 @@ function VerticalTimeline({
 
   const selectedEntity = useMemo(() => {
     if (!selectedEntityId) return null;
-    return timelineEntities.find((ent) => String(ent.id) === String(selectedEntityId)) || null;
-  }, [timelineEntities, selectedEntityId]);
+    const found = timelineEntities.find((ent) => String(ent.id) === String(selectedEntityId));
+    if (found || !lockedEntityId) return found || null;
+    // Locked (individual-role) entity without events in this timeline: resolve it from the timeboard persons
+    const person = (persons || []).find((p) => String(p.id) === String(selectedEntityId));
+    return person
+      ? {
+        id: person.id,
+        name: person.personName || person.person_name || person.name || '',
+        type: person.type || PersonType.PERSON,
+        identification: person.obligatorIdentification || person.obligator_identification || ''
+      }
+      : null;
+  }, [timelineEntities, selectedEntityId, lockedEntityId, persons]);
+
+  // Movement history of the selected entity (printable from the individual header)
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  const handleBuildHistoryHtml = useCallback((period) => {
+    const months = HISTORY_PERIOD_MONTHS[period] || HISTORY_PERIOD_MONTHS[HistoryPeriod.LAST_6_MONTHS];
+    const fromDate = format(subMonths(todayDate, months), 'yyyy-MM-dd');
+    const settledStatus = timeline?.type === TimelineType.EXPENSE ? EventStatus.PAID : EventStatus.RECEIVED;
+
+    const rows = timelineEvents
+      .filter((ev) => (
+        isEventBelongingToCurrentTimeline(ev) &&
+        ev.date && ev.date >= fromDate && ev.date <= todayStr &&
+        ev.status !== EventStatus.DELETED &&
+        isEventMatchingEntity(ev, selectedEntityId)
+      ))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((ev) => {
+        let statusKey = EventStatus.PENDING;
+        if (isCancelledStatus(ev.status)) statusKey = EventStatus.CANCELLED;
+        else if (isPositiveStatus(ev.status)) statusKey = ev.status;
+        else if (ev.isCompleted) statusKey = settledStatus;
+        else if (ev.date < todayStr) statusKey = EventStatus.OVERDUE;
+        return { date: ev.date, name: ev.title || ev.name || '', statusLabel: t(`status.${statusKey}`) };
+      });
+
+    return buildHistoryHtml({
+      timeboard: activeTimeboard,
+      currentUser,
+      entityName: selectedEntity?.name || '',
+      fromDate,
+      toDate: todayStr,
+      rows,
+      language,
+      t
+    });
+  }, [timelineEvents, isEventBelongingToCurrentTimeline, isEventMatchingEntity, selectedEntityId, selectedEntity, timeline?.type, todayStr, activeTimeboard, currentUser, language, t]);
 
   // On timeline switch, keep the entity filter only if the entity exists in the new timeline.
   React.useEffect(() => {
+    if (lockedEntityId) return;
     if (selectedEntityId && !selectedEntity) {
       setSelectedEntityId(null);
     }
@@ -997,6 +1070,19 @@ function VerticalTimeline({
       return isEventMatchingEntity(ev, selectedEntityId);
     });
   }, [timelineEvents, selectedEntityId, computeFromMonth, currentMonthKey, isEventBelongingToCurrentTimeline, isEventMatchingEntity]);
+
+  // Events of the selected entity for the whole current calendar year (Jan - Dec),
+  // used by the individual header's year progress indicator.
+  const currentYearKey = format(todayDate, 'yyyy');
+  const entityYearEvents = useMemo(() => {
+    if (!selectedEntityId) return [];
+    return timelineEvents.filter((ev) => {
+      if (!isEventBelongingToCurrentTimeline(ev)) return false;
+      if (!ev.date || !ev.date.startsWith(currentYearKey)) return false;
+      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return false;
+      return isEventMatchingEntity(ev, selectedEntityId);
+    });
+  }, [timelineEvents, selectedEntityId, computeFromMonth, currentYearKey, isEventBelongingToCurrentTimeline, isEventMatchingEntity]);
 
   // Clearance certificate: income-side timelines declare the entity owes nothing to the timeboard;
   // expense timelines declare the timeboard owes nothing to the entity.
@@ -1633,7 +1719,7 @@ function VerticalTimeline({
                   ) : (
                     <div
                       className="empty-day-row"
-                      onClick={() => onAddEventForDate(format(weekData.weekStart, 'yyyy-MM-dd'))}
+                      onClick={() => onAddEventForDate?.(format(weekData.weekStart, 'yyyy-MM-dd'))}
                     >
                       <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
                       <span className="empty-day-text">{t('timeline.noEventsWeek')}</span>
@@ -2425,7 +2511,7 @@ function VerticalTimeline({
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
-                                onAddEventForDate(
+                                onAddEventForDate?.(
                                   targetDayStr,
                                   timeline.type === TimelineType.EXPENSE || activeFinancialTab === 'gastos'
                                     ? EventType.EXPENSE
@@ -2657,7 +2743,7 @@ function VerticalTimeline({
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
-                                          onAddEventForDate(targetDayStr, EventType.INVESTMENT, {
+                                          onAddEventForDate?.(targetDayStr, EventType.INVESTMENT, {
                                             pocketId: pocket.id,
                                             pocketName: pocket.name,
                                             title: pocket.name,
@@ -2690,7 +2776,7 @@ function VerticalTimeline({
                                           if (onOpenWithdrawModal) {
                                             onOpenWithdrawModal(targetDayStr, pocket.id);
                                           } else if (onAddEventForDate) {
-                                            onAddEventForDate(targetDayStr, EventType.WITHDRAWAL, {
+                                            onAddEventForDate?.(targetDayStr, EventType.WITHDRAWAL, {
                                               pocketId: pocket.id,
                                               pocketName: pocket.name,
                                               title: pocket.name,
@@ -2932,7 +3018,7 @@ function VerticalTimeline({
                             : isReminders
                               ? EventType.REMINDER
                               : EventType.INCOME;
-                        onAddEventForDate(format(mGroup.monthDate, 'yyyy-MM-01'), nature);
+                        onAddEventForDate?.(format(mGroup.monthDate, 'yyyy-MM-01'), nature);
                       }}
                       style={{
                         cursor: isLoanTimelineOrTab ? 'default' : 'pointer',
@@ -3076,7 +3162,7 @@ function VerticalTimeline({
                         ) : (
                           <div
                             className="empty-day-row"
-                            onClick={() => onAddEventForDate(format(mGroup.monthDate, 'yyyy-MM-01'))}
+                            onClick={() => onAddEventForDate?.(format(mGroup.monthDate, 'yyyy-MM-01'))}
                           >
                             <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
                             <span className="empty-day-text">{t('timeline.noEventsMonth')}</span>
@@ -3146,7 +3232,7 @@ function VerticalTimeline({
                 <div
                   className={`day-node-dot ${isTodayNode ? 'is-today-node' : hasEvents ? 'has-events' : ''
                     }`}
-                  onClick={() => onAddEventForDate(dateKey)}
+                  onClick={() => onAddEventForDate?.(dateKey)}
                   title={
                     hasEvents
                       ? `${t('timeline.eventsCount', { count: dayEvents.length })}`
@@ -3179,7 +3265,7 @@ function VerticalTimeline({
                 ) : (
                   <div
                     className="empty-day-row"
-                    onClick={() => onAddEventForDate(dateKey)}
+                    onClick={() => onAddEventForDate?.(dateKey)}
                   >
                     <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
                     <span className="empty-day-text">{t('timeline.noEventsDay')}</span>
@@ -3543,8 +3629,8 @@ function VerticalTimeline({
           )}
         </div>
 
-        {/* 4. Timelines Filter (Multi-Selection for Balance) */}
-        {timeline.type === TimelineType.BALANCE && (
+        {/* 4. Timelines Filter (Multi-Selection for Balance) — read-only users only get the status filter */}
+        {timeline.type === TimelineType.BALANCE && !isReadOnly && (
           <div className="sidebar-section">
             <div
               className="sidebar-section-title"
@@ -3606,7 +3692,7 @@ function VerticalTimeline({
         )}
 
         {/* 5. Tipo / Natureza Filter */}
-        {timeline.type === TimelineType.EXPENSE ? (
+        {isReadOnly ? null : timeline.type === TimelineType.EXPENSE ? (
           availableExpenseCategoryItems.length > 0 && (
             <div className="sidebar-section">
               <div
@@ -3739,7 +3825,7 @@ function VerticalTimeline({
         )}
 
         {/* 🌟 6. Entidades / Individuals Filter (Single Selection) */}
-        {timelineEntities.length > 0 && (
+        {timelineEntities.length > 0 && !isReadOnly && (
           <div className="sidebar-section">
             <div
               className="sidebar-section-title"
@@ -3861,7 +3947,9 @@ function VerticalTimeline({
               selectedEntityId,
               selectedEntity,
               entityEvents,
+              entityYearEvents,
               onOpenClearance: timeline.type !== TimelineType.BALANCE ? handleOpenClearance : undefined,
+              onOpenHistory: () => setIsHistoryOpen(true),
               monthExpensesTotalMap,
               monthLoansTotalMap,
               monthIncomeTotalMap,
@@ -3877,7 +3965,7 @@ function VerticalTimeline({
         </div>
 
         {/* 📌 Pilha de Tarefas Pendentes (apenas para timelines de projeto/gerais, oculta em Financeiro, Entradas, Empréstimos e Principal) */}
-        {!isFinancialTimeline && (
+        {!isFinancialTimeline && !isReadOnly && (
           <FloatingTaskStack
             pendingTasks={pendingFloatingTasks}
             onCompleteTask={onCompleteFloatingTask}
@@ -3917,12 +4005,21 @@ function VerticalTimeline({
               <button
                 className="btn btn-primary btn-sm"
                 style={{ marginTop: '16px' }}
-                onClick={() => onAddEventForDate(todayStr)}
+                onClick={() => onAddEventForDate?.(todayStr)}
               >
                 <Plus size={16} /> {t('timeline.addEventToday')}
               </button>
             )}
           </div>
+        )}
+
+        {/* Modal de Impressão do Histórico de Movimentações */}
+        {isHistoryOpen && (
+          <HistoryPrintModal
+            isOpen={isHistoryOpen}
+            onClose={() => setIsHistoryOpen(false)}
+            buildHtml={handleBuildHistoryHtml}
+          />
         )}
 
         {/* Modal de Impressão / Pré-visualização do Recibo */}

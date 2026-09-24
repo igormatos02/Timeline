@@ -145,6 +145,7 @@ export const translations = {
       balance: "Balance",
       noLoanMonth: "No installment or amortization this month",
       noTabRecords: "No records in this tab for this month",
+      noTimeboards: "No Timeboards",
       noTimelines: "No timelines created in this timeboard yet.",
       createTimeline: "Create Timeline",
       projectMoreFuture: "Load +12 Future Months",
@@ -369,6 +370,13 @@ export const translations = {
     // Action Hints / Tooltips
     actionNotes: "View / Edit Notes",
     actionAddNote: "Add Note",
+    eventNotes: {
+      title: "Movement notes ({{count}})",
+      empty: "No notes added yet.",
+      placeholder: "Write a new note...",
+      add: "Add",
+      delete: "Delete this note"
+    },
     actionBreakdown: "View / Edit Breakdown ({count} items)",
     actionSplitValue: "Breakdown Amount",
     actionAutoOn: "⚡ Automatic Mode Active: Automatically settles this series on due dates. Click to turn OFF for entire series.",
@@ -1032,7 +1040,12 @@ export const translations = {
       debtBalanceHint: "{{count}} overdue or pending obligations",
       noPendingObligations: "No pending obligations for {{name}}",
       getClearance: "Get clearance certificate",
-      getClearanceDisabled: "Only available when there are no pending obligations"
+      getClearanceDisabled: "Only available when there are no pending obligations",
+      printHistory: "Print history",
+      timeboardSummaryTitle: "Condominium balance",
+      plannedYear: "Planned ({{year}}):",
+      realizedYear: "Realized",
+      remainingYear: "Remaining"
     },
 
     // Expense Timeline Header
@@ -1725,6 +1738,26 @@ export const translations = {
       receiptNumber: "Rec. {number}"
     },
 
+    // Printable movement history (individual view)
+    history: {
+      title: "Movement History",
+      periodLabel: "Period",
+      apply: "Apply",
+      choosePeriod: "Choose a period and click Apply to preview the history.",
+      entity: "Entity:",
+      fromTo: "From {{from}} to {{to}}",
+      colDate: "Date",
+      colName: "Name",
+      colStatus: "Status",
+      empty: "No movements in the selected period.",
+      periods: {
+        last_6_months: "Last 6 months",
+        last_year: "Last year",
+        last_2_years: "Last 2 years",
+        last_5_years: "Last 5 years"
+      }
+    },
+
     // Clearance certificate (Comprovativo de Quitação)
     clearance: {
       title: "Clearance Certificate",
@@ -1903,6 +1936,7 @@ export const translations = {
       balance: "Saldo",
       noLoanMonth: "Nenhuma parcela ou amortização neste mês",
       noTabRecords: "Sem registos nesta aba para este mês",
+      noTimeboards: "Sem Timeboards",
       noTimelines: "Nenhuma timeline criada neste timeboard ainda.",
       createTimeline: "Criar Timeline",
       projectMoreFuture: "Carregar +12 Meses Futuros",
@@ -2127,6 +2161,13 @@ export const translations = {
     // Action Hints / Tooltips
     actionNotes: "Ver / Editar Notas",
     actionAddNote: "Adicionar Nota",
+    eventNotes: {
+      title: "Notas do Movimento ({{count}})",
+      empty: "Nenhuma nota adicionada ainda.",
+      placeholder: "Escrever uma nova nota...",
+      add: "Adicionar",
+      delete: "Eliminar esta nota"
+    },
     actionBreakdown: "Ver / Editar Desmembramento ({count} subpartes)",
     actionSplitValue: "Desmembrar Valor",
     actionAutoOn: "⚡ Movimento Automático Ativo na Série: Liquida automaticamente na data de vencimento. Clique para desligar em toda a série.",
@@ -2746,7 +2787,12 @@ export const translations = {
       debtBalanceHint: "{{count}} obrigações em atraso ou pendentes",
       noPendingObligations: "Nenhuma obrigação pendente para {{name}}",
       getClearance: "Obter comprovativo de quitação",
-      getClearanceDisabled: "Disponível apenas quando não existem obrigações pendentes"
+      getClearanceDisabled: "Disponível apenas quando não existem obrigações pendentes",
+      printHistory: "Imprimir histórico",
+      timeboardSummaryTitle: "Saldo do condomínio",
+      plannedYear: "Planeado ({{year}}):",
+      realizedYear: "Realizado",
+      remainingYear: "Falta realizar"
     },
 
     // Expense Timeline Header
@@ -3479,6 +3525,26 @@ export const translations = {
       download: "Descarregar PDF",
       close: "Fechar",
       receiptNumber: "Rec. {number}"
+    },
+
+    // Histórico de movimentações imprimível (visão individual)
+    history: {
+      title: "Histórico de Movimentações",
+      periodLabel: "Período",
+      apply: "Aplicar",
+      choosePeriod: "Escolha o período e clique em Aplicar para pré-visualizar o histórico.",
+      entity: "Entidade:",
+      fromTo: "De {{from}} até {{to}}",
+      colDate: "Data",
+      colName: "Nome",
+      colStatus: "Estado",
+      empty: "Sem movimentos no período selecionado.",
+      periods: {
+        last_6_months: "Últimos 6 meses",
+        last_year: "Último ano",
+        last_2_years: "Últimos 2 anos",
+        last_5_years: "Últimos 5 anos"
+      }
     },
 
     // Comprovativo de Quitação

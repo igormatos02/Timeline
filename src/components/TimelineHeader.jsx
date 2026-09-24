@@ -20,9 +20,21 @@ import IndividualTimelineHeader from './timeline-headers/IndividualTimelineHeade
  * Renderiza o cabeçalho dedicado para cada tipo de timeline do enum TimelineType.
  */
 function TimelineHeader(rawProps) {
-  const { timeline, timeboard, selectedEntityId, isIndividualView } = rawProps;
+  const { timeline, timeboard, selectedEntityId, isIndividualView, isIndividualRole } = rawProps;
 
   if (!timeline) return null;
+
+  // Individual-role users only ever see the individual header (no global view, no switch).
+  if (isIndividualRole) {
+    return (
+      <IndividualTimelineHeader
+        {...rawProps}
+        isIndividualView
+        onToggleIndividualView={undefined}
+        onOpenClearance={undefined}
+      />
+    );
+  }
 
   // The individual view is only available on condoflow timeboards.
   const isCondoflow = timeboard?.type === TimeboardType.CONDOFLOW;

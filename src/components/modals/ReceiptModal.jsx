@@ -8,7 +8,9 @@ export default function ReceiptModal({
   onClose,
   htmlContent,
   title,
-  onPrint
+  onPrint,
+  toolbar = null,
+  emptyMessage = ''
 }) {
   const { t } = useTranslation();
   const iframeRef = useRef(null);
@@ -49,7 +51,6 @@ export default function ReceiptModal({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
         backdropFilter: 'blur(6px)',
         zIndex: 9999,
         display: 'flex',
@@ -69,7 +70,7 @@ export default function ReceiptModal({
           backgroundColor: 'var(--bg-card)',
           borderRadius: '14px',
           border: '1px solid var(--border-glass)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          boxShadow: 'var(--shadow-sm)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'
@@ -83,7 +84,7 @@ export default function ReceiptModal({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(255, 255, 255, 0.02)'
+            background: 'var(--bg-glass)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -92,7 +93,7 @@ export default function ReceiptModal({
                 width: '34px',
                 height: '34px',
                 borderRadius: '8px',
-                background: 'rgba(99, 102, 241, 0.18)',
+                background: 'var(--primary-glow)',
                 color: 'var(--primary-light)',
                 display: 'flex',
                 alignItems: 'center',
@@ -111,6 +112,7 @@ export default function ReceiptModal({
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={handleDownload}
+              disabled={!htmlContent}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -128,6 +130,7 @@ export default function ReceiptModal({
               type="button"
               className="btn btn-primary btn-sm"
               onClick={handlePrint}
+              disabled={!htmlContent}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -162,20 +165,33 @@ export default function ReceiptModal({
           </div>
         </div>
 
+        {/* Optional toolbar (e.g. period filters) */}
+        {toolbar && (
+          <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-glass)' }}>
+            {toolbar}
+          </div>
+        )}
+
         {/* Iframe Preview Container */}
-        <div style={{ flex: 1, position: 'relative', background: TimelineColor.WHITE }}>
-          <iframe
-            ref={iframeRef}
-            srcDoc={htmlContent}
-            title={t('receipt.receiptTitle')}
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              background: TimelineColor.WHITE
-            }}
-          />
-        </div>
+        {htmlContent ? (
+          <div style={{ flex: 1, position: 'relative', background: TimelineColor.WHITE }}>
+            <iframe
+              ref={iframeRef}
+              srcDoc={htmlContent}
+              title={title || t('receipt.receiptTitle')}
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                background: TimelineColor.WHITE
+              }}
+            />
+          </div>
+        ) : (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>
+            {emptyMessage}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'reac
 import { format, parseISO, addMonths, subMonths, startOfMonth, endOfMonth, differenceInCalendarMonths } from 'date-fns';
 import Navbar from './components/Navbar';
 import TimelineHeader from './components/TimelineHeader';
+import { PermissionsProvider } from './context/PermissionsContext.jsx';
+import { computeBalanceTotals, computePocketsInitialTotal } from './utils/balanceMetrics.js';
 import VerticalTimeline from './components/VerticalTimeline';
 
 // Heavy modals are lazy-loaded so they do not bloat the initial bundle
@@ -547,12 +549,15 @@ export default function App() {
     return virtual;
   }, [rawEvents, activeTimeboardTimelines]);
 
+  // Users with the individual role only see their own obligations and the individual header
+  const isIndividualRole = activeTimeboard?.role === PersonRole.INDIVIDUAL || currentUserPerson?.role === PersonRole.INDIVIDUAL;
+  const individualEntityId = isIndividualRole ? (activeTimeboard?.personId || currentUserPerson?.id || null) : null;
+
   // Events used for display — rawEvents enriched with virtual withdrawal income events
   const displayEvents = useMemo(() => {
     let events = !virtualWithdrawalEvents.length ? rawEvents : [...rawEvents, ...virtualWithdrawalEvents];
 
-    const isIndividual = activeTimeboard?.role === PersonRole.INDIVIDUAL || currentUserPerson?.role === PersonRole.INDIVIDUAL;
-    if (isIndividual) {
+    if (isIndividualRole) {
       const currentPersonId = activeTimeboard?.personId || currentUserPerson?.id;
       const currentObligatorId = (
         activeTimeboard?.obligatorIdentification ||
@@ -587,15 +592,24 @@ export default function App() {
     }
 
     return events;
-  }, [rawEvents, virtualWithdrawalEvents, activeTimeboard, currentUserPerson]);
+  }, [rawEvents, virtualWithdrawalEvents, activeTimeboard, currentUserPerson, isIndividualRole]);
+
+  // Individual-role users only see the timelines they take part in (those holding their obligations)
+  const visibleTimelines = React.useMemo(() => {
+    if (!isIndividualRole) return activeTimeboardTimelines;
+    const ownTimelineIds = new Set(
+      (displayEvents || []).map((ev) => ev.timelineId || ev.timeline_id).filter(Boolean).map(String)
+    );
+    return activeTimeboardTimelines.filter((tl) => ownTimelineIds.has(String(tl.id)));
+  }, [isIndividualRole, activeTimeboardTimelines, displayEvents]);
 
   // Dynamic active timeline representation for the selected tab
   const activeTimeline = React.useMemo(() => {
-    if (!activeTimeboard || activeTimeboardTimelines.length === 0) return null;
+    if (!activeTimeboard || visibleTimelines.length === 0) return null;
 
-    const currentSelectedRaw = activeTimeboardTimelines.find(
+    const currentSelectedRaw = visibleTimelines.find(
       (tl) => tl.id === activeFinancialTab || tl.type === activeFinancialTab || tl.id === activeTimelineId || tl.type === activeTimelineId
-    ) || activeTimeboardTimelines[0];
+    ) || visibleTimelines[0];
 
     const currentSelected = {
       ...currentSelectedRaw,
@@ -627,10 +641,10 @@ export default function App() {
       ...currentSelected,
       loanHeaderResult: computedMetrics,
       procedureMetrics: computedMetrics,
-      timelines: activeTimeboardTimelines,
+      timelines: visibleTimelines,
       events: computedEvents
     };
-  }, [activeTimeboard, activeTimeboardTimelines, activeFinancialTab, activeTimelineId, displayEvents]);
+  }, [activeTimeboard, activeTimeboardTimelines, visibleTimelines, activeFinancialTab, activeTimelineId, displayEvents]);
 
   // Contagem de eventos da base de dados (templates únicos) e calculados (projeções/ocorrências)
   const dbEventsCount = React.useMemo(() => {
@@ -704,7 +718,7 @@ export default function App() {
           startDate: startDateVal,
           start_date: startDateVal
         });
-        await refreshSystem();
+        await refreshTimelines();
       } catch (err) {
         console.error('Error saving compute start date:', err);
       }
@@ -1158,6 +1172,51 @@ export default function App() {
     }
   }, [activeTimeboard?.id, investmentTimeline?.id, loadPockets]);
 
+  // Timeboard balance summary for individual-role users (their displayEvents only hold their own
+  // obligations, so the totals are computed from all timeboard events, like the balance header does).
+  const timeboardSummary = React.useMemo(() => {
+    if (!isIndividualRole) return null;
+    const timelinesList = activeTimeboardTimelines || [];
+    const balanceTimeline = timelinesList.find((tl) => normalizeTimelineType(tl?.type) === TimelineType.BALANCE);
+    const incomeTimeline = timelinesList.find((tl) => normalizeTimelineType(tl?.type) === TimelineType.INCOME);
+
+    const timelineTypeMap = new Map(timelinesList.filter((tl) => tl?.id).map((tl) => [String(tl.id), tl.type]));
+    let events = (rawEvents || []).filter((ev) => {
+      if (!ev || !ev.id) return false;
+      const tlId = ev.timelineId || ev.timelineOriginId || ev.timeline_id;
+      return (tlId && timelineTypeMap.has(String(tlId))) || Boolean(ev.pocketId || ev.pocket_id);
+    });
+    timelinesList.filter((tl) => isLoanTimelineType(tl.type)).forEach((loanTl) => {
+      events = recalculateLoanState({
+        ...loanTl,
+        system: loanTl.system || loanTl.amortizationSystem || loanTl.loanContract?.system || loanTl.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE,
+        amortizationSystem: loanTl.system || loanTl.amortizationSystem || loanTl.loanContract?.system || loanTl.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE
+      }, events);
+    });
+
+    const rawComputeStart = activeTimeboard?.computeFrom || activeTimeboard?.compute_from ||
+      balanceTimeline?.computeFrom || balanceTimeline?.compute_from || balanceTimeline?.startDate || balanceTimeline?.start_date;
+    const computeFromMonth = rawComputeStart && !String(rawComputeStart).startsWith('1900-01') && String(rawComputeStart) !== 'all'
+      ? String(rawComputeStart).substring(0, 7)
+      : '1900-01';
+    const currentMonthStr = format(new Date(), 'yyyy-MM');
+
+    const totals = computeBalanceTotals({
+      events,
+      timelineTypeMap,
+      computeFromMonth,
+      currentMonthStr,
+      targetHorizonMonthStr: currentMonthStr
+    });
+    const incomeInitialValue = Number(incomeTimeline?.initialValue ?? incomeTimeline?.initial_value ?? 0);
+    const pocketsInitial = computePocketsInitialTotal({ pockets, timelines: timelinesList, events });
+
+    return {
+      netBalance: incomeInitialValue + totals.realizedIncome - (totals.realizedExpenses + totals.realizedLoanPaid) - totals.realizedInvestmentsDeductions,
+      savedBalance: totals.realizedInvestmentsTotal + pocketsInitial
+    };
+  }, [isIndividualRole, activeTimeboardTimelines, rawEvents, activeTimeboard, pockets]);
+
   const handleOpenCreatePocket = useCallback((pocket = null) => {
     setSelectedPocketForEdit(pocket);
     setIsPocketModalOpen(true);
@@ -1378,6 +1437,7 @@ export default function App() {
           let newIsCompleted = Boolean(ev.isCompleted);
 
           const isNotCancelledOrDeleted = ev.status !== EventStatus.CANCELLED && ev.status !== EventStatus.DELETED;
+          const todayStr = format(new Date(), 'yyyy-MM-dd');
           if (nextAuto && ev.date && ev.date <= todayStr && isNotCancelledOrDeleted) {
             const isIncome = ev.eventType === EventType.INCOME;
             const isWithdrawal = ev.eventType === EventType.WITHDRAWAL || Boolean(ev.isWithdrawal);
@@ -2197,6 +2257,7 @@ export default function App() {
 
   // 3. Timeline Workspace View (When a specific timeboard is active)
   return (
+    <PermissionsProvider isReadOnly={isIndividualRole}>
     <div className="app-container">
       {/* Navbar */}
       <Navbar
@@ -2207,7 +2268,7 @@ export default function App() {
           setActiveTimelineId(null);
           setActiveFinancialTab(null);
         }}
-        onOpenEditTimeboard={async (tb) => {
+        onOpenEditTimeboard={isIndividualRole ? undefined : async (tb) => {
           try {
             const fresh = await api.fetchTimeboard(tb.id);
             setEditingTimeboard(fresh || tb);
@@ -2227,7 +2288,8 @@ export default function App() {
         {timelines.length > 0 && activeTimeline ? (
           <VerticalTimeline
             timeline={activeTimeline}
-            timelines={activeTimeboardTimelines}
+            lockedEntityId={individualEntityId}
+            timelines={visibleTimelines}
             activeTimeboard={activeTimeboard}
             currentUser={currentUser}
             activeFinancialTab={activeFinancialTab}
@@ -2283,6 +2345,8 @@ export default function App() {
                 onSaveComputeStartDate={handleSaveComputeStartDate}
                 isIndividualView={isIndividualView}
                 onToggleIndividualView={setIsIndividualView}
+                isIndividualRole={isIndividualRole}
+                timeboardSummary={timeboardSummary}
                 onAddEvent={(opts) => {
                   if (opts && typeof opts === 'object' && !opts.nativeEvent) {
                     const presetDate = opts.date || format(new Date(), 'yyyy-MM-dd');
@@ -2297,11 +2361,11 @@ export default function App() {
           />
         ) : isLoadingSystem ? null : (
           <div className="empty-timeline-state glass-panel" style={{ marginTop: '40px', textAlign: 'center' }}>
-            <h2>{activeTimeboard ? activeTimeboard.name : (t('timeboard.noTimeboards') || 'Sem Timeboards')}</h2>
+            <h2>{activeTimeboard ? activeTimeboard.name : t('timeline.noTimeboards')}</h2>
             <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-              {t('timeline.noTimelines') || 'Nenhuma timeline criada neste timeboard.'}
+              {t('timeline.noTimelines')}
             </p>
-            {activeTimeboard && (
+            {activeTimeboard && !isIndividualRole && (
               <button
                 type="button"
                 className="btn btn-primary btn-sm"
@@ -2309,7 +2373,7 @@ export default function App() {
                 onClick={handleOpenCreateTimeline}
               >
                 <Plus size={16} />
-                <span>{t('timeline.createTimeline') || 'Criar Timeline'}</span>
+                <span>{t('timeline.createTimeline')}</span>
               </button>
             )}
           </div>
@@ -2707,5 +2771,6 @@ export default function App() {
         </div>
       </div>
     </div>
+    </PermissionsProvider>
   );
 }

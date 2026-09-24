@@ -428,6 +428,15 @@ ${RECEIPT_STYLES}
   `;
 }
 
+// Table styles shared by the printable documents (declarations, history)
+const DOCUMENT_TABLE_STYLES = `
+        .charges-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12px; }
+        .charges-table th, .charges-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid currentColor; }
+        .charges-table th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+        .charges-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .charges-table .empty { text-align: center; font-style: italic; }
+`;
+
 /**
  * Builds a clearance certificate (Comprovativo de Quitação) declaring that there are
  * no pending obligations between the obligator and the timeboard.
@@ -593,11 +602,7 @@ ${RECEIPT_STYLES}
         .declaration .identity { margin: 4px 0 14px 16px; }
         .declaration .identity div { margin-bottom: 4px; }
         .declaration .section-title { font-weight: 800; margin: 18px 0 8px; }
-        .charges-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12px; }
-        .charges-table th, .charges-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid currentColor; }
-        .charges-table th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
-        .charges-table .num { text-align: right; font-variant-numeric: tabular-nums; }
-        .charges-table .empty { text-align: center; font-style: italic; }
+${DOCUMENT_TABLE_STYLES}
         .sign-block { margin-top: 36px; }
         .sign-block .signature-line { width: 240px; margin-bottom: 4px; }
         .stamp-box { margin-top: 28px; width: 180px; height: 90px; border: 1px dashed currentColor; border-radius: 6px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font-size: 11px; }
@@ -647,6 +652,87 @@ ${RECEIPT_STYLES}
             <div><strong>${timeboardName}</strong></div>
             <div class="stamp-box">${t('clearance.stamp')}</div>
           </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Builds the printable movement history of an entity:
+ * title, condominium name, print template, period (from - to) and the list of movements.
+ * `rows`: [{ date, name, statusLabel }]
+ */
+export function buildHistoryHtml({
+  timeboard,
+  currentUser,
+  entityName = '',
+  fromDate,
+  toDate,
+  rows = [],
+  language = 'pt',
+  t
+}) {
+  const isPt = language === 'pt';
+  const dateLocale = isPt ? pt : enUS;
+  const longDateFormat = isPt ? "dd 'de' MMMM 'de' yyyy" : "MMMM dd, yyyy";
+
+  const { timeboardName, timeboardDesc } = resolveIssuer({ timeboard, currentUser, t });
+  const titleLabel = t('history.title');
+
+  const rowsHtml = rows.length > 0
+    ? rows.map((r) => `
+          <tr>
+            <td>${format(parseISO(r.date), 'dd/MM/yyyy')}</td>
+            <td>${r.name || '—'}</td>
+            <td>${r.statusLabel}</td>
+          </tr>`).join('')
+    : `
+          <tr><td colspan="3" class="empty">${t('history.empty')}</td></tr>`;
+
+  return `
+    <!DOCTYPE html>
+    <html lang="${language}">
+    <head>
+      <meta charset="utf-8" />
+      <title>${titleLabel} - ${entityName || timeboardName}</title>
+      <style>
+${RECEIPT_STYLES}
+${DOCUMENT_TABLE_STYLES}
+        .history { line-height: 1.5; font-size: 13px; }
+        .history .doc-title { font-size: 16px; font-weight: 800; text-align: center; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+        .history .condo-name { font-size: 14px; font-weight: 700; text-align: center; margin-bottom: 4px; }
+        .history .print-layout { text-align: center; margin-bottom: 16px; }
+        .history .period { margin-bottom: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="receipt-section history">
+          <div class="doc-title">${titleLabel}</div>
+          <div class="condo-name">${timeboardName}</div>
+          ${timeboardDesc ? `<div class="print-layout">${timeboardDesc}</div>` : ''}
+
+          <div class="period">
+            ${entityName ? `<div><strong>${t('history.entity')}</strong> ${entityName}</div>` : ''}
+            <div>${t('history.fromTo', {
+              from: `<strong>${format(parseISO(fromDate), longDateFormat, { locale: dateLocale })}</strong>`,
+              to: `<strong>${format(parseISO(toDate), longDateFormat, { locale: dateLocale })}</strong>`
+            })}</div>
+          </div>
+
+          <table class="charges-table">
+            <thead>
+              <tr>
+                <th>${t('history.colDate')}</th>
+                <th>${t('history.colName')}</th>
+                <th>${t('history.colStatus')}</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}
+            </tbody>
+          </table>
         </div>
       </div>
     </body>

@@ -86,6 +86,7 @@ import { getPaletteTheme, ColorPaletteId, COLOR_PALETTES } from '../../shared/co
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import * as api from '../services/api.js';
 import { compareEventsWithinDay } from '../utils/eventSorting.js';
+import { usePermissions } from '../context/PermissionsContext.jsx';
 
 const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   event,
@@ -93,22 +94,35 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   currentTimelineId,
   timelineType,
   activeFinancialTab = null,
-  onEdit,
-  onUpdateEventDirect,
-  onDelete,
-  onToggleTask,
-  onAddChecklistItem,
-  onDeleteChecklistItem,
-  onToggleLoanPayment,
-  onPayUpToHere,
-  onOpenEditInstallment,
+  onEdit: onEditProp,
+  onUpdateEventDirect: onUpdateEventDirectProp,
+  onDelete: onDeleteProp,
+  onToggleTask: onToggleTaskProp,
+  onAddChecklistItem: onAddChecklistItemProp,
+  onDeleteChecklistItem: onDeleteChecklistItemProp,
+  onToggleLoanPayment: onToggleLoanPaymentProp,
+  onPayUpToHere: onPayUpToHereProp,
+  onOpenEditInstallment: onOpenEditInstallmentProp,
   onNavigateToTimeline,
-  onPrintReceipt,
+  onPrintReceipt: onPrintReceiptProp,
   timelineColor,
   timelines = [],
   persons = []
 }) {
   const { t, language } = useTranslation();
+  // Read-only users (individual role) cannot change events; they can only view and add notes.
+  const { isReadOnly } = usePermissions();
+  const onEdit = isReadOnly ? undefined : onEditProp;
+  const onUpdateEventDirect = isReadOnly ? undefined : onUpdateEventDirectProp;
+  const onSaveNotes = onUpdateEventDirectProp;
+  const onDelete = isReadOnly ? undefined : onDeleteProp;
+  const onToggleTask = isReadOnly ? undefined : onToggleTaskProp;
+  const onAddChecklistItem = isReadOnly ? undefined : onAddChecklistItemProp;
+  const onDeleteChecklistItem = isReadOnly ? undefined : onDeleteChecklistItemProp;
+  const onToggleLoanPayment = isReadOnly ? undefined : onToggleLoanPaymentProp;
+  const onPayUpToHere = isReadOnly ? undefined : onPayUpToHereProp;
+  const onOpenEditInstallment = isReadOnly ? undefined : onOpenEditInstallmentProp;
+  const onPrintReceipt = isReadOnly ? undefined : onPrintReceiptProp;
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   const [newItemText, setNewItemText] = useState('');
   const [localAuto, setLocalAuto] = React.useState(Boolean(event.automatic || event.isAutomatic));
@@ -869,7 +883,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       return (
         <span
           onClick={(e) => {
-            if (isLockedPositive || isCancelled) return;
+            if (isReadOnly || isLockedPositive || isCancelled) return;
             e.stopPropagation();
             if (isDesmembramentoExpanded) {
               handleCancelDesmembramento(e);
@@ -895,7 +909,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           {prefix}{formatCurrency(Math.abs(Number(event.amount || 0)))}
           <span
             onClick={(e) => {
-              if (isLockedPositive || isCancelled) return;
+              if (isReadOnly || isLockedPositive || isCancelled) return;
               e.stopPropagation();
               if (isDesmembramentoExpanded) {
                 handleCancelDesmembramento(e);
@@ -1095,7 +1109,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     return (
       <span
         onClick={(e) => {
-          if (isLockedPositive || isCancelled) return;
+          if (isReadOnly || isLockedPositive || isCancelled) return;
           e.stopPropagation();
           setPropagateSubsequent(true);
           setIsEditingAmount(true);
@@ -1947,7 +1961,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     if (isAmortized || isAnchorCard || isVirtual || isLockedPositive || isCancelled) return;
                     if (isLoanInstallment && originInfo && onNavigateToTimeline) {
                       onNavigateToTimeline(originInfo.id);
-                    } else {
+                    } else if (!isReadOnly) {
                       setIsEditingTitle(true);
                     }
                   }}
@@ -2217,8 +2231,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         </button>
       )}
 
-      {/* Botão de Notas */}
-      {onEdit && !isAnchorCard && (() => {
+      {/* Botão de Notas (também disponível para utilizadores só de leitura) */}
+      {(onEdit || isReadOnly) && !isAnchorCard && (() => {
         const allNotes = Array.isArray(event.notes)
           ? event.notes.filter(Boolean)
           : (event.description && !event.description.toLowerCase().includes('transferência bancária de vencimento') && event.description.trim() ? [event.description.trim()] : []);
@@ -2293,7 +2307,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       })()}
 
       {/* Botão / Indicador de Evento Automático (Apenas para Eventos Recorrentes / Parcelamentos e não trancados/cancelados) */}
-      {isRecurringEvent && !isLockedPositive && !isCancelled && (
+      {isRecurringEvent && !isReadOnly && !isLockedPositive && !isCancelled && (
         <button
           type="button"
           className="action-icon-btn"
@@ -4108,7 +4122,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             style={{
               marginTop: '8px',
               padding: '12px 14px',
-              background: 'rgba(255, 255, 255, 0.03)',
+              background: 'var(--bg-glass)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
               border: '1px solid var(--border-glass)',
@@ -4119,9 +4133,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', fontWeight: '700', color: hasNotes ? '#f59e0b' : 'var(--text-muted)' }}>
-                <FileText size={14} style={{ color: hasNotes ? '#f59e0b' : 'var(--text-dim)' }} />
-                <span>Notas do Movimento ({allNotes.length})</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', fontWeight: '700', color: hasNotes ? TimelineColor.WARNING : 'var(--text-muted)' }}>
+                <FileText size={14} style={{ color: hasNotes ? TimelineColor.WARNING : 'var(--text-dim)' }} />
+                <span>{t('eventNotes.title', { count: allNotes.length })}</span>
               </div>
               <button
                 type="button"
@@ -4154,9 +4168,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       fontSize: '0.78rem',
                       color: 'var(--text-main)',
                       padding: '6px 10px',
-                      background: 'rgba(255, 255, 255, 0.04)',
+                      background: 'var(--bg-glass)',
                       borderRadius: '6px',
-                      borderLeft: '3px solid #f59e0b'
+                      borderLeft: `3px solid ${TimelineColor.WARNING}`
                     }}
                   >
                     <span style={{ flex: 1, lineHeight: '1.45' }}>{renderFormattedMarkdown(note)}</span>
@@ -4185,7 +4199,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                           display: 'inline-flex',
                           alignItems: 'center'
                         }}
-                        title="Eliminar esta nota"
+                        title={t('eventNotes.delete')}
                       >
                         <Trash2 size={12} />
                       </button>
@@ -4195,12 +4209,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               </div>
             ) : (
               <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
-                Nenhuma nota adicionada ainda.
+                {t('eventNotes.empty')}
               </span>
             )}
 
-            {/* Add New Note Input Form */}
-            {(onUpdateEventDirect || onEdit) && (
+            {/* Add New Note Input Form (also available to read-only users) */}
+            {onSaveNotes && (
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -4212,9 +4226,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       notes: updatedNotes,
                       description: updatedNotes[0] || ''
                     };
-                    if (onUpdateEventDirect) {
-                      onUpdateEventDirect(updatedEvent);
-                    }
+                    onSaveNotes(updatedEvent);
                     setNewItemText('');
                   }
                 }}
@@ -4223,13 +4235,13 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               >
                 <input
                   type="text"
-                  placeholder="Escrever uma nova nota..."
+                  placeholder={t('eventNotes.placeholder')}
                   value={newItemText}
                   onChange={(e) => setNewItemText(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
                   style={{
                     flex: 1,
-                    background: 'rgba(0, 0, 0, 0.15)',
+                    background: 'var(--bg-card)',
                     border: '1px solid var(--border-glass)',
                     borderRadius: '6px',
                     padding: '6px 10px',
@@ -4246,17 +4258,17 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   style={{
                     padding: '4px 12px',
                     fontSize: '0.74rem',
-                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                    color: '#ffffff',
+                    background: TimelineColor.WARNING,
+                    color: TimelineColor.WHITE,
                     border: 'none',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '4px'
                   }}
-                  title="Adicionar nota"
+                  title={t('actionAddNote')}
                 >
                   <Plus size={13} />
-                  <span>Adicionar</span>
+                  <span>{t('eventNotes.add')}</span>
                 </button>
               </form>
             )}

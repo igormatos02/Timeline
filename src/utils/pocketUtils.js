@@ -9,15 +9,11 @@ export function pocketHasTarget(pocket) {
 }
 
 /**
- * Whether a pocket movement already counts as saved:
- * - received / completed movements, or
- * - external deposits whose date has already arrived (future external deposits are only planned).
+ * Whether a pocket movement already counts as saved: only when it was actually received / completed.
+ * External deposits follow the same rule (being external only means they do not commit the income).
  * @param {object} ev - pocket event
- * @param {string} todayStr - 'yyyy-MM-dd'
  */
-export function isPocketMovementRealized(ev, todayStr) {
+export function isPocketMovementRealized(ev) {
   if (!ev) return false;
-  if (isPositiveStatus(ev.status) || ev.isCompleted) return true;
-  const isExternal = Boolean(ev.isExternal || ev.is_external);
-  return isExternal && Boolean(ev.date) && ev.date <= todayStr;
+  return isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
 }

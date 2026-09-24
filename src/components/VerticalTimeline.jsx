@@ -2700,8 +2700,8 @@ function VerticalTimeline({
 
                                 if (isFutureMonth) {
                                   allPocketContributed += multiplier * amt;
-                                } else if (isPocketMovementRealized(ev, todayStr)) {
-                                  // Received movements, or external deposits already due
+                                } else if (isPocketMovementRealized(ev)) {
+                                  // Only received movements count as saved
                                   allPocketContributed += multiplier * amt;
                                 }
                               }
@@ -2802,7 +2802,6 @@ function VerticalTimeline({
                                           onAddEventForDate?.(targetDayStr, EventType.INVESTMENT, {
                                             pocketId: pocket.id,
                                             pocketName: pocket.name,
-                                            title: pocket.name,
                                             category: InvestmentEventCategory.SAVINGS
                                           });
                                         }}
@@ -2835,7 +2834,6 @@ function VerticalTimeline({
                                             onAddEventForDate?.(targetDayStr, EventType.WITHDRAWAL, {
                                               pocketId: pocket.id,
                                               pocketName: pocket.name,
-                                              title: pocket.name,
                                               isWithdrawal: true
                                             });
                                           }

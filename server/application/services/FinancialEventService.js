@@ -50,6 +50,11 @@ export class FinancialEventService {
       await financialEventStatusRepository.upsertStatus(year, month, eventId, EventStatus.DELETED, options);
     } else if (status === EventStatus.CANCELLED || isCancelledStatus(status)) {
       await financialEventStatusRepository.upsertStatus(year, month, eventId, EventStatus.CANCELLED, options);
+    } else if (!isPositiveStatus(status)) {
+      // Negative statuses (pending, overdue, planned, open...) are the absence of a status row:
+      // remove the month's row (e.g. un-cancelling or un-paying an event) instead of storing it.
+      const ids = [eventId, ...(Array.isArray(options.aliases) ? options.aliases : [])].filter(Boolean).map(String);
+      await financialEventStatusRepository.deleteStatus(year, month, [...new Set(ids)]);
     } else {
       await financialEventStatusRepository.upsertStatus(year, month, eventId, status, options);
     }
@@ -864,7 +869,8 @@ export class FinancialEventService {
 
     await this._syncStatus(targetDate, targetEventId, toggled.status, {
       timelineId: targetEvent.timelineId || targetEvent.timeline_id,
-      timeboardId: targetEvent.timeboardId || targetEvent.timeboard_id
+      timeboardId: targetEvent.timeboardId || targetEvent.timeboard_id,
+      aliases: [targetEvent.id, rootId]
     });
 
     if (targetEvent.id && !String(id).includes('_')) {

@@ -89,6 +89,7 @@ import { getPaletteTheme, ColorPaletteId, COLOR_PALETTES } from '../../shared/co
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import * as api from '../services/api.js';
 import { compareEventsWithinDay } from '../utils/eventSorting.js';
+import CopyIdButton from './ui/CopyIdButton.jsx';
 import { usePermissions } from '../context/PermissionsContext.jsx';
 import { useTimeboard } from '../context/TimeboardContext.jsx';
 import { makeDiaryT } from '../utils/diaryLabels.js';
@@ -2042,6 +2043,13 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 </h3>
               )}
 
+              {/* Copy event id (same as the timeboard / timeline headers) */}
+              {!isEditingTitle && !isVirtual && event.id && (
+                <span onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex' }}>
+                  <CopyIdButton id={event.id} />
+                </span>
+              )}
+
               {/* Labels / Tags next to Title */}
               <div className="tag-list" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
                 {/* Custom Labels / Etiquetas */}
@@ -2455,17 +2463,14 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           onClick={(e) => {
             e.stopPropagation();
             if (isCancelled) {
-              const uncancelledStatus = isIncomeEvent
-                ? EventStatus.RECEIVED
-                : isExpenseEvent
-                  ? EventStatus.PAID
-                  : isInvestmentEvent
-                    ? EventStatus.INVESTED
-                    : isReminderEvent
-                      ? EventStatus.OPEN
-                      : isFollowupEvent
-                        ? FollowupStatus.IN_PROGRESS
-                        : EventStatus.PENDING;
+              // Reactivating goes back to the event's open (negative) status; "overdue" is derived from the date
+              const uncancelledStatus = isInvestmentEvent
+                ? EventStatus.PLANNED
+                : isReminderEvent
+                  ? EventStatus.OPEN
+                  : isFollowupEvent
+                    ? FollowupStatus.IN_PROGRESS
+                    : EventStatus.PENDING;
               handleStatusToggle(e, uncancelledStatus);
             } else {
               handleStatusToggle(e, EventStatus.CANCELLED);

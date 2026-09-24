@@ -194,7 +194,7 @@ export default function FinancialEventModal({
       }
 
       setFormData({
-        title: initialData?.title || initialData?.name || initialData?.pocketName || '',
+        title: initialData?.title || initialData?.name || '',
         description: initialData?.description || initialData?.notes || '',
         date: targetDate,
         dayOfMonth: parsedDay,

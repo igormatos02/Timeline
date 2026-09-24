@@ -77,7 +77,6 @@ export default function InvestmentTimelineHeader({
     ? filteredEvents
     : (events && events.length > 0 ? events : (timeline.events || []));
   const currentMonthStr = new Date().toISOString().substring(0, 7);
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
 
   // 1. POUPANÇA POR COFRINHOS
   const pocketColors = paletteTheme.colors && paletteTheme.colors.length > 1 ? paletteTheme.colors : TIMELINE_COLOR_PRESETS;
@@ -93,8 +92,8 @@ export default function InvestmentTimelineHeader({
         const isWithdrawal = Boolean(ev.isWithdrawal || ev.eventType === EventType.WITHDRAWAL || ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0);
         const multiplier = isWithdrawal ? -1 : 1;
         const amt = Math.abs(Number(ev.amount || 0));
-        // Received movements, or external deposits already due (future ones are only planned)
-        if (isPocketMovementRealized(ev, todayStr)) {
+        // Only received movements count as saved (external or not)
+        if (isPocketMovementRealized(ev)) {
           pocketContributed += multiplier * amt;
         }
       }
@@ -107,6 +106,7 @@ export default function InvestmentTimelineHeader({
       id: pocket.id,
       name: pocket.name,
       amount: accumulated,
+      hasTarget: pocketHasTarget(pocket),
       color: pocket.color || pocketColors[idx % pocketColors.length]
     };
   });
@@ -234,8 +234,8 @@ export default function InvestmentTimelineHeader({
       const multiplier = isWithdrawal ? -1 : 1;
       const amt = Math.abs(Number(ev.amount || 0));
 
-      // External deposits are added to Received / Invested once their date has arrived
-      if (isPocketMovementRealized(ev, todayStr)) {
+      // Only received movements count as contributed (external deposits included)
+      if (isPocketMovementRealized(ev)) {
         totalInstallmentsReceived += multiplier * amt;
         totalReceivedCount += 1;
       }
@@ -487,30 +487,33 @@ export default function InvestmentTimelineHeader({
                                     fontSize: '0.76rem'
                                   }}
                                 >
-                                  {item.percent}%
+                                  {item.hasTarget ? `${item.percent}%` : null}
                                 </span>
                               </div>
                             </div>
 
-                            <div
-                              style={{
-                                width: '100%',
-                                height: '6px',
-                                background: 'rgba(255, 255, 255, 0.08)',
-                                borderRadius: '9999px',
-                                overflow: 'hidden'
-                              }}
-                            >
+                            {/* Share bar only for pockets with a target */}
+                            {item.hasTarget && (
                               <div
                                 style={{
-                                  width: `${Math.min(100, Math.max(0, item.percent))}%`,
-                                  height: '100%',
-                                  background: item.color,
+                                  width: '100%',
+                                  height: '6px',
+                                  background: 'var(--border-glass)',
                                   borderRadius: '9999px',
-                                  transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+                                  overflow: 'hidden'
                                 }}
-                              />
-                            </div>
+                              >
+                                <div
+                                  style={{
+                                    width: `${Math.min(100, Math.max(0, item.percent))}%`,
+                                    height: '100%',
+                                    background: item.color,
+                                    borderRadius: '9999px',
+                                    transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+                                  }}
+                                />
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

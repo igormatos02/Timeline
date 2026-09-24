@@ -8,6 +8,7 @@ import { financialEventStatusRepository } from '../../infrastructure/database/su
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
 import { userRepository } from '../../infrastructure/database/supabase/SupabaseUserRepository.js';
 import { emailService } from './EmailService.js';
+import { getAppUrl } from '../../../shared/config/appConfig.js';
 import { TimeboardType, TimelineType, TimelineStatus, EventPeriodicity, InvitationStatus, PersonRole, PersonType } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 

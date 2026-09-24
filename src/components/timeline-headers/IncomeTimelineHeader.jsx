@@ -14,6 +14,7 @@ import {
   isCancelledStatus,
   isPositiveStatus,
   TimelineColor,
+  TIMELINE_COLOR_PRESETS,
   TimelineType,
   isLoanTimelineType,
   IncomeEventCategory,

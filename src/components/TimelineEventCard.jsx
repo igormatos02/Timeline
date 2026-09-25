@@ -84,7 +84,14 @@ import {
   normalizeTimelineType,
   normalizeRecurrence
 } from '../enums/index.js';
-import { INCOME_CATEGORY_META, EXPENSE_CATEGORY_META, INVESTMENT_CATEGORY_META, REMINDER_CATEGORY_META } from './event-modals/FinancialEventModalConfig.js';
+import {
+  INCOME_CATEGORY_META,
+  EXPENSE_CATEGORY_META,
+  INVESTMENT_CATEGORY_META,
+  REMINDER_CATEGORY_META,
+  CONDO_INCOME_CATEGORY_META,
+  CONDO_INVESTMENT_CATEGORY_META
+} from './event-modals/FinancialEventModalConfig.js';
 import { DIARY_MOOD_CONFIG, renderFormattedMarkdown } from './event-modals/DiaryEventModal.jsx';
 import { getPaletteTheme, ColorPaletteId, COLOR_PALETTES } from '../../shared/config/colorPalettes.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
@@ -543,35 +550,99 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     }
   };
 
+  // Category badge shown next to the amount: icon, name and colour of the event's category
+  // (condoflow timeboards use their own income / deposit categories first)
+  const renderCategoryBadge = (onPositiveCard) => {
+    const category = String(event.category || '').toLowerCase().trim();
+    if (!category) return null;
+    const sources = isIncomeEvent
+      ? [[isCondoflow ? CONDO_INCOME_CATEGORY_META : null, 'incomeCategories'], [INCOME_CATEGORY_META, 'incomeCategories']]
+      : isExpenseEvent
+        ? [[EXPENSE_CATEGORY_META, 'expenseCategories']]
+        : isInvestmentEvent && !isWithdrawalEvent
+          ? [[isCondoflow ? CONDO_INVESTMENT_CATEGORY_META : null, 'investmentCategories'], [INVESTMENT_CATEGORY_META, 'investmentCategories']]
+          : [];
+    const match = sources.find(([metaMap]) => metaMap && metaMap[category]);
+    if (!match) return null;
+    const [metaMap, labelNamespace] = match;
+    const { icon: CategoryIcon, color } = metaMap[category];
+    return (
+      <span
+        title={t(`${labelNamespace}.${category}`)}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+          marginLeft: '8px',
+          padding: '2px 8px',
+          borderRadius: '9999px',
+          fontSize: '0.68rem',
+          fontWeight: '700',
+          lineHeight: 1.3,
+          whiteSpace: 'nowrap',
+          color: onPositiveCard ? TimelineColor.WHITE : color,
+          background: onPositiveCard ? color : `${color}1f`,
+          border: `1px solid ${onPositiveCard ? `${TimelineColor.WHITE}59` : `${color}59`}`
+        }}
+      >
+        {CategoryIcon && <CategoryIcon size={11} />}
+        <span>{t(`${labelNamespace}.${category}`)}</span>
+      </span>
+    );
+  };
+
   // Receipt reference line: "REC. 202602 | Data: 13/03/2025".
   // The payment date shows as soon as the event is paid / received (stored receipt date, or the event date).
   const renderReceiptRef = (onPositiveCard) => {
     const receiptNumber = event.cont_year ?? event.contYear;
     const hasReceiptNumber = receiptNumber != null && Number(receiptNumber) > 0;
     const paymentDate = isCompleted && !isCancelled ? (event.receiptDate || event.date) : null;
-    const canAddReceiptNumber = !hasReceiptNumber && Boolean(paymentDate) && canEditPaymentDate
+    // The receipt number can be added or changed at any time (same rules as the receipt modal)
+    const canManageReceiptNumber = Boolean(paymentDate) && canEditPaymentDate
       && isObligationEvent && Boolean(onPrintReceipt) && Boolean(saveReceiptNumber);
+    const canAddReceiptNumber = !hasReceiptNumber && canManageReceiptNumber;
+    const canChangeReceiptNumber = hasReceiptNumber && canManageReceiptNumber;
+    const openReceiptNumberPopover = (e, initialValue) => {
+      e.stopPropagation();
+      const rect = e.currentTarget.getBoundingClientRect();
+      setReceiptNumberPos({ top: rect.bottom + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - RECEIPT_NUMBER_POPOVER_WIDTH - 8)) });
+      setReceiptNumberDraft(String(initialValue || ''));
+      setReceiptNumberError('');
+      setIsReceiptDateOpen(false);
+      setIsReceiptNumberOpen((open) => !open);
+    };
     if (!hasReceiptNumber && !paymentDate) {
       return <span style={{ fontSize: '0.7rem', lineHeight: 1 }}>&nbsp;</span>;
     }
     return (
       <span style={{ fontSize: '0.7rem', color: onPositiveCard ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
         <FileText size={10} />
-        {hasReceiptNumber && t('receipt.receiptNumber', { number: receiptNumber })}
+        {canChangeReceiptNumber ? (
+          <button
+            type="button"
+            ref={receiptNumberAnchorRef}
+            title={t('receipt.editNumberHint')}
+            onClick={(e) => openReceiptNumberPopover(e, receiptNumber)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              font: 'inherit',
+              color: 'inherit',
+              textTransform: 'inherit',
+              textDecoration: 'underline dotted',
+              cursor: 'pointer'
+            }}
+          >
+            {t('receipt.receiptNumber', { number: receiptNumber })}
+          </button>
+        ) : (hasReceiptNumber && t('receipt.receiptNumber', { number: receiptNumber }))}
         {canAddReceiptNumber && (
           <button
             type="button"
             ref={receiptNumberAnchorRef}
             title={t('receipt.addNumberHint')}
-            onClick={(e) => {
-              e.stopPropagation();
-              const rect = e.currentTarget.getBoundingClientRect();
-              setReceiptNumberPos({ top: rect.bottom + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - RECEIPT_NUMBER_POPOVER_WIDTH - 8)) });
-              setReceiptNumberDraft(String(getProposedReceiptNumber?.(event) || ''));
-              setReceiptNumberError('');
-              setIsReceiptDateOpen(false);
-              setIsReceiptNumberOpen((open) => !open);
-            }}
+            onClick={(e) => openReceiptNumberPopover(e, getProposedReceiptNumber?.(event))}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -1567,7 +1638,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     const normalizedCat = (cat || '').toLowerCase().trim();
     if (!normalizedCat) {
       return {
-        label: t('categories.default') || '',
+        label: t('categories.default'),
         icon: <Tag size={12} />,
         bg: 'rgba(6, 182, 212, 0.15)',
         color: '#67e8f9',
@@ -2395,12 +2466,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                         : isVirtual
                           ? undefined
                           : isAmortized
-                            ? t('event.amortizedTooltip')
+                            ? t('backend.event.amortizedTooltip')
                             : isLoanInstallment
-                              ? t('event.loanInstallmentTooltip', { label: originInfo ? originInfo.label : t('loans.loan') })
+                              ? t('backend.event.loanInstallmentTooltip', { label: originInfo ? originInfo.label : t('loans.loan') })
                               : isRecurring
-                                ? t('event.editNameRecurring')
-                                : t('event.editName')
+                                ? t('backend.event.editNameRecurring')
+                                : t('backend.event.editName')
                   }
                   style={{
                     margin: 0,
@@ -2782,7 +2853,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               updateScope: 'all_series'
             });
           }}
-          title={localAuto ? t('event.autoMovementActiveTitle') : t('event.autoMovementManualTitle')}
+          title={localAuto ? t('backend.event.autoMovementActiveTitle') : t('backend.event.autoMovementManualTitle')}
           style={{
             color: localAuto ? TimelineColor.WARNING : 'var(--text-dim)',
             background: localAuto ? 'rgba(251, 191, 36, 0.16)' : 'transparent',
@@ -3084,6 +3155,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {renderEditableAmount('+', isCancelled ? TimelineColor.SLATE : isReceivedIncome ? TimelineColor.WHITE : TimelineColor.WARNING)}
+              {renderCategoryBadge(isReceivedIncome)}
             </div>
             <div style={{ marginLeft: 'auto' }}>
               {renderActionButtons()}
@@ -3216,6 +3288,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {renderEditableAmount('-', isCancelled ? TimelineColor.SLATE : isPaidExpense ? TimelineColor.WHITE : TimelineColor.EXPENSE)}
+              {renderCategoryBadge(isPaidExpense)}
             </div>
             <div style={{ marginLeft: 'auto' }}>
               {renderActionButtons()}
@@ -3455,6 +3528,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     : TimelineColor.INVESTMENT
                 )
               )}
+              {renderCategoryBadge(isCompletedInvestment)}
             </div>
             <div style={{ marginLeft: 'auto' }}>
               {renderActionButtons()}
@@ -3817,7 +3891,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   title="Parcela abatida por amortização extraordinária antecipada."
                 >
                   <CheckCircle2 size={13} style={{ color: TimelineColor.SLATE }} />
-                  <span>{t('status.abatida')}</span>
+                  <span>{t('status.abated')}</span>
                 </div>
               ) : (
                 renderStatusDropdownButton(

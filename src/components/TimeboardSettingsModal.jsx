@@ -398,7 +398,7 @@ export default function TimeboardSettingsModal({
     const effectiveObligatorId = entityForm.obligatorIdentification.trim();
 
     if (!effectivePersonName) {
-      alert(t('timeboardSettings.entities.form.personNameRequired') || 'O Nome da Pessoa é obrigatório.');
+      alert(t('timeboardSettings.entities.form.personNameRequired'));
       return;
     }
 

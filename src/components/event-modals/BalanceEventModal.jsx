@@ -26,19 +26,19 @@ export default function BalanceEventModal({
   const movementTypes = useMemo(() => [
     {
       id: EventType.INCOME,
-      label: t(EVENT_MODAL_CONFIG[EventType.INCOME].subtitleKey) || t('modal.income'),
+      label: t(EVENT_MODAL_CONFIG[EventType.INCOME].subtitleKey),
       color: EVENT_MODAL_CONFIG[EventType.INCOME].accent,
       icon: EVENT_MODAL_CONFIG[EventType.INCOME].icon
     },
     {
       id: EventType.EXPENSE,
-      label: t(EVENT_MODAL_CONFIG[EventType.EXPENSE].subtitleKey) || t('modal.expense'),
+      label: t(EVENT_MODAL_CONFIG[EventType.EXPENSE].subtitleKey),
       color: EVENT_MODAL_CONFIG[EventType.EXPENSE].accent,
       icon: EVENT_MODAL_CONFIG[EventType.EXPENSE].icon
     },
     {
       id: EventType.INVESTMENT,
-      label: t(EVENT_MODAL_CONFIG[EventType.INVESTMENT].subtitleKey) || t('modal.investment'),
+      label: t(EVENT_MODAL_CONFIG[EventType.INVESTMENT].subtitleKey),
       color: EVENT_MODAL_CONFIG[EventType.INVESTMENT].accent,
       icon: EVENT_MODAL_CONFIG[EventType.INVESTMENT].icon
     }

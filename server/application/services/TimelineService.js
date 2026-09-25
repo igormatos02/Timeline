@@ -238,8 +238,7 @@ export class TimelineService {
       );
       if (duplicate) {
         throw new Error(
-          t('backend.validation.timelineAlreadyExists') ||
-          `Uma timeline do tipo "${type}" já existe neste timeboard.`
+          t('backend.validation.timelineAlreadyExists', { type })
         );
       }
     }

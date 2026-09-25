@@ -525,7 +525,7 @@ export default function DiaryEventModal({
             {isSaving ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 <Loader2 size={14} className="animate-spin" />
-                <span>{t('buttons.saving') || 'A guardar...'}</span>
+                <span>{t('buttons.saving')}</span>
               </span>
             ) : (
               dt('diaryModal.save')

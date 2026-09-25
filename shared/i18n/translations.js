@@ -35,6 +35,7 @@ export const translations = {
 
     // Buttons
     buttons: {
+      saving: "Saving...",
       addEvent: "Add Event",
       amortize: "Amortize",
       goToToday: "Go to Today",
@@ -55,6 +56,9 @@ export const translations = {
 
     // Common
     common: {
+      date: "Date",
+      event: "Event",
+      processing: "Processing...",
       updateFailed: "Could not save the change: {{message}}",
       save: "Save",
       cancel: "Cancel",
@@ -102,6 +106,10 @@ export const translations = {
 
     // Timeline Rows & Cards
     timeline: {
+      incomes: "Incomes",
+      acquisition: "Acquisition",
+      valuation: "Valuation",
+      financing: "Financing",
       lockedPositiveNotice: "Locked — Positive financial events cannot be edited or reverted",
       cannotEditLockedEvent: "This event is in a positive state and locked. It cannot be edited, only cancelled.",
       cannotDeleteLockedEvent: "This event is in a positive state and locked. It cannot be deleted, only cancelled.",
@@ -332,6 +340,7 @@ export const translations = {
 
     // Sidebar Filters
     sidebar: {
+      clearSearch: "Clear search",
       period: "Period",
       year: "Year",
       month: "Month",
@@ -387,6 +396,28 @@ export const translations = {
       back: "Back",
       confirm: "Yes, cancel",
       locked: "Cancelled event — it cannot be reactivated",
+    },
+    categories: {
+      default: "General",
+    },
+    email: {
+      roleAdmin: "Administrator",
+    },
+    loans: {
+      loan: "loan",
+    },
+    loan: {
+      systemTitle: "Amortization system",
+      systemPrice: "Price table",
+      systemPriceDescription: "Fixed installments",
+      systemPriceShort: "Price",
+      systemSac: "SAC",
+      systemSacDescription: "Constant amortization, decreasing installments",
+      systemSacShort: "SAC",
+    },
+    validation: {
+      amountRequired: "Enter an amount",
+      titleRequired: "Enter a title",
     },
     eventNotes: {
       title: "Movement notes ({{count}})",
@@ -720,6 +751,8 @@ export const translations = {
 
     // Timeboard Modal
     timeboardModal: {
+      deleteTitle: "Delete timeboard",
+      typeShared: "Shared",
       newTitle: "Create Timeboard",
       editTitle: "Edit Timeboard",
       createButton: "Create Timeboard",
@@ -938,6 +971,7 @@ export const translations = {
           noAccount: "No Account"
         },
         form: {
+          personNameRequired: "The person's name is required.",
           typeLabel: "Entity Type *",
           personNameLabel: "Person Name *",
           nameLabel: "Person Name *",
@@ -1160,6 +1194,8 @@ export const translations = {
       shopping: "Shopping",
       clothing: "Clothing",
       car_maintenance: "Car Maintenance",
+      carmaintenance: "Vehicle Maintenance",
+      ensurance: "Insurance",
       house: "Home Improvement",
       insurance: "Insurance",
       pets: "Pets",
@@ -1692,6 +1728,7 @@ export const translations = {
         eventNotFound: "Event not found",
         noteContentRequired: "Comment text is required",
         eventCancelledLocked: "A cancelled event cannot be reactivated",
+        timelineAlreadyExists: "A timeline of type \"{{type}}\" already exists in this timeboard.",
         eventLockedPositive: "Positive financial events are permanently locked and cannot be modified or reverted to pending.",
         loanNotFound: "Loan not found",
         personNameRequired: "personName is required",
@@ -1798,7 +1835,8 @@ export const translations = {
       addNumberHint: "Add the receipt number",
       ok: "OK",
       numberLabel: "Receipt no.:",
-      numberEditableHint: "Can be changed until the receipt is printed",
+      numberEditableHint: "The receipt number can be changed at any time",
+      editNumberHint: "Click to change the receipt number",
       numberTaken: "Receipt number {{number}} is already used",
       numberInvalid: "Enter a valid receipt number",
       paymentDateShort: "Date: {{date}}",
@@ -1961,6 +1999,7 @@ export const translations = {
 
     // Buttons
     buttons: {
+      saving: "A guardar...",
       addEvent: "Adicionar Evento",
       amortize: "Amortizar",
       goToToday: "Ir para Hoje",
@@ -1981,6 +2020,9 @@ export const translations = {
 
     // Common
     common: {
+      date: "Data",
+      event: "Evento",
+      processing: "A processar...",
       updateFailed: "Não foi possível gravar a alteração: {{message}}",
       save: "Guardar",
       cancel: "Cancelar",
@@ -2028,6 +2070,10 @@ export const translations = {
 
     // Timeline Rows & Cards
     timeline: {
+      incomes: "Entradas",
+      acquisition: "Aquisição",
+      valuation: "Valorização",
+      financing: "Financiamento",
       lockedPositiveNotice: "Trancado — Eventos financeiros positivos não podem ser alterados ou revertidos",
       cannotEditLockedEvent: "Este evento está em estado positivo e trancado. Não pode ser editado, apenas cancelado.",
       cannotDeleteLockedEvent: "Este evento está em estado positivo e trancado. Não pode ser eliminado, apenas cancelado.",
@@ -2258,6 +2304,7 @@ export const translations = {
 
     // Sidebar Filters
     sidebar: {
+      clearSearch: "Limpar pesquisa",
       period: "Período",
       year: "Ano",
       month: "Mês",
@@ -2313,6 +2360,28 @@ export const translations = {
       back: "Voltar",
       confirm: "Sim, cancelar",
       locked: "Evento cancelado — não pode ser reativado",
+    },
+    categories: {
+      default: "Geral",
+    },
+    email: {
+      roleAdmin: "Administrador",
+    },
+    loans: {
+      loan: "empréstimo",
+    },
+    loan: {
+      systemTitle: "Sistema de amortização",
+      systemPrice: "Tabela Price",
+      systemPriceDescription: "Prestações constantes",
+      systemPriceShort: "Price",
+      systemSac: "SAC",
+      systemSacDescription: "Amortização constante, prestações decrescentes",
+      systemSacShort: "SAC",
+    },
+    validation: {
+      amountRequired: "Indique um valor",
+      titleRequired: "Indique um título",
     },
     eventNotes: {
       title: "Notas do Movimento ({{count}})",
@@ -2604,6 +2673,10 @@ export const translations = {
 
     // Timeboard Modal
     timeboardModal: {
+      deleteTitle: "Eliminar timeboard",
+      typeShared: "Partilhado",
+      condoNameLabel: "Nome do Condomínio",
+      condoNamePlaceholder: "ex.: Condomínio Residencial, Condomínio Comercial...",
       newTitle: "Criar Timeboard",
       editTitle: "Editar Timeboard",
       createButton: "Criar Timeboard",
@@ -2820,6 +2893,7 @@ export const translations = {
           noAccount: "Sem Conta"
         },
         form: {
+          personNameRequired: "O nome da pessoa é obrigatório.",
           typeLabel: "Tipo de Entidade *",
           personNameLabel: "Nome da Pessoa / Razão Social *",
           nameLabel: "Nome da Pessoa / Razão Social *",
@@ -3042,6 +3116,8 @@ export const translations = {
       shopping: "Compras",
       clothing: "Vestuário",
       car_maintenance: "Manutenção do Carro",
+      carmaintenance: "Manutenção Automóvel",
+      ensurance: "Seguros",
       house: "Obras / Casa",
       insurance: "Seguros",
       pets: "Animais de Estimação",
@@ -3616,6 +3692,7 @@ export const translations = {
         eventNotFound: "Evento não encontrado",
         noteContentRequired: "O texto do comentário é obrigatório",
         eventCancelledLocked: "Um evento cancelado não pode ser reativado",
+        timelineAlreadyExists: "Já existe uma timeline do tipo \"{{type}}\" neste timeboard.",
         eventLockedPositive: "Eventos financeiros positivos estão permanentemente trancados e não podem ser alterados nem revertidos para pendente.",
         loanNotFound: "Empréstimo não encontrado",
         personNameRequired: "personName é obrigatório",
@@ -3722,7 +3799,8 @@ export const translations = {
       addNumberHint: "Adicionar o número do recibo",
       ok: "OK",
       numberLabel: "Nº do Recibo:",
-      numberEditableHint: "Pode ser alterado enquanto o recibo não for impresso",
+      numberEditableHint: "O número do recibo pode ser alterado a qualquer momento",
+      editNumberHint: "Clique para alterar o número do recibo",
       numberTaken: "O número de recibo {{number}} já está a ser usado",
       numberInvalid: "Indique um número de recibo válido",
       paymentDateShort: "Data: {{date}}",

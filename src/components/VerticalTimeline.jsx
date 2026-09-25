@@ -21,6 +21,7 @@ import { pt, enUS } from 'date-fns/locale';
 import {
   Plus,
   Search,
+  X,
   Calendar,
   EyeOff,
   Layers,
@@ -269,7 +270,7 @@ function VerticalTimeline({
     integratedTimelines: false,
     categories: true,
     entities: false,
-    period: true
+    period: false
   });
 
   // Receipt Modal and Generation Overlay State
@@ -346,8 +347,8 @@ function VerticalTimeline({
       await advanceReceiptCounter(timelineId, receiptNumber);
     }
 
-    // Once printed, the receipt number can no longer be changed
-    setReceiptModalData((prev) => (prev ? { ...prev, canEditReceiptNumber: false } : prev));
+    // The number is now stored on the occurrence: later changes never advance the counter
+    setReceiptModalData((prev) => (prev ? { ...prev, proposedReceiptNumber: null } : prev));
   }, [receiptModalData, activeTimeboard, onPatchEventLocal, advanceReceiptCounter]);
 
   const handleOpenReceipt = useCallback((targetEvent, targetPerson) => {
@@ -381,8 +382,8 @@ function VerticalTimeline({
           targetEvent,
           targetPerson,
           receiptDate,
-          // The number can be changed while this occurrence has no stored receipt number yet
-          canEditReceiptNumber: !hasStoredNumber,
+          // The receipt number can be changed at any time
+          canEditReceiptNumber: true,
           // Automatic proposal (timeline counter): saving it advances the counter, a custom number does not
           proposedReceiptNumber: hasStoredNumber ? null : receiptNumber
         });
@@ -435,7 +436,7 @@ function VerticalTimeline({
     }
   }, [receiptModalData, timeline, activeTimeboard, onPatchEventLocal]);
 
-  // Manual receipt number (before printing): stored on the event status only, the timeline counter is not advanced.
+  // Receipt number changed in the receipt modal (at any time): stored on the event status; only the sequential proposal advances the counter.
   // Returns { error } with a translated message when it cannot be saved (e.g. number already used).
   const handleSaveReceiptNumber = useCallback(async (rawNumber) => {
     const targetEvent = receiptModalData?.targetEvent;
@@ -483,7 +484,7 @@ function VerticalTimeline({
         t,
         paymentDate: prev.receiptDate
       });
-      return { ...prev, receiptNumber: number, htmlContent: html, canEditReceiptNumber: false };
+      return { ...prev, receiptNumber: number, htmlContent: html, proposedReceiptNumber: null };
     });
     return { ok: true };
   }, [receiptModalData, timeline, activeTimeboard, currentUser, persons, language, t, onPatchEventLocal, advanceReceiptCounter]);
@@ -522,7 +523,9 @@ function VerticalTimeline({
       return { error: t('receipt.numberInvalid') };
     }
     const receiptTimeline = resolveReceiptTimeline(targetEvent);
-    const proposedNumber = Number(computeReceiptNumber(receiptTimeline, targetEvent));
+    // Only the first number of an occurrence can be the timeline's sequential proposal (which advances the counter)
+    const hadStoredNumber = Number(targetEvent.cont_year ?? targetEvent.contYear) > 0;
+    const proposedNumber = hadStoredNumber ? null : Number(computeReceiptNumber(receiptTimeline, targetEvent));
     try {
       await api.setEventStatus(targetEvent.id, {
         date: targetEvent.date,
@@ -1636,6 +1639,14 @@ function VerticalTimeline({
     ? periodRange.end
     : (periodMonthIndex !== null ? new Date(todayDate.getFullYear(), 11, 31) : addMonths(currentMonthEnd, Math.max(1, futureHorizonYears) * 12));
 
+  // A search made only of digits (optionally prefixed by "REC") also finds the receipt number of the occurrence
+  const matchesReceiptNumber = (ev, query) => {
+    const receiptNumber = ev.cont_year ?? ev.contYear;
+    if (receiptNumber == null || Number(receiptNumber) <= 0) return false;
+    const match = String(query).trim().match(/^(?:rec\.?\s*)?(\d+)$/i);
+    return Boolean(match) && String(receiptNumber).includes(match[1]);
+  };
+
   // Filter events based on search query, status, category, and label
   const filteredEvents = useMemo(() => {
     if (!timelineEvents) return [];
@@ -1648,7 +1659,8 @@ function VerticalTimeline({
         searchQuery === '' ||
         ((ev.title || '').toLowerCase().includes(searchQuery.toLowerCase())) ||
         ((ev.description || '').toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (ev.labels && ev.labels.some((l) => (l || '').toLowerCase().includes(searchQuery.toLowerCase())));
+        (ev.labels && ev.labels.some((l) => (l || '').toLowerCase().includes(searchQuery.toLowerCase()))) ||
+        matchesReceiptNumber(ev, searchQuery);
 
       // Na visualização de lista por status ou por categoria, mostrar apenas eventos até ao final do mês atual e meses anteriores
       if (periodRange && (!ev.date || ev.date < periodRange.startStr || ev.date > periodRange.endStr)) {
@@ -3979,7 +3991,19 @@ function VerticalTimeline({
                 }
                 setSearchQuery(val);
               }}
+              style={searchQuery ? { paddingRight: '30px' } : undefined}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                className="search-clear-btn"
+                onClick={() => setSearchQuery('')}
+                title={t('sidebar.clearSearch')}
+                aria-label={t('sidebar.clearSearch')}
+              >
+                <X size={12} />
+              </button>
+            )}
           </div>
         </div>
 

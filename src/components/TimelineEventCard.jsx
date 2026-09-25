@@ -139,7 +139,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const onPrintReceipt = isReadOnly ? undefined : onPrintReceiptProp;
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   // Payment date edited directly on the ticket (paid / received events)
-  const { saveReceiptDate, saveReceiptNumber, getProposedReceiptNumber } = useEventActions();
+  const { saveReceiptDate, saveReceiptNumber, getProposedReceiptNumber, addEventNote, deleteEventNote, currentUserId } = useEventActions();
   const [isReceiptDateOpen, setIsReceiptDateOpen] = useState(false);
   const [receiptDateDraft, setReceiptDateDraft] = useState(null);
   const [isSavingReceiptDate, setIsSavingReceiptDate] = useState(false);
@@ -486,6 +486,58 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
   const isFinancialLockedType = isIncomeEvent || isExpenseEvent || isInvestmentEvent;
   const isLockedPositive = isFinancialLockedType && (isReceivedIncome || isPaidExpense || isCompletedInvestment || isPositiveStatus(effectiveStatus));
+
+  // Comments of financial events and reminders are stored per occurrence (year / month), so they
+  // are not propagated to the other months of a recurring event. Todo / follow-up / diary items keep
+  // their notes on the item itself.
+  const usesOccurrenceNotes = Boolean(addEventNote) && !isTodoEvent && !isFollowupEvent && !isRegisterEvent && !isVirtual;
+  const [isSavingNote, setIsSavingNote] = useState(false);
+
+  // Normalized list: { key, content, noteId?, authorId?, authorName?, createdAt? }
+  const getCardNotes = () => {
+    if (usesOccurrenceNotes) {
+      return (Array.isArray(event.monthNotes) ? event.monthNotes : [])
+        .filter((n) => n && n.content)
+        .map((n) => ({ key: n.id, noteId: n.id, content: n.content, authorId: n.authorId, authorName: n.authorName, createdAt: n.createdAt }));
+    }
+    const legacy = Array.isArray(event.notes)
+      ? event.notes.filter(Boolean)
+      : (event.description && !event.description.toLowerCase().includes('transferência bancária de vencimento') && event.description.trim() ? [event.description.trim()] : []);
+    return legacy.map((content, idx) => ({ key: `legacy-${idx}`, content }));
+  };
+
+  const canAddNote = usesOccurrenceNotes || Boolean(onSaveNotes);
+  const canDeleteNote = (note) => {
+    if (usesOccurrenceNotes) {
+      return !isReadOnly || (currentUserId && String(note.authorId) === String(currentUserId));
+    }
+    return Boolean(onUpdateEventDirect || onEdit);
+  };
+
+  const addCardNote = async (text) => {
+    const content = text.trim();
+    if (!content) return false;
+    if (usesOccurrenceNotes) {
+      setIsSavingNote(true);
+      const ok = await addEventNote(event, content);
+      setIsSavingNote(false);
+      return ok;
+    }
+    const updatedNotes = [...getCardNotes().map((n) => n.content), content];
+    onSaveNotes({ ...event, notes: updatedNotes, description: updatedNotes[0] || '' });
+    return true;
+  };
+
+  const removeCardNote = (note, idx) => {
+    if (usesOccurrenceNotes) {
+      deleteEventNote(event, note.noteId);
+      return;
+    }
+    const updatedNotes = getCardNotes().map((n) => n.content).filter((_, nIdx) => nIdx !== idx);
+    if (onUpdateEventDirect) {
+      onUpdateEventDirect({ ...event, notes: updatedNotes, description: updatedNotes[0] || '' });
+    }
+  };
 
   // Receipt reference line: "REC. 202602 | Data: 13/03/2025".
   // The payment date shows as soon as the event is paid / received (stored receipt date, or the event date).
@@ -2586,9 +2638,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
       {/* Botão de Notas (também disponível para utilizadores só de leitura) */}
       {(onEdit || isReadOnly) && !isAnchorCard && !isCondoPost && (() => {
-        const allNotes = Array.isArray(event.notes)
-          ? event.notes.filter(Boolean)
-          : (event.description && !event.description.toLowerCase().includes('transferência bancária de vencimento') && event.description.trim() ? [event.description.trim()] : []);
+        const allNotes = getCardNotes();
         const hasNotes = allNotes.length > 0;
 
         return (
@@ -4518,9 +4568,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
       {/* Expandable Notes Section (Glassmorphism) */}
       {(() => {
-        const allNotes = Array.isArray(event.notes)
-          ? event.notes.filter(Boolean)
-          : (event.description && !event.description.toLowerCase().includes('transferência bancária de vencimento') && event.description.trim() ? [event.description.trim()] : []);
+        const allNotes = getCardNotes();
         const hasNotes = allNotes.length > 0;
 
         if (!isNotesExpanded) return null;
@@ -4557,7 +4605,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   padding: '2px 6px'
                 }}
               >
-                ✕ Fechar
+                ✕ {t('common.close')}
               </button>
             </div>
 
@@ -4566,7 +4614,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {allNotes.map((note, idx) => (
                   <div
-                    key={idx}
+                    key={note.key}
                     onClick={(e) => e.stopPropagation()}
                     style={{
                       display: 'flex',
@@ -4581,22 +4629,21 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       borderLeft: `3px solid ${TimelineColor.WARNING}`
                     }}
                   >
-                    <span style={{ flex: 1, lineHeight: '1.45' }}>{renderFormattedMarkdown(note)}</span>
-                    {(onUpdateEventDirect || onEdit) && (
+                    <span style={{ flex: 1, lineHeight: '1.45', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <span>{renderFormattedMarkdown(note.content)}</span>
+                      {(note.authorName || note.createdAt) && (
+                        <span style={{ fontSize: '0.64rem', color: 'var(--text-dim)' }}>
+                          {[note.authorName, note.createdAt ? format(parseISO(note.createdAt), 'dd/MM/yyyy HH:mm') : null].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
+                    </span>
+                    {canDeleteNote(note) && (
                       <button
                         type="button"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          const updatedNotes = allNotes.filter((_, nIdx) => nIdx !== idx);
-                          const updatedEvent = {
-                            ...event,
-                            notes: updatedNotes,
-                            description: updatedNotes[0] || ''
-                          };
-                          if (onUpdateEventDirect) {
-                            onUpdateEventDirect(updatedEvent);
-                          }
+                          removeCardNote(note, idx);
                         }}
                         style={{
                           background: 'transparent',
@@ -4622,21 +4669,14 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             )}
 
             {/* Add New Note Input Form (also available to read-only users) */}
-            {onSaveNotes && (
+            {canAddNote && (
               <form
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  if (newItemText.trim()) {
-                    const updatedNotes = [...allNotes, newItemText.trim()];
-                    const updatedEvent = {
-                      ...event,
-                      notes: updatedNotes,
-                      description: updatedNotes[0] || ''
-                    };
-                    onSaveNotes(updatedEvent);
-                    setNewItemText('');
-                  }
+                  if (!newItemText.trim() || isSavingNote) return;
+                  const ok = await addCardNote(newItemText);
+                  if (ok) setNewItemText('');
                 }}
                 onClick={(e) => e.stopPropagation()}
                 style={{ display: 'flex', gap: '6px', marginTop: '4px' }}
@@ -4660,7 +4700,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 />
                 <button
                   type="submit"
-                  disabled={!newItemText.trim()}
+                  disabled={!newItemText.trim() || isSavingNote}
                   onClick={(e) => e.stopPropagation()}
                   className="btn btn-primary btn-sm"
                   style={{

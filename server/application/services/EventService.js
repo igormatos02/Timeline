@@ -44,6 +44,14 @@ export class EventService {
     return financialEventService.setEventStatus(id, options);
   }
 
+  async addEventNote(id, options = {}) {
+    return financialEventService.addEventNote(id, options);
+  }
+
+  async deleteEventNote(noteId) {
+    return financialEventService.deleteEventNote(noteId);
+  }
+
   async deleteEvent(id, options = {}) {
     return financialEventService.deleteEvent(id, options);
   }

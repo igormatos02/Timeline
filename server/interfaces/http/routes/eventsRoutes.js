@@ -66,6 +66,27 @@ eventsRouter.post('/:id/toggle-payment', async (req, res) => {
   }
 });
 
+// POST /api/events/:id/notes (adds a comment to one occurrence: year / month of the given date)
+eventsRouter.post('/:id/notes', async (req, res) => {
+  try {
+    const { date, content, timelineId, timeboardId, authorId, authorName } = req.body || {};
+    const note = await eventService.addEventNote(req.params.id, { date, content, timelineId, timeboardId, authorId, authorName });
+    res.status(201).json(note);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// DELETE /api/events/notes/:noteId
+eventsRouter.delete('/notes/:noteId', async (req, res) => {
+  try {
+    await eventService.deleteEventNote(req.params.noteId);
+    res.status(204).end();
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // POST /api/events/:id/status (Updates or sets status and options like cont_year in financial_event_status)
 eventsRouter.post('/:id/status', async (req, res) => {
   try {

@@ -150,6 +150,7 @@ import PeriodBadgeFilter from './ui/PeriodBadgeFilter.jsx';
 import HistoryPrintModal from './modals/HistoryPrintModal.jsx';
 import { EventActionsProvider } from '../context/EventActionsContext.jsx';
 import { usePermissions } from '../context/PermissionsContext.jsx';
+import { useToast } from '../context/ToastContext.jsx';
 import { buildReceiptHtml, buildClearanceHtml, buildCondoClearanceHtml, buildHistoryHtml, computeReceiptNumber, computeNextReceiptNumber } from '../utils/receiptGenerator.js';
 
 const groupEventsByDate = (events = []) => {
@@ -208,6 +209,7 @@ function VerticalTimeline({
   onLoadMorePast
 }) {
   const { language, t } = useTranslation();
+  const { showToast } = useToast();
   // Read-only users (individual role) cannot create or change anything on the timeline.
   const { isReadOnly } = usePermissions();
   const onOpenCreatePocket = isReadOnly ? undefined : onOpenCreatePocketProp;
@@ -538,9 +540,50 @@ function VerticalTimeline({
     return { ok: true };
   }, [t, resolveReceiptTimeline, timeline, activeTimeboard, onPatchEventLocal, advanceReceiptCounter]);
 
+  // Comments of one occurrence (year / month): stored in financial_event_notes, not on the event itself
+  const addEventNote = useCallback(async (targetEvent, content) => {
+    if (!targetEvent?.id || !content) return false;
+    try {
+      const note = await api.addEventNote(targetEvent.id, {
+        date: targetEvent.date,
+        content,
+        timelineId: targetEvent.timelineOriginId || targetEvent.timelineId || timeline?.id,
+        timeboardId: activeTimeboard?.id,
+        authorId: currentUser?.id,
+        authorName: currentUser?.name
+      });
+      const current = Array.isArray(targetEvent.monthNotes) ? targetEvent.monthNotes : [];
+      onPatchEventLocal?.(targetEvent.id, { monthNotes: [...current, note] });
+      return true;
+    } catch (err) {
+      showToast(t('common.updateFailed', { message: err.message || '' }), 'error');
+      return false;
+    }
+  }, [timeline, activeTimeboard, currentUser, onPatchEventLocal, showToast, t]);
+
+  const deleteEventNote = useCallback(async (targetEvent, noteId) => {
+    if (!targetEvent?.id || !noteId) return false;
+    try {
+      await api.deleteEventNote(noteId);
+      const current = Array.isArray(targetEvent.monthNotes) ? targetEvent.monthNotes : [];
+      onPatchEventLocal?.(targetEvent.id, { monthNotes: current.filter((n) => n.id !== noteId) });
+      return true;
+    } catch (err) {
+      showToast(t('common.updateFailed', { message: err.message || '' }), 'error');
+      return false;
+    }
+  }, [onPatchEventLocal, showToast, t]);
+
   const eventActions = useMemo(
-    () => ({ saveReceiptDate, saveReceiptNumber, getProposedReceiptNumber }),
-    [saveReceiptDate, saveReceiptNumber, getProposedReceiptNumber]
+    () => ({
+      saveReceiptDate,
+      saveReceiptNumber,
+      getProposedReceiptNumber,
+      addEventNote,
+      deleteEventNote,
+      currentUserId: currentUser?.id || null
+    }),
+    [saveReceiptDate, saveReceiptNumber, getProposedReceiptNumber, addEventNote, deleteEventNote, currentUser?.id]
   );
 
   const toggleSectionCollapse = (key) => {

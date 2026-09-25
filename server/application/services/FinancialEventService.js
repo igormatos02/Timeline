@@ -1,5 +1,6 @@
 import { eventRepository } from '../../infrastructure/database/supabase/SupabaseEventRepository.js';
 import { financialEventStatusRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventStatusRepository.js';
+import { financialEventNoteRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventNoteRepository.js';
 import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { todoRepository } from '../../infrastructure/database/supabase/SupabaseTodoRepository.js';
@@ -36,6 +37,15 @@ import {
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
+
+// Public shape of an occurrence comment
+const toMonthNote = (row) => ({
+  id: row.id,
+  content: row.content,
+  authorId: row.author_id || null,
+  authorName: row.author_name || null,
+  createdAt: row.created_at
+});
 
 export class FinancialEventService {
   async _syncStatus(date, eventId, status, options = {}) {
@@ -86,6 +96,10 @@ export class FinancialEventService {
       if (rows.length > 0 && !previousStatus) previousStatus = rows[0].status;
     }
     await financialEventStatusRepository.deleteStatus(fromYear, fromMonth, cleanIds);
+    // Comments belong to the occurrence: they follow it to the new month
+    await financialEventNoteRepository.moveMonth(
+      fromYear, fromMonth, parseInt(toKey.substring(0, 4), 10), parseInt(toKey.substring(5, 7), 10), cleanIds
+    );
 
     if (!newStatus && previousStatus) {
       await this._syncStatus(toDate, cleanIds[0], previousStatus, options);
@@ -120,6 +134,8 @@ export class FinancialEventService {
     rawEvents = rawEvents.filter((ev) => ev.eventType !== EventType.REGISTER);
 
     const fullStatusMap = await financialEventStatusRepository.getFullStatusMap();
+    // Comments are stored per occurrence (year / month / event), like the statuses
+    const notesMap = await financialEventNoteRepository.getNotesMap(filter.timeboardId ? { timeboardId: filter.timeboardId } : {});
 
     // Mapear também os status dinâmicos que vieram no join dos rawEvents
     const joinedStatusMap = new Map();
@@ -211,9 +227,16 @@ export class FinancialEventService {
         if (matchedRecord && matchedRecord.receipt_date) {
           ev.receiptDate = String(matchedRecord.receipt_date).substring(0, 10);
         }
+
+        const noteRows = [key, keyById, keyBySob, keyBySeries, keyByStrippedId, keyByStrippedTargetId]
+          .filter(Boolean)
+          .map((k) => notesMap.get(k))
+          .find((rows) => rows && rows.length > 0);
+        ev.monthNotes = (noteRows || []).map(toMonthNote);
       } else {
         ev.status = ev.status || EventStatus.PENDING;
         ev.isCompleted = isPositiveStatus(ev.status);
+        ev.monthNotes = [];
       }
     }
 
@@ -714,27 +737,70 @@ export class FinancialEventService {
       }
     }
 
-    // Alteração de propriedades (como categoria, título, notas, prioridade, etc.) sem alteração de valor monetário ou data não cria nova versão
+    // Changes are compared with the occurrence being edited, not with the first row of the series:
+    // a projected occurrence ("seriesId_yyyy-MM-dd") uses the version active on its date.
+    const versionOf = (v) => Number(v?.version !== undefined ? v.version : (v?.eventVersion !== undefined ? v.eventVersion : (v?.event_version || 0)));
+    const occurrenceDate = String(id).includes('_') ? String(id).split('_')[1] : (existingDirect?.date || existing?.date);
+    let referenceEvent = existingDirect || existing;
+    if (!existingDirect && String(id).includes('_') && occurrenceDate) {
+      const activeSegments = seriesVersions
+        .filter((v) => !v.sobrepositionOver && v.date && v.date <= occurrenceDate)
+        .sort((a, b) => (a.date === b.date ? versionOf(a) - versionOf(b) : (a.date > b.date ? 1 : -1)));
+      if (activeSegments.length > 0) referenceEvent = activeSegments[activeSegments.length - 1];
+    }
+
+    // Only a change of amount creates a new version; any other change (title, category, notes,
+    // priority, date, ...) never increases the version number
     const isAmountChanged = (
       directUpdates.amount !== undefined &&
-      existing?.amount !== undefined &&
-      Number(directUpdates.amount) !== Number(existing?.amount)
+      referenceEvent?.amount !== undefined &&
+      Number(directUpdates.amount) !== Number(referenceEvent.amount)
     );
 
     const isDateChanged = (
       directUpdates.date !== undefined &&
-      existing?.date !== undefined &&
-      directUpdates.date !== existing.date
+      Boolean(occurrenceDate) &&
+      directUpdates.date !== occurrenceDate
     );
 
-    if (!isAmountChanged && !isDateChanged) {
-      const targetRecordId = existingDirect?.id || seriesRootEvent?.id || (id && !id.includes('_') ? id : null);
-      if (targetRecordId) {
-        const updatePayload = {
-          ...directUpdates,
-          is_recurring: isRecurring,
-          isRecurring: isRecurring
-        };
+    const newRowVersion = isAmountChanged ? currentHighestVersion + 1 : currentHighestVersion;
+
+    // Fields that describe the occurrence / row identity: never copied from the edited occurrence onto stored rows
+    const {
+      date: _date,
+      amount: _amount,
+      installmentAmount: _installmentAmount,
+      installment_amount: _installmentAmountSnake,
+      version: _version,
+      eventVersion: _eventVersion,
+      event_version: _eventVersionSnake,
+      id: _id,
+      eventId: _eventId,
+      event_id: _eventIdSnake,
+      sobrepositionOver: _sobrepositionOver,
+      ...propertyUpdates
+    } = directUpdates;
+
+    // Recurring series, no change of amount or date: update the stored rows of the series in place
+    // (no new version) — every segment / override of the series, so the change shows in every month
+    if (isRecurring && !isAmountChanged && !isDateChanged) {
+      const rootId = seriesRootEvent?.id || existingDirect?.id || (id && !id.includes('_') ? id : null);
+      if (rootId) {
+        const {
+          recurrence: _recurrence,
+          isRecurring: _isRecurring,
+          is_recurring: _isRecurringSnake,
+          ...sharedUpdates
+        } = propertyUpdates;
+        const seriesRowIds = [...new Set([rootId, ...seriesVersions.map((v) => v.id)].filter(Boolean))];
+        let updatedRoot = null;
+        for (const rowId of seriesRowIds) {
+          const payload = rowId === rootId
+            ? { ...propertyUpdates, is_recurring: true, isRecurring: true }
+            : sharedUpdates;
+          const updatedRow = await eventRepository.update(rowId, payload);
+          if (rowId === rootId) updatedRoot = updatedRow;
+        }
         if (directUpdates.status) {
           const targetDate = directUpdates.date || existingDirect?.date || existing?.date;
           await this._syncStatus(targetDate, targetSeriesId, directUpdates.status, {
@@ -742,8 +808,33 @@ export class FinancialEventService {
             timeboardId: directUpdates.timeboardId || directUpdates.timeboard_id || existingDirect?.timeboardId || existing?.timeboard_id
           });
         }
-        return eventRepository.update(targetRecordId, updatePayload);
+        return updatedRoot;
       }
+    }
+
+    // Unique (non-recurring) events always keep a single version: any change, amount included, is made in place
+    const uniqueRow = existingDirect || seriesRootEvent;
+    if (!isRecurring && uniqueRow?.id) {
+      if (directUpdates.date && uniqueRow.date && directUpdates.date !== uniqueRow.date) {
+        await this._moveMonthStatus(
+          [targetSeriesId, uniqueRow.id, uniqueRow.eventId],
+          uniqueRow.date,
+          directUpdates.date,
+          directUpdates.status,
+          {
+            timelineId: uniqueRow.timelineId || uniqueRow.timeline_id,
+            timeboardId: uniqueRow.timeboardId || uniqueRow.timeboard_id
+          }
+        );
+      }
+      if (directUpdates.status) {
+        await this._syncStatus(directUpdates.date || uniqueRow.date, targetSeriesId, directUpdates.status, {
+          timelineId: directUpdates.timelineId || directUpdates.timeline_id || uniqueRow.timelineId || uniqueRow.timeline_id,
+          timeboardId: directUpdates.timeboardId || directUpdates.timeboard_id || uniqueRow.timeboardId || uniqueRow.timeboard_id
+        });
+      }
+      const { version: _v, eventVersion: _ev, event_version: _evs, ...inPlaceUpdates } = directUpdates;
+      return eventRepository.update(uniqueRow.id, { ...inPlaceUpdates, is_recurring: false, isRecurring: false });
     }
 
     // 2. Eventos não-recorrentes ou edição global de toda a série ou edição direta do registo da mesma data
@@ -783,9 +874,10 @@ export class FinancialEventService {
       return eventRepository.update(existingDirect.id || id, updatePayload);
     }
 
-    // 3. Edição com propagação ("A partir deste mês" / subsequentes): Cria nova versão incremental na série
+    // 3. Edição com propagação ("A partir deste mês" / subsequentes): novo segmento da série
+    // (a versão só aumenta quando o valor muda)
     if (isSubsequentUpdate || (isRecurring && !isSingleUpdate)) {
-      const nextVersion = currentHighestVersion + 1;
+      const nextVersion = newRowVersion;
       const baseEventData = existing ? { ...existing } : {};
       delete baseEventData.id;
 
@@ -830,7 +922,8 @@ export class FinancialEventService {
     }
 
     // 4. Edição pontual ("Apenas este mês"): Cria override pontual (sobrepositionOver)
-    const nextVersion = currentHighestVersion + 1;
+    // (a versão só aumenta quando o valor muda)
+    const nextVersion = newRowVersion;
     const baseEventData = existing ? { ...existing } : {};
     delete baseEventData.id;
 
@@ -846,6 +939,7 @@ export class FinancialEventService {
       eventId: targetSeriesId,
       sobrepositionOver: targetSeriesId,
       date: targetDate,
+      recurrence: EventRecurrence.ONCE,
       is_recurring: false,
       isRecurring: false,
       version: nextVersion,
@@ -935,6 +1029,41 @@ export class FinancialEventService {
     }
 
     return { ...targetEvent, id, date: targetDate, ...toggled };
+  }
+
+  // Adds a comment to one occurrence (year / month) of an event; other months are not affected
+  async addEventNote(id, options = {}) {
+    const content = String(options.content || '').trim();
+    if (!content) throw new Error(t('backend.validation.noteContentRequired'));
+
+    const rootId = String(id).includes('_') ? String(id).split('_')[0] : id;
+    const dateSuffix = String(id).includes('_') ? String(id).split('_')[1] : null;
+    let targetEvent = await eventRepository.getById(rootId);
+    if (!targetEvent) {
+      const allCandidateEvents = await eventRepository.getAllWithStatuses();
+      targetEvent = allCandidateEvents.find(
+        (e) => e.id === id || e.eventId === id || e.id === rootId || e.eventId === rootId || e.sobrepositionOver === rootId
+      );
+      if (!targetEvent) throw new Error(`${t('backend.validation.eventNotFound')}: ${id}`);
+    }
+    const targetDate = String(options.date || dateSuffix || targetEvent.date || '');
+    if (targetDate.length < 7) throw new Error(`${t('backend.validation.eventNotFound')}: ${id}`);
+
+    const row = await financialEventNoteRepository.create({
+      year: parseInt(targetDate.substring(0, 4), 10),
+      month: parseInt(targetDate.substring(5, 7), 10),
+      event_id: String(targetEvent.eventId || targetEvent.id),
+      timeline_id: options.timelineId || targetEvent.timelineId || targetEvent.timeline_id || null,
+      timeboard_id: options.timeboardId || targetEvent.timeboardId || targetEvent.timeboard_id || null,
+      content,
+      author_id: options.authorId ? String(options.authorId) : null,
+      author_name: options.authorName ? String(options.authorName) : null
+    });
+    return toMonthNote(row);
+  }
+
+  async deleteEventNote(noteId) {
+    return financialEventNoteRepository.delete(noteId);
   }
 
   async setEventStatus(id, options = {}) {
@@ -1078,8 +1207,9 @@ export class FinancialEventService {
         ...(allRelatedEvents.map(e => e.eventId))
       ].filter(Boolean)));
 
-      // 1. Delete all records from financial_event_status table
+      // 1. Delete all records from financial_event_status table (and the comments of every occurrence)
       await financialEventStatusRepository.deleteAllStatusForEvent(targetIds);
+      await financialEventNoteRepository.deleteAllForEvent(targetIds);
 
       // 2. Delete all records from financial_events table
       await eventRepository.deleteByEventId(targetIds);

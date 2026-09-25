@@ -672,6 +672,29 @@ export async function setEventStatus(id, payload = {}) {
   return res.json();
 }
 
+// Comments of a single occurrence (year / month of payload.date) of an event
+export async function addEventNote(id, payload = {}) {
+  const res = await fetch(`${API_BASE}/events/${encodeURIComponent(id)}/notes`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || 'Failed to add event note');
+  }
+  return res.json();
+}
+
+export async function deleteEventNote(noteId) {
+  const res = await fetch(`${API_BASE}/events/notes/${encodeURIComponent(noteId)}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to delete event note');
+  return true;
+}
+
 export async function deleteEvent(id, options = {}) {
   const res = await fetch(`${API_BASE}/events/${id}`, {
     method: 'DELETE',

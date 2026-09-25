@@ -22,7 +22,6 @@ import {
   Plus,
   Search,
   Calendar,
-  Eye,
   EyeOff,
   Layers,
   Clock,
@@ -245,7 +244,8 @@ function VerticalTimeline({
     }
   }, [lockedEntityId, selectedEntityId]);
   const [selectedLabelFilter, setSelectedLabelFilter] = useState(EventStatus.ALL);
-  const [showEmptyDays, setShowEmptyDays] = useState(true);
+  // Empty days / weeks / months are always shown (the sidebar toggle was removed)
+  const showEmptyDays = true;
   // Period filter (year / month): show only that month or year instead of scrolling the whole timeline
   const [periodYear, setPeriodYear] = useState('');
   const [periodMonth, setPeriodMonth] = useState('');
@@ -255,11 +255,11 @@ function VerticalTimeline({
   const [monthProjectionMode, setMonthProjectionMode] = useState('realized');
   const [collapsedSections, setCollapsedSections] = useState({
     timelines: false,
-    status: false,
+    status: true,
     integratedTimelines: false,
-    categories: false,
+    categories: true,
     entities: false,
-    period: false
+    period: true
   });
 
   // Receipt Modal and Generation Overlay State
@@ -3864,6 +3864,52 @@ function VerticalTimeline({
         </div>
       )}
 
+        {/* Period Filter (year / month) — not for read-only users, who only get the status filter */}
+        {!isReadOnly && (
+          <div className="sidebar-section">
+            <div
+              className="sidebar-section-title"
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              onClick={() => toggleSectionCollapse('period')}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ChevronDown
+                  size={13}
+                  style={{
+                    transform: collapsedSections['period'] ? 'rotate(-90deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.18s ease',
+                    color: 'var(--text-muted)'
+                  }}
+                />
+                <span>{t('sidebar.period')}</span>
+              </div>
+              {isPeriodActive && (
+                <button
+                  type="button"
+                  className="sidebar-action-link"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPeriodYear('');
+                    setPeriodMonth('');
+                  }}
+                  style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer', fontSize: '0.72rem', padding: 0, fontWeight: '700' }}
+                >
+                  {t('buttons.all')}
+                </button>
+              )}
+            </div>
+            {!collapsedSections['period'] && (
+              <PeriodBadgeFilter
+                year={periodYear}
+                month={periodMonth}
+                years={periodYearOptions}
+                onYearChange={setPeriodYear}
+                onMonthChange={setPeriodMonth}
+              />
+            )}
+          </div>
+        )}
+
         {/* 1. Search Box */}
         <div className="sidebar-section">
           <div className="search-box">
@@ -3948,52 +3994,6 @@ function VerticalTimeline({
             </div>
           )}
         </div>
-
-        {/* 3b. Period Filter (year / month) — not for read-only users, who only get the status filter */}
-        {!isReadOnly && (
-          <div className="sidebar-section">
-            <div
-              className="sidebar-section-title"
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-              onClick={() => toggleSectionCollapse('period')}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <ChevronDown
-                  size={13}
-                  style={{
-                    transform: collapsedSections['period'] ? 'rotate(-90deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.18s ease',
-                    color: 'var(--text-muted)'
-                  }}
-                />
-                <span>{t('sidebar.period')}</span>
-              </div>
-              {isPeriodActive && (
-                <button
-                  type="button"
-                  className="sidebar-action-link"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPeriodYear('');
-                    setPeriodMonth('');
-                  }}
-                  style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer', fontSize: '0.72rem', padding: 0, fontWeight: '700' }}
-                >
-                  {t('buttons.all')}
-                </button>
-              )}
-            </div>
-            {!collapsedSections['period'] && (
-              <PeriodBadgeFilter
-                year={periodYear}
-                month={periodMonth}
-                years={periodYearOptions}
-                onYearChange={setPeriodYear}
-                onMonthChange={setPeriodMonth}
-              />
-            )}
-          </div>
-        )}
 
         {/* 4. Timelines Filter (Multi-Selection for Balance) — read-only users only get the status filter */}
         {timeline.type === TimelineType.BALANCE && !isReadOnly && (
@@ -4233,7 +4233,7 @@ function VerticalTimeline({
             </div>
 
             {!collapsedSections['entities'] && (
-              <div className="sidebar-btn-group" style={{ maxHeight: '260px', overflowY: 'auto', paddingRight: '2px' }}>
+              <div className="sidebar-btn-group">
                 {/* Opção "Todas as Entidades" */}
                 <button
                   type="button"
@@ -4282,22 +4282,6 @@ function VerticalTimeline({
           </div>
         )}
 
-        {/* 7. Períodos Vazios Toggle (not available to read-only users, who only get the status filter) */}
-        {!isReadOnly && (
-          <div className="sidebar-section">
-            <div
-              className="sidebar-filter-item"
-              onClick={() => setShowEmptyDays(!showEmptyDays)}
-              style={{ cursor: 'pointer' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {showEmptyDays ? <Eye size={15} /> : <EyeOff size={15} />}
-                <span>{showEmptyDays ? t('sidebar.hideEmpty') : t('sidebar.showEmpty')}</span>
-              </div>
-              {renderFilterSwitch(showEmptyDays, 'var(--primary)')}
-            </div>
-          </div>
-        )}
       </aside>
 
       {/* 📜 Right Timeline Content Stream */}

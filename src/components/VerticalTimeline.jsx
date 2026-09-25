@@ -83,7 +83,8 @@ import {
   ReceiptEuro
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
-import { compareEventsWithinDay } from '../utils/eventSorting.js';
+import { compareEventsWithinDay, createEventDayComparator, buildPersonsById } from '../utils/eventSorting.js';
+import { useTimeboard } from '../context/TimeboardContext.jsx';
 import MonthProjectionBadges from './MonthProjectionBadges.jsx';
 import FloatingTaskStack from './FloatingTaskStack';
 import { getGroupingForPeriodicity } from '../utils/loanCalculations';
@@ -153,7 +154,7 @@ import { usePermissions } from '../context/PermissionsContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { buildReceiptHtml, buildClearanceHtml, buildCondoClearanceHtml, buildHistoryHtml, computeReceiptNumber, computeNextReceiptNumber } from '../utils/receiptGenerator.js';
 
-const groupEventsByDate = (events = []) => {
+const groupEventsByDate = (events = [], dayComparator = compareEventsWithinDay) => {
   const groups = [];
   const map = new Map();
   for (const ev of events) {
@@ -166,7 +167,7 @@ const groupEventsByDate = (events = []) => {
     map.get(dateKey).events.push(ev);
   }
   for (const group of groups) {
-    group.events.sort(compareEventsWithinDay);
+    group.events.sort(dayComparator);
   }
   return groups;
 };
@@ -210,6 +211,13 @@ function VerticalTimeline({
 }) {
   const { language, t } = useTranslation();
   const { showToast } = useToast();
+  const { isCondoflow } = useTimeboard();
+  // Events of a same day: condoflow timeboards are ordered by the obligator identifier (unit), others by title
+  const personsById = useMemo(() => buildPersonsById(persons), [persons]);
+  const dayComparator = useMemo(
+    () => createEventDayComparator({ personsById, obligatorFirst: isCondoflow }),
+    [personsById, isCondoflow]
+  );
   // Read-only users (individual role) cannot create or change anything on the timeline.
   const { isReadOnly } = usePermissions();
   const onOpenCreatePocket = isReadOnly ? undefined : onOpenCreatePocketProp;
@@ -1608,10 +1616,12 @@ function VerticalTimeline({
     return { start, end, startStr: format(start, 'yyyy-MM-dd'), endStr: format(end, 'yyyy-MM-dd') };
   }, [periodYear, periodMonth]);
 
-  // Years available in the period filter: from the earliest event of this timeline up to the current year
+  // Years available in the period filter: from the timeboard's calculation start (or the earliest event
+  // of this timeline, whichever comes first) up to the current year
   const periodYearOptions = useMemo(() => {
     const currentYear = todayDate.getFullYear();
     const years = new Set([currentYear]);
+    if (computeFromMonth) years.add(Number(computeFromMonth.substring(0, 4)));
     timelineEvents.forEach((ev) => {
       if (ev?.date && isEventBelongingToCurrentTimeline(ev)) years.add(Number(ev.date.substring(0, 4)));
     });
@@ -1619,7 +1629,7 @@ function VerticalTimeline({
     const min = Math.min(...list);
     const max = currentYear;
     return Array.from({ length: max - min + 1 }, (_, i) => max - i);
-  }, [timelineEvents, isEventBelongingToCurrentTimeline]);
+  }, [timelineEvents, isEventBelongingToCurrentTimeline, computeFromMonth]);
 
   const startDateObj = periodRange ? periodRange.start : defaultStartDateObj;
   const maxDateObj = periodRange
@@ -1845,10 +1855,10 @@ function VerticalTimeline({
       map[ev.date].push(ev);
     });
     Object.values(map).forEach((list) => {
-      list.sort(compareEventsWithinDay);
+      list.sort(dayComparator);
     });
     return map;
-  }, [filteredEvents]);
+  }, [filteredEvents, dayComparator]);
 
   // Generate array of days only when day-view is active
   const daysArray = useMemo(() => {
@@ -2033,7 +2043,7 @@ function VerticalTimeline({
                   </div>
 
                   {hasEvents ? (
-                    groupEventsByDate(weekData.events).map((dateGroup, gIdx) => (
+                    groupEventsByDate(weekData.events, dayComparator).map((dateGroup, gIdx) => (
                       <div
                         key={`${dateGroup.date}_${gIdx}`}
                         style={{ marginBottom: '8px' }}
@@ -2517,11 +2527,11 @@ function VerticalTimeline({
         if (titleCmp !== 0) return titleCmp;
         return String(b.id || '').localeCompare(String(a.id || ''));
       });
-      mEntry.groupedDateEvents = groupEventsByDate(mEntry.events);
+      mEntry.groupedDateEvents = groupEventsByDate(mEntry.events, dayComparator);
     });
 
     return Array.from(monthMap.values());
-  }, [filteredEvents, startDateObj, maxDateObj, todayDate, periodMonthIndex]);
+  }, [filteredEvents, startDateObj, maxDateObj, todayDate, periodMonthIndex, dayComparator]);
 
   const renderMonthView = () => {
 
@@ -3239,7 +3249,7 @@ function VerticalTimeline({
                               {/* Abaixo: Os eventos como já ficavam no card do mês */}
                               {pocketMonthEvents.length > 0 ? (
                                 <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                  {groupEventsByDate(pocketMonthEvents).map((dateGroup, gIdx) => (
+                                  {groupEventsByDate(pocketMonthEvents, dayComparator).map((dateGroup, gIdx) => (
                                     <div key={`${dateGroup.date}_${gIdx}`}>
                                       <TimelineEventCard
                                         events={dateGroup.events}
@@ -3288,7 +3298,7 @@ function VerticalTimeline({
                         {/* Eventos não associados a nenhum cofrinho */}
                         {unassignedEvents.length > 0 && (
                           <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {groupEventsByDate(unassignedEvents).map((dateGroup, gIdx) => (
+                            {groupEventsByDate(unassignedEvents, dayComparator).map((dateGroup, gIdx) => (
                               <div key={`unassigned_${dateGroup.date}_${gIdx}`}>
                                 <TimelineEventCard
                                   events={dateGroup.events}
@@ -3317,7 +3327,7 @@ function VerticalTimeline({
                       </div>
                     );
                   })() : hasEvents ? (
-                    (mGroup.groupedDateEvents || groupEventsByDate(mGroup.events)).map((dateGroup, gIdx) => (
+                    (mGroup.groupedDateEvents || groupEventsByDate(mGroup.events, dayComparator)).map((dateGroup, gIdx) => (
                       <div
                         key={`${dateGroup.date}_${gIdx}`}
                         style={{ marginBottom: '8px' }}
@@ -3473,7 +3483,7 @@ function VerticalTimeline({
                         </div>
 
                         {hasEvents ? (
-                          groupEventsByDate(mGroup.events).map((dateGroup, gIdx) => (
+                          groupEventsByDate(mGroup.events, dayComparator).map((dateGroup, gIdx) => (
                             <div
                               key={`${dateGroup.date}_${gIdx}`}
                               style={{ marginBottom: '8px' }}
@@ -3631,7 +3641,7 @@ function VerticalTimeline({
       return dateB.localeCompare(dateA);
     });
 
-    const grouped = groupEventsByDate(sortedEvents);
+    const grouped = groupEventsByDate(sortedEvents, dayComparator);
 
     return (
       <div className="filtered-events-stack-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', padding: '4px 0 24px 0' }}>

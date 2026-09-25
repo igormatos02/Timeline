@@ -1524,7 +1524,16 @@ export default function App() {
           };
         }
 
-        const { date: _d, id: _i, ...restProps } = updatedEvent;
+        // Per-occurrence data (comments, payment date, receipt number) belongs to the edited month only
+        const {
+          date: _d,
+          id: _i,
+          monthNotes: _monthNotes,
+          receiptDate: _receiptDate,
+          contYear: _contYear,
+          cont_year: _contYearSnake,
+          ...restProps
+        } = updatedEvent;
         return { ...ev, ...restProps };
       }
 

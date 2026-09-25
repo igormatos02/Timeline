@@ -56,6 +56,20 @@ export class FinancialEventService {
     const month = parseInt(dateStr.substring(5, 7), 10);
     if (isNaN(year) || isNaN(month)) return;
 
+    // A cancelled occurrence can never be reactivated: only cancelling again or deleting is allowed
+    const isCancelling = status === EventStatus.CANCELLED || isCancelledStatus(status);
+    if (status !== EventStatus.DELETED && !isCancelling) {
+      const ids = [eventId, ...(Array.isArray(options.aliases) ? options.aliases : [])].filter(Boolean).map(String);
+      for (const rowEventId of new Set(ids)) {
+        const currentRows = await financialEventStatusRepository.getAll({ year, month, eventId: rowEventId });
+        if (currentRows.some((r) => r.status === EventStatus.CANCELLED || isCancelledStatus(r.status))) {
+          const error = new Error(t('backend.validation.eventCancelledLocked'));
+          error.code = 'EVENT_CANCELLED';
+          throw error;
+        }
+      }
+    }
+
     if (status === EventStatus.DELETED) {
       await financialEventStatusRepository.upsertStatus(year, month, eventId, EventStatus.DELETED, options);
     } else if (status === EventStatus.CANCELLED || isCancelledStatus(status)) {

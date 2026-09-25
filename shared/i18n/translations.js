@@ -381,6 +381,13 @@ export const translations = {
     // Action Hints / Tooltips
     actionNotes: "View / Edit Notes",
     actionAddNote: "Add Note",
+    cancelEventConfirm: {
+      title: "Cancel event",
+      message: "A cancelled event cannot be reactivated. Do you really want to cancel it?",
+      back: "Back",
+      confirm: "Yes, cancel",
+      locked: "Cancelled event — it cannot be reactivated",
+    },
     eventNotes: {
       title: "Movement notes ({{count}})",
       empty: "No notes added yet.",
@@ -1684,6 +1691,7 @@ export const translations = {
         timelineSystemCannotBeDeleted: "System timeline cannot be deleted",
         eventNotFound: "Event not found",
         noteContentRequired: "Comment text is required",
+        eventCancelledLocked: "A cancelled event cannot be reactivated",
         eventLockedPositive: "Positive financial events are permanently locked and cannot be modified or reverted to pending.",
         loanNotFound: "Loan not found",
         personNameRequired: "personName is required",
@@ -2299,6 +2307,13 @@ export const translations = {
     // Action Hints / Tooltips
     actionNotes: "Ver / Editar Notas",
     actionAddNote: "Adicionar Nota",
+    cancelEventConfirm: {
+      title: "Cancelar evento",
+      message: "Um evento cancelado não pode ser reativado. Deseja mesmo cancelar?",
+      back: "Voltar",
+      confirm: "Sim, cancelar",
+      locked: "Evento cancelado — não pode ser reativado",
+    },
     eventNotes: {
       title: "Notas do Movimento ({{count}})",
       empty: "Nenhuma nota adicionada ainda.",
@@ -3600,6 +3615,7 @@ export const translations = {
         timelineSystemCannotBeDeleted: "Timeline do sistema não pode ser eliminada",
         eventNotFound: "Evento não encontrado",
         noteContentRequired: "O texto do comentário é obrigatório",
+        eventCancelledLocked: "Um evento cancelado não pode ser reativado",
         eventLockedPositive: "Eventos financeiros positivos estão permanentemente trancados e não podem ser alterados nem revertidos para pendente.",
         loanNotFound: "Empréstimo não encontrado",
         personNameRequired: "personName é obrigatório",

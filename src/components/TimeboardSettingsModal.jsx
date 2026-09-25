@@ -280,6 +280,25 @@ export default function TimeboardSettingsModal({
     }, 4000);
   };
 
+  // Esc closes the innermost open layer first (invitation, entity form, month picker), then the settings modal
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key !== 'Escape') return;
+      if (isInviteModalOpen) {
+        setIsInviteModalOpen(false);
+      } else if (isEntityModalOpen) {
+        setIsEntityModalOpen(false);
+      } else if (isCustomMonthPickerOpen) {
+        setIsCustomMonthPickerOpen(false);
+      } else {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isInviteModalOpen, isEntityModalOpen, isCustomMonthPickerOpen, onClose]);
+
   if (!isOpen || !timeboard) return null;
 
   // Handler: Save General Info
@@ -2769,10 +2788,20 @@ function CustomRoleDropdown({ currentRole, onChange, t }) {
         setIsOpen(false);
       }
     };
+    // Esc closes the open dropdown only (captured before the modal's own Esc handler)
+    const handleKeyDown = (e) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      setIsOpen(false);
+    };
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown, true);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
   }, [isOpen]);
 
   const handleSelect = (role) => {

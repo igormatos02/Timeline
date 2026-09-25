@@ -89,12 +89,13 @@ import { DIARY_MOOD_CONFIG, renderFormattedMarkdown } from './event-modals/Diary
 import { getPaletteTheme, ColorPaletteId, COLOR_PALETTES } from '../../shared/config/colorPalettes.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import * as api from '../services/api.js';
-import { compareEventsWithinDay } from '../utils/eventSorting.js';
+import { createEventDayComparator, buildPersonsById } from '../utils/eventSorting.js';
 import CopyIdButton from './ui/CopyIdButton.jsx';
 import { usePermissions } from '../context/PermissionsContext.jsx';
 import { useTimeboard } from '../context/TimeboardContext.jsx';
 import { useEventActions } from '../context/EventActionsContext.jsx';
 import DueDatePicker from './ui/DueDatePicker.jsx';
+import CancelEventConfirmModal from './CancelEventConfirmModal.jsx';
 import { makeDiaryT } from '../utils/diaryLabels.js';
 
 const RECEIPT_DATE_POPOVER_WIDTH = 270;
@@ -138,6 +139,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const onOpenEditInstallment = isReadOnly ? undefined : onOpenEditInstallmentProp;
   const onPrintReceipt = isReadOnly ? undefined : onPrintReceiptProp;
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
   // Payment date edited directly on the ticket (paid / received events)
   const { saveReceiptDate, saveReceiptNumber, getProposedReceiptNumber, addEventNote, deleteEventNote, currentUserId } = useEventActions();
   const [isReceiptDateOpen, setIsReceiptDateOpen] = useState(false);
@@ -163,6 +165,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const handleStatusToggle = React.useCallback(async (e, explicitStatus = null) => {
     if (e && e.stopPropagation) e.stopPropagation();
     if (isTogglingStatus || !onToggleLoanPayment) return;
+    // A cancelled event can never be reactivated
+    if (isCancelledStatus(localStatus || event.status)) return;
 
     // Immediate 0ms visual feedback
     const isCurrPositive = isPositiveStatus(event.status) || event.status === FollowupStatus.FINISHED || Boolean(event.isCompleted);
@@ -187,7 +191,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     } finally {
       setIsTogglingStatus(false);
     }
-  }, [event, isTogglingStatus, onToggleLoanPayment]);
+  }, [event, localStatus, isTogglingStatus, onToggleLoanPayment]);
 
   const handlePayUpToHereClick = React.useCallback(async (e) => {
     if (e && e.stopPropagation) e.stopPropagation();
@@ -867,6 +871,26 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             gap: '5px'
           }}
           title=""
+        >
+          {children}
+        </div>
+      );
+    }
+
+    if (isCancelled) {
+      return (
+        <div
+          className="btn btn-sm"
+          style={{
+            ...buttonProps?.style,
+            boxShadow: 'none',
+            cursor: 'default',
+            userSelect: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}
+          title={t('cancelEventConfirm.locked')}
         >
           {children}
         </div>
@@ -2803,43 +2827,56 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         </button>
       )}
 
-      {/* Botão Cancelar / Reativar Evento */}
-      {!isAnchorCard && !isLoanInstallment && !isCondoPost && onToggleLoanPayment && (
-        <button
-          type="button"
+      {/* Botão Cancelar Evento: pede confirmação; um evento cancelado não pode ser reativado */}
+      {!isAnchorCard && !isLoanInstallment && !isCondoPost && onToggleLoanPayment && (isCancelled ? (
+        <span
           className="action-icon-btn"
-          disabled={isTogglingStatus}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isCancelled) {
-              // Reactivating goes back to the event's open (negative) status; "overdue" is derived from the date
-              const uncancelledStatus = isInvestmentEvent
-                ? EventStatus.PLANNED
-                : isReminderEvent
-                  ? EventStatus.OPEN
-                  : isFollowupEvent
-                    ? FollowupStatus.IN_PROGRESS
-                    : EventStatus.PENDING;
-              handleStatusToggle(e, uncancelledStatus);
-            } else {
-              handleStatusToggle(e, EventStatus.CANCELLED);
-            }
-          }}
-          title={isCancelled ? t('actionReactivateEvent') : t('actionCancelEvent')}
+          title={t('cancelEventConfirm.locked')}
           style={{
             padding: '3px 5px',
             borderRadius: '5px',
-            color: isCancelled ? (isFlatPositive ? TimelineColor.WHITE : TimelineColor.WARNING) : (isFlatPositive ? TimelineColor.WHITE : 'var(--text-dim)'),
-            background: isCancelled ? (isFlatPositive ? 'rgba(255, 255, 255, 0.25)' : 'rgba(245, 158, 11, 0.14)') : 'transparent',
-            border: isCancelled ? (isFlatPositive ? '1px solid rgba(255, 255, 255, 0.4)' : '1px solid rgba(245, 158, 11, 0.35)') : '1px solid transparent',
-            cursor: isTogglingStatus ? 'wait' : 'pointer',
+            color: isFlatPositive ? TimelineColor.WHITE : TimelineColor.WARNING,
+            background: isFlatPositive ? `${TimelineColor.WHITE}40` : `${TimelineColor.WARNING}24`,
+            border: `1px solid ${isFlatPositive ? `${TimelineColor.WHITE}66` : `${TimelineColor.WARNING}59`}`,
+            cursor: 'default',
             display: 'inline-flex',
             alignItems: 'center'
           }}
         >
-          <Ban size={13} style={{ color: isCancelled ? (isFlatPositive ? TimelineColor.WHITE : TimelineColor.WARNING) : (isFlatPositive ? TimelineColor.WHITE : undefined) }} />
-        </button>
-      )}
+          <Ban size={13} />
+        </span>
+      ) : (
+        <>
+          <button
+            type="button"
+            className="action-icon-btn"
+            disabled={isTogglingStatus}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsCancelConfirmOpen(true);
+            }}
+            title={t('actionCancelEvent')}
+            style={{
+              padding: '3px 5px',
+              borderRadius: '5px',
+              color: isFlatPositive ? TimelineColor.WHITE : 'var(--text-dim)',
+              background: 'transparent',
+              border: '1px solid transparent',
+              cursor: isTogglingStatus ? 'wait' : 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center'
+            }}
+          >
+            <Ban size={13} style={{ color: isFlatPositive ? TimelineColor.WHITE : undefined }} />
+          </button>
+          <CancelEventConfirmModal
+            isOpen={isCancelConfirmOpen}
+            eventTitle={event.title || event.name}
+            onClose={() => setIsCancelConfirmOpen(false)}
+            onConfirm={() => handleStatusToggle(null, EventStatus.CANCELLED)}
+          />
+        </>
+      ))}
 
       {/* Botão Imprimir Recibo - Apenas para evento com obligator e status positivo */}
       {isObligationEvent && onPrintReceipt && isPositiveStatus(effectiveStatus) && (
@@ -5106,10 +5143,15 @@ const TimelineEventDayCard = React.memo(function TimelineEventDayCard({
   onPrintReceipt,
   persons = []
 }) {
+  const { isCondoflow: isCondoflowBoard } = useTimeboard();
+  const dayComparator = React.useMemo(
+    () => createEventDayComparator({ personsById: buildPersonsById(persons), obligatorFirst: isCondoflowBoard }),
+    [persons, isCondoflowBoard]
+  );
   const eventList = React.useMemo(() => {
     const list = Array.isArray(events) ? [...events] : (event ? [event] : []);
-    return list.sort(compareEventsWithinDay);
-  }, [events, event]);
+    return list.sort(dayComparator);
+  }, [events, event, dayComparator]);
   const { language } = useTranslation();
   const dateLocale = language === 'pt' ? pt : enUS;
 

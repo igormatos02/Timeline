@@ -1555,6 +1555,14 @@ export default function App() {
     }
   }, [refreshTimelines, showToast, t, fetchEventsForVisiblePeriod, pastHorizonYears, futureHorizonYears]);
 
+  // Updates an event in the local state only (the change was already saved elsewhere), so cards re-render at once
+  const handlePatchEventLocal = useCallback((eventId, patch) => {
+    if (!eventId || !patch) return;
+    const applyPatch = (ev) => (ev && ev.id === eventId ? { ...ev, ...patch } : ev);
+    setRawEvents((prev) => prev.map(applyPatch));
+    setTimelines((prev) => prev.map((tl) => (tl.events ? { ...tl, events: tl.events.map(applyPatch) } : tl)));
+  }, []);
+
   const handleRequestDeleteEvent = useCallback((eventOrId) => {
     scrollYBeforeModalRef.current = window.scrollY;
     if (!eventOrId) return;
@@ -2380,6 +2388,7 @@ export default function App() {
             onOpenAmortizationModal={handleOpenAmortizationModal}
             onOpenWithdrawModal={handleOpenWithdrawalModal}
             onNavigateToTimeline={handleNavigateToTimeline}
+            onPatchEventLocal={handlePatchEventLocal}
             headerComponent={
               <TimelineHeader
                 timeboard={activeTimeboard}

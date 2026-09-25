@@ -283,7 +283,7 @@ export default function BalanceTimelineHeader({
   const { t, language } = useTranslation();
   const dateLocale = language === 'en' ? enUS : pt;
   const currentMonthStr = format(new Date(), 'yyyy-MM');
-  const [collapsed, setIsCollapsed] = useState(false);
+  const [collapsed, setIsCollapsed] = useState(true);
   const [projectionMonthsAhead, setProjectionMonthsAhead] = useState(0);
 
   const incomeTimeline = React.useMemo(() => (allTimelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.INCOME), [allTimelines]);

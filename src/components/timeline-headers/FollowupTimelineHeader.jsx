@@ -30,7 +30,7 @@ export default function FollowupTimelineHeader({
   onAddEvent
 }) {
   const { t } = useTranslation();
-  const [collapsed, setIsCollapsed] = useState(false);
+  const [collapsed, setIsCollapsed] = useState(true);
 
   const headerColor = timeline?.color || TimelineColor.FOLLOWUP;
   const rawEventsList = filteredEvents !== undefined ? filteredEvents : (timeline?.events || events || []);

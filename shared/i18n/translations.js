@@ -332,6 +332,13 @@ export const translations = {
 
     // Sidebar Filters
     sidebar: {
+      period: "Period",
+      year: "Year",
+      month: "Month",
+      allYears: "All years",
+      allMonths: "All months",
+      yearLabel: "Year:",
+      monthLabel: "Month:",
       filtersNavigation: "Filters & Navigation",
       newTimeline: "New Timeline",
       timelines: "Timelines",
@@ -485,6 +492,7 @@ export const translations = {
 
     // Modal Events
     modal: {
+      day: "Day",
       condoDepositNew: "New Entry",
       condoDepositEdit: "Edit Entry",
       condoDepositAdd: "Add Entry",
@@ -1776,6 +1784,17 @@ export const translations = {
     },
 
     receipt: {
+      changePaymentDate: "Click to change the payment date",
+      addNumber: "Add",
+      addNumberHint: "Add the receipt number",
+      ok: "OK",
+      numberLabel: "Receipt no.:",
+      numberEditableHint: "Can be changed until the receipt is printed",
+      numberTaken: "Receipt number {{number}} is already used",
+      numberInvalid: "Enter a valid receipt number",
+      paymentDateShort: "Date: {{date}}",
+      paymentDateLabel: "Payment date:",
+      dateLabel: "Receipt date",
       printReceipt: "Print Receipt",
       generatingReceipt: "Generating receipt...",
       receiptTitle: "RECEIPT",
@@ -2230,6 +2249,13 @@ export const translations = {
 
     // Sidebar Filters
     sidebar: {
+      period: "Período",
+      year: "Ano",
+      month: "Mês",
+      allYears: "Todos os anos",
+      allMonths: "Todos os meses",
+      yearLabel: "Ano:",
+      monthLabel: "Mês:",
       filtersNavigation: "Filtros & Navegação",
       newTimeline: "Nova Timeline",
       timelines: "Timelines",
@@ -2383,6 +2409,7 @@ export const translations = {
 
     // Modal Events
     modal: {
+      day: "Dia",
       condoDepositNew: "Nova Entrada",
       condoDepositEdit: "Editar Entrada",
       condoDepositAdd: "Adicionar Entrada",
@@ -3672,6 +3699,17 @@ export const translations = {
     },
 
     receipt: {
+      changePaymentDate: "Clique para alterar a data de pagamento",
+      addNumber: "Adicionar",
+      addNumberHint: "Adicionar o número do recibo",
+      ok: "OK",
+      numberLabel: "Nº do Recibo:",
+      numberEditableHint: "Pode ser alterado enquanto o recibo não for impresso",
+      numberTaken: "O número de recibo {{number}} já está a ser usado",
+      numberInvalid: "Indique um número de recibo válido",
+      paymentDateShort: "Data: {{date}}",
+      paymentDateLabel: "Data de Pagamento:",
+      dateLabel: "Data do recibo",
       printReceipt: "Imprimir Recibo",
       generatingReceipt: "A gerar recibo...",
       receiptTitle: "RECIBO",

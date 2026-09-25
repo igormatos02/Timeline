@@ -147,7 +147,9 @@ const EXPENSE_CATEGORY_ITEMS = [
 
 import * as api from '../services/api.js';
 import ReceiptModal from './modals/ReceiptModal.jsx';
+import PeriodBadgeFilter from './ui/PeriodBadgeFilter.jsx';
 import HistoryPrintModal from './modals/HistoryPrintModal.jsx';
+import { EventActionsProvider } from '../context/EventActionsContext.jsx';
 import { usePermissions } from '../context/PermissionsContext.jsx';
 import { buildReceiptHtml, buildClearanceHtml, buildCondoClearanceHtml, buildHistoryHtml, computeReceiptNumber, computeNextReceiptNumber } from '../utils/receiptGenerator.js';
 
@@ -198,6 +200,7 @@ function VerticalTimeline({
   onOpenAmortizationModal: onOpenAmortizationModalProp,
   onOpenWithdrawModal: onOpenWithdrawModalProp,
   onNavigateToTimeline,
+  onPatchEventLocal,
   onCreateTimeline: onCreateTimelineProp,
   headerComponent,
   futureHorizonYears = 1,
@@ -243,6 +246,9 @@ function VerticalTimeline({
   }, [lockedEntityId, selectedEntityId]);
   const [selectedLabelFilter, setSelectedLabelFilter] = useState(EventStatus.ALL);
   const [showEmptyDays, setShowEmptyDays] = useState(true);
+  // Period filter (year / month): show only that month or year instead of scrolling the whole timeline
+  const [periodYear, setPeriodYear] = useState('');
+  const [periodMonth, setPeriodMonth] = useState('');
   // Individual view: switches for the shared reminders / diary posts (on by default)
   const [showSharedReminders, setShowSharedReminders] = useState(true);
   const [showSharedPosts, setShowSharedPosts] = useState(true);
@@ -252,7 +258,8 @@ function VerticalTimeline({
     status: false,
     integratedTimelines: false,
     categories: false,
-    entities: false
+    entities: false,
+    period: false
   });
 
   // Receipt Modal and Generation Overlay State
@@ -260,9 +267,36 @@ function VerticalTimeline({
   const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
   const [generatingLabelKey, setGeneratingLabelKey] = useState('receipt.generatingReceipt');
 
+  // Receipts are numbered by the event's own timeline (e.g. income), even when opened from the Balance view
+  const resolveReceiptTimeline = useCallback((targetEvent) => {
+    const ownTimelineId = targetEvent?.timelineOriginId || targetEvent?.timelineId || targetEvent?.timeline_id;
+    return (timelines || []).find((tl) => String(tl.id) === String(ownTimelineId)) || timeline;
+  }, [timelines, timeline]);
+
+  // Advances the receipt counter (cont_year) of the given timeline after the receipt number was used
+  const advanceReceiptCounter = useCallback(async (receiptTimelineId, usedNumber) => {
+    if (!receiptTimelineId || !usedNumber) return;
+    const nextReceiptNumber = computeNextReceiptNumber(usedNumber);
+    // Keep the in-memory timelines in sync so the next receipt proposes the right number
+    [timeline, ...(timelines || [])].forEach((tl) => {
+      if (tl && String(tl.id) === String(receiptTimelineId)) {
+        tl.contYear = nextReceiptNumber;
+        tl.cont_year = nextReceiptNumber;
+      }
+    });
+    try {
+      await api.updateTimeline(receiptTimelineId, {
+        contYear: nextReceiptNumber,
+        cont_year: nextReceiptNumber
+      });
+    } catch (err) {
+      console.error('Error updating timeline cont_year after receipt:', err);
+    }
+  }, [timeline, timelines]);
+
   const handleReceiptPrint = useCallback(async () => {
     if (!receiptModalData || !receiptModalData.receiptNumber || !receiptModalData.timelineId) return;
-    const { receiptNumber, timelineId, targetEvent } = receiptModalData;
+    const { receiptNumber, timelineId, targetEvent, receiptDate } = receiptModalData;
 
     // Se o evento já possuía cont_year, não avança o contador da timeline
     const hadEventContYear = Boolean(
@@ -274,12 +308,21 @@ function VerticalTimeline({
     if (targetEvent?.id) {
       targetEvent.contYear = receiptNumber;
       targetEvent.cont_year = receiptNumber;
+      if (receiptDate) targetEvent.receiptDate = receiptDate;
+      // Show the receipt number / payment date on the card right away
+      onPatchEventLocal?.(targetEvent.id, {
+        contYear: receiptNumber,
+        cont_year: receiptNumber,
+        ...(receiptDate ? { receiptDate } : {})
+      });
       try {
         await api.setEventStatus(targetEvent.id, {
           date: targetEvent.date,
           status: targetEvent.status,
           contYear: receiptNumber,
           cont_year: receiptNumber,
+          // The printed receipt carries this payment date: keep it stored
+          ...(receiptDate ? { receiptDate } : {}),
           timelineId: targetEvent.timelineId || timelineId,
           timeboardId: activeTimeboard?.id
         });
@@ -288,51 +331,50 @@ function VerticalTimeline({
       }
     }
 
-    // Se o evento ainda NÃO tinha cont_year próprio, incrementa o contador da timeline
+    // Se o evento ainda NÃO tinha cont_year próprio, incrementa o contador da timeline do recibo
     if (!hadEventContYear) {
-      const nextReceiptNumber = computeNextReceiptNumber(receiptNumber);
-
-      // Atualiza imediatamente em memória a timeline ativa
-      if (timeline && (timeline.id === timelineId || String(timeline.id) === String(timelineId))) {
-        timeline.contYear = nextReceiptNumber;
-        timeline.cont_year = nextReceiptNumber;
-      }
-
-      try {
-        await api.updateTimeline(timelineId, {
-          contYear: nextReceiptNumber,
-          cont_year: nextReceiptNumber
-        });
-      } catch (err) {
-        console.error('Error updating timeline cont_year after print:', err);
-      }
+      await advanceReceiptCounter(timelineId, receiptNumber);
     }
-  }, [receiptModalData, timeline, activeTimeboard]);
+
+    // Once printed, the receipt number can no longer be changed
+    setReceiptModalData((prev) => (prev ? { ...prev, canEditReceiptNumber: false } : prev));
+  }, [receiptModalData, activeTimeboard, onPatchEventLocal, advanceReceiptCounter]);
 
   const handleOpenReceipt = useCallback((targetEvent, targetPerson) => {
     setGeneratingLabelKey('receipt.generatingReceipt');
     setIsGeneratingReceipt(true);
     setTimeout(() => {
       try {
-        const receiptNumber = computeReceiptNumber(timeline, targetEvent);
+        const receiptTimeline = resolveReceiptTimeline(targetEvent);
+        const receiptNumber = computeReceiptNumber(receiptTimeline, targetEvent);
+        const hasStoredNumber = Number(targetEvent?.cont_year ?? targetEvent?.contYear) > 0;
+        // Saved payment date of this occurrence (receipt_date), or the event date by default
+        const receiptDate = targetEvent?.receiptDate || targetEvent?.date || format(new Date(), 'yyyy-MM-dd');
         const html = buildReceiptHtml({
           event: targetEvent,
           timeboard: activeTimeboard,
-          timeline,
+          timeline: receiptTimeline,
           receiptNumber,
           currentUser,
           obligationPerson: targetPerson,
           persons,
           language,
-          t
+          t,
+          paymentDate: receiptDate
         });
         setReceiptModalData({
           isOpen: true,
           htmlContent: html,
           title: t('receipt.printReceipt'),
           receiptNumber,
-          timelineId: timeline?.id,
-          targetEvent
+          timelineId: receiptTimeline?.id,
+          targetEvent,
+          targetPerson,
+          receiptDate,
+          // The number can be changed while this occurrence has no stored receipt number yet
+          canEditReceiptNumber: !hasStoredNumber,
+          // Automatic proposal (timeline counter): saving it advances the counter, a custom number does not
+          proposedReceiptNumber: hasStoredNumber ? null : receiptNumber
         });
       } catch (err) {
         console.error('Error generating receipt HTML:', err);
@@ -340,7 +382,166 @@ function VerticalTimeline({
         setIsGeneratingReceipt(false);
       }
     }, 450);
-  }, [activeTimeboard, timeline, currentUser, language, t, persons]);
+  }, [activeTimeboard, timeline, currentUser, language, t, persons, resolveReceiptTimeline]);
+
+  // The receipt date can be changed in the receipt modal header: rebuild the document with it
+  const handleReceiptDateChange = useCallback((nextDate) => {
+    setReceiptModalData((prev) => {
+      if (!prev || !prev.targetEvent) return prev;
+      const html = buildReceiptHtml({
+        event: prev.targetEvent,
+        timeboard: activeTimeboard,
+        timeline,
+        receiptNumber: prev.receiptNumber,
+        currentUser,
+        obligationPerson: prev.targetPerson,
+        persons,
+        language,
+        t,
+        paymentDate: nextDate
+      });
+      return { ...prev, receiptDate: nextDate, htmlContent: html };
+    });
+  }, [activeTimeboard, timeline, currentUser, persons, language, t]);
+
+  // "Save" in the receipt modal: store the payment date in financial_event_status.receipt_date
+  const handleSaveReceiptDate = useCallback(async (nextDate) => {
+    const targetEvent = receiptModalData?.targetEvent;
+    if (!targetEvent?.id || !nextDate) return;
+    try {
+      await api.setEventStatus(targetEvent.id, {
+        date: targetEvent.date,
+        status: targetEvent.status,
+        receiptDate: nextDate,
+        timelineId: targetEvent.timelineId || timeline?.id,
+        timeboardId: activeTimeboard?.id
+      });
+      // Keep it in memory so the next time the receipt opens it already shows the saved date
+      targetEvent.receiptDate = nextDate;
+      onPatchEventLocal?.(targetEvent.id, { receiptDate: nextDate });
+      setReceiptModalData((prev) => (prev ? { ...prev, receiptDate: nextDate } : prev));
+    } catch (err) {
+      console.error('Error saving receipt date:', err);
+    }
+  }, [receiptModalData, timeline, activeTimeboard, onPatchEventLocal]);
+
+  // Manual receipt number (before printing): stored on the event status only, the timeline counter is not advanced.
+  // Returns { error } with a translated message when it cannot be saved (e.g. number already used).
+  const handleSaveReceiptNumber = useCallback(async (rawNumber) => {
+    const targetEvent = receiptModalData?.targetEvent;
+    const number = Number(rawNumber);
+    if (!targetEvent?.id || !Number.isInteger(number) || number <= 0) {
+      return { error: t('receipt.numberInvalid') };
+    }
+    try {
+      await api.setEventStatus(targetEvent.id, {
+        date: targetEvent.date,
+        status: targetEvent.status,
+        contYear: number,
+        cont_year: number,
+        receiptDate: receiptModalData.receiptDate,
+        checkReceiptNumber: true,
+        timelineId: receiptModalData.timelineId || targetEvent.timelineId || timeline?.id,
+        timeboardId: activeTimeboard?.id
+      });
+    } catch (err) {
+      return {
+        error: err.code === 'RECEIPT_NUMBER_TAKEN'
+          ? t('receipt.numberTaken', { number })
+          : t('common.updateFailed', { message: err.message || '' })
+      };
+    }
+
+    targetEvent.contYear = number;
+    targetEvent.cont_year = number;
+    onPatchEventLocal?.(targetEvent.id, { contYear: number, cont_year: number });
+    // Keeping the automatic number uses the timeline counter: advance it (a custom number does not)
+    if (receiptModalData.proposedReceiptNumber && Number(receiptModalData.proposedReceiptNumber) === number) {
+      await advanceReceiptCounter(receiptModalData.timelineId, number);
+    }
+    setReceiptModalData((prev) => {
+      if (!prev) return prev;
+      const html = buildReceiptHtml({
+        event: prev.targetEvent,
+        timeboard: activeTimeboard,
+        timeline,
+        receiptNumber: number,
+        currentUser,
+        obligationPerson: prev.targetPerson,
+        persons,
+        language,
+        t,
+        paymentDate: prev.receiptDate
+      });
+      return { ...prev, receiptNumber: number, htmlContent: html, canEditReceiptNumber: false };
+    });
+    return { ok: true };
+  }, [receiptModalData, timeline, activeTimeboard, currentUser, persons, language, t, onPatchEventLocal, advanceReceiptCounter]);
+
+  // Payment date changed directly on the event card (ticket): store it and refresh the card at once
+  const saveReceiptDate = useCallback(async (targetEvent, nextDate) => {
+    if (!targetEvent?.id || !nextDate) return false;
+    try {
+      await api.setEventStatus(targetEvent.id, {
+        date: targetEvent.date,
+        status: targetEvent.status,
+        receiptDate: nextDate,
+        timelineId: targetEvent.timelineOriginId || targetEvent.timelineId || timeline?.id,
+        timeboardId: activeTimeboard?.id
+      });
+      onPatchEventLocal?.(targetEvent.id, { receiptDate: nextDate });
+      return true;
+    } catch (err) {
+      console.error('Error saving receipt date from the card:', err);
+      return false;
+    }
+  }, [timeline, activeTimeboard, onPatchEventLocal]);
+
+  // Next sequential receipt number proposed for an event without a stored one (its own timeline counter)
+  const getProposedReceiptNumber = useCallback(
+    (targetEvent) => computeReceiptNumber(resolveReceiptTimeline(targetEvent), targetEvent),
+    [resolveReceiptTimeline]
+  );
+
+  // Receipt number added directly on the event card (ticket). Same rules as the receipt modal:
+  // must be unique in the timeline, and only the proposed sequential number advances the counter.
+  // Returns { ok } or { error } with a translated message.
+  const saveReceiptNumber = useCallback(async (targetEvent, rawNumber) => {
+    const number = Number(rawNumber);
+    if (!targetEvent?.id || !Number.isInteger(number) || number <= 0) {
+      return { error: t('receipt.numberInvalid') };
+    }
+    const receiptTimeline = resolveReceiptTimeline(targetEvent);
+    const proposedNumber = Number(computeReceiptNumber(receiptTimeline, targetEvent));
+    try {
+      await api.setEventStatus(targetEvent.id, {
+        date: targetEvent.date,
+        status: targetEvent.status,
+        contYear: number,
+        cont_year: number,
+        receiptDate: targetEvent.receiptDate || targetEvent.date,
+        checkReceiptNumber: true,
+        timelineId: receiptTimeline?.id || targetEvent.timelineId || timeline?.id,
+        timeboardId: activeTimeboard?.id
+      });
+    } catch (err) {
+      return {
+        error: err.code === 'RECEIPT_NUMBER_TAKEN'
+          ? t('receipt.numberTaken', { number })
+          : t('common.updateFailed', { message: err.message || '' })
+      };
+    }
+    onPatchEventLocal?.(targetEvent.id, { contYear: number, cont_year: number });
+    if (proposedNumber === number) {
+      await advanceReceiptCounter(receiptTimeline?.id, number);
+    }
+    return { ok: true };
+  }, [t, resolveReceiptTimeline, timeline, activeTimeboard, onPatchEventLocal, advanceReceiptCounter]);
+
+  const eventActions = useMemo(
+    () => ({ saveReceiptDate, saveReceiptNumber, getProposedReceiptNumber }),
+    [saveReceiptDate, saveReceiptNumber, getProposedReceiptNumber]
+  );
 
   const toggleSectionCollapse = (key) => {
     setCollapsedSections((prev) => ({
@@ -589,6 +790,8 @@ function VerticalTimeline({
     setSearchQuery('');
     setShowSharedReminders(true);
     setShowSharedPosts(true);
+    setPeriodYear('');
+    setPeriodMonth('');
   };
 
   const toggleExpenseCategory = (catId) => {
@@ -1346,10 +1549,39 @@ function VerticalTimeline({
   }, [timelineEvents, isEventBelongingToCurrentTimeline]);
   const horizonStartDateObj = subMonths(currentMonthStart, effectivePastYears * 12);
   const earliestEventMonthStart = earliestEventDate ? startOfMonth(parseISO(earliestEventDate)) : null;
-  const startDateObj = earliestEventMonthStart && earliestEventMonthStart < horizonStartDateObj
+  const defaultStartDateObj = earliestEventMonthStart && earliestEventMonthStart < horizonStartDateObj
     ? earliestEventMonthStart
     : horizonStartDateObj;
-  const maxDateObj = addMonths(currentMonthEnd, Math.max(1, futureHorizonYears) * 12);
+
+  // Selected period: a year (optionally with a month) renders only that range;
+  // a month alone (e.g. every August) renders that month of every year up to the current one
+  const isPeriodActive = periodYear !== '' || periodMonth !== '';
+  const periodMonthIndex = periodMonth !== '' ? Number(periodMonth) : null;
+  const periodRange = useMemo(() => {
+    if (!periodYear) return null;
+    const year = Number(periodYear);
+    const start = periodMonth !== '' ? new Date(year, Number(periodMonth), 1) : new Date(year, 0, 1);
+    const end = periodMonth !== '' ? endOfMonth(start) : new Date(year, 11, 31);
+    return { start, end, startStr: format(start, 'yyyy-MM-dd'), endStr: format(end, 'yyyy-MM-dd') };
+  }, [periodYear, periodMonth]);
+
+  // Years available in the period filter: from the earliest event of this timeline up to the current year
+  const periodYearOptions = useMemo(() => {
+    const currentYear = todayDate.getFullYear();
+    const years = new Set([currentYear]);
+    timelineEvents.forEach((ev) => {
+      if (ev?.date && isEventBelongingToCurrentTimeline(ev)) years.add(Number(ev.date.substring(0, 4)));
+    });
+    const list = [...years].filter((y) => y && y <= currentYear);
+    const min = Math.min(...list);
+    const max = currentYear;
+    return Array.from({ length: max - min + 1 }, (_, i) => max - i);
+  }, [timelineEvents, isEventBelongingToCurrentTimeline]);
+
+  const startDateObj = periodRange ? periodRange.start : defaultStartDateObj;
+  const maxDateObj = periodRange
+    ? periodRange.end
+    : (periodMonthIndex !== null ? new Date(todayDate.getFullYear(), 11, 31) : addMonths(currentMonthEnd, Math.max(1, futureHorizonYears) * 12));
 
   // Filter events based on search query, status, category, and label
   const filteredEvents = useMemo(() => {
@@ -1366,7 +1598,14 @@ function VerticalTimeline({
         (ev.labels && ev.labels.some((l) => (l || '').toLowerCase().includes(searchQuery.toLowerCase())));
 
       // Na visualização de lista por status ou por categoria, mostrar apenas eventos até ao final do mês atual e meses anteriores
-      if (isListView) {
+      if (periodRange && (!ev.date || ev.date < periodRange.startStr || ev.date > periodRange.endStr)) {
+        return false;
+      }
+      if (!periodRange && periodMonthIndex !== null
+        && (!ev.date || Number(ev.date.substring(5, 7)) - 1 !== periodMonthIndex || Number(ev.date.substring(0, 4)) > todayDate.getFullYear())) {
+        return false;
+      }
+      if (isListView && !isPeriodActive) {
         const currentMonthKey = format(todayDate, 'yyyy-MM');
         if (ev.date && ev.date.substring(0, 7) > currentMonthKey) {
           return false;
@@ -1528,6 +1767,9 @@ function VerticalTimeline({
     computeFromMonth,
     showSharedReminders,
     showSharedPosts,
+    periodRange,
+    periodMonthIndex,
+    isPeriodActive,
   ]);
 
   // Shared notice types present in this timeline and the color of their own timeline
@@ -2198,7 +2440,7 @@ function VerticalTimeline({
       const allMonthsDesc = eachMonthOfInterval({
         start: startDateObj,
         end: maxDateObj
-      }).reverse();
+      }).reverse().filter((mDate) => periodMonthIndex === null || mDate.getMonth() === periodMonthIndex);
 
       allMonthsDesc.forEach((mDate) => {
         const monthKey = format(mDate, 'yyyy-MM');
@@ -2236,7 +2478,7 @@ function VerticalTimeline({
     });
 
     return Array.from(monthMap.values());
-  }, [filteredEvents, startDateObj, maxDateObj, todayDate]);
+  }, [filteredEvents, startDateObj, maxDateObj, todayDate, periodMonthIndex]);
 
   const renderMonthView = () => {
 
@@ -3430,6 +3672,7 @@ function VerticalTimeline({
   };
 
   return (
+    <EventActionsProvider value={eventActions}>
     <div className="timeline-workspace-layout">
       {/* 🧭 Left Filter Sidebar Cockpit */}
       <aside className="filter-sidebar">
@@ -3705,6 +3948,52 @@ function VerticalTimeline({
             </div>
           )}
         </div>
+
+        {/* 3b. Period Filter (year / month) — not for read-only users, who only get the status filter */}
+        {!isReadOnly && (
+          <div className="sidebar-section">
+            <div
+              className="sidebar-section-title"
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              onClick={() => toggleSectionCollapse('period')}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ChevronDown
+                  size={13}
+                  style={{
+                    transform: collapsedSections['period'] ? 'rotate(-90deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.18s ease',
+                    color: 'var(--text-muted)'
+                  }}
+                />
+                <span>{t('sidebar.period')}</span>
+              </div>
+              {isPeriodActive && (
+                <button
+                  type="button"
+                  className="sidebar-action-link"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPeriodYear('');
+                    setPeriodMonth('');
+                  }}
+                  style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer', fontSize: '0.72rem', padding: 0, fontWeight: '700' }}
+                >
+                  {t('buttons.all')}
+                </button>
+              )}
+            </div>
+            {!collapsedSections['period'] && (
+              <PeriodBadgeFilter
+                year={periodYear}
+                month={periodMonth}
+                years={periodYearOptions}
+                onYearChange={setPeriodYear}
+                onMonthChange={setPeriodMonth}
+              />
+            )}
+          </div>
+        )}
 
         {/* 4. Timelines Filter (Multi-Selection for Balance) — read-only users only get the status filter */}
         {timeline.type === TimelineType.BALANCE && !isReadOnly && (
@@ -4109,6 +4398,12 @@ function VerticalTimeline({
             htmlContent={receiptModalData.htmlContent}
             title={receiptModalData.title}
             onPrint={handleReceiptPrint}
+            date={receiptModalData.receiptDate}
+            onDateChange={receiptModalData.targetEvent ? handleReceiptDateChange : undefined}
+            onSaveDate={receiptModalData.targetEvent ? handleSaveReceiptDate : undefined}
+            receiptNumber={receiptModalData.receiptNumber}
+            canEditReceiptNumber={Boolean(receiptModalData.targetEvent && receiptModalData.canEditReceiptNumber)}
+            onSaveReceiptNumber={receiptModalData.targetEvent ? handleSaveReceiptNumber : undefined}
           />
         )}
 
@@ -4139,6 +4434,7 @@ function VerticalTimeline({
         )}
       </div>
     </div>
+    </EventActionsProvider>
   );
 }
 

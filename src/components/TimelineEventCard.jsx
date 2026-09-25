@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Clock,
   CheckSquare,
@@ -92,7 +93,12 @@ import { compareEventsWithinDay } from '../utils/eventSorting.js';
 import CopyIdButton from './ui/CopyIdButton.jsx';
 import { usePermissions } from '../context/PermissionsContext.jsx';
 import { useTimeboard } from '../context/TimeboardContext.jsx';
+import { useEventActions } from '../context/EventActionsContext.jsx';
+import DueDatePicker from './ui/DueDatePicker.jsx';
 import { makeDiaryT } from '../utils/diaryLabels.js';
+
+const RECEIPT_DATE_POPOVER_WIDTH = 270;
+const RECEIPT_NUMBER_POPOVER_WIDTH = 220;
 
 const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   event,
@@ -132,6 +138,22 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const onOpenEditInstallment = isReadOnly ? undefined : onOpenEditInstallmentProp;
   const onPrintReceipt = isReadOnly ? undefined : onPrintReceiptProp;
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
+  // Payment date edited directly on the ticket (paid / received events)
+  const { saveReceiptDate, saveReceiptNumber, getProposedReceiptNumber } = useEventActions();
+  const [isReceiptDateOpen, setIsReceiptDateOpen] = useState(false);
+  const [receiptDateDraft, setReceiptDateDraft] = useState(null);
+  const [isSavingReceiptDate, setIsSavingReceiptDate] = useState(false);
+  const [receiptDatePos, setReceiptDatePos] = useState(null);
+  const receiptDateAnchorRef = useRef(null);
+  const receiptDatePopoverRef = useRef(null);
+  // Floating "add receipt number" popover on the ticket
+  const [isReceiptNumberOpen, setIsReceiptNumberOpen] = useState(false);
+  const [receiptNumberDraft, setReceiptNumberDraft] = useState('');
+  const [receiptNumberError, setReceiptNumberError] = useState('');
+  const [isSavingReceiptNumber, setIsSavingReceiptNumber] = useState(false);
+  const [receiptNumberPos, setReceiptNumberPos] = useState(null);
+  const receiptNumberAnchorRef = useRef(null);
+  const receiptNumberPopoverRef = useRef(null);
   const [newItemText, setNewItemText] = useState('');
   const [localAuto, setLocalAuto] = React.useState(Boolean(event.automatic || event.isAutomatic));
   const [localStatus, setLocalStatus] = React.useState(event.status);
@@ -465,6 +487,283 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const isFinancialLockedType = isIncomeEvent || isExpenseEvent || isInvestmentEvent;
   const isLockedPositive = isFinancialLockedType && (isReceivedIncome || isPaidExpense || isCompletedInvestment || isPositiveStatus(effectiveStatus));
 
+  // Receipt reference line: "REC. 202602 | Data: 13/03/2025".
+  // The payment date shows as soon as the event is paid / received (stored receipt date, or the event date).
+  const renderReceiptRef = (onPositiveCard) => {
+    const receiptNumber = event.cont_year ?? event.contYear;
+    const hasReceiptNumber = receiptNumber != null && Number(receiptNumber) > 0;
+    const paymentDate = isCompleted && !isCancelled ? (event.receiptDate || event.date) : null;
+    const canAddReceiptNumber = !hasReceiptNumber && Boolean(paymentDate) && canEditPaymentDate
+      && isObligationEvent && Boolean(onPrintReceipt) && Boolean(saveReceiptNumber);
+    if (!hasReceiptNumber && !paymentDate) {
+      return <span style={{ fontSize: '0.7rem', lineHeight: 1 }}>&nbsp;</span>;
+    }
+    return (
+      <span style={{ fontSize: '0.7rem', color: onPositiveCard ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+        <FileText size={10} />
+        {hasReceiptNumber && t('receipt.receiptNumber', { number: receiptNumber })}
+        {canAddReceiptNumber && (
+          <button
+            type="button"
+            ref={receiptNumberAnchorRef}
+            title={t('receipt.addNumberHint')}
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
+              setReceiptNumberPos({ top: rect.bottom + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - RECEIPT_NUMBER_POPOVER_WIDTH - 8)) });
+              setReceiptNumberDraft(String(getProposedReceiptNumber?.(event) || ''));
+              setReceiptNumberError('');
+              setIsReceiptDateOpen(false);
+              setIsReceiptNumberOpen((open) => !open);
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '2px',
+              padding: '0 6px',
+              lineHeight: '14px',
+              borderRadius: '9999px',
+              border: '1px solid currentColor',
+              background: 'transparent',
+              color: 'inherit',
+              font: 'inherit',
+              fontSize: '0.62rem',
+              textTransform: 'inherit',
+              cursor: 'pointer',
+              opacity: 0.9
+            }}
+          >
+            <Plus size={9} />
+            {t('receipt.addNumber')}
+          </button>
+        )}
+        {(hasReceiptNumber || canAddReceiptNumber) && paymentDate && <span style={{ opacity: 0.6 }}>|</span>}
+        {paymentDate && (canEditPaymentDate ? (
+          <button
+            type="button"
+            title={t('receipt.changePaymentDate')}
+            ref={receiptDateAnchorRef}
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
+              setReceiptDatePos({ top: rect.bottom + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - RECEIPT_DATE_POPOVER_WIDTH - 8)) });
+              setReceiptDateDraft(paymentDate);
+              setIsReceiptNumberOpen(false);
+              setIsReceiptDateOpen((open) => !open);
+            }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              font: 'inherit',
+              color: 'inherit',
+              textTransform: 'inherit',
+              textDecoration: 'underline dotted',
+              cursor: 'pointer'
+            }}
+          >
+            {t('receipt.paymentDateShort', { date: format(parseISO(paymentDate), 'dd/MM/yyyy') })}
+          </button>
+        ) : t('receipt.paymentDateShort', { date: format(parseISO(paymentDate), 'dd/MM/yyyy') }))}
+      </span>
+    );
+  };
+
+  const canEditPaymentDate = Boolean(saveReceiptDate) && !isReadOnly && isCompleted && !isCancelled && !isVirtual;
+
+  // Close the floating payment-date popover on outside click, Escape or scroll (it is anchored to the date)
+  useEffect(() => {
+    if (!isReceiptDateOpen) return undefined;
+    const handleMouseDown = (e) => {
+      if (receiptDatePopoverRef.current?.contains(e.target) || receiptDateAnchorRef.current?.contains(e.target)) return;
+      setIsReceiptDateOpen(false);
+    };
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setIsReceiptDateOpen(false);
+    };
+    const handleScroll = (e) => {
+      if (receiptDatePopoverRef.current?.contains(e.target)) return;
+      setIsReceiptDateOpen(false);
+    };
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('keydown', handleKey);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('keydown', handleKey);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isReceiptDateOpen]);
+
+  // Close the floating receipt-number popover on outside click, Escape or scroll
+  useEffect(() => {
+    if (!isReceiptNumberOpen) return undefined;
+    const handleMouseDown = (e) => {
+      if (receiptNumberPopoverRef.current?.contains(e.target) || receiptNumberAnchorRef.current?.contains(e.target)) return;
+      setIsReceiptNumberOpen(false);
+    };
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setIsReceiptNumberOpen(false);
+    };
+    const handleScroll = (e) => {
+      if (receiptNumberPopoverRef.current?.contains(e.target)) return;
+      setIsReceiptNumberOpen(false);
+    };
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('keydown', handleKey);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('keydown', handleKey);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isReceiptNumberOpen]);
+
+  const saveReceiptNumberDraft = async () => {
+    if (isSavingReceiptNumber || !saveReceiptNumber) return;
+    setIsSavingReceiptNumber(true);
+    const result = await saveReceiptNumber(event, receiptNumberDraft);
+    setIsSavingReceiptNumber(false);
+    if (result?.error) {
+      setReceiptNumberError(result.error);
+      return;
+    }
+    setIsReceiptNumberOpen(false);
+  };
+
+  // Floating popover (portal) to add the receipt number: pre-filled with the next sequential number, editable
+  const renderReceiptNumberEditor = () => {
+    if (!isReceiptNumberOpen || !receiptNumberPos) return null;
+    const smallButtonStyle = { padding: '3px 10px', fontSize: '0.7rem', minHeight: 0, display: 'inline-flex', alignItems: 'center', gap: '4px' };
+    return createPortal(
+      <div
+        ref={receiptNumberPopoverRef}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'fixed',
+          top: receiptNumberPos.top,
+          left: receiptNumberPos.left,
+          zIndex: 1000,
+          width: `${RECEIPT_NUMBER_POPOVER_WIDTH}px`,
+          padding: '8px',
+          borderRadius: '10px',
+          border: '1px solid var(--border-glass)',
+          background: 'var(--bg-card)',
+          boxShadow: 'var(--shadow-sm)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px'
+        }}
+      >
+        <label style={{ fontSize: '0.64rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+          {t('receipt.numberLabel')}
+        </label>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            autoFocus
+            value={receiptNumberDraft}
+            onChange={(e) => {
+              setReceiptNumberDraft(e.target.value);
+              setReceiptNumberError('');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveReceiptNumberDraft();
+            }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              padding: '4px 8px',
+              borderRadius: '6px',
+              border: `1px solid ${receiptNumberError ? 'var(--danger)' : 'var(--border-glass)'}`,
+              background: 'var(--bg-glass)',
+              color: 'var(--text-main)',
+              fontSize: '0.78rem',
+              fontWeight: '700'
+            }}
+          />
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            disabled={isSavingReceiptNumber || !receiptNumberDraft}
+            onClick={saveReceiptNumberDraft}
+            style={smallButtonStyle}
+          >
+            <Check size={11} />
+            <span>{t('common.save')}</span>
+          </button>
+        </div>
+        {receiptNumberError && (
+          <span role="alert" style={{ fontSize: '0.66rem', color: 'var(--danger)', fontWeight: '600' }}>
+            {receiptNumberError}
+          </span>
+        )}
+      </div>,
+      document.body
+    );
+  };
+
+  const saveReceiptDateDraft = async () => {
+    if (!receiptDateDraft || isSavingReceiptDate) return;
+    setIsSavingReceiptDate(true);
+    const ok = await saveReceiptDate(event, receiptDateDraft);
+    setIsSavingReceiptDate(false);
+    if (ok) setIsReceiptDateOpen(false);
+  };
+
+  // Small floating popover (portal, fixed position) with the compact Year | Month | Day picker,
+  // so changing the payment date does not grow the ticket
+  const renderReceiptDateEditor = () => {
+    if (!isReceiptDateOpen || !receiptDateDraft || !receiptDatePos) return null;
+    const draftObj = parseISO(receiptDateDraft);
+    const smallButtonStyle = { padding: '3px 10px', fontSize: '0.7rem', minHeight: 0, display: 'inline-flex', alignItems: 'center', gap: '4px' };
+    return createPortal(
+      <div
+        ref={receiptDatePopoverRef}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'fixed',
+          top: receiptDatePos.top,
+          left: receiptDatePos.left,
+          zIndex: 1000,
+          width: `${RECEIPT_DATE_POPOVER_WIDTH}px`,
+          padding: '8px 8px 0',
+          borderRadius: '10px',
+          border: '1px solid var(--border-glass)',
+          background: 'var(--bg-card)',
+          boxShadow: 'var(--shadow-sm)'
+        }}
+      >
+        <DueDatePicker
+          compact
+          date={format(draftObj, 'yyyy-MM-01')}
+          day={draftObj.getDate()}
+          dayLabel={t('modal.day')}
+          accent={paletteTheme.primary}
+          onChange={({ date: monthDate, day }) => setReceiptDateDraft(`${monthDate.substring(0, 8)}${String(day).padStart(2, '0')}`)}
+        />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginBottom: '8px' }}>
+          <button type="button" className="btn btn-secondary btn-sm" style={smallButtonStyle} onClick={() => setIsReceiptDateOpen(false)}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            disabled={isSavingReceiptDate}
+            onClick={saveReceiptDateDraft}
+            style={smallButtonStyle}
+          >
+            <Check size={11} />
+            <span>{t('common.save')}</span>
+          </button>
+        </div>
+      </div>,
+      document.body
+    );
+  };
+
   // Removes lock icons from a status label (read-only users see the status as a plain indicator)
   const stripLockIcons = (node) => React.Children.map(node, (child) => {
     if (!React.isValidElement(child)) return child;
@@ -723,8 +1022,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         key,
         meta: REMINDER_CATEGORY_META[key] || {
           icon: Tag,
-          color: '#f59e0b',
-          bg: 'rgba(245, 158, 11, 0.15)'
+          color: TimelineColor.WARNING,
+          bg: `${TimelineColor.WARNING}26`
         },
         label: t(`reminderCategories.${key}`) || key
       }));
@@ -1033,8 +1332,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             onMouseDown={(e) => e.preventDefault()}
             onClick={handleSaveAmount}
             style={{
-              background: '#10b981',
-              color: '#fff',
+              background: TimelineColor.SUCCESS,
+              color: TimelineColor.WHITE,
               border: 'none',
               borderRadius: '4px',
               padding: '4px 6px',
@@ -2606,14 +2905,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
           {/* Linha 2: [receipt number or empty] (left) e [b status] (right, apenas não virtual) */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
-            {(event.cont_year != null && event.cont_year > 0) ? (
-              <span style={{ fontSize: '0.7rem', color: isReceivedIncome ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', paddingBottom: '0px', marginBottom: '0px', lineHeight: 1, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <FileText size={10} />
-                {t('receipt.receiptNumber', { number: event.cont_year })}
-              </span>
-            ) : (
-              <span style={{ fontSize: '0.7rem', lineHeight: 1 }}>&nbsp;</span>
-            )}
+            {renderReceiptRef(isReceivedIncome)}
             {!isVirtual && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
                 {renderStatusDropdownButton(
@@ -2689,6 +2981,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               </div>
             )}
           </div>
+          {renderReceiptDateEditor()}
+          {renderReceiptNumberEditor()}
 
           {/* Linha 3: [Valor] (left) e [event action buttons] (right) */}
           <div style={{
@@ -2736,14 +3030,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           {/* Linha 2: [receipt number or empty] (left) e [b status] (right) */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', paddingBottom: '0px' }}>
-              {(event.cont_year != null && event.cont_year > 0) ? (
-                <span style={{ fontSize: '0.7rem', color: isPaidExpense ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <FileText size={10} />
-                  {t('receipt.receiptNumber', { number: event.cont_year })}
-                </span>
-              ) : (
-                <span style={{ fontSize: '0.7rem', lineHeight: 1 }}>&nbsp;</span>
-              )}
+              {renderReceiptRef(isPaidExpense)}
               {event.priority && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isPaidExpense ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
                   <span style={{ fontSize: '0.68rem', color: isPaidExpense ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
@@ -2826,6 +3113,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               )}
             </div>
           </div>
+          {renderReceiptDateEditor()}
+          {renderReceiptNumberEditor()}
 
           {/* Linha 3: [Valor] (left) e [event action buttons] (right) */}
           <div style={{
@@ -2873,14 +3162,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           {/* Linha 2: [receipt number or category label] (left) e [b status] (right) */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', paddingBottom: '0px' }}>
-              {(event.cont_year != null && event.cont_year > 0) ? (
-                <span style={{ fontSize: '0.7rem', color: isCompletedInvestment ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <FileText size={10} />
-                  {t('receipt.receiptNumber', { number: event.cont_year })}
-                </span>
-              ) : (
-                <span style={{ fontSize: '0.7rem', lineHeight: 1 }}>&nbsp;</span>
-              )}
+              {renderReceiptRef(isCompletedInvestment)}
 
               {event.category === 'investimento_patrimonio' && Number(event.initialInvestedAmount || 0) > 0 && Number(event.amount || 0) > 0 && Number(event.initialInvestedAmount) !== Number(event.amount) && (
                 <>
@@ -3055,6 +3337,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               )}
             </div>
           </div>
+          {renderReceiptDateEditor()}
+          {renderReceiptNumberEditor()}
 
           {/* Linha 3: [Valor] (left) e [event action buttons] (right) */}
           <div style={{

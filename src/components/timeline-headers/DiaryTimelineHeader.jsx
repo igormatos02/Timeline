@@ -48,7 +48,7 @@ export default function DiaryTimelineHeader({
   const { t, dateLocale } = useTranslation();
   const { isCondoflow } = useTimeboard();
   const dt = makeDiaryT(t, isCondoflow);
-  const [collapsed, setIsCollapsed] = useState(false);
+  const [collapsed, setIsCollapsed] = useState(true);
 
   const paletteTheme = useMemo(() => {
     return getPaletteTheme(timeline?.color, TimelineColor.DIARY);

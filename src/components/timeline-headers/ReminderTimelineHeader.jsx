@@ -60,7 +60,7 @@ export default function ReminderTimelineHeader({
   onReset
 }) {
   const { t, language, dateLocale } = useTranslation();
-  const [collapsed, setIsCollapsed] = useState(false);
+  const [collapsed, setIsCollapsed] = useState(true);
 
   const paletteTheme = useMemo(() => {
     return getPaletteTheme(timeline?.color, TimelineColor.REMINDER);

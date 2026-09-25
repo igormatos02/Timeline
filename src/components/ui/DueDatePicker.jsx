@@ -37,8 +37,9 @@ export function clampDueDate({ date, day }, minDate = null, maxDate = null) {
  *   onOpen      - called when a grid opens, so the parent can close its other popovers (optional)
  *   minDate     - earliest allowed date 'yyyy-MM-dd' (optional)
  *   maxDate     - latest allowed date 'yyyy-MM-dd' (optional)
+ *   compact     - smaller fields and grid, for inline use (e.g. on a ticket) (optional)
  */
-export default function DueDatePicker({ date, day, onChange, accent = TimelineColor.SUCCESS, dayLabel, takenDays = null, onOpen, minDate = null, maxDate = null }) {
+export default function DueDatePicker({ date, day, onChange, accent = TimelineColor.SUCCESS, dayLabel, takenDays = null, onOpen, minDate = null, maxDate = null, compact = false }) {
   const { t, dateLocale } = useTranslation();
   const [openPart, setOpenPart] = useState(null);
 
@@ -77,7 +78,7 @@ export default function DueDatePicker({ date, day, onChange, accent = TimelineCo
     return false;
   };
 
-  const labelStyle = { display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '5px', color: 'var(--text-main)' };
+  const labelStyle = { display: 'block', fontSize: compact ? '0.64rem' : '0.78rem', fontWeight: '700', marginBottom: compact ? '2px' : '5px', color: compact ? 'var(--text-muted)' : 'var(--text-main)' };
 
   const renderTrigger = (part, label, text, withIcon = false) => {
     const isOpen = openPart === part;
@@ -93,21 +94,21 @@ export default function DueDatePicker({ date, day, onChange, accent = TimelineCo
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '6px',
+            gap: compact ? '4px' : '6px',
             background: 'var(--bg-glass)',
             border: isOpen ? `2px solid ${accent}` : '1px solid var(--border-glass)',
-            borderRadius: '8px',
-            padding: '10px 12px',
+            borderRadius: compact ? '6px' : '8px',
+            padding: compact ? '4px 6px' : '10px 12px',
             cursor: 'pointer',
             boxSizing: 'border-box',
             color: 'var(--text-main)'
           }}
         >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-            {withIcon && <Calendar size={16} style={{ color: accent, flexShrink: 0 }} />}
-            <span style={{ fontSize: '0.92rem', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{text}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: compact ? '4px' : '8px', minWidth: 0 }}>
+            {withIcon && <Calendar size={compact ? 11 : 16} style={{ color: accent, flexShrink: 0 }} />}
+            <span style={{ fontSize: compact ? '0.72rem' : '0.92rem', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{text}</span>
           </span>
-          <ChevronDown size={15} style={{ color: 'var(--text-muted)', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
+          <ChevronDown size={compact ? 11 : 15} style={{ color: 'var(--text-muted)', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
         </button>
       </div>
     );
@@ -122,8 +123,8 @@ export default function DueDatePicker({ date, day, onChange, accent = TimelineCo
       style={{
         opacity: disabled ? 0.35 : 1,
         position: 'relative',
-        padding: '7px 0',
-        fontSize: '0.82rem',
+        padding: compact ? '3px 0' : '7px 0',
+        fontSize: compact ? '0.68rem' : '0.82rem',
         fontWeight: isSelected ? '800' : '600',
         borderRadius: '6px',
         border: isSelected ? `2px solid ${accent}` : taken ? `1px dashed ${TimelineColor.DANGER}73` : '1px solid var(--border-glass)',
@@ -175,19 +176,19 @@ export default function DueDatePicker({ date, day, onChange, accent = TimelineCo
     }
 
     return (
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-glass)', borderRadius: '10px', padding: '12px', marginTop: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-          <span style={{ fontSize: '0.74rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{title}</span>
-          {info && <span style={{ fontSize: '0.74rem', color: accent, fontWeight: '800', textTransform: 'capitalize' }}>{info}</span>}
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-glass)', borderRadius: compact ? '8px' : '10px', padding: compact ? '6px' : '12px', marginTop: compact ? '4px' : '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: compact ? '4px' : '8px' }}>
+          <span style={{ fontSize: compact ? '0.62rem' : '0.74rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{title}</span>
+          {info && <span style={{ fontSize: compact ? '0.62rem' : '0.74rem', color: accent, fontWeight: '800', textTransform: 'capitalize' }}>{info}</span>}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: '6px' }}>{buttons}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: compact ? '3px' : '6px' }}>{buttons}</div>
       </div>
     );
   };
 
   return (
-    <div style={{ marginBottom: '14px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr 1.2fr', gap: '8px' }}>
+    <div style={{ marginBottom: compact ? '6px' : '14px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr 1.2fr', gap: compact ? '4px' : '8px' }}>
         {renderTrigger(PART.YEAR, t('modal.year'), String(year))}
         {renderTrigger(PART.MONTH, t('modal.month'), format(dateObj, 'MMMM', { locale: dateLocale }))}
         {renderTrigger(PART.DAY, dayLabel || t('modal.dayOfMonth'), t('modal.dayValue', { day }), true)}

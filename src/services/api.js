@@ -662,7 +662,13 @@ export async function setEventStatus(id, payload = {}) {
     headers: getHeaders(),
     body: JSON.stringify(payload)
   });
-  if (!res.ok) throw new Error('Failed to update event status');
+  if (!res.ok) {
+    // Keep the server error code (e.g. RECEIPT_NUMBER_TAKEN) so the UI can show a translated message
+    const body = await res.json().catch(() => ({}));
+    const error = new Error(body.error || 'Failed to update event status');
+    error.code = body.code;
+    throw error;
+  }
   return res.json();
 }
 

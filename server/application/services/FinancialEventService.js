@@ -56,7 +56,15 @@ export class FinancialEventService {
       const ids = [eventId, ...(Array.isArray(options.aliases) ? options.aliases : [])].filter(Boolean).map(String);
       await financialEventStatusRepository.deleteStatus(year, month, [...new Set(ids)]);
     } else {
-      await financialEventStatusRepository.upsertStatus(year, month, eventId, status, options);
+      // Positive status: the payment date defaults to the event date (the date it was due),
+      // unless a receipt date is given or was already chosen for this month.
+      let upsertOptions = options;
+      if (!options.receiptDate && !options.receipt_date) {
+        const existingRows = await financialEventStatusRepository.getAll({ year, month, eventId });
+        const existingReceiptDate = existingRows[0]?.receipt_date;
+        upsertOptions = { ...options, receiptDate: existingReceiptDate || dateStr.substring(0, 10) };
+      }
+      await financialEventStatusRepository.upsertStatus(year, month, eventId, status, upsertOptions);
     }
   }
 
@@ -150,6 +158,9 @@ export class FinancialEventService {
           rawEv.contYear = Number(cy);
           rawEv.cont_year = Number(cy);
         }
+        if (matchedRecord && matchedRecord.receipt_date) {
+          rawEv.receiptDate = String(matchedRecord.receipt_date).substring(0, 10);
+        }
       }
     }
 
@@ -196,6 +207,9 @@ export class FinancialEventService {
           const cy = matchedRecord.cont_year != null ? matchedRecord.cont_year : matchedRecord.contYear;
           ev.contYear = Number(cy);
           ev.cont_year = Number(cy);
+        }
+        if (matchedRecord && matchedRecord.receipt_date) {
+          ev.receiptDate = String(matchedRecord.receipt_date).substring(0, 10);
         }
       } else {
         ev.status = ev.status || EventStatus.PENDING;
@@ -944,14 +958,34 @@ export class FinancialEventService {
     const targetEventId = targetEvent.eventId || targetEvent.id;
     const effectiveStatus = options.status || targetEvent.status || EventStatus.PAID;
 
+    // Manual receipt number: it must not be used by another receipt of the same timeline
+    const requestedReceiptNumber = options.contYear !== undefined ? options.contYear : options.cont_year;
+    if (options.checkReceiptNumber && requestedReceiptNumber) {
+      const timelineId = options.timelineId || targetEvent.timelineId || targetEvent.timeline_id;
+      const ownIds = new Set([targetEventId, targetEvent.id, rootId].filter(Boolean).map(String));
+      const [year, month] = String(targetDate || '').substring(0, 7).split('-').map(Number);
+      const rows = await financialEventStatusRepository.getAll(timelineId ? { timelineId } : null);
+      const taken = rows.some((r) => (
+        Number(r.cont_year) === Number(requestedReceiptNumber) &&
+        !(ownIds.has(String(r.event_id)) && Number(r.year) === year && Number(r.month) === month)
+      ));
+      if (taken) {
+        const error = new Error(`Receipt number ${requestedReceiptNumber} is already used`);
+        error.code = 'RECEIPT_NUMBER_TAKEN';
+        throw error;
+      }
+    }
+
     await this._syncStatus(targetDate, targetEventId, effectiveStatus, {
       timelineId: options.timelineId || targetEvent.timelineId || targetEvent.timeline_id,
       timeboardId: options.timeboardId || targetEvent.timeboardId || targetEvent.timeboard_id,
       contYear: options.contYear !== undefined ? options.contYear : options.cont_year,
-      cont_year: options.cont_year !== undefined ? options.cont_year : options.contYear
+      cont_year: options.cont_year !== undefined ? options.cont_year : options.contYear,
+      receiptDate: options.receiptDate !== undefined ? options.receiptDate : options.receipt_date
     });
 
     const contYearVal = options.contYear !== undefined ? options.contYear : options.cont_year;
+    const receiptDateVal = options.receiptDate !== undefined ? options.receiptDate : options.receipt_date;
     return {
       ...targetEvent,
       id,
@@ -959,7 +993,8 @@ export class FinancialEventService {
       status: effectiveStatus,
       isCompleted: isPositiveStatus(effectiveStatus),
       contYear: contYearVal !== undefined && contYearVal !== null ? Number(contYearVal) : (targetEvent.contYear || null),
-      cont_year: contYearVal !== undefined && contYearVal !== null ? Number(contYearVal) : (targetEvent.cont_year || null)
+      cont_year: contYearVal !== undefined && contYearVal !== null ? Number(contYearVal) : (targetEvent.cont_year || null),
+      receiptDate: receiptDateVal ? String(receiptDateVal).substring(0, 10) : (targetEvent.receiptDate || null)
     };
   }
 

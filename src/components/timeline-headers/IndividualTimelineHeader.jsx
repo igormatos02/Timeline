@@ -31,7 +31,7 @@ export default function IndividualTimelineHeader({
   timeboardSummary = null
 }) {
   const { t } = useTranslation();
-  const [collapsed, setIsCollapsed] = useState(false);
+  const [collapsed, setIsCollapsed] = useState(true);
 
   const { debtBalance, openCount } = useMemo(() => {
     const open = (entityEvents || []).filter(isOpenObligation);

@@ -17,7 +17,7 @@ export default function DefaultTimelineHeader({
   onAddEvent
 }) {
   const { t } = useTranslation();
-  const [collapsed, setIsCollapsed] = useState(false);
+  const [collapsed, setIsCollapsed] = useState(true);
 
   if (!timeline) return null;
 

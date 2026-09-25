@@ -51,7 +51,7 @@ export default function IncomeTimelineHeader({
   onToggleIndividualView
 }) {
   const { t, language } = useTranslation();
-  const [collapsed, setIsCollapsed] = useState(false);
+  const [collapsed, setIsCollapsed] = useState(true);
   const [chartMode, setChartMode] = useState('realized');
   const dateLocale = language === 'en' ? enUS : pt;
 

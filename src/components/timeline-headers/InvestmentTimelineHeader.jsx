@@ -43,7 +43,7 @@ export default function InvestmentTimelineHeader({
   onToggleIndividualView
 }) {
   const { t, dateLocale } = useTranslation();
-  const [collapsed, setIsCollapsed] = useState(false);
+  const [collapsed, setIsCollapsed] = useState(true);
   const [chartMode, setChartMode] = useState('realized');
 
   const paletteTheme = useMemo(() => {

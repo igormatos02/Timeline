@@ -75,6 +75,11 @@ export class SupabaseFinancialEventStatusRepository {
     if (contYearVal !== undefined && contYearVal !== null && contYearVal !== '') {
       row.cont_year = Number(contYearVal);
     }
+    // Payment date written on the receipt (defaults to the event date, can be changed in the receipt modal)
+    const receiptDateVal = options.receiptDate !== undefined ? options.receiptDate : options.receipt_date;
+    if (receiptDateVal) {
+      row.receipt_date = String(receiptDateVal).substring(0, 10);
+    }
 
     const { data, error } = await supabase
       .from(this.tableName)

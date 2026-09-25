@@ -69,18 +69,20 @@ eventsRouter.post('/:id/toggle-payment', async (req, res) => {
 // POST /api/events/:id/status (Updates or sets status and options like cont_year in financial_event_status)
 eventsRouter.post('/:id/status', async (req, res) => {
   try {
-    const { date, status, contYear, cont_year, timelineId, timeboardId } = req.body;
+    const { date, status, contYear, cont_year, receiptDate, receipt_date, timelineId, timeboardId, checkReceiptNumber } = req.body;
     const result = await eventService.setEventStatus(req.params.id, {
       date,
       status,
       contYear: contYear !== undefined ? contYear : cont_year,
       cont_year: cont_year !== undefined ? cont_year : contYear,
+      receiptDate: receiptDate !== undefined ? receiptDate : receipt_date,
+      checkReceiptNumber: Boolean(checkReceiptNumber),
       timelineId,
       timeboardId
     });
     res.json(result);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(err.code === 'RECEIPT_NUMBER_TAKEN' ? 409 : 400).json({ error: err.message, code: err.code });
   }
 });
 

@@ -42,7 +42,7 @@ export default function LoanTimelineHeader({
   onOpenAmortizationModal
 }) {
   const { t } = useTranslation();
-  const [collapsed, setIsCollapsed] = useState(false);
+  const [collapsed, setIsCollapsed] = useState(true);
 
   const paletteTheme = useMemo(() => {
     return getPaletteTheme(timeline?.color, TimelineColor.PRIMARY);

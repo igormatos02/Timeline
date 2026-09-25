@@ -308,7 +308,8 @@ export function buildReceiptHtml({
   obligationPerson,
   persons = [],
   language = 'pt',
-  t
+  t,
+  paymentDate = null
 }) {
   const isIncome = event?.eventType === EventType.INCOME;
   const isPt = language === 'pt';
@@ -336,7 +337,8 @@ export function buildReceiptHtml({
     ? { role: receiverLabel, entity: timeboardName }
     : { role: receiverLabel, entity: obligatorDetails || '' };
 
-  const eventDate = event?.date ? parseISO(event.date) : new Date();
+  // Date written on the receipt: chosen in the receipt modal, defaulting to the event date
+  const eventDate = paymentDate ? parseISO(paymentDate) : (event?.date ? parseISO(event.date) : new Date());
   const formattedDate = format(
     eventDate,
     isPt ? "dd 'de' MMMM 'de' yyyy" : "MMMM dd, yyyy",

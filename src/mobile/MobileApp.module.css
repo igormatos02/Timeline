@@ -314,6 +314,10 @@
   background: var(--bg-card);
   color: var(--text-muted);
   cursor: pointer;
+}
+
+/* Month names come in lowercase from the date locale */
+.monthChip {
   text-transform: capitalize;
 }
 
@@ -425,4 +429,36 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.metaBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-glow);
+  border: 1px solid var(--border-glass-glow);
+}
+
+.totalButton {
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.totalActive {
+  border: 2px solid var(--primary);
+  box-shadow: var(--shadow-glow);
 }

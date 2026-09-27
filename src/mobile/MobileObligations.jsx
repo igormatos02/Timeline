@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { LogOut, RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, Loader2, Ticket } from 'lucide-react';
+import { LogOut, RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, Loader2, Ticket, Crown, UserCheck } from 'lucide-react';
 import { format, parseISO, setMonth } from 'date-fns';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { TimelineColor, PersonRole } from '../enums/index.js';
+import { TimelineColor, PersonRole, EventStatus } from '../enums/index.js';
 import { formatCurrency } from '../utils/formatCurrency.js';
 import * as mobileApi from './mobileApi.js';
 import styles from './MobileApp.module.css';
 
 const ALL = 'all';
+// "All years" covers everything up to the end of the current month (no future installments)
+const currentYear = String(new Date().getFullYear());
+const endOfCurrentMonth = () => `${new Date().toISOString().substring(0, 7)}-31`;
 const MONTH_INDEXES = Array.from({ length: 12 }, (_, index) => index);
 
 // Visual state of an installment: paid, overdue (due date passed) or pending
@@ -28,8 +31,10 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [year, setYear] = useState(String(new Date().getFullYear()));
+  const [year, setYear] = useState(currentYear);
   const [month, setMonthFilter] = useState(ALL);
+  // Status filter from the totals cards: all, paid or pending
+  const [statusFilter, setStatusFilter] = useState(ALL);
   const [inviteCode, setInviteCode] = useState('');
   const [isAccepting, setIsAccepting] = useState(false);
   // Admins choose between their own (individual) view and the admin view of any entity
@@ -119,20 +124,27 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
   useEffect(() => { loadObligations(); }, [loadObligations]);
 
   const items = useMemo(() => data?.items || [], [data]);
+  // Year chips: the years with installments, up to the current year
   const years = useMemo(() => {
-    const set = new Set(items.map((item) => item.date.substring(0, 4)));
-    set.add(String(new Date().getFullYear()));
+    const set = new Set(items.map((item) => item.date.substring(0, 4)).filter((y) => y <= currentYear));
+    set.add(currentYear);
     return [...set].sort((a, b) => b.localeCompare(a));
   }, [items]);
 
-  const filtered = useMemo(() => items.filter((item) => {
+  // Period filter (year / month); the totals use it, the list also applies the status filter
+  const inPeriod = useMemo(() => items.filter((item) => {
+    if (year === ALL && item.date > endOfCurrentMonth()) return false;
     if (year !== ALL && !item.date.startsWith(year)) return false;
     if (month !== ALL && Number(item.date.substring(5, 7)) - 1 !== month) return false;
     return true;
   }), [items, year, month]);
+  const filtered = useMemo(() => inPeriod.filter((item) => (
+    statusFilter === ALL || (statusFilter === EventStatus.PAID ? item.isPaid : !item.isPaid)
+  )), [inPeriod, statusFilter]);
+  const toggleStatus = (status) => setStatusFilter((current) => (current === status ? ALL : status));
 
-  const paidTotal = filtered.filter((item) => item.isPaid).reduce((sum, item) => sum + item.amount, 0);
-  const pendingTotal = filtered.filter((item) => !item.isPaid).reduce((sum, item) => sum + item.amount, 0);
+  const paidTotal = inPeriod.filter((item) => item.isPaid).reduce((sum, item) => sum + item.amount, 0);
+  const pendingTotal = inPeriod.filter((item) => !item.isPaid).reduce((sum, item) => sum + item.amount, 0);
   const overdueCount = items.filter((item) => item.isOverdue).length;
   const debt = data?.debtBalance || 0;
   const debtColor = debt > 0 ? TimelineColor.DANGER : TimelineColor.SUCCESS;
@@ -149,6 +161,15 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
               ? (entities.find((entity) => entity.id === selectedEntityId)?.name || t('mobile.views.admin'))
               : (user?.name || user?.email)}
           </div>
+          {selectedTimeboard && (
+            <div className={styles.badgeRow}>
+              <span className={styles.metaBadge}>
+                {selectedTimeboard.isShared ? <UserCheck size={12} /> : <Crown size={12} />}
+                {selectedTimeboard.isShared ? t('mobile.invited') : t('mobile.ownTimeboard')}
+              </span>
+              <span className={styles.metaBadge}>{t(`timeboardSettings.entities.roles.${selectedTimeboard.role || PersonRole.INDIVIDUAL}`)}</span>
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button type="button" className={styles.iconButton} onClick={loadObligations} aria-label={t('mobile.refresh')} title={t('mobile.refresh')} disabled={!selectedId}>
@@ -247,10 +268,16 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
 
           {/* Year / month filter */}
           <div className={styles.filters}>
-            <select className={styles.select} value={year} onChange={(e) => setYear(e.target.value)} aria-label={t('mobile.yearLabel')}>
-              <option value={ALL}>{t('mobile.allYears')}</option>
-              {years.map((y) => <option key={y} value={y}>{y}</option>)}
-            </select>
+            <div className={styles.monthChips} role="group" aria-label={t('mobile.yearLabel')}>
+              <button type="button" className={`${styles.chip} ${year === ALL ? styles.chipActive : ''}`} onClick={() => setYear(ALL)}>
+                {t('mobile.allYears')}
+              </button>
+              {years.map((y) => (
+                <button key={y} type="button" className={`${styles.chip} ${year === y ? styles.chipActive : ''}`} onClick={() => setYear(y)}>
+                  {y}
+                </button>
+              ))}
+            </div>
             <div className={styles.monthChips} role="group" aria-label={t('mobile.monthLabel')}>
               <button type="button" className={`${styles.chip} ${month === ALL ? styles.chipActive : ''}`} onClick={() => setMonthFilter(ALL)}>
                 {t('mobile.allMonths')}
@@ -259,7 +286,7 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
                 <button
                   key={index}
                   type="button"
-                  className={`${styles.chip} ${month === index ? styles.chipActive : ''}`}
+                  className={`${styles.chip} ${styles.monthChip} ${month === index ? styles.chipActive : ''}`}
                   onClick={() => setMonthFilter(index)}
                 >
                   {format(setMonth(new Date(2000, 0, 1), index), 'MMM', { locale: dateLocale }).replace('.', '')}
@@ -268,16 +295,26 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
             </div>
           </div>
 
-          {/* Paid / pending totals of the filtered period */}
+          {/* Paid / pending totals of the period — tap to show only those installments (tap again: all) */}
           <div className={styles.totals}>
-            <div className={styles.card}>
+            <button
+              type="button"
+              aria-pressed={statusFilter === EventStatus.PAID}
+              className={`${styles.card} ${styles.totalButton} ${statusFilter === EventStatus.PAID ? styles.totalActive : ''}`}
+              onClick={() => toggleStatus(EventStatus.PAID)}
+            >
               <div className={styles.totalLabel}>{t('mobile.paid')}</div>
               <div className={styles.totalValue} style={{ color: TimelineColor.SUCCESS }}>{formatCurrency(paidTotal)}</div>
-            </div>
-            <div className={styles.card}>
+            </button>
+            <button
+              type="button"
+              aria-pressed={statusFilter === EventStatus.PENDING}
+              className={`${styles.card} ${styles.totalButton} ${statusFilter === EventStatus.PENDING ? styles.totalActive : ''}`}
+              onClick={() => toggleStatus(EventStatus.PENDING)}
+            >
               <div className={styles.totalLabel}>{t('mobile.pending')}</div>
               <div className={styles.totalValue} style={{ color: pendingTotal > 0 ? TimelineColor.WARNING : 'var(--text-main)' }}>{formatCurrency(pendingTotal)}</div>
-            </div>
+            </button>
           </div>
 
           {/* Installments */}

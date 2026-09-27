@@ -929,6 +929,8 @@ export const translations = {
       noLinkedTimeboards: "Your account is not linked to any timeboard yet. Use the invitation code you received.",
       acceptInvite: "Accept invitation",
       viewLabel: "View",
+      ownTimeboard: "Your timeboard",
+      invited: "Invited",
       views: {
         individual: "Individual",
         admin: "Admin"
@@ -3062,6 +3064,8 @@ export const translations = {
       noLinkedTimeboards: "A sua conta ainda não está ligada a nenhum timeboard. Use o código de convite que recebeu.",
       acceptInvite: "Aceitar convite",
       viewLabel: "Vista",
+      ownTimeboard: "O seu timeboard",
+      invited: "Convidado",
       views: {
         individual: "Individual",
         admin: "Admin"

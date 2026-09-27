@@ -3948,51 +3948,49 @@ function VerticalTimeline({
         </div>
       )}
 
-        {/* Period Filter (year / month) — not for read-only users, who only get the status filter */}
-        {!isReadOnly && (
-          <div className="sidebar-section">
-            <div
-              className="sidebar-section-title"
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-              onClick={() => toggleSectionCollapse('period')}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <ChevronDown
-                  size={13}
-                  style={{
-                    transform: collapsedSections['period'] ? 'rotate(-90deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.18s ease',
-                    color: 'var(--text-muted)'
-                  }}
-                />
-                <span>{t('sidebar.period')}</span>
-              </div>
-              {isPeriodActive && (
-                <button
-                  type="button"
-                  className="sidebar-action-link"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPeriodYear('');
-                    setPeriodMonth('');
-                  }}
-                  style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer', fontSize: '0.72rem', padding: 0, fontWeight: '700' }}
-                >
-                  {t('buttons.all')}
-                </button>
-              )}
-            </div>
-            {!collapsedSections['period'] && (
-              <PeriodBadgeFilter
-                year={periodYear}
-                month={periodMonth}
-                years={periodYearOptions}
-                onYearChange={setPeriodYear}
-                onMonthChange={setPeriodMonth}
+        {/* Period Filter (year / month) — for every user, individual members included */}
+        <div className="sidebar-section">
+          <div
+            className="sidebar-section-title"
+            style={{ cursor: 'pointer', userSelect: 'none' }}
+            onClick={() => toggleSectionCollapse('period')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <ChevronDown
+                size={13}
+                style={{
+                  transform: collapsedSections['period'] ? 'rotate(-90deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.18s ease',
+                  color: 'var(--text-muted)'
+                }}
               />
+              <span>{t('sidebar.period')}</span>
+            </div>
+            {isPeriodActive && (
+              <button
+                type="button"
+                className="sidebar-action-link"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPeriodYear('');
+                  setPeriodMonth('');
+                }}
+                style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer', fontSize: '0.72rem', padding: 0, fontWeight: '700' }}
+              >
+                {t('buttons.all')}
+              </button>
             )}
           </div>
-        )}
+          {!collapsedSections['period'] && (
+            <PeriodBadgeFilter
+              year={periodYear}
+              month={periodMonth}
+              years={periodYearOptions}
+              onYearChange={setPeriodYear}
+              onMonthChange={setPeriodMonth}
+            />
+          )}
+        </div>
 
         {/* 1. Search Box */}
         <div className="sidebar-section">

@@ -751,7 +751,7 @@ const escapeHtml = (value) => String(value ?? '')
 
 /**
  * Builds the printable debtors report: title, condominium name, print template, period (from - to)
- * and a table (timeline, date, debtor, event, amount) split into groups with subtotals and a grand total.
+ * and a table (due date, event, debtor, amount) split into groups (the group title names the timeline, debtor or month) with subtotals and a grand total.
  * `groups`: [{ label, subtotal, rows: [{ timelineName, date, debtorName, eventName, amount }] }]
  */
 export function buildDebtorsReportHtml({
@@ -773,21 +773,20 @@ export function buildDebtorsReportHtml({
 
   const groupsHtml = groups.length > 0
     ? groups.map((group) => `
-          <tr class="group-row"><td colspan="5">${escapeHtml(group.label)}</td></tr>
+          <tr class="group-row"><td colspan="4">${escapeHtml(group.label)}</td></tr>
           ${group.rows.map((r) => `
           <tr>
-            <td>${escapeHtml(r.timelineName) || '—'}</td>
             <td>${format(parseISO(r.date), 'dd/MM/yyyy')}</td>
-            <td>${escapeHtml(r.debtorName) || '—'}</td>
             <td>${escapeHtml(r.eventName) || '—'}</td>
+            <td>${escapeHtml(r.debtorName) || '—'}</td>
             <td class="num">${formatCurrency(r.amount)}</td>
           </tr>`).join('')}
           <tr class="subtotal-row">
-            <td colspan="4">${t('timeboardSettings.reports.debtors.subtotal')}</td>
+            <td colspan="3">${t('timeboardSettings.reports.debtors.subtotal')}</td>
             <td class="num">${formatCurrency(group.subtotal)}</td>
           </tr>`).join('')
     : `
-          <tr><td colspan="5" class="empty">${t('timeboardSettings.reports.debtors.empty')}</td></tr>`;
+          <tr><td colspan="4" class="empty">${t('timeboardSettings.reports.debtors.empty')}</td></tr>`;
 
   return `
     <!DOCTYPE html>
@@ -825,17 +824,16 @@ ${DOCUMENT_TABLE_STYLES}
           <table class="charges-table">
             <thead>
               <tr>
-                <th>${t('timeboardSettings.reports.debtors.colTimeline')}</th>
-                <th>${t('timeboardSettings.reports.debtors.colDate')}</th>
-                <th>${t('timeboardSettings.reports.debtors.colDebtor')}</th>
+                <th>${t('timeboardSettings.reports.debtors.colDueDate')}</th>
                 <th>${t('timeboardSettings.reports.debtors.colEvent')}</th>
+                <th>${t('timeboardSettings.reports.debtors.colDebtor')}</th>
                 <th class="num">${t('timeboardSettings.reports.debtors.colAmount')}</th>
               </tr>
             </thead>
             <tbody>${groupsHtml}
             ${groups.length > 0 ? `
               <tr class="total-row">
-                <td colspan="4">${t('timeboardSettings.reports.debtors.total')}</td>
+                <td colspan="3">${t('timeboardSettings.reports.debtors.total')}</td>
                 <td class="num">${formatCurrency(total)}</td>
               </tr>` : ''}
             </tbody>

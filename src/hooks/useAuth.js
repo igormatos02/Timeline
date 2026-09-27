@@ -2,54 +2,37 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../services/supabaseClient.js';
 import * as api from '../services/api';
 import { useToast } from '../context/ToastContext.jsx';
+import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 export default function useAuth(setCurrentView) {
   const { showToast } = useToast();
+  const { t } = useTranslation();
   const [currentUser, setCurrentUser] = useState(() => api.getCurrentUser());
 
-  // Effect: Listen to Supabase Auth State (Google OAuth Callback)
+  // Effect: Google sign-in through Supabase Auth — the Supabase session is exchanged for an API session
   useEffect(() => {
     let isMounted = true;
 
-    // Check existing session on mount
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user && isMounted) {
-        const gUser = session.user;
-        const gPayload = {
-          googleId: gUser.id,
-          email: gUser.email,
-          name: gUser.user_metadata?.full_name || gUser.user_metadata?.name || (gUser.email ? gUser.email.split('@')[0] : 'Utilizador Google'),
-          avatarUrl: gUser.user_metadata?.avatar_url || gUser.user_metadata?.picture || null
-        };
-        try {
-          const appUser = await api.syncGoogleUser(gPayload);
-          if (!isMounted) return;
-          setCurrentUser(appUser);
-          setCurrentView((prev) => (prev === 'landing' ? 'hub' : prev));
-        } catch (err) {
-          console.error('[App] Failed to sync Google OAuth session:', err);
-        }
+    const syncSession = async (session) => {
+      if (!session?.access_token || !isMounted) return;
+      // Already signed in to the API with this account
+      if (api.isUserLoggedIn()) return;
+      try {
+        const appUser = await api.syncGoogleSession(session.access_token);
+        if (!isMounted) return;
+        setCurrentUser(appUser);
+        setCurrentView((prev) => (prev === 'landing' ? 'hub' : prev));
+      } catch (err) {
+        console.error('[useAuth] Failed to sync Google session:', err);
+        showToast(err.message || t('auth.errors.googleAuthFailed'), 'error');
       }
-    });
+    };
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user && isMounted) {
-        const gUser = session.user;
-        const gPayload = {
-          googleId: gUser.id,
-          email: gUser.email,
-          name: gUser.user_metadata?.full_name || gUser.user_metadata?.name || (gUser.email ? gUser.email.split('@')[0] : 'Utilizador Google'),
-          avatarUrl: gUser.user_metadata?.avatar_url || gUser.user_metadata?.picture || null
-        };
-        try {
-          const appUser = await api.syncGoogleUser(gPayload);
-          if (!isMounted) return;
-          setCurrentUser(appUser);
-          setCurrentView((prev) => (prev === 'landing' ? 'hub' : prev));
-        } catch (err) {
-          console.error('[App] Failed to sync Google OAuth sign-in:', err);
-        }
+    supabase.auth.getSession().then(({ data: { session } }) => syncSession(session));
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        syncSession(session);
       } else if (event === 'SIGNED_OUT' && isMounted) {
         setCurrentUser(null);
         setCurrentView('landing');
@@ -60,22 +43,34 @@ export default function useAuth(setCurrentView) {
       isMounted = false;
       subscription?.unsubscribe();
     };
-  }, [setCurrentView]);
+  }, [setCurrentView, showToast, t]);
+
+  // Effect: the API rejected the session (expired / invalid token) -> back to the login
+  useEffect(() => {
+    const handleExpired = () => {
+      setCurrentUser(null);
+      setCurrentView('landing');
+      localStorage.removeItem('chrono_current_view');
+      showToast(t('auth.sessionExpired'), 'info');
+    };
+    window.addEventListener(api.SESSION_EXPIRED_EVENT, handleExpired);
+    return () => window.removeEventListener(api.SESSION_EXPIRED_EVENT, handleExpired);
+  }, [setCurrentView, showToast, t]);
 
   const handleAuthSuccess = useCallback((user) => {
     setCurrentUser(user);
     setCurrentView('hub');
     localStorage.setItem('chrono_current_view', 'hub');
-    showToast(`Bem-vindo, ${user.name}!`);
-  }, [setCurrentView, showToast]);
+    showToast(t('auth.welcome', { name: user.name }));
+  }, [setCurrentView, showToast, t]);
 
   const handleLogout = useCallback(() => {
     api.logoutUser();
     setCurrentUser(null);
     setCurrentView('landing');
     localStorage.removeItem('chrono_current_view');
-    showToast('Sessão terminada com sucesso.');
-  }, [setCurrentView, showToast]);
+    showToast(t('auth.loggedOut'));
+  }, [setCurrentView, showToast, t]);
 
   return { currentUser, handleAuthSuccess, handleLogout };
 }

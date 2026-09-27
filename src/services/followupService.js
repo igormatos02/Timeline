@@ -1,3 +1,5 @@
+import { apiFetch } from './api.js';
+
 const API_BASE = '/api/followups';
 
 export async function getAllFollowups(params = {}) {
@@ -6,7 +8,7 @@ export async function getAllFollowups(params = {}) {
   if (params.timelineId) query.set('timelineId', params.timelineId);
 
   const url = `${API_BASE}${query.toString() ? `?${query.toString()}` : ''}`;
-  const res = await fetch(url);
+  const res = await apiFetch(url);
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || 'Failed to fetch followups');
@@ -15,7 +17,7 @@ export async function getAllFollowups(params = {}) {
 }
 
 export async function getFollowupById(id) {
-  const res = await fetch(`${API_BASE}/${id}`);
+  const res = await apiFetch(`${API_BASE}/${id}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || 'Failed to fetch followup');
@@ -24,7 +26,7 @@ export async function getFollowupById(id) {
 }
 
 export async function getFollowupsByEventId(eventId) {
-  const res = await fetch(`${API_BASE}/event/${eventId}`);
+  const res = await apiFetch(`${API_BASE}/event/${eventId}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || 'Failed to fetch followups by eventId');
@@ -33,7 +35,7 @@ export async function getFollowupsByEventId(eventId) {
 }
 
 export async function createFollowup(data) {
-  const res = await fetch(API_BASE, {
+  const res = await apiFetch(API_BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
@@ -46,7 +48,7 @@ export async function createFollowup(data) {
 }
 
 export async function updateFollowup(id, data) {
-  const res = await fetch(`${API_BASE}/${id}`, {
+  const res = await apiFetch(`${API_BASE}/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
@@ -59,7 +61,7 @@ export async function updateFollowup(id, data) {
 }
 
 export async function toggleFollowupStatus(id, status = null) {
-  const res = await fetch(`${API_BASE}/${id}/toggle-status`, {
+  const res = await apiFetch(`${API_BASE}/${id}/toggle-status`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status })
@@ -72,7 +74,7 @@ export async function toggleFollowupStatus(id, status = null) {
 }
 
 export async function deleteFollowup(id) {
-  const res = await fetch(`${API_BASE}/${id}`, {
+  const res = await apiFetch(`${API_BASE}/${id}`, {
     method: 'DELETE'
   });
   if (!res.ok) {

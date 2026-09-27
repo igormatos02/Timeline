@@ -1,12 +1,20 @@
 import { Router } from 'express';
 import { eventService } from '../../../application/services/EventService.js';
+import { meService } from '../../../application/services/MeService.js';
+import { PersonRole } from '../../../../shared/enums/index.js';
 
 export const eventsRouter = Router();
 
 // GET /api/events
 eventsRouter.get('/', async (req, res) => {
   try {
-    const events = await eventService.getAllEvents(req.query);
+    // Events are always read within a timeboard the user can access (resolved by the access middleware)
+    if (!req.timeboardId) return res.status(400).json({ error: 'timeboardId or timelineId is required' });
+    const events = await eventService.getAllEvents({ ...req.query, timeboardId: req.query.timeboardId || req.timeboardId });
+    // Individual members only receive their own obligations and the shared notices
+    if (req.timeboardAccess?.role === PersonRole.INDIVIDUAL) {
+      return res.json(await meService.filterEventsForIndividual(events, req.timeboardId, req.timeboardAccess));
+    }
     res.json(events);
   } catch (err) {
     res.status(500).json({ error: err.message });

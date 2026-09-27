@@ -72,17 +72,20 @@ export default function App() {
   const [myTimeboards, setMyTimeboards] = useState([]);
   const [sharedTimeboards, setSharedTimeboards] = useState([]);
 
-  // Pending Invite State from URL query params
+  // Pending Invite State from URL query params (`invite` = invitation code; the other params come from older links)
   const [pendingInvite, setPendingInvite] = useState(() => {
     try {
       const params = new URLSearchParams(window.location.search);
+      const inviteCode = params.get('invite');
+      if (inviteCode) api.setPendingInviteCode(inviteCode);
       const inviteTbId = params.get('inviteTimeboardId') || params.get('tbId');
       const inviteEmail = params.get('email');
-      if (inviteTbId) {
-        return { timeboardId: inviteTbId, email: inviteEmail || '' };
+      if (inviteTbId || inviteCode) {
+        return { timeboardId: inviteTbId || null, email: inviteEmail || '', code: inviteCode || api.getPendingInviteCode() || null };
       }
     } catch (e) { }
-    return null;
+    const storedCode = api.getPendingInviteCode();
+    return storedCode ? { timeboardId: null, email: '', code: storedCode } : null;
   });
 
   const [activeTimeboardId, setActiveTimeboardId] = useState(() => {
@@ -132,35 +135,28 @@ export default function App() {
     return null;
   });
 
-  // Effect: Handle Pending Invite for Logged-In User
+  // Effect: Handle Pending Invite for Logged-In User — accepted by its code (any account holding the code)
+  // or, for older links, by the invited e-mail of the logged-in account
   useEffect(() => {
-    if (!currentUser?.id || !pendingInvite?.timeboardId) return;
-
-    const cleanUserEmail = currentUser.email ? currentUser.email.toLowerCase().trim() : '';
-    const cleanInviteEmail = pendingInvite.email ? pendingInvite.email.toLowerCase().trim() : '';
-
-    // If the invite is for a specific email that does not match the currently logged in user:
-    if (cleanInviteEmail && cleanUserEmail && cleanInviteEmail !== cleanUserEmail) {
-      console.warn(`[Invite] Active user (${cleanUserEmail}) does not match invite target email (${cleanInviteEmail}).`);
-      showToast(`Este convite é para "${cleanInviteEmail}". Sessão atual: "${cleanUserEmail}".`, 'info');
-      // Do not auto-link mismatched user account
-      return;
-    }
+    const inviteCode = pendingInvite?.code || api.getPendingInviteCode();
+    if (!currentUser?.id || (!inviteCode && !pendingInvite?.timeboardId)) return;
 
     let isMounted = true;
     (async () => {
       try {
-        await api.acceptTimeboardInvite(pendingInvite.timeboardId, currentUser.id, cleanInviteEmail || cleanUserEmail);
+        const result = inviteCode
+          ? await api.acceptInviteByCode(inviteCode)
+          : await api.acceptTimeboardInvite(pendingInvite.timeboardId);
         if (!isMounted) return;
+        const acceptedTimeboardId = result?.timeboard?.id || pendingInvite?.timeboardId;
 
-        showToast('Convite aceite com sucesso! Bem-vindo ao Timeboard.', 'success');
+        showToast(t('invite.acceptedToast'), 'success');
+        api.setPendingInviteCode(null);
 
         // Clean up URL parameters
         try {
           const url = new URL(window.location);
-          url.searchParams.delete('inviteTimeboardId');
-          url.searchParams.delete('tbId');
-          url.searchParams.delete('email');
+          ['invite', 'inviteTimeboardId', 'tbId', 'email'].forEach((param) => url.searchParams.delete(param));
           window.history.replaceState({}, '', url.pathname);
         } catch (e) { }
 
@@ -176,19 +172,24 @@ export default function App() {
           setSharedTimeboards(shared);
           setTimeboards(all);
         }
-        setActiveTimeboardId(pendingInvite.timeboardId);
-        setActiveTimelineId(null);
-        setActiveFinancialTab(null);
-        setCurrentView('workspace');
-        localStorage.setItem('chrono_current_view', 'workspace');
-        localStorage.setItem('chrono_active_timeboard_id', pendingInvite.timeboardId);
+        if (acceptedTimeboardId) {
+          setActiveTimeboardId(acceptedTimeboardId);
+          setActiveTimelineId(null);
+          setActiveFinancialTab(null);
+          setCurrentView('workspace');
+          localStorage.setItem('chrono_current_view', 'workspace');
+          localStorage.setItem('chrono_active_timeboard_id', acceptedTimeboardId);
+        }
       } catch (err) {
-        console.error('Error auto-accepting timeboard invite:', err);
+        console.error('Error accepting timeboard invite:', err);
+        api.setPendingInviteCode(null);
+        setPendingInvite(null);
+        showToast(err.message || t('invite.acceptFailed'), 'error');
       }
     })();
 
     return () => { isMounted = false; };
-  }, [currentUser?.id, currentUser?.email, pendingInvite?.timeboardId, pendingInvite?.email]);
+  }, [currentUser?.id, pendingInvite?.timeboardId, pendingInvite?.code]);
 
   // Load latest data from Database on mount - Timeboards for current user
   useEffect(() => {

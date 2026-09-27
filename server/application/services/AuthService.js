@@ -2,11 +2,24 @@ import { userRepository } from '../../infrastructure/database/supabase/SupabaseU
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
 import { timeboardInvitationRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardInvitationRepository.js';
 import { timeboardMemberRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardMemberRepository.js';
+import { supabase } from '../../infrastructure/database/supabase/supabaseClient.js';
+import { hashPassword, verifyPassword, isHashedPassword } from '../../infrastructure/security/password.js';
+import { createSessionToken } from '../../infrastructure/security/sessionToken.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
 
 export class AuthService {
+  // Auth responses: the public user plus the signed session token used by every API request
+  _withSession(userObj) {
+    return { ...userObj, token: createSessionToken(userObj) };
+  }
+
+  async getSessionUser(userId) {
+    const user = await userRepository.findById(userId);
+    return user ? user.toJSON() : null;
+  }
+
   async _postAuthSync(user) {
     if (!user || !user.id || !user.email) return;
     const cleanEmail = user.email.toLowerCase().trim();
@@ -51,14 +64,14 @@ export class AuthService {
     const created = await userRepository.create({
       name: cleanName,
       email: cleanEmail,
-      password: password, // In production you can hash with bcrypt
+      password: await hashPassword(password),
       googleId: null,
       avatarUrl: null
     });
 
     const userObj = created.toJSON();
     await this._postAuthSync(userObj);
-    return userObj;
+    return this._withSession(userObj);
   }
 
   async loginWithEmail({ email, password }) {
@@ -77,13 +90,35 @@ export class AuthService {
       throw new Error(t('backend.validation.googleAccountOnly'));
     }
 
-    if (user.password && user.password !== password) {
+    if (!(await verifyPassword(password, user.password))) {
       throw new Error(t('backend.validation.incorrectPassword'));
+    }
+    // Legacy plain-text passwords are hashed on the first successful login
+    if (!isHashedPassword(user.password)) {
+      await userRepository.update(user.id, { password: await hashPassword(password) });
     }
 
     const userObj = user.toJSON();
     await this._postAuthSync(userObj);
-    return userObj;
+    return this._withSession(userObj);
+  }
+
+  /**
+   * Google login: the client signs in with Google through Supabase Auth (web OAuth or the native
+   * Android sign-in) and sends the Supabase access token; the identity is read from Supabase,
+   * never trusted from the request body.
+   */
+  async loginWithSupabaseAccessToken(accessToken) {
+    if (!accessToken) throw new Error(t('backend.validation.googleIdRequired'));
+    const { data, error } = await supabase.auth.getUser(accessToken);
+    if (error || !data?.user) throw new Error(t('backend.validation.invalidGoogleSession'));
+    const gUser = data.user;
+    return this.loginOrRegisterWithGoogle({
+      googleId: gUser.id,
+      email: gUser.email,
+      name: gUser.user_metadata?.full_name || gUser.user_metadata?.name || null,
+      avatarUrl: gUser.user_metadata?.avatar_url || gUser.user_metadata?.picture || null
+    });
   }
 
   async loginOrRegisterWithGoogle({ googleId, email, name, avatarUrl }) {
@@ -98,7 +133,7 @@ export class AuthService {
     if (user) {
       const userObj = user.toJSON();
       await this._postAuthSync(userObj);
-      return userObj;
+      return this._withSession(userObj);
     }
 
     // 2. Check if user with this email exists -> link google_id
@@ -111,7 +146,7 @@ export class AuthService {
         });
         const userObj = updated.toJSON();
         await this._postAuthSync(userObj);
-        return userObj;
+        return this._withSession(userObj);
       }
     }
 
@@ -127,7 +162,7 @@ export class AuthService {
 
     const userObj = created.toJSON();
     await this._postAuthSync(userObj);
-    return userObj;
+    return this._withSession(userObj);
   }
 }
 

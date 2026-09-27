@@ -879,7 +879,33 @@ export const translations = {
       },
       success: {
         resetSent: "We've sent a password reset link to your email!"
+      },
+      processing: "Processing...",
+      registerAndEnter: "Create Account & Sign In",
+      createAccountLink: "Create an account",
+      hasAccountLink: "Already have an account? Sign in",
+      backToLogin: "← Back to sign in",
+      sessionExpired: "Your session has expired. Please sign in again.",
+      welcome: "Welcome, {{name}}!",
+      loggedOut: "Signed out successfully.",
+      inviteCode: {
+        haveCode: "I have an invitation code",
+        label: "Invitation code",
+        placeholder: "XXXX-XXXX",
+        hint: "The code is in the invitation e-mail.",
+        check: "Check code",
+        required: "Please enter the invitation code.",
+        invalid: "Invalid or expired invitation code.",
+        invitationFor: "Invitation to {{timeboard}}",
+        continueHint: "Sign in or create an account to accept the invitation.",
+        useAnother: "Use another code"
       }
+    },
+
+    // Timeboard invitations
+    invite: {
+      acceptedToast: "Invitation accepted! Welcome to the Timeboard.",
+      acceptFailed: "Could not accept the invitation."
     },
 
     // Timeboards Hub
@@ -1057,8 +1083,7 @@ export const translations = {
         debtors: {
           title: "Debtors Report",
           fromTo: "From {{from}} to {{to}}",
-          colTimeline: "Timeline",
-          colDate: "Date",
+          colDueDate: "Due date",
           colDebtor: "Debtor",
           colEvent: "Event",
           colAmount: "Amount",
@@ -1856,6 +1881,11 @@ export const translations = {
         googleAccountOnly: "This account was created with Google. Please use the 'Sign in with Google' button.",
         incorrectPassword: "Incorrect password",
         googleIdRequired: "Google ID is required for Google authentication",
+        invalidGoogleSession: "The Google session is invalid or has expired. Please sign in again.",
+        invitationCodeInvalid: "Invalid or expired invitation code.",
+        invitationCodeRequired: "Invitation code is required.",
+        forbidden: "You do not have access to this timeboard.",
+        tooManyAttempts: "Too many attempts. Please try again in a few minutes.",
         timeboardIdRequired: "timeboardId is required",
         emailRequiredField: "email is required",
         userIdRequired: "userId is required",
@@ -1961,6 +1991,9 @@ export const translations = {
         timeboardLabel: "Timeboard",
         accessPermissionLabel: "Access Permission",
         acceptButton: "Accept Invitation & Access",
+        inviteCodeLabel: "Or use this invitation code in the mobile app",
+        inviteCodeHint: "Valid for 14 days and for a single use.",
+        inviteCodeText: "Invitation code for the mobile app: {{code}} (valid for 14 days, single use).",
         fallbackInstruction: "If the button above doesn't work, copy and paste the following link into your browser:",
         copyright: "All rights reserved.",
         roleAdmin: "Admin",
@@ -2943,7 +2976,33 @@ export const translations = {
       },
       success: {
         resetSent: "Enviámos um link de recuperação para o seu email!"
+      },
+      processing: "A processar...",
+      registerAndEnter: "Criar Conta & Entrar",
+      createAccountLink: "Criar uma conta",
+      hasAccountLink: "Já tem conta? Entrar",
+      backToLogin: "← Voltar ao início de sessão",
+      sessionExpired: "A sua sessão expirou. Inicie sessão novamente.",
+      welcome: "Bem-vindo, {{name}}!",
+      loggedOut: "Sessão terminada com sucesso.",
+      inviteCode: {
+        haveCode: "Tenho um código de convite",
+        label: "Código de convite",
+        placeholder: "XXXX-XXXX",
+        hint: "O código está no email do convite.",
+        check: "Verificar código",
+        required: "Introduza o código de convite.",
+        invalid: "Código de convite inválido ou expirado.",
+        invitationFor: "Convite para {{timeboard}}",
+        continueHint: "Entre ou crie conta para aceitar o convite.",
+        useAnother: "Usar outro código"
       }
+    },
+
+    // Convites de timeboard
+    invite: {
+      acceptedToast: "Convite aceite com sucesso! Bem-vindo ao Timeboard.",
+      acceptFailed: "Não foi possível aceitar o convite."
     },
 
     // Timeboards Hub
@@ -3121,8 +3180,7 @@ export const translations = {
         debtors: {
           title: "Relatório de Devedores",
           fromTo: "De {{from}} a {{to}}",
-          colTimeline: "Timeline",
-          colDate: "Data",
+          colDueDate: "Vencimento",
           colDebtor: "Devedor",
           colEvent: "Evento",
           colAmount: "Valor",
@@ -3962,6 +4020,11 @@ export const translations = {
         googleAccountOnly: "Esta conta foi criada com o Google. Por favor utilize o botão \"Entrar com Google\".",
         incorrectPassword: "Palavra-passe incorreta.",
         googleIdRequired: "google_id é obrigatório para autenticação com Google.",
+        invalidGoogleSession: "A sessão Google é inválida ou expirou. Inicie sessão novamente.",
+        invitationCodeInvalid: "Código de convite inválido ou expirado.",
+        invitationCodeRequired: "O código de convite é obrigatório.",
+        forbidden: "Não tem acesso a este timeboard.",
+        tooManyAttempts: "Demasiadas tentativas. Tente novamente dentro de alguns minutos.",
         timeboardIdRequired: "timeboardId é obrigatório",
         emailRequiredField: "email é obrigatório",
         userIdRequired: "userId é obrigatório",
@@ -4067,6 +4130,9 @@ export const translations = {
         timeboardLabel: "Timeboard",
         accessPermissionLabel: "Permissão de Acesso",
         acceptButton: "Aceitar Convite & Aceder",
+        inviteCodeLabel: "Ou use este código de convite na aplicação móvel",
+        inviteCodeHint: "Válido durante 14 dias e para uma única utilização.",
+        inviteCodeText: "Código de convite para a aplicação móvel: {{code}} (válido 14 dias, uso único).",
         fallbackInstruction: "Se o botão acima não funcionar, copie e cole o seguinte link no seu navegador:",
         copyright: "Todos os direitos reservados.",
         roleAdmin: "Administrador",

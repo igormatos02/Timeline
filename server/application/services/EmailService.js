@@ -32,7 +32,7 @@ class EmailService {
   /**
    * Send Timeboard Invitation Email
    */
-  async sendTimeboardInvitation({ toEmail, toName, timeboardName, timeboardId, inviterName, role, acceptUrl }) {
+  async sendTimeboardInvitation({ toEmail, toName, timeboardName, timeboardId, inviterName, role, acceptUrl, inviteCode = '' }) {
     const client = this.getClient();
     const finalAcceptUrl = acceptUrl || `${this.appUrl}/?inviteTimeboardId=${encodeURIComponent(timeboardId)}&email=${encodeURIComponent(toEmail)}`;
 
@@ -51,7 +51,8 @@ class EmailService {
         name: cleanTbName,
         role: roleLabel,
         url: finalAcceptUrl
-      });
+      }) +
+      (inviteCode ? '\n\n' + t('backend.email.inviteCodeText', { code: inviteCode }) : '');
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -110,6 +111,14 @@ class EmailService {
                         ${t('backend.email.acceptButton')}
                       </a>
                     </div>
+
+                    ${inviteCode ? `
+                    <!-- Invitation code for the mobile app -->
+                    <div style="text-align: center; margin-bottom: 28px; padding: 16px; border-radius: 10px; background-color: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3);">
+                      <div style="color: #94a3b8; font-size: 12px; margin-bottom: 6px;">${t('backend.email.inviteCodeLabel')}</div>
+                      <div style="color: #ffffff; font-size: 26px; font-weight: 800; letter-spacing: 4px; font-family: 'SF Mono', Menlo, Consolas, monospace;">${inviteCode}</div>
+                      <div style="color: #94a3b8; font-size: 12px; margin-top: 6px;">${t('backend.email.inviteCodeHint')}</div>
+                    </div>` : ''}
 
                     <p style="color: #64748b; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
                       ${t('backend.email.fallbackInstruction')}<br>

@@ -9,6 +9,10 @@ import { authRouter } from './interfaces/http/routes/authRoutes.js';
 import { todoRouter } from './interfaces/http/routes/todoRoutes.js';
 import { followupRouter } from './interfaces/http/routes/followupRoutes.js';
 import { pocketRouter } from './interfaces/http/routes/pocketRoutes.js';
+import { invitationsRouter } from './interfaces/http/routes/invitationsRoutes.js';
+import { meRouter } from './interfaces/http/routes/meRoutes.js';
+import { requireAuth } from './interfaces/http/middleware/requireAuth.js';
+import { timeboardAccessFromRequest } from './interfaces/http/middleware/timeboardAccess.js';
 
 export const app = express();
 
@@ -16,16 +20,21 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// API Routes
+// Public routes: authentication and invitation code lookup (version / health below are public too)
 app.use('/api/auth', authRouter);
-app.use('/api/timeboards', timeboardsRouter);
-app.use('/api/timelines', timelinesRouter);
-app.use('/api/events', eventsRouter);
-app.use('/api/loans', loansRouter);
-app.use('/api/persons', personsRouter);
-app.use('/api/todos', todoRouter);
-app.use('/api/followups', followupRouter);
-app.use('/api/pockets', pocketRouter);
+app.use('/api/invitations', invitationsRouter);
+
+// Protected routes: a valid session token, and access to the timeboard the request targets
+const protectedRoute = [requireAuth, timeboardAccessFromRequest];
+app.use('/api/me', requireAuth, meRouter);
+app.use('/api/timeboards', protectedRoute, timeboardsRouter);
+app.use('/api/timelines', protectedRoute, timelinesRouter);
+app.use('/api/events', protectedRoute, eventsRouter);
+app.use('/api/loans', protectedRoute, loansRouter);
+app.use('/api/persons', protectedRoute, personsRouter);
+app.use('/api/todos', protectedRoute, todoRouter);
+app.use('/api/followups', protectedRoute, followupRouter);
+app.use('/api/pockets', protectedRoute, pocketRouter);
 
 // Dynamic version endpoint reading package.json on demand
 app.get('/api/version', (req, res) => {

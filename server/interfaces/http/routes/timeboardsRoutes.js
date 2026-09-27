@@ -1,24 +1,25 @@
 import { Router } from 'express';
 import { timeboardService } from '../../../application/services/TimeboardService.js';
+import { timeboardInvitationRepository } from '../../../infrastructure/database/supabase/SupabaseTimeboardInvitationRepository.js';
+import { timeboardAccessFromParam } from '../middleware/timeboardAccess.js';
 import { createT } from '../../../../shared/i18n/index.js';
 
 const t = createT('en');
 
 export const timeboardsRouter = Router();
 
-// GET /api/timeboards?userId=...
+// Routes with a timeboard `:id` require access to that timeboard (except accepting an invitation,
+// done before the user is a member)
+timeboardsRouter.param('id', (req, res, next, id) => {
+  if (req.path.endsWith('/accept-invite')) return next();
+  return timeboardAccessFromParam(req, res, next, id);
+});
+
+// GET /api/timeboards — timeboards of the logged-in user (own and shared)
 timeboardsRouter.get('/', async (req, res) => {
   try {
-    const { userId, user_id } = req.query;
-    const targetUserId = userId || user_id;
-
-    if (targetUserId) {
-      const result = await timeboardService.getTimeboardsForUser(targetUserId);
-      return res.json(result);
-    }
-
-    const timeboards = await timeboardService.getAllTimeboards();
-    res.json(timeboards);
+    const result = await timeboardService.getTimeboardsForUser(req.user.id);
+    res.json(result);
   } catch (err) {
     console.error('Error fetching timeboards:', err);
     res.status(500).json({ error: err.message });
@@ -116,10 +117,11 @@ timeboardsRouter.post('/:id/invite', async (req, res) => {
 // POST /api/timeboards/:id/accept-invite
 timeboardsRouter.post('/:id/accept-invite', async (req, res) => {
   try {
-    const { userId, email } = req.body;
-    if (!userId) return res.status(400).json({ error: t('backend.validation.userIdRequired') });
-
-    const result = await timeboardService.acceptInvite(req.params.id, userId, email);
+    // Accepts with the logged-in account, only when a pending invitation exists for its e-mail
+    // (invitations for another e-mail are accepted by code: POST /api/invitations/accept)
+    const pending = await timeboardInvitationRepository.findPendingByTimeboardAndEmail(req.params.id, req.user.email);
+    if (!pending) return res.status(403).json({ error: t('backend.validation.forbidden') });
+    const result = await timeboardService.acceptInvite(req.params.id, req.user.id, req.user.email);
     res.json(result);
   } catch (err) {
     console.error('Error accepting invitation:', err);
@@ -141,7 +143,8 @@ timeboardsRouter.get('/:id', async (req, res) => {
 // POST /api/timeboards
 timeboardsRouter.post('/', async (req, res) => {
   try {
-    const newTimeboard = await timeboardService.createTimeboard(req.body, req.body.locale);
+    // The logged-in user owns the new timeboard
+    const newTimeboard = await timeboardService.createTimeboard({ ...req.body, ownerId: req.user.id, userId: req.user.id }, req.body.locale);
     res.status(201).json(newTimeboard);
   } catch (err) {
     res.status(400).json({ error: err.message });

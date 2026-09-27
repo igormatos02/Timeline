@@ -10,6 +10,7 @@ import { userRepository } from '../../infrastructure/database/supabase/SupabaseU
 import { emailService } from './EmailService.js';
 import { getAppUrl } from '../../../shared/config/appConfig.js';
 import { TimeboardType, TimelineType, TimelineStatus, EventPeriodicity, InvitationStatus, PersonRole, PersonType } from '../../../shared/enums/index.js';
+import { generateInviteCode, normalizeInviteCode, formatInviteCode, maskEmail, INVITE_CODE_TTL_DAYS } from '../../infrastructure/security/inviteCode.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -185,6 +186,44 @@ export class TimeboardService {
     return { success: true, member, timeboard: updatedTimeboard };
   }
 
+  // Pending, non-expired invitation of a code (or null)
+  async _findUsableInvitation(rawCode) {
+    const code = normalizeInviteCode(rawCode);
+    if (!code) return null;
+    const invitation = await timeboardInvitationRepository.findByCode(code);
+    if (!invitation || invitation.status !== InvitationStatus.PENDING) return null;
+    if (invitation.expiresAt && new Date(invitation.expiresAt) < new Date()) return null;
+    return invitation;
+  }
+
+  /** Public details of an invitation code, shown before logging in / registering (no sensitive data). */
+  async lookupInviteCode(rawCode) {
+    const invitation = await this._findUsableInvitation(rawCode);
+    if (!invitation) throw new Error(t('backend.validation.invitationCodeInvalid'));
+    const timeboard = await timeboardRepository.getById(invitation.timeboardId);
+    const persons = await personRepository.getByTimeboardId(invitation.timeboardId);
+    const person = persons.find((p) => p.email && p.email.toLowerCase().trim() === invitation.email);
+    return {
+      timeboardName: timeboard?.name || '',
+      personName: person?.personName || '',
+      maskedEmail: maskEmail(invitation.email),
+      email: invitation.email,
+      role: invitation.role
+    };
+  }
+
+  /**
+   * Accepts an invitation by its code with the logged-in account. Holding the (single-use, expiring)
+   * code proves the invitation reached the person, so the account e-mail may differ from the invited one.
+   */
+  async acceptInviteByCode(rawCode, userId) {
+    const invitation = await this._findUsableInvitation(rawCode);
+    if (!invitation) throw new Error(t('backend.validation.invitationCodeInvalid'));
+    const result = await this.acceptInvite(invitation.timeboardId, userId, invitation.email);
+    await timeboardInvitationRepository.update(invitation.id, { acceptedUserId: userId, inviteCode: null });
+    return result;
+  }
+
   async sendInvitation({ timeboardId, personId, email, role, inviterName, invitedBy, originUrl }) {
     if (!timeboardId || !email) {
       throw new Error(t('backend.validation.timeboardIdAndEmailRequired'));
@@ -212,23 +251,30 @@ export class TimeboardService {
       }
     }
 
-    // 2. Record invitation in timeboard_invitations table
+    // 2. Record the invitation with a new single-use code (re-sending replaces the code of a pending invitation)
+    const inviteCode = generateInviteCode();
+    const expiresAt = new Date(Date.now() + INVITE_CODE_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
     let invitationRecord = null;
     try {
-      invitationRecord = await timeboardInvitationRepository.create({
-        timeboardId: timeboardId,
-        email: cleanEmail,
-        role: finalRole,
-        status: InvitationStatus.PENDING,
-        invitedBy: invitedBy || null
-      });
+      const pending = await timeboardInvitationRepository.findPendingByTimeboardAndEmail(timeboardId, cleanEmail);
+      invitationRecord = pending
+        ? await timeboardInvitationRepository.update(pending.id, { role: finalRole, inviteCode, expiresAt, invitedBy: invitedBy || null })
+        : await timeboardInvitationRepository.create({
+          timeboardId: timeboardId,
+          email: cleanEmail,
+          role: finalRole,
+          status: InvitationStatus.PENDING,
+          invitedBy: invitedBy || null,
+          inviteCode,
+          expiresAt
+        });
     } catch (err) {
       console.warn(`[TimeboardService.sendInvitation] Could not save invitation record: ${err.message}`);
     }
 
-    // 3. Build accept invitation URL
+    // 3. Build accept invitation URL (the code identifies the invitation; the other params keep old links working)
     const cleanBaseUrl = getAppUrl(originUrl);
-    const acceptUrl = `${cleanBaseUrl}/?inviteTimeboardId=${encodeURIComponent(timeboardId)}&email=${encodeURIComponent(cleanEmail)}`;
+    const acceptUrl = `${cleanBaseUrl}/?invite=${encodeURIComponent(inviteCode)}&inviteTimeboardId=${encodeURIComponent(timeboardId)}&email=${encodeURIComponent(cleanEmail)}`;
 
     // 4. Send via Brevo
     const emailResult = await emailService.sendTimeboardInvitation({
@@ -238,7 +284,8 @@ export class TimeboardService {
       timeboardId: timeboardId,
       inviterName: inviterName || t('backend.service.timeboardAdmin'),
       role: finalRole,
-      acceptUrl: acceptUrl
+      acceptUrl: acceptUrl,
+      inviteCode: formatInviteCode(inviteCode)
     });
 
     return {

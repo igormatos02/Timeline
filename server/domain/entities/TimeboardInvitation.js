@@ -17,6 +17,8 @@ export class TimeboardInvitation {
     invitedBy = null,
     expiresAt = null,
     acceptedAt = null,
+    inviteCode = null,
+    acceptedUserId = null,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
   }) {
@@ -28,6 +30,8 @@ export class TimeboardInvitation {
     this.invitedBy = invitedBy;
     this.expiresAt = expiresAt;
     this.acceptedAt = acceptedAt;
+    this.inviteCode = inviteCode;
+    this.acceptedUserId = acceptedUserId;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }

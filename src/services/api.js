@@ -17,13 +17,33 @@ export function getActiveTenantId() {
   return localStorage.getItem('chrono_active_tenant_id') || DEFAULT_TENANT.id;
 }
 
+// Session token issued by the API on login (signed JWT: header.payload.signature)
+const AUTH_TOKEN_KEY = 'chrono_auth_token';
+const isSessionToken = (token) => typeof token === 'string' && token.split('.').length === 3;
+
+export function getAuthToken() {
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  return isSessionToken(token) ? token : null;
+}
+
+// Event fired when the API rejects the session (expired / invalid token): the app returns to the login
+export const SESSION_EXPIRED_EVENT = 'chrono:session-expired';
+
+function clearSession() {
+  localStorage.removeItem('chrono_active_user');
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+}
+
 export function isUserLoggedIn() {
-  const token = localStorage.getItem('chrono_auth_token');
-  const user = localStorage.getItem('chrono_active_user');
-  return Boolean(token || user);
+  return Boolean(getAuthToken() && localStorage.getItem('chrono_active_user'));
 }
 
 export function getCurrentUser() {
+  // Sessions from before the API tokens (no valid token) must log in again
+  if (!getAuthToken()) {
+    clearSession();
+    return null;
+  }
   const customUser = localStorage.getItem('chrono_active_user');
   if (customUser) {
     try {
@@ -33,14 +53,24 @@ export function getCurrentUser() {
   return null;
 }
 
-export function setCurrentUser(user) {
+export function setCurrentUser(user, token = null) {
   if (!user) {
-    localStorage.removeItem('chrono_active_user');
-    localStorage.removeItem('chrono_auth_token');
+    clearSession();
     return;
   }
   localStorage.setItem('chrono_active_user', JSON.stringify(user));
-  localStorage.setItem('chrono_auth_token', `token_${Date.now()}`);
+  if (token) localStorage.setItem(AUTH_TOKEN_KEY, token);
+}
+
+/** fetch with the session headers; a 401 outside the auth routes ends the session. */
+export async function apiFetch(url, options = {}) {
+  const hadSession = Boolean(getAuthToken());
+  const res = await fetch(url, { ...options, headers: { ...getHeaders(), ...(options.headers || {}) } });
+  if (res.status === 401 && hadSession && !String(url).includes('/auth/')) {
+    clearSession();
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+  }
+  return res;
 }
 
 export async function loginWithEmail(email, password) {
@@ -74,7 +104,7 @@ export async function loginWithEmail(email, password) {
       tenantName: DEFAULT_TENANT.name
     };
 
-    setCurrentUser(user);
+    setCurrentUser(user, data.token);
     return user;
   } catch (err) {
     console.error('[api.loginWithEmail] Error:', err);
@@ -113,7 +143,7 @@ export async function registerWithEmail(name, email, password) {
       tenantName: DEFAULT_TENANT.name
     };
 
-    setCurrentUser(user);
+    setCurrentUser(user, data.token);
     return user;
   } catch (err) {
     console.error('[api.registerWithEmail] Error:', err);
@@ -122,109 +152,65 @@ export async function registerWithEmail(name, email, password) {
 }
 
 export async function loginWithGoogle(pendingInvite = null) {
-  try {
-    const baseUrl = getAppUrl();
-    let redirectUrl = baseUrl;
-    if (pendingInvite?.timeboardId) {
-      const params = new URLSearchParams();
-      params.set('inviteTimeboardId', pendingInvite.timeboardId);
-      if (pendingInvite.email) params.set('email', pendingInvite.email);
-      redirectUrl = `${baseUrl}/?${params.toString()}`;
-    }
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectUrl
-      }
-    });
-
-    if (error) {
-      console.warn('[api.loginWithGoogle] Supabase OAuth warning:', error);
-
-      // Fallback if Google OAuth is not enabled in Supabase Dashboard
-      const isProviderDisabled =
-        error.message?.includes('provider is not enabled') ||
-        error.message?.includes('Unsupported provider') ||
-        error.code === 'validation_failed';
-
-      if (isProviderDisabled) {
-        // If user came via an invitation link, log them in directly as the invited user
-        if (pendingInvite?.email) {
-          const simulatedGoogleId = 'google_inv_' + Math.abs(pendingInvite.email.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0));
-          const user = await syncGoogleUser({
-            googleId: simulatedGoogleId,
-            email: pendingInvite.email,
-            name: pendingInvite.name || pendingInvite.email.split('@')[0],
-            avatarUrl: null
-          });
-          return user;
-        }
-
-        throw new Error('O login com Google não está ativo no painel do Supabase (Authentication > Providers > Google). Pode ativar lá com o Client ID do Google Cloud ou entrar com Email e Senha abaixo.');
-      }
-
-      throw new Error(error.message || 'Falha ao iniciar autenticação com o Google.');
-    }
-
-    return data;
-  } catch (err) {
-    console.error('[api.loginWithGoogle] Error:', err);
-    throw err;
+  const baseUrl = getAppUrl();
+  let redirectUrl = baseUrl;
+  if (pendingInvite?.timeboardId) {
+    const params = new URLSearchParams();
+    params.set('inviteTimeboardId', pendingInvite.timeboardId);
+    if (pendingInvite.email) params.set('email', pendingInvite.email);
+    redirectUrl = `${baseUrl}/?${params.toString()}`;
   }
+
+  // Google sign-in through Supabase Auth; the session is exchanged for an API session in syncGoogleSession
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: redirectUrl }
+  });
+  if (error) {
+    console.error('[api.loginWithGoogle] Error:', error);
+    throw new Error(error.message);
+  }
+  return data;
 }
 
-export async function syncGoogleUser(googlePayload) {
-  if (!googlePayload || !googlePayload.googleId) {
-    throw new Error('Dados do Google inválidos.');
-  }
+/** Exchanges the Supabase session of a Google sign-in (web OAuth or native app) for an API session. */
+export async function syncGoogleSession(accessToken) {
+  const res = await fetch(`${API_BASE}/auth/google`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ accessToken })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error);
 
-  try {
-    const res = await fetch(`${API_BASE}/auth/google`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(googlePayload)
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Falha ao autenticar com Google.');
-    }
-
-    const userName = data.name || googlePayload.name || (googlePayload.email ? googlePayload.email.split('@')[0] : 'Utilizador Google');
-    const initials = userName.substring(0, 2).toUpperCase();
-
-    const user = {
-      id: data.id,
-      name: userName,
-      email: data.email || googlePayload.email,
-      avatarInitials: initials,
-      avatarUrl: data.avatarUrl || googlePayload.avatarUrl || null,
-      googleId: data.googleId || googlePayload.googleId,
-      tenantId: DEFAULT_TENANT.id,
-      tenantName: DEFAULT_TENANT.name
-    };
-
-    setCurrentUser(user);
-    return user;
-  } catch (err) {
-    console.error('[api.syncGoogleUser] Error:', err);
-    throw err;
-  }
+  const userName = data.name || (data.email ? data.email.split('@')[0] : '');
+  const user = {
+    id: data.id,
+    name: userName,
+    email: data.email,
+    avatarInitials: userName.substring(0, 2).toUpperCase(),
+    avatarUrl: data.avatarUrl || null,
+    googleId: data.googleId || null,
+    tenantId: DEFAULT_TENANT.id,
+    tenantName: DEFAULT_TENANT.name
+  };
+  setCurrentUser(user, data.token);
+  return user;
 }
 
 export async function logoutUser() {
-  localStorage.removeItem('chrono_active_user');
-  localStorage.removeItem('chrono_auth_token');
+  clearSession();
   try {
     await supabase.auth.signOut();
   } catch (e) {}
 }
 
 function getHeaders(custom = {}) {
+  const token = getAuthToken();
   return {
     'Content-Type': 'application/json',
     'x-tenant-id': getActiveTenantId(),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...custom
   };
 }
@@ -237,7 +223,7 @@ export async function fetchTimeboards(userId = null) {
     ? `${API_BASE}/timeboards?userId=${encodeURIComponent(targetUserId)}`
     : `${API_BASE}/timeboards`;
 
-  const res = await fetch(url, {
+  const res = await apiFetch(url, {
     headers: getHeaders()
   });
   if (!res.ok) throw new Error(`Failed to fetch timeboards: ${res.statusText}`);
@@ -246,7 +232,7 @@ export async function fetchTimeboards(userId = null) {
 
 export async function createTimeboard(timeboardData, locale) {
   const current = getCurrentUser();
-  const res = await fetch(`${API_BASE}/timeboards`, {
+  const res = await apiFetch(`${API_BASE}/timeboards`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({
@@ -261,7 +247,7 @@ export async function createTimeboard(timeboardData, locale) {
 }
 
 export async function updateTimeboard(id, updates) {
-  const res = await fetch(`${API_BASE}/timeboards/${id}`, {
+  const res = await apiFetch(`${API_BASE}/timeboards/${id}`, {
     method: 'PUT',
     headers: getHeaders(),
     body: JSON.stringify(updates)
@@ -271,7 +257,7 @@ export async function updateTimeboard(id, updates) {
 }
 
 export async function deleteTimeboard(id) {
-  const res = await fetch(`${API_BASE}/timeboards/${id}`, {
+  const res = await apiFetch(`${API_BASE}/timeboards/${id}`, {
     method: 'DELETE',
     headers: getHeaders()
   });
@@ -281,7 +267,7 @@ export async function deleteTimeboard(id) {
 
 export async function fetchTimeboard(timeboardId) {
   if (!timeboardId) return null;
-  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}`, {
+  const res = await apiFetch(`${API_BASE}/timeboards/${timeboardId}`, {
     headers: getHeaders()
   });
   if (!res.ok) return null;
@@ -291,7 +277,7 @@ export async function fetchTimeboard(timeboardId) {
 // Timeboard Members (Shared Dashboards)
 export async function fetchTimeboardMembers(timeboardId) {
   if (!timeboardId) return [];
-  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/members`, {
+  const res = await apiFetch(`${API_BASE}/timeboards/${timeboardId}/members`, {
     headers: getHeaders()
   });
   if (!res.ok) return [];
@@ -299,7 +285,7 @@ export async function fetchTimeboardMembers(timeboardId) {
 }
 
 export async function addTimeboardMember(timeboardId, memberUserId) {
-  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/members`, {
+  const res = await apiFetch(`${API_BASE}/timeboards/${timeboardId}/members`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({ userId: memberUserId })
@@ -309,7 +295,7 @@ export async function addTimeboardMember(timeboardId, memberUserId) {
 }
 
 export async function removeTimeboardMember(timeboardId, memberUserId) {
-  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/members/${memberUserId}`, {
+  const res = await apiFetch(`${API_BASE}/timeboards/${timeboardId}/members/${memberUserId}`, {
     method: 'DELETE',
     headers: getHeaders()
   });
@@ -318,7 +304,7 @@ export async function removeTimeboardMember(timeboardId, memberUserId) {
 }
 
 export async function sendTimeboardInvitation({ timeboardId, personId, email, role, inviterName, invitedBy }) {
-  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/invite`, {
+  const res = await apiFetch(`${API_BASE}/timeboards/${timeboardId}/invite`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({ personId, email, role, inviterName, invitedBy })
@@ -329,7 +315,7 @@ export async function sendTimeboardInvitation({ timeboardId, personId, email, ro
 }
 
 export async function fetchTimeboardInvitations(timeboardId) {
-  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/invitations`, {
+  const res = await apiFetch(`${API_BASE}/timeboards/${timeboardId}/invitations`, {
     headers: getHeaders()
   });
   if (!res.ok) throw new Error('Falha ao obter lista de convites.');
@@ -337,7 +323,7 @@ export async function fetchTimeboardInvitations(timeboardId) {
 }
 
 export async function revokeTimeboardInvitation(timeboardId, invitationId) {
-  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/invitations/${invitationId}/revoke`, {
+  const res = await apiFetch(`${API_BASE}/timeboards/${timeboardId}/invitations/${invitationId}/revoke`, {
     method: 'POST',
     headers: getHeaders()
   });
@@ -347,7 +333,7 @@ export async function revokeTimeboardInvitation(timeboardId, invitationId) {
 }
 
 export async function unlinkPersonMember(timeboardId, personId) {
-  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/persons/${personId}/unlink`, {
+  const res = await apiFetch(`${API_BASE}/timeboards/${timeboardId}/persons/${personId}/unlink`, {
     method: 'POST',
     headers: getHeaders()
   });
@@ -356,16 +342,32 @@ export async function unlinkPersonMember(timeboardId, personId) {
   return data;
 }
 
-export async function acceptTimeboardInvite(timeboardId, userId, email = null) {
-  const res = await fetch(`${API_BASE}/timeboards/${timeboardId}/accept-invite`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({ userId, email })
-  });
+export async function acceptTimeboardInvite(timeboardId) {
+  const res = await apiFetch(`${API_BASE}/timeboards/${timeboardId}/accept-invite`, { method: 'POST' });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Falha ao aceitar convite.');
+  if (!res.ok) throw new Error(data.error);
   return data;
 }
+
+// Invitation codes (typed in the app or on the web to identify an invitation)
+export async function lookupInviteCode(code) {
+  const res = await fetch(`${API_BASE}/invitations/code/${encodeURIComponent(code)}`, { headers: getHeaders() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error);
+  return data;
+}
+
+export async function acceptInviteByCode(code) {
+  const res = await apiFetch(`${API_BASE}/invitations/accept`, { method: 'POST', body: JSON.stringify({ code }) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error);
+  return data;
+}
+
+// Invitation code waiting for the login / registration to finish (kept across the Google redirect)
+const PENDING_INVITE_CODE_KEY = 'chrono_pending_invite_code';
+export const getPendingInviteCode = () => localStorage.getItem(PENDING_INVITE_CODE_KEY);
+export const setPendingInviteCode = (code) => (code ? localStorage.setItem(PENDING_INVITE_CODE_KEY, code) : localStorage.removeItem(PENDING_INVITE_CODE_KEY));
 
 // Persons & Organizations (Entities) Cache Helpers
 export function getLocalPersons(timeboardId) {
@@ -397,7 +399,7 @@ export async function fetchPersons(params = {}) {
   if (!tbId) return [];
 
   try {
-    const res = await fetch(`${API_BASE}/persons?timeboardId=${encodeURIComponent(tbId)}`, {
+    const res = await apiFetch(`${API_BASE}/persons?timeboardId=${encodeURIComponent(tbId)}`, {
       headers: getHeaders()
     });
     if (res.ok) {
@@ -428,7 +430,7 @@ export async function fetchPersons(params = {}) {
 export async function createPerson(personData) {
   const tbId = personData.timeboardId || personData.timeboard_id;
   try {
-    const res = await fetch(`${API_BASE}/persons`, {
+    const res = await apiFetch(`${API_BASE}/persons`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(personData)
@@ -462,7 +464,7 @@ export async function createPerson(personData) {
 export async function updatePerson(id, updates) {
   const tbId = updates.timeboardId || updates.timeboard_id;
   try {
-    const res = await fetch(`${API_BASE}/persons/${id}`, {
+    const res = await apiFetch(`${API_BASE}/persons/${id}`, {
       method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify(updates)
@@ -492,7 +494,7 @@ export async function updatePerson(id, updates) {
 
 export async function deletePerson(id, timeboardId = null) {
   try {
-    const res = await fetch(`${API_BASE}/persons/${id}`, {
+    const res = await apiFetch(`${API_BASE}/persons/${id}`, {
       method: 'DELETE',
       headers: getHeaders()
     });
@@ -522,7 +524,7 @@ export async function fetchTimelines(params = {}) {
     )
   ).toString();
 
-  const res = await fetch(
+  const res = await apiFetch(
     `${API_BASE}/timelines${query ? `?${query}` : ''}`,
     {
       headers: getHeaders()
@@ -540,7 +542,7 @@ export async function fetchTimelineById(id, params = {}) {
   const query = new URLSearchParams(
     Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== '')
   ).toString();
-  const res = await fetch(`${API_BASE}/timelines/${id}${query ? `?${query}` : ''}`, {
+  const res = await apiFetch(`${API_BASE}/timelines/${id}${query ? `?${query}` : ''}`, {
     headers: getHeaders()
   });
   if (!res.ok) throw new Error(`Failed to fetch timeline ${id}`);
@@ -548,7 +550,7 @@ export async function fetchTimelineById(id, params = {}) {
 }
 
 export async function createTimeline(timelineData) {
-  const res = await fetch(`${API_BASE}/timelines`, {
+  const res = await apiFetch(`${API_BASE}/timelines`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({
@@ -564,7 +566,7 @@ export async function createTimeline(timelineData) {
 }
 
 export async function updateTimeline(id, updates) {
-  const res = await fetch(`${API_BASE}/timelines/${id}`, {
+  const res = await apiFetch(`${API_BASE}/timelines/${id}`, {
     method: 'PUT',
     headers: getHeaders(),
     body: JSON.stringify(updates)
@@ -577,7 +579,7 @@ export async function updateTimeline(id, updates) {
 }
 
 export async function deleteTimeline(id) {
-  const res = await fetch(`${API_BASE}/timelines/${id}`, {
+  const res = await apiFetch(`${API_BASE}/timelines/${id}`, {
     method: 'DELETE',
     headers: getHeaders()
   });
@@ -589,7 +591,7 @@ export async function deleteTimeline(id) {
 }
 
 export async function resetTimeline(id) {
-  const res = await fetch(`${API_BASE}/timelines/${id}/reset`, {
+  const res = await apiFetch(`${API_BASE}/timelines/${id}/reset`, {
     method: 'POST',
     headers: getHeaders()
   });
@@ -602,7 +604,7 @@ export async function fetchEvents(params = {}) {
   const query = new URLSearchParams(
     Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== '')
   ).toString();
-  const res = await fetch(`${API_BASE}/events${query ? `?${query}` : ''}`, {
+  const res = await apiFetch(`${API_BASE}/events${query ? `?${query}` : ''}`, {
     headers: getHeaders()
   });
   if (!res.ok) throw new Error(`Failed to fetch events: ${res.statusText}`);
@@ -610,7 +612,7 @@ export async function fetchEvents(params = {}) {
 }
 
 export async function fetchEventById(id) {
-  const res = await fetch(`${API_BASE}/events/${id}`, {
+  const res = await apiFetch(`${API_BASE}/events/${id}`, {
     headers: getHeaders()
   });
   if (!res.ok) throw new Error(`Failed to fetch event ${id}: ${res.statusText}`);
@@ -618,7 +620,7 @@ export async function fetchEventById(id) {
 }
 
 export async function createEvent(eventData) {
-  const res = await fetch(`${API_BASE}/events`, {
+  const res = await apiFetch(`${API_BASE}/events`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({
@@ -634,7 +636,7 @@ export async function createEvent(eventData) {
 }
 
 export async function updateEvent(id, updates) {
-  const res = await fetch(`${API_BASE}/events/${id}`, {
+  const res = await apiFetch(`${API_BASE}/events/${id}`, {
     method: 'PUT',
     headers: getHeaders(),
     body: JSON.stringify(updates)
@@ -647,7 +649,7 @@ export async function updateEvent(id, updates) {
 }
 
 export async function toggleEventPayment(id, status = null) {
-  const res = await fetch(`${API_BASE}/events/${id}/toggle-payment`, {
+  const res = await apiFetch(`${API_BASE}/events/${id}/toggle-payment`, {
     method: 'POST',
     headers: getHeaders(),
     ...(status ? { body: JSON.stringify({ status }) } : {})
@@ -657,7 +659,7 @@ export async function toggleEventPayment(id, status = null) {
 }
 
 export async function setEventStatus(id, payload = {}) {
-  const res = await fetch(`${API_BASE}/events/${id}/status`, {
+  const res = await apiFetch(`${API_BASE}/events/${id}/status`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(payload)
@@ -674,7 +676,7 @@ export async function setEventStatus(id, payload = {}) {
 
 // Comments of a single occurrence (year / month of payload.date) of an event
 export async function addEventNote(id, payload = {}) {
-  const res = await fetch(`${API_BASE}/events/${encodeURIComponent(id)}/notes`, {
+  const res = await apiFetch(`${API_BASE}/events/${encodeURIComponent(id)}/notes`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(payload)
@@ -687,7 +689,7 @@ export async function addEventNote(id, payload = {}) {
 }
 
 export async function deleteEventNote(noteId) {
-  const res = await fetch(`${API_BASE}/events/notes/${encodeURIComponent(noteId)}`, {
+  const res = await apiFetch(`${API_BASE}/events/notes/${encodeURIComponent(noteId)}`, {
     method: 'DELETE',
     headers: getHeaders()
   });
@@ -696,7 +698,7 @@ export async function deleteEventNote(noteId) {
 }
 
 export async function deleteEvent(id, options = {}) {
-  const res = await fetch(`${API_BASE}/events/${id}`, {
+  const res = await apiFetch(`${API_BASE}/events/${id}`, {
     method: 'DELETE',
     headers: getHeaders(),
     body: JSON.stringify(options)
@@ -712,7 +714,7 @@ export async function fetchTodos(filter = {}) {
   if (filter.timelineId) query.set('timelineId', filter.timelineId);
   if (filter.status) query.set('status', filter.status);
 
-  const res = await fetch(`${API_BASE}/todos?${query.toString()}`, {
+  const res = await apiFetch(`${API_BASE}/todos?${query.toString()}`, {
     headers: getHeaders()
   });
   if (!res.ok) throw new Error('Failed to fetch todos');
@@ -720,7 +722,7 @@ export async function fetchTodos(filter = {}) {
 }
 
 export async function createTodo(todoData) {
-  const res = await fetch(`${API_BASE}/todos`, {
+  const res = await apiFetch(`${API_BASE}/todos`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({
@@ -736,7 +738,7 @@ export async function createTodo(todoData) {
 }
 
 export async function updateTodo(id, updates) {
-  const res = await fetch(`${API_BASE}/todos/${id}`, {
+  const res = await apiFetch(`${API_BASE}/todos/${id}`, {
     method: 'PUT',
     headers: getHeaders(),
     body: JSON.stringify(updates)
@@ -749,7 +751,7 @@ export async function updateTodo(id, updates) {
 }
 
 export async function toggleTodoStatus(id, status = null) {
-  const res = await fetch(`${API_BASE}/todos/${id}/toggle-status`, {
+  const res = await apiFetch(`${API_BASE}/todos/${id}/toggle-status`, {
     method: 'POST',
     headers: getHeaders(),
     ...(status ? { body: JSON.stringify({ status }) } : {})
@@ -762,7 +764,7 @@ export async function toggleTodoStatus(id, status = null) {
 }
 
 export async function deleteTodo(id) {
-  const res = await fetch(`${API_BASE}/todos/${id}`, {
+  const res = await apiFetch(`${API_BASE}/todos/${id}`, {
     method: 'DELETE',
     headers: getHeaders()
   });
@@ -775,7 +777,7 @@ export async function deleteTodo(id) {
 
 // Loans
 export async function fetchLoanContract(timelineId) {
-  const res = await fetch(`${API_BASE}/loans/timeline/${timelineId}`, {
+  const res = await apiFetch(`${API_BASE}/loans/timeline/${timelineId}`, {
     headers: getHeaders()
   });
   if (!res.ok) return null;
@@ -783,7 +785,7 @@ export async function fetchLoanContract(timelineId) {
 }
 
 export async function createLoanContract(contractData) {
-  const res = await fetch(`${API_BASE}/loans`, {
+  const res = await apiFetch(`${API_BASE}/loans`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({
@@ -796,7 +798,7 @@ export async function createLoanContract(contractData) {
 }
 
 export async function updateLoanContract(id, updates) {
-  const res = await fetch(`${API_BASE}/loans/${id}`, {
+  const res = await apiFetch(`${API_BASE}/loans/${id}`, {
     method: 'PUT',
     headers: getHeaders(),
     body: JSON.stringify(updates)
@@ -806,7 +808,7 @@ export async function updateLoanContract(id, updates) {
 }
 
 export async function amortizeLoan(payload) {
-  const res = await fetch(`${API_BASE}/loans/amortize`, {
+  const res = await apiFetch(`${API_BASE}/loans/amortize`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(payload)
@@ -816,7 +818,7 @@ export async function amortizeLoan(payload) {
 }
 
 export async function payUpTo(payload) {
-  const res = await fetch(`${API_BASE}/events/pay-up-to`, {
+  const res = await apiFetch(`${API_BASE}/events/pay-up-to`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(payload)
@@ -832,19 +834,19 @@ export async function payUpTo(payload) {
 export async function getPockets(params = {}) {
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_BASE}/pockets?${query}` : `${API_BASE}/pockets`;
-  const res = await fetch(url, { headers: getHeaders() });
+  const res = await apiFetch(url, { headers: getHeaders() });
   if (!res.ok) throw new Error('Failed to fetch pockets');
   return res.json();
 }
 
 export async function getPocketById(id) {
-  const res = await fetch(`${API_BASE}/pockets/${id}`, { headers: getHeaders() });
+  const res = await apiFetch(`${API_BASE}/pockets/${id}`, { headers: getHeaders() });
   if (!res.ok) throw new Error('Failed to fetch pocket');
   return res.json();
 }
 
 export async function createPocket(pocketData) {
-  const res = await fetch(`${API_BASE}/pockets`, {
+  const res = await apiFetch(`${API_BASE}/pockets`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({
@@ -857,7 +859,7 @@ export async function createPocket(pocketData) {
 }
 
 export async function updatePocket(id, updates) {
-  const res = await fetch(`${API_BASE}/pockets/${id}`, {
+  const res = await apiFetch(`${API_BASE}/pockets/${id}`, {
     method: 'PUT',
     headers: getHeaders(),
     body: JSON.stringify(updates)
@@ -867,7 +869,7 @@ export async function updatePocket(id, updates) {
 }
 
 export async function deletePocket(id) {
-  const res = await fetch(`${API_BASE}/pockets/${id}`, {
+  const res = await apiFetch(`${API_BASE}/pockets/${id}`, {
     method: 'DELETE',
     headers: getHeaders()
   });

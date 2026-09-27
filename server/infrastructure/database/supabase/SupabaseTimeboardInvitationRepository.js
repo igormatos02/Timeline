@@ -16,6 +16,8 @@ function rowToEntity(row) {
     invitedBy: row.invited_by || row.invitedBy,
     expiresAt: row.expires_at || row.expiresAt,
     acceptedAt: row.accepted_at || row.acceptedAt,
+    inviteCode: row.invite_code || null,
+    acceptedUserId: row.accepted_user_id || null,
     createdAt: row.created_at || row.createdAt,
     updatedAt: row.updated_at || row.updatedAt
   });
@@ -35,6 +37,8 @@ function entityToRow(data) {
   if (data.expires_at !== undefined) row.expires_at = data.expires_at;
   if (data.acceptedAt !== undefined) row.accepted_at = data.acceptedAt;
   if (data.accepted_at !== undefined) row.accepted_at = data.accepted_at;
+  if (data.inviteCode !== undefined) row.invite_code = data.inviteCode;
+  if (data.acceptedUserId !== undefined) row.accepted_user_id = data.acceptedUserId;
   return row;
 }
 
@@ -77,6 +81,20 @@ export class SupabaseTimeboardInvitationRepository extends IRepository {
       console.warn(`[SupabaseTimeboardInvitationRepository] getByTimeboardId catch: ${err.message}`);
       return [];
     }
+  }
+
+  async findByCode(code) {
+    if (!code) return null;
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select('*')
+      .eq('invite_code', code)
+      .maybeSingle();
+    if (error) {
+      console.warn(`[SupabaseTimeboardInvitationRepository] findByCode warning: ${error.message}`);
+      return null;
+    }
+    return rowToEntity(data);
   }
 
   async findPendingByTimeboardAndEmail(timeboardId, email) {

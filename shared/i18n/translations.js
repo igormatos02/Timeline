@@ -908,6 +908,33 @@ export const translations = {
       acceptFailed: "Could not accept the invitation."
     },
 
+    // Mobile app (individual members)
+    mobile: {
+      tagline: "Your installments, always at hand",
+      title: "My installments",
+      refresh: "Refresh",
+      logout: "Sign out",
+      timeboardLabel: "Timeboard",
+      debtBalance: "Debt balance",
+      upToDate: "You are up to date",
+      overdueCount: "{{count}} overdue installment(s)",
+      yearLabel: "Year",
+      monthLabel: "Month",
+      allYears: "All years",
+      allMonths: "All",
+      paid: "Paid",
+      pending: "Pending",
+      dueOn: "Due {{date}}",
+      noInstallments: "No installments in this period.",
+      noLinkedTimeboards: "Your account is not linked to any timeboard yet. Use the invitation code you received.",
+      acceptInvite: "Accept invitation",
+      status: {
+        paid: "Paid",
+        pending: "Pending",
+        overdue: "Overdue"
+      }
+    },
+
     // Timeboards Hub
     timeboardsHub: {
       greetingTitle: "Hello, {name} 👋",
@@ -3003,6 +3030,33 @@ export const translations = {
     invite: {
       acceptedToast: "Convite aceite com sucesso! Bem-vindo ao Timeboard.",
       acceptFailed: "Não foi possível aceitar o convite."
+    },
+
+    // Aplicação móvel (membros individuais)
+    mobile: {
+      tagline: "As suas prestações, sempre à mão",
+      title: "As minhas prestações",
+      refresh: "Atualizar",
+      logout: "Terminar sessão",
+      timeboardLabel: "Timeboard",
+      debtBalance: "Saldo devedor",
+      upToDate: "Está em dia",
+      overdueCount: "{{count}} prestação(ões) em atraso",
+      yearLabel: "Ano",
+      monthLabel: "Mês",
+      allYears: "Todos os anos",
+      allMonths: "Todos",
+      paid: "Pagas",
+      pending: "Pendentes",
+      dueOn: "Vence a {{date}}",
+      noInstallments: "Sem prestações neste período.",
+      noLinkedTimeboards: "A sua conta ainda não está ligada a nenhum timeboard. Use o código de convite que recebeu.",
+      acceptInvite: "Aceitar convite",
+      status: {
+        paid: "Pago",
+        pending: "Pendente",
+        overdue: "Em atraso"
+      }
     },
 
     // Timeboards Hub

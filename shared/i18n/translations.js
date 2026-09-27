@@ -1038,13 +1038,15 @@ export const translations = {
         filtersLabel: "Filters",
         periodLabel: "Period",
         groupByLabel: "Group by",
+        timelinesLabel: "Timelines",
+        noTimelines: "No income or account timelines.",
         print: "Print",
         types: {
           debtors: "Debtors Report",
           closings: "Closings"
         },
         typesDesc: {
-          debtors: "Overdue obligations not yet settled, by timeline, debtor or date",
+          debtors: "Overdue income and account deposits not yet settled, by timeline, debtor or date",
           closings: "Income, savings, expenses, balance and pending amounts of a month, a year or up to a date"
         },
         groupBy: {
@@ -3100,13 +3102,15 @@ export const translations = {
         filtersLabel: "Filtros",
         periodLabel: "Período",
         groupByLabel: "Agrupar por",
+        timelinesLabel: "Timelines",
+        noTimelines: "Sem timelines de entradas ou de conta.",
         print: "Imprimir",
         types: {
           debtors: "Relatório de Devedores",
           closings: "Fechamentos"
         },
         typesDesc: {
-          debtors: "Obrigações em atraso ainda não liquidadas, por timeline, devedor ou data",
+          debtors: "Entradas e depósitos na conta em atraso ainda não liquidados, por timeline, devedor ou data",
           closings: "Entradas, poupança, saídas, balanço e valores pendentes de um mês, de um ano ou até uma data"
         },
         groupBy: {

@@ -250,6 +250,7 @@ function Last6MonthsTimeSeriesChart({ series = [], t }) {
 }
 
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
+import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
 
 export default function BalanceTimelineHeader({
   timeline,
@@ -283,7 +284,7 @@ export default function BalanceTimelineHeader({
   const { t, language } = useTranslation();
   const dateLocale = language === 'en' ? enUS : pt;
   const currentMonthStr = format(new Date(), 'yyyy-MM');
-  const [collapsed, setIsCollapsed] = useState(true);
+  const [collapsed, setIsCollapsed] = useHeaderCollapsed();
   const [projectionMonthsAhead, setProjectionMonthsAhead] = useState(0);
 
   const incomeTimeline = React.useMemo(() => (allTimelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.INCOME), [allTimelines]);

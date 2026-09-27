@@ -36,13 +36,18 @@ import {
   Strikethrough,
   RotateCcw,
   Home,
-  DollarSign
+  DollarSign,
+  PanelTop,
+  ChevronsDownUp,
+  ChevronsUpDown
 } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { PersonRole, PersonType, TimeboardType, InvitationStatus, TimelineColor } from '../enums/index.js';
+import { PersonRole, PersonType, TimeboardType, InvitationStatus, HeaderDefaultState, TimelineColor } from '../enums/index.js';
 import * as api from '../services/api.js';
 import MonthPickerPopover from './ui/MonthPickerPopover.jsx';
 import CopyIdButton from './ui/CopyIdButton.jsx';
+import OptionBoxGroup from './ui/OptionBoxGroup.jsx';
+import TimeboardReportsTab from './reports/TimeboardReportsTab.jsx';
 
 const TIMEBOARD_TYPE_TEMPLATES = {
   [TimeboardType.CONDOFLOW]: {
@@ -71,7 +76,9 @@ export default function TimeboardSettingsModal({
   timeboard,
   onSaveTimeboard,
   onDeleteTimeboard,
-  onEntitySaved
+  onEntitySaved,
+  timelines = [],
+  events = []
 }) {
   const { t, dateLocale } = useTranslation();
   const currentMonthKey = new Date().toISOString().substring(0, 7);
@@ -176,6 +183,7 @@ export default function TimeboardSettingsModal({
 
   // Settings tab form state (Compute From)
   const [computeMode, setComputeMode] = useState('all'); // 'all' | 'current' | 'custom'
+  const [headerDefaultState, setHeaderDefaultState] = useState(HeaderDefaultState.COLLAPSED);
   const [customComputeMonth, setCustomComputeMonth] = useState(currentMonthKey);
   const [isCustomMonthPickerOpen, setIsCustomMonthPickerOpen] = useState(false);
   const [customMonthPickerYear, setCustomMonthPickerYear] = useState(() => new Date().getFullYear());
@@ -221,6 +229,8 @@ export default function TimeboardSettingsModal({
         type: timeboard.type || TimeboardType.FINANCIAL,
         print_template: printTemplateMd
       });
+
+      setHeaderDefaultState(timeboard.headerDefaultState === HeaderDefaultState.EXPANDED ? HeaderDefaultState.EXPANDED : HeaderDefaultState.COLLAPSED);
 
       const rawCompute = timeboard.computeFrom || timeboard.compute_from;
       if (!rawCompute || rawCompute === '1900-01-01' || rawCompute === '1900-01') {
@@ -340,14 +350,15 @@ export default function TimeboardSettingsModal({
       await onSaveTimeboard({
         ...timeboard,
         computeFrom: finalComputeFrom,
-        compute_from: finalComputeFrom
+        compute_from: finalComputeFrom,
+        headerDefaultState
       });
       setSettingsSaveSuccess(true);
       showToast(t('timeboardSettings.settingsTab.computeFromSavedToast'));
       setTimeout(() => setSettingsSaveSuccess(false), 2500);
     } catch (err) {
       console.error('Failed to save timeboard settings:', err);
-      showToast(err.message || 'Error saving settings');
+      showToast(err.message || t('timeboardSettings.settingsTab.saveFailedToast'));
     } finally {
       setIsSavingSettings(false);
     }
@@ -361,6 +372,23 @@ export default function TimeboardSettingsModal({
     }
   };
 
+  // Entity form: type / role choices shown as the same compact boxes used by the event modals
+  const entityTypeOptions = [
+    { id: PersonType.PERSON, label: t('timeboardSettings.entities.types.person'), icon: User, color: TimelineColor.SUCCESS },
+    { id: PersonType.ORGANIZATION, label: t('timeboardSettings.entities.types.organization'), icon: Building2, color: TimelineColor.BLUE },
+    { id: PersonType.MEMBER, label: t('timeboardSettings.entities.types.member'), icon: UserCheck, color: TimelineColor.VIOLET }
+  ];
+  const entityRoleOptions = [
+    { id: PersonRole.ADMIN, label: t('timeboardSettings.entities.roles.admin'), icon: Crown, color: TimelineColor.WARNING, tooltip: t('timeboardSettings.entities.rolesDesc.admin') },
+    { id: PersonRole.CONTRIBUTOR, label: t('timeboardSettings.entities.roles.contributor'), icon: Users, color: TimelineColor.PRIMARY, tooltip: t('timeboardSettings.entities.rolesDesc.contributor') },
+    { id: PersonRole.INDIVIDUAL, label: t('timeboardSettings.entities.roles.individual'), icon: UserCheck, color: TimelineColor.CYAN, tooltip: t('timeboardSettings.entities.rolesDesc.individual') }
+  ];
+  const entityTypeColor = (entityTypeOptions.find((option) => option.id === entityForm.type) || entityTypeOptions[0]).color;
+  const entityFieldStyle = { marginBottom: 0 };
+  const entityLabelStyle = { fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-main)' };
+  // Solid input background: the modal card is translucent over the dark overlay
+  const entityInputStyle = { background: 'var(--bg-card-hover)' };
+
   // Handler: Open Entity Form (Create or Edit)
   const handleOpenEntityForm = (entity = null) => {
     if (entity) {
@@ -368,7 +396,8 @@ export default function TimeboardSettingsModal({
       setEntityForm({
         type: entity.type || PersonType.PERSON,
         personName: entity.personName || entity.person_name || entity.name || '',
-        obligatorIdentification: entity.obligatorIdentification || entity.obligator_identification || entity.taxId || entity.tax_id || '',
+        obligatorIdentification: entity.obligatorIdentification || entity.obligator_identification || '',
+        taxId: entity.taxId || entity.tax_id || '',
         email: entity.email || '',
         phone: entity.phone || '',
         birthDate: entity.birthDate || entity.birth_date || '',
@@ -381,6 +410,7 @@ export default function TimeboardSettingsModal({
         type: selectedTypeFilter !== 'all' ? selectedTypeFilter : PersonType.PERSON,
         personName: '',
         obligatorIdentification: '',
+        taxId: '',
         email: '',
         phone: '',
         birthDate: '',
@@ -396,6 +426,7 @@ export default function TimeboardSettingsModal({
     e.preventDefault();
     const effectivePersonName = entityForm.personName.trim();
     const effectiveObligatorId = entityForm.obligatorIdentification.trim();
+    const effectiveTaxId = (entityForm.taxId || '').trim();
 
     if (!effectivePersonName) {
       alert(t('timeboardSettings.entities.form.personNameRequired'));
@@ -409,7 +440,7 @@ export default function TimeboardSettingsModal({
       personName: effectivePersonName,
       name: effectivePersonName,
       obligatorIdentification: effectiveObligatorId || null,
-      taxId: effectiveObligatorId || null,
+      taxId: effectiveTaxId || null,
       email: entityForm.email.trim() || null,
       phone: entityForm.phone.trim() || null,
       birthDate: entityForm.birthDate || null,
@@ -423,20 +454,20 @@ export default function TimeboardSettingsModal({
         const updated = await api.updatePerson(editingEntity.id, payload);
         const resolvedUpdated = { ...editingEntity, ...payload, ...updated };
         setPersons((prev) => prev.map((p) => (p.id === editingEntity.id ? resolvedUpdated : p)));
-        showToast(`Entidade "${effectivePersonName}" atualizada com sucesso.`);
+        showToast(t('timeboardSettings.entities.entityUpdatedToast', { name: effectivePersonName }));
         if (onEntitySaved) onEntitySaved(resolvedUpdated);
       } else {
         const created = await api.createPerson(payload);
         const resolvedCreated = { ...payload, ...created };
         setPersons((prev) => [...prev, resolvedCreated]);
-        showToast(`Entidade "${effectivePersonName}" adicionada com sucesso.`);
+        showToast(t('timeboardSettings.entities.entityAddedToast', { name: effectivePersonName }));
         if (onEntitySaved) onEntitySaved(resolvedCreated);
       }
       setIsEntityModalOpen(false);
       setEditingEntity(null);
     } catch (err) {
       console.error('Failed to save entity:', err);
-      showToast(err.message || 'Falha ao guardar entidade.', 'error');
+      showToast(err.message || t('timeboardSettings.entities.entitySaveFailedToast'), 'error');
     } finally {
       setIsSavingEntity(false);
     }
@@ -1569,6 +1600,13 @@ export default function TimeboardSettingsModal({
                     {t('timeboardSettings.reports.subtitle')}
                   </p>
                 </div>
+                <TimeboardReportsTab
+                  timeboard={timeboard}
+                  timelines={timelines}
+                  events={events}
+                  persons={persons}
+                  currentUser={currentUser}
+                />
               </div>
             )}
 
@@ -1771,6 +1809,54 @@ export default function TimeboardSettingsModal({
                   )}
                 </div>
 
+                {/* Card de Configuração: headers colapsados / expandidos por defeito */}
+                <div
+                  style={{
+                    background: 'var(--bg-app)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        background: 'var(--primary-glow)',
+                        border: '1px solid var(--border-glass-glow)',
+                        color: TimelineColor.PRIMARY,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <PanelTop size={18} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                        {t('timeboardSettings.settingsTab.headerDefaultStateTitle')}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px', lineHeight: 1.4 }}>
+                        {t('timeboardSettings.settingsTab.headerDefaultStateDesc')}
+                      </div>
+                    </div>
+                  </div>
+                  <OptionBoxGroup
+                    options={[
+                      { id: HeaderDefaultState.COLLAPSED, label: t('timeboardSettings.settingsTab.headerCollapsed'), icon: ChevronsDownUp, color: TimelineColor.PRIMARY },
+                      { id: HeaderDefaultState.EXPANDED, label: t('timeboardSettings.settingsTab.headerExpanded'), icon: ChevronsUpDown, color: TimelineColor.PRIMARY }
+                    ]}
+                    value={headerDefaultState}
+                    onChange={setHeaderDefaultState}
+                    marginBottom="0"
+                  />
+                </div>
+
                 {/* Botão Salvar */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '10px' }}>
                   <button
@@ -1867,8 +1953,6 @@ export default function TimeboardSettingsModal({
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(8px)',
             zIndex: 1300,
             display: 'flex',
             alignItems: 'center',
@@ -1880,24 +1964,25 @@ export default function TimeboardSettingsModal({
             className="modal-container"
             style={{
               width: '100%',
-              maxWidth: '540px',
-              background: 'var(--bg-card, #1e293b)',
-              border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
+              maxWidth: '700px',
+              maxHeight: 'calc(100vh - 40px)',
+              overflowY: 'auto',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-glass)',
               borderRadius: '16px',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.65), 0 0 30px rgba(99, 102, 241, 0.2)',
-              overflow: 'hidden',
+              boxShadow: 'var(--shadow-glow)',
               animation: 'scaleUp 0.2s ease-out'
             }}
           >
             {/* Sub-Modal Header */}
             <div
               style={{
-                padding: '18px 24px',
-                borderBottom: '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
+                padding: '16px 24px',
+                borderBottom: '1px solid var(--border-glass)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%)'
+                background: 'var(--bg-app)'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1906,23 +1991,9 @@ export default function TimeboardSettingsModal({
                     width: '36px',
                     height: '36px',
                     borderRadius: '10px',
-                    background: entityForm.type === PersonType.ORGANIZATION
-                      ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.3) 100%)'
-                      : entityForm.type === PersonType.MEMBER
-                      ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.3) 100%)'
-                      : 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.3) 100%)',
-                    color: entityForm.type === PersonType.ORGANIZATION
-                      ? '#60a5fa'
-                      : entityForm.type === PersonType.MEMBER
-                      ? '#a78bfa'
-                      : '#34d399',
-                    border: `1px solid ${
-                      entityForm.type === PersonType.ORGANIZATION
-                        ? 'rgba(59, 130, 246, 0.3)'
-                        : entityForm.type === PersonType.MEMBER
-                        ? 'rgba(139, 92, 246, 0.3)'
-                        : 'rgba(16, 185, 129, 0.3)'
-                    }`,
+                    background: `${entityTypeColor}26`,
+                    color: entityTypeColor,
+                    border: `1px solid ${entityTypeColor}4d`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center'
@@ -1937,10 +2008,10 @@ export default function TimeboardSettingsModal({
                   )}
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main, #fff)' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>
                     {editingEntity
-                      ? (t('timeboardSettings.entities.editPersonTitle') || 'Editar Pessoa / Empresa / Membro')
-                      : (t('timeboardSettings.entities.addPersonTitle') || 'Adicionar Pessoa / Empresa / Membro')}
+                      ? t('timeboardSettings.entities.editPersonTitle')
+                      : t('timeboardSettings.entities.addPersonTitle')}
                   </h3>
                   <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
                     {timeboard.name}
@@ -1951,8 +2022,8 @@ export default function TimeboardSettingsModal({
                 type="button"
                 onClick={() => setIsEntityModalOpen(false)}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
+                  background: 'var(--bg-glass)',
+                  border: '1px solid var(--border-glass)',
                   color: 'var(--text-muted)',
                   width: '32px',
                   height: '32px',
@@ -1968,325 +2039,131 @@ export default function TimeboardSettingsModal({
             </div>
 
             {/* Sub-Modal Form */}
-            <form onSubmit={handleSaveEntity} style={{ padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <form onSubmit={handleSaveEntity} style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {/* Type Switcher (Person vs Organization vs Member) */}
-              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-muted, #94a3b8)' }}>
-                  {t('timeboardSettings.entities.form.typeLabel') || 'Tipo de Entidade *'}
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                  {/* Person */}
-                  <button
-                    type="button"
-                    onClick={() => setEntityForm({ ...entityForm, type: PersonType.PERSON })}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                      padding: '10px 6px',
-                      borderRadius: '10px',
-                      fontSize: '0.82rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      border: entityForm.type === PersonType.PERSON ? '1.5px solid #10b981' : '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
-                      background: entityForm.type === PersonType.PERSON ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                      color: entityForm.type === PersonType.PERSON ? '#34d399' : 'var(--text-muted)',
-                      boxShadow: entityForm.type === PersonType.PERSON ? '0 0 16px rgba(16, 185, 129, 0.2)' : 'none',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <User size={16} />
-                    <span>{t('timeboardSettings.entities.types.person') || 'Pessoa'}</span>
-                  </button>
-
-                  {/* Organization */}
-                  <button
-                    type="button"
-                    onClick={() => setEntityForm({ ...entityForm, type: PersonType.ORGANIZATION })}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                      padding: '10px 6px',
-                      borderRadius: '10px',
-                      fontSize: '0.82rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      border: entityForm.type === PersonType.ORGANIZATION ? '1.5px solid #3b82f6' : '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
-                      background: entityForm.type === PersonType.ORGANIZATION ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                      color: entityForm.type === PersonType.ORGANIZATION ? '#60a5fa' : 'var(--text-muted)',
-                      boxShadow: entityForm.type === PersonType.ORGANIZATION ? '0 0 16px rgba(59, 130, 246, 0.2)' : 'none',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <Building2 size={16} />
-                    <span>{t('timeboardSettings.entities.types.organization') || 'Empresa'}</span>
-                  </button>
-
-                  {/* Member */}
-                  <button
-                    type="button"
-                    onClick={() => setEntityForm({ ...entityForm, type: PersonType.MEMBER })}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                      padding: '10px 6px',
-                      borderRadius: '10px',
-                      fontSize: '0.82rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      border: entityForm.type === PersonType.MEMBER ? '1.5px solid #8b5cf6' : '1px solid var(--border-glass, rgba(255, 255, 255, 0.1))',
-                      background: entityForm.type === PersonType.MEMBER ? 'rgba(139, 92, 246, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                      color: entityForm.type === PersonType.MEMBER ? '#a78bfa' : 'var(--text-muted)',
-                      boxShadow: entityForm.type === PersonType.MEMBER ? '0 0 16px rgba(139, 92, 246, 0.2)' : 'none',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <UserCheck size={16} />
-                    <span>{t('timeboardSettings.entities.types.member') || 'Membro'}</span>
-                  </button>
-                </div>
-              </div>
+              <OptionBoxGroup
+                label={t('timeboardSettings.entities.form.typeLabel')}
+                options={entityTypeOptions}
+                value={entityForm.type}
+                onChange={(type) => setEntityForm({ ...entityForm, type })}
+                marginBottom="0"
+              />
 
               {/* Person Name */}
-              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
-                  {t('timeboardSettings.entities.form.personNameLabel') || 'Nome da Pessoa / Razão Social *'}
+              <div className="form-group" style={entityFieldStyle}>
+                <label style={entityLabelStyle}>
+                  {t('timeboardSettings.entities.form.personNameLabel')}
                 </label>
                 <input
                   type="text"
                   required
+                  className="form-input"
+                  style={entityInputStyle}
                   value={entityForm.personName}
                   onChange={(e) => setEntityForm({ ...entityForm, personName: e.target.value })}
-                  placeholder={t('timeboardSettings.entities.form.personNamePlaceholder') || 'Ex: Maria Silva ou Empresa XYZ Lda'}
-                  style={{
-                    background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
-                    border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
-                    borderRadius: '10px',
-                    padding: '11px 14px',
-                    color: 'var(--text-main, #fff)',
-                    fontSize: '0.92rem'
-                  }}
+                  placeholder={t('timeboardSettings.entities.form.personNamePlaceholder')}
                 />
               </div>
 
-              {/* Obligator Identification */}
-              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
-                  {t('timeboardSettings.entities.form.obligatorIdentificationLabel') || 'Identificação do Obrigado'}
-                </label>
-                <input
-                  type="text"
-                  value={entityForm.obligatorIdentification}
-                  onChange={(e) => setEntityForm({ ...entityForm, obligatorIdentification: e.target.value })}
-                  placeholder={t('timeboardSettings.entities.form.obligatorIdentificationPlaceholder') || 'Ex: NIF, CPF, BI ou Nº de Documento'}
-                  style={{
-                    background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
-                    border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
-                    borderRadius: '10px',
-                    padding: '11px 14px',
-                    color: 'var(--text-main, #fff)',
-                    fontSize: '0.88rem'
-                  }}
-                />
+              {/* Obligator Identification & Tax ID (NIF), both optional */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group" style={entityFieldStyle}>
+                  <label style={entityLabelStyle}>
+                    {t('timeboardSettings.entities.form.obligatorIdentificationLabel')}
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    style={entityInputStyle}
+                    value={entityForm.obligatorIdentification}
+                    onChange={(e) => setEntityForm({ ...entityForm, obligatorIdentification: e.target.value })}
+                    placeholder={t('timeboardSettings.entities.form.obligatorIdentificationPlaceholder')}
+                  />
+                </div>
+                <div className="form-group" style={entityFieldStyle}>
+                  <label style={entityLabelStyle}>
+                    {t('timeboardSettings.entities.form.taxIdLabel')}
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    style={entityInputStyle}
+                    value={entityForm.taxId || ''}
+                    onChange={(e) => setEntityForm({ ...entityForm, taxId: e.target.value })}
+                    placeholder={t('timeboardSettings.entities.form.taxIdPlaceholder')}
+                  />
+                </div>
               </div>
 
               {/* Birth Date & Phone Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
-                    {t('timeboardSettings.entities.form.birthDateLabel') || 'Data de Nascimento'}
+                <div className="form-group" style={entityFieldStyle}>
+                  <label style={entityLabelStyle}>
+                    {t('timeboardSettings.entities.form.birthDateLabel')}
                   </label>
                   <input
                     type="date"
+                    className="form-input"
+                    style={entityInputStyle}
                     value={entityForm.birthDate}
                     onChange={(e) => setEntityForm({ ...entityForm, birthDate: e.target.value })}
-                    style={{
-                      background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
-                      border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
-                      borderRadius: '10px',
-                      padding: '11px 14px',
-                      color: 'var(--text-main, #fff)',
-                      fontSize: '0.88rem'
-                    }}
                   />
                 </div>
 
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
-                    {t('timeboardSettings.entities.form.phoneLabel') || 'Telefone (Opcional)'}
+                <div className="form-group" style={entityFieldStyle}>
+                  <label style={entityLabelStyle}>
+                    {t('timeboardSettings.entities.form.phoneLabel')}
                   </label>
                   <input
                     type="tel"
+                    className="form-input"
+                    style={entityInputStyle}
                     value={entityForm.phone}
                     onChange={(e) => setEntityForm({ ...entityForm, phone: e.target.value })}
-                    placeholder={t('timeboardSettings.entities.form.phonePlaceholder') || 'Ex: +351 912 345 678'}
-                    style={{
-                      background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
-                      border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
-                      borderRadius: '10px',
-                      padding: '11px 14px',
-                      color: 'var(--text-main, #fff)',
-                      fontSize: '0.88rem'
-                    }}
+                    placeholder={t('timeboardSettings.entities.form.phonePlaceholder')}
                   />
                 </div>
               </div>
 
               {/* Email Address */}
-              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
-                  {t('timeboardSettings.entities.form.emailLabel') || 'Endereço de Email'}
+              <div className="form-group" style={entityFieldStyle}>
+                <label style={entityLabelStyle}>
+                  {t('timeboardSettings.entities.form.emailLabel')}
                 </label>
                 <input
                   type="email"
+                  className="form-input"
+                  style={entityInputStyle}
                   value={entityForm.email}
                   onChange={(e) => setEntityForm({ ...entityForm, email: e.target.value })}
-                  placeholder={t('timeboardSettings.entities.form.emailPlaceholder') || 'Ex: utilizador@exemplo.com'}
-                  style={{
-                    background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
-                    border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
-                    borderRadius: '10px',
-                    padding: '11px 14px',
-                    color: 'var(--text-main, #fff)',
-                    fontSize: '0.88rem'
-                  }}
+                  placeholder={t('timeboardSettings.entities.form.emailPlaceholder')}
                 />
               </div>
 
               {/* Observation / Notes */}
-              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #e2e8f0)' }}>
-                  {t('timeboardSettings.entities.form.observationLabel') || 'Observações'}
+              <div className="form-group" style={entityFieldStyle}>
+                <label style={entityLabelStyle}>
+                  {t('timeboardSettings.entities.form.observationLabel')}
                 </label>
                 <textarea
                   rows={2}
+                  className="form-input"
                   value={entityForm.observation}
                   onChange={(e) => setEntityForm({ ...entityForm, observation: e.target.value })}
-                  placeholder={t('timeboardSettings.entities.form.observationPlaceholder') || 'Adicione notas ou observações relevantes...'}
-                  style={{
-                    background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
-                    border: '1px solid var(--border-glass, rgba(255, 255, 255, 0.15))',
-                    borderRadius: '10px',
-                    padding: '11px 14px',
-                    color: 'var(--text-main, #fff)',
-                    fontSize: '0.88rem',
-                    resize: 'vertical'
-                  }}
+                  placeholder={t('timeboardSettings.entities.form.observationPlaceholder')}
+                  style={{ ...entityInputStyle, resize: 'vertical' }}
                 />
               </div>
 
-              {/* Role Selector (Premium Custom Cards Selector) - Only for Members */}
+              {/* Role Selector - Only for Members (role description as tooltip) */}
               {entityForm.type === PersonType.MEMBER && (
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                    {t('timeboardSettings.entities.form.roleLabel')}
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
-                    {/* Admin Option */}
-                    <div
-                      onClick={() => setEntityForm({ ...entityForm, role: PersonRole.ADMIN })}
-                      style={{
-                        padding: '12px',
-                        borderRadius: '10px',
-                        border: entityForm.role === PersonRole.ADMIN ? `1.5px solid ${TimelineColor.WARNING}` : '1px solid var(--border-glass)',
-                        background: entityForm.role === PersonRole.ADMIN ? 'rgba(245, 158, 11, 0.12)' : 'rgba(255, 255, 255, 0.03)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '4px',
-                        transition: 'all 0.2s ease',
-                        boxShadow: entityForm.role === PersonRole.ADMIN ? '0 0 16px rgba(245, 158, 11, 0.2)' : 'none'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: TimelineColor.WARNING, fontWeight: '700', fontSize: '0.86rem' }}>
-                          <Crown size={15} />
-                          <span>{t('timeboardSettings.entities.roles.admin')}</span>
-                        </div>
-                        {entityForm.role === PersonRole.ADMIN && (
-                          <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: TimelineColor.WARNING, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg-app)' }}>
-                            <Check size={11} strokeWidth={3} />
-                          </div>
-                        )}
-                      </div>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        {t('timeboardSettings.entities.rolesDesc.admin')}
-                      </span>
-                    </div>
-
-                    {/* Contributor Option */}
-                    <div
-                      onClick={() => setEntityForm({ ...entityForm, role: PersonRole.CONTRIBUTOR })}
-                      style={{
-                        padding: '12px',
-                        borderRadius: '10px',
-                        border: entityForm.role === PersonRole.CONTRIBUTOR ? `1.5px solid ${TimelineColor.PRIMARY}` : '1px solid var(--border-glass)',
-                        background: entityForm.role === PersonRole.CONTRIBUTOR ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.03)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '4px',
-                        transition: 'all 0.2s ease',
-                        boxShadow: entityForm.role === PersonRole.CONTRIBUTOR ? '0 0 16px rgba(99, 102, 241, 0.2)' : 'none'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: TimelineColor.PRIMARY_LIGHT, fontWeight: '700', fontSize: '0.86rem' }}>
-                          <Users size={15} />
-                          <span>{t('timeboardSettings.entities.roles.contributor')}</span>
-                        </div>
-                        {entityForm.role === PersonRole.CONTRIBUTOR && (
-                          <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: TimelineColor.PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-main)' }}>
-                            <Check size={11} strokeWidth={3} />
-                          </div>
-                        )}
-                      </div>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        {t('timeboardSettings.entities.rolesDesc.contributor')}
-                      </span>
-                    </div>
-
-                    {/* Individual Option */}
-                    <div
-                      onClick={() => setEntityForm({ ...entityForm, role: PersonRole.INDIVIDUAL })}
-                      style={{
-                        padding: '12px',
-                        borderRadius: '10px',
-                        border: entityForm.role === PersonRole.INDIVIDUAL ? `1.5px solid ${TimelineColor.CYAN}` : '1px solid var(--border-glass)',
-                        background: entityForm.role === PersonRole.INDIVIDUAL ? 'rgba(6, 182, 212, 0.12)' : 'rgba(255, 255, 255, 0.03)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '4px',
-                        transition: 'all 0.2s ease',
-                        boxShadow: entityForm.role === PersonRole.INDIVIDUAL ? '0 0 16px rgba(6, 182, 212, 0.2)' : 'none'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: TimelineColor.CYAN, fontWeight: '700', fontSize: '0.86rem' }}>
-                          <UserCheck size={15} />
-                          <span>{t('timeboardSettings.entities.roles.individual')}</span>
-                        </div>
-                        {entityForm.role === PersonRole.INDIVIDUAL && (
-                          <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: TimelineColor.CYAN, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg-app)' }}>
-                            <Check size={11} strokeWidth={3} />
-                          </div>
-                        )}
-                      </div>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        {t('timeboardSettings.entities.rolesDesc.individual')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <OptionBoxGroup
+                  label={t('timeboardSettings.entities.form.roleLabel')}
+                  options={entityRoleOptions}
+                  value={entityForm.role}
+                  onChange={(role) => setEntityForm({ ...entityForm, role })}
+                  marginBottom="0"
+                />
               )}
 
               {/* Linked Account Status & Unlink Action (Inside Form) */}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
   Settings,
   CheckCircle2,
@@ -12,6 +12,7 @@ import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
+import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
 
 export default function TodoTimelineHeader({
   timeline,
@@ -26,7 +27,7 @@ export default function TodoTimelineHeader({
   onAddEvent: _onAddEvent
 }) {
   const { t } = useTranslation();
-  const [collapsed, setIsCollapsed] = useState(true);
+  const [collapsed, setIsCollapsed] = useHeaderCollapsed();
 
   const paletteTheme = useMemo(() => {
     return getPaletteTheme(timeline?.color, TimelineColor.TODO);

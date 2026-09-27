@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient.js';
 import { Timeboard } from '../../../domain/entities/Timeboard.js';
 import { IRepository } from '../../../domain/repositories/IRepository.js';
+import { HeaderDefaultState } from '../../../../shared/enums/index.js';
 
 const TABLE = 'timeboards';
 
@@ -20,6 +21,7 @@ function rowToEntity(row) {
     computeFrom: row.compute_from || row.computeFrom || null,
     printTemplate: row.print_template || row.printTemplate || null,
     print_template: row.print_template || row.printTemplate || null,
+    headerDefaultState: row.header_default_state || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   });
@@ -52,6 +54,8 @@ function entityToRow(data, isCreate = false) {
   if (data.printTemplate !== undefined || data.print_template !== undefined) {
     row.print_template = data.print_template ?? data.printTemplate;
   }
+
+  if (Object.values(HeaderDefaultState).includes(data.headerDefaultState)) row.header_default_state = data.headerDefaultState;
 
   const rawComputeFrom = data.computeFrom !== undefined ? data.computeFrom : data.compute_from;
   if (rawComputeFrom !== undefined) {

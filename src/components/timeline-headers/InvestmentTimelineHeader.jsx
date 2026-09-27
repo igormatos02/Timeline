@@ -19,6 +19,7 @@ import { computeMonthDiff } from '../../utils/timelineCharts.js';
 import { pocketHasTarget, isPocketMovementRealized } from '../../utils/pocketUtils.js';
 
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
+import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
 
 export default function InvestmentTimelineHeader({
   timeline,
@@ -43,7 +44,7 @@ export default function InvestmentTimelineHeader({
   onToggleIndividualView
 }) {
   const { t, dateLocale } = useTranslation();
-  const [collapsed, setIsCollapsed] = useState(true);
+  const [collapsed, setIsCollapsed] = useHeaderCollapsed();
   const [chartMode, setChartMode] = useState('realized');
 
   const paletteTheme = useMemo(() => {

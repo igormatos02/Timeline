@@ -32,7 +32,8 @@ import {
   isPositiveStatus,
   isNegativeStatus,
   isCancelledStatus,
-  normalizeRecurrence
+  normalizeRecurrence,
+  FINANCIAL_ADVANCE_PAYMENT_TYPES
 } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
@@ -526,6 +527,8 @@ export class FinancialEventService {
     const todayStr = new Date().toISOString().substring(0, 10);
     const isFuture = data.date > todayStr;
     if (!isFuture) return data;
+    // Income, expense and investment events can be paid / received in advance
+    if (FINANCIAL_ADVANCE_PAYMENT_TYPES.includes(data.eventType) || Boolean(data.isWithdrawal)) return data;
 
     if (isPositiveStatus(data.status) || data.status === FollowupStatus.FINISHED || Boolean(data.isCompleted)) {
       let pendingStatus = EventStatus.PENDING;

@@ -741,3 +741,108 @@ ${DOCUMENT_TABLE_STYLES}
     </html>
   `;
 }
+
+// Escapes user-provided text (names, titles) before it is inserted into the printable HTML
+const escapeHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;');
+
+/**
+ * Builds the printable debtors report: title, condominium name, print template, period (from - to)
+ * and a table (timeline, date, debtor, event, amount) split into groups with subtotals and a grand total.
+ * `groups`: [{ label, subtotal, rows: [{ timelineName, date, debtorName, eventName, amount }] }]
+ */
+export function buildDebtorsReportHtml({
+  timeboard,
+  currentUser,
+  fromDate,
+  toDate,
+  groups = [],
+  total = 0,
+  language = 'pt',
+  t
+}) {
+  const isPt = language === 'pt';
+  const dateLocale = isPt ? pt : enUS;
+  const longDateFormat = isPt ? "dd 'de' MMMM 'de' yyyy" : "MMMM dd, yyyy";
+
+  const { timeboardName, timeboardDesc } = resolveIssuer({ timeboard, currentUser, t });
+  const titleLabel = t('timeboardSettings.reports.debtors.title');
+
+  const groupsHtml = groups.length > 0
+    ? groups.map((group) => `
+          <tr class="group-row"><td colspan="5">${escapeHtml(group.label)}</td></tr>
+          ${group.rows.map((r) => `
+          <tr>
+            <td>${escapeHtml(r.timelineName) || '—'}</td>
+            <td>${format(parseISO(r.date), 'dd/MM/yyyy')}</td>
+            <td>${escapeHtml(r.debtorName) || '—'}</td>
+            <td>${escapeHtml(r.eventName) || '—'}</td>
+            <td class="num">${formatCurrency(r.amount)}</td>
+          </tr>`).join('')}
+          <tr class="subtotal-row">
+            <td colspan="4">${t('timeboardSettings.reports.debtors.subtotal')}</td>
+            <td class="num">${formatCurrency(group.subtotal)}</td>
+          </tr>`).join('')
+    : `
+          <tr><td colspan="5" class="empty">${t('timeboardSettings.reports.debtors.empty')}</td></tr>`;
+
+  return `
+    <!DOCTYPE html>
+    <html lang="${language}">
+    <head>
+      <meta charset="utf-8" />
+      <title>${titleLabel} - ${timeboardName}</title>
+      <style>
+${RECEIPT_STYLES}
+${DOCUMENT_TABLE_STYLES}
+        .history { line-height: 1.5; font-size: 13px; }
+        .history .doc-title { font-size: 16px; font-weight: 800; text-align: center; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+        .history .condo-name { font-size: 14px; font-weight: 700; text-align: center; margin-bottom: 4px; }
+        .history .print-layout { text-align: center; margin-bottom: 16px; }
+        .history .period { margin-bottom: 12px; }
+        .charges-table .group-row td { font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; padding-top: 14px; }
+        .charges-table .subtotal-row td { font-weight: 700; font-style: italic; }
+        .charges-table .total-row td { font-weight: 800; font-size: 13px; border-top: 2px solid currentColor; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="receipt-section history">
+          <div class="doc-title">${titleLabel}</div>
+          <div class="condo-name">${timeboardName}</div>
+          ${timeboardDesc ? `<div class="print-layout">${timeboardDesc}</div>` : ''}
+
+          <div class="period">
+            <div>${t('timeboardSettings.reports.debtors.fromTo', {
+              from: `<strong>${format(parseISO(fromDate), longDateFormat, { locale: dateLocale })}</strong>`,
+              to: `<strong>${format(parseISO(toDate), longDateFormat, { locale: dateLocale })}</strong>`
+            })}</div>
+          </div>
+
+          <table class="charges-table">
+            <thead>
+              <tr>
+                <th>${t('timeboardSettings.reports.debtors.colTimeline')}</th>
+                <th>${t('timeboardSettings.reports.debtors.colDate')}</th>
+                <th>${t('timeboardSettings.reports.debtors.colDebtor')}</th>
+                <th>${t('timeboardSettings.reports.debtors.colEvent')}</th>
+                <th class="num">${t('timeboardSettings.reports.debtors.colAmount')}</th>
+              </tr>
+            </thead>
+            <tbody>${groupsHtml}
+            ${groups.length > 0 ? `
+              <tr class="total-row">
+                <td colspan="4">${t('timeboardSettings.reports.debtors.total')}</td>
+                <td class="num">${formatCurrency(total)}</td>
+              </tr>` : ''}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}

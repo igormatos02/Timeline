@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import TimelineHeader from './components/TimelineHeader';
 import { PermissionsProvider } from './context/PermissionsContext.jsx';
 import { TimeboardProvider } from './context/TimeboardContext.jsx';
+import { HeaderRefreshProvider } from './context/HeaderRefreshContext.jsx';
 import { computeBalanceTotals, computePocketsInitialTotal } from './utils/balanceMetrics.js';
 import VerticalTimeline from './components/VerticalTimeline';
 
@@ -32,7 +33,7 @@ import {
 import { formatCurrency } from './utils/formatCurrency';
 import { generateUUID } from './utils/uuid.js';
 import * as api from './services/api';
-import { EventType, EventStatus, FollowupStatus, TimelineType, TimelineStatus, TimelineColor, getDefaultTimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isCancelledStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem, PersonRole, TimeboardType, DiaryPublishStatus } from './enums/index.js';
+import { EventType, FINANCIAL_ADVANCE_PAYMENT_TYPES, EventStatus, FollowupStatus, TimelineType, TimelineStatus, TimelineColor, getDefaultTimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isCancelledStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem, PersonRole, TimeboardType, DiaryPublishStatus } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
@@ -1358,6 +1359,8 @@ export default function App() {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     const isFutureEvent = event.date > todayStr;
     if (!isFutureEvent) return event;
+    // Income, expense and investment events can be paid / received in advance
+    if (FINANCIAL_ADVANCE_PAYMENT_TYPES.includes(event.eventType) || Boolean(event.isWithdrawal)) return event;
 
     const isPositive = isPositiveStatus(event.status) || event.status === FollowupStatus.FINISHED || Boolean(event.isCompleted);
     if (isPositive) {
@@ -2331,7 +2334,8 @@ export default function App() {
   // 3. Timeline Workspace View (When a specific timeboard is active)
   return (
     <PermissionsProvider isReadOnly={isIndividualRole}>
-    <TimeboardProvider timeboardType={activeTimeboard?.type}>
+    <TimeboardProvider timeboardType={activeTimeboard?.type} headerDefaultState={activeTimeboard?.headerDefaultState}>
+    <HeaderRefreshProvider value={refreshTimelines}>
     <div className="app-container">
       {/* Navbar */}
       <Navbar
@@ -2475,6 +2479,8 @@ export default function App() {
           timeboard={timeboards.find((t) => t.id === (editingTimeboard?.id || activeTimeboardId)) || editingTimeboard || activeTimeboard}
           onSaveTimeboard={handleSaveTimeboard}
           onDeleteTimeboard={handleDeleteTimeboard}
+          timelines={activeTimeboardTimelines}
+          events={rawEvents}
           onEntitySaved={(savedEntity) => {
             if (!savedEntity || !savedEntity.id) return;
             setTimeboardPersons((prev) => {
@@ -2847,6 +2853,7 @@ export default function App() {
         </div>
       </div>
     </div>
+    </HeaderRefreshProvider>
     </TimeboardProvider>
     </PermissionsProvider>
   );

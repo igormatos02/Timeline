@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
   ListTree,
   Plus,
@@ -16,6 +16,7 @@ import HeaderShell from '../ui/HeaderShell.jsx';
 import { DonutChart, PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
 
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
+import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
 
 export default function FollowupTimelineHeader({
   timeline,
@@ -30,7 +31,7 @@ export default function FollowupTimelineHeader({
   onAddEvent
 }) {
   const { t } = useTranslation();
-  const [collapsed, setIsCollapsed] = useState(true);
+  const [collapsed, setIsCollapsed] = useHeaderCollapsed();
 
   const headerColor = timeline?.color || TimelineColor.FOLLOWUP;
   const rawEventsList = filteredEvents !== undefined ? filteredEvents : (timeline?.events || events || []);

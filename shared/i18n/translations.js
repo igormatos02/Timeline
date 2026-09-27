@@ -106,6 +106,7 @@ export const translations = {
 
     // Timeline Rows & Cards
     timeline: {
+      changeCategory: "Change category",
       incomes: "Incomes",
       acquisition: "Acquisition",
       valuation: "Valuation",
@@ -679,7 +680,7 @@ export const translations = {
       real_estate: "Real Estate",
       crypto: "Crypto & Digital Assets",
       assets: "Assets & Equity",
-      other: "Other Investments"
+      other: "Other"
     },
 
     // Names of the condominium account deposit categories
@@ -987,8 +988,8 @@ export const translations = {
           birthDatePlaceholder: "YYYY-MM-DD",
           observationLabel: "Observation",
           observationPlaceholder: "Add any relevant notes or observations...",
-          taxIdLabel: "Obligator Identification *",
-          taxIdPlaceholder: "e.g., PT123456789",
+          taxIdLabel: "Tax ID",
+          taxIdPlaceholder: "e.g., 123456789",
           roleLabel: "Role *",
           userAccountLabel: "Linked User Account ID",
           userAccountPlaceholder: "Leave blank if not registered yet (NULL)",
@@ -997,6 +998,9 @@ export const translations = {
         },
         deleteConfirm: "Are you sure you want to remove this entity from the timeboard?",
         roleUpdatedToast: "Role updated to {role}.",
+        entityUpdatedToast: "Entity \"{{name}}\" updated successfully.",
+        entityAddedToast: "Entity \"{{name}}\" added successfully.",
+        entitySaveFailedToast: "Failed to save entity.",
         inviteModal: {
           title: "Send Access Invitation",
           subtitle: "Invite this member to access Timeboard",
@@ -1008,7 +1012,35 @@ export const translations = {
       },
       reports: {
         title: "Reports",
-        subtitle: "View and generate reports for this timeboard"
+        subtitle: "View and generate reports for this timeboard",
+        listLabel: "Available reports",
+        filtersLabel: "Filters",
+        periodLabel: "Period",
+        groupByLabel: "Group by",
+        print: "Print",
+        types: {
+          debtors: "Debtors Report"
+        },
+        typesDesc: {
+          debtors: "Overdue obligations not yet settled, by timeline, debtor or date"
+        },
+        groupBy: {
+          timeline: "Timeline",
+          debtor: "Debtor",
+          date: "Date"
+        },
+        debtors: {
+          title: "Debtors Report",
+          fromTo: "From {{from}} to {{to}}",
+          colTimeline: "Timeline",
+          colDate: "Date",
+          colDebtor: "Debtor",
+          colEvent: "Event",
+          colAmount: "Amount",
+          subtotal: "Subtotal",
+          total: "Total owed",
+          empty: "No debtors in the selected period."
+        }
       },
       settingsTab: {
         title: "Advanced Configurations",
@@ -1020,6 +1052,11 @@ export const translations = {
         computeFromOptionCustom: "Custom Month",
         computeFromMonthLabel: "Select Start Month (YYYY-MM)",
         computeFromSavedToast: "Settings saved successfully.",
+        saveFailedToast: "Failed to save settings.",
+        headerDefaultStateTitle: "Timeline headers",
+        headerDefaultStateDesc: "Whether the timeline headers start collapsed or expanded when this timeboard is opened.",
+        headerCollapsed: "Collapsed",
+        headerExpanded: "Expanded",
         saveButton: "Save Settings",
         savingButton: "Saving..."
       }
@@ -1245,6 +1282,7 @@ export const translations = {
       settingsTitle: "Timeline Settings",
       deleteTitle: "Delete this timeline",
       sourcesTitle: "INCOME BY SOURCE",
+      sourcesTitleYear: "INCOME BY SOURCE ({{year}})",
       noIncome: "No income recorded",
       noIncomeHint: "Add income events to view the breakdown by source.",
       annualProjectionTitle: "ANNUAL PROJECTION",
@@ -2070,6 +2108,7 @@ export const translations = {
 
     // Timeline Rows & Cards
     timeline: {
+      changeCategory: "Alterar categoria",
       incomes: "Entradas",
       acquisition: "Aquisição",
       valuation: "Valorização",
@@ -2643,7 +2682,7 @@ export const translations = {
       real_estate: "Imobiliário & REITs",
       crypto: "Criptoativos",
       assets: "Património & Bens",
-      other: "Outros Investimentos"
+      other: "Outros"
     },
 
     // Names of the condominium account deposit categories
@@ -2909,7 +2948,7 @@ export const translations = {
           birthDatePlaceholder: "AAAA-MM-DD",
           observationLabel: "Observações",
           observationPlaceholder: "Adicione notas ou observações relevantes...",
-          taxIdLabel: "Identificação do Obrigado *",
+          taxIdLabel: "NIF",
           taxIdPlaceholder: "Ex: 123456789",
           roleLabel: "Função (Role) *",
           userAccountLabel: "ID da Conta de Utilizador (User ID)",
@@ -2919,6 +2958,9 @@ export const translations = {
         },
         deleteConfirm: "Tem a certeza que deseja remover esta entidade do timeboard?",
         roleUpdatedToast: "Função atualizada para {role}.",
+        entityUpdatedToast: "Entidade \"{{name}}\" atualizada com sucesso.",
+        entityAddedToast: "Entidade \"{{name}}\" adicionada com sucesso.",
+        entitySaveFailedToast: "Falha ao guardar entidade.",
         inviteModal: {
           title: "Enviar Convite de Acesso",
           subtitle: "Convide este membro para aceder ao Timeboard",
@@ -2930,7 +2972,35 @@ export const translations = {
       },
       reports: {
         title: "Relatórios",
-        subtitle: "Visualizar e gerar relatórios deste timeboard"
+        subtitle: "Visualizar e gerar relatórios deste timeboard",
+        listLabel: "Relatórios disponíveis",
+        filtersLabel: "Filtros",
+        periodLabel: "Período",
+        groupByLabel: "Agrupar por",
+        print: "Imprimir",
+        types: {
+          debtors: "Relatório de Devedores"
+        },
+        typesDesc: {
+          debtors: "Obrigações em atraso ainda não liquidadas, por timeline, devedor ou data"
+        },
+        groupBy: {
+          timeline: "Timeline",
+          debtor: "Devedor",
+          date: "Data"
+        },
+        debtors: {
+          title: "Relatório de Devedores",
+          fromTo: "De {{from}} a {{to}}",
+          colTimeline: "Timeline",
+          colDate: "Data",
+          colDebtor: "Devedor",
+          colEvent: "Evento",
+          colAmount: "Valor",
+          subtotal: "Subtotal",
+          total: "Total em dívida",
+          empty: "Sem devedores no período selecionado."
+        }
       },
       settingsTab: {
         title: "Configurações Avançadas",
@@ -2942,6 +3012,11 @@ export const translations = {
         computeFromOptionCustom: "Mês Personalizado",
         computeFromMonthLabel: "Selecione o Mês Inicial (AAAA-MM)",
         computeFromSavedToast: "Configurações guardadas com sucesso.",
+        saveFailedToast: "Falha ao guardar as configurações.",
+        headerDefaultStateTitle: "Headers das timelines",
+        headerDefaultStateDesc: "Define se os headers das timelines começam colapsados ou expandidos ao abrir este timeboard.",
+        headerCollapsed: "Colapsados",
+        headerExpanded: "Expandidos",
         saveButton: "Guardar Configurações",
         savingButton: "A guardar..."
       }
@@ -3149,7 +3224,7 @@ export const translations = {
       real_estate: "Imobiliário",
       crypto: "Criptoativos",
       assets: "Património / Bens",
-      other: "Outros Investimentos"
+      other: "Outros"
     },
     reminderCategories: {
       birthday: "Aniversário",
@@ -3209,6 +3284,7 @@ export const translations = {
       settingsTitle: "Definições da Timeline",
       deleteTitle: "Excluir esta timeline",
       sourcesTitle: "RENDIMENTOS POR ORIGEM",
+      sourcesTitleYear: "RENDIMENTOS POR ORIGEM ({{year}})",
       noIncome: "Sem rendimentos registados",
       noIncomeHint: "Adicione entradas para visualizar o gráfico por origem.",
       annualProjectionTitle: "PROJEÇÃO ANUAL",

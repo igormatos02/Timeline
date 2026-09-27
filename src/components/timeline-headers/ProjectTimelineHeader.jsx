@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Plus,
   CheckCircle2,
@@ -12,6 +12,7 @@ import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
+import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
 
 export default function ProjectTimelineHeader({
   timeline,
@@ -26,7 +27,7 @@ export default function ProjectTimelineHeader({
   onAddEvent
 }) {
   const { t } = useTranslation();
-  const [collapsed, setIsCollapsed] = useState(true);
+  const [collapsed, setIsCollapsed] = useHeaderCollapsed();
 
   if (!timeline) return null;
 

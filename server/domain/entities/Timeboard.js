@@ -1,4 +1,4 @@
-import { TimeboardType } from '../../../shared/enums/index.js';
+import { TimeboardType, HeaderDefaultState } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -22,6 +22,7 @@ export class Timeboard {
     compute_from = null,
     printTemplate = null,
     print_template = null,
+    headerDefaultState = HeaderDefaultState.COLLAPSED,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
   }) {
@@ -38,6 +39,7 @@ export class Timeboard {
     this.compute_from = this.computeFrom;
     this.printTemplate = printTemplate ?? print_template ?? null;
     this.print_template = this.printTemplate;
+    this.headerDefaultState = Object.values(HeaderDefaultState).includes(headerDefaultState) ? headerDefaultState : HeaderDefaultState.COLLAPSED;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }

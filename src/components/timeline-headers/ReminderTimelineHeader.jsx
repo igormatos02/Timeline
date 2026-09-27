@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
   Sparkles,
   Plus,
@@ -45,6 +45,7 @@ export const REMINDER_CATEGORY_ICONS = {
 };
 
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
+import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
 
 export default function ReminderTimelineHeader({
   timeline,
@@ -60,7 +61,7 @@ export default function ReminderTimelineHeader({
   onReset
 }) {
   const { t, language, dateLocale } = useTranslation();
-  const [collapsed, setIsCollapsed] = useState(true);
+  const [collapsed, setIsCollapsed] = useHeaderCollapsed();
 
   const paletteTheme = useMemo(() => {
     return getPaletteTheme(timeline?.color, TimelineColor.REMINDER);

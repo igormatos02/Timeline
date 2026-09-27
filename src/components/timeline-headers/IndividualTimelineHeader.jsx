@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { AlertCircle, CheckCircle2, FileCheck, Printer, Wallet, PiggyBank } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { EventStatus, TimelineColor, getDefaultTimelineColor, isCancelledStatus, isPositiveStatus } from '../../enums/index.js';
@@ -8,6 +8,7 @@ import { PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
+import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
 
 // An obligation is open (overdue or pending) when it is not completed, cancelled or deleted.
 const isOpenObligation = (ev) => {
@@ -31,7 +32,7 @@ export default function IndividualTimelineHeader({
   timeboardSummary = null
 }) {
   const { t } = useTranslation();
-  const [collapsed, setIsCollapsed] = useState(true);
+  const [collapsed, setIsCollapsed] = useHeaderCollapsed();
 
   const { debtBalance, openCount } = useMemo(() => {
     const open = (entityEvents || []).filter(isOpenObligation);

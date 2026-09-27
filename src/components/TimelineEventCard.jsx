@@ -107,6 +107,7 @@ import { makeDiaryT } from '../utils/diaryLabels.js';
 
 const RECEIPT_DATE_POPOVER_WIDTH = 270;
 const RECEIPT_NUMBER_POPOVER_WIDTH = 220;
+const CATEGORY_PICKER_POPOVER_WIDTH = 220;
 
 const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   event,
@@ -163,6 +164,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const [receiptNumberPos, setReceiptNumberPos] = useState(null);
   const receiptNumberAnchorRef = useRef(null);
   const receiptNumberPopoverRef = useRef(null);
+  const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
+  const [categoryPickerPos, setCategoryPickerPos] = useState(null);
+  const categoryAnchorRef = useRef(null);
+  const categoryPickerPopoverRef = useRef(null);
   const [newItemText, setNewItemText] = useState('');
   const [localAuto, setLocalAuto] = React.useState(Boolean(event.automatic || event.isAutomatic));
   const [localStatus, setLocalStatus] = React.useState(event.status);
@@ -429,7 +434,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     isLoanInstallment
   ) && normRec !== EventRecurrence.ONCE;
 
-  const isFutureMonth = Boolean(event.date && event.date > currentMonthEndStr);
+  // Future months lock the status, except income / expense / investment events, which can be paid in advance
+  const isFutureMonth = Boolean(event.date && event.date > currentMonthEndStr) && !isIncomeEvent && !isExpenseEvent && !isInvestmentEvent;
 
   const isCancelled = isCancelledStatus(effectiveStatus) || isCancelledStatus(event.status);
 
@@ -550,26 +556,51 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     }
   };
 
-  // Category badge shown next to the amount: icon, name and colour of the event's category
+  // Category sources of the event's type: [metaMap, labelNamespace]
   // (condoflow timeboards use their own income / deposit categories first)
-  const renderCategoryBadge = (onPositiveCard) => {
-    const category = String(event.category || '').toLowerCase().trim();
-    if (!category) return null;
-    const sources = isIncomeEvent
+  const getCategorySources = () => (
+    isIncomeEvent
       ? [[isCondoflow ? CONDO_INCOME_CATEGORY_META : null, 'incomeCategories'], [INCOME_CATEGORY_META, 'incomeCategories']]
       : isExpenseEvent
         ? [[EXPENSE_CATEGORY_META, 'expenseCategories']]
         : isInvestmentEvent && !isWithdrawalEvent
           ? [[isCondoflow ? CONDO_INVESTMENT_CATEGORY_META : null, 'investmentCategories'], [INVESTMENT_CATEGORY_META, 'investmentCategories']]
-          : [];
-    const match = sources.find(([metaMap]) => metaMap && metaMap[category]);
+          : []
+  ).filter(([metaMap]) => metaMap);
+
+  // The category can be changed from the badge when the event can be edited in place
+  const canChangeCategory = Boolean(onUpdateEventDirect) && !isCancelledStatus(event.status);
+
+  const saveCategory = (nextCategory) => {
+    setIsCategoryPickerOpen(false);
+    if (!onUpdateEventDirect || nextCategory === String(event.category || '').toLowerCase().trim()) return;
+    onUpdateEventDirect({ ...event, category: nextCategory });
+  };
+
+  // Category badge shown next to the amount: icon, name and colour of the event's category
+  const renderCategoryBadge = (onPositiveCard) => {
+    const category = String(event.category || '').toLowerCase().trim();
+    if (!category) return null;
+    const match = getCategorySources().find(([metaMap]) => metaMap[category]);
     if (!match) return null;
     const [metaMap, labelNamespace] = match;
     const { icon: CategoryIcon, color } = metaMap[category];
+    const BadgeTag = canChangeCategory ? 'button' : 'span';
+    const openCategoryPicker = (e) => {
+      e.stopPropagation();
+      const rect = e.currentTarget.getBoundingClientRect();
+      setCategoryPickerPos({ top: rect.bottom + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - CATEGORY_PICKER_POPOVER_WIDTH - 8)) });
+      setIsCategoryPickerOpen((open) => !open);
+    };
     return (
-      <span
-        title={t(`${labelNamespace}.${category}`)}
+      <BadgeTag
+        ref={canChangeCategory ? categoryAnchorRef : undefined}
+        type={canChangeCategory ? 'button' : undefined}
+        onClick={canChangeCategory ? openCategoryPicker : undefined}
+        title={canChangeCategory ? t('timeline.changeCategory') : t(`${labelNamespace}.${category}`)}
         style={{
+          cursor: canChangeCategory ? 'pointer' : 'default',
+          fontFamily: 'inherit',
           display: 'inline-flex',
           alignItems: 'center',
           gap: '4px',
@@ -587,7 +618,76 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       >
         {CategoryIcon && <CategoryIcon size={11} />}
         <span>{t(`${labelNamespace}.${category}`)}</span>
-      </span>
+        {canChangeCategory && <ChevronDown size={10} />}
+      </BadgeTag>
+    );
+  };
+
+  // Floating popover (portal) listing the categories of the event's type
+  const renderCategoryPicker = () => {
+    if (!isCategoryPickerOpen || !categoryPickerPos) return null;
+    const [options] = getCategorySources();
+    if (!options) return null;
+    const [metaMap, labelNamespace] = options;
+    const currentCategory = String(event.category || '').toLowerCase().trim();
+    return createPortal(
+      <div
+        ref={categoryPickerPopoverRef}
+        role="listbox"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'fixed',
+          top: categoryPickerPos.top,
+          left: categoryPickerPos.left,
+          zIndex: 1000,
+          width: `${CATEGORY_PICKER_POPOVER_WIDTH}px`,
+          maxHeight: '320px',
+          overflowY: 'auto',
+          padding: '6px',
+          borderRadius: '10px',
+          border: '1px solid var(--border-glass)',
+          background: 'var(--bg-card)',
+          boxShadow: 'var(--shadow-sm)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '2px'
+        }}
+      >
+        {Object.entries(metaMap).map(([categoryKey, { icon: OptionIcon, color }]) => {
+          const isSelected = categoryKey === currentCategory;
+          return (
+            <button
+              key={categoryKey}
+              type="button"
+              role="option"
+              aria-selected={isSelected}
+              onClick={() => saveCategory(categoryKey)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '6px 8px',
+                borderRadius: '6px',
+                border: 'none',
+                background: isSelected ? 'var(--bg-app)' : 'transparent',
+                color: 'var(--text-main)',
+                fontFamily: 'inherit',
+                fontSize: '0.76rem',
+                fontWeight: isSelected ? '700' : '500',
+                textAlign: 'left',
+                cursor: 'pointer'
+              }}
+            >
+              {OptionIcon && <OptionIcon size={13} style={{ color, flexShrink: 0 }} />}
+              <span style={{ flex: 1 }}>{t(`${labelNamespace}.${categoryKey}`)}</span>
+              {isSelected && <Check size={12} style={{ color: 'var(--primary)' }} />}
+            </button>
+          );
+        })}
+      </div>,
+      document.body
     );
   };
 
@@ -722,6 +822,30 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     };
   }, [isReceiptDateOpen]);
 
+  // Close the floating category picker on outside click, Escape or scroll
+  useEffect(() => {
+    if (!isCategoryPickerOpen) return undefined;
+    const handleMouseDown = (e) => {
+      if (categoryPickerPopoverRef.current?.contains(e.target) || categoryAnchorRef.current?.contains(e.target)) return;
+      setIsCategoryPickerOpen(false);
+    };
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setIsCategoryPickerOpen(false);
+    };
+    const handleScroll = (e) => {
+      if (categoryPickerPopoverRef.current?.contains(e.target)) return;
+      setIsCategoryPickerOpen(false);
+    };
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('keydown', handleKey);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('keydown', handleKey);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isCategoryPickerOpen]);
+
   // Close the floating receipt-number popover on outside click, Escape or scroll
   useEffect(() => {
     if (!isReceiptNumberOpen) return undefined;
@@ -791,6 +915,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             min="1"
             step="1"
             autoFocus
+            onFocus={(e) => e.target.select()}
             value={receiptNumberDraft}
             onChange={(e) => {
               setReceiptNumberDraft(e.target.value);
@@ -3141,6 +3266,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           </div>
           {renderReceiptDateEditor()}
           {renderReceiptNumberEditor()}
+          {renderCategoryPicker()}
 
           {/* Linha 3: [Valor] (left) e [event action buttons] (right) */}
           <div style={{
@@ -3274,6 +3400,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           </div>
           {renderReceiptDateEditor()}
           {renderReceiptNumberEditor()}
+          {renderCategoryPicker()}
 
           {/* Linha 3: [Valor] (left) e [event action buttons] (right) */}
           <div style={{
@@ -3499,6 +3626,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           </div>
           {renderReceiptDateEditor()}
           {renderReceiptNumberEditor()}
+          {renderCategoryPicker()}
 
           {/* Linha 3: [Valor] (left) e [event action buttons] (right) */}
           <div style={{

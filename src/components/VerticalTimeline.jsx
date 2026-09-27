@@ -39,7 +39,6 @@ import {
   PiggyBank,
   Landmark,
   CheckCircle2,
-  AlertCircle,
   Play,
   CheckSquare,
   ListTree,
@@ -763,29 +762,27 @@ function VerticalTimeline({
     setSelectedStatusFilters([]);
   };
 
+  // "Pending" also covers overdue events (there is no separate overdue filter)
   const getStatusFilterOptions = () => {
     if ([TimelineType.INCOME, TimelineType.BALANCE].includes(timeline.type)) {
       return [
         { id: EventStatus.ALL, name: t('status.all'), icon: <Layers size={13} /> },
         { id: EventStatus.RECEIVED, name: t('status.received'), icon: <CheckCircle2 size={13} /> },
-        { id: EventStatus.PENDING, name: t('status.pending'), icon: <Clock size={13} /> },
-        { id: EventStatus.OVERDUE, name: t('status.overdue'), icon: <AlertCircle size={13} /> }
+        { id: EventStatus.PENDING, name: t('status.pending'), icon: <Clock size={13} /> }
       ];
     }
     if ([TimelineType.EXPENSE, TimelineType.LOAN].includes(timeline.type) || isLoanTimelineType(timeline.type)) {
       return [
         { id: EventStatus.ALL, name: t('status.all'), icon: <Layers size={13} /> },
         { id: EventStatus.PAID, name: t('status.paid'), icon: <CheckCircle2 size={13} /> },
-        { id: EventStatus.PENDING, name: t('status.pending'), icon: <Clock size={13} /> },
-        { id: EventStatus.OVERDUE, name: t('status.overdue'), icon: <AlertCircle size={13} /> }
+        { id: EventStatus.PENDING, name: t('status.pending'), icon: <Clock size={13} /> }
       ];
     }
     if (timeline.type === TimelineType.INVESTMENT) {
       return [
         { id: EventStatus.ALL, name: t('status.all'), icon: <Layers size={13} /> },
         { id: EventStatus.INVESTED, name: t('status.invested'), icon: <CheckCircle2 size={13} /> },
-        { id: EventStatus.PENDING, name: t('status.pending'), icon: <Clock size={13} /> },
-        { id: EventStatus.OVERDUE, name: t('status.overdue'), icon: <AlertCircle size={13} /> }
+        { id: EventStatus.PENDING, name: t('status.pending'), icon: <Clock size={13} /> }
       ];
     }
     return [
@@ -1704,7 +1701,10 @@ function VerticalTimeline({
           if (statusFilter === EventStatus.OVERDUE) {
             return isOverdue;
           }
-          if (statusFilter === EventStatus.PENDING || statusFilter === EventStatus.PLANNED) {
+          if (statusFilter === EventStatus.PENDING) {
+            return isPending || isOverdue;
+          }
+          if (statusFilter === EventStatus.PLANNED) {
             return isPending;
           }
           return ev.status === statusFilter;
@@ -2808,92 +2808,7 @@ function VerticalTimeline({
                           );
                         })()}
 
-                        {onAddEventForDate && !isLoanTimelineOrTab && !isBalancoView && (() => {
-                          const isInvestment = timeline.type === TimelineType.INVESTMENT || activeFinancialTab === 'investimentos';
-                          const addLabel = isFinancialTimeline
-                            ? (activeFinancialTab === 'gastos' || timeline.type === TimelineType.EXPENSE
-                                ? t('expenseHeader.addExpenseButton')
-                                : isInvestment
-                                  ? t('pocket.addPocket')
-                                  : t('incomeHeader.addIncome'))
-                            : timeline.type === TimelineType.REMINDER
-                              ? t('reminderHeader.addReminder')
-                              : timeline.type === TimelineType.DIARY
-                                ? makeDiaryT(t, activeTimeboard?.type === TimeboardType.CONDOFLOW)('diaryHeader.addEntry')
-                                : timeline.type === TimelineType.TODO
-                                  ? t('todoHeader.addTask')
-                                  : timeline.type === TimelineType.FOLLOWUP
-                                    ? t('followupHeader.addFollowup')
-                                    : timeline.type === TimelineType.PROJECT
-                                      ? t('projectHeader.newTaskMilestone')
-                                      : t('buttons.addEvent');
-
-                          const buttonColor = paletteTheme.primary;
-
-                          return isInvestment ? (
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-sm"
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                fontSize: '0.78rem',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                background: `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`,
-                                borderColor: paletteTheme.primary,
-                                color: TimelineColor.WHITE
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (onOpenCreatePocket) onOpenCreatePocket({ defaultDate: format(mGroup.monthDate, 'yyyy-MM-01') });
-                              }}
-                              title={t('pocket.addPocket')}
-                            >
-                              <PiggyBank size={14} />
-                              <span>{addLabel}</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-sm"
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                fontSize: '0.78rem',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                background: `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`,
-                                borderColor: paletteTheme.primary,
-                                color: TimelineColor.WHITE
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
-                                onAddEventForDate?.(
-                                  targetDayStr,
-                                  timeline.type === TimelineType.EXPENSE || activeFinancialTab === 'gastos'
-                                    ? EventType.EXPENSE
-                                    : timeline.type === TimelineType.FOLLOWUP
-                                      ? EventType.FOLLOWUP
-                                      : isReminders
-                                        ? EventType.REMINDER
-                                        : EventType.INCOME
-                                );
-                              }}
-                              title={t('timeline.addEventMonthTitle', { month: monthTitleStr })}
-                            >
-                              <Plus size={14} />
-                              <span>{addLabel}</span>
-                            </button>
-                          );
-                        })()}
+                        {renderAddEventButton(format(mGroup.monthDate, 'yyyy-MM-01'), t('timeline.addEventMonthTitle', { month: monthTitleStr }))}
                       </div>
                     </div>
 
@@ -3646,6 +3561,82 @@ function VerticalTimeline({
     );
   };
 
+  // "Add" button of the timeline type (income / expense / pocket / reminder / ...), shown on each month header
+  // and on top of the list view. targetDayStr is the default date of the new event.
+  const renderAddEventButton = (targetDayStr, title) => {
+    if (!onAddEventForDate || isLoanTimelineOrTab || isBalancoView) return null;
+    const isInvestment = timeline.type === TimelineType.INVESTMENT || activeFinancialTab === 'investimentos';
+    const addLabel = isFinancialTimeline
+      ? (activeFinancialTab === 'gastos' || timeline.type === TimelineType.EXPENSE
+          ? t('expenseHeader.addExpenseButton')
+          : isInvestment
+            ? t('pocket.addPocket')
+            : t('incomeHeader.addIncome'))
+      : timeline.type === TimelineType.REMINDER
+        ? t('reminderHeader.addReminder')
+        : timeline.type === TimelineType.DIARY
+          ? makeDiaryT(t, activeTimeboard?.type === TimeboardType.CONDOFLOW)('diaryHeader.addEntry')
+          : timeline.type === TimelineType.TODO
+            ? t('todoHeader.addTask')
+            : timeline.type === TimelineType.FOLLOWUP
+              ? t('followupHeader.addFollowup')
+              : timeline.type === TimelineType.PROJECT
+                ? t('projectHeader.newTaskMilestone')
+                : t('buttons.addEvent');
+    const buttonStyle = {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+      padding: '6px 12px',
+      borderRadius: '8px',
+      fontSize: '0.78rem',
+      fontWeight: '700',
+      cursor: 'pointer',
+      background: `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`,
+      borderColor: paletteTheme.primary,
+      color: TimelineColor.WHITE
+    };
+
+    return isInvestment ? (
+      <button
+        type="button"
+        className="btn btn-primary btn-sm"
+        style={buttonStyle}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (onOpenCreatePocket) onOpenCreatePocket({ defaultDate: targetDayStr });
+        }}
+        title={t('pocket.addPocket')}
+      >
+        <PiggyBank size={14} />
+        <span>{addLabel}</span>
+      </button>
+    ) : (
+      <button
+        type="button"
+        className="btn btn-primary btn-sm"
+        style={buttonStyle}
+        onClick={(e) => {
+          e.stopPropagation();
+          onAddEventForDate?.(
+            targetDayStr,
+            timeline.type === TimelineType.EXPENSE || activeFinancialTab === 'gastos'
+              ? EventType.EXPENSE
+              : timeline.type === TimelineType.FOLLOWUP
+                ? EventType.FOLLOWUP
+                : isReminders
+                  ? EventType.REMINDER
+                  : EventType.INCOME
+          );
+        }}
+        title={title}
+      >
+        <Plus size={14} />
+        <span>{addLabel}</span>
+      </button>
+    );
+  };
+
   const renderFilteredStatusListView = () => {
     const sortedEvents = [...filteredEvents].sort((a, b) => {
       const dateA = a.date || a.dueDate || '';
@@ -3692,6 +3683,7 @@ function VerticalTimeline({
             >
               {t('status.all')}
             </button>
+            {renderAddEventButton(todayStr, t('timeline.addEventToday'))}
           </div>
         </div>
 

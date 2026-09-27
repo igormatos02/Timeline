@@ -31,6 +31,7 @@ import IncomeEvolutionChart from '../IncomeEvolutionChart.jsx';
 import { computeMonthDiff } from '../../utils/timelineCharts.js';
 
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
+import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
 
 export default function ExpenseTimelineHeader({
   timeline,
@@ -52,7 +53,7 @@ export default function ExpenseTimelineHeader({
   onToggleIndividualView
 }) {
   const { t, language } = useTranslation();
-  const [collapsed, setIsCollapsed] = useState(true);
+  const [collapsed, setIsCollapsed] = useHeaderCollapsed();
   const [chartMode, setChartMode] = useState('realized');
   const dateLocale = language === 'en' ? enUS : pt;
 

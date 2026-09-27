@@ -36,6 +36,7 @@ function entityToRow(data) {
   if (data.obligatorIdentification !== undefined) row.obligator_identification = data.obligatorIdentification;
   if (data.email !== undefined) row.email = data.email;
   if (data.phone !== undefined) row.phone = data.phone;
+  if (data.taxId !== undefined) row.tax_id = data.taxId;
   if (data.birthDate !== undefined) row.birth_date = data.birthDate;
   if (data.observation !== undefined) row.observation = data.observation;
   if (data.role !== undefined) row.role = data.role;

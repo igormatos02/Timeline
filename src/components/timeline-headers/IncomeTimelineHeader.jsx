@@ -30,6 +30,7 @@ import IncomeEvolutionChart from '../IncomeEvolutionChart.jsx';
 import { computeMonthDiff } from '../../utils/timelineCharts.js';
 import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
+import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
 
 export default function IncomeTimelineHeader({
   timeline,
@@ -51,7 +52,7 @@ export default function IncomeTimelineHeader({
   onToggleIndividualView
 }) {
   const { t, language } = useTranslation();
-  const [collapsed, setIsCollapsed] = useState(true);
+  const [collapsed, setIsCollapsed] = useHeaderCollapsed();
   const [chartMode, setChartMode] = useState('realized');
   const dateLocale = language === 'en' ? enUS : pt;
 
@@ -71,56 +72,14 @@ export default function IncomeTimelineHeader({
   if (!timeline) return null;
 
   const headerColor = timeline.color || TimelineColor.INCOME;
-  const metrics = timeline.metrics || {};
-  const isFiltered = (selectedCategoryFilter && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') || (filteredEvents !== undefined);
-  const dto = !isFiltered ? (timeline.incomeHeaderResult || timeline.procedureMetrics || metrics.incomeHeaderResult) : null;
+  const isFiltered = (selectedCategoryFilter && selectedCategoryFilter !== EventStatus.ALL) || (filteredEvents !== undefined);
 
   const eventsList = (isFiltered && filteredEvents) ? filteredEvents : (timeline.events || events || []);
   const currentMonthStr = new Date().toISOString().substring(0, 7);
 
   // 1. RENDIMENTOS POR ORIGEM / CATEGORIA & TOTAL DO MÊS
   const validEnumValues = Object.values(IncomeEventCategory);
-  const getCategoryLabel = (cat) => {
-    return t(`incomeCategories.${cat}`) || cat;
-  };
-
-  let uiTotalInc = 0;
-  const categoryTotals = {};
-  eventsList.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-    const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
-    if (isIncome && ev.date.startsWith(currentMonthStr)) {
-      const amt = Number(ev.amount || 0);
-      uiTotalInc += amt;
-      let cat = (ev.category || '').toLowerCase();
-      if (!validEnumValues.includes(cat)) {
-        cat = IncomeEventCategory.OTHER;
-      }
-      categoryTotals[cat] = (categoryTotals[cat] || 0) + amt;
-    }
-  });
-
-  const monthTotalIncome = uiTotalInc > 0 ? uiTotalInc : (dto?.current_month_income ?? 0);
-
-  // Extrair lista de categorias / origens com cálculo local reativo
-  let categoryList = Object.entries(categoryTotals)
-    .filter(([cat]) => validEnumValues.includes(cat))
-    .map(([cat, amt]) => ({
-      rawCat: cat,
-      name: getCategoryLabel(cat),
-      amount: amt,
-      percent: monthTotalIncome > 0 ? Math.round((amt / monthTotalIncome) * 100) : 0
-    }))
-    .sort((a, b) => b.amount - a.amount);
-
-  if (categoryList.length === 0 && dto?.categories_breakdown && dto.categories_breakdown.length > 0) {
-    categoryList = dto.categories_breakdown.map((item) => ({
-      rawCat: item.category,
-      name: getCategoryLabel(item.category),
-      amount: Number(item.amount || 0),
-      percent: Number(item.percent || 0)
-    }));
-  }
+  const getCategoryLabel = (cat) => t(`incomeCategories.${cat}`);
 
   // 2. CONSUMO / COMPROMETIMENTO DA ENTRADA (Janela de 12 meses a partir de hoje)
   const startDateObj = new Date();
@@ -210,7 +169,7 @@ export default function IncomeTimelineHeader({
   const rawComputeStart = computeStartDate || timeboardComputeStart || balanceComputeStart || ownComputeStart;
 
   const computeFromMonth = rawComputeStart
-    ? (String(rawComputeStart) === '1900-01' || String(rawComputeStart).startsWith('1900-01') || String(rawComputeStart) === 'all' ? '1900-01' : String(rawComputeStart).substring(0, 7))
+    ? (String(rawComputeStart) === '1900-01' || String(rawComputeStart).startsWith('1900-01') || String(rawComputeStart) === EventStatus.ALL ? '1900-01' : String(rawComputeStart).substring(0, 7))
     : '1900-01';
 
   const currentCalendarYear = new Date().getFullYear().toString();
@@ -294,6 +253,34 @@ export default function IncomeTimelineHeader({
   const currentAccumulation = initialValueAmount + accumulatedRealizedBalance;
   const currentProjectedAccumulation = initialValueAmount + accumulatedProjectedBalance;
 
+  // 1. RENDIMENTOS POR ORIGEM: income of the current year by category (from the calculation start),
+  // so categories that only occur in some months (e.g. a yearly reserve fund) are also shown
+  let yearTotalIncome = 0;
+  const categoryTotals = {};
+  eventsList.forEach((ev) => {
+    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+    const evMonthKey = ev.date.substring(0, 7);
+    if (computeFromMonth && computeFromMonth !== '1900-01' && evMonthKey < computeFromMonth) return;
+    const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
+    if (!isIncome || !ev.date.startsWith(currentCalendarYear)) return;
+    const amt = Math.abs(Number(ev.amount || 0));
+    yearTotalIncome += amt;
+    let cat = (ev.category || '').toLowerCase();
+    if (!validEnumValues.includes(cat)) {
+      cat = IncomeEventCategory.OTHER;
+    }
+    categoryTotals[cat] = (categoryTotals[cat] || 0) + amt;
+  });
+
+  const categoryList = Object.entries(categoryTotals)
+    .map(([cat, amt]) => ({
+      rawCat: cat,
+      name: getCategoryLabel(cat),
+      amount: amt,
+      percent: yearTotalIncome > 0 ? Math.round((amt / yearTotalIncome) * 100) : 0
+    }))
+    .sort((a, b) => b.amount - a.amount);
+
   // Projeção do Ano Corrente (Jan - Dez) para o PieDonut do Quadrante 3
   let calendarYearProjectedIncome = 0;
   let calendarYearReceivedIncome = 0;
@@ -301,7 +288,7 @@ export default function IncomeTimelineHeader({
   eventsList.forEach((ev) => {
     if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
     const evMonthKey = ev.date.substring(0, 7);
-    if (computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== 'all' && evMonthKey < computeFromMonth) return;
+    if (computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== EventStatus.ALL && evMonthKey < computeFromMonth) return;
     const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
     if (isIncome && ev.date.startsWith(currentCalendarYear)) {
       const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
@@ -352,8 +339,8 @@ export default function IncomeTimelineHeader({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.2)',
+                background: 'var(--bg-app)',
+                border: '1px solid var(--border-glass-glow)',
                 color: 'var(--primary-light)',
                 cursor: 'pointer',
                 padding: '6px 12px',
@@ -446,9 +433,9 @@ export default function IncomeTimelineHeader({
               {/* Grid Principal 2x2 */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
                 {/* Quadrante 1: RENDIMENTOS POR ORIGEM (PieChart SVG & Legenda) */}
-                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ background: 'var(--bg-app)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {t('incomeHeader.sourcesTitle')}
+                    {t('incomeHeader.sourcesTitleYear', { year: currentCalendarYear })}
                   </div>
                   {(() => {
                     const categoryColors = paletteTheme.colors && paletteTheme.colors.length > 1 ? paletteTheme.colors : TIMELINE_COLOR_PRESETS;
@@ -458,7 +445,7 @@ export default function IncomeTimelineHeader({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
                           <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
                             <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                              <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                              <circle cx="0" cy="0" r="0.82" fill="none" stroke="var(--border-glass)" strokeWidth="0.25" strokeDasharray="3 3" />
                             </svg>
                             <div
                               style={{
@@ -509,7 +496,7 @@ export default function IncomeTimelineHeader({
                 </div>
 
                 {/* Quadrante 2: CONSUMO DA ENTRADA (Donut Chart de Comprometimento) */}
-                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ background: 'var(--bg-app)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {t('incomeHeader.incomeConsumptionTitle')}
                   </div>
@@ -537,7 +524,7 @@ export default function IncomeTimelineHeader({
                 </div>
 
                 {/* Quadrante 3: ACUMULAÇÃO ATUAL & PROJETADA (Balanço + Initial Value & Donut Chart Jan - Dez) */}
-                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ background: 'var(--bg-app)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                       <span style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -595,14 +582,14 @@ export default function IncomeTimelineHeader({
 
                   const d = new Date(year, month - 1, 1);
                   const label = format(d, 'MMM', { locale: dateLocale }).replace('.', '').toUpperCase();
-                  const isNotComputed = Boolean(computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== 'all' && key < computeFromMonth);
+                  const isNotComputed = Boolean(computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== EventStatus.ALL && key < computeFromMonth);
                   last7Months.push({ key, label, total: 0, isNotComputed });
                 }
 
                 eventsList.forEach((ev) => {
                   if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
                   const evMonthKey = ev.date.substring(0, 7);
-                  if (computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== 'all' && evMonthKey < computeFromMonth) return;
+                  if (computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== EventStatus.ALL && evMonthKey < computeFromMonth) return;
 
                   const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
                   if (isIncome) {

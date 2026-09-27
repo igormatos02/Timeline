@@ -1,6 +1,7 @@
-import React from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
+import { useHeaderRefresh } from '../../context/HeaderRefreshContext.jsx';
 
 export default function HeaderShell({
   collapsed,
@@ -18,7 +19,23 @@ export default function HeaderShell({
   style
 }) {
   const { t } = useTranslation();
-  const actualOnToggle = onToggle || onToggleCollapse;
+  const refreshData = useHeaderRefresh();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const isRefreshingRef = useRef(false);
+  const onToggleProp = onToggle || onToggleCollapse;
+
+  // Expanding the header reloads the data, so its figures always match the latest changes
+  const actualOnToggle = (...args) => {
+    const isExpanding = collapsed;
+    if (onToggleProp) onToggleProp(...args);
+    if (!isExpanding || !refreshData || isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
+    setIsRefreshing(true);
+    Promise.resolve(refreshData()).finally(() => {
+      isRefreshingRef.current = false;
+      setIsRefreshing(false);
+    });
+  };
   const actualColor = headerColor || accentColor;
   const actualLeft = left || header;
   const actualRight = right || actions;
@@ -67,7 +84,9 @@ export default function HeaderShell({
               flexShrink: 0
             }}
           >
-            {collapsed ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
+            {isRefreshing
+              ? <Loader2 size={15} className="animate-spin" />
+              : (collapsed ? <ChevronDown size={17} /> : <ChevronUp size={17} />)}
           </button>
 
           {actualLeft}

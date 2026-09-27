@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
   Plus,
   Settings,
@@ -31,6 +31,7 @@ import BarChart7Months from '../ui/BarChart7Months.jsx';
 import { computeMonthDiff } from '../../utils/timelineCharts.js';
 
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
+import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
 
 export default function DiaryTimelineHeader({
   timeline,
@@ -48,7 +49,7 @@ export default function DiaryTimelineHeader({
   const { t, dateLocale } = useTranslation();
   const { isCondoflow } = useTimeboard();
   const dt = makeDiaryT(t, isCondoflow);
-  const [collapsed, setIsCollapsed] = useState(true);
+  const [collapsed, setIsCollapsed] = useHeaderCollapsed();
 
   const paletteTheme = useMemo(() => {
     return getPaletteTheme(timeline?.color, TimelineColor.DIARY);

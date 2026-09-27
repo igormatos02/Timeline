@@ -32,6 +32,7 @@ import {
   TimelineColor,
   TIMELINE_COLOR_PRESETS,
   ProjectionDirection,
+  isAccountOutflowEvent,
   isPositiveStatus,
   isCancelledStatus,
   isLoanTimelineType,
@@ -996,7 +997,8 @@ export default function BalanceTimelineHeader({
                       } else if (isExpense) {
                         annualExpense += absAmt;
                       } else if (isInvestment && !ev.isExternal && !ev.is_external) {
-                        annualInvestment += multiplier * absAmt;
+                        // Account outflows (pocket cost / expense) do not change the balance
+                        if (!isAccountOutflowEvent(ev)) annualInvestment += multiplier * absAmt;
                       } else if (
                         hasLoanTimeline &&
                         (annualLoan === 0 || projectionMonthsAhead > 0) &&

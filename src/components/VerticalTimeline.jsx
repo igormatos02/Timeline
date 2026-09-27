@@ -80,7 +80,10 @@ import {
   Loader2,
   Printer,
   Wallet,
-  ReceiptEuro
+  ReceiptEuro,
+  ArrowUpRight,
+  Receipt,
+  ShoppingCart
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
 import { compareEventsWithinDay, createEventDayComparator, buildPersonsById } from '../utils/eventSorting.js';
@@ -116,7 +119,9 @@ import {
   isLoanTimelineType,
   isPositiveStatus,
   isCancelledStatus,
-  isNegativeStatus
+  isNegativeStatus,
+  AccountMovementType,
+  getAccountMovementType
 } from '../enums/index.js';
 import { getTimelineDropdownOptions } from '../utils/timelineConfig.jsx';
 import { makeDiaryT } from '../utils/diaryLabels.js';
@@ -143,6 +148,14 @@ const EXPENSE_CATEGORY_ITEMS = [
   { id: ExpensesEventCategory.TRAVEL, icon: Plane, color: TimelineColor.CYAN },
   { id: ExpensesEventCategory.PERSONAL_CARE, icon: Sparkles, color: TimelineColor.ROSE },
   { id: ExpensesEventCategory.SERVICES, icon: CreditCard, color: TimelineColor.SLATE },
+];
+
+// Account (savings timeline) movement kinds shown in the movement filter
+const ACCOUNT_MOVEMENT_ITEMS = [
+  { id: AccountMovementType.INFLOW, icon: ArrowUpRight, color: TimelineColor.INVESTMENT },
+  { id: AccountMovementType.WITHDRAWAL, icon: ArrowDownRight, color: TimelineColor.INCOME },
+  { id: AccountMovementType.COST, icon: Receipt, color: TimelineColor.DANGER },
+  { id: AccountMovementType.EXPENSE, icon: ShoppingCart, color: TimelineColor.EXPENSE }
 ];
 
 // Condominium (condoflow) timeboards only use their own expense categories
@@ -830,6 +843,8 @@ function VerticalTimeline({
 
   // Multi-selection of categories for Expense timeline
   const [selectedExpenseCategories, setSelectedExpenseCategories] = useState([]);
+  // Account (savings timeline) movement filter: inflows, withdrawals, costs and expenses (empty = all)
+  const [selectedMovementTypes, setSelectedMovementTypes] = useState([]);
 
   const isCategoryFiltered =
     (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) ||
@@ -1756,6 +1771,9 @@ function VerticalTimeline({
           matchesCategory = ev.category === selectedCategoryFilter || ev.eventType === selectedCategoryFilter;
         }
       }
+      if (timeline.type === TimelineType.INVESTMENT && selectedMovementTypes.length > 0 && !selectedMovementTypes.includes(getAccountMovementType(ev))) {
+        matchesCategory = false;
+      }
 
       const matchesTimelineMultiSelect =
         timeline.type !== TimelineType.BALANCE ||
@@ -1843,6 +1861,7 @@ function VerticalTimeline({
     periodMonthIndex,
     isPeriodActive,
     isCondoflow,
+    selectedMovementTypes,
   ]);
 
   // Shared notice types present in this timeline and the color of their own timeline
@@ -3048,13 +3067,13 @@ function VerticalTimeline({
                                         }}
                                       >
                                         <Plus size={12} strokeWidth={2.5} />
-                                        <span>{t('buttons.addEvent')}</span>
+                                        <span>{t('pocket.addInflow')}</span>
                                       </button>
 
                                       <button
                                         type="button"
                                         className="btn btn-xs"
-                                        title={t('buttons.withdrawal')}
+                                        title={t('pocket.addOutflow')}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
@@ -3076,15 +3095,15 @@ function VerticalTimeline({
                                           borderRadius: '6px',
                                           fontSize: '0.74rem',
                                           fontWeight: '700',
-                                          background: 'rgba(239, 68, 68, 0.12)',
+                                          background: `${TimelineColor.DANGER}1f`,
                                           color: TimelineColor.DANGER,
-                                          border: '1px solid rgba(239, 68, 68, 0.35)',
+                                          border: `1px solid ${TimelineColor.DANGER}59`,
                                           cursor: 'pointer',
                                           transition: 'all 0.15s ease'
                                         }}
                                       >
                                         <ArrowDownRight size={12} strokeWidth={2.4} />
-                                        <span>{t('buttons.withdrawal')}</span>
+                                        <span>{t('pocket.addOutflow')}</span>
                                       </button>
                                     </>
                                   )}
@@ -4265,6 +4284,70 @@ function VerticalTimeline({
               )}
             </div>
           )
+        )}
+
+        {/* Account movement filter (savings timeline): inflows, withdrawals, costs, expenses */}
+        {timeline.type === TimelineType.INVESTMENT && (
+          <div className="sidebar-section">
+            <div
+              className="sidebar-section-title"
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              onClick={() => toggleSectionCollapse('movements')}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ChevronDown
+                  size={13}
+                  style={{
+                    transform: collapsedSections['movements'] ? 'rotate(-90deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.18s ease',
+                    color: 'var(--text-muted)'
+                  }}
+                />
+                <span>{t('pocket.movementType')}</span>
+              </div>
+            </div>
+            {!collapsedSections['movements'] && (
+              <div className="sidebar-btn-group">
+                <button
+                  type="button"
+                  className={`sidebar-filter-item ${selectedMovementTypes.length === 0 ? 'active' : ''}`}
+                  onClick={() => setSelectedMovementTypes([])}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Layers size={13} />
+                    <span>{t('pocket.allMovements')}</span>
+                  </div>
+                  {renderFilterSwitch(selectedMovementTypes.length === 0, 'var(--primary)')}
+                </button>
+                {ACCOUNT_MOVEMENT_ITEMS.map(({ id, icon: MovementIcon, color }) => {
+                  const isSelected = selectedMovementTypes.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
+                      onClick={() => {
+                        if (!isListView) window.scrollTo({ top: 0, behavior: 'instant' });
+                        setSelectedMovementTypes((prev) => {
+                          const next = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
+                          return next.length === ACCOUNT_MOVEMENT_ITEMS.length ? [] : next;
+                        });
+                      }}
+                      style={isSelected ? { borderColor: `${color}66` } : {}}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ color, display: 'inline-flex', alignItems: 'center' }}>
+                          <MovementIcon size={13} />
+                        </span>
+                        <span>{t(`pocket.movements.${id}`)}</span>
+                      </div>
+                      {renderFilterSwitch(isSelected, color)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
 
         {/* 🌟 6. Entidades / Individuals Filter (Single Selection) */}

@@ -12,7 +12,8 @@ import {
   isPositiveStatus,
   isCancelledStatus,
   isLoanTimelineType,
-  normalizeTimelineType
+  normalizeTimelineType,
+  isAccountOutflowEvent
 } from '../enums/index.js';
 
 /**
@@ -110,7 +111,9 @@ export function classifyBalanceEvent(ev, timelineTypeMap = new Map()) {
     Boolean(ev.pocketId || ev.pocket_id)
   ) && !isLoan;
 
-  const isWithdrawal = Boolean(
+  // Pocket costs / expenses debit the account but do not return money to the income timeline
+  const isAccountOutflow = isInvestment && isAccountOutflowEvent(ev);
+  const isWithdrawal = !isAccountOutflow && Boolean(
     ev.isWithdrawal ||
     ev.eventType === EventType.WITHDRAWAL ||
     (isInvestment && (ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0))
@@ -123,7 +126,7 @@ export function classifyBalanceEvent(ev, timelineTypeMap = new Map()) {
     Boolean(ev.isExpense)
   ) && !isIncome && !isInvestment && !isLoan;
 
-  return { isLoan, isLoanInst, isAmortization, isIncome, isInvestment, isWithdrawal, isExpense, absAmt };
+  return { isLoan, isLoanInst, isAmortization, isIncome, isInvestment, isWithdrawal, isAccountOutflow, isExpense, absAmt };
 }
 
 /**
@@ -158,7 +161,7 @@ export function computeBalanceTotals({ events = [], timelineTypeMap = new Map(),
     const isUpToCurrentMonth = eventMonthStr <= currentMonthStr;
     const isUpToHorizon = eventMonthStr <= targetHorizonMonthStr;
 
-    const { isLoan, isLoanInst, isAmortization, isIncome, isInvestment, isWithdrawal, isExpense, absAmt } = classifyBalanceEvent(ev, timelineTypeMap);
+    const { isLoan, isLoanInst, isAmortization, isIncome, isInvestment, isWithdrawal, isAccountOutflow, isExpense, absAmt } = classifyBalanceEvent(ev, timelineTypeMap);
 
     const isPaid = isPositiveStatus(ev.status) || isPositiveStatus(ev.status?.toLowerCase()) || Boolean(ev.isCompleted);
 
@@ -191,7 +194,7 @@ export function computeBalanceTotals({ events = [], timelineTypeMap = new Map(),
       return;
     }
 
-    const multiplier = isWithdrawal ? -1 : 1;
+    const multiplier = (isWithdrawal || isAccountOutflow) ? -1 : 1;
     if (absAmt <= 0) return;
 
     const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted) || ev.status === EventStatus.WITHDRAWN;
@@ -202,7 +205,8 @@ export function computeBalanceTotals({ events = [], timelineTypeMap = new Map(),
         realizedIncome += absAmt;
       } else if (isInvestment) {
         realizedInvestmentsTotal += multiplier * absAmt;
-        if (!ev.isExternal && !ev.is_external) {
+        // Account outflows only lower the account balance (the money already left the balance when saved)
+        if (!isAccountOutflow && !ev.isExternal && !ev.is_external) {
           realizedInvestmentsDeductions += multiplier * absAmt;
         }
         if (isWithdrawal) {
@@ -219,7 +223,7 @@ export function computeBalanceTotals({ events = [], timelineTypeMap = new Map(),
         plannedIncome += absAmt;
       } else if (isInvestment) {
         plannedInvestmentsTotal += multiplier * absAmt;
-        if (!ev.isExternal && !ev.is_external) {
+        if (!isAccountOutflow && !ev.isExternal && !ev.is_external) {
           plannedInvestmentsDeductions += multiplier * absAmt;
         }
         if (isWithdrawal) {

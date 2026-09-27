@@ -65,7 +65,7 @@ export function computeClosingReport({ events = [], timelines = [], pockets = []
     if (!timelineTypeMap.has(String(ev.timelineId || ev.timeline_id || ''))) return;
     if ((fromDate && ev.date < fromDate) || ev.date > toDate) return;
 
-    const { isLoan, isIncome, isInvestment, isWithdrawal, isExpense, absAmt } = classifyBalanceEvent(ev, timelineTypeMap);
+    const { isLoan, isIncome, isInvestment, isWithdrawal, isAccountOutflow, isExpense, absAmt } = classifyBalanceEvent(ev, timelineTypeMap);
     if (absAmt <= 0) return;
 
     const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted) || ev.status === EventStatus.WITHDRAWN;
@@ -83,10 +83,11 @@ export function computeClosingReport({ events = [], timelines = [], pockets = []
     } else if (isIncome) {
       income.push({ date: ev.date, name, groupLabel: incomeLabel(ev.category), amount: absAmt });
     } else if (isInvestment) {
-      // Withdrawals are shown as negative savings
-      const amount = isWithdrawal ? -absAmt : absAmt;
+      // Withdrawals and account outflows (pocket cost / expense) are shown as negative savings;
+      // account outflows are not deducted from the balance (the money already left it when saved)
+      const amount = (isWithdrawal || isAccountOutflow) ? -absAmt : absAmt;
       savings.push({ date: ev.date, name, groupLabel: pocketLabel(ev), amount, isExternal: Boolean(ev.isExternal || ev.is_external) });
-      if (!ev.isExternal && !ev.is_external) savingsDeducted += amount;
+      if (!isAccountOutflow && !ev.isExternal && !ev.is_external) savingsDeducted += amount;
     } else if (isExpense) {
       expenses.push({ date: ev.date, name, groupLabel: expenseLabel(ev.category), amount: absAmt });
     }

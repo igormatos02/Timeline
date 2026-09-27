@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { format, parseISO, addMonths } from 'date-fns';
 import { formatCurrency } from '../utils/formatCurrency';
-import { EventType, EventStatus, TimelineType, TimelineColor, isPositiveStatus } from '../enums/index.js';
+import { EventType, EventStatus, TimelineType, TimelineColor, isPositiveStatus, isAccountOutflowEvent } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { getPaletteTheme } from '../../shared/config/colorPalettes.js';
 
@@ -180,7 +180,8 @@ export default function IncomeEvolutionChart({
             }
             if (isInvestmentEv) {
               monthInvestment += multiplier * absAmt;
-              if (!isExternal) {
+              // Account outflows (pocket cost / expense) lower the account but not the balance
+              if (!isExternal && !isAccountOutflowEvent(ev)) {
                 monthInvestmentOutflow += multiplier * absAmt;
               }
               if (activeFinancialTab === 'investimentos') eventCount++;

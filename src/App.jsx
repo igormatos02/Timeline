@@ -33,7 +33,7 @@ import {
 import { formatCurrency } from './utils/formatCurrency';
 import { generateUUID } from './utils/uuid.js';
 import * as api from './services/api';
-import { EventType, FINANCIAL_ADVANCE_PAYMENT_TYPES, EventStatus, FollowupStatus, TimelineType, TimelineStatus, TimelineColor, getDefaultTimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isCancelledStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem, PersonRole, TimeboardType, DiaryPublishStatus } from './enums/index.js';
+import { EventType, FINANCIAL_ADVANCE_PAYMENT_TYPES, isAccountOutflowEvent, EventStatus, FollowupStatus, TimelineType, TimelineStatus, TimelineColor, getDefaultTimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isCancelledStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem, PersonRole, TimeboardType, DiaryPublishStatus } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
@@ -1344,7 +1344,7 @@ export default function App() {
       handleOpenAmortizationModal(eventObj.date, eventObj);
       return;
     }
-    if (eventObj?.eventType === EventType.WITHDRAWAL || eventObj?.isWithdrawal) {
+    if (eventObj?.eventType === EventType.WITHDRAWAL || eventObj?.isWithdrawal || isAccountOutflowEvent(eventObj)) {
       handleOpenWithdrawalModal(eventObj.date, eventObj.pocketId || eventObj.pocket_id, eventObj);
       return;
     }
@@ -1802,7 +1802,7 @@ export default function App() {
       const isFollowup = ev.eventType === EventType.FOLLOWUP || ev.timelineType === TimelineType.FOLLOWUP || ev.timeline_type === TimelineType.FOLLOWUP;
 
       const isCurrPositive = isPositiveStatus(ev.status) || ev.status === FollowupStatus.FINISHED || Boolean(ev.isCompleted);
-      const isFinancialLockedType = isIncome || ev.eventType === EventType.EXPENSE || isInvestment;
+      const isFinancialLockedType = isIncome || ev.eventType === EventType.EXPENSE || isInvestment || isAccountOutflowEvent(ev);
 
       if (isFinancialLockedType && isCurrPositive) {
         return {

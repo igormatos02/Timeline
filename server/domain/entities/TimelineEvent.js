@@ -9,6 +9,7 @@ import {
   FollowupStatus,
   isPositiveStatus,
   isCancelledStatus,
+  isAccountOutflowEvent,
   normalizePeriodicity,
   normalizeRecurrence
 } from '../../../shared/enums/index.js';
@@ -291,7 +292,7 @@ export function calcToggledStatus(event, explicitStatus = null) {
   // If Positive -> Negative (Pending / Open / Planned / In Progress)
   // NOTE: Positive Income, Expense, and Investment events are locked and cannot revert to negative
   if (isPositive) {
-    if (isIncome || isInvestment || event.eventType === EventType.EXPENSE) {
+    if (isIncome || isInvestment || event.eventType === EventType.EXPENSE || isAccountOutflowEvent(event)) {
       return {
         status: currentStatus,
         isCompleted: true

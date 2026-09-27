@@ -377,7 +377,7 @@ export const translations = {
       balanceTimeline: "Balance Timeline",
       incomeTimeline: "Income Timeline",
       expenseTimeline: "Expenses Timeline",
-      investmentTimeline: "Savings Timeline",
+      investmentTimeline: "Account",
       loanTimeline: "Loan Timeline",
       projectTimeline: "Project Timeline",
       reminderTimeline: "Reminder Timeline",
@@ -448,7 +448,7 @@ export const translations = {
     financialType: {
       income: "Income",
       expense: "Expense",
-      investment: "Investment",
+      investment: "Account",
       amortization: "Amortization"
     },
 
@@ -561,16 +561,16 @@ export const translations = {
       expenseAmountLabel: "Expense Amount (€) *",
       addExpense: "Add Expense",
 
-      editInvestment: "Edit Investment",
-      newInvestment: "New Investment",
-      investmentTitleLabel: "Investment Description *",
+      editInvestment: "Edit Inflow",
+      newInvestment: "New Inflow",
+      investmentTitleLabel: "Inflow Description *",
       investmentTitlePlaceholder: "e.g., Index Funds, Treasury, Real Estate...",
       investmentAmountLabel: "Invested Amount (€) *",
       investmentSubtype: "Investment / Asset Type",
       monthlyInvestmentAmount: "Monthly Deposit / Amount (€)",
       initialInvestedAmount: "Initial Contribution (€)",
       targetAmount: "Target Amount (€)",
-      addInvestment: "Add Investment",
+      addInvestment: "Add Inflow",
 
       editMovement: "Edit Movement",
       newMovement: "New Financial Movement",
@@ -1383,6 +1383,8 @@ export const translations = {
 
     // Pocket / Cofrinho
     pocket: {
+      addInflow: "Add Inflow",
+      addOutflow: "Add Outflow",
       hasTarget: "Set a target",
       hasTargetHint: "Turn off if this pocket has no target amount",
       pockets: "Pockets & Goals",
@@ -1417,6 +1419,14 @@ export const translations = {
       forecastPercent: "{percent}% forecast",
       initialContributionNote: "Initial: {amount}",
       filterByPockets: "Filter by Pockets",
+      movementType: "Movement type",
+      allMovements: "All movements",
+      movements: {
+        inflow: "Inflows",
+        withdrawal: "Withdrawals",
+        pocket_cost: "Costs",
+        pocket_expense: "Expenses"
+      },
       allPockets: "All Pockets",
       startingMonth: "Starting Month"
     },
@@ -1443,6 +1453,28 @@ export const translations = {
       pocketSelectPlaceholder: "Select a pocket",
       amountLabel: "Withdrawal Amount (€) *",
       maxAvailable: "Max available: {{amount}}",
+      outflowTitle: "Add Outflow",
+      outflowEditTitle: "Edit Outflow",
+      confirmOutflow: "Add Outflow",
+      saveOutflow: "Save Outflow",
+      outflowAmountLabel: "Amount (€) *",
+      typeLabel: "Outflow type",
+      types: {
+        withdrawal: "Withdrawal",
+        pocket_cost: "Cost",
+        pocket_expense: "Expense"
+      },
+      typesDesc: {
+        withdrawal: "Moves money from the pocket to the income timeline",
+        pocket_cost: "A cost of the pocket (e.g. account fees), one-time or periodic",
+        pocket_expense: "An expense paid from the pocket, with the expense categories"
+      },
+      titlePlaceholders: {
+        withdrawal: "Ex: Emergency withdrawal, planned purchase...",
+        pocket_cost: "Ex: Account maintenance fee, bank charges...",
+        pocket_expense: "Ex: Roof repair, cleaning products..."
+      },
+      automaticLabel: "Automatic debit",
       dateLabel: "Due Date *",
       dayLabel: "Due Day *",
       titleLabel: "Title / Description *",
@@ -1461,15 +1493,15 @@ export const translations = {
     // Investment Timeline Header
     investmentHeader: {
       externalDepositsLabel: "External deposits: {{amount}} (not committed)",
-      badge: "Savings & Investments",
-      addInvestment: "New Contribution",
+      badge: "Account",
+      addInvestment: "New Inflow",
       resetTitle: "Clear all movements in this timeline",
       settingsTitle: "Timeline Settings",
       deleteTitle: "Delete this timeline",
       categoriesTitle: "SAVINGS BY POCKET",
       noPockets: "No pockets recorded",
       noPocketsHint: "Create pockets to view the savings breakdown.",
-      noInvestments: "No investments recorded",
+      noInvestments: "No inflows recorded",
       noInvestmentsHint: "Add contributions to view the category breakdown.",
       annualProjectionTitle: "ANNUAL CONTRIBUTION PROJECTION",
       projectionNext12Months: "Committed (+12M):",
@@ -2449,7 +2481,7 @@ export const translations = {
       balanceTimeline: "Linha de Balanço",
       incomeTimeline: "Linha de Entrada",
       expenseTimeline: "Linha de Despesas",
-      investmentTimeline: "Linha de Poupança",
+      investmentTimeline: "Conta",
       loanTimeline: "Linha Empréstimo",
       projectTimeline: "Projetos",
       reminderTimeline: "Lembretes",
@@ -2520,7 +2552,7 @@ export const translations = {
     financialType: {
       income: "Entrada",
       expense: "Gasto",
-      investment: "Investimento",
+      investment: "Conta",
       amortization: "Amortização"
     },
 
@@ -2633,16 +2665,16 @@ export const translations = {
       expenseAmountLabel: "Valor da Despesa (€) *",
       addExpense: "Adicionar Despesa",
 
-      editInvestment: "Editar Investimento",
-      newInvestment: "Novo Investimento",
-      investmentTitleLabel: "Descrição do Investimento *",
+      editInvestment: "Editar Entrada",
+      newInvestment: "Nova Entrada",
+      investmentTitleLabel: "Descrição da Entrada *",
       investmentTitlePlaceholder: "Ex: Fundos de Investimento, Poupança, Ações...",
       investmentAmountLabel: "Valor Investido (€) *",
       investmentSubtype: "Tipo de Aplicação / Investimento",
       monthlyInvestmentAmount: "Aporte Mensal / Valor (€)",
       initialInvestedAmount: "Aporte Inicial (€)",
       targetAmount: "Meta Final (€)",
-      addInvestment: "Adicionar Investimento",
+      addInvestment: "Adicionar Entrada",
 
       editMovement: "Editar Movimento",
       newMovement: "Novo Movimento Financeiro",
@@ -3455,6 +3487,8 @@ export const translations = {
 
     // Pocket / Cofrinho
     pocket: {
+      addInflow: "Adicionar Entrada",
+      addOutflow: "Adicionar Saída",
       hasTarget: "Definir meta",
       hasTargetHint: "Desligue se este cofrinho não tiver um valor objetivo",
       pockets: "Cofrinhos & Metas",
@@ -3489,6 +3523,14 @@ export const translations = {
       forecastPercent: "{percent}% previsto",
       initialContributionNote: "Aporte Inicial: {amount}",
       filterByPockets: "Filtrar por Cofrinhos",
+      movementType: "Tipo de movimento",
+      allMovements: "Todos os movimentos",
+      movements: {
+        inflow: "Entradas",
+        withdrawal: "Retiradas",
+        pocket_cost: "Custos",
+        pocket_expense: "Gastos"
+      },
       allPockets: "Todos os Cofrinhos",
       startingMonth: "Mês de Início"
     },
@@ -3515,6 +3557,28 @@ export const translations = {
       pocketSelectPlaceholder: "Selecione o cofrinho",
       amountLabel: "Valor da Retirada (€) *",
       maxAvailable: "Máximo disponível: {{amount}}",
+      outflowTitle: "Adicionar Saída",
+      outflowEditTitle: "Editar Saída",
+      confirmOutflow: "Adicionar Saída",
+      saveOutflow: "Guardar Saída",
+      outflowAmountLabel: "Valor (€) *",
+      typeLabel: "Tipo de saída",
+      types: {
+        withdrawal: "Retirada",
+        pocket_cost: "Custo",
+        pocket_expense: "Gasto"
+      },
+      typesDesc: {
+        withdrawal: "Move o dinheiro do cofrinho para a timeline de entradas",
+        pocket_cost: "Um custo do cofrinho (ex.: manutenção de conta), único ou periódico",
+        pocket_expense: "Um gasto pago pelo cofrinho, com as categorias das despesas"
+      },
+      titlePlaceholders: {
+        withdrawal: "Ex: Retirada de emergência, compra planeada...",
+        pocket_cost: "Ex: Manutenção de conta, comissões bancárias...",
+        pocket_expense: "Ex: Reparação do telhado, produtos de limpeza..."
+      },
+      automaticLabel: "Débito automático",
       dateLabel: "Data de Vencimento *",
       dayLabel: "Dia de Vencimento *",
       titleLabel: "Título / Descrição *",
@@ -3533,15 +3597,15 @@ export const translations = {
     // Investment Timeline Header
     investmentHeader: {
       externalDepositsLabel: "Depósitos externos: {{amount}} (não comprometidos)",
-      badge: "Poupança & Investimentos",
-      addInvestment: "Novo Aporte",
+      badge: "Conta",
+      addInvestment: "Nova Entrada",
       resetTitle: "Limpar todos os movimentos desta timeline",
       settingsTitle: "Definições da Timeline",
       deleteTitle: "Excluir esta timeline",
       categoriesTitle: "POUPANÇA POR COFRINHOS",
       noPockets: "Sem cofrinhos registados",
       noPocketsHint: "Crie cofrinhos para visualizar o gráfico por cofrinhos.",
-      noInvestments: "Sem investimentos registados",
+      noInvestments: "Sem entradas registadas",
       noInvestmentsHint: "Adicione aportes para visualizar o gráfico por categoria.",
       annualProjectionTitle: "PROJEÇÃO ANUAL DE APORTES",
       projectionNext12Months: "Comprometido (+12M):",

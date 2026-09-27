@@ -1,5 +1,5 @@
 import React from 'react';
-import { TimelineType, EventType, normalizeTimelineType } from '../enums/index.js';
+import { TimelineType, EventType, normalizeTimelineType, isAccountOutflowEvent } from '../enums/index.js';
 import {
   IncomeEventModal,
   ExpenseEventModal,
@@ -23,7 +23,7 @@ export default function CreateEventModal(props) {
 
   if (!isOpen) return null;
 
-  if (initialData?.eventType === EventType.WITHDRAWAL || initialData?.isWithdrawal) {
+  if (initialData?.eventType === EventType.WITHDRAWAL || initialData?.isWithdrawal || isAccountOutflowEvent(initialData)) {
     return <WithdrawalModal {...props} />;
   }
 

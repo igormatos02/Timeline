@@ -928,6 +928,14 @@ export const translations = {
       noInstallments: "No installments in this period.",
       noLinkedTimeboards: "Your account is not linked to any timeboard yet. Use the invitation code you received.",
       acceptInvite: "Accept invitation",
+      viewLabel: "View",
+      views: {
+        individual: "Individual",
+        admin: "Admin"
+      },
+      entityLabel: "Entity",
+      noOwnEntity: "You have no entity of your own in this timeboard. Use the Admin view to see the entities.",
+      noEntities: "This timeboard has no entities yet.",
       googleNotConfigured: "Google sign-in is not configured in this app version.",
       status: {
         paid: "Paid",
@@ -3053,6 +3061,14 @@ export const translations = {
       noInstallments: "Sem prestações neste período.",
       noLinkedTimeboards: "A sua conta ainda não está ligada a nenhum timeboard. Use o código de convite que recebeu.",
       acceptInvite: "Aceitar convite",
+      viewLabel: "Vista",
+      views: {
+        individual: "Individual",
+        admin: "Admin"
+      },
+      entityLabel: "Entidade",
+      noOwnEntity: "Não tem uma entidade própria neste timeboard. Use a vista Admin para ver as entidades.",
+      noEntities: "Este timeboard ainda não tem entidades.",
       googleNotConfigured: "O login com Google não está configurado nesta versão da aplicação.",
       status: {
         paid: "Pago",

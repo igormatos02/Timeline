@@ -35,7 +35,9 @@ export async function signInWithNativeGoogle({ notConfiguredMessage, noTokenMess
   const rawNonce = randomNonce();
   const { result } = await SocialLogin.login({
     provider: 'google',
-    options: { scopes: ['email', 'profile'], nonce: await sha256Hex(rawNonce) }
+    // No custom scopes: the ID token already carries the e-mail and name (custom scopes would
+    // require a modified MainActivity)
+    options: { nonce: await sha256Hex(rawNonce) }
   });
   if (!result?.idToken) throw new Error(noTokenMessage);
   const { error } = await supabase.auth.signInWithIdToken({ provider: 'google', token: result.idToken, nonce: rawNonce });

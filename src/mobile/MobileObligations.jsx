@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { LogOut, RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, Loader2, Ticket } from 'lucide-react';
 import { format, parseISO, setMonth } from 'date-fns';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { TimelineColor } from '../enums/index.js';
+import { TimelineColor, PersonRole } from '../enums/index.js';
 import { formatCurrency } from '../utils/formatCurrency.js';
 import * as mobileApi from './mobileApi.js';
 import styles from './MobileApp.module.css';
@@ -32,16 +32,20 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
   const [month, setMonthFilter] = useState(ALL);
   const [inviteCode, setInviteCode] = useState('');
   const [isAccepting, setIsAccepting] = useState(false);
+  // Admins choose between their own (individual) view and the admin view of any entity
+  const [viewModeChoice, setViewModeChoice] = useState(null);
+  const [entities, setEntities] = useState([]);
+  const [selectedEntityId, setSelectedEntityId] = useState(null);
 
   const handleError = useCallback((err) => {
     if (err instanceof mobileApi.SessionExpiredError) onSessionExpired();
     else setError(err.message || t('auth.errors.requestFailed'));
   }, [onSessionExpired, t]);
 
-  // Timeboards where the user is linked to a person (the ones with installments)
+  // Timeboards where the user is linked to a person (the ones with installments) or is admin
   const loadTimeboards = useCallback((preferredId = null) => mobileApi.getTimeboards()
     .then((result) => {
-      const linked = (result?.all || []).filter((tb) => tb.personId);
+      const linked = (result?.all || []).filter((tb) => tb.personId || tb.role === PersonRole.ADMIN);
       setTimeboards(linked);
       setSelectedId((current) => {
         const wanted = preferredId || current;
@@ -69,16 +73,48 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
     }
   };
 
+  const selectedTimeboard = (timeboards || []).find((tb) => tb.id === selectedId);
+  const isAdmin = selectedTimeboard?.role === PersonRole.ADMIN;
+  const hasOwnEntity = Boolean(selectedTimeboard?.personId);
+  // Individual members always see their own view; admins default to it when they have an entity
+  const viewMode = isAdmin
+    ? (viewModeChoice || (hasOwnEntity ? PersonRole.INDIVIDUAL : PersonRole.ADMIN))
+    : PersonRole.INDIVIDUAL;
+  const isAdminView = viewMode === PersonRole.ADMIN;
+
+  const selectTimeboard = (id) => {
+    setSelectedId(id);
+    setViewModeChoice(null);
+    setSelectedEntityId(null);
+  };
+
+  // Admin view: the timeboard's entities (with their debt balance)
+  useEffect(() => {
+    if (!isAdminView || !selectedId) return;
+    mobileApi.getEntities(selectedId)
+      .then((list) => {
+        setEntities(list);
+        setSelectedEntityId((current) => (list.some((e) => e.id === current) ? current : (list[0]?.id || null)));
+      })
+      .catch(handleError);
+  }, [isAdminView, selectedId, handleError]);
+
   const loadObligations = useCallback(() => {
     if (!selectedId) return;
     mobileApi.setSelectedTimeboardId(selectedId);
+    const personId = isAdminView ? selectedEntityId : null;
+    // Nothing to show: admin view without an entity yet, or individual view without an own entity
+    if ((isAdminView && !personId) || (!isAdminView && !hasOwnEntity)) {
+      setData(null);
+      return;
+    }
     setIsLoading(true);
     setError('');
-    mobileApi.getObligations(selectedId)
+    mobileApi.getObligations(selectedId, personId)
       .then(setData)
       .catch(handleError)
       .finally(() => setIsLoading(false));
-  }, [selectedId, handleError]);
+  }, [selectedId, isAdminView, selectedEntityId, hasOwnEntity, handleError]);
 
   useEffect(() => { loadObligations(); }, [loadObligations]);
 
@@ -100,7 +136,6 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
   const overdueCount = items.filter((item) => item.isOverdue).length;
   const debt = data?.debtBalance || 0;
   const debtColor = debt > 0 ? TimelineColor.DANGER : TimelineColor.SUCCESS;
-  const selectedTimeboard = (timeboards || []).find((tb) => tb.id === selectedId);
   const shownError = error || notice;
 
   return (
@@ -109,7 +144,11 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
       <div className={styles.header}>
         <div style={{ minWidth: 0 }}>
           <div className={styles.headerTitle}>{selectedTimeboard?.name || t('mobile.title')}</div>
-          <div className={styles.headerSub}>{user?.name || user?.email}</div>
+          <div className={styles.headerSub}>
+            {isAdminView
+              ? (entities.find((entity) => entity.id === selectedEntityId)?.name || t('mobile.views.admin'))
+              : (user?.name || user?.email)}
+          </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button type="button" className={styles.iconButton} onClick={loadObligations} aria-label={t('mobile.refresh')} title={t('mobile.refresh')} disabled={!selectedId}>
@@ -154,10 +193,45 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
       ) : (
         <>
           {timeboards.length > 1 && (
-            <select className={styles.select} value={selectedId || ''} onChange={(e) => setSelectedId(e.target.value)} aria-label={t('mobile.timeboardLabel')}>
+            <select className={styles.select} value={selectedId || ''} onChange={(e) => selectTimeboard(e.target.value)} aria-label={t('mobile.timeboardLabel')}>
               {timeboards.map((tb) => <option key={tb.id} value={tb.id}>{tb.name}</option>)}
             </select>
           )}
+
+          {/* Admins: individual (own) view or admin view of any entity */}
+          {isAdmin && (
+            <div className={styles.tabs} role="tablist" aria-label={t('mobile.viewLabel')} style={{ marginBottom: 0 }}>
+              {[PersonRole.INDIVIDUAL, PersonRole.ADMIN].map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  role="tab"
+                  aria-selected={viewMode === mode}
+                  className={`${styles.tab} ${viewMode === mode ? styles.tabActive : ''}`}
+                  onClick={() => setViewModeChoice(mode)}
+                >
+                  {t(`mobile.views.${mode}`)}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {isAdminView && entities.length > 0 && (
+            <select className={styles.select} value={selectedEntityId || ''} onChange={(e) => setSelectedEntityId(e.target.value)} aria-label={t('mobile.entityLabel')}>
+              {entities.map((entity) => (
+                <option key={entity.id} value={entity.id}>
+                  {entity.debtBalance > 0 ? `${entity.name} · ${formatCurrency(entity.debtBalance)}` : entity.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {!isAdminView && !hasOwnEntity ? (
+            <div className={`${styles.card} ${styles.empty}`}>{t('mobile.noOwnEntity')}</div>
+          ) : isAdminView && entities.length === 0 ? (
+            <div className={`${styles.card} ${styles.empty}`}>{t('mobile.noEntities')}</div>
+          ) : (
+          <>
 
           {/* Debt balance */}
           <div className={styles.debtCard} style={{ background: `linear-gradient(135deg, ${debtColor} 0%, ${debtColor}cc 100%)` }}>
@@ -237,6 +311,8 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
               );
             })}
           </div>
+          </>
+          )}
         </>
       )}
     </div>

@@ -69,7 +69,12 @@ export const lookupInviteCode = (code) => request(`/invitations/code/${encodeURI
 export const acceptInviteByCode = (code) => request('/invitations/accept', { method: 'POST', body: { code } });
 
 export const getTimeboards = () => request('/timeboards');
-export const getObligations = (timeboardId) => request(`/me/obligations?timeboardId=${encodeURIComponent(timeboardId)}`);
+// Obligations of the logged-in person, or of another entity (`personId`, admins only)
+export const getObligations = (timeboardId, personId = null) => request(
+  `/me/obligations?timeboardId=${encodeURIComponent(timeboardId)}${personId ? `&personId=${encodeURIComponent(personId)}` : ''}`
+);
+// Admins: the timeboard's entities with their debt balance
+export const getEntities = (timeboardId) => request(`/me/entities?timeboardId=${encodeURIComponent(timeboardId)}`);
 
 export const getPendingInviteCode = () => read(INVITE_CODE_KEY);
 export const setPendingInviteCode = (code) => write(INVITE_CODE_KEY, code || null);

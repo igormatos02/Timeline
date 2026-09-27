@@ -928,6 +928,7 @@ export const translations = {
       noInstallments: "No installments in this period.",
       noLinkedTimeboards: "Your account is not linked to any timeboard yet. Use the invitation code you received.",
       acceptInvite: "Accept invitation",
+      googleNotConfigured: "Google sign-in is not configured in this app version.",
       status: {
         paid: "Paid",
         pending: "Pending",
@@ -3052,6 +3053,7 @@ export const translations = {
       noInstallments: "Sem prestações neste período.",
       noLinkedTimeboards: "A sua conta ainda não está ligada a nenhum timeboard. Use o código de convite que recebeu.",
       acceptInvite: "Aceitar convite",
+      googleNotConfigured: "O login com Google não está configurado nesta versão da aplicação.",
       status: {
         paid: "Pago",
         pending: "Pendente",

@@ -3,6 +3,7 @@ import { Sparkles, Ticket, AlertCircle, ArrowRight, LogIn, UserPlus, Loader2 } f
 import { supabase } from '../services/supabaseClient.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import * as mobileApi from './mobileApi.js';
+import { isNativeApp, signInWithNativeGoogle } from './nativeGoogle.js';
 import styles from './MobileApp.module.css';
 
 // Official Google "G" logo colors (brand requirement of the Google sign-in button)
@@ -93,6 +94,14 @@ export default function MobileAuth({ onLoggedIn, notice, onClearNotice }) {
   };
 
   const handleGoogle = () => run(async () => {
+    // Android app: native Google account picker; the Supabase session is then synced by MobileApp
+    if (isNativeApp()) {
+      await signInWithNativeGoogle({
+        notConfiguredMessage: t('mobile.googleNotConfigured'),
+        noTokenMessage: t('auth.errors.googleAuthFailed')
+      });
+      return;
+    }
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}${window.location.pathname}` }

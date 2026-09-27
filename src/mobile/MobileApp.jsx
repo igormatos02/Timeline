@@ -5,6 +5,7 @@ import { useTranslation } from '../i18n/LanguageContext.jsx';
 import * as mobileApi from './mobileApi.js';
 import MobileAuth from './MobileAuth.jsx';
 import MobileObligations from './MobileObligations.jsx';
+import { signOutNativeGoogle } from './nativeGoogle.js';
 import styles from './MobileApp.module.css';
 
 /**
@@ -83,6 +84,7 @@ export default function MobileApp() {
     mobileApi.clearSession();
     mobileApi.setSelectedTimeboardId(null);
     try { await supabase.auth.signOut(); } catch { /* not signed in with Google */ }
+    await signOutNativeGoogle();
     setUser(null);
   };
 

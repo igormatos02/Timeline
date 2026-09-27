@@ -5,7 +5,7 @@
 import { format, parseISO } from 'date-fns';
 import { pt, enUS } from 'date-fns/locale';
 import { formatCurrency } from './formatCurrency.js';
-import { EventType, ClearanceDocumentType } from '../enums/index.js';
+import { EventType, ClearanceDocumentType, TIMELINE_COLOR_PRESETS } from '../enums/index.js';
 
 /**
  * Computa o número de recibo baseado na timeline (cont_year) e ano corrente:
@@ -840,6 +840,135 @@ ${DOCUMENT_TABLE_STYLES}
               </tr>` : ''}
             </tbody>
           </table>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Builds the printable closing report (month, year or general up to a date): income, savings and expenses
+ * of the period, the balance, percentage bar charts (expenses and income by category, savings by pocket)
+ * and the amounts still pending. `report` comes from computeClosingReport.
+ */
+export function buildClosingReportHtml({
+  timeboard,
+  currentUser,
+  periodLabel,
+  report,
+  language = 'pt',
+  t
+}) {
+  const { timeboardName, timeboardDesc } = resolveIssuer({ timeboard, currentUser, t });
+  const tk = (key, params) => t(`timeboardSettings.reports.closings.${key}`, params);
+  const titleLabel = tk('title');
+
+  const rowsTable = (rows, emptyKey) => `
+          <table class="charges-table">
+            <thead>
+              <tr>
+                <th>${tk('colDate')}</th>
+                <th>${tk('colEvent')}</th>
+                <th>${tk('colCategory')}</th>
+                <th class="num">${tk('colAmount')}</th>
+              </tr>
+            </thead>
+            <tbody>${rows.length > 0 ? rows.map((r) => `
+              <tr>
+                <td>${format(parseISO(r.date), 'dd/MM/yyyy')}</td>
+                <td>${escapeHtml(r.name) || '—'}</td>
+                <td>${escapeHtml(r.groupLabel)}</td>
+                <td class="num">${formatCurrency(r.amount)}</td>
+              </tr>`).join('') : `
+              <tr><td colspan="4" class="empty">${tk(emptyKey)}</td></tr>`}
+            </tbody>
+          </table>`;
+
+  const section = (titleKey, block, emptyKey) => `
+          <div class="section">
+            <div class="section-title"><span>${tk(titleKey)}</span><span>${formatCurrency(block.total)}</span></div>
+            ${rowsTable(block.rows, emptyKey)}
+          </div>`;
+
+  const barChart = (titleKey, items) => `
+          <div class="chart">
+            <div class="chart-title">${tk(titleKey)}</div>
+            ${items.length > 0 ? items.map((item, i) => {
+              const color = TIMELINE_COLOR_PRESETS[i % TIMELINE_COLOR_PRESETS.length];
+              return `
+            <div class="bar-row">
+              <div class="bar-label">${escapeHtml(item.label)}</div>
+              <div class="bar-track"><div class="bar-fill" style="width:${Math.max(item.percent, 1)}%;background:${color}"></div></div>
+              <div class="bar-value">${item.percent}% · ${formatCurrency(item.amount)}</div>
+            </div>`;
+            }).join('') : `<div class="empty">${tk('noData')}</div>`}
+          </div>`;
+
+  const { income, savings, expenses, balance, pending } = report;
+
+  return `
+    <!DOCTYPE html>
+    <html lang="${language}">
+    <head>
+      <meta charset="utf-8" />
+      <title>${titleLabel} - ${timeboardName}</title>
+      <style>
+${RECEIPT_STYLES}
+${DOCUMENT_TABLE_STYLES}
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .history { line-height: 1.5; font-size: 13px; }
+        .history .doc-title { font-size: 16px; font-weight: 800; text-align: center; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+        .history .condo-name { font-size: 14px; font-weight: 700; text-align: center; margin-bottom: 4px; }
+        .history .print-layout { text-align: center; margin-bottom: 16px; }
+        .history .period { margin-bottom: 16px; text-align: center; font-weight: 700; }
+        .section { margin-bottom: 14px; break-inside: auto; }
+        .section-title { display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid currentColor; padding-bottom: 4px; margin-bottom: 6px; }
+        .summary-table { width: 100%; border-collapse: collapse; margin: 6px 0 18px; font-size: 13px; }
+        .summary-table td { padding: 5px 8px; border-bottom: 1px solid currentColor; }
+        .summary-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .summary-table .balance-row td { font-weight: 800; font-size: 14px; border-top: 2px solid currentColor; }
+        .note { font-size: 11px; font-style: italic; margin-top: -12px; margin-bottom: 16px; }
+        .charts { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 18px; break-inside: avoid; }
+        .chart-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+        .bar-row { display: grid; grid-template-columns: 30% 1fr 30%; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 11px; }
+        .bar-track { height: 10px; border-radius: 5px; border: 1px solid currentColor; overflow: hidden; }
+        .bar-fill { height: 100%; }
+        .bar-value { text-align: right; font-variant-numeric: tabular-nums; }
+        .empty { font-style: italic; font-size: 11px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="receipt-section history">
+          <div class="doc-title">${titleLabel}</div>
+          <div class="condo-name">${timeboardName}</div>
+          ${timeboardDesc ? `<div class="print-layout">${timeboardDesc}</div>` : ''}
+          <div class="period">${escapeHtml(periodLabel)}</div>
+
+          ${section('incomeTitle', income, 'noIncome')}
+          ${section('savingsTitle', savings, 'noSavings')}
+          ${section('expensesTitle', expenses, 'noExpenses')}
+
+          <div class="section">
+            <div class="section-title"><span>${tk('balanceTitle')}</span></div>
+            <table class="summary-table">
+              <tr><td>${tk('incomeTitle')}</td><td class="num">+${formatCurrency(income.total)}</td></tr>
+              <tr><td>${tk('expensesTitle')}</td><td class="num">-${formatCurrency(expenses.total)}</td></tr>
+              <tr><td>${tk('savingsDeducted')}</td><td class="num">-${formatCurrency(savings.deducted)}</td></tr>
+              <tr class="balance-row"><td>${tk('balanceTitle')}</td><td class="num">${balance >= 0 ? '+' : ''}${formatCurrency(balance)}</td></tr>
+            </table>
+            ${savings.hasExternal ? `<div class="note">${tk('externalNote')}</div>` : ''}
+          </div>
+
+          <div class="charts">
+            ${barChart('expensesByCategory', expenses.breakdown)}
+            ${barChart('incomeByCategory', income.breakdown)}
+            ${barChart('savingsByPocket', savings.breakdown)}
+          </div>
+
+          ${section('receivableTitle', pending.receivable, 'noPending')}
+          ${section('payableTitle', pending.payable, 'noPending')}
         </div>
       </div>
     </body>

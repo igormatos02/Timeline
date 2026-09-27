@@ -59,6 +59,74 @@ export function computePocketsInitialTotal({ pockets = [], timelines = [], event
 }
 
 /**
+ * Classifies an event the way the balance timeline does (loan, income, investment / withdrawal, expense).
+ * Shared by the balance totals and the closing report so both use the same rules.
+ */
+export function classifyBalanceEvent(ev, timelineTypeMap = new Map()) {
+  const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timeline_id || ''));
+
+  const isLoanInst = ev.eventType === EventType.LOAN_INSTALLMENT ||
+    ev.eventType === 'loan_installment' ||
+    ev.category === 'parcela_emprestimo' ||
+    ev.category === LoanEventCategory.LOAN_INSTALLMENT ||
+    (Boolean(ev.isSystemLoanEvent) && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
+
+  const isAmortization = ev.eventType === EventType.AMORTIZATION ||
+    ev.eventType === 'amortization' ||
+    ev.category === 'amortizacao' ||
+    ev.category === 'amortization' ||
+    ev.category === AmortizationEventCategory.REDUCE_TERM ||
+    ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
+    ev.category === AmortizationStrategy.REDUCE_TERM ||
+    ev.category === AmortizationStrategy.REDUCE_INSTALLMENT;
+
+  const isLoan = isLoanInst || isAmortization || isLoanTimelineType(tlType);
+
+  const amt = isLoanInst
+    ? Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0))
+    : Number(ev.amount || 0);
+  const absAmt = Math.abs(amt);
+
+  const normalizedTlType = normalizeTimelineType(tlType || ev.timelineType || ev.timeline_type);
+
+  const isIncome = (
+    ev.eventType === EventType.INCOME ||
+    normalizedTlType === TimelineType.INCOME ||
+    ev.category === IncomeEventCategory.RECURRING_INCOME ||
+    Boolean(ev.isIncome)
+  ) && !isLoan;
+
+  const isInvestment = (
+    ev.eventType === EventType.INVESTMENT ||
+    ev.eventType === 'investment' ||
+    ev.eventType === 'investments' ||
+    ev.eventType === EventType.WITHDRAWAL ||
+    ev.category === InvestmentEventCategory.SAVINGS ||
+    ev.category === 'savings' ||
+    ev.category === 'investimento' ||
+    normalizedTlType === TimelineType.INVESTMENT ||
+    Boolean(ev.isInvestment) ||
+    Boolean(ev.isWithdrawal) ||
+    Boolean(ev.pocketId || ev.pocket_id)
+  ) && !isLoan;
+
+  const isWithdrawal = Boolean(
+    ev.isWithdrawal ||
+    ev.eventType === EventType.WITHDRAWAL ||
+    (isInvestment && (ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0))
+  );
+
+  const isExpense = (
+    ev.eventType === EventType.EXPENSE ||
+    normalizedTlType === TimelineType.EXPENSE ||
+    ev.category === ExpenseEventCategory.RECURRING_EXPENSE ||
+    Boolean(ev.isExpense)
+  ) && !isIncome && !isInvestment && !isLoan;
+
+  return { isLoan, isLoanInst, isAmortization, isIncome, isInvestment, isWithdrawal, isExpense, absAmt };
+}
+
+/**
  * Realized (up to the current month) and planned (up to the horizon) totals of the balance timeline.
  * Shared by the balance header and the individual header (timeboard summary for individual users).
  */
@@ -90,29 +158,7 @@ export function computeBalanceTotals({ events = [], timelineTypeMap = new Map(),
     const isUpToCurrentMonth = eventMonthStr <= currentMonthStr;
     const isUpToHorizon = eventMonthStr <= targetHorizonMonthStr;
 
-    const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timeline_id || ''));
-
-    const isLoanInst = ev.eventType === EventType.LOAN_INSTALLMENT ||
-      ev.eventType === 'loan_installment' ||
-      ev.category === 'parcela_emprestimo' ||
-      ev.category === LoanEventCategory.LOAN_INSTALLMENT ||
-      (Boolean(ev.isSystemLoanEvent) && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
-
-    const isAmortization = ev.eventType === EventType.AMORTIZATION ||
-      ev.eventType === 'amortization' ||
-      ev.category === 'amortizacao' ||
-      ev.category === 'amortization' ||
-      ev.category === AmortizationEventCategory.REDUCE_TERM ||
-      ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
-      ev.category === AmortizationStrategy.REDUCE_TERM ||
-      ev.category === AmortizationStrategy.REDUCE_INSTALLMENT;
-
-    const isLoan = isLoanInst || isAmortization || isLoanTimelineType(tlType);
-
-    const amt = isLoanInst
-      ? Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0))
-      : Number(ev.amount || 0);
-    const absAmt = Math.abs(amt);
+    const { isLoan, isLoanInst, isAmortization, isIncome, isInvestment, isWithdrawal, isExpense, absAmt } = classifyBalanceEvent(ev, timelineTypeMap);
 
     const isPaid = isPositiveStatus(ev.status) || isPositiveStatus(ev.status?.toLowerCase()) || Boolean(ev.isCompleted);
 
@@ -145,43 +191,8 @@ export function computeBalanceTotals({ events = [], timelineTypeMap = new Map(),
       return;
     }
 
-    const normalizedTlType = normalizeTimelineType(tlType || ev.timelineType || ev.timeline_type);
-
-    const isIncome = (
-      ev.eventType === EventType.INCOME ||
-      normalizedTlType === TimelineType.INCOME ||
-      ev.category === IncomeEventCategory.RECURRING_INCOME ||
-      Boolean(ev.isIncome)
-    ) && !isLoan;
-
-    const isInvestment = (
-      ev.eventType === EventType.INVESTMENT ||
-      ev.eventType === 'investment' ||
-      ev.eventType === 'investments' ||
-      ev.eventType === EventType.WITHDRAWAL ||
-      ev.category === InvestmentEventCategory.SAVINGS ||
-      ev.category === 'savings' ||
-      ev.category === 'investimento' ||
-      normalizedTlType === TimelineType.INVESTMENT ||
-      Boolean(ev.isInvestment) ||
-      Boolean(ev.isWithdrawal) ||
-      Boolean(ev.pocketId || ev.pocket_id)
-    ) && !isLoan;
-
-    const isWithdrawal = Boolean(
-      ev.isWithdrawal ||
-      ev.eventType === EventType.WITHDRAWAL ||
-      (isInvestment && (ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0))
-    );
     const multiplier = isWithdrawal ? -1 : 1;
     if (absAmt <= 0) return;
-
-    const isExpense = (
-      ev.eventType === EventType.EXPENSE ||
-      normalizedTlType === TimelineType.EXPENSE ||
-      ev.category === ExpenseEventCategory.RECURRING_EXPENSE ||
-      Boolean(ev.isExpense)
-    ) && !isIncome && !isInvestment && !isLoan;
 
     const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted) || ev.status === EventStatus.WITHDRAWN;
 

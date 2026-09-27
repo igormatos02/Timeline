@@ -644,6 +644,7 @@ export const translations = {
       travel: "Travel",
       personal_care: "Personal Care",
       services: "Services",
+      cleaning: "Cleaning",
       condominium: "Condominium",
       reserve: "Reserve Fund",
       other: "Other Expenses"
@@ -660,6 +661,26 @@ export const translations = {
       investment_return: "Investment Returns / Dividends",
       recurring_income: "Recurring Inflow",
       other: "Other Income"
+    },
+
+    // Names of the condominium expense categories (selection boxes)
+    condoExpenseCategories: {
+      electricity: "Electricity",
+      water: "Water",
+      gas: "Gas",
+      cleaning: "Cleaning",
+      services: "Services",
+      other: "Other"
+    },
+
+    // Descriptions of the condominium expense categories (selection boxes)
+    condoExpenseCategoryDesc: {
+      electricity: "Electricity of the common areas",
+      water: "Water consumption of the building",
+      gas: "Gas supply",
+      cleaning: "Cleaning of the common areas",
+      services: "Maintenance and other contracted services",
+      other: "Other condominium expenses"
     },
 
     // Descriptions of the condominium income categories (selection boxes)
@@ -1019,10 +1040,12 @@ export const translations = {
         groupByLabel: "Group by",
         print: "Print",
         types: {
-          debtors: "Debtors Report"
+          debtors: "Debtors Report",
+          closings: "Closings"
         },
         typesDesc: {
-          debtors: "Overdue obligations not yet settled, by timeline, debtor or date"
+          debtors: "Overdue obligations not yet settled, by timeline, debtor or date",
+          closings: "Income, savings, expenses, balance and pending amounts of a month, a year or up to a date"
         },
         groupBy: {
           timeline: "Timeline",
@@ -1040,6 +1063,43 @@ export const translations = {
           subtotal: "Subtotal",
           total: "Total owed",
           empty: "No debtors in the selected period."
+        },
+        closings: {
+          title: "Closing",
+          typeLabel: "Closing",
+          periods: {
+            month: "Month closing",
+            year: "Year closing",
+            general: "General closing"
+          },
+          monthLabel: "Month",
+          yearLabel: "Year",
+          untilDateLabel: "Up to date",
+          periodMonth: "Month closing: {{month}}",
+          periodYear: "Year closing: {{year}}",
+          periodGeneral: "General closing up to {{date}}",
+          incomeTitle: "Income",
+          savingsTitle: "Savings",
+          expensesTitle: "Expenses",
+          balanceTitle: "Balance",
+          savingsDeducted: "Savings deducted from the balance",
+          externalNote: "External deposits are not deducted from the balance.",
+          expensesByCategory: "Expenses by category",
+          incomeByCategory: "Income by category",
+          savingsByPocket: "Savings by pocket",
+          receivableTitle: "Pending receipts",
+          payableTitle: "Pending payments",
+          colDate: "Date",
+          colEvent: "Event",
+          colCategory: "Category",
+          colAmount: "Amount",
+          noIncome: "No income in the period.",
+          noSavings: "No savings in the period.",
+          noExpenses: "No expenses in the period.",
+          noPending: "No pending amounts.",
+          noData: "No data in the period.",
+          noPocket: "No pocket",
+          loanCategory: "Loans"
         }
       },
       settingsTab: {
@@ -1239,6 +1299,7 @@ export const translations = {
       travel: "Travel",
       personal_care: "Personal Care",
       services: "Services",
+      cleaning: "Cleaning",
       condominium: "Condominium",
       reserve: "Reserve Fund",
       other: "Other"
@@ -1466,6 +1527,15 @@ export const translations = {
       realCapitalCost: "Real Capital Cost",
       realCapitalCostTitle: "Estimated total real cost (Financed Capital + Interest + Fees)",
       futureProjection: "Future Projection",
+      pastProjection: "Past Projection",
+      projectionDirectionLabel: "Projection direction",
+      pastHorizon: "Past Horizon:",
+      minusMonths: "-{count} Months",
+      minusYear: "-{count} Year",
+      minusYears: "-{count} Years",
+      calculationStart: "Start",
+      calculationStartLabel: "Start ({month})",
+      projectBackToTitle: "Go back to {date}",
       forecastHorizon: "Forecast Horizon:",
       currentMonth: "Current Month",
       currentMonthParen: "(Current Month)",
@@ -2646,6 +2716,7 @@ export const translations = {
       travel: "Viagens",
       personal_care: "Cuidados Pessoais",
       services: "Serviços",
+      cleaning: "Limpeza",
       condominium: "Condomínio",
       reserve: "Fundo de Reserva",
       other: "Outras Despesas"
@@ -2662,6 +2733,26 @@ export const translations = {
       investment_return: "Rendimentos / Dividendos",
       recurring_income: "Entrada Recorrente",
       other: "Outras Entradas"
+    },
+
+    // Names of the condominium expense categories (selection boxes)
+    condoExpenseCategories: {
+      electricity: "Eletricidade",
+      water: "Água",
+      gas: "Gás",
+      cleaning: "Limpeza",
+      services: "Serviços",
+      other: "Outros"
+    },
+
+    // Descriptions of the condominium expense categories (selection boxes)
+    condoExpenseCategoryDesc: {
+      electricity: "Eletricidade das partes comuns",
+      water: "Consumo de água do edifício",
+      gas: "Fornecimento de gás",
+      cleaning: "Limpeza das partes comuns",
+      services: "Manutenção e outros serviços contratados",
+      other: "Outras despesas do condomínio"
     },
 
     // Descriptions of the condominium income categories (selection boxes)
@@ -2979,10 +3070,12 @@ export const translations = {
         groupByLabel: "Agrupar por",
         print: "Imprimir",
         types: {
-          debtors: "Relatório de Devedores"
+          debtors: "Relatório de Devedores",
+          closings: "Fechamentos"
         },
         typesDesc: {
-          debtors: "Obrigações em atraso ainda não liquidadas, por timeline, devedor ou data"
+          debtors: "Obrigações em atraso ainda não liquidadas, por timeline, devedor ou data",
+          closings: "Entradas, poupança, saídas, balanço e valores pendentes de um mês, de um ano ou até uma data"
         },
         groupBy: {
           timeline: "Timeline",
@@ -3000,6 +3093,43 @@ export const translations = {
           subtotal: "Subtotal",
           total: "Total em dívida",
           empty: "Sem devedores no período selecionado."
+        },
+        closings: {
+          title: "Fechamento",
+          typeLabel: "Fechamento",
+          periods: {
+            month: "Fechamento do mês",
+            year: "Fechamento do ano",
+            general: "Fechamento geral"
+          },
+          monthLabel: "Mês",
+          yearLabel: "Ano",
+          untilDateLabel: "Até a data",
+          periodMonth: "Fechamento do mês: {{month}}",
+          periodYear: "Fechamento do ano: {{year}}",
+          periodGeneral: "Fechamento geral até {{date}}",
+          incomeTitle: "Entradas",
+          savingsTitle: "Poupança",
+          expensesTitle: "Saídas",
+          balanceTitle: "Balanço",
+          savingsDeducted: "Poupança descontada do balanço",
+          externalNote: "Os depósitos externos não são descontados do balanço.",
+          expensesByCategory: "Gastos por categoria",
+          incomeByCategory: "Entradas por categoria",
+          savingsByPocket: "Poupança por cofrinho",
+          receivableTitle: "Pendentes de recebimento",
+          payableTitle: "Pendentes de pagamento",
+          colDate: "Data",
+          colEvent: "Evento",
+          colCategory: "Categoria",
+          colAmount: "Valor",
+          noIncome: "Sem entradas no período.",
+          noSavings: "Sem poupança no período.",
+          noExpenses: "Sem saídas no período.",
+          noPending: "Sem valores pendentes.",
+          noData: "Sem dados no período.",
+          noPocket: "Sem cofrinho",
+          loanCategory: "Empréstimos"
         }
       },
       settingsTab: {
@@ -3199,6 +3329,7 @@ export const translations = {
       travel: "Viagens",
       personal_care: "Cuidados Pessoais",
       services: "Serviços / Assinaturas",
+      cleaning: "Limpeza",
       condominium: "Condomínio",
       reserve: "Fundo de Reserva",
       other: "Outros Gastos"
@@ -3468,6 +3599,15 @@ export const translations = {
       realCapitalCost: "Custo Real Capital",
       realCapitalCostTitle: "Custo total real estimado (Capital Financiado + Juros + Impostos)",
       futureProjection: "Projeção Futura",
+      pastProjection: "Projeção Passada",
+      projectionDirectionLabel: "Direção da projeção",
+      pastHorizon: "Horizonte Passado:",
+      minusMonths: "-{count} Meses",
+      minusYear: "-{count} Ano",
+      minusYears: "-{count} Anos",
+      calculationStart: "Início",
+      calculationStartLabel: "Início ({month})",
+      projectBackToTitle: "Retroagir até {date}",
       forecastHorizon: "Horizonte dos Previstos:",
       currentMonth: "Mês Atual",
       currentMonthParen: "(Mês Atual)",

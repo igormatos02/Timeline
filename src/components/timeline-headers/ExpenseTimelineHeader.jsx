@@ -31,7 +31,8 @@ import IncomeEvolutionChart from '../IncomeEvolutionChart.jsx';
 import { computeMonthDiff } from '../../utils/timelineCharts.js';
 
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
-import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
+import { useHeaderCollapsed, useTimeboard } from '../../context/TimeboardContext.jsx';
+import { CONDO_EXPENSE_CATEGORY_META } from '../event-modals/FinancialEventModalConfig.js';
 
 export default function ExpenseTimelineHeader({
   timeline,
@@ -54,6 +55,7 @@ export default function ExpenseTimelineHeader({
 }) {
   const { t, language } = useTranslation();
   const [collapsed, setIsCollapsed] = useHeaderCollapsed();
+  const { isCondoflow } = useTimeboard();
   const [chartMode, setChartMode] = useState('realized');
   const dateLocale = language === 'en' ? enUS : pt;
 
@@ -85,7 +87,9 @@ export default function ExpenseTimelineHeader({
   const dto = !isFiltered ? (timeline.expenseHeaderResult || timeline.procedureMetrics || metrics.expenseHeaderResult) : null;
 
   // 1. GASTOS POR CATEGORIA (Calculado com base nos eventos visíveis na UI)
-  const validEnumValues = Object.values(ExpenseEventCategory);
+  // Condoflow timeboards only use their own expense categories (anything else counts as "Other")
+  const validEnumValues = isCondoflow ? Object.keys(CONDO_EXPENSE_CATEGORY_META) : Object.values(ExpenseEventCategory);
+  const categoryNamespace = isCondoflow ? 'condoExpenseCategories' : 'expenseCategories';
   let uiTotalExp = 0;
   let uiTotalInc = 0;
   const currentMonthCategoryTotals = {};
@@ -117,7 +121,8 @@ export default function ExpenseTimelineHeader({
   let monthTotalIncome = dto?.current_month_income ?? uiTotalInc;
 
   // Extrair lista de categorias diretamente do DTO ou dos eventos da UI
-  let categoryList = (!isFiltered && dto?.categories_breakdown && dto.categories_breakdown.length > 0)
+  // (condoflow maps its categories itself, so the stored procedure breakdown is not used)
+  let categoryList = (!isFiltered && !isCondoflow && dto?.categories_breakdown && dto.categories_breakdown.length > 0)
     ? dto.categories_breakdown.map((item) => ({
         rawCat: item.category,
         name: item.category,
@@ -471,7 +476,7 @@ export default function ExpenseTimelineHeader({
                     const items = categoryList.map((c, i) => ({
                       ...c,
                       color: categoryColors[i % categoryColors.length],
-                      title: `${t(`expenseCategories.${c.name}`) || c.name}: ${c.percent}%`
+                      title: `${t(`${categoryNamespace}.${c.name}`)}: ${c.percent}%`
                     }));
 
                     return (
@@ -479,7 +484,7 @@ export default function ExpenseTimelineHeader({
                         <PieDonut items={items} centerFontSize="0.66rem" />
                         <DonutLegend
                           items={items}
-                          nameFormatter={(item) => t(`expenseCategories.${item.name}`) || item.name}
+                          nameFormatter={(item) => t(`${categoryNamespace}.${item.name}`)}
                         />
                       </div>
                     );

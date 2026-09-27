@@ -145,8 +145,13 @@ const EXPENSE_CATEGORY_ITEMS = [
   { id: ExpensesEventCategory.SERVICES, icon: CreditCard, color: TimelineColor.SLATE },
 ];
 
+// Condominium (condoflow) timeboards only use their own expense categories
+const CONDO_EXPENSE_CATEGORY_ITEMS = Object.entries(CONDO_EXPENSE_CATEGORY_META).map(([id, { icon, color }]) => ({ id, icon, color }));
+const CONDO_EXPENSE_CATEGORY_IDS = Object.keys(CONDO_EXPENSE_CATEGORY_META);
+
 import * as api from '../services/api.js';
 import ReceiptModal from './modals/ReceiptModal.jsx';
+import { CONDO_EXPENSE_CATEGORY_META } from './event-modals/FinancialEventModalConfig.js';
 import PeriodBadgeFilter from './ui/PeriodBadgeFilter.jsx';
 import HistoryPrintModal from './modals/HistoryPrintModal.jsx';
 import { EventActionsProvider } from '../context/EventActionsContext.jsx';
@@ -856,7 +861,7 @@ function VerticalTimeline({
       setSelectedExpenseCategories(next);
     } else {
       const next = [...selectedExpenseCategories, catId];
-      if (next.length === EXPENSE_CATEGORY_ITEMS.length) {
+      if (next.length === (isCondoflow ? CONDO_EXPENSE_CATEGORY_ITEMS : EXPENSE_CATEGORY_ITEMS).length) {
         setSelectedExpenseCategories([]);
       } else {
         setSelectedExpenseCategories(next);
@@ -1438,9 +1443,11 @@ function VerticalTimeline({
         .filter((ev) => !ev.isDeleted)
         .map((ev) => ev.category || ev.expenseCategory || ev.type)
         .filter(Boolean)
+        // Condoflow: categories outside its own list are shown as "Other"
+        .map((cat) => (isCondoflow && !CONDO_EXPENSE_CATEGORY_IDS.includes(cat) ? ExpensesEventCategory.OTHER : cat))
     );
-    return EXPENSE_CATEGORY_ITEMS.filter((cat) => presentCategories.has(cat.id));
-  }, [timelineEvents]);
+    return (isCondoflow ? CONDO_EXPENSE_CATEGORY_ITEMS : EXPENSE_CATEGORY_ITEMS).filter((cat) => presentCategories.has(cat.id));
+  }, [timelineEvents, isCondoflow]);
 
   const availableCategoryOptions = useMemo(() => {
     if (timeline.type === TimelineType.INVESTMENT) {
@@ -1719,7 +1726,7 @@ function VerticalTimeline({
             const targetCat = cat.toLowerCase();
             if (evCat === targetCat) return true;
             if (targetCat === ExpensesEventCategory.OTHER) {
-              const allKnown = Object.values(ExpensesEventCategory).map((v) => v.toLowerCase());
+              const allKnown = (isCondoflow ? CONDO_EXPENSE_CATEGORY_IDS : Object.values(ExpensesEventCategory)).map((v) => v.toLowerCase());
               return !allKnown.includes(evCat);
             }
             return false;
@@ -1835,6 +1842,7 @@ function VerticalTimeline({
     periodRange,
     periodMonthIndex,
     isPeriodActive,
+    isCondoflow,
   ]);
 
   // Shared notice types present in this timeline and the color of their own timeline
@@ -4199,7 +4207,7 @@ function VerticalTimeline({
                           <span style={{ color: cat.color, display: 'inline-flex', alignItems: 'center' }}>
                             <IconComponent size={13} />
                           </span>
-                          <span>{t(`expenseCategories.${cat.id}`)}</span>
+                          <span>{t(`${isCondoflow ? 'condoExpenseCategories' : 'expenseCategories'}.${cat.id}`)}</span>
                         </div>
                         {renderFilterSwitch(isSelected, cat.color)}
                       </button>

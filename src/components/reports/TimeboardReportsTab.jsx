@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FileWarning, Printer, Check } from 'lucide-react';
-import { format, parseISO, subMonths } from 'date-fns';
+import { FileWarning, Printer, Check, CalendarCheck } from 'lucide-react';
+import { format, parseISO, subMonths, endOfMonth, setMonth } from 'date-fns';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import {
   EventType,
@@ -9,15 +9,22 @@ import {
   HISTORY_PERIOD_MONTHS,
   ReportType,
   ReportGroupBy,
+  ClosingPeriod,
+  TimeboardType,
   isCancelledStatus,
   isPositiveStatus
 } from '../../enums/index.js';
-import { buildDebtorsReportHtml } from '../../utils/receiptGenerator.js';
+import { buildDebtorsReportHtml, buildClosingReportHtml } from '../../utils/receiptGenerator.js';
+import { computeClosingReport } from '../../utils/closingReport.js';
 import ReceiptModal from '../modals/ReceiptModal.jsx';
 
 const REPORTS = [
-  { id: ReportType.DEBTORS, icon: FileWarning }
+  { id: ReportType.DEBTORS, icon: FileWarning },
+  { id: ReportType.CLOSINGS, icon: CalendarCheck }
 ];
+
+const CLOSING_PERIOD_OPTIONS = [ClosingPeriod.MONTH, ClosingPeriod.YEAR, ClosingPeriod.GENERAL];
+const MONTH_INDEXES = Array.from({ length: 12 }, (_, index) => index);
 
 const PERIOD_OPTIONS = [
   HistoryPeriod.LAST_6_MONTHS,
@@ -43,12 +50,18 @@ const getPersonName = (person) => person?.personName || person?.person_name || p
  * Reports tab of the timeboard settings: list of reports; the selected one shows its filter ribbon
  * and prints through the shared print preview modal.
  */
-export default function TimeboardReportsTab({ timeboard, timelines = [], events = [], persons = [], currentUser }) {
+export default function TimeboardReportsTab({ timeboard, timelines = [], events = [], pockets = [], persons = [], currentUser }) {
   const { t, language, dateLocale } = useTranslation();
   const [selectedReport, setSelectedReport] = useState(null);
   const [period, setPeriod] = useState(HistoryPeriod.LAST_6_MONTHS);
   const [groupBy, setGroupBy] = useState(ReportGroupBy.TIMELINE);
   const [printHtml, setPrintHtml] = useState('');
+  // Closings: month (month + year), year (year) or general (up to a date, default)
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const [closingPeriod, setClosingPeriod] = useState(ClosingPeriod.GENERAL);
+  const [closingMonth, setClosingMonth] = useState(new Date().getMonth());
+  const [closingYear, setClosingYear] = useState(new Date().getFullYear());
+  const [closingUntilDate, setClosingUntilDate] = useState(todayStr);
 
   // Esc closes the print preview only (captured before the settings modal's own Esc handler)
   useEffect(() => {
@@ -67,8 +80,52 @@ export default function TimeboardReportsTab({ timeboard, timelines = [], events 
     [timelines, timeboard?.id]
   );
 
+  // Years offered by the closing pickers: from the first event of the timeboard up to next year
+  const closingYears = useMemo(() => {
+    const boardIds = new Set(boardTimelines.map((tl) => String(tl.id)));
+    let firstYear = new Date().getFullYear();
+    events.forEach((ev) => {
+      if (!ev?.date || !boardIds.has(String(ev.timelineId || ev.timeline_id || ''))) return;
+      firstYear = Math.min(firstYear, Number(ev.date.substring(0, 4)));
+    });
+    const lastYear = new Date().getFullYear() + 1;
+    return Array.from({ length: lastYear - firstYear + 1 }, (_, index) => lastYear - index);
+  }, [events, boardTimelines]);
+
+  const buildClosingsHtml = () => {
+    let fromDate;
+    let toDate;
+    let periodLabel;
+    if (closingPeriod === ClosingPeriod.MONTH) {
+      const monthStart = new Date(closingYear, closingMonth, 1);
+      fromDate = format(monthStart, 'yyyy-MM-dd');
+      toDate = format(endOfMonth(monthStart), 'yyyy-MM-dd');
+      periodLabel = t('timeboardSettings.reports.closings.periodMonth', { month: format(monthStart, 'MMMM yyyy', { locale: dateLocale }) });
+    } else if (closingPeriod === ClosingPeriod.YEAR) {
+      fromDate = `${closingYear}-01-01`;
+      toDate = `${closingYear}-12-31`;
+      periodLabel = t('timeboardSettings.reports.closings.periodYear', { year: closingYear });
+    } else {
+      // General: from the timeboard's calculation start up to the chosen date
+      const rawComputeFrom = String(timeboard?.computeFrom || timeboard?.compute_from || '');
+      fromDate = rawComputeFrom && !rawComputeFrom.startsWith('1900-01') ? `${rawComputeFrom.substring(0, 7)}-01` : null;
+      toDate = closingUntilDate || todayStr;
+      periodLabel = t('timeboardSettings.reports.closings.periodGeneral', { date: format(parseISO(toDate), 'dd/MM/yyyy') });
+    }
+
+    const report = computeClosingReport({
+      events,
+      timelines: boardTimelines,
+      pockets,
+      fromDate,
+      toDate,
+      isCondoflow: timeboard?.type === TimeboardType.CONDOFLOW,
+      t
+    });
+    return buildClosingReportHtml({ timeboard, currentUser, periodLabel, report, language, t });
+  };
+
   const buildDebtorsHtml = () => {
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
     const months = HISTORY_PERIOD_MONTHS[period] || HISTORY_PERIOD_MONTHS[HistoryPeriod.LAST_6_MONTHS];
     const fromDate = format(subMonths(new Date(), months), 'yyyy-MM-dd');
     const timelineById = new Map(boardTimelines.map((tl) => [String(tl.id), tl]));
@@ -130,6 +187,7 @@ export default function TimeboardReportsTab({ timeboard, timelines = [], events 
 
   const handlePrint = () => {
     if (selectedReport === ReportType.DEBTORS) setPrintHtml(buildDebtorsHtml());
+    if (selectedReport === ReportType.CLOSINGS) setPrintHtml(buildClosingsHtml());
   };
 
   const renderSegmented = (label, options, value, onChange, labelOf) => (
@@ -167,6 +225,40 @@ export default function TimeboardReportsTab({ timeboard, timelines = [], events 
         })}
       </div>
     </div>
+  );
+
+  const renderPicker = (label, control) => (
+    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <span style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        {label}
+      </span>
+      {control}
+    </label>
+  );
+  const pickerStyle = { width: 'auto', padding: '5px 10px', fontSize: '0.78rem', background: 'var(--bg-card)' };
+
+  const renderClosingFilters = () => (
+    <>
+      {renderSegmented(t('timeboardSettings.reports.closings.typeLabel'), CLOSING_PERIOD_OPTIONS, closingPeriod, setClosingPeriod, (opt) => t(`timeboardSettings.reports.closings.periods.${opt}`))}
+      {closingPeriod === ClosingPeriod.MONTH && renderPicker(
+        t('timeboardSettings.reports.closings.monthLabel'),
+        <select className="form-input" style={pickerStyle} value={closingMonth} onChange={(e) => setClosingMonth(Number(e.target.value))}>
+          {MONTH_INDEXES.map((index) => (
+            <option key={index} value={index}>{format(setMonth(new Date(2000, 0, 1), index), 'MMMM', { locale: dateLocale })}</option>
+          ))}
+        </select>
+      )}
+      {closingPeriod !== ClosingPeriod.GENERAL && renderPicker(
+        t('timeboardSettings.reports.closings.yearLabel'),
+        <select className="form-input" style={pickerStyle} value={closingYear} onChange={(e) => setClosingYear(Number(e.target.value))}>
+          {closingYears.map((year) => <option key={year} value={year}>{year}</option>)}
+        </select>
+      )}
+      {closingPeriod === ClosingPeriod.GENERAL && renderPicker(
+        t('timeboardSettings.reports.closings.untilDateLabel'),
+        <input type="date" className="form-input" style={pickerStyle} value={closingUntilDate} onChange={(e) => setClosingUntilDate(e.target.value)} />
+      )}
+    </>
   );
 
   return (
@@ -236,12 +328,18 @@ export default function TimeboardReportsTab({ timeboard, timelines = [], events 
                     background: 'var(--bg-card-hover)'
                   }}
                 >
-                  {renderSegmented(t('timeboardSettings.reports.periodLabel'), PERIOD_OPTIONS, period, setPeriod, (opt) => t(`history.periods.${opt}`))}
-                  {renderSegmented(t('timeboardSettings.reports.groupByLabel'), GROUP_BY_OPTIONS, groupBy, setGroupBy, (opt) => t(`timeboardSettings.reports.groupBy.${opt}`))}
+                  {id === ReportType.DEBTORS && (
+                    <>
+                      {renderSegmented(t('timeboardSettings.reports.periodLabel'), PERIOD_OPTIONS, period, setPeriod, (opt) => t(`history.periods.${opt}`))}
+                      {renderSegmented(t('timeboardSettings.reports.groupByLabel'), GROUP_BY_OPTIONS, groupBy, setGroupBy, (opt) => t(`timeboardSettings.reports.groupBy.${opt}`))}
+                    </>
+                  )}
+                  {id === ReportType.CLOSINGS && renderClosingFilters()}
                   <button
                     type="button"
                     className="btn btn-primary btn-sm"
                     onClick={handlePrint}
+                    disabled={id === ReportType.CLOSINGS && closingPeriod === ClosingPeriod.GENERAL && !closingUntilDate}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}
                   >
                     <Printer size={14} />

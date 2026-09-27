@@ -12,7 +12,7 @@ import {
   X,
   Settings
 } from 'lucide-react';
-import { format, parseISO, subMonths, addMonths } from 'date-fns';
+import { format, parseISO, subMonths, addMonths, differenceInCalendarMonths } from 'date-fns';
 import { pt, enUS } from 'date-fns/locale';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -31,6 +31,7 @@ import {
   AmortizationStrategy,
   TimelineColor,
   TIMELINE_COLOR_PRESETS,
+  ProjectionDirection,
   isPositiveStatus,
   isCancelledStatus,
   isLoanTimelineType,
@@ -286,6 +287,12 @@ export default function BalanceTimelineHeader({
   const currentMonthStr = format(new Date(), 'yyyy-MM');
   const [collapsed, setIsCollapsed] = useHeaderCollapsed();
   const [projectionMonthsAhead, setProjectionMonthsAhead] = useState(0);
+  // Future: the slider moves forward from today; past: it moves back from today to the calculation start
+  const [projectionDirection, setProjectionDirection] = useState(ProjectionDirection.FUTURE);
+  const isPastProjection = projectionDirection === ProjectionDirection.PAST;
+  // Signed month offset of the horizon relative to the current month
+  const projectionOffset = isPastProjection ? -projectionMonthsAhead : projectionMonthsAhead;
+  const isFutureProjection = !isPastProjection && projectionMonthsAhead > 0;
 
   const incomeTimeline = React.useMemo(() => (allTimelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.INCOME), [allTimelines]);
   const expenseTimeline = React.useMemo(() => (allTimelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.EXPENSE), [allTimelines]);
@@ -385,7 +392,7 @@ export default function BalanceTimelineHeader({
   const projectedHorizonLabel = (() => {
     try {
       const baseDate = new Date();
-      const targetDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + projectionMonthsAhead, 1);
+      const targetDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + projectionOffset, 1);
       return format(targetDate, 'MMM yyyy', { locale: dateLocale });
     } catch {
       return format(new Date(), 'MMM yyyy', { locale: dateLocale });
@@ -397,10 +404,22 @@ export default function BalanceTimelineHeader({
     ? (String(rawComputeStart) === '1900-01' || String(rawComputeStart).startsWith('1900-01') || String(rawComputeStart) === 'all' ? '1900-01' : String(rawComputeStart).substring(0, 7))
     : '1900-01';
 
+  // Past projection limit: the calculation start month (or the first event when all history is computed)
+  const pastStartMonth = (() => {
+    if (computeFromMonth && computeFromMonth !== '1900-01') return computeFromMonth;
+    let earliest = currentMonthStr;
+    (eventsList || []).forEach((ev) => {
+      const mk = ev?.date ? ev.date.substring(0, 7) : null;
+      if (mk && mk < earliest) earliest = mk;
+    });
+    return earliest;
+  })();
+  const maxPastMonths = Math.max(0, differenceInCalendarMonths(parseISO(`${currentMonthStr}-01`), parseISO(`${pastStartMonth}-01`)));
+
   const targetHorizonMonthStr = (() => {
     try {
       const baseDate = new Date();
-      const targetDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + projectionMonthsAhead, 1);
+      const targetDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + projectionOffset, 1);
       return format(targetDate, 'yyyy-MM');
     } catch {
       return currentMonthStr;
@@ -440,7 +459,7 @@ export default function BalanceTimelineHeader({
       })();
 
   const last6MonthsSeries = React.useMemo(() => {
-    const refDate = projectionMonthsAhead > 0 ? addMonths(new Date(), projectionMonthsAhead) : new Date();
+    const refDate = projectionOffset !== 0 ? addMonths(new Date(), projectionOffset) : new Date();
     const months = [];
 
     // Priorizar os maps pré-calculados do VerticalTimeline (mesma fonte exata do MonthProjectionBadges)
@@ -550,7 +569,7 @@ export default function BalanceTimelineHeader({
     hasLoanTimeline,
     hasInvestmentTimeline,
     dateLocale,
-    projectionMonthsAhead,
+    projectionOffset,
     currentMonthStr
   ]);
 
@@ -604,7 +623,7 @@ export default function BalanceTimelineHeader({
 
   const rawRemainingDebt = rawMetrics.total_remaining_debt ?? rawMetrics.totalRemainingDebt ?? rawMetrics.totalActiveDebt ?? 0;
   const initialBaseRemainingDebt = activeLoanTimelinesSum > 0 ? activeLoanTimelinesSum : rawRemainingDebt;
-  const computedRemainingDebt = Math.max(0, initialBaseRemainingDebt - (projectionMonthsAhead > 0 ? plannedAmortized : realizedAmortized));
+  const computedRemainingDebt = Math.max(0, initialBaseRemainingDebt - (isFutureProjection ? plannedAmortized : realizedAmortized));
 
   const realizedPaidExpenses = realizedExpenses + realizedLoanPaid;
   // Saldo Líquido do período (Realizado até o mês atual + Saldo Inicial da timeline de Entrada)
@@ -626,7 +645,7 @@ export default function BalanceTimelineHeader({
     totalPeriodDueDebt: Math.max(0, plannedLoanPaidAndDue - realizedLoanPaid),
     totalLoanPaid: realizedLoanPaid,
     totalRemainingDebt: computedRemainingDebt,
-    totalAmortized: projectionMonthsAhead > 0 ? plannedAmortized : (realizedAmortized > 0 ? realizedAmortized : (rawMetrics.total_amortized ?? rawMetrics.totalAmortized ?? 0)),
+    totalAmortized: isFutureProjection ? plannedAmortized : (realizedAmortized > 0 ? realizedAmortized : (rawMetrics.total_amortized ?? rawMetrics.totalAmortized ?? 0)),
     totalLoanDebt: rawMetrics.total_loan_debt ?? rawMetrics.totalLoanDebt ?? 0,
     investmentsTotalAccumulated: rawMetrics.investments_total_accumulated ?? rawMetrics.investmentsTotalAccumulated ?? 0
   };
@@ -1114,7 +1133,7 @@ export default function BalanceTimelineHeader({
 
                         let futureAmortized = 0;
 
-                        if (projectionMonthsAhead > 0) {
+                        if (isFutureProjection) {
                           eventsList.forEach((ev) => {
                             if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
                             const evTid = String(ev.timelineId || ev.timeline_id || ev.timelineOriginId || '');
@@ -1259,11 +1278,63 @@ export default function BalanceTimelineHeader({
 
               {/* 🔵 LINHA 2: PREVISTOS & PROJEÇÃO */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: paletteTheme.primary, display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`, display: 'inline-block' }} />
-                    {t('balanceHeader.futureProjection')}
+                    {t(isPastProjection ? 'balanceHeader.pastProjection' : 'balanceHeader.futureProjection')}
                   </span>
+                  {/* Future / past projection switch (same style as the planned / realized switch of the income header) */}
+                  <div
+                    role="group"
+                    aria-label={t('balanceHeader.projectionDirectionLabel')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      background: 'var(--bg-glass)',
+                      borderRadius: '6px',
+                      padding: '2px',
+                      border: '1px solid var(--border-glass)',
+                      flexShrink: 0,
+                      userSelect: 'none'
+                    }}
+                  >
+                    {[
+                      { id: ProjectionDirection.FUTURE, label: t('balanceHeader.futureProjection') },
+                      { id: ProjectionDirection.PAST, label: t('balanceHeader.pastProjection') }
+                    ].map((option) => {
+                      const isActive = projectionDirection === option.id;
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          aria-pressed={isActive}
+                          onClick={() => {
+                            if (isActive) return;
+                            setProjectionDirection(option.id);
+                            setProjectionMonthsAhead(0);
+                          }}
+                          style={{
+                            padding: '3px 10px',
+                            minWidth: '74px',
+                            borderRadius: '4px',
+                            fontSize: '0.68rem',
+                            fontWeight: '600',
+                            border: 'none',
+                            cursor: 'pointer',
+                            background: isActive ? paletteTheme.primary : 'transparent',
+                            color: isActive ? TimelineColor.WHITE : 'var(--text-muted)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            whiteSpace: 'nowrap',
+                            transition: 'background-color 0.15s ease, color 0.15s ease'
+                          }}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Slider de Horizonte */}
@@ -1285,7 +1356,7 @@ export default function BalanceTimelineHeader({
                         <Clock size={15} />
                       </div>
                       <span style={{ fontSize: '0.78rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                        {t('balanceHeader.forecastHorizon')}
+                        {t(isPastProjection ? 'balanceHeader.pastHorizon' : 'balanceHeader.forecastHorizon')}
                       </span>
                       <span
                         style={{
@@ -1299,18 +1370,29 @@ export default function BalanceTimelineHeader({
                           textTransform: 'capitalize'
                         }}
                       >
-                        {projectedHorizonLabel} {projectionMonthsAhead === 0 ? t('balanceHeader.currentMonthParen') : `(+${projectionMonthsAhead}m)`}
+                        {projectedHorizonLabel} {projectionMonthsAhead === 0 ? t('balanceHeader.currentMonthParen') : `(${isPastProjection ? '-' : '+'}${projectionMonthsAhead}m)`}
                       </span>
                     </div>
 
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
-                      {[
-                        { label: t('balanceHeader.currentMonth'), months: 0 },
-                        { label: t('balanceHeader.plusMonths', { count: 6 }), months: 6 },
-                        { label: t('balanceHeader.plusYear', { count: 1 }), months: 12 },
-                        { label: t('balanceHeader.plusYears', { count: 2 }), months: 24 },
-                        { label: t('balanceHeader.plusYears', { count: 5 }), months: 60 }
-                      ].map((preset) => {
+                      {(isPastProjection
+                        ? [
+                          { label: t('balanceHeader.currentMonth'), months: 0 },
+                          { label: t('balanceHeader.minusMonths', { count: 6 }), months: 6 },
+                          { label: t('balanceHeader.minusYear', { count: 1 }), months: 12 },
+                          { label: t('balanceHeader.minusYears', { count: 2 }), months: 24 },
+                          { label: t('balanceHeader.minusYears', { count: 5 }), months: 60 }
+                        ].filter((preset) => preset.months < maxPastMonths).concat(
+                          maxPastMonths > 0 ? [{ label: t('balanceHeader.calculationStart'), months: maxPastMonths }] : []
+                        )
+                        : [
+                          { label: t('balanceHeader.currentMonth'), months: 0 },
+                          { label: t('balanceHeader.plusMonths', { count: 6 }), months: 6 },
+                          { label: t('balanceHeader.plusYear', { count: 1 }), months: 12 },
+                          { label: t('balanceHeader.plusYears', { count: 2 }), months: 24 },
+                          { label: t('balanceHeader.plusYears', { count: 5 }), months: 60 }
+                        ]
+                      ).map((preset) => {
                         const isSelected = projectionMonthsAhead === preset.months;
                         return (
                           <button
@@ -1338,12 +1420,49 @@ export default function BalanceTimelineHeader({
                   </div>
 
                   {(() => {
+                    const monthLabelStyle = { fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: '700', whiteSpace: 'nowrap' };
+                    const sliderStyle = {
+                      flex: 1,
+                      accentColor: paletteTheme.primary,
+                      '--slider-thumb-color': paletteTheme.primary,
+                      cursor: 'pointer',
+                      height: '6px'
+                    };
+                    const todayLabel = t('balanceHeader.today', { month: format(todayDate, 'MMM yyyy', { locale: dateLocale }) });
+
+                    // Past: calculation start on the left, today on the right; moving left goes back in time
+                    if (isPastProjection) {
+                      const sliderValue = maxPastMonths - projectionMonthsAhead;
+                      const thumbPercent = maxPastMonths > 0 ? (sliderValue / maxPastMonths) * 100 : 100;
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span style={monthLabelStyle}>
+                            {t('balanceHeader.calculationStartLabel', { month: format(parseISO(`${pastStartMonth}-01`), 'MMM yyyy', { locale: dateLocale }) })}
+                          </span>
+                          <input
+                            type="range"
+                            min="0"
+                            max={maxPastMonths}
+                            step="1"
+                            value={sliderValue}
+                            disabled={maxPastMonths === 0}
+                            onChange={(e) => setProjectionMonthsAhead(maxPastMonths - Number(e.target.value))}
+                            className="timeline-range-input"
+                            style={{
+                              ...sliderStyle,
+                              background: `linear-gradient(to right, var(--border-glass) 0%, var(--border-glass) ${thumbPercent}%, ${paletteTheme.primary} ${thumbPercent}%, ${paletteTheme.primary} 100%)`
+                            }}
+                            title={t('balanceHeader.projectBackToTitle', { date: projectedHorizonLabel })}
+                          />
+                          <span style={monthLabelStyle}>{todayLabel}</span>
+                        </div>
+                      );
+                    }
+
                     const sliderPercent = Math.min(100, Math.max(0, (projectionMonthsAhead / 120) * 100));
                     return (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: '700', whiteSpace: 'nowrap' }}>
-                          {t('balanceHeader.today', { month: format(todayDate, 'MMM yyyy', { locale: dateLocale }) })}
-                        </span>
+                        <span style={monthLabelStyle}>{todayLabel}</span>
                         <input
                           type="range"
                           min="0"
@@ -1353,16 +1472,12 @@ export default function BalanceTimelineHeader({
                           onChange={(e) => setProjectionMonthsAhead(Number(e.target.value))}
                           className="timeline-range-input"
                           style={{
-                            flex: 1,
-                            accentColor: paletteTheme.primary,
-                            '--slider-thumb-color': paletteTheme.primary,
-                            background: `linear-gradient(to right, ${paletteTheme.primary} 0%, ${paletteTheme.primary} ${sliderPercent}%, var(--border-glass) ${sliderPercent}%, var(--border-glass) 100%)`,
-                            cursor: 'pointer',
-                            height: '6px'
+                            ...sliderStyle,
+                            background: `linear-gradient(to right, ${paletteTheme.primary} 0%, ${paletteTheme.primary} ${sliderPercent}%, var(--border-glass) ${sliderPercent}%, var(--border-glass) 100%)`
                           }}
                           title={t('balanceHeader.projectToTitle', { date: projectedHorizonLabel })}
                         />
-                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                        <span style={monthLabelStyle}>
                           {t('balanceHeader.plusYears', { count: 10 })}
                         </span>
                       </div>

@@ -2481,6 +2481,7 @@ export default function App() {
           onDeleteTimeboard={handleDeleteTimeboard}
           timelines={activeTimeboardTimelines}
           events={rawEvents}
+          pockets={pockets}
           onEntitySaved={(savedEntity) => {
             if (!savedEntity || !savedEntity.id) return;
             setTimeboardPersons((prev) => {

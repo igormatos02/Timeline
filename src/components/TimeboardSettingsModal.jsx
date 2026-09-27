@@ -78,7 +78,8 @@ export default function TimeboardSettingsModal({
   onDeleteTimeboard,
   onEntitySaved,
   timelines = [],
-  events = []
+  events = [],
+  pockets = []
 }) {
   const { t, dateLocale } = useTranslation();
   const currentMonthKey = new Date().toISOString().substring(0, 7);
@@ -1604,6 +1605,7 @@ export default function TimeboardSettingsModal({
                   timeboard={timeboard}
                   timelines={timelines}
                   events={events}
+                  pockets={pockets}
                   persons={persons}
                   currentUser={currentUser}
                 />

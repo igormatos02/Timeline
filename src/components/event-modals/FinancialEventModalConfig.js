@@ -30,7 +30,8 @@ import {
   Cake,
   Calendar,
   Clock,
-  Undo2
+  Undo2,
+  SprayCan
 } from 'lucide-react';
 import { EventStatus, EventType, IncomeEventCategory, ExpenseEventCategory, InvestmentEventCategory, ReminderEventCategory, TimelineColor } from '../../../shared/enums/index.js';
 
@@ -59,11 +60,22 @@ export const CONDO_INVESTMENT_CATEGORY_META = {
   [InvestmentEventCategory.OTHER]: { icon: Tag, color: TimelineColor.SLATE, bg: `${TimelineColor.SLATE}26` }
 };
 
+// Condominium (condoflow) expense categories, shown as selection boxes (order matters)
+export const CONDO_EXPENSE_CATEGORY_META = {
+  [ExpenseEventCategory.ELECTRICITY]: { icon: Zap, color: TimelineColor.AMBER, bg: `${TimelineColor.AMBER}26` },
+  [ExpenseEventCategory.WATER]: { icon: Droplets, color: TimelineColor.SKY, bg: `${TimelineColor.SKY}26` },
+  [ExpenseEventCategory.GAS]: { icon: Flame, color: TimelineColor.ROSE, bg: `${TimelineColor.ROSE}26` },
+  [ExpenseEventCategory.CLEANING]: { icon: SprayCan, color: TimelineColor.CYAN, bg: `${TimelineColor.CYAN}26` },
+  [ExpenseEventCategory.SERVICES]: { icon: Wrench, color: TimelineColor.VIOLET, bg: `${TimelineColor.VIOLET}26` },
+  [ExpenseEventCategory.OTHER]: { icon: Tag, color: TimelineColor.SLATE, bg: `${TimelineColor.SLATE}26` }
+};
+
 /**
  * Adjusts a modal config to the active timeboard. On condominium (condoflow) timeboards:
  * - income: Condominium Payment (default), Reserve Fund and Other
  * - account deposits (investment): Condominium Payment (default), Reserve Fund, Refund and Other
- * both chosen with selection boxes.
+ * - expenses: Electricity, Water, Gas, Cleaning, Services and Other (default)
+ * all chosen with selection boxes.
  */
 export function resolveEventModalConfig(config, isCondoflow) {
   if (!isCondoflow) return config;
@@ -86,6 +98,17 @@ export function resolveEventModalConfig(config, isCondoflow) {
         editKey: 'modal.condoDepositEdit',
         addKey: 'modal.condoDepositAdd'
       }
+    };
+  }
+  if (config?.eventType === EventType.EXPENSE) {
+    return {
+      ...config,
+      categoryMeta: CONDO_EXPENSE_CATEGORY_META,
+      categoryDefault: ExpenseEventCategory.OTHER,
+      categoryLegacyMap: null,
+      useCategoryBoxes: true,
+      translationPrefix: 'condoExpenseCategories',
+      categoryDescriptionPrefix: 'condoExpenseCategoryDesc'
     };
   }
   if (config?.eventType !== EventType.INCOME) return config;

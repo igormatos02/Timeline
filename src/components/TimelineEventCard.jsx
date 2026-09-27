@@ -90,6 +90,7 @@ import {
   INVESTMENT_CATEGORY_META,
   REMINDER_CATEGORY_META,
   CONDO_INCOME_CATEGORY_META,
+  CONDO_EXPENSE_CATEGORY_META,
   CONDO_INVESTMENT_CATEGORY_META
 } from './event-modals/FinancialEventModalConfig.js';
 import { DIARY_MOOD_CONFIG, renderFormattedMarkdown } from './event-modals/DiaryEventModal.jsx';
@@ -557,12 +558,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   };
 
   // Category sources of the event's type: [metaMap, labelNamespace]
-  // (condoflow timeboards use their own income / deposit categories first)
+  // (condoflow timeboards use their own income / expense / deposit categories)
   const getCategorySources = () => (
     isIncomeEvent
       ? [[isCondoflow ? CONDO_INCOME_CATEGORY_META : null, 'incomeCategories'], [INCOME_CATEGORY_META, 'incomeCategories']]
       : isExpenseEvent
-        ? [[EXPENSE_CATEGORY_META, 'expenseCategories']]
+        ? (isCondoflow ? [[CONDO_EXPENSE_CATEGORY_META, 'condoExpenseCategories']] : [[EXPENSE_CATEGORY_META, 'expenseCategories']])
         : isInvestmentEvent && !isWithdrawalEvent
           ? [[isCondoflow ? CONDO_INVESTMENT_CATEGORY_META : null, 'investmentCategories'], [INVESTMENT_CATEGORY_META, 'investmentCategories']]
           : []

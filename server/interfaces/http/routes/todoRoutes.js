@@ -1,7 +1,11 @@
 import { Router } from 'express';
+import { resourceAccessParam } from '../middleware/timeboardAccess.js';
 import { todoService } from '../../../application/services/TodoService.js';
 
 export const todoRouter = Router();
+
+// Access to the timeboard of the resource in the URL
+todoRouter.param('id', resourceAccessParam('todo'));
 
 // GET /api/todos
 todoRouter.get('/', async (req, res) => {

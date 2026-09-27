@@ -1,7 +1,12 @@
 import { Router } from 'express';
+import { resourceAccessParam, resourceAccessFromBody } from '../middleware/timeboardAccess.js';
 import { loanService } from '../../../application/services/LoanService.js';
 
 export const loansRouter = Router();
+
+// Access to the timeboard of the resource in the URL
+loansRouter.param('id', resourceAccessParam('loan'));
+loansRouter.param('timelineId', resourceAccessParam('timeline'));
 
 // GET /api/loans
 loansRouter.get('/', async (req, res) => {
@@ -44,7 +49,7 @@ loansRouter.put('/:id', async (req, res) => {
 });
 
 // POST /api/loans/amortize
-loansRouter.post('/amortize', async (req, res) => {
+loansRouter.post('/amortize', resourceAccessFromBody('loan', 'loanId'), async (req, res) => {
   try {
     const result = await loanService.amortizeLoan(req.body);
     res.json(result);

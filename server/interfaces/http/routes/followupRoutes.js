@@ -1,7 +1,12 @@
 import { Router } from 'express';
+import { resourceAccessParam } from '../middleware/timeboardAccess.js';
 import { followupService } from '../../../application/services/FollowupService.js';
 
 export const followupRouter = Router();
+
+// Access to the timeboard of the resource in the URL
+followupRouter.param('id', resourceAccessParam('followup'));
+followupRouter.param('eventId', resourceAccessParam('event'));
 
 // GET /api/followups
 followupRouter.get('/', async (req, res) => {

@@ -1,10 +1,14 @@
 import { Router } from 'express';
+import { resourceAccessParam } from '../middleware/timeboardAccess.js';
 import { timelineService } from '../../../application/services/TimelineService.js';
 import { createT } from '../../../../shared/i18n/index.js';
 
 const t = createT('en');
 
 export const timelinesRouter = Router();
+
+// Access to the timeboard of the resource in the URL
+timelinesRouter.param('id', resourceAccessParam('timeline'));
 
 // GET /api/timelines
 timelinesRouter.get('/', async (req, res) => {

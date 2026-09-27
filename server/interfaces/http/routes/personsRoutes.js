@@ -1,10 +1,14 @@
 import { Router } from 'express';
+import { resourceAccessParam } from '../middleware/timeboardAccess.js';
 import { personService } from '../../../application/services/PersonService.js';
 import { createT } from '../../../../shared/i18n/index.js';
 
 const t = createT('en');
 
 export const personsRouter = Router();
+
+// Access to the timeboard of the resource in the URL
+personsRouter.param('id', resourceAccessParam('person'));
 
 // GET /api/persons?timeboardId=:id
 personsRouter.get('/', async (req, res) => {

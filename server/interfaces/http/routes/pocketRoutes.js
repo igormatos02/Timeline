@@ -1,7 +1,11 @@
 import { Router } from 'express';
+import { resourceAccessParam } from '../middleware/timeboardAccess.js';
 import { pocketService } from '../../../application/services/PocketService.js';
 
 export const pocketRouter = Router();
+
+// Access to the timeboard of the resource in the URL
+pocketRouter.param('id', resourceAccessParam('pocket'));
 
 pocketRouter.get('/', async (req, res) => {
   try {

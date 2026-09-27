@@ -1,9 +1,14 @@
 import { Router } from 'express';
+import { resourceAccessParam } from '../middleware/timeboardAccess.js';
 import { eventService } from '../../../application/services/EventService.js';
 import { meService } from '../../../application/services/MeService.js';
 import { PersonRole } from '../../../../shared/enums/index.js';
 
 export const eventsRouter = Router();
+
+// Access to the timeboard of the resource in the URL
+eventsRouter.param('id', resourceAccessParam('event'));
+eventsRouter.param('noteId', resourceAccessParam('note'));
 
 // GET /api/events
 eventsRouter.get('/', async (req, res) => {

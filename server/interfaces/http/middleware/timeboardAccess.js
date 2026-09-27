@@ -11,7 +11,7 @@ const pick = (source, ...keys) => {
   return null;
 };
 
-async function checkAccess(req, res, next, timeboardId) {
+export async function checkAccess(req, res, next, timeboardId) {
   try {
     const access = await accessService.getTimeboardAccess(req.user.id, timeboardId);
     if (!access) return res.status(403).json({ error: t('backend.validation.forbidden') });
@@ -47,4 +47,28 @@ export async function timeboardAccessFromRequest(req, res, next) {
 /** Router param handler for routes whose `:id` is a timeboard id. */
 export function timeboardAccessFromParam(req, res, next, timeboardId) {
   return checkAccess(req, res, next, timeboardId);
+}
+
+/**
+ * Router param handler for routes whose param is the id of a resource (event, timeline, person, ...):
+ * checks access to the timeboard the resource belongs to. When the resource cannot be found, the request
+ * only continues if it already referenced an accessible timeboard (e.g. an event update carrying its timeline).
+ */
+export function resourceAccessParam(kind) {
+  return async (req, res, next, id) => {
+    try {
+      const timeboardId = await accessService.resolveResourceTimeboardId(kind, id);
+      if (timeboardId) return checkAccess(req, res, next, timeboardId);
+      if (req.timeboardAccess) return next();
+      return res.status(404).json({ error: 'Not found' });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  };
+}
+
+/** Same as resourceAccessParam, for a resource id sent in the request body (e.g. `loanId`). */
+export function resourceAccessFromBody(kind, field) {
+  const check = resourceAccessParam(kind);
+  return (req, res, next) => check(req, res, next, req.body?.[field]);
 }

@@ -13,7 +13,8 @@ import {
   isCancelledStatus,
   isLoanTimelineType,
   normalizeTimelineType,
-  isAccountOutflowEvent
+  isAccountOutflowEvent,
+  isPocketTransferEvent
 } from '../enums/index.js';
 
 /**
@@ -54,7 +55,7 @@ const isExternalFlag = (ev) => Boolean(ev.isExternal || ev.is_external || ev.isE
 
 /**
  * Classifies an event. Returns the movement kind plus the flags used by the balance totals:
- * { kind, isReference, isEffective, isExternal, amount (absolute), pocketId,
+ * { kind, isReference, isEffective, isExternal, amount (absolute), pocketId, targetPocketId, isTransfer,
  *   isLoan, isLoanInst, isAmortization, isIncome, isInvestment, isWithdrawal, isAccountOutflow, isExpense, absAmt }
  */
 export function classifyMovement(ev, timelineTypeMap = new Map()) {
@@ -88,7 +89,10 @@ export function classifyMovement(ev, timelineTypeMap = new Map()) {
     Boolean(ev.isIncome)
   ) && !isLoan;
 
-  const isInvestment = (
+  // Transfer between two spaces of the account (General / pockets): never a deposit nor a withdrawal
+  const isTransfer = isPocketTransferEvent(ev) && !isLoan;
+
+  const isInvestment = !isTransfer && (
     ev.eventType === EventType.INVESTMENT ||
     LEGACY_INVESTMENT_EVENT_TYPES.includes(ev.eventType) ||
     ev.eventType === EventType.WITHDRAWAL ||
@@ -123,6 +127,7 @@ export function classifyMovement(ev, timelineTypeMap = new Map()) {
   else if (isAmortization) kind = MovementKind.AMORTIZATION;
   else if (isLoan) kind = MovementKind.LOAN_INSTALLMENT;
   else if (isIncome) kind = MovementKind.INCOME;
+  else if (isTransfer) kind = MovementKind.SAVINGS_TRANSFER;
   else if (isAccountOutflow) kind = MovementKind.SAVINGS_EXPENSE;
   else if (isWithdrawal) kind = MovementKind.WITHDRAWAL;
   else if (isInvestment) kind = isExternal ? MovementKind.DEPOSIT_EXTERNAL : MovementKind.DEPOSIT_INTERNAL;
@@ -135,6 +140,9 @@ export function classifyMovement(ev, timelineTypeMap = new Map()) {
     isExternal,
     amount: absAmt,
     pocketId: ev.pocketId || ev.pocket_id || null,
+    // Destination space of a transfer (null = General)
+    targetPocketId: isTransfer ? (ev.targetPocketId || ev.target_pocket_id || null) : null,
+    isTransfer,
     isLoan,
     isLoanInst,
     isAmortization,

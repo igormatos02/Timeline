@@ -5,19 +5,26 @@ import { TimeboardType, HeaderDefaultState } from '../enums/index.js';
  * Active timeboard features shared with deeply nested components (cards, modals, headers).
  * - isCondoflow: condominium timeboards hide personal features such as the diary mood.
  * - headerDefaultState: whether the timeline headers start collapsed or expanded.
+ * - pockets: pockets of the account (names of the account spaces shown on the movements).
  */
-const TimeboardContext = createContext({ timeboardType: null, isCondoflow: false, headerDefaultState: HeaderDefaultState.COLLAPSED });
+const TimeboardContext = createContext({ timeboardType: null, isCondoflow: false, headerDefaultState: HeaderDefaultState.COLLAPSED, pockets: [] });
 
-export function TimeboardProvider({ timeboardType = null, headerDefaultState = HeaderDefaultState.COLLAPSED, children }) {
+export function TimeboardProvider({ timeboardType = null, headerDefaultState = HeaderDefaultState.COLLAPSED, pockets = [], children }) {
   const value = useMemo(
-    () => ({ timeboardType, isCondoflow: timeboardType === TimeboardType.CONDOFLOW, headerDefaultState }),
-    [timeboardType, headerDefaultState]
+    () => ({ timeboardType, isCondoflow: timeboardType === TimeboardType.CONDOFLOW, headerDefaultState, pockets }),
+    [timeboardType, headerDefaultState, pockets]
   );
   return <TimeboardContext.Provider value={value}>{children}</TimeboardContext.Provider>;
 }
 
 export function useTimeboard() {
   return useContext(TimeboardContext);
+}
+
+/** Name of a pocket of the account, or null for the General space / an unknown pocket. */
+export function usePocketName() {
+  const { pockets } = useContext(TimeboardContext);
+  return (pocketId) => (pocketId ? ((pockets || []).find((p) => String(p.id) === String(pocketId))?.name || null) : null);
 }
 
 /**

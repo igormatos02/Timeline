@@ -647,6 +647,7 @@ export const translations = {
       travel: "Travel",
       personal_care: "Personal Care",
       services: "Services",
+      bank_fees: "Bank fees / Commissions",
       cleaning: "Cleaning",
       condominium: "Condominium",
       reserve: "Reserve Fund",
@@ -673,6 +674,7 @@ export const translations = {
       gas: "Gas",
       cleaning: "Cleaning",
       services: "Services",
+      bank_fees: "Bank fees / Commissions",
       other: "Other"
     },
 
@@ -683,6 +685,7 @@ export const translations = {
       gas: "Gas supply",
       cleaning: "Cleaning of the common areas",
       services: "Maintenance and other contracted services",
+      bank_fees: "Account maintenance, transfer fees and other bank charges",
       other: "Other condominium expenses"
     },
 
@@ -1428,6 +1431,7 @@ export const translations = {
       travel: "Travel",
       personal_care: "Personal Care",
       services: "Services",
+      bank_fees: "Bank fees / Commissions",
       cleaning: "Cleaning",
       condominium: "Condominium",
       reserve: "Reserve Fund",
@@ -1569,7 +1573,7 @@ export const translations = {
       movements: {
         inflow: "Inflows",
         withdrawal: "Withdrawals",
-        pocket_cost: "Costs",
+        pocket_transfer: "Transfers",
         pocket_expense: "Expenses"
       },
       allPockets: "All Pockets",
@@ -1590,6 +1594,25 @@ export const translations = {
     },
 
     // Withdrawal Modal
+    // Account (savings timeline) spaces: the General space and the pockets
+    account: {
+      general: "General",
+      where: "Where",
+      to: "To",
+      transferRoute: "{{from}} → {{to}}",
+      transferSameSpaceError: "Choose a destination different from the origin.",
+      amountExceedsSpaceError: "The amount cannot exceed the balance of {{space}} ({{max}}).",
+      noSpaceBalanceError: "{{space}} has no balance available.",
+      depositOrigin: "Where the money comes from",
+      depositInternal: "Available money",
+      depositInternalDesc: "Leaves the available money and goes into the account",
+      depositExternal: "New money (external)",
+      depositExternalDesc: "Comes directly into the account (e.g. a payment into the bank account); does not touch the available money",
+      generalHint: "Movements without a pocket",
+      monthEndBalance: "Balance at the end of the month",
+      monthEndBalanceForecast: "Forecast balance at the end of the month"
+    },
+
     withdrawalModal: {
       title: "Withdraw from Pocket",
       editTitle: "Edit Withdrawal",
@@ -1606,18 +1629,18 @@ export const translations = {
       typeLabel: "Outflow type",
       types: {
         withdrawal: "Withdrawal",
-        pocket_cost: "Cost",
-        pocket_expense: "Expense"
+        pocket_expense: "Expense",
+        pocket_transfer: "Transfer"
       },
       typesDesc: {
         withdrawal: "Moves money from the pocket to the income timeline",
-        pocket_cost: "A cost of the pocket (e.g. account fees), one-time or periodic",
-        pocket_expense: "An expense paid from the pocket, with the expense categories"
+        pocket_expense: "An expense paid by the account, with the expense categories (bank fees included)",
+        pocket_transfer: "Moves money between the General space and the pockets (the account total does not change)"
       },
       titlePlaceholders: {
         withdrawal: "Ex: Emergency withdrawal, planned purchase...",
-        pocket_cost: "Ex: Account maintenance fee, bank charges...",
-        pocket_expense: "Ex: Roof repair, cleaning products..."
+        pocket_expense: "Ex: Roof repair, account maintenance fee...",
+        pocket_transfer: "Ex: Reserve fund, roof works..."
       },
       automaticLabel: "Automatic debit",
       dateLabel: "Due Date *",
@@ -2021,6 +2044,8 @@ export const translations = {
         eventCancelledLocked: "A cancelled event cannot be reactivated",
         timelineAlreadyExists: "A timeline of type \"{{type}}\" already exists in this timeboard.",
         eventLockedPositive: "Positive financial events are permanently locked and cannot be modified or reverted to pending.",
+        transferSameSpace: "The origin and the destination of a transfer must be different.",
+        transferAmountRequired: "The transfer amount must be greater than zero.",
         loanNotFound: "Loan not found",
         personNameRequired: "personName is required",
         obligatorIdentificationRequired: "obligatorIdentification is required",
@@ -2905,6 +2930,7 @@ export const translations = {
       travel: "Viagens",
       personal_care: "Cuidados Pessoais",
       services: "Serviços",
+      bank_fees: "Custos bancários / Comissões",
       cleaning: "Limpeza",
       condominium: "Condomínio",
       reserve: "Fundo de Reserva",
@@ -2931,6 +2957,7 @@ export const translations = {
       gas: "Gás",
       cleaning: "Limpeza",
       services: "Serviços",
+      bank_fees: "Custos bancários / Comissões",
       other: "Outros"
     },
 
@@ -2941,6 +2968,7 @@ export const translations = {
       gas: "Fornecimento de gás",
       cleaning: "Limpeza das partes comuns",
       services: "Manutenção e outros serviços contratados",
+      bank_fees: "Manutenção de conta, transferências e outras comissões bancárias",
       other: "Outras despesas do condomínio"
     },
 
@@ -3644,6 +3672,7 @@ export const translations = {
       travel: "Viagens",
       personal_care: "Cuidados Pessoais",
       services: "Serviços / Assinaturas",
+      bank_fees: "Custos bancários / Comissões",
       cleaning: "Limpeza",
       condominium: "Condomínio",
       reserve: "Fundo de Reserva",
@@ -3827,7 +3856,7 @@ export const translations = {
       movements: {
         inflow: "Entradas",
         withdrawal: "Retiradas",
-        pocket_cost: "Custos",
+        pocket_transfer: "Transferências",
         pocket_expense: "Gastos"
       },
       allPockets: "Todos os Cofrinhos",
@@ -3848,6 +3877,25 @@ export const translations = {
     },
 
     // Withdrawal Modal
+    // Espaços da Conta (timeline de poupança): a Geral e os cofrinhos
+    account: {
+      general: "Geral",
+      where: "Onde",
+      to: "Para",
+      transferRoute: "{{from}} → {{to}}",
+      transferSameSpaceError: "Escolha um destino diferente da origem.",
+      amountExceedsSpaceError: "O valor não pode ultrapassar o saldo de {{space}} ({{max}}).",
+      noSpaceBalanceError: "{{space}} não tem saldo disponível.",
+      depositOrigin: "De onde vem o dinheiro",
+      depositInternal: "Dinheiro disponível",
+      depositInternalDesc: "Sai do dinheiro disponível e entra na Conta",
+      depositExternal: "Dinheiro novo (externo)",
+      depositExternalDesc: "Entra diretamente na Conta (ex.: pagamento na conta bancária); não mexe no disponível",
+      generalHint: "Movimentos sem cofrinho",
+      monthEndBalance: "Saldo no fim do mês",
+      monthEndBalanceForecast: "Saldo previsto no fim do mês"
+    },
+
     withdrawalModal: {
       title: "Retirada de Cofrinho",
       editTitle: "Editar Retirada",
@@ -3864,18 +3912,18 @@ export const translations = {
       typeLabel: "Tipo de saída",
       types: {
         withdrawal: "Retirada",
-        pocket_cost: "Custo",
-        pocket_expense: "Gasto"
+        pocket_expense: "Gasto",
+        pocket_transfer: "Transferir"
       },
       typesDesc: {
         withdrawal: "Move o dinheiro do cofrinho para a timeline de entradas",
-        pocket_cost: "Um custo do cofrinho (ex.: manutenção de conta), único ou periódico",
-        pocket_expense: "Um gasto pago pelo cofrinho, com as categorias das despesas"
+        pocket_expense: "Um gasto pago pela Conta, com as categorias das despesas (inclui custos bancários)",
+        pocket_transfer: "Move dinheiro entre a Geral e os cofrinhos (o total da Conta não muda)"
       },
       titlePlaceholders: {
         withdrawal: "Ex: Retirada de emergência, compra planeada...",
-        pocket_cost: "Ex: Manutenção de conta, comissões bancárias...",
-        pocket_expense: "Ex: Reparação do telhado, produtos de limpeza..."
+        pocket_expense: "Ex: Reparação do telhado, manutenção de conta...",
+        pocket_transfer: "Ex: Fundo de reserva, obra do telhado..."
       },
       automaticLabel: "Débito automático",
       dateLabel: "Data de Vencimento *",
@@ -4279,6 +4327,8 @@ export const translations = {
         eventCancelledLocked: "Um evento cancelado não pode ser reativado",
         timelineAlreadyExists: "Já existe uma timeline do tipo \"{{type}}\" neste timeboard.",
         eventLockedPositive: "Eventos financeiros positivos estão permanentemente trancados e não podem ser alterados nem revertidos para pendente.",
+        transferSameSpace: "A origem e o destino de uma transferência têm de ser diferentes.",
+        transferAmountRequired: "O valor da transferência tem de ser maior que zero.",
         loanNotFound: "Empréstimo não encontrado",
         personNameRequired: "personName é obrigatório",
         obligatorIdentificationRequired: "obligatorIdentification é obrigatório",

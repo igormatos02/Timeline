@@ -18,7 +18,7 @@ import IncomeEvolutionChart from '../IncomeEvolutionChart.jsx';
 import { computeMonthDiff } from '../../utils/timelineCharts.js';
 import { pocketHasTarget } from '../../utils/pocketUtils.js';
 import { classifyMovement, isActiveMovement } from '../../../shared/finance/movements.js';
-import { computeSpaceBalances, savingsEffect } from '../../../shared/finance/savingsSpaces.js';
+import { computeSpaceBalances, savingsEffect, GENERAL_SPACE_KEY } from '../../../shared/finance/savingsSpaces.js';
 
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
 import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
@@ -84,7 +84,7 @@ export default function InvestmentTimelineHeader({
   // 1. POUPANÇA POR COFRINHOS
   const pocketColors = paletteTheme.colors && paletteTheme.colors.length > 1 ? paletteTheme.colors : TIMELINE_COLOR_PRESETS;
 
-  // Balance of each pocket (shared engine): initial value + effective movements (external ones included)
+  // Balance of each space (shared engine): initial value + effective movements (external ones included)
   const pocketBalances = computeSpaceBalances({ events: eventsList, pockets, side: 'realized' });
   let totalPocketsAccumulated = 0;
   const rawPocketList = pockets.map((pocket, idx) => {
@@ -99,6 +99,19 @@ export default function InvestmentTimelineHeader({
       color: pocket.color || pocketColors[idx % pocketColors.length]
     };
   });
+
+  // The account's General space (movements without a pocket) is part of the total: Account = General + pockets
+  const generalBalance = pocketBalances.get(GENERAL_SPACE_KEY) || 0;
+  if (Math.abs(generalBalance) >= 0.01) {
+    totalPocketsAccumulated += generalBalance;
+    rawPocketList.unshift({
+      id: GENERAL_SPACE_KEY,
+      name: t('account.general'),
+      amount: generalBalance,
+      hasTarget: false,
+      color: pocketColors[pockets.length % pocketColors.length]
+    });
+  }
 
   const pocketList = rawPocketList
     .map((item) => ({
@@ -270,8 +283,8 @@ export default function InvestmentTimelineHeader({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.2)',
+                background: 'var(--primary-glow)',
+                border: '1px solid var(--border-glass-glow)',
                 color: 'var(--primary-light)',
                 cursor: 'pointer',
                 padding: '6px 12px',
@@ -364,7 +377,7 @@ export default function InvestmentTimelineHeader({
               {/* Grid Principal 2x2 */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
                 {/* Quadrante 1: POUPANÇA POR COFRINHOS (Linhas de Progresso por Cofrinho) */}
-                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ background: 'var(--bg-glass)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {t('investmentHeader.categoriesTitle')}
                   </div>
@@ -480,7 +493,7 @@ export default function InvestmentTimelineHeader({
                 </div>
 
                 {/* Quadrante 2: COMPROMETIMENTO ANUAL (Aportes vs Renda — Donut Chart) */}
-                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ background: 'var(--bg-glass)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {t('investmentHeader.annualProjectionTitle')}
                   </div>
@@ -490,7 +503,7 @@ export default function InvestmentTimelineHeader({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
                           <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
                             <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                              <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                              <circle cx="0" cy="0" r="0.82" fill="none" stroke="var(--border-glass)" strokeWidth="0.25" strokeDasharray="3 3" />
                             </svg>
                             <div
                               style={{
@@ -533,7 +546,7 @@ export default function InvestmentTimelineHeader({
                         <DonutChart
                           percent={annualCommitmentPercent}
                           sliceColor={sliceColor}
-                          remainingColor="rgba(255, 255, 255, 0.08)"
+                          remainingColor="var(--border-glass)"
                           title={`${t('investmentHeader.annualProjectionTitle')}: ${annualCommitmentPercent}%`}
                           label={`${annualCommitmentPercent}%`}
                         />
@@ -566,7 +579,7 @@ export default function InvestmentTimelineHeader({
                 </div>
 
                 {/* Quadrante 3: ATUAL (Valor Inicial, Total Aportado & Target) */}
-                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ background: 'var(--bg-glass)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {t('investmentHeader.currentTitle')}
                   </div>

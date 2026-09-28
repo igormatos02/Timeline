@@ -18,6 +18,7 @@ export const ExpensesEventCategory = Object.freeze({
   TRAVEL: 'travel',
   CLOTHING: 'clothing',
   SERVICES: 'services',
+  BANK_FEES: 'bank_fees',
   CLEANING: 'cleaning',
   CONDOMINIUM: 'condominium',
   RESERVE: 'reserve',

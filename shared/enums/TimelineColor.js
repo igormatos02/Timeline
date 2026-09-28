@@ -34,6 +34,9 @@ export const TimelineColor = Object.freeze({
   SKY: '#0ea5e9',
   PINK: '#ec4899',
   SLATE: '#64748b',
+  SLATE_LIGHT: '#94a3b8',
+  TEAL: '#14b8a6',
+  ORANGE: '#f97316',
   WHITE: '#ffffff'
 });
 

@@ -10,6 +10,7 @@ import {
   isPositiveStatus,
   isCancelledStatus,
   isAccountOutflowEvent,
+  isPocketTransferEvent,
   normalizePeriodicity,
   normalizeRecurrence
 } from '../../../shared/enums/index.js';
@@ -102,6 +103,8 @@ export class TimelineEvent {
     obligation_person_id,
     pocketId = null,
     pocket_id = null,
+    targetPocketId = null,
+    target_pocket_id = null,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString(),
     created_at,
@@ -224,6 +227,9 @@ export class TimelineEvent {
     this.obligationPersonId = obligationPersonId || obligation_person_id || null;
     this.pocketId = pocketId !== undefined ? pocketId : (pocket_id !== undefined ? pocket_id : null);
     this.pocket_id = this.pocketId;
+    // Destination space of an account transfer (null = the account's General space)
+    this.targetPocketId = targetPocketId || target_pocket_id || null;
+    this.target_pocket_id = this.targetPocketId;
     this.createdAt = created_at || createdAt;
     this.updatedAt = updated_at || updatedAt;
   }
@@ -292,7 +298,7 @@ export function calcToggledStatus(event, explicitStatus = null) {
   // If Positive -> Negative (Pending / Open / Planned / In Progress)
   // NOTE: Positive Income, Expense, and Investment events are locked and cannot revert to negative
   if (isPositive) {
-    if (isIncome || isInvestment || event.eventType === EventType.EXPENSE || isAccountOutflowEvent(event)) {
+    if (isIncome || isInvestment || event.eventType === EventType.EXPENSE || isAccountOutflowEvent(event) || isPocketTransferEvent(event)) {
       return {
         status: currentStatus,
         isCompleted: true
@@ -308,7 +314,7 @@ export function calcToggledStatus(event, explicitStatus = null) {
 
   let positiveStatus = EventStatus.PAID;
   if (isReminder) positiveStatus = EventStatus.CLOSED;
-  else if (isTodo) positiveStatus = EventStatus.COMPLETED;
+  else if (isTodo || isPocketTransferEvent(event)) positiveStatus = EventStatus.COMPLETED;
   else if (isFollowup) positiveStatus = FollowupStatus.FINISHED;
   else if (isIncome) positiveStatus = EventStatus.RECEIVED;
   else if (isWithdrawal) positiveStatus = EventStatus.WITHDRAWN;

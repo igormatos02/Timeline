@@ -1,12 +1,24 @@
-import { MovementKind } from '../enums/index.js';
+import { MovementKind, isPocketTransferEvent } from '../enums/index.js';
 import { classifyMovement, isActiveMovement } from './movements.js';
 
 // Key of the account's General space (movements without a pocket)
 export const GENERAL_SPACE_KEY = 'general';
 
 /**
- * Signed effect of a classified movement on the savings: + deposits (internal and external),
- * - withdrawals and savings expenses / costs; 0 for anything else (and for references).
+ * Whether a movement touches a space of the account (pocketId, or null for the General space): its own space,
+ * or the destination of a transfer.
+ */
+export function isMovementInSpace(ev, pocketId) {
+  if (!ev) return false;
+  const origin = ev.pocketId || ev.pocket_id || null;
+  const target = isPocketTransferEvent(ev) ? (ev.targetPocketId || ev.target_pocket_id || null) : undefined;
+  const key = pocketId ? String(pocketId) : '';
+  return String(origin || '') === key || (target !== undefined && String(target || '') === key);
+}
+
+/**
+ * Signed effect of a classified movement on the savings total: + deposits (internal and external),
+ * - withdrawals and savings expenses; 0 for anything else (transfers and references included).
  */
 export function savingsEffect(movement) {
   if (!movement || movement.isReference) return 0;
@@ -17,6 +29,7 @@ export function savingsEffect(movement) {
 
 /**
  * Balance of each savings space (each pocket + the General space), including the pockets' initial values.
+ * Transfers move money between two spaces without changing the total.
  * - side 'realized': effective movements only (what is really in the space); 'projected': every active one.
  * - upToMonth ('yyyy-MM') / upToDate ('yyyy-MM-dd'): only movements up to that point.
  * - excludeEventId: leaves one movement out (e.g. the one being edited).
@@ -40,11 +53,19 @@ export function computeSpaceBalances({
     if (upToMonth && ev.date.substring(0, 7) > upToMonth) return;
     if (upToDate && ev.date > upToDate) return;
     const movement = classifyMovement(ev, timelineTypeMap);
+    if (movement.isReference) return;
+    if (side === 'realized' && !movement.isEffective) return;
+    const spaceKey = (pocketId) => (pocketId ? String(pocketId) : GENERAL_SPACE_KEY);
+    const addTo = (key, value) => balances.set(key, (balances.get(key) || 0) + value);
+    // A transfer leaves the origin space and enters the destination one (the account total does not change)
+    if (movement.kind === MovementKind.SAVINGS_TRANSFER) {
+      addTo(spaceKey(movement.pocketId), -movement.amount);
+      addTo(spaceKey(movement.targetPocketId), movement.amount);
+      return;
+    }
     const effect = savingsEffect(movement);
     if (!effect) return;
-    if (side === 'realized' && !movement.isEffective) return;
-    const key = movement.pocketId ? String(movement.pocketId) : GENERAL_SPACE_KEY;
-    balances.set(key, (balances.get(key) || 0) + effect);
+    addTo(spaceKey(movement.pocketId), effect);
   });
   return balances;
 }

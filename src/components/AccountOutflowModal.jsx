@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ArrowDownRight, Check, PiggyBank, FileText, Receipt, ShoppingCart, Zap, Repeat } from 'lucide-react';
+import { ArrowDownRight, ArrowLeftRight, Check, FileText, ShoppingCart, Zap, Repeat } from 'lucide-react';
 import { format, parseISO, getDaysInMonth, addMonths } from 'date-fns';
 import ModalShell from './ui/ModalShell.jsx';
 import EuroInput from './ui/EuroInput.jsx';
@@ -11,6 +11,7 @@ import MonthPickerPopover from './ui/MonthPickerPopover.jsx';
 import ToggleSwitch from './ui/ToggleSwitch.jsx';
 import CategorySelector from './ui/CategorySelector.jsx';
 import CategoryBoxSelector from './ui/CategoryBoxSelector.jsx';
+import AccountSpaceSelector from './ui/AccountSpaceSelector.jsx';
 import { EXPENSE_CATEGORY_META, CONDO_EXPENSE_CATEGORY_META } from './event-modals/FinancialEventModalConfig.js';
 import { useTimeboard } from '../context/TimeboardContext.jsx';
 import {
@@ -28,40 +29,42 @@ import {
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { formatCurrency } from '../utils/formatCurrency.js';
 import { generateUUID } from '../utils/uuid.js';
-import { computeSpaceBalances } from '../../shared/finance/savingsSpaces.js';
+import { computeSpaceBalances, GENERAL_SPACE_KEY } from '../../shared/finance/savingsSpaces.js';
 
-/**
- * Money available in a pocket (shared financial engine): its initial value plus the effective movements
- * (pending deposits, external ones included, do not count yet).
- */
-export function calculatePocketAvailableBalance(pocket, events = [], upToDate = null, excludeEventId = null) {
-  if (!pocket) return 0;
-  const balances = computeSpaceBalances({ events, pockets: [pocket], side: 'realized', upToDate, excludeEventId });
-  return Math.max(0, balances.get(String(pocket.id)) || 0);
-}
-
-// Outflows of an account pocket: withdrawal (back to the income timeline), cost and expense (stay in the account)
-const OUTFLOW_TYPES = [EventType.WITHDRAWAL, EventType.POCKET_COST, EventType.POCKET_EXPENSE];
+// Outflows of the account: withdrawal (back to the available money), expense paid by the account, transfer
+// between two spaces (General / pockets)
+const OUTFLOW_TYPES = [EventType.WITHDRAWAL, EventType.POCKET_EXPENSE, EventType.POCKET_TRANSFER];
 const OUTFLOW_ICONS = {
   [EventType.WITHDRAWAL]: ArrowDownRight,
-  [EventType.POCKET_COST]: Receipt,
-  [EventType.POCKET_EXPENSE]: ShoppingCart
+  [EventType.POCKET_EXPENSE]: ShoppingCart,
+  [EventType.POCKET_TRANSFER]: ArrowLeftRight
 };
-// Default recurrence of each outflow type (a cost is usually monthly, the others one-time)
-const DEFAULT_RECURRENCE = {
-  [EventType.WITHDRAWAL]: EventRecurrence.ONCE,
-  [EventType.POCKET_COST]: EventRecurrence.RECURRING,
-  [EventType.POCKET_EXPENSE]: EventRecurrence.ONCE
+const OUTFLOW_COLORS = {
+  [EventType.WITHDRAWAL]: TimelineColor.DANGER,
+  [EventType.POCKET_EXPENSE]: TimelineColor.DANGER,
+  [EventType.POCKET_TRANSFER]: TimelineColor.CYAN
 };
 
+// Legacy pocket costs are edited as expenses of the "bank fees" category
+const resolveInitialType = (initialData) => {
+  if (initialData?.eventType === EventType.POCKET_COST) return EventType.POCKET_EXPENSE;
+  return OUTFLOW_TYPES.includes(initialData?.eventType) ? initialData.eventType : EventType.WITHDRAWAL;
+};
+const resolveInitialCategory = (initialData, categoryMeta) => {
+  if (initialData?.eventType === EventType.POCKET_COST) return ExpenseEventCategory.BANK_FEES;
+  const category = String(initialData?.category || '').toLowerCase();
+  return categoryMeta[category] ? category : ExpenseEventCategory.OTHER;
+};
+const spaceKeyOf = (pocketId) => (pocketId ? String(pocketId) : GENERAL_SPACE_KEY);
+
 /**
- * "Add outflow" popup of an account pocket (savings timeline):
- * - withdrawal: one-time move of money from the pocket to the income timeline (as before)
- * - cost: debits the pocket (one-time or periodic), e.g. account fees
- * - expense: works like an expense (same categories) but is paid from the pocket
- * Costs and expenses only lower the pocket balance; they never reach the income timeline.
+ * "Add outflow" popup of the account (savings timeline):
+ * - withdrawal: moves money from a space (General or a pocket) back to the available money
+ * - expense: an expense paid by the account (expense categories, bank fees included), one-time or periodic
+ * - transfer: moves money between two spaces; the account total and the balance do not change
+ * The amount is limited to the balance of the origin space ("Where").
  */
-export default function WithdrawalModal({
+export default function AccountOutflowModal({
   isOpen,
   onClose,
   onSave,
@@ -79,44 +82,32 @@ export default function WithdrawalModal({
   const expenseCategoryMeta = isCondoflow ? CONDO_EXPENSE_CATEGORY_META : EXPENSE_CATEGORY_META;
   const expenseTranslationPrefix = isCondoflow ? 'condoExpenseCategories' : 'expenseCategories';
 
-  // Locked target pocket based on where the button was clicked
-  const targetPocketId = useMemo(() => {
-    if (initialData?.pocketId || initialData?.pocket_id) {
-      return initialData.pocketId || initialData.pocket_id;
-    }
-    if (defaultPocketId) return defaultPocketId;
-    return pockets.length > 0 ? pockets[0].id : '';
-  }, [initialData, defaultPocketId, pockets]);
-
-  const selectedPocket = useMemo(() => {
-    return pockets.find((p) => p.id === targetPocketId) || pockets[0] || null;
-  }, [pockets, targetPocketId]);
+  const initialOriginId = initialData ? (initialData.pocketId || initialData.pocket_id || null) : (defaultPocketId || null);
 
   // Locked base month and year from the trigger context
   const baseDateStr = useMemo(() => {
     return initialData?.date || defaultDate || format(new Date(), 'yyyy-MM-dd');
   }, [initialData?.date, defaultDate]);
 
-  const baseMonthKey = useMemo(() => {
-    return baseDateStr.substring(0, 7);
-  }, [baseDateStr]);
+  const baseMonthKey = useMemo(() => baseDateStr.substring(0, 7), [baseDateStr]);
 
   const initialDay = useMemo(() => {
     try {
-      const parsed = parseISO(baseDateStr);
-      return Number(format(parsed, 'd'));
+      return Number(format(parseISO(baseDateStr), 'd'));
     } catch {
       return 1;
     }
   }, [baseDateStr]);
 
-  const initialType = OUTFLOW_TYPES.includes(initialData?.eventType) ? initialData.eventType : EventType.WITHDRAWAL;
+  const initialType = resolveInitialType(initialData);
 
   const [outflowType, setOutflowType] = useState(initialType);
+  const [originId, setOriginId] = useState(initialOriginId);
+  const [targetId, setTargetId] = useState(null);
   const [title, setTitle] = useState(initialData?.title || initialData?.name || '');
   const [amount, setAmount] = useState(initialData?.amount ? Math.abs(Number(initialData.amount)).toString() : '');
   const [dayOfMonth, setDayOfMonth] = useState(initialDay);
-  const [recurrence, setRecurrence] = useState(DEFAULT_RECURRENCE[initialType]);
+  const [recurrence, setRecurrence] = useState(EventRecurrence.ONCE);
   const [periodicity, setPeriodicity] = useState(EventPeriodicity.MONTHLY);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
   const [category, setCategory] = useState(ExpenseEventCategory.OTHER);
@@ -129,18 +120,27 @@ export default function WithdrawalModal({
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Default destination of a transfer: the first open pocket other than the origin (or General from a pocket)
+  const defaultTargetFor = (origin) => {
+    if (origin) return null;
+    const firstPocket = (pockets || []).find((p) => !(p.date_closed || p.dateClosed));
+    return firstPocket ? firstPocket.id : null;
+  };
+
   useEffect(() => {
     if (isOpen) {
-      const type = OUTFLOW_TYPES.includes(initialData?.eventType) ? initialData.eventType : EventType.WITHDRAWAL;
+      const type = resolveInitialType(initialData);
+      const origin = initialData ? (initialData.pocketId || initialData.pocket_id || null) : (defaultPocketId || null);
       setOutflowType(type);
+      setOriginId(origin);
+      setTargetId(initialData?.targetPocketId || initialData?.target_pocket_id || defaultTargetFor(origin));
       setTitle(initialData?.title || initialData?.name || '');
       setAmount(initialData?.amount ? Math.abs(Number(initialData.amount)).toString() : '');
       setDayOfMonth(initialDay);
-      setRecurrence(initialData ? normalizeRecurrence(initialData) : DEFAULT_RECURRENCE[type]);
+      setRecurrence(initialData ? normalizeRecurrence(initialData) : EventRecurrence.ONCE);
       setPeriodicity(initialData ? normalizePeriodicity(initialData.periodicity) : EventPeriodicity.MONTHLY);
       setRecurrenceEndDate(initialData?.limitDate || initialData?.limit_date || initialData?.recurrenceEndDate || '');
-      const initialCategory = String(initialData?.category || '').toLowerCase();
-      setCategory(expenseCategoryMeta[initialCategory] ? initialCategory : ExpenseEventCategory.OTHER);
+      setCategory(resolveInitialCategory(initialData, expenseCategoryMeta));
       setIsAutomatic(Boolean(initialData?.isAutomatic ?? initialData?.automatic ?? false));
       setUpdateScope(EventUpdateMode.SINGLE);
       setIsDayPickerOpen(false);
@@ -149,38 +149,54 @@ export default function WithdrawalModal({
       setError(null);
       setLoading(false);
     }
-  }, [isOpen, initialData, initialDay, expenseCategoryMeta]);
+    // defaultTargetFor only depends on the pockets
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialData, initialDay, expenseCategoryMeta, defaultPocketId, pockets]);
 
-  const maxAvailable = useMemo(() => {
-    if (!selectedPocket) return 0;
-    return calculatePocketAvailableBalance(
-      selectedPocket,
-      events,
-      null,
-      initialData?.id || null
-    );
-  }, [selectedPocket, events, initialData?.id]);
+  // Effective balance of every space (the movement being edited is left out)
+  const spaceBalances = useMemo(() => computeSpaceBalances({
+    events,
+    pockets,
+    side: 'realized',
+    excludeEventId: initialData?.id || null
+  }), [events, pockets, initialData?.id]);
 
   if (!isOpen) return null;
 
   const isWithdrawal = outflowType === EventType.WITHDRAWAL;
   const isPocketExpense = outflowType === EventType.POCKET_EXPENSE;
+  const isTransfer = outflowType === EventType.POCKET_TRANSFER;
   const isRecurring = !isWithdrawal && (recurrence === EventRecurrence.RECURRING || recurrence === EventRecurrence.LIMITED);
   const isSeriesEdit = isEditing && Boolean(initialData?.seriesId || initialData?.eventId || initialData?.isRecurring);
-  const accent = TimelineColor.DANGER;
+  const accent = OUTFLOW_COLORS[outflowType];
 
-  const outflowOptions = OUTFLOW_TYPES.map((type) => ({
+  const spaceName = (pocketId) => (pocketId
+    ? ((pockets || []).find((p) => String(p.id) === String(pocketId))?.name || t('account.general'))
+    : t('account.general'));
+  const maxAvailable = Math.max(0, spaceBalances.get(spaceKeyOf(originId)) || 0);
+
+  // Without pockets everything happens in the General space: no "Where" choice and nothing to transfer to
+  const hasPockets = (pockets || []).length > 0;
+  const outflowOptions = OUTFLOW_TYPES.filter((type) => hasPockets || type !== EventType.POCKET_TRANSFER).map((type) => ({
     id: type,
     label: t(`withdrawalModal.types.${type}`),
     icon: OUTFLOW_ICONS[type],
-    color: accent,
+    color: OUTFLOW_COLORS[type],
     tooltip: t(`withdrawalModal.typesDesc.${type}`)
   }));
 
   const handleChangeType = (type) => {
     setOutflowType(type);
-    setRecurrence(DEFAULT_RECURRENCE[type]);
-    setIsAutomatic(type === EventType.POCKET_COST);
+    setRecurrence(EventRecurrence.ONCE);
+    setIsAutomatic(false);
+    if (type === EventType.POCKET_TRANSFER && String(targetId ?? '') === String(originId ?? '')) {
+      setTargetId(defaultTargetFor(originId));
+    }
+  };
+
+  const handleChangeOrigin = (id) => {
+    setOriginId(id);
+    if (String(targetId ?? '') === String(id ?? '')) setTargetId(defaultTargetFor(id));
   };
 
   const handleSubmit = async (e) => {
@@ -193,11 +209,6 @@ export default function WithdrawalModal({
       return;
     }
 
-    if (!selectedPocket) {
-      setError(t('withdrawalModal.noBalanceError'));
-      return;
-    }
-
     const numAmount = Number(amount);
     if (!numAmount || Number.isNaN(numAmount) || numAmount <= 0) {
       setError(t('validation.amountRequired'));
@@ -205,7 +216,12 @@ export default function WithdrawalModal({
     }
 
     if (numAmount > maxAvailable + 0.001) {
-      setError(t('withdrawalModal.amountExceedsError', { max: formatCurrency(maxAvailable) }));
+      setError(t('account.amountExceedsSpaceError', { space: spaceName(originId), max: formatCurrency(maxAvailable) }));
+      return;
+    }
+
+    if (isTransfer && String(targetId ?? '') === String(originId ?? '')) {
+      setError(t('account.transferSameSpaceError'));
       return;
     }
 
@@ -214,24 +230,28 @@ export default function WithdrawalModal({
     const finalDateStr = `${baseMonthKey}-${String(safeDay).padStart(2, '0')}`;
 
     const todayStr = format(new Date(), 'yyyy-MM-dd');
-    // One-time outflows on a past date are already done; periodic ones follow the automatic payment toggle
+    // One-time outflows on a past date are already done; periodic ones follow the automatic toggle
     const isCompleted = !isRecurring && finalDateStr <= todayStr;
-    const settledStatus = isWithdrawal ? EventStatus.WITHDRAWN : EventStatus.PAID;
+    const settledStatus = isWithdrawal ? EventStatus.WITHDRAWN : (isTransfer ? EventStatus.COMPLETED : EventStatus.PAID);
     const pendingStatus = isWithdrawal ? EventStatus.PLANNED : EventStatus.PENDING;
     const finalRecurrence = isWithdrawal ? EventRecurrence.ONCE : recurrence;
     const endDate = !isWithdrawal && recurrence === EventRecurrence.LIMITED && recurrenceEndDate ? recurrenceEndDate : null;
+    const originPocket = (pockets || []).find((p) => String(p.id) === String(originId)) || null;
 
     const payload = {
       ...(initialData || {}),
       id: initialData?.id || generateUUID(),
       title: trimmedTitle,
       name: trimmedTitle,
-      amount: -Math.abs(numAmount),
+      // Withdrawals and expenses take money out of the account; a transfer only moves it inside the account
+      amount: isTransfer ? Math.abs(numAmount) : -Math.abs(numAmount),
       date: finalDateStr,
       dayOfMonth: safeDay,
-      pocketId: selectedPocket.id,
-      pocket_id: selectedPocket.id,
-      pocketName: selectedPocket.name,
+      pocketId: originId || null,
+      pocket_id: originId || null,
+      pocketName: originPocket?.name || null,
+      targetPocketId: isTransfer ? (targetId || null) : null,
+      target_pocket_id: isTransfer ? (targetId || null) : null,
       category: isPocketExpense ? category : InvestmentEventCategory.OTHER,
       eventType: outflowType,
       recurrence: finalRecurrence,
@@ -241,7 +261,7 @@ export default function WithdrawalModal({
       limitDate: endDate,
       limit_date: endDate,
       isWithdrawal,
-      isInvestment: true,
+      isInvestment: !isTransfer,
       isRecurring,
       isAutomatic: !isWithdrawal && isAutomatic,
       status: isEditing && initialData?.status ? initialData.status : (isCompleted ? settledStatus : pendingStatus),
@@ -269,7 +289,7 @@ export default function WithdrawalModal({
       accent={accent}
       icon={OUTFLOW_ICONS[outflowType]}
       title={isEditing ? t('withdrawalModal.outflowEditTitle') : t('withdrawalModal.outflowTitle')}
-      subtitle={selectedPocket?.name || timeline?.name || t('withdrawalModal.subtitle')}
+      subtitle={timeline?.name || t('withdrawalModal.subtitle')}
       footer={
         <>
           <button
@@ -315,41 +335,6 @@ export default function WithdrawalModal({
         </div>
       )}
 
-      {/* Source pocket (fixed) with its available balance */}
-      {selectedPocket && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '9px 12px',
-            borderRadius: '8px',
-            background: `${TimelineColor.INVESTMENT}14`,
-            border: `1px solid ${TimelineColor.INVESTMENT}40`,
-            marginBottom: '14px'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <PiggyBank size={15} style={{ color: TimelineColor.INVESTMENT }} />
-            <span style={{ fontSize: '0.86rem', fontWeight: '700', color: 'var(--text-main)' }}>
-              {selectedPocket.name}
-            </span>
-          </div>
-          <span
-            style={{
-              fontSize: '0.74rem',
-              fontWeight: '700',
-              color: TimelineColor.INVESTMENT,
-              background: `${TimelineColor.INVESTMENT}26`,
-              padding: '2px 8px',
-              borderRadius: '6px'
-            }}
-          >
-            {formatCurrency(maxAvailable)}
-          </span>
-        </div>
-      )}
-
       {/* Outflow type (fixed when editing) */}
       {!isEditing && (
         <OptionBoxGroup
@@ -357,6 +342,30 @@ export default function WithdrawalModal({
           options={outflowOptions}
           value={outflowType}
           onChange={handleChangeType}
+        />
+      )}
+
+      {/* Origin space ("Where") with the balances; destination of a transfer */}
+      {hasPockets && (
+      <AccountSpaceSelector
+        label={t('account.where')}
+        pockets={pockets}
+        value={originId}
+        onChange={handleChangeOrigin}
+        balances={spaceBalances}
+        generalLabel={t('account.general')}
+      />
+      )}
+      {isTransfer && (
+        <AccountSpaceSelector
+          label={t('account.to')}
+          pockets={pockets}
+          value={targetId}
+          onChange={setTargetId}
+          balances={spaceBalances}
+          excludeId={originId}
+          generalLabel={t('account.general')}
+          color={TimelineColor.CYAN}
         />
       )}
 
@@ -387,7 +396,7 @@ export default function WithdrawalModal({
         />
       </div>
 
-      {/* Amount, limited to the pocket balance */}
+      {/* Amount, limited to the balance of the origin space */}
       <div style={{ marginBottom: '14px' }}>
         <EuroInput
           label={t('withdrawalModal.outflowAmountLabel')}
@@ -403,7 +412,7 @@ export default function WithdrawalModal({
               style={{
                 fontSize: '0.74rem',
                 fontWeight: '700',
-                color: maxAvailable > 0 ? TimelineColor.DANGER : 'var(--text-dim)'
+                color: maxAvailable > 0 ? accent : 'var(--text-dim)'
               }}
             >
               {t('withdrawalModal.maxAvailable', { amount: formatCurrency(maxAvailable) })}
@@ -412,12 +421,12 @@ export default function WithdrawalModal({
         />
         {maxAvailable <= 0 && (
           <p style={{ margin: '4px 0 0 0', fontSize: '0.72rem', color: TimelineColor.DANGER, fontWeight: '600' }}>
-            {t('withdrawalModal.noBalanceError')}
+            {t('account.noSpaceBalanceError', { space: spaceName(originId) })}
           </p>
         )}
       </div>
 
-      {/* Expense category (same categories as the expenses timeline) */}
+      {/* Expense category (same categories as the expenses timeline, bank fees included) */}
       {isPocketExpense && (isCondoflow ? (
         <CategoryBoxSelector
           value={category}
@@ -442,7 +451,7 @@ export default function WithdrawalModal({
         />
       ))}
 
-      {/* Recurrence of costs and expenses (one-time, recurring or period), like the other events */}
+      {/* Recurrence of expenses and transfers (one-time, recurring or period), like the other events */}
       {!isWithdrawal && !isEditing && (
         <>
           <RecurrenceSelector
@@ -499,7 +508,7 @@ export default function WithdrawalModal({
         onToggle={() => setIsDayPickerOpen(!isDayPickerOpen)}
       />
 
-      {/* Periodic costs / expenses can be debited automatically */}
+      {/* Periodic expenses / transfers can be done automatically */}
       {isRecurring && (
         <ToggleSwitch
           checked={isAutomatic}

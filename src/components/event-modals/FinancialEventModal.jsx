@@ -3,10 +3,11 @@ import {
   Zap,
   Repeat,
   ExternalLink,
-  Scissors
+  Scissors,
+  Wallet
 } from 'lucide-react';
 import { format, parseISO, addMonths, getDaysInMonth } from 'date-fns';
-import { EventRecurrence, EventPeriodicity, EventUpdateMode, normalizeRecurrence, normalizePeriodicity } from '../../../shared/enums/index.js';
+import { EventRecurrence, EventPeriodicity, EventUpdateMode, EventType, TimelineColor, normalizeRecurrence, normalizePeriodicity } from '../../../shared/enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { useModalEscape } from '../../hooks/useModalEscape.js';
 import ModalShell from '../ui/ModalShell.jsx';
@@ -21,6 +22,8 @@ import BreakdownItems from '../ui/BreakdownItems.jsx';
 import ObligationSelector from '../ObligationSelector.jsx';
 import { EVENT_MODAL_CONFIG, resolveEventModalConfig } from './FinancialEventModalConfig.js';
 import CategoryBoxSelector from '../ui/CategoryBoxSelector.jsx';
+import OptionBoxGroup from '../ui/OptionBoxGroup.jsx';
+import AccountSpaceSelector from '../ui/AccountSpaceSelector.jsx';
 import { useTimeboard } from '../../context/TimeboardContext.jsx';
 
 export default function FinancialEventModal({
@@ -306,8 +309,9 @@ export default function FinancialEventModal({
       isAutomatic: config.showAutomatic !== false ? Boolean(formData.isAutomatic) : false,
       isObligation: Boolean(formData.isObligation),
       obligationPersonId: formData.isObligation ? formData.obligationPersonId : null,
-      pocketId: formData.pocketId || initialData?.pocketId || initialData?.pocket_id || null,
-      pocket_id: formData.pocketId || initialData?.pocketId || initialData?.pocket_id || null,
+      // Space of the account ("Where"): a pocket, or null for the General space
+      pocketId: formData.pocketId || null,
+      pocket_id: formData.pocketId || null,
       updateScope: (isEditing && (initialData?.seriesId || initialData?.eventId || initialData?.isRecurring || isRecurring)) ? updateScope : undefined
     };
 
@@ -338,8 +342,8 @@ export default function FinancialEventModal({
       icon={config.icon}
       title={
         isEditing
-          ? (t(config.titleKeys?.editKey) || config.titleKeys?.editFallback || 'Editar')
-          : (t(config.titleKeys?.newKey) || config.titleKeys?.newFallback || 'Novo')
+          ? t(config.titleKeys?.editKey)
+          : t(config.titleKeys?.newKey)
       }
       subtitle={timeline?.name}
       footer={
@@ -350,7 +354,7 @@ export default function FinancialEventModal({
             onClick={onClose}
             style={{ padding: '8px 16px', borderRadius: '8px' }}
           >
-            {t('modal.cancel') || 'Cancelar'}
+            {t('modal.cancel')}
           </button>
           <button
             type="submit"
@@ -364,27 +368,27 @@ export default function FinancialEventModal({
             }}
           >
             {isEditing
-              ? (t('modal.saveChanges') || 'Salvar Alterações')
-              : (t(config.titleKeys?.addKey) || config.titleKeys?.addFallback || 'Adicionar Evento')}
+              ? t('modal.saveChanges')
+              : (t(config.titleKeys?.addKey))}
           </button>
         </>
       }
     >
       <div style={{ marginBottom: '14px' }}>
         <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-          {t(config.titleLabelKey) || config.titleLabelFallback || 'Título / Descrição *'}
+          {t(config.titleLabelKey)}
         </label>
         <input
           ref={titleInputRef}
           type="text"
           value={formData.title}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          placeholder={t(config.titlePlaceholderKey) || config.titlePlaceholderFallback || ''}
+          placeholder={t(config.titlePlaceholderKey)}
           required
           style={{
             width: '100%',
             padding: '10px 12px',
-            background: 'var(--bg-glass, rgba(255,255,255,0.03))',
+            background: 'var(--bg-glass)',
             border: '1px solid var(--border-glass)',
             borderRadius: '8px',
             color: 'var(--text-main)',
@@ -398,17 +402,17 @@ export default function FinancialEventModal({
       {config.showDescription && (
         <div style={{ marginBottom: '14px' }}>
           <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-            {t(config.descriptionLabelKey) || config.descriptionLabelFallback || 'Descrição / Notas'}
+            {t(config.descriptionLabelKey)}
           </label>
           <textarea
             rows={2}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder={t(config.descriptionPlaceholderKey) || config.descriptionPlaceholderFallback || 'Adicione informações adicionais ou contexto...'}
+            placeholder={t(config.descriptionPlaceholderKey)}
             style={{
               width: '100%',
               padding: '10px 12px',
-              background: 'var(--bg-glass, rgba(255,255,255,0.03))',
+              background: 'var(--bg-glass)',
               border: '1px solid var(--border-glass)',
               borderRadius: '8px',
               color: 'var(--text-main)',
@@ -425,7 +429,7 @@ export default function FinancialEventModal({
       {config.showAmount !== false && (
         <div onFocus={() => setIsAmountFocused(true)}>
           <EuroInput
-            label={t(config.amountLabelKey) || config.amountLabelFallback}
+            label={t(config.amountLabelKey)}
             value={displayedAmount}
             accent={ACCENT}
             readOnly={config.useBreakdown && breakdownItems.length > 0}
@@ -437,7 +441,7 @@ export default function FinancialEventModal({
             }}
             labelExtra={config.useBreakdown && breakdownItems.length > 0 ? (
               <span style={{ fontSize: '0.72rem', color: ACCENT, fontWeight: '800' }}>
-                ({breakdownItems.length} {(t('modal.subparts') || 'Subpartes').toLowerCase()})
+                ({breakdownItems.length} {t('modal.subparts').toLowerCase()})
               </span>
             ) : null}
             marginBottom={config.useBreakdown && isAmountFocused && !isBreakdownOpen ? '6px' : '14px'}
@@ -467,6 +471,33 @@ export default function FinancialEventModal({
             />
           )}
         </div>
+      )}
+
+      {/* Account deposits: the space that receives the money ("Where") and where the money comes from */}
+      {config.eventType === EventType.INVESTMENT && (
+        <>
+          {(pockets || []).length > 0 && (
+            <AccountSpaceSelector
+              label={t('account.where')}
+              pockets={pockets}
+            value={formData.pocketId || null}
+              onChange={(pocketId) => setFormData((prev) => ({ ...prev, pocketId }))}
+              generalLabel={t('account.general')}
+              color={ACCENT}
+            />
+          )}
+          {config.showIsExternal && (
+            <OptionBoxGroup
+              label={t('account.depositOrigin')}
+              value={formData.isExternal}
+              onChange={(isExternal) => setFormData((prev) => ({ ...prev, isExternal }))}
+              options={[
+                { id: false, label: t('account.depositInternal'), tooltip: t('account.depositInternalDesc'), icon: Wallet, color: ACCENT },
+                { id: true, label: t('account.depositExternal'), tooltip: t('account.depositExternalDesc'), icon: ExternalLink, color: TimelineColor.CYAN }
+              ]}
+            />
+          )}
+        </>
       )}
 
       {config.showCategories !== false && config.useCategoryBoxes && (
@@ -505,14 +536,14 @@ export default function FinancialEventModal({
           gridTemplateColumns: isFirstEvent ? '1fr 1fr' : '1fr',
           gap: '12px',
           marginBottom: '14px',
-          background: 'rgba(255,255,255,0.02)',
+          background: 'var(--bg-glass)',
           padding: '12px',
           borderRadius: '10px',
           border: '1px solid var(--border-glass)'
         }}>
           {isFirstEvent && (
             <EuroInput
-              label={t('modal.initialInvestedAmount') || 'Aporte Inicial (€)'}
+              label={t('modal.initialInvestedAmount')}
               value={formData.initialInvestedAmount}
               accent={ACCENT}
               required={false}
@@ -522,7 +553,7 @@ export default function FinancialEventModal({
             />
           )}
           <EuroInput
-            label={t('modal.targetAmount') || 'Meta Final (€)'}
+            label={t('modal.targetAmount')}
             value={formData.targetAmount}
             accent={ACCENT}
             required={false}
@@ -568,7 +599,7 @@ export default function FinancialEventModal({
               onChange={(month) => setFormData({ ...formData, recurrenceEndDate: month })}
               accent={ACCENT}
               dateLocale={dateLocale}
-              label={t('modal.endMonth') || 'Mês Final'}
+              label={t('modal.endMonth')}
               isOpen={isEndMonthPickerOpen}
               onToggle={() => {
                 setIsEndMonthPickerOpen(!isEndMonthPickerOpen);
@@ -607,20 +638,9 @@ export default function FinancialEventModal({
         <ToggleSwitch
           checked={formData.isAutomatic}
           onChange={(val) => setFormData({ ...formData, isAutomatic: val })}
-          label={t('modal.automatic') || config.automaticLabelFallback}
+          label={t('modal.automatic')}
           icon={Zap}
           accent={ACCENT}
-        />
-      )}
-
-      {config.showIsExternal && (
-        <ToggleSwitch
-          checked={formData.isExternal}
-          onChange={(val) => setFormData({ ...formData, isExternal: val })}
-          label={t('modal.isExternalDeposit')}
-          icon={ExternalLink}
-          accent={ACCENT}
-          hint={t('modal.isExternalDepositHint')}
         />
       )}
 

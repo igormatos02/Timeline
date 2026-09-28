@@ -262,6 +262,8 @@ export class SupabaseFinancialEventRepository extends IRepository {
       obligation_person_id: row.obligation_person_id || row.obligationPersonId || null,
       pocketId: row.pocket_id || null,
       pocket_id: row.pocket_id || null,
+      targetPocketId: row.target_pocket_id || null,
+      target_pocket_id: row.target_pocket_id || null,
 
       createdAt: row.created_at,
       updatedAt: row.updated_at
@@ -522,6 +524,12 @@ export class SupabaseFinancialEventRepository extends IRepository {
       updated_at:
         new Date().toISOString()
     };
+
+    // Destination space of an account transfer (only sent for transfers, so other saves do not depend on the column)
+    if (eventType === EventType.POCKET_TRANSFER) {
+      const targetPocketId = data.targetPocketId || data.target_pocket_id || null;
+      row.target_pocket_id = targetPocketId && uuidRegex.test(targetPocketId) ? targetPocketId : null;
+    }
 
     if (validId) {
       row.id = validId;

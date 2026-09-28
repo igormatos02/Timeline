@@ -21,7 +21,7 @@ import {
   DollarSign,
   ArrowUpRight,
   ArrowDownRight,
-  Receipt,
+  ArrowLeftRight,
   ExternalLink,
   Sparkles,
   Gift,
@@ -79,6 +79,7 @@ import {
   DiaryMood,
   DiaryPublishStatus,
   isAccountOutflowEvent,
+  isPocketTransferEvent,
   isCancelledStatus,
   isPositiveStatus,
   isNegativeStatus,
@@ -104,7 +105,7 @@ import * as api from '../services/api.js';
 import { createEventDayComparator, buildPersonsById } from '../utils/eventSorting.js';
 import CopyIdButton from './ui/CopyIdButton.jsx';
 import { usePermissions } from '../context/PermissionsContext.jsx';
-import { useTimeboard } from '../context/TimeboardContext.jsx';
+import { useTimeboard, usePocketName } from '../context/TimeboardContext.jsx';
 import { useEventActions } from '../context/EventActionsContext.jsx';
 import DueDatePicker from './ui/DueDatePicker.jsx';
 import CancelEventConfirmModal from './CancelEventConfirmModal.jsx';
@@ -141,6 +142,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const { isReadOnly } = usePermissions();
   // Condominium timeboards do not use the diary mood
   const { isCondoflow } = useTimeboard();
+  const pocketName = usePocketName();
   // References and other in-memory events (withdrawal income, outflows of other timelines) are read-only too
   const blocksChanges = isReadOnly || Boolean(event.isVirtual || event.isReadOnly);
   const onEdit = blocksChanges ? undefined : onEditProp;
@@ -359,7 +361,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
   // Account outflows that stay in the account (pocket cost / expense) are not withdrawals
   const isAccountOutflow = isAccountOutflowEvent(event);
-  const isWithdrawalEvent = !isAccountOutflow && Boolean(
+  // Transfer between two spaces of the account: shown as "General → Roof", without a sign
+  const isTransferEvent = isPocketTransferEvent(event);
+  const isWithdrawalEvent = !isAccountOutflow && !isTransferEvent && Boolean(
     event.eventType === EventType.WITHDRAWAL ||
     event.isWithdrawal ||
     (event.pocketId && Number(event.amount || 0) < 0)
@@ -371,7 +375,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
   const isIncomeEvent = event.eventType === EventType.INCOME && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
   const isExpenseEvent = event.eventType === EventType.EXPENSE && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
-  const isInvestmentEvent = (event.eventType === EventType.INVESTMENT || isPocketOutflowEvent) && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
+  const isInvestmentEvent = (event.eventType === EventType.INVESTMENT || isPocketOutflowEvent || isTransferEvent) && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
 
   const baseItemColor = useMemo(() => {
     if (isWithdrawalEvent) {
@@ -604,7 +608,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         : event.eventType === EventType.POCKET_EXPENSE
           // Pocket expenses use the expense categories
           ? (isCondoflow ? [[CONDO_EXPENSE_CATEGORY_META, 'condoExpenseCategories']] : [[EXPENSE_CATEGORY_META, 'expenseCategories']])
-          : isInvestmentEvent && !isPocketOutflowEvent
+          : isInvestmentEvent && !isPocketOutflowEvent && !isTransferEvent
             ? [[isCondoflow ? CONDO_INVESTMENT_CATEGORY_META : null, 'investmentCategories'], [INVESTMENT_CATEGORY_META, 'investmentCategories']]
             : []
   ).filter(([metaMap]) => metaMap);
@@ -664,11 +668,18 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     );
   };
 
-  // Type badge of the account outflows that stay in the account (cost / expense)
+  // Type badge of the account movements that stay in the account: expense (legacy costs included) and
+  // transfer (with its route, e.g. "General → Roof")
   const renderOutflowTypeBadge = (onPositiveCard) => {
-    if (!isAccountOutflow) return null;
-    const TypeIcon = event.eventType === EventType.POCKET_COST ? Receipt : ShoppingCart;
-    const color = TimelineColor.DANGER;
+    if (!isAccountOutflow && !isTransferEvent) return null;
+    const TypeIcon = isTransferEvent ? ArrowLeftRight : ShoppingCart;
+    const color = isTransferEvent ? TimelineColor.CYAN : TimelineColor.DANGER;
+    const label = isTransferEvent
+      ? t('account.transferRoute', {
+          from: pocketName(event.pocketId || event.pocket_id) || t('account.general'),
+          to: pocketName(event.targetPocketId || event.target_pocket_id) || t('account.general')
+        })
+      : t(`withdrawalModal.types.${EventType.POCKET_EXPENSE}`);
     return (
       <span
         style={{
@@ -688,7 +699,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         }}
       >
         <TypeIcon size={11} />
-        <span>{t(`withdrawalModal.types.${event.eventType}`)}</span>
+        <span>{label}</span>
       </span>
     );
   };
@@ -3064,6 +3075,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 } else if (isAccountOutflow) {
                   newStatus = EventStatus.PAID;
                   newIsCompleted = true;
+                } else if (isTransferEvent) {
+                  newStatus = EventStatus.COMPLETED;
+                  newIsCompleted = true;
                 } else if (isInvestmentEvent) {
                   newStatus = EventStatus.INVESTED;
                   newIsCompleted = true;
@@ -3756,11 +3770,13 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 </span>
               ) : (
                 renderEditableAmount(
-                  isPocketOutflowEvent ? '-' : '+',
+                  isTransferEvent ? '' : (isPocketOutflowEvent ? '-' : '+'),
                   isCancelled
                     ? TimelineColor.SLATE
                     : isCompletedInvestment
                     ? TimelineColor.WHITE
+                    : isTransferEvent
+                    ? TimelineColor.CYAN
                     : isPocketOutflowEvent
                     ? TimelineColor.DANGER
                     : TimelineColor.INVESTMENT

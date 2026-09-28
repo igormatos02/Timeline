@@ -1,5 +1,5 @@
 import React from 'react';
-import { TimelineType, EventType, normalizeTimelineType, isAccountOutflowEvent } from '../enums/index.js';
+import { TimelineType, EventType, normalizeTimelineType, isAccountOutflowEvent, isPocketTransferEvent } from '../enums/index.js';
 import {
   IncomeEventModal,
   ExpenseEventModal,
@@ -12,7 +12,7 @@ import {
   FollowupEventModal,
   DefaultEventModal
 } from './event-modals/index.js';
-import WithdrawalModal from './WithdrawalModal.jsx';
+import AccountOutflowModal from './AccountOutflowModal.jsx';
 
 /**
  * Dispatcher modular de popups de eventos.
@@ -23,8 +23,8 @@ export default function CreateEventModal(props) {
 
   if (!isOpen) return null;
 
-  if (initialData?.eventType === EventType.WITHDRAWAL || initialData?.isWithdrawal || isAccountOutflowEvent(initialData)) {
-    return <WithdrawalModal {...props} />;
+  if (initialData?.eventType === EventType.WITHDRAWAL || initialData?.isWithdrawal || isAccountOutflowEvent(initialData) || isPocketTransferEvent(initialData)) {
+    return <AccountOutflowModal {...props} />;
   }
 
   const normalizedType = normalizeTimelineType(timeline?.type);

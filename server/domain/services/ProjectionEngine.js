@@ -9,7 +9,8 @@ import {
   AmortizationEventCategory,
   isCancelledStatus,
   normalizePeriodicity,
-  normalizeRecurrence
+  normalizeRecurrence,
+  isPocketTransferEvent
 } from '../../../shared/enums/index.js';
 
 function checkIsLoan(ev) {
@@ -300,6 +301,7 @@ export function projectEvents(rawEvents = [], options = {}) {
       else if (isWithdrawal) autoStatus = EventStatus.WITHDRAWN;
       else if (isInvestment) autoStatus = EventStatus.INVESTED;
       else if (isAmortization) autoStatus = EventStatus.AMORTIZED;
+      else if (isPocketTransferEvent(ev)) autoStatus = EventStatus.COMPLETED;
 
       return {
         ...ev,

@@ -4,18 +4,14 @@ import {
   parseISO,
   eachDayOfInterval,
   eachMonthOfInterval,
-  subDays,
   startOfWeek,
   endOfWeek,
   isSameWeek,
-  isSameMonth,
   getWeek,
-  addYears,
   addMonths,
   subMonths,
   startOfMonth,
-  endOfMonth,
-  differenceInCalendarMonths
+  endOfMonth
 } from 'date-fns';
 import { pt, enUS } from 'date-fns/locale';
 import {
@@ -43,14 +39,11 @@ import {
   CheckSquare,
   ListTree,
   Home,
-  Car,
   CreditCard,
-  Gift,
   ArrowUp,
   ArrowDown,
   FileText,
   Zap,
-  Activity,
   Bell,
   FolderKanban,
   Utensils,
@@ -68,21 +61,17 @@ import {
   ShieldCheck,
   Dog,
   Plane,
-  Target,
   ArrowDownRight,
-  Pencil,
-  Trash2,
+  ArrowLeftRight,
   ChevronDown,
   Users,
   User,
   Building2,
   UserCheck,
   Loader2,
-  Printer,
   Wallet,
   ReceiptEuro,
   ArrowUpRight,
-  Receipt,
   ShoppingCart
 } from 'lucide-react';
 import TimelineEventCard from './TimelineEventCard';
@@ -90,7 +79,6 @@ import { compareEventsWithinDay, createEventDayComparator, buildPersonsById } fr
 import { useTimeboard } from '../context/TimeboardContext.jsx';
 import MonthProjectionBadges from './MonthProjectionBadges.jsx';
 import FloatingTaskStack from './FloatingTaskStack';
-import { getGroupingForPeriodicity } from '../utils/loanCalculations';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getPaletteTheme } from '../../shared/config/colorPalettes.js';
 import {
@@ -99,7 +87,6 @@ import {
   ClearanceDocumentType,
   HISTORY_PERIOD_MONTHS,
   HistoryPeriod,
-  EventStatusLabel,
   TimelineType,
   TimelineStatus,
   TimeboardType,
@@ -112,14 +99,12 @@ import {
   AmortizationEventCategory,
   AmortizationStrategy,
   EventPeriodicity,
-  FollowupStatus,
   PersonType,
   normalizePeriodicity,
   normalizeTimelineType,
   isLoanTimelineType,
   isPositiveStatus,
   isCancelledStatus,
-  isNegativeStatus,
   AccountMovementType,
   getAccountMovementType,
   MovementKind,
@@ -127,11 +112,11 @@ import {
   getOutflowType
 } from '../enums/index.js';
 import { getTimelineDropdownOptions } from '../utils/timelineConfig.jsx';
+import AccountMonthSpaces from './account/AccountMonthSpaces.jsx';
 import { makeDiaryT } from '../utils/diaryLabels.js';
-import { pocketHasTarget } from '../utils/pocketUtils.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { computeMonthlyFlows } from '../../shared/finance/financialPosition.js';
-import { computeSpaceBalances, savingsEffect } from '../../shared/finance/savingsSpaces.js';
+import { savingsEffect, GENERAL_SPACE_KEY, isMovementInSpace } from '../../shared/finance/savingsSpaces.js';
 import { classifyMovement } from '../../shared/finance/movements.js';
 
 const EXPENSE_CATEGORY_ITEMS = [
@@ -160,8 +145,8 @@ const EXPENSE_CATEGORY_ITEMS = [
 const ACCOUNT_MOVEMENT_ITEMS = [
   { id: AccountMovementType.INFLOW, icon: ArrowUpRight, color: TimelineColor.INVESTMENT },
   { id: AccountMovementType.WITHDRAWAL, icon: ArrowDownRight, color: TimelineColor.INCOME },
-  { id: AccountMovementType.COST, icon: Receipt, color: TimelineColor.DANGER },
-  { id: AccountMovementType.EXPENSE, icon: ShoppingCart, color: TimelineColor.EXPENSE }
+  { id: AccountMovementType.EXPENSE, icon: ShoppingCart, color: TimelineColor.EXPENSE },
+  { id: AccountMovementType.TRANSFER, icon: ArrowLeftRight, color: TimelineColor.CYAN }
 ];
 
 // Outflow kinds shown in the Outflows timeline filter: its own expenses, via savings (references), installments (references)
@@ -831,7 +816,7 @@ function VerticalTimeline({
         width: '28px',
         height: '16px',
         borderRadius: '9999px',
-        background: checked ? activeColor : 'rgba(148, 163, 184, 0.25)',
+        background: checked ? activeColor : `${TimelineColor.SLATE_LIGHT}40`,
         position: 'relative',
         transition: 'background 0.2s ease',
         flexShrink: 0,
@@ -848,7 +833,7 @@ function VerticalTimeline({
           top: '2px',
           left: checked ? '14px' : '2px',
           transition: 'left 0.2s ease',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)'
+          boxShadow: 'var(--shadow-lg)'
         }}
       />
     </span>
@@ -1491,6 +1476,7 @@ function VerticalTimeline({
 
       return [
         { id: EventStatus.ALL, name: t('pocket.allPockets'), icon: <Layers size={13} /> },
+        { id: GENERAL_SPACE_KEY, name: t('account.general'), icon: <Landmark size={13} style={{ color: timeline.color || TimelineColor.INVESTMENT }} /> },
         ...pocketOptions
       ];
     }
@@ -1765,7 +1751,7 @@ function VerticalTimeline({
         }
       } else if (selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') {
         if (timeline.type === TimelineType.INVESTMENT) {
-          matchesCategory = ev.pocketId === selectedCategoryFilter || ev.pocket_id === selectedCategoryFilter;
+          matchesCategory = isMovementInSpace(ev, selectedCategoryFilter === GENERAL_SPACE_KEY ? null : selectedCategoryFilter);
         } else if (timeline.type === TimelineType.INCOME) {
           const evCat = (ev.category || '').toLowerCase();
           if (selectedCategoryFilter === IncomeEventCategory.OTHER) {
@@ -1967,13 +1953,13 @@ function VerticalTimeline({
             gap: '8px',
             padding: '9px 22px',
             borderRadius: '24px',
-            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(168, 85, 247, 0.18))',
-            border: '1px solid rgba(99, 102, 241, 0.45)',
+            background: `linear-gradient(135deg, ${TimelineColor.PRIMARY}2e, ${TimelineColor.PURPLE}2e)`,
+            border: `1px solid ${TimelineColor.PRIMARY}73`,
             color: 'var(--primary-light)',
             fontWeight: '700',
             fontSize: '0.84rem',
             cursor: 'pointer',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+            boxShadow: 'var(--shadow-lg)',
             transition: 'all var(--transition-fast)'
           }}
         >
@@ -1998,13 +1984,13 @@ function VerticalTimeline({
             gap: '8px',
             padding: '9px 22px',
             borderRadius: '24px',
-            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(168, 85, 247, 0.18))',
-            border: '1px solid rgba(99, 102, 241, 0.45)',
+            background: `linear-gradient(135deg, ${TimelineColor.PRIMARY}2e, ${TimelineColor.PURPLE}2e)`,
+            border: `1px solid ${TimelineColor.PRIMARY}73`,
             color: 'var(--primary-light)',
             fontWeight: '700',
             fontSize: '0.84rem',
             cursor: 'pointer',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+            boxShadow: 'var(--shadow-lg)',
             transition: 'all var(--transition-fast)'
           }}
         >
@@ -2372,13 +2358,13 @@ function VerticalTimeline({
                     hasEvents && !isCurrentMonth
                       ? {
                         backgroundColor: isNotComputedMonth
-                          ? 'rgba(148, 163, 184, 0.25)'
+                          ? `${TimelineColor.SLATE_LIGHT}40`
                           : (isFutureMonth
-                            ? 'rgba(148, 163, 184, 0.4)'
+                            ? `${TimelineColor.SLATE_LIGHT}66`
                             : paletteTheme.primary),
                         borderColor: isNotComputedMonth
-                          ? 'rgba(148, 163, 184, 0.25)'
-                          : (isFutureMonth ? 'rgba(148, 163, 184, 0.3)' : undefined)
+                          ? `${TimelineColor.SLATE_LIGHT}40`
+                          : (isFutureMonth ? `${TimelineColor.SLATE_LIGHT}4c` : undefined)
                       }
                       : {}
                   }
@@ -2390,8 +2376,8 @@ function VerticalTimeline({
                   className="group-card"
                   style={
                     isNotComputedMonth
-                      ? { opacity: 0.78, borderStyle: 'dashed', borderColor: 'rgba(148, 163, 184, 0.25)' }
-                      : (isFutureMonth ? { borderColor: 'rgba(148, 163, 184, 0.18)' } : undefined)
+                      ? { opacity: 0.78, borderStyle: 'dashed', borderColor: `${TimelineColor.SLATE_LIGHT}40` }
+                      : (isFutureMonth ? { borderColor: `${TimelineColor.SLATE_LIGHT}2e` } : undefined)
                   }
                 >
                   <div className="group-card-header" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
@@ -2423,8 +2409,8 @@ function VerticalTimeline({
                               fontSize: '0.68rem',
                               fontWeight: '700',
                               color: 'var(--text-dim)',
-                              borderColor: 'rgba(148, 163, 184, 0.25)',
-                              background: 'rgba(148, 163, 184, 0.08)',
+                              borderColor: `${TimelineColor.SLATE_LIGHT}40`,
+                              background: `${TimelineColor.SLATE_LIGHT}14`,
                               borderRadius: '999px',
                               letterSpacing: '0.2px',
                               cursor: 'help'
@@ -2446,8 +2432,8 @@ function VerticalTimeline({
                             height: '26px',
                             boxSizing: 'border-box',
                             color: isFutureMonth ? 'var(--text-dim)' : 'var(--text-muted)',
-                            borderColor: isFutureMonth ? 'rgba(148, 163, 184, 0.18)' : 'var(--border-glass)',
-                            background: isFutureMonth ? 'rgba(148, 163, 184, 0.05)' : undefined
+                            borderColor: isFutureMonth ? `${TimelineColor.SLATE_LIGHT}2e` : 'var(--border-glass)',
+                            background: isFutureMonth ? `${TimelineColor.SLATE_LIGHT}0d` : undefined
                           }}
                         >
                           {t('timeline.eventsCount', { count: mGroup.events.length })}
@@ -2527,401 +2513,56 @@ function VerticalTimeline({
                     )}
                   </div>
 
-                  {timeline.type === TimelineType.INVESTMENT ? (() => {
-                    const monthKey = format(mGroup.monthDate, 'yyyy-MM');
-                    const visiblePockets = (pockets || []).filter((pocket) => {
-                      if (selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') {
-                        if (pocket.id !== selectedCategoryFilter) return false;
-                      }
-                      const createdMonth = (pocket.date_created || pocket.dateCreated || '').substring(0, 7) || '1900-01';
-                      const closedMonth = (pocket.date_closed || pocket.dateClosed || '').substring(0, 7) || null;
-
-                      // Pocket starts appearing from its creation month forward
-                      if (monthKey < createdMonth) return false;
-                      // Pocket stops appearing after its closing month (if date_closed is null, it appears forever)
-                      if (closedMonth && monthKey > closedMonth) return false;
-
-                      return true;
-                    });
-
-                    const unassignedEvents = (mGroup.events || []).filter(
-                      (ev) => {
-                        if (ev.pocketId || ev.pocket_id || ev.isDeleted || isCancelledStatus(ev.status) || ev.status !== EventStatus.DELETED) return false;
-                        if (selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos' && selectedCategoryFilter !== 'unassigned') {
-                          return false;
-                        }
-                        return true;
-                      }
-                    );
-
-                    if (visiblePockets.length === 0 && unassignedEvents.length === 0) {
-                      return (
-                        <div
-                          className="empty-day-row"
-                          onClick={() => {
-                            if (onOpenCreatePocket) onOpenCreatePocket({ defaultDate: format(mGroup.monthDate, 'yyyy-MM-01') });
-                          }}
-                          style={{
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            padding: '12px 14px',
-                            borderRadius: '8px',
-                            background: 'rgba(255, 255, 255, 0.02)',
-                            border: '1px dashed var(--border-glass)'
-                          }}
-                        >
-                          <PiggyBank size={18} style={{ color: timeline.color || TimelineColor.INVESTMENT }} />
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                              {t('pocket.noPockets')}
-                            </span>
-                            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-                              {t('pocket.noPocketsHint')}
-                            </span>
-                          </div>
+                  {timeline.type === TimelineType.INVESTMENT ? (
+                    <AccountMonthSpaces
+                      monthKey={format(mGroup.monthDate, 'yyyy-MM')}
+                      monthStartStr={format(mGroup.monthDate, 'yyyy-MM-01')}
+                      isFutureMonth={isFutureMonth}
+                      monthEvents={mGroup.events}
+                      allEvents={timeline.events || []}
+                      pockets={pockets}
+                      spaceFilter={selectedCategoryFilter}
+                      color={timeline.color || TimelineColor.INVESTMENT}
+                      palette={paletteTheme}
+                      onAddInflow={onAddEventForDate ? (dateStr, pocketId) => {
+                        const pocket = (pockets || []).find((p) => p.id === pocketId);
+                        onAddEventForDate(dateStr, EventType.INVESTMENT, {
+                          pocketId: pocketId || null,
+                          pocketName: pocket?.name || null,
+                          category: InvestmentEventCategory.SAVINGS
+                        });
+                      } : undefined}
+                      onAddOutflow={onOpenWithdrawModal ? (dateStr, pocketId) => onOpenWithdrawModal(dateStr, pocketId) : undefined}
+                      onEditPocket={onEditPocket}
+                      onDeletePocket={onDeletePocket}
+                      renderEvents={(spaceEvents) => groupEventsByDate(spaceEvents, dayComparator).map((dateGroup, gIdx) => (
+                        <div key={`${dateGroup.date}_${gIdx}`}>
+                          <TimelineEventCard
+                            events={dateGroup.events}
+                            timelineColor={timeline.color}
+                            allEvents={timeline.events || []}
+                            timelines={effectiveTimelines || timelines}
+                            currentTimelineId={timeline.id}
+                            timelineType={timeline.type}
+                            activeFinancialTab={activeFinancialTab}
+                            persons={persons}
+                            onEdit={onEditEvent}
+                            onUpdateEventDirect={onUpdateEventDirect}
+                            onDelete={onDeleteEvent}
+                            onToggleTask={onToggleTask}
+                            onAddChecklistItem={onAddChecklistItem}
+                            onDeleteChecklistItem={onDeleteChecklistItem}
+                            onToggleLoanPayment={onToggleLoanPayment}
+                            onPayUpToHere={onPayUpToHere}
+                            onOpenEditInstallment={onOpenEditInstallment}
+                            onNavigateToTimeline={onNavigateToTimeline}
+                            onPrintReceipt={handleOpenReceipt}
+                          />
                         </div>
-                      );
-                    }
-
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {visiblePockets.map((pocket) => {
-                          const pInitial = Number(pocket.initial_value ?? pocket.initialValue ?? 0);
-                          const pTarget = Number(pocket.target_value ?? pocket.targetValue ?? 0);
-
-                          // Pocket balance at the end of this month (shared engine): planned movements for future
-                          // months, only effective ones up to the current month
-                          const pAccumulated = computeSpaceBalances({
-                            events: (timeline.events || []).filter((ev) => ev && (ev.pocketId === pocket.id || ev.pocket_id === pocket.id)),
-                            pockets: [pocket],
-                            side: isFutureMonth ? 'projected' : 'realized',
-                            upToMonth: monthKey
-                          }).get(String(pocket.id)) || 0;
-                          const pPercent = pTarget > 0 ? Math.min(100, Math.round((pAccumulated / pTarget) * 100)) : 0;
-                          const isClosed = Boolean(pocket.date_closed || pocket.dateClosed);
-                          const pocketMonthEvents = (mGroup.events || []).filter(
-                            (ev) => (ev.pocketId === pocket.id || ev.pocket_id === pocket.id) && !ev.isDeleted && !isCancelledStatus(ev.status) && ev.status !== EventStatus.DELETED
-                          );
-
-                          return (
-                            <div
-                              key={pocket.id}
-                              style={{
-                                padding: '12px 14px',
-                                borderRadius: '10px',
-                                background: 'rgba(255, 255, 255, 0.02)',
-                                border: '1px solid var(--border-glass)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '10px',
-                                opacity: isClosed ? 0.75 : 1
-                              }}
-                            >
-                              {/* Linha 1 no topo: Nome do cofrinho + Status Encerrado (se houver) + Botões de Ação */}
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  flexWrap: 'wrap',
-                                  gap: '8px'
-                                }}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <PiggyBank size={18} style={{ color: timeline.color || TimelineColor.INVESTMENT }} />
-                                  <span style={{ fontSize: '0.92rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                                    {pocket.name}
-                                  </span>
-                                  {isClosed && (
-                                    <span
-                                      style={{
-                                        fontSize: '0.68rem',
-                                        fontWeight: '700',
-                                        padding: '2px 6px',
-                                        borderRadius: '4px',
-                                        background: 'rgba(239, 68, 68, 0.15)',
-                                        color: TimelineColor.DANGER
-                                      }}
-                                    >
-                                      {t('pocket.statusClosed')}
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  {onEditPocket && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onEditPocket(pocket);
-                                      }}
-                                      className="btn btn-ghost btn-xs"
-                                      title={t('common.edit')}
-                                      style={{ padding: '4px 7px', color: 'var(--text-muted)' }}
-                                    >
-                                      <Pencil size={13} />
-                                    </button>
-                                  )}
-
-                                  {onDeletePocket && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDeletePocket(pocket);
-                                      }}
-                                      className="btn btn-ghost btn-xs"
-                                      title={t('common.delete')}
-                                      style={{ padding: '4px 7px', color: TimelineColor.DANGER }}
-                                    >
-                                      <Trash2 size={13} />
-                                    </button>
-                                  )}
-
-                                  {onAddEventForDate && !isClosed && (
-                                    <>
-                                      <button
-                                        type="button"
-                                        className="btn btn-primary btn-xs"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
-                                          onAddEventForDate?.(targetDayStr, EventType.INVESTMENT, {
-                                            pocketId: pocket.id,
-                                            pocketName: pocket.name,
-                                            category: InvestmentEventCategory.SAVINGS
-                                          });
-                                        }}
-                                        style={{
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '4px',
-                                          padding: '4px 10px',
-                                          borderRadius: '6px',
-                                          fontSize: '0.74rem',
-                                          fontWeight: '700',
-                                          background: timeline.color || TimelineColor.INVESTMENT,
-                                          borderColor: timeline.color || TimelineColor.INVESTMENT
-                                        }}
-                                      >
-                                        <Plus size={12} strokeWidth={2.5} />
-                                        <span>{t('pocket.addInflow')}</span>
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        className="btn btn-xs"
-                                        title={t('pocket.addOutflow')}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-01');
-                                          if (onOpenWithdrawModal) {
-                                            onOpenWithdrawModal(targetDayStr, pocket.id);
-                                          } else if (onAddEventForDate) {
-                                            onAddEventForDate?.(targetDayStr, EventType.WITHDRAWAL, {
-                                              pocketId: pocket.id,
-                                              pocketName: pocket.name,
-                                              isWithdrawal: true
-                                            });
-                                          }
-                                        }}
-                                        style={{
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '4px',
-                                          padding: '4px 10px',
-                                          borderRadius: '6px',
-                                          fontSize: '0.74rem',
-                                          fontWeight: '700',
-                                          background: `${TimelineColor.DANGER}1f`,
-                                          color: TimelineColor.DANGER,
-                                          border: `1px solid ${TimelineColor.DANGER}59`,
-                                          cursor: 'pointer',
-                                          transition: 'all 0.15s ease'
-                                        }}
-                                      >
-                                        <ArrowDownRight size={12} strokeWidth={2.4} />
-                                        <span>{t('pocket.addOutflow')}</span>
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Linha 2: Barra de Progresso idêntica à do evento com meta */}
-                              {pocketHasTarget(pocket) && pTarget > 0 && (() => {
-                                const labelTitle = isFutureMonth
-                                  ? t('pocket.goalProgressForecast', {
-                                      accumulated: formatCurrency(pAccumulated),
-                                      target: formatCurrency(pTarget)
-                                    })
-                                  : t('pocket.goalProgress', {
-                                      accumulated: formatCurrency(pAccumulated),
-                                      target: formatCurrency(pTarget)
-                                    });
-
-                                const labelPercent = isFutureMonth
-                                  ? (pPercent >= 100
-                                      ? t('pocket.goalReachedForecast')
-                                      : t('pocket.forecastPercent', { percent: pPercent }))
-                                  : (pPercent >= 100
-                                      ? t('pocket.goalReached')
-                                      : t('pocket.reachedPercent', { percent: pPercent }));
-
-                                return (
-                                  <div
-                                    style={{
-                                      width: '100%',
-                                      marginTop: '2px',
-                                      paddingTop: '6px',
-                                      borderTop: '1px solid rgba(139, 92, 246, 0.15)'
-                                    }}
-                                  >
-                                    <div
-                                      style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        fontSize: '0.74rem',
-                                        fontWeight: '700',
-                                        color: isFutureMonth ? TimelineColor.PRIMARY_LIGHT : paletteTheme.primary,
-                                        marginBottom: '5px'
-                                      }}
-                                    >
-                                      <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                        <Target size={12} />
-                                        <span>{labelTitle}</span>
-                                        {pInitial > 0 && (
-                                          <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: '500', marginLeft: '4px' }}>
-                                            ({t('pocket.initialContributionNote', { amount: formatCurrency(pInitial) })})
-                                          </span>
-                                        )}
-                                      </span>
-                                      <span
-                                        style={{
-                                          color: pPercent >= 100
-                                            ? TimelineColor.SUCCESS
-                                            : isFutureMonth
-                                              ? TimelineColor.PRIMARY_LIGHT
-                                              : paletteTheme.primary,
-                                          fontWeight: '800'
-                                        }}
-                                      >
-                                        {labelPercent}
-                                      </span>
-                                    </div>
-
-                                    <div
-                                      style={{
-                                        width: '100%',
-                                        height: '6px',
-                                        background: 'rgba(148, 163, 184, 0.15)',
-                                        borderRadius: '9999px',
-                                        overflow: 'hidden',
-                                        position: 'relative'
-                                      }}
-                                    >
-                                      <div
-                                        style={{
-                                          width: `${pPercent}%`,
-                                          height: '100%',
-                                          background: pPercent >= 100
-                                            ? `linear-gradient(90deg, ${TimelineColor.SUCCESS} 0%, ${TimelineColor.EMERALD} 100%)`
-                                            : `linear-gradient(90deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`,
-                                          borderRadius: '9999px',
-                                          transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                                          boxShadow: '0 0 10px rgba(99, 102, 241, 0.45)'
-                                        }}
-                                      />
-                                    </div>
-                                  </div>
-                                );
-                              })()}
-
-                              {/* Abaixo: Os eventos como já ficavam no card do mês */}
-                              {pocketMonthEvents.length > 0 ? (
-                                <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                  {groupEventsByDate(pocketMonthEvents, dayComparator).map((dateGroup, gIdx) => (
-                                    <div key={`${dateGroup.date}_${gIdx}`}>
-                                      <TimelineEventCard
-                                        events={dateGroup.events}
-                                        timelineColor={timeline.color}
-                                        allEvents={timeline.events || []}
-                                        timelines={effectiveTimelines || timelines}
-                                        currentTimelineId={timeline.id}
-                                        timelineType={timeline.type}
-                                        activeFinancialTab={activeFinancialTab}
-                                        persons={persons}
-                                        onEdit={onEditEvent}
-                                        onUpdateEventDirect={onUpdateEventDirect}
-                                        onDelete={onDeleteEvent}
-                                        onToggleTask={onToggleTask}
-                                        onAddChecklistItem={onAddChecklistItem}
-                                        onDeleteChecklistItem={onDeleteChecklistItem}
-                                        onToggleLoanPayment={onToggleLoanPayment}
-                                        onPayUpToHere={onPayUpToHere}
-                                        onOpenEditInstallment={onOpenEditInstallment}
-                                        onNavigateToTimeline={onNavigateToTimeline}
-                                        onPrintReceipt={handleOpenReceipt}
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div
-                                  style={{
-                                    padding: '8px 10px',
-                                    borderRadius: '6px',
-                                    background: 'rgba(255, 255, 255, 0.01)',
-                                    border: '1px dashed var(--border-glass)',
-                                    fontSize: '0.74rem',
-                                    color: 'var(--text-dim)',
-                                    textAlign: 'center',
-                                    marginTop: '2px'
-                                  }}
-                                >
-                                  {t('timeline.noEventsMonth')}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-
-                        {/* Eventos não associados a nenhum cofrinho */}
-                        {unassignedEvents.length > 0 && (
-                          <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {groupEventsByDate(unassignedEvents, dayComparator).map((dateGroup, gIdx) => (
-                              <div key={`unassigned_${dateGroup.date}_${gIdx}`}>
-                                <TimelineEventCard
-                                  events={dateGroup.events}
-                                  timelineColor={timeline.color}
-                                  allEvents={timeline.events || []}
-                                  timelines={effectiveTimelines || timelines}
-                                  currentTimelineId={timeline.id}
-                                  timelineType={timeline.type}
-                                  activeFinancialTab={activeFinancialTab}
-                                  onEdit={onEditEvent}
-                                  onUpdateEventDirect={onUpdateEventDirect}
-                                  onDelete={onDeleteEvent}
-                                  onToggleTask={onToggleTask}
-                                  onAddChecklistItem={onAddChecklistItem}
-                                  onDeleteChecklistItem={onDeleteChecklistItem}
-                                  onToggleLoanPayment={onToggleLoanPayment}
-                                  onPayUpToHere={onPayUpToHere}
-                                  onOpenEditInstallment={onOpenEditInstallment}
-                                  onNavigateToTimeline={onNavigateToTimeline}
-                                  onPrintReceipt={handleOpenReceipt}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })() : hasEvents ? (
+                      ))}
+                      t={t}
+                    />
+                  ) : hasEvents ? (
                     (mGroup.groupedDateEvents || groupEventsByDate(mGroup.events, dayComparator)).map((dateGroup, gIdx) => (
                       <div
                         key={`${dateGroup.date}_${gIdx}`}
@@ -3072,7 +2713,7 @@ function VerticalTimeline({
                           <h4 className="year-month-title" style={{ textTransform: 'capitalize' }}>
                             🗓️ {monthTitleStr}
                           </h4>
-                          <span className="event-tag" style={{ background: 'rgba(99, 102, 241, 0.2)', color: 'var(--primary-light)' }}>
+                          <span className="event-tag" style={{ background: `${TimelineColor.PRIMARY}33`, color: 'var(--primary-light)' }}>
                             {t('timeline.eventsCount', { count: mGroup.events.length })}
                           </span>
                         </div>
@@ -3443,7 +3084,7 @@ function VerticalTimeline({
                       fontSize: '0.72rem',
                       fontWeight: '700',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(99, 102, 241, 0.35)',
+                      boxShadow: `0 2px 8px ${TimelineColor.PRIMARY}59`,
                       transition: 'all 0.15s ease'
                     }}
                   >
@@ -3464,7 +3105,7 @@ function VerticalTimeline({
                         WebkitBackdropFilter: 'blur(16px)',
                         border: '1px solid var(--border-glass)',
                         borderRadius: '10px',
-                        boxShadow: '0 16px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.15)',
+                        boxShadow: 'var(--shadow-lg)',
                         padding: '6px',
                         zIndex: 100,
                         display: 'flex',
@@ -3499,8 +3140,8 @@ function VerticalTimeline({
                             transition: 'all 0.15s ease'
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(99, 102, 241, 0.14)';
-                            e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+                            e.currentTarget.style.background = `${TimelineColor.PRIMARY}24`;
+                            e.currentTarget.style.borderColor = `${TimelineColor.PRIMARY}4c`;
                             e.currentTarget.style.color = 'var(--primary-light)';
                           }}
                           onMouseLeave={(e) => {
@@ -4263,7 +3904,7 @@ function VerticalTimeline({
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.65)',
+              backgroundColor: 'var(--overlay-backdrop)',
               backdropFilter: 'blur(4px)',
               zIndex: 10000,
               display: 'flex',

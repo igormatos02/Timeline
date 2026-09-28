@@ -20,7 +20,7 @@ const AmortizationModal = React.lazy(() => import('./components/AmortizationModa
 const EditInstallmentModal = React.lazy(() => import('./components/EditInstallmentModal'));
 const CreatePocketModal = React.lazy(() => import('./components/CreatePocketModal'));
 const DeletePocketModal = React.lazy(() => import('./components/DeletePocketModal'));
-const WithdrawalModal = React.lazy(() => import('./components/WithdrawalModal'));
+const AccountOutflowModal = React.lazy(() => import('./components/AccountOutflowModal'));
 import {
   recalculateLoanState,
   propagateInstallmentAmountForward,
@@ -34,7 +34,7 @@ import { buildWithdrawalReferences, buildOutflowReferences } from '../shared/fin
 import { formatCurrency } from './utils/formatCurrency';
 import { generateUUID } from './utils/uuid.js';
 import * as api from './services/api';
-import { EventType, FINANCIAL_ADVANCE_PAYMENT_TYPES, isAccountOutflowEvent, EventStatus, FollowupStatus, TimelineType, TimelineStatus, TimelineColor, getDefaultTimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isCancelledStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem, PersonRole, TimeboardType, DiaryPublishStatus } from './enums/index.js';
+import { EventType, FINANCIAL_ADVANCE_PAYMENT_TYPES, isAccountOutflowEvent, isPocketTransferEvent, EventStatus, FollowupStatus, TimelineType, TimelineStatus, TimelineColor, getDefaultTimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isCancelledStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem, PersonRole, TimeboardType, DiaryPublishStatus } from './enums/index.js';
 import { DEFAULT_TENANT } from './constants/tenant.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
@@ -1315,7 +1315,7 @@ export default function App() {
       handleOpenAmortizationModal(eventObj.date, eventObj);
       return;
     }
-    if (eventObj?.eventType === EventType.WITHDRAWAL || eventObj?.isWithdrawal || isAccountOutflowEvent(eventObj)) {
+    if (eventObj?.eventType === EventType.WITHDRAWAL || eventObj?.isWithdrawal || isAccountOutflowEvent(eventObj) || isPocketTransferEvent(eventObj)) {
       handleOpenWithdrawalModal(eventObj.date, eventObj.pocketId || eventObj.pocket_id, eventObj);
       return;
     }
@@ -1482,6 +1482,9 @@ export default function App() {
               newIsCompleted = true;
             } else if (isAmortization) {
               newStatus = EventStatus.AMORTIZED;
+              newIsCompleted = true;
+            } else if (isPocketTransferEvent(ev)) {
+              newStatus = EventStatus.COMPLETED;
               newIsCompleted = true;
             } else {
               newStatus = EventStatus.PAID;
@@ -1797,6 +1800,7 @@ export default function App() {
       else if (isWithdrawal) positiveStatus = EventStatus.WITHDRAWN;
       else if (isInvestment) positiveStatus = EventStatus.INVESTED;
       else if (isAmortization) positiveStatus = EventStatus.AMORTIZED;
+      else if (isPocketTransferEvent(ev)) positiveStatus = EventStatus.COMPLETED;
 
       return {
         nextStatus: positiveStatus,
@@ -2305,7 +2309,7 @@ export default function App() {
   // 3. Timeline Workspace View (When a specific timeboard is active)
   return (
     <PermissionsProvider isReadOnly={isIndividualRole}>
-    <TimeboardProvider timeboardType={activeTimeboard?.type} headerDefaultState={activeTimeboard?.headerDefaultState}>
+    <TimeboardProvider timeboardType={activeTimeboard?.type} headerDefaultState={activeTimeboard?.headerDefaultState} pockets={pockets}>
     <HeaderRefreshProvider value={refreshTimelines}>
     <div className="app-container">
       {/* Navbar */}
@@ -2515,8 +2519,8 @@ export default function App() {
           remainingBalance={loanMetrics ? loanMetrics.remainingBalance : undefined}
         />
 
-        {/* Withdrawal Modal */}
-        <WithdrawalModal
+        {/* Account outflow modal: withdrawal, expense paid by the account, transfer between spaces */}
+        <AccountOutflowModal
           isOpen={isWithdrawalModalOpen}
           onClose={() => {
             setIsWithdrawalModalOpen(false);
@@ -2594,12 +2598,12 @@ export default function App() {
                     width: '36px',
                     height: '36px',
                     borderRadius: '8px',
-                    background: 'rgba(245, 158, 11, 0.15)',
+                    background: `${TimelineColor.AMBER}26`,
                     color: TimelineColor.WARNING,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    border: '1px solid rgba(245, 158, 11, 0.3)'
+                    border: `1px solid ${TimelineColor.AMBER}4c`
                   }}
                 >
                   <RotateCcw size={18} />
@@ -2628,8 +2632,8 @@ export default function App() {
                 style={{
                   padding: '10px 14px',
                   borderRadius: 'var(--radius-sm)',
-                  background: 'rgba(239, 68, 68, 0.08)',
-                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  background: `${TimelineColor.DANGER}14`,
+                  border: `1px solid ${TimelineColor.DANGER}40`,
                   fontSize: '0.82rem',
                   color: TimelineColor.DANGER
                 }}
@@ -2653,7 +2657,7 @@ export default function App() {
                 style={{
                   background: TimelineColor.WARNING,
                   borderColor: TimelineColor.WARNING,
-                  boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
+                  boxShadow: `0 4px 14px ${TimelineColor.AMBER}59`,
                   fontWeight: '700',
                   display: 'flex',
                   alignItems: 'center',
@@ -2675,7 +2679,7 @@ export default function App() {
             position: 'fixed',
             inset: 0,
             zIndex: 99999,
-            background: 'rgba(10, 15, 30, 0.85)',
+            background: 'var(--overlay-backdrop)',
             backdropFilter: 'blur(12px)',
             display: 'flex',
             flexDirection: 'column',
@@ -2689,7 +2693,7 @@ export default function App() {
             style={{
               width: '48px',
               height: '48px',
-              border: '3px solid rgba(99, 102, 241, 0.2)',
+              border: `3px solid ${TimelineColor.PRIMARY}33`,
               borderTopColor: TimelineColor.PRIMARY,
               borderRadius: '50%',
               animation: 'spin 0.8s linear infinite'
@@ -2719,7 +2723,7 @@ export default function App() {
             position: 'fixed',
             inset: 0,
             zIndex: 99999,
-            background: 'rgba(15, 23, 42, 0.85)',
+            background: 'var(--overlay-backdrop)',
             backdropFilter: 'blur(10px)',
             display: 'flex',
             flexDirection: 'column',
@@ -2733,7 +2737,7 @@ export default function App() {
             style={{
               width: '52px',
               height: '52px',
-              border: '4px solid rgba(99, 102, 241, 0.25)',
+              border: `4px solid ${TimelineColor.PRIMARY}40`,
               borderTopColor: TimelineColor.PRIMARY,
               borderRadius: '50%',
               animation: 'spin 0.75s linear infinite'
@@ -2784,7 +2788,7 @@ export default function App() {
             background: 'var(--bg-card)',
             border: '1px solid var(--border-glass)',
             borderRadius: 'var(--radius-md, 12px)',
-            boxShadow: 'var(--shadow-lg, 0 10px 25px -5px rgba(0, 0, 0, 0.3))',
+            boxShadow: 'var(--shadow-lg)',
             backdropFilter: 'blur(12px)',
             fontSize: '0.74rem',
             fontWeight: '700',

@@ -33,7 +33,8 @@ import {
   isNegativeStatus,
   isCancelledStatus,
   normalizeRecurrence,
-  FINANCIAL_ADVANCE_PAYMENT_TYPES
+  FINANCIAL_ADVANCE_PAYMENT_TYPES,
+  isPocketTransferEvent
 } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
@@ -548,8 +549,18 @@ export class FinancialEventService {
     return data;
   }
 
+  // Account transfers: origin and destination spaces must differ (null = General) and the amount must be positive
+  _validateAccountTransfer(data) {
+    if (!isPocketTransferEvent(data)) return;
+    const origin = data.pocketId || data.pocket_id || null;
+    const target = data.targetPocketId || data.target_pocket_id || null;
+    if (String(origin || '') === String(target || '')) throw new Error(t('backend.validation.transferSameSpace'));
+    if (!(Math.abs(Number(data.amount || 0)) > 0)) throw new Error(t('backend.validation.transferAmountRequired'));
+  }
+
   async createEvent(eventData) {
     const sanitizedData = this._sanitizeFutureEventStatus(eventData);
+    this._validateAccountTransfer(sanitizedData);
 
     if (sanitizedData.eventType === EventType.FOLLOWUP || sanitizedData.timelineType === TimelineType.FOLLOWUP) {
       return followupService.createFollowup(sanitizedData);
@@ -642,6 +653,10 @@ export class FinancialEventService {
 
     const seriesRootEvent = allRawEvents.find((e) => (e.eventId && e.eventId === targetSeriesId) || e.id === targetSeriesId);
     const existing = existingDirect || seriesRootEvent;
+
+    if (existing && (isPocketTransferEvent(existing) || isPocketTransferEvent(directUpdates))) {
+      this._validateAccountTransfer({ ...existing, ...directUpdates });
+    }
 
     const isFinancialType = existing?.eventType === EventType.INCOME || existing?.eventType === EventType.EXPENSE || existing?.eventType === EventType.INVESTMENT;
     const isExistingPositive = existing && isPositiveStatus(existing.status);

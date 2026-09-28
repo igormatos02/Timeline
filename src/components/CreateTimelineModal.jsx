@@ -3,24 +3,14 @@ import {
   X,
   Sparkles,
   CreditCard,
-  Scale,
-  TrendingUp,
-  ShoppingCart,
-  PiggyBank,
-  FolderKanban,
-  Bell,
-  BookOpen,
-  CheckSquare,
   Layers,
-  Target,
-  Calendar,
   ShieldCheck,
   ShieldAlert,
   ChevronDown,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { format, parseISO, setMonth, setYear } from 'date-fns';
+import { format, parseISO, setMonth } from 'date-fns';
 import { generateLoanInstallments } from '../utils/loanCalculations';
 import { formatCurrency } from '../utils/formatCurrency';
 import {

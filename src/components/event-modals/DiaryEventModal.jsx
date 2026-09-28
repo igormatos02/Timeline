@@ -4,16 +4,12 @@ import {
   Bold,
   Italic,
   Strikethrough,
-  RotateCcw,
   Sparkles,
   Smile,
   Meh,
   Frown,
-  Calendar,
   AlertCircle,
-  Loader2,
-  Eye,
-  Edit3
+  Loader2
 } from 'lucide-react';
 import { format, parseISO, getDaysInMonth } from 'date-fns';
 import {

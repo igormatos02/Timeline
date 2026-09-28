@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
   Sparkles,
-  Plus,
   Layers,
   Settings
 } from 'lucide-react';

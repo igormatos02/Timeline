@@ -2,8 +2,13 @@ import { eventService } from './EventService.js';
 import { accessService } from './AccessService.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
-import { TimelineType, PersonRole, normalizeTimelineType } from '../../../shared/enums/index.js';
+import { timelineService } from './TimelineService.js';
+import { pocketRepository } from '../../infrastructure/database/supabase/SupabasePocketRepository.js';
+import { timeboardRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardRepository.js';
+import { TimelineType, PersonRole, TimelineStatus, normalizeTimelineType, isLoanTimelineType } from '../../../shared/enums/index.js';
 import { isActiveMovement, isEffectiveMovement } from '../../../shared/finance/movements.js';
+import { computeMoneySummary } from '../../../shared/finance/moneySummary.js';
+import { recalculateLoanState, getLoanMetrics } from '../../../shared/finance/loanCalculations.js';
 
 // Timelines whose events are shared notices visible to individual members
 const NOTICE_TIMELINE_TYPES = [TimelineType.REMINDER, TimelineType.DIARY];
@@ -84,6 +89,38 @@ export class MeService {
         overdueCount: summary.get(String(p.id))?.overdueCount || 0
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /**
+   * Admins: "where is my money" of the timeboard (shared/finance/moneySummary.js, same rules as the web balance):
+   * effective movements up to the current month, loans recalculated like the web.
+   */
+  async getSummary(userId, { timeboardId }) {
+    const access = await accessService.getTimeboardAccess(userId, timeboardId);
+    if (!access || access.role !== PersonRole.ADMIN) return null;
+    const [timeboard, timelines, pockets] = await Promise.all([
+      timeboardRepository.getById(timeboardId),
+      timelineService.getAllTimelines(timeboardId),
+      pocketRepository.getByTimeboardId(timeboardId)
+    ]);
+    let events = await eventService.getAllEvents({ timeboardId });
+    const loanTimelines = (timelines || []).filter((tl) => isLoanTimelineType(tl.type) && (tl.status === TimelineStatus.ACTIVE || !tl.status));
+    loanTimelines.forEach((loanTimeline) => { events = recalculateLoanState(loanTimeline, events); });
+
+    const incomeTimeline = (timelines || []).find((tl) => normalizeTimelineType(tl.type) === TimelineType.INCOME);
+    const rawComputeFrom = String(timeboard?.computeFrom || '');
+    const today = new Date();
+    const horizon = new Date(today.getFullYear() + 1, today.getMonth(), 1);
+    return computeMoneySummary({
+      events,
+      timelineTypeMap: new Map((timelines || []).map((tl) => [String(tl.id), tl.type])),
+      pockets: pockets || [],
+      fromMonth: rawComputeFrom && !rawComputeFrom.startsWith('1900-01') ? rawComputeFrom.substring(0, 7) : null,
+      asOfMonth: today.toISOString().substring(0, 7),
+      horizonMonth: horizon.toISOString().substring(0, 7),
+      initialAvailable: Number(incomeTimeline?.initialValue ?? incomeTimeline?.initial_value ?? 0),
+      loans: loanTimelines.map((loanTimeline) => getLoanMetrics(loanTimeline, events))
+    });
   }
 
   async getObligations(userId, { timeboardId, year, month, personId = null }) {

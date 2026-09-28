@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Trash2, AlertTriangle, X, PiggyBank, Calendar } from 'lucide-react';
+import { Trash2, AlertTriangle, X, PiggyBank } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency.js';
 import { TimelineColor } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';

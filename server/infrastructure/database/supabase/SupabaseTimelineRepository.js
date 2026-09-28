@@ -1,10 +1,5 @@
 import { supabase } from './supabaseClient.js';
 import { Timeline } from '../../../domain/entities/Timeline.js';
-import { LoanHeaderResultDTO } from '../../../../shared/dtos/LoanHeaderResultDTO.js';
-import { ExpenseHeaderResultDTO } from '../../../../shared/dtos/ExpenseHeaderResultDTO.js';
-import { IncomeHeaderResultDTO } from '../../../../shared/dtos/IncomeHeaderResultDTO.js';
-import { InvestmentHeaderResultDTO } from '../../../../shared/dtos/InvestmentHeaderResultDTO.js';
-import { BalanceHeaderResultDTO } from '../../../../shared/dtos/BalanceHeaderResultDTO.js';
 import { IRepository } from '../../../domain/repositories/IRepository.js';
 
 const TABLE = 'timelines';

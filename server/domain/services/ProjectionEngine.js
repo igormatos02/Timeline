@@ -9,9 +9,9 @@ import {
   AmortizationEventCategory,
   isCancelledStatus,
   normalizePeriodicity,
-  normalizeRecurrence,
-  isPocketTransferEvent
+  normalizeRecurrence
 } from '../../../shared/enums/index.js';
+import { effectiveStatusFor } from '../../../shared/finance/statusRules.js';
 
 function checkIsLoan(ev) {
   if (!ev) return false;
@@ -291,17 +291,8 @@ export function projectEvents(rawEvents = [], options = {}) {
     const isDeleted = ev.status === EventStatus.DELETED || Boolean(ev.isDeleted);
 
     if (isAuto && ev.date && ev.date <= todayStr && !isCancelled && !isDeleted) {
-      const isIncome = ev.eventType === EventType.INCOME;
-      const isWithdrawal = ev.eventType === EventType.WITHDRAWAL || Boolean(ev.isWithdrawal);
-      const isInvestment = ev.eventType === EventType.INVESTMENT;
-      const isAmortization = ev.eventType === EventType.AMORTIZATION;
-
-      let autoStatus = EventStatus.PAID;
-      if (isIncome) autoStatus = EventStatus.RECEIVED;
-      else if (isWithdrawal) autoStatus = EventStatus.WITHDRAWN;
-      else if (isInvestment) autoStatus = EventStatus.INVESTED;
-      else if (isAmortization) autoStatus = EventStatus.AMORTIZED;
-      else if (isPocketTransferEvent(ev)) autoStatus = EventStatus.COMPLETED;
+      // Shared status words (shared/finance/statusRules.js)
+      const autoStatus = effectiveStatusFor(ev);
 
       return {
         ...ev,

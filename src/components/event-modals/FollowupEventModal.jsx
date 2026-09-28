@@ -2,9 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { format, parseISO, getDaysInMonth } from 'date-fns';
 import {
   ListTree,
-  Tag,
-  AlignLeft,
-  FileText,
   Plus,
   X,
   CheckCircle2,
@@ -18,8 +15,7 @@ import {
   EventType,
   TimelineType,
   TimelineColor,
-  FollowupStatus,
-  normalizeFollowupStatus
+  FollowupStatus
 } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';

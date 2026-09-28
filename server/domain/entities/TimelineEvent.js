@@ -1,19 +1,17 @@
 import {
   EventType,
-  TimelineType,
   EventStatus,
   EventPriority,
-  EventPeriodicity,
   EventRecurrence,
   LoanEventCategory,
   FollowupStatus,
   isPositiveStatus,
-  isCancelledStatus,
   isAccountOutflowEvent,
   isPocketTransferEvent,
   normalizePeriodicity,
   normalizeRecurrence
 } from '../../../shared/enums/index.js';
+import { effectiveStatusFor, pendingStatusFor } from '../../../shared/finance/statusRules.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -272,13 +270,9 @@ export function calcToggledStatus(event, explicitStatus = null) {
     };
   }
 
-  const isAmortization = event.eventType === EventType.AMORTIZATION || (typeof event.isAmortizationEvent === 'function' && event.isAmortizationEvent());
   const isWithdrawal = event.eventType === EventType.WITHDRAWAL || Boolean(event.isWithdrawal);
   const isInvestment = event.eventType === EventType.INVESTMENT || isWithdrawal;
   const isIncome = event.eventType === EventType.INCOME;
-  const isReminder = event.eventType === EventType.REMINDER || event.timelineType === TimelineType.REMINDER || event.timeline_type === TimelineType.REMINDER;
-  const isTodo = event.eventType === EventType.TODO || event.timelineType === TimelineType.TODO || event.timeline_type === TimelineType.TODO;
-  const isFollowup = event.eventType === EventType.FOLLOWUP || event.timelineType === TimelineType.FOLLOWUP || event.timeline_type === TimelineType.FOLLOWUP;
 
   const currentStatus = String(event.status || '').toLowerCase();
 
@@ -304,25 +298,15 @@ export function calcToggledStatus(event, explicitStatus = null) {
         isCompleted: true
       };
     }
-    let nextNeg = isInvestment ? EventStatus.PLANNED : (isFollowup ? FollowupStatus.IN_PROGRESS : EventStatus.PENDING);
-    if (isReminder) nextNeg = EventStatus.OPEN;
+    // Shared status words (shared/finance/statusRules.js)
     return {
-      status: nextNeg,
+      status: pendingStatusFor(event),
       isCompleted: false
     };
   }
 
-  let positiveStatus = EventStatus.PAID;
-  if (isReminder) positiveStatus = EventStatus.CLOSED;
-  else if (isTodo || isPocketTransferEvent(event)) positiveStatus = EventStatus.COMPLETED;
-  else if (isFollowup) positiveStatus = FollowupStatus.FINISHED;
-  else if (isIncome) positiveStatus = EventStatus.RECEIVED;
-  else if (isWithdrawal) positiveStatus = EventStatus.WITHDRAWN;
-  else if (isInvestment) positiveStatus = EventStatus.INVESTED;
-  else if (isAmortization) positiveStatus = EventStatus.AMORTIZED;
-
   return {
-    status: positiveStatus,
+    status: effectiveStatusFor(event),
     isCompleted: true
   };
 }

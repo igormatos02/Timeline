@@ -344,8 +344,6 @@ export const translations = {
     sidebar: {
       clearSearch: "Clear search",
       period: "Period",
-      year: "Year",
-      month: "Month",
       allYears: "All years",
       allMonths: "All months",
       yearLabel: "Year:",
@@ -631,45 +629,8 @@ export const translations = {
     },
 
     // Expense Categories
-    expenseCategories: {
-      food: "Food & Groceries",
-      rent: "Housing / Rent",
-      electricity: "Electricity",
-      water: "Water",
-      gas: "Gas",
-      communications: "Internet & Mobile",
-      transportation: "Transportation",
-      health: "Health & Pharmacy",
-      education: "Education",
-      entertainment: "Leisure & Entertainment",
-      shopping: "Shopping",
-      clothing: "Clothing",
-      carmaintenance: "Vehicle Maintenance",
-      house: "House & Home",
-      ensurance: "Insurance",
-      pets: "Pets",
-      travel: "Travel",
-      personal_care: "Personal Care",
-      services: "Services",
-      bank_fees: "Bank fees / Commissions",
-      cleaning: "Cleaning",
-      condominium: "Condominium",
-      reserve: "Reserve Fund",
-      other: "Other Expenses"
-    },
 
     // Income Categories
-    incomeCategories: {
-      condo_payment: "Condominium Payment",
-      reserve_fund: "Reserve Fund",
-      salary: "Salary / Wages",
-      meal_allowance: "Meal Allowance",
-      bonus: "Bonus & Commissions",
-      freelance: "Freelance & Services",
-      investment_return: "Investment Returns / Dividends",
-      recurring_income: "Recurring Inflow",
-      other: "Other Income"
-    },
 
     // Names of the condominium expense categories (selection boxes)
     condoExpenseCategories: {
@@ -701,18 +662,6 @@ export const translations = {
     },
 
     // Investment Categories
-    investmentCategories: {
-      condo_payment: "Condominium Payment",
-      reserve_fund: "Reserve Fund",
-      refund: "Refund",
-      savings: "Savings & Deposits",
-      stocks: "Stocks & Equities",
-      funds: "Funds & ETFs",
-      real_estate: "Real Estate",
-      crypto: "Crypto & Digital Assets",
-      assets: "Assets & Equity",
-      other: "Other"
-    },
 
     // Names of the condominium account deposit categories
     condoInvestmentCategories: {
@@ -731,55 +680,8 @@ export const translations = {
     },
 
     // Reminder Categories
-    reminderCategories: {
-      birthday: "Birthday / Anniversary",
-      maintenance: "Maintenance",
-      random_event: "Random Event",
-      appointment: "Appointment / Commitment",
-      other: "Other Reminders"
-    },
 
     // Landing Page
-    landing: {
-      badge: "Financial Management & Interactive Timelines",
-      title: "Where time meets <span>financial clarity</span>.",
-      subtitle: "Plan income, expenses, loans and investments on an intuitive timeline. Control obligations by member, company or person in a single intelligent ecosystem.",
-      pills: {
-        amortization: "Real-time Amortization Calculation",
-        entities: "Multi-Entities & Obligations",
-        projections: "Projections & Annual Goals"
-      },
-      featuresTitle: "Built for total control and strategic vision",
-      featuresSubtitle: "Everything you need to manage multiple budgets, investments and financial timelines.",
-      features: {
-        timeline: {
-          title: "Visual Financial Timeline",
-          desc: "Interactive monthly view with projected vs realized balances, color-coded by category."
-        },
-        multiEntity: {
-          title: "Multi-Entity Management",
-          desc: "Separate finances by person, company or family member with role-based access."
-        },
-        loans: {
-          title: "Smart Loan & Amortization Engine",
-          desc: "Price/SAC systems, extraordinary amortizations, real-time balance projection."
-        },
-        investments: {
-          title: "Investments & Savings Tracking",
-          desc: "Pockets, contributions, returns, internal/external classification, performance metrics."
-        },
-        projections: {
-          title: "Projections & Scenarios",
-          desc: "Monthly/annual forecasting, what-if scenarios, goal tracking with visual indicators."
-        },
-        reminders: {
-          title: "Reminders & Diary",
-          desc: "Recurring alerts, birthdays, maintenance, appointments — all on the timeline."
-        }
-      },
-      cta: "Start Free",
-      footer: "Timeboard — Financial clarity through time."
-    },
 
     // Timeboard Modal
     timeboardModal: {
@@ -2666,8 +2568,6 @@ export const translations = {
     sidebar: {
       clearSearch: "Limpar pesquisa",
       period: "Período",
-      year: "Ano",
-      month: "Mês",
       allYears: "Todos os anos",
       allMonths: "Todos os meses",
       yearLabel: "Ano:",
@@ -2953,45 +2853,8 @@ export const translations = {
     },
 
     // Expense Categories
-    expenseCategories: {
-      food: "Alimentação & Supermercado",
-      rent: "Habitação / Renda",
-      electricity: "Eletricidade",
-      water: "Água",
-      gas: "Gás",
-      communications: "Telecomunicações",
-      transportation: "Transportes",
-      health: "Saúde & Farmácia",
-      education: "Educação",
-      entertainment: "Lazer & Entretenimento",
-      shopping: "Compras",
-      clothing: "Vestuário",
-      carmaintenance: "Manutenção Automóvel",
-      house: "Casa",
-      ensurance: "Seguros",
-      pets: "Animais de Estimação",
-      travel: "Viagens",
-      personal_care: "Cuidados Pessoais",
-      services: "Serviços",
-      bank_fees: "Custos bancários / Comissões",
-      cleaning: "Limpeza",
-      condominium: "Condomínio",
-      reserve: "Fundo de Reserva",
-      other: "Outras Despesas"
-    },
 
     // Income Categories
-    incomeCategories: {
-      condo_payment: "Pagamento de Condomínio",
-      reserve_fund: "Fundo de Reserva",
-      salary: "Salário / Vencimento",
-      meal_allowance: "Subsídio de Alimentação",
-      bonus: "Bónus / Comissões",
-      freelance: "Freelance / Serviços",
-      investment_return: "Rendimentos / Dividendos",
-      recurring_income: "Entrada Recorrente",
-      other: "Outras Entradas"
-    },
 
     // Names of the condominium expense categories (selection boxes)
     condoExpenseCategories: {
@@ -3023,18 +2886,6 @@ export const translations = {
     },
 
     // Investment Categories
-    investmentCategories: {
-      condo_payment: "Pagamento de Condomínio",
-      reserve_fund: "Fundo de Reserva",
-      refund: "Reembolso",
-      savings: "Poupança & Depósitos",
-      stocks: "Ações & Bolsa",
-      funds: "Fundos & ETFs",
-      real_estate: "Imobiliário & REITs",
-      crypto: "Criptoativos",
-      assets: "Património & Bens",
-      other: "Outros"
-    },
 
     // Names of the condominium account deposit categories
     condoInvestmentCategories: {
@@ -3053,13 +2904,6 @@ export const translations = {
     },
 
     // Reminder Categories
-    reminderCategories: {
-      birthday: "Aniversário",
-      maintenance: "Manutenção",
-      random_event: "Evento Aleatório",
-      appointment: "Compromisso",
-      other: "Outros Lembretes"
-    },
 
     // Timeboard Modal
     timeboardModal: {
@@ -3094,46 +2938,6 @@ export const translations = {
     },
 
     // Landing Page
-    landing: {
-      badge: "Gestão Financeira & Linhas Temporais Interativas",
-      title: "Onde o tempo encontra a <span>clareza financeira</span>.",
-      subtitle: "Planeie receitas, despesas, empréstimos e investimentos numa linha temporal intuitiva. Controle obrigações por membro, empresa ou pessoa num único ecossistema inteligente.",
-      pills: {
-        amortization: "Cálculo de Amortizações em Tempo Real",
-        entities: "Multi-Entidades & Obrigações",
-        projections: "Projeções & Metas Anuais"
-      },
-      featuresTitle: "Construído para controlo total e visão estratégica",
-      featuresSubtitle: "Tudo o que precisa para gerir múltiplos orçamentos, investimentos e cronogramas financeiros.",
-      features: {
-        timeline: {
-          title: "Linha Temporal Financeira Visual",
-          desc: "Vista mensal interativa com saldos projetados vs realizados, coloridos por categoria."
-        },
-        multiEntity: {
-          title: "Gestão Multi-Entidades",
-          desc: "Separe finanças por pessoa, empresa ou familiar com acesso baseado em funções."
-        },
-        loans: {
-          title: "Motor Inteligente de Empréstimos & Amortização",
-          desc: "Sistemas Price/SAC, amortizações extraordinárias, projeção de saldo em tempo real."
-        },
-        investments: {
-          title: "Investimentos & Poupança",
-          desc: "Pockets, aportes, rendimentos, classificação interna/externa, métricas de performance."
-        },
-        projections: {
-          title: "Projeções & Cenários",
-          desc: "Previsão mensal/anual, cenários what-if, acompanhamento de metas com indicadores visuais."
-        },
-        reminders: {
-          title: "Lembretes & Diário",
-          desc: "Alertas recorrentes, aniversários, manutenções, compromissos — tudo na timeline."
-        }
-      },
-      cta: "Começar Grátis",
-      footer: "Timeboard — Clareza financeira através do tempo."
-    },
 
     // Auth Card
     auth: {

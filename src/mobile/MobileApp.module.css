@@ -509,3 +509,64 @@
   opacity: 0.6;
   cursor: default;
 }
+
+/* "Where is my money" (admin view) */
+.summaryToggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-main);
+  cursor: pointer;
+  font: inherit;
+}
+
+.summaryTitle,
+.summaryWealth {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 0.92rem;
+}
+
+.summaryWealth {
+  color: var(--primary);
+}
+
+.summaryRows {
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 0;
+  font-size: 0.86rem;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.summaryRow span {
+  color: var(--text-muted);
+}
+
+.summarySubRow {
+  padding-left: 14px;
+  font-size: 0.8rem;
+}
+
+.summaryTotalRow {
+  border-bottom: none;
+  font-weight: 800;
+}
+
+.summaryTotalRow span {
+  color: var(--text-main);
+}

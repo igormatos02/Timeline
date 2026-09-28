@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Plus,
   Settings
 } from 'lucide-react';
 import { TimelineColor } from '../../enums/index.js';

@@ -1,16 +1,8 @@
 import React, { useMemo } from 'react';
 import {
-  CreditCard,
-  Plus,
   Settings,
-  Sparkles,
   Building2,
   FileText,
-  Calendar,
-  Percent,
-  CheckCircle2,
-  Clock,
-  ChevronDown,
   Wallet,
   PieChart,
   TrendingUp
@@ -19,14 +11,13 @@ import { format, parseISO, differenceInCalendarDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
-import { LoanAmortizationSystem, TimelineColor, TimelineStatus } from '../../enums/index.js';
+import { TimelineColor, TimelineStatus } from '../../enums/index.js';
 import LoanStatusBreakdown from './LoanStatusBreakdown.jsx';
 import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import { DonutChart } from '../ui/DonutChart.jsx';
 import CopyIdButton from '../ui/CopyIdButton.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 
-import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
 import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
 
 export default function LoanTimelineHeader({
@@ -330,7 +321,7 @@ export default function LoanTimelineHeader({
                       transition:
                         'left 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                       boxShadow:
-                        'var(--shadow-sm)'
+                        'var(--shadow-xs)'
                     }}
                   />
                 </button>

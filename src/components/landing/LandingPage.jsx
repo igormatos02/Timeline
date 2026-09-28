@@ -6,15 +6,10 @@ import {
   Calendar,
   Layers,
   ShieldCheck,
-  Building2,
   Users,
   Zap,
-  ArrowRight,
   PieChart,
-  BarChart3,
-  CreditCard,
-  CheckCircle,
-  FileSpreadsheet
+  BarChart3
 } from 'lucide-react';
 import AuthCard from './AuthCard.jsx';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';

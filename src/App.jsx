@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
-import { format, parseISO, addMonths, subMonths, startOfMonth, endOfMonth, differenceInCalendarMonths } from 'date-fns';
+import { format } from 'date-fns';
 import Navbar from './components/Navbar';
 import TimelineHeader from './components/TimelineHeader';
 import { PermissionsProvider } from './context/PermissionsContext.jsx';
@@ -24,15 +24,13 @@ const AccountOutflowModal = React.lazy(() => import('./components/AccountOutflow
 import {
   recalculateLoanState,
   propagateInstallmentAmountForward,
-  applyExtraordinaryAmortization,
   getLoanMetrics,
   generateLoanInstallments,
-  isLoanInstallment,
-  isAmortizationEvent
+  isLoanInstallment
 } from './utils/loanCalculations';
 import { buildWithdrawalReferences, buildOutflowReferences } from '../shared/finance/references.js';
 import { isLockedMovement, isLockableMovement, buildCorrectionDraft } from '../shared/finance/corrections.js';
-import { formatCurrency } from './utils/formatCurrency';
+import { effectiveStatusFor, pendingStatusFor } from '../shared/finance/statusRules.js';
 import { generateUUID } from './utils/uuid.js';
 import * as api from './services/api';
 import { EventType, FINANCIAL_ADVANCE_PAYMENT_TYPES, isAccountOutflowEvent, isPocketTransferEvent, EventStatus, FollowupStatus, TimelineType, TimelineStatus, TimelineColor, getDefaultTimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isCancelledStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem, PersonRole, TimeboardType, DiaryPublishStatus } from './enums/index.js';
@@ -289,14 +287,6 @@ export default function App() {
 
   const fetchEventsForVisiblePeriod = React.useCallback(async (pastYears = pastHorizonYears, futureYears = futureHorizonYears, forceReload = false) => {
     if (!activeTimeboardId) return;
-
-    // Calcular o horizonte global dinamicamente a partir da data atual do sistema
-    const now = new Date();
-    const currentMonthStart = startOfMonth(now);
-    const startObj = subMonths(currentMonthStart, Math.max(1, pastYears) * 12);
-    const endObj = addMonths(endOfMonth(now), Math.max(1, futureYears) * 12);
-    const startDate = format(startObj, 'yyyy-MM-01');
-    const endDate = format(endObj, 'yyyy-MM-dd');
 
     try {
       // Para timelines de empréstimos, buscar a série completa sem truncar por horizonte de 1 ano
@@ -1493,30 +1483,9 @@ export default function App() {
           const isNotCancelledOrDeleted = ev.status !== EventStatus.CANCELLED && ev.status !== EventStatus.DELETED;
           const todayStr = format(new Date(), 'yyyy-MM-dd');
           if (nextAuto && ev.date && ev.date <= todayStr && isNotCancelledOrDeleted) {
-            const isIncome = ev.eventType === EventType.INCOME;
-            const isWithdrawal = ev.eventType === EventType.WITHDRAWAL || Boolean(ev.isWithdrawal);
-            const isInvestment = ev.eventType === EventType.INVESTMENT;
-            const isAmortization = ev.eventType === EventType.AMORTIZATION;
-
-            if (isIncome) {
-              newStatus = EventStatus.RECEIVED;
-              newIsCompleted = true;
-            } else if (isWithdrawal) {
-              newStatus = EventStatus.WITHDRAWN;
-              newIsCompleted = true;
-            } else if (isInvestment) {
-              newStatus = EventStatus.INVESTED;
-              newIsCompleted = true;
-            } else if (isAmortization) {
-              newStatus = EventStatus.AMORTIZED;
-              newIsCompleted = true;
-            } else if (isPocketTransferEvent(ev)) {
-              newStatus = EventStatus.COMPLETED;
-              newIsCompleted = true;
-            } else {
-              newStatus = EventStatus.PAID;
-              newIsCompleted = true;
-            }
+            // Shared status words (shared/finance/statusRules.js)
+            newStatus = effectiveStatusFor(ev);
+            newIsCompleted = true;
           }
 
           return {
@@ -1794,40 +1763,25 @@ export default function App() {
         };
       }
 
-      const isIncome = ev.eventType === EventType.INCOME;
-      const isWithdrawal = ev.eventType === EventType.WITHDRAWAL || Boolean(ev.isWithdrawal);
-      const isInvestment = ev.eventType === EventType.INVESTMENT || isWithdrawal;
-      const isAmortization = ev.eventType === EventType.AMORTIZATION || isAmortizationEvent(ev);
-      const isReminder = ev.eventType === EventType.REMINDER || ev.timelineType === TimelineType.REMINDER || ev.timeline_type === TimelineType.REMINDER;
-      const isTodo = ev.eventType === EventType.TODO || ev.timelineType === TimelineType.TODO || ev.timeline_type === TimelineType.TODO;
-      const isFollowup = ev.eventType === EventType.FOLLOWUP || ev.timelineType === TimelineType.FOLLOWUP || ev.timeline_type === TimelineType.FOLLOWUP;
-
       const isCurrPositive = isPositiveStatus(ev.status) || ev.status === FollowupStatus.FINISHED || Boolean(ev.isCompleted);
-      const isFinancialLockedType = isIncome || ev.eventType === EventType.EXPENSE || isInvestment || isAccountOutflowEvent(ev);
 
-      if (isFinancialLockedType && isCurrPositive) {
+      // Effective financial movements are locked (shared/finance/corrections.js)
+      if (isLockableMovement(ev) && isCurrPositive) {
         return {
           nextStatus: ev.status,
           nextCompleted: true
         };
       }
 
+      // Shared status words (shared/finance/statusRules.js)
       if (isCurrPositive) {
         return {
-          nextStatus: isReminder ? EventStatus.OPEN : isInvestment ? EventStatus.PLANNED : (isFollowup ? FollowupStatus.IN_PROGRESS : EventStatus.PENDING),
+          nextStatus: pendingStatusFor(ev),
           nextCompleted: false
         };
       }
 
-      let positiveStatus = EventStatus.PAID;
-      if (isReminder) positiveStatus = EventStatus.CLOSED;
-      else if (isTodo) positiveStatus = EventStatus.COMPLETED;
-      else if (isFollowup) positiveStatus = FollowupStatus.FINISHED;
-      else if (isIncome) positiveStatus = EventStatus.RECEIVED;
-      else if (isWithdrawal) positiveStatus = EventStatus.WITHDRAWN;
-      else if (isInvestment) positiveStatus = EventStatus.INVESTED;
-      else if (isAmortization) positiveStatus = EventStatus.AMORTIZED;
-      else if (isPocketTransferEvent(ev)) positiveStatus = EventStatus.COMPLETED;
+      const positiveStatus = effectiveStatusFor(ev);
 
       return {
         nextStatus: positiveStatus,

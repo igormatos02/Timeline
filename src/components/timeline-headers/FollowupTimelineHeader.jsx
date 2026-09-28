@@ -1,21 +1,16 @@
 import React, { useMemo } from 'react';
 import {
   ListTree,
-  Plus,
   Settings,
   CheckCircle2,
-  Clock,
-  CheckSquare,
-  Sparkles,
-  Layers
+  CheckSquare
 } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { FollowupStatus, TimelineColor } from '../../enums/index.js';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
-import { DonutChart, PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
+import { PieDonut } from '../ui/DonutChart.jsx';
 
-import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
 import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
 
 export default function FollowupTimelineHeader({

@@ -1,7 +1,7 @@
 import { IRepository } from '../../../domain/repositories/IRepository.js';
 import { TimelineEvent } from '../../../domain/entities/TimelineEvent.js';
 import { supabase } from './supabaseClient.js';
-import { EventType, EventStatus, EventPriority, EventPeriodicity, EventRecurrence, AmortizationEventCategory, AmortizationStrategy } from '../../../../shared/enums/index.js';
+import { EventType, EventStatus, EventPriority, EventPeriodicity, EventRecurrence, AmortizationEventCategory } from '../../../../shared/enums/index.js';
 
 /**
  * Infrastructure Adapter: SupabaseFinancialEventRepository

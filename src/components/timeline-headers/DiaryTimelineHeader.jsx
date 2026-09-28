@@ -1,21 +1,11 @@
 import React, { useMemo } from 'react';
 import {
-  Plus,
   Settings,
-  Sparkles,
-  Calendar,
-  Smile,
-  Meh,
-  Frown,
-  Heart,
   BookOpen
 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import {
   DiaryMood,
-  TimelineType,
-  EventType,
-  EventStatus,
   TimelineColor,
   isCancelledStatus
 } from '../../enums/index.js';

@@ -5,6 +5,7 @@ import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { TimelineColor, PersonRole, EventStatus } from '../enums/index.js';
 import { formatCurrency } from '../utils/formatCurrency.js';
 import * as mobileApi from './mobileApi.js';
+import MobileMoneySummary from './MobileMoneySummary.jsx';
 import { PUBLIC_SITE_URL } from '../../shared/config/appConfig.js';
 import styles from './MobileApp.module.css';
 
@@ -96,6 +97,16 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
     setViewModeChoice(null);
     setSelectedEntityId(null);
   };
+
+  // Admin view: "where is my money" of the timeboard
+  const [summaryState, setSummaryState] = useState({ timeboardId: null, summary: null });
+  useEffect(() => {
+    if (!isAdminView || !selectedId) return;
+    mobileApi.getSummary(selectedId)
+      .then((result) => setSummaryState({ timeboardId: selectedId, summary: result }))
+      .catch(handleError);
+  }, [isAdminView, selectedId, handleError]);
+  const summary = summaryState.timeboardId === selectedId ? summaryState.summary : null;
 
   // Admin view: the timeboard's entities (with their debt balance)
   useEffect(() => {
@@ -254,6 +265,8 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
               ))}
             </div>
           )}
+
+          {isAdminView && <MobileMoneySummary summary={summary} t={t} />}
 
           {isAdminView && entities.length > 0 && (
             <select className={styles.select} value={selectedEntityId || ''} onChange={(e) => setSelectedEntityId(e.target.value)} aria-label={t('mobile.entityLabel')}>

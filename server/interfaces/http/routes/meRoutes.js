@@ -32,3 +32,16 @@ meRouter.get('/entities', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// GET /api/me/summary?timeboardId — admins: "where is my money" of the timeboard (shared financial engine)
+meRouter.get('/summary', async (req, res) => {
+  try {
+    const { timeboardId } = req.query;
+    if (!timeboardId) return res.status(400).json({ error: t('backend.validation.timeboardIdQueryParamRequired') });
+    const result = await meService.getSummary(req.user.id, { timeboardId });
+    if (!result) return res.status(403).json({ error: t('backend.validation.forbidden') });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});

@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Plus,
   Settings,
   Layers,
   Sparkles,

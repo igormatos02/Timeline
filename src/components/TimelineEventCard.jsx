@@ -9,29 +9,20 @@ import {
   AlertCircle,
   Repeat,
   Calendar,
-  Pin,
   BookOpen,
   Tag,
   CreditCard,
-  TrendingDown,
   TrendingUp,
   CheckCircle2,
   Circle,
-  Sliders,
   DollarSign,
   ArrowUpRight,
-  ArrowDownRight,
   ArrowLeftRight,
   ExternalLink,
   Sparkles,
-  Gift,
-  MinusCircle,
   Plus,
   ChevronDown,
-  ChevronUp,
   FileText,
-  Home,
-  Car,
   Layers,
   Zap,
   ShoppingCart,
@@ -44,8 +35,6 @@ import {
   UserCheck,
   FileCheck2,
   Ban,
-  Utensils,
-  Cake,
   Wrench,
   Bell,
   ListTree,
@@ -67,22 +56,16 @@ import {
   TimelineType,
   EventStatus,
   FollowupStatus,
-  ReminderEventStatus,
   EventRecurrence,
-  EventPeriodicity,
   EventPriority,
   PersonType,
   AmortizationEventCategory,
-  LoanEventCategory,
-  InvestmentEventCategory,
-  ReminderEventCategory,
   DiaryMood,
   DiaryPublishStatus,
   isAccountOutflowEvent,
   isPocketTransferEvent,
   isCancelledStatus,
   isPositiveStatus,
-  isNegativeStatus,
   isLoanTimelineType,
   normalizeTimelineType,
   normalizeRecurrence,
@@ -93,7 +76,6 @@ import {
   INCOME_CATEGORY_META,
   EXPENSE_CATEGORY_META,
   INVESTMENT_CATEGORY_META,
-  REMINDER_CATEGORY_META,
   CONDO_INCOME_CATEGORY_META,
   CONDO_EXPENSE_CATEGORY_META,
   CONDO_INVESTMENT_CATEGORY_META
@@ -111,6 +93,7 @@ import DueDatePicker from './ui/DueDatePicker.jsx';
 import CancelEventConfirmModal from './CancelEventConfirmModal.jsx';
 import { makeDiaryT } from '../utils/diaryLabels.js';
 import { getMovementStatusKey } from '../../shared/finance/movements.js';
+import { effectiveStatusFor } from '../../shared/finance/statusRules.js';
 
 const RECEIPT_DATE_POPOVER_WIDTH = 270;
 const RECEIPT_NUMBER_POPOVER_WIDTH = 220;
@@ -125,19 +108,15 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   onEdit: onEditProp,
   onUpdateEventDirect: onUpdateEventDirectProp,
   onDelete: onDeleteProp,
-  onToggleTask: onToggleTaskProp,
-  onAddChecklistItem: onAddChecklistItemProp,
-  onDeleteChecklistItem: onDeleteChecklistItemProp,
   onToggleLoanPayment: onToggleLoanPaymentProp,
   onPayUpToHere: onPayUpToHereProp,
-  onOpenEditInstallment: onOpenEditInstallmentProp,
   onNavigateToTimeline,
   onPrintReceipt: onPrintReceiptProp,
   timelineColor,
   timelines = [],
   persons = []
 }) {
-  const { t, language } = useTranslation();
+  const { t } = useTranslation();
   // Read-only users (individual role) cannot change events; they can only view and add notes.
   const { isReadOnly } = usePermissions();
   // Condominium timeboards do not use the diary mood
@@ -149,12 +128,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const onUpdateEventDirect = blocksChanges ? undefined : onUpdateEventDirectProp;
   const onSaveNotes = onUpdateEventDirectProp;
   const onDelete = blocksChanges ? undefined : onDeleteProp;
-  const onToggleTask = blocksChanges ? undefined : onToggleTaskProp;
-  const onAddChecklistItem = blocksChanges ? undefined : onAddChecklistItemProp;
-  const onDeleteChecklistItem = blocksChanges ? undefined : onDeleteChecklistItemProp;
   const onToggleLoanPayment = blocksChanges ? undefined : onToggleLoanPaymentProp;
   const onPayUpToHere = blocksChanges ? undefined : onPayUpToHereProp;
-  const onOpenEditInstallment = blocksChanges ? undefined : onOpenEditInstallmentProp;
   const onPrintReceipt = blocksChanges ? undefined : onPrintReceiptProp;
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
@@ -519,7 +494,6 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
   const isReceivedIncome = isIncomeEvent && isCompleted && !isCancelled;
   const isOverdueIncome = isIncomeEvent && isOverdue && !isCancelled;
-  const isNextIncome = isIncomeEvent && event.date >= todayStr && event.date <= currentMonthEndStr && !isReceivedIncome && !isCancelled;
 
   const isPaidExpense = isExpenseEvent && isCompleted && !isCancelled;
   const isOverdueExpense = isExpenseEvent && isOverdue && !isCancelled;
@@ -1135,7 +1109,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           className="btn btn-sm"
           style={{
             ...buttonProps?.style,
-            background: 'rgba(255, 255, 255, 0.03)',
+            background: `${TimelineColor.WHITE}08`,
             color: 'var(--text-dim)',
             border: '1px solid var(--border-glass)',
             boxShadow: 'none',
@@ -1358,51 +1332,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isCategoryDropdownOpen]);
 
-  const handleSelectCategory = (newCat) => {
-    if (newCat && newCat !== event.category && onUpdateEventDirect) {
-      onUpdateEventDirect({
-        ...event,
-        category: newCat
-      });
-    }
-    setIsCategoryDropdownOpen(false);
-  };
 
-  const getCategoryOptionsForEvent = () => {
-    const isIncome = event.eventType === EventType.INCOME || timelineType === TimelineType.INCOME || event.isIncome;
-    const isInvestment = event.eventType === EventType.INVESTMENT || timelineType === TimelineType.INVESTMENT || event.isInvestment;
-    const isReminder = timelineType === TimelineType.REMINDER || timelineType === 'reminder' || timelineType === 'reminders';
-    if (isReminder) {
-      return Object.values(ReminderEventCategory).map((key) => ({
-        key,
-        meta: REMINDER_CATEGORY_META[key] || {
-          icon: Tag,
-          color: TimelineColor.WARNING,
-          bg: `${TimelineColor.WARNING}26`
-        },
-        label: t(`reminderCategories.${key}`) || key
-      }));
-    }
-    if (isIncome) {
-      return Object.keys(INCOME_CATEGORY_META).map((key) => ({
-        key,
-        meta: INCOME_CATEGORY_META[key],
-        label: t(`incomeCategories.${key}`) || key
-      }));
-    }
-    if (isInvestment) {
-      return Object.keys(INVESTMENT_CATEGORY_META).map((key) => ({
-        key,
-        meta: INVESTMENT_CATEGORY_META[key],
-        label: t(`investmentCategories.${key}`) || key
-      }));
-    }
-    return Object.keys(EXPENSE_CATEGORY_META).map((key) => ({
-      key,
-      meta: EXPENSE_CATEGORY_META[key],
-      label: t(`expenseCategories.${key}`) || key
-    }));
-  };
 
   const hasBreakdown = Array.isArray(event.breakdownItems) && event.breakdownItems.length > 0;
 
@@ -1622,8 +1552,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               fontSize: '0.72rem',
               fontWeight: '700',
               color: isDesmembramentoExpanded ? TimelineColor.WHITE : 'var(--primary-light)',
-              background: isDesmembramentoExpanded ? 'var(--primary)' : 'rgba(99, 102, 241, 0.14)',
-              border: '1px solid rgba(99, 102, 241, 0.4)',
+              background: isDesmembramentoExpanded ? 'var(--primary)' : `${TimelineColor.PRIMARY}24`,
+              border: `1px solid ${TimelineColor.PRIMARY}66`,
               borderRadius: '9999px',
               padding: '2px 9px',
               display: 'inline-flex',
@@ -1631,7 +1561,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               gap: '5px',
               cursor: (isLockedPositive || isCancelled) ? 'default' : 'pointer',
               transition: 'all 0.15s ease',
-              boxShadow: isDesmembramentoExpanded ? '0 2px 8px rgba(99, 102, 241, 0.35)' : 'none'
+              boxShadow: isDesmembramentoExpanded ? `0 2px 8px ${TimelineColor.PRIMARY}59` : 'none'
             }}
             title={
               (isLockedPositive || isCancelled)
@@ -1679,7 +1609,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             onClick={(e) => e.stopPropagation()}
             style={{
               color: defaultColor,
-              borderColor: defaultColor !== 'var(--text-main)' ? defaultColor : 'rgba(255, 255, 255, 0.35)'
+              borderColor: defaultColor !== 'var(--text-main)' ? defaultColor : `${TimelineColor.WHITE}59`
             }}
           />
           <button
@@ -1705,7 +1635,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             onMouseDown={(e) => e.preventDefault()}
             onClick={handleCancelAmount}
             style={{
-              background: 'rgba(255, 255, 255, 0.1)',
+              background: `${TimelineColor.WHITE}1a`,
               color: 'var(--text-dim)',
               border: 'none',
               borderRadius: '4px',
@@ -1726,9 +1656,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             onClick={openDesmembramento}
             title="Desmembrar valor em subpartes com nomes associados"
             style={{
-              background: 'rgba(99, 102, 241, 0.14)',
+              background: `${TimelineColor.PRIMARY}24`,
               color: 'var(--primary-light)',
-              border: '1px solid rgba(99, 102, 241, 0.3)',
+              border: `1px solid ${TimelineColor.PRIMARY}4c`,
               borderRadius: '4px',
               padding: '3px 6px',
               cursor: 'pointer',
@@ -1759,8 +1689,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 color: propagateSubsequent ? 'var(--primary-light)' : 'var(--text-dim)',
                 cursor: 'pointer',
                 userSelect: 'none',
-                background: propagateSubsequent ? 'rgba(99, 102, 241, 0.14)' : 'rgba(255, 255, 255, 0.05)',
-                border: propagateSubsequent ? '1px solid rgba(99, 102, 241, 0.35)' : '1px solid var(--border-glass)',
+                background: propagateSubsequent ? `${TimelineColor.PRIMARY}24` : `${TimelineColor.WHITE}0d`,
+                border: propagateSubsequent ? `1px solid ${TimelineColor.PRIMARY}59` : '1px solid var(--border-glass)',
                 borderRadius: '9999px',
                 padding: '2px 8px',
                 marginLeft: '4px',
@@ -1771,7 +1701,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 style={{
                   width: '20px',
                   height: '11px',
-                  background: propagateSubsequent ? 'var(--primary)' : 'rgba(148, 163, 184, 0.35)',
+                  background: propagateSubsequent ? 'var(--primary)' : `${TimelineColor.SLATE_LIGHT}59`,
                   borderRadius: '9999px',
                   position: 'relative',
                   display: 'inline-block',
@@ -1841,580 +1771,60 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
   const isMemoryCard = isRegisterEvent || event.category === 'memoria' || event.category === 'memory' || event.category === 'note';
 
-  // Category Info & Styles
-  const getCategoryMeta = (cat) => {
-    const normalizedCat = (cat || '').toLowerCase().trim();
-    if (!normalizedCat) {
-      return {
-        label: t('categories.default'),
-        icon: <Tag size={12} />,
-        bg: 'rgba(6, 182, 212, 0.15)',
-        color: '#67e8f9',
-        border: 'rgba(6, 182, 212, 0.3)'
-      };
-    }
 
-    if (EXPENSE_CATEGORY_META[normalizedCat]) {
-      const meta = EXPENSE_CATEGORY_META[normalizedCat];
-      const IconComp = meta.icon;
-      return {
-        label: t(`expenseCategories.${normalizedCat}`) || normalizedCat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-        icon: IconComp ? <IconComp size={12} /> : <Tag size={12} />,
-        bg: meta.bg || 'rgba(244, 63, 94, 0.15)',
-        color: meta.color || '#f43f5e',
-        border: 'rgba(244, 63, 94, 0.3)'
-      };
-    }
 
-    if (INCOME_CATEGORY_META[normalizedCat]) {
-      const meta = INCOME_CATEGORY_META[normalizedCat];
-      const IconComp = meta.icon;
-      return {
-        label: t(`incomeCategories.${normalizedCat}`) || normalizedCat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-        icon: IconComp ? <IconComp size={12} /> : <DollarSign size={12} />,
-        bg: meta.bg || 'rgba(16, 185, 129, 0.15)',
-        color: meta.color || '#10b981',
-        border: 'rgba(16, 185, 129, 0.3)'
-      };
-    }
 
-    if (isWithdrawalEvent) {
-      return {
-        label: t('withdrawalModal.badge'),
-        icon: <ArrowDownRight size={12} />,
-        bg: 'rgba(239, 68, 68, 0.15)',
-        color: TimelineColor.DANGER,
-        border: 'rgba(239, 68, 68, 0.3)'
-      };
-    }
 
-    if (INVESTMENT_CATEGORY_META[normalizedCat]) {
-      const meta = INVESTMENT_CATEGORY_META[normalizedCat];
-      const IconComp = meta.icon;
-      return {
-        label: t(`investmentCategories.${normalizedCat}`) || normalizedCat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-        icon: IconComp ? <IconComp size={12} /> : <TrendingUp size={12} />,
-        bg: meta.bg || 'rgba(139, 92, 246, 0.15)',
-        color: meta.color || '#8b5cf6',
-        border: 'rgba(139, 92, 246, 0.3)'
-      };
-    }
 
-    if (REMINDER_CATEGORY_META[normalizedCat] || Object.values(ReminderEventCategory).includes(normalizedCat)) {
-      const meta = REMINDER_CATEGORY_META[normalizedCat] || {
-        icon: Tag,
-        color: '#f59e0b',
-        bg: 'rgba(245, 158, 11, 0.15)'
-      };
-      const IconComp = meta.icon || Tag;
-      const color = meta.color || '#f59e0b';
-      return {
-        label: t(`reminderCategories.${normalizedCat}`) || normalizedCat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-        icon: <IconComp size={12} />,
-        bg: meta.bg || `${color}26`,
-        color,
-        border: `${color}4d`
-      };
-    }
 
-    switch (normalizedCat) {
-      case 'meal_allowance':
-      case 'mealallowance':
-      case 'subsidio_alimentacao':
-      case 'subsidio_refeicao':
-        return {
-          label: t('incomeCategories.meal_allowance') || '',
-          icon: <Utensils size={12} />,
-          bg: 'rgba(245, 158, 11, 0.15)',
-          color: '#f59e0b',
-          border: 'rgba(245, 158, 11, 0.3)'
-        };
-      case 'salary':
-      case 'entrada_recorrente':
-        return {
-          label: t('incomeCategories.salary') || '',
-          icon: <DollarSign size={12} />,
-          bg: 'rgba(16, 185, 129, 0.15)',
-          color: '#10b981',
-          border: 'rgba(16, 185, 129, 0.3)'
-        };
-      case 'bonus':
-      case 'entrada_esporadica':
-        return {
-          label: t('incomeCategories.bonus') || '',
-          icon: <Gift size={12} />,
-          bg: 'rgba(6, 182, 212, 0.15)',
-          color: '#06b6d4',
-          border: 'rgba(6, 182, 212, 0.3)'
-        };
-      case 'freelance':
-        return {
-          label: t('incomeCategories.freelance') || '',
-          icon: <Zap size={12} />,
-          bg: 'rgba(6, 182, 212, 0.15)',
-          color: '#06b6d4',
-          border: 'rgba(6, 182, 212, 0.3)'
-        };
-      case 'investment_return':
-        return {
-          label: t('incomeCategories.investment_return') || '',
-          icon: <TrendingUp size={12} />,
-          bg: 'rgba(59, 130, 246, 0.15)',
-          color: '#3b82f6',
-          border: 'rgba(59, 130, 246, 0.3)'
-        };
-      case 'recurring_income':
-        return {
-          label: t('incomeCategories.recurring_income') || '',
-          icon: <Repeat size={12} />,
-          bg: 'rgba(20, 184, 166, 0.15)',
-          color: '#14b8a6',
-          border: 'rgba(20, 184, 166, 0.3)'
-        };
-      case 'saida_recorrente':
-        return {
-          label: 'Gasto Recorrente / Fixo',
-          icon: <CreditCard size={12} />,
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#f43f5e',
-          border: 'rgba(244, 63, 94, 0.3)'
-        };
-      case 'saida_esporadica':
-      case 'gasto':
-        return {
-          label: 'Gasto / Saída',
-          icon: <Tag size={12} />,
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#f43f5e',
-          border: 'rgba(244, 63, 94, 0.3)'
-        };
-      case 'investimento_poupanca':
-        return {
-          label: 'Poupança',
-          icon: <PiggyBank size={12} />,
-          bg: 'rgba(99, 102, 241, 0.15)',
-          color: 'var(--primary-light)',
-          border: 'rgba(99, 102, 241, 0.3)'
-        };
-      case 'investimento_patrimonio':
-        return {
-          label: 'Património',
-          icon: <Landmark size={12} />,
-          bg: 'rgba(168, 85, 247, 0.15)',
-          color: '#c084fc',
-          border: 'rgba(168, 85, 247, 0.3)'
-        };
-      case 'investimento_outros':
-      case 'investimento_etf':
-      case 'investimento_acoes':
-      case 'investimento_extra':
-        return {
-          label: 'Outros Investimentos',
-          icon: <Sparkles size={12} />,
-          bg: 'rgba(99, 102, 241, 0.15)',
-          color: '#818cf8',
-          border: 'rgba(99, 102, 241, 0.3)'
-        };
-      case 'parcela_emprestimo':
-        return {
-          label: 'Prestação / Parcela',
-          icon: <CreditCard size={12} />,
-          bg: 'rgba(99, 102, 241, 0.15)',
-          color: 'var(--primary-light)',
-          border: 'rgba(99, 102, 241, 0.3)'
-        };
-      case 'amortizacao':
-        return {
-          label: 'Amortização Extraordinária',
-          icon: <TrendingDown size={12} />,
-          bg: 'rgba(16, 185, 129, 0.15)',
-          color: '#10b981',
-          border: 'rgba(16, 185, 129, 0.3)'
-        };
-      case 'repetitivo':
-        return {
-          label: 'Data Comemorativa / Aniversário',
-          icon: <Repeat size={12} />,
-          bg: 'rgba(236, 72, 153, 0.15)',
-          color: '#f472b6',
-          border: 'rgba(236, 72, 153, 0.3)'
-        };
-      case 'tarefa':
-        return {
-          label: 'Tarefa (Fixada)',
-          icon: <Pin size={12} />,
-          bg: 'rgba(245, 158, 11, 0.15)',
-          color: '#fcd34d',
-          border: 'rgba(245, 158, 11, 0.3)'
-        };
-      case 'memoria':
-        return {
-          label: 'Memória / Nota',
-          icon: <BookOpen size={12} />,
-          bg: 'rgba(16, 185, 129, 0.15)',
-          color: '#6ee7b7',
-          border: 'rgba(16, 185, 129, 0.3)'
-        };
-      case 'electricity':
-        return {
-          label: 'Eletricidade',
-          icon: <Zap size={12} />,
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#f43f5e',
-          border: 'rgba(244, 63, 94, 0.3)'
-        };
-      case 'water':
-        return {
-          label: 'Água',
-          icon: <Tag size={12} />,
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#f43f5e',
-          border: 'rgba(244, 63, 94, 0.3)'
-        };
-      case 'gas':
-        return {
-          label: 'Gás',
-          icon: <Tag size={12} />,
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#f43f5e',
-          border: 'rgba(244, 63, 94, 0.3)'
-        };
-      case 'communications':
-        return {
-          label: 'Comunicações / TV',
-          icon: <CreditCard size={12} />,
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#f43f5e',
-          border: 'rgba(244, 63, 94, 0.3)'
-        };
-      case 'rent':
-        return {
-          label: 'Renda / Habitação',
-          icon: <Home size={12} />,
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#f43f5e',
-          border: 'rgba(244, 63, 94, 0.3)'
-        };
-      case 'health':
-        return {
-          label: 'Saúde',
-          icon: <Tag size={12} />,
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#f43f5e',
-          border: 'rgba(244, 63, 94, 0.3)'
-        };
-      case 'food':
-        return {
-          label: 'Alimentação / Supermercado',
-          icon: <ShoppingCart size={12} />,
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#f43f5e',
-          border: 'rgba(244, 63, 94, 0.3)'
-        };
-      case 'transportation':
-        return {
-          label: 'Transporte / Combustível',
-          icon: <Car size={12} />,
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#f43f5e',
-          border: 'rgba(244, 63, 94, 0.3)'
-        };
-      case 'carmaintenance':
-        return {
-          label: 'Manutenção Auto',
-          icon: <Car size={12} />,
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#f43f5e',
-          border: 'rgba(244, 63, 94, 0.3)'
-        };
-      case 'house':
-      case 'housemaintenance':
-        return {
-          label: 'Casa / Habitação',
-          icon: <Home size={12} />,
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#f43f5e',
-          border: 'rgba(244, 63, 94, 0.3)'
-        };
-      case 'services':
-      case 'fixed_expense':
-        return {
-          label: 'Serviços',
-          icon: <Sliders size={12} />,
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#f43f5e',
-          border: 'rgba(244, 63, 94, 0.3)'
-        };
-      case 'ensurance':
-        return {
-          label: 'Seguros',
-          icon: <FileText size={12} />,
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: '#f43f5e',
-          border: 'rgba(244, 63, 94, 0.3)'
-        };
-      default: {
-        const cleaned = cat
-          ? cat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-          : 'Agendamento';
-        return {
-          label: cleaned,
-          icon: <Tag size={12} />,
-          bg: 'rgba(6, 182, 212, 0.15)',
-          color: '#67e8f9',
-          border: 'rgba(6, 182, 212, 0.3)'
-        };
-      }
-    }
-  };
-
-  const catMeta = getCategoryMeta(event.category);
-
-  const getCompletedTimeStr = () => {
-    return event.completedAtTime || event.time || '10:00';
-  };
-
-  // Custom Status Badges
-  const getCustomStatusBadge = () => {
-    if (isReminderEvent) {
-      if (isClosedReminder) {
-        return {
-          label: t('status.closed'),
-          icon: <CheckCircle2 size={11} />,
-          bg: 'rgba(16, 185, 129, 0.15)',
-          color: '#10b981',
-          border: 'rgba(16, 185, 129, 0.3)'
-        };
-      }
-      if (isOverdueReminder) {
-        return {
-          label: t('status.overdue'),
-          icon: <AlertCircle size={11} />,
-          bg: 'rgba(252, 191, 73, 0.18)',
-          color: '#fcbf49',
-          border: 'rgba(252, 191, 73, 0.4)',
-          pulsing: true
-        };
-      }
-      return {
-        label: t('status.open'),
-        icon: <Clock size={11} />,
-        bg: 'rgba(6, 182, 212, 0.15)',
-        color: '#06b6d4',
-        border: 'rgba(6, 182, 212, 0.3)'
-      };
-    }
-
-    if (isIncomeEvent) {
-      if (isReceivedIncome) {
-        return {
-          label: t('status.received'),
-          icon: <CheckCircle2 size={11} />,
-          bg: 'rgba(16, 185, 129, 0.15)',
-          color: '#10b981',
-          border: 'rgba(16, 185, 129, 0.3)'
-        };
-      }
-      if (isOverdueIncome) {
-        return {
-          label: t('status.overdue'),
-          icon: <AlertCircle size={11} />,
-          bg: 'rgba(252, 191, 73, 0.18)',
-          color: '#fcbf49',
-          border: 'rgba(252, 191, 73, 0.4)',
-          pulsing: true
-        };
-      }
-      if (isNextIncome) {
-        return {
-          label: t(`status.${EventStatus.NEXT_INCOME}`),
-          icon: <Clock size={11} />,
-          bg: 'rgba(59, 130, 246, 0.15)',
-          color: '#60a5fa',
-          border: 'rgba(59, 130, 246, 0.35)'
-        };
-      }
-      return {
-        label: t(`status.${EventStatus.TO_RECEIVE}`),
-        icon: <Clock size={11} />,
-        bg: 'rgba(148, 163, 184, 0.1)',
-        color: '#94a3b8',
-        border: 'rgba(148, 163, 184, 0.2)'
-      };
-    }
-
-    if (isLoanInstallment) {
-      if (isPaidLoan) {
-        return {
-          label: t('status.settled'),
-          icon: <CheckCircle2 size={11} />,
-          bg: 'rgba(16, 185, 129, 0.15)',
-          color: '#10b981',
-          border: 'rgba(16, 185, 129, 0.3)'
-        };
-      }
-      if (isOverdueLoan) {
-        return {
-          label: t('status.overdue'),
-          icon: <AlertCircle size={11} />,
-          bg: 'rgba(252, 191, 73, 0.18)',
-          color: '#fcbf49',
-          border: 'rgba(252, 191, 73, 0.4)',
-          pulsing: true
-        };
-      }
-      return {
-        label: t('status.pending'),
-        icon: <Circle size={11} />,
-        bg: 'rgba(245, 158, 11, 0.15)',
-        color: '#f59e0b',
-        border: 'rgba(245, 158, 11, 0.3)'
-      };
-    }
-
-    if (isExpenseEvent) {
-      if (isPaidExpense) {
-        return {
-          label: t('status.paid'),
-          icon: <CheckCircle2 size={11} />,
-          bg: 'rgba(16, 185, 129, 0.15)',
-          color: '#10b981',
-          border: 'rgba(16, 185, 129, 0.3)'
-        };
-      }
-      if (isOverdueExpense) {
-        return {
-          label: t('status.overdue'),
-          icon: <AlertCircle size={11} />,
-          bg: 'rgba(252, 191, 73, 0.18)',
-          color: '#fcbf49',
-          border: 'rgba(252, 191, 73, 0.4)',
-          pulsing: true
-        };
-      }
-      return {
-        label: t('status.pending'),
-        icon: <Clock size={11} />,
-        bg: 'rgba(245, 158, 11, 0.15)',
-        color: '#f59e0b',
-        border: 'rgba(245, 158, 11, 0.3)'
-      };
-    }
-
-    if (isInvestmentEvent) {
-      if (isCompletedInvestment) {
-        return {
-          label: t(`status.${effectiveStatusKey}`),
-          icon: <CheckCircle2 size={11} />,
-          bg: 'rgba(99, 102, 241, 0.15)',
-          color: 'var(--primary-light)',
-          border: 'rgba(99, 102, 241, 0.3)'
-        };
-      }
-      if (isOverdueInvestment) {
-        return {
-          label: t('status.overdue'),
-          icon: <AlertCircle size={11} />,
-          bg: 'rgba(252, 191, 73, 0.18)',
-          color: '#fcbf49',
-          border: 'rgba(252, 191, 73, 0.4)',
-          pulsing: true
-        };
-      }
-      return {
-        label: t('status.pending'),
-        icon: <Clock size={11} />,
-        bg: 'rgba(99, 102, 241, 0.1)',
-        color: 'var(--primary-light)',
-        border: 'rgba(99, 102, 241, 0.2)'
-      };
-    }
-
-    if (!isCompleted && isOverdue) {
-      return {
-        label: t('status.overdue'),
-        icon: <AlertCircle size={11} />,
-        bg: 'rgba(252, 191, 73, 0.18)',
-        color: '#fcbf49',
-        border: 'rgba(252, 191, 73, 0.4)',
-        pulsing: true
-      };
-    }
-
-    return null;
-  };
-
-  const statusBadge = getCustomStatusBadge();
-
-  // Priority Badge Color
-  const getPriorityStyle = (priority) => {
-    const p = String(priority || '').toLowerCase();
-    switch (p) {
-      case EventPriority.URGENT:
-
-        return { bg: 'rgba(239, 68, 68, 0.15)', text: '#fca5a5', border: 'rgba(239, 68, 68, 0.3)' };
-      case EventPriority.HIGH:
-
-        return { bg: 'rgba(245, 158, 11, 0.15)', text: '#fcd34d', border: 'rgba(245, 158, 11, 0.3)' };
-      case EventPriority.LOW:
-
-        return { bg: 'rgba(100, 116, 139, 0.15)', text: '#94a3b8', border: 'rgba(100, 116, 139, 0.3)' };
-      case EventPriority.NORMAL:
-
-      default:
-        return { bg: 'rgba(255, 255, 255, 0.05)', text: 'var(--text-dim)', border: 'var(--border-glass)' };
-    }
-  };
-
-  const priorityStyle = getPriorityStyle(event.priority);
 
   // Card specific backgrounds and theme palette
   const getCardTheme = () => {
     if (isIncomeEvent) {
       return {
-        color: '#10b981',
-        bg: 'rgba(16, 185, 129, 0.12)',
-        border: 'rgba(16, 185, 129, 0.3)',
-        lightText: '#34d399'
+        color: TimelineColor.EMERALD,
+        bg: `${TimelineColor.EMERALD}1f`,
+        border: `${TimelineColor.EMERALD}4c`,
+        lightText: TimelineColor.EMERALD
       };
     }
     if (isExpenseEvent) {
       return {
-        color: '#f43f5e',
-        bg: 'rgba(244, 63, 94, 0.12)',
-        border: 'rgba(244, 63, 94, 0.3)',
-        lightText: '#fb7185'
+        color: TimelineColor.ROSE,
+        bg: `${TimelineColor.ROSE}1f`,
+        border: `${TimelineColor.ROSE}4c`,
+        lightText: TimelineColor.ROSE
       };
     }
     if (isInvestmentEvent) {
       return {
-        color: '#8b5cf6',
-        bg: 'rgba(139, 92, 246, 0.12)',
-        border: 'rgba(139, 92, 246, 0.3)',
-        lightText: '#a78bfa'
+        color: TimelineColor.VIOLET,
+        bg: `${TimelineColor.VIOLET}1f`,
+        border: `${TimelineColor.VIOLET}4c`,
+        lightText: TimelineColor.VIOLET
       };
     }
     if (isLoanInstallment) {
       return {
-        color: '#0ea5e9',
-        bg: 'rgba(14, 165, 233, 0.12)',
-        border: 'rgba(14, 165, 233, 0.3)',
-        lightText: '#38bdf8'
+        color: TimelineColor.SKY,
+        bg: `${TimelineColor.SKY}1f`,
+        border: `${TimelineColor.SKY}4c`,
+        lightText: TimelineColor.SKY
       };
     }
     if (isAmortization) {
       return {
         color: TimelineColor.INCOME,
-        bg: 'rgba(16, 185, 129, 0.12)',
-        border: 'rgba(16, 185, 129, 0.3)',
+        bg: `${TimelineColor.EMERALD}1f`,
+        border: `${TimelineColor.EMERALD}4c`,
         lightText: TimelineColor.EMERALD
       };
     }
     return {
-      color: 'var(--primary-light, #818cf8)',
-      bg: 'rgba(99, 102, 241, 0.12)',
-      border: 'rgba(99, 102, 241, 0.3)',
-      lightText: 'var(--text-main, #e2e8f0)'
+      color: `var(--primary-light, ${TimelineColor.PRIMARY_LIGHT})`,
+      bg: `${TimelineColor.PRIMARY}1f`,
+      border: `${TimelineColor.PRIMARY}4c`,
+      lightText: `var(--text-main, ${TimelineColor.SLATE_LIGHT})`
     };
   };
 
@@ -2601,9 +2011,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     letterSpacing: '0.04em',
                     padding: '2px 7px',
                     borderRadius: '5px',
-                    background: isFlatPositive ? 'rgba(255, 255, 255, 0.22)' : hexToRgba(TimelineColor.INCOME, 0.16),
+                    background: isFlatPositive ? `${TimelineColor.WHITE}38` : hexToRgba(TimelineColor.INCOME, 0.16),
                     color: isFlatPositive ? TimelineColor.WHITE : TimelineColor.INCOME,
-                    border: isFlatPositive ? '1px solid rgba(255, 255, 255, 0.35)' : `1px solid ${hexToRgba(TimelineColor.INCOME, 0.38)}`
+                    border: isFlatPositive ? `1px solid ${TimelineColor.WHITE}59` : `1px solid ${hexToRgba(TimelineColor.INCOME, 0.38)}`
                   }}
                 >
                   {t('withdrawalModal.depositBadge')}
@@ -2662,7 +2072,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       fontSize: '0.98rem',
                       fontWeight: '700',
                       color: isFlatPositive ? TimelineColor.WHITE : 'var(--text-main)',
-                      background: isFlatPositive ? 'rgba(0,0,0,0.25)' : 'var(--bg-glass-input)',
+                      background: isFlatPositive ? 'var(--bg-shade)' : 'var(--bg-glass-input)',
                       border: '1px solid var(--border-glass)',
                       borderRadius: '4px',
                       outline: 'none',
@@ -2753,9 +2163,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       fontSize: '0.70rem',
                       padding: '2px 7px',
                       borderRadius: '5px',
-                      background: isFlatPositive ? 'rgba(255, 255, 255, 0.2)' : undefined,
+                      background: isFlatPositive ? `${TimelineColor.WHITE}33` : undefined,
                       color: isFlatPositive ? TimelineColor.WHITE : undefined,
-                      border: isFlatPositive ? '1px solid rgba(255, 255, 255, 0.35)' : undefined
+                      border: isFlatPositive ? `1px solid ${TimelineColor.WHITE}59` : undefined
                     }}
                   >
                     <Tag size={10} style={{ color: isFlatPositive ? TimelineColor.WHITE : undefined }} /> {lbl}
@@ -2767,9 +2177,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
                     <span
                       style={{
-                        background: 'rgba(16, 185, 129, 0.14)',
-                        color: '#10b981',
-                        border: '1px solid rgba(16, 185, 129, 0.35)',
+                        background: `${TimelineColor.EMERALD}24`,
+                        color: TimelineColor.EMERALD,
+                        border: `1px solid ${TimelineColor.EMERALD}59`,
                         padding: '2px 7px',
                         borderRadius: '5px',
                         fontSize: '0.68rem',
@@ -2786,9 +2196,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     {abatedBreakdown && abatedBreakdown.origInterest > 0 && (
                       <span
                         style={{
-                          background: 'rgba(99, 102, 241, 0.12)',
+                          background: `${TimelineColor.PRIMARY}1f`,
                           color: 'var(--primary-light)',
-                          border: '1px solid rgba(99, 102, 241, 0.3)',
+                          border: `1px solid ${TimelineColor.PRIMARY}4c`,
                           padding: '2px 7px',
                           borderRadius: '5px',
                           fontSize: '0.68rem',
@@ -2821,8 +2231,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       }
                     }}
                     style={{
-                      background: activeFinancialTab === 'gastos' ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
-                      border: activeFinancialTab === 'gastos' ? '1px solid rgba(99, 102, 241, 0.25)' : '1px solid var(--border-glass)',
+                      background: activeFinancialTab === 'gastos' ? `${TimelineColor.PRIMARY}14` : 'transparent',
+                      border: activeFinancialTab === 'gastos' ? `1px solid ${TimelineColor.PRIMARY}40` : '1px solid var(--border-glass)',
                       borderRadius: '5px',
                       padding: '2px 7px',
                       color: originInfo.color,
@@ -2887,11 +2297,11 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       }}
                     >
                       {personType === PersonType.ORGANIZATION ? (
-                        <Building2 size={13} style={{ color: cardTheme.color || '#f59e0b', flexShrink: 0 }} />
+                        <Building2 size={13} style={{ color: cardTheme.color || TimelineColor.AMBER, flexShrink: 0 }} />
                       ) : personType === PersonType.MEMBER ? (
-                        <UserCheck size={13} style={{ color: cardTheme.color || '#f59e0b', flexShrink: 0 }} />
+                        <UserCheck size={13} style={{ color: cardTheme.color || TimelineColor.AMBER, flexShrink: 0 }} />
                       ) : (
-                        <User size={13} style={{ color: cardTheme.color || '#f59e0b', flexShrink: 0 }} />
+                        <User size={13} style={{ color: cardTheme.color || TimelineColor.AMBER, flexShrink: 0 }} />
                       )}
                       <span>{personDisplayName}</span>
                     </div>
@@ -2903,13 +2313,13 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                         gap: '4px',
                         fontSize: '0.74rem',
                         fontWeight: '700',
-                        color: cardTheme.color || '#f59e0b',
+                        color: cardTheme.color || TimelineColor.AMBER,
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em',
                         lineHeight: 1.2
                       }}
                     >
-                      <FileCheck2 size={12} style={{ color: cardTheme.color || '#f59e0b', flexShrink: 0 }} />
+                      <FileCheck2 size={12} style={{ color: cardTheme.color || TimelineColor.AMBER, flexShrink: 0 }} />
                       <span>{t('modal.obligation') || 'Obrigação'}</span>
                     </div>
                   )}
@@ -2923,7 +2333,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                         gap: '4px',
                         fontSize: '0.74rem',
                         fontWeight: '400',
-                        color: isFlatPositive ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)',
+                        color: isFlatPositive ? `${TimelineColor.WHITE}b2` : 'var(--text-muted)',
                         lineHeight: 1.2
                       }}
                     >
@@ -2957,9 +2367,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             padding: '3px 8px',
             fontSize: '0.72rem',
             gap: '4px',
-            background: 'rgba(16, 185, 129, 0.14)',
-            color: '#10b981',
-            border: '1px solid rgba(16, 185, 129, 0.35)',
+            background: `${TimelineColor.EMERALD}24`,
+            color: TimelineColor.EMERALD,
+            border: `1px solid ${TimelineColor.EMERALD}59`,
             fontWeight: '700',
             borderRadius: '5px',
             cursor: isPayingUpToHere ? 'not-allowed' : 'pointer',
@@ -2969,7 +2379,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           }}
           title={t('buttons.payUpToHereTitle') || "Marcar como pagas todas as prestações deste empréstimo anteriores a esta parcela (inclusive)"}
         >
-          <CheckCircle2 size={12} style={{ color: '#10b981' }} />
+          <CheckCircle2 size={12} style={{ color: TimelineColor.EMERALD }} />
           <span>{t('buttons.payUpToHere') || "Pagar até aqui"}</span>
         </button>
       )}
@@ -2989,9 +2399,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             }}
             title={hasNotes ? `${t('actionNotes')} (${allNotes.length})` : t('actionAddNote')}
             style={{
-              color: hasNotes ? (isFlatPositive ? TimelineColor.WHITE : TimelineColor.WARNING) : (isFlatPositive ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)'),
-              background: hasNotes ? (isFlatPositive ? 'rgba(255, 255, 255, 0.25)' : 'rgba(245, 158, 11, 0.14)') : 'transparent',
-              border: hasNotes ? (isFlatPositive ? '1px solid rgba(255, 255, 255, 0.4)' : '1px solid rgba(245, 158, 11, 0.35)') : '1px solid transparent',
+              color: hasNotes ? (isFlatPositive ? TimelineColor.WHITE : TimelineColor.WARNING) : (isFlatPositive ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)'),
+              background: hasNotes ? (isFlatPositive ? `${TimelineColor.WHITE}40` : `${TimelineColor.AMBER}24`) : 'transparent',
+              border: hasNotes ? (isFlatPositive ? `1px solid ${TimelineColor.WHITE}66` : `1px solid ${TimelineColor.AMBER}59`) : '1px solid transparent',
               borderRadius: '5px',
               padding: '3px 5px',
               display: 'inline-flex',
@@ -3028,8 +2438,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             title={hasBreakdown ? t('actionBreakdown', { count: allSubparts.length }) : t('actionSplitValue')}
             style={{
               color: hasBreakdown ? 'var(--primary-light)' : 'var(--text-dim)',
-              background: hasBreakdown ? 'rgba(99, 102, 241, 0.14)' : 'transparent',
-              border: hasBreakdown ? '1px solid rgba(99, 102, 241, 0.35)' : '1px solid transparent',
+              background: hasBreakdown ? `${TimelineColor.PRIMARY}24` : 'transparent',
+              border: hasBreakdown ? `1px solid ${TimelineColor.PRIMARY}59` : '1px solid transparent',
               borderRadius: '5px',
               padding: '3px 5px',
               display: 'inline-flex',
@@ -3066,28 +2476,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             if (nextAuto) {
               const isPastOrToday = Boolean(event.date && event.date <= todayStr);
               if (isPastOrToday && !isCancelledStatus(event.status) && event.status !== EventStatus.DELETED) {
-                if (isIncomeEvent) {
-                  newStatus = EventStatus.RECEIVED;
-                  newIsCompleted = true;
-                } else if (isWithdrawalEvent) {
-                  newStatus = EventStatus.WITHDRAWN;
-                  newIsCompleted = true;
-                } else if (isAccountOutflow) {
-                  newStatus = EventStatus.PAID;
-                  newIsCompleted = true;
-                } else if (isTransferEvent) {
-                  newStatus = EventStatus.COMPLETED;
-                  newIsCompleted = true;
-                } else if (isInvestmentEvent) {
-                  newStatus = EventStatus.INVESTED;
-                  newIsCompleted = true;
-                } else if (isAmortization) {
-                  newStatus = EventStatus.AMORTIZED;
-                  newIsCompleted = true;
-                } else {
-                  newStatus = EventStatus.PAID;
-                  newIsCompleted = true;
-                }
+                // Shared status words (shared/finance/statusRules.js)
+                newStatus = effectiveStatusFor(event);
+                newIsCompleted = true;
               }
               setLocalStatus(newStatus);
             }
@@ -3105,8 +2496,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           title={localAuto ? t('backend.event.autoMovementActiveTitle') : t('backend.event.autoMovementManualTitle')}
           style={{
             color: localAuto ? TimelineColor.WARNING : 'var(--text-dim)',
-            background: localAuto ? 'rgba(251, 191, 36, 0.16)' : 'transparent',
-            border: localAuto ? '1px solid rgba(251, 191, 36, 0.4)' : '1px solid transparent',
+            background: localAuto ? `${TimelineColor.AMBER}29` : 'transparent',
+            border: localAuto ? `1px solid ${TimelineColor.AMBER}66` : '1px solid transparent',
             borderRadius: '5px',
             padding: '2px 5px',
             display: 'inline-flex',
@@ -3241,8 +2632,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             padding: '3px 5px',
             borderRadius: '5px',
             color: isFlatPositive ? TimelineColor.WHITE : 'var(--primary-light)',
-            background: isFlatPositive ? 'rgba(255, 255, 255, 0.22)' : 'rgba(99, 102, 241, 0.15)',
-            border: isFlatPositive ? '1px solid rgba(255, 255, 255, 0.35)' : '1px solid rgba(99, 102, 241, 0.35)',
+            background: isFlatPositive ? `${TimelineColor.WHITE}38` : `${TimelineColor.PRIMARY}26`,
+            border: isFlatPositive ? `1px solid ${TimelineColor.WHITE}59` : `1px solid ${TimelineColor.PRIMARY}59`,
             display: 'inline-flex',
             alignItems: 'center',
             cursor: 'pointer'
@@ -3302,10 +2693,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           style={{
             padding: '3px 5px',
             borderRadius: '5px',
-            color: isFlatPositive ? 'rgba(255, 255, 255, 0.9)' : undefined
+            color: isFlatPositive ? `${TimelineColor.WHITE}e6` : undefined
           }}
         >
-          <Trash2 size={13} style={{ color: isFlatPositive ? 'rgba(255, 255, 255, 0.9)' : undefined }} />
+          <Trash2 size={13} style={{ color: isFlatPositive ? `${TimelineColor.WHITE}e6` : undefined }} />
         </button>
       )}
     </div>
@@ -3325,7 +2716,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             background: isReceivedIncome
               ? `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`
               : 'transparent',
-            border: isReceivedIncome ? '1px solid rgba(255, 255, 255, 0.25)' : '1px solid var(--border-glass)',
+            border: isReceivedIncome ? `1px solid ${TimelineColor.WHITE}40` : '1px solid var(--border-glass)',
             borderRadius: '8px',
             padding: '8px 10px',
             margin: '0',
@@ -3350,12 +2741,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     title: t('timeline.clickToChangeStatus'),
                     style: {
                       background: isCancelled
-                        ? 'rgba(148, 163, 184, 0.15)'
+                        ? `${TimelineColor.SLATE_LIGHT}26`
                         : isReceivedIncome
-                          ? 'rgba(255, 255, 255, 0.25)'
+                          ? `${TimelineColor.WHITE}40`
                           : isOverdueIncome
-                            ? 'rgba(252, 191, 73, 0.16)'
-                            : 'rgba(245, 158, 11, 0.14)',
+                            ? `${TimelineColor.AMBER}29`
+                            : `${TimelineColor.AMBER}24`,
                       color: isCancelled
                         ? TimelineColor.SLATE
                         : isReceivedIncome
@@ -3364,12 +2755,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                             ? TimelineColor.WARNING
                             : TimelineColor.WARNING,
                       border: isCancelled
-                        ? '1px solid rgba(148, 163, 184, 0.35)'
+                        ? `1px solid ${TimelineColor.SLATE_LIGHT}59`
                         : isReceivedIncome
-                          ? '1px solid rgba(255, 255, 255, 0.4)'
+                          ? `1px solid ${TimelineColor.WHITE}66`
                           : isOverdueIncome
-                            ? '1px solid rgba(252, 191, 73, 0.4)'
-                            : '1px solid rgba(245, 158, 11, 0.35)',
+                            ? `1px solid ${TimelineColor.AMBER}66`
+                            : `1px solid ${TimelineColor.AMBER}59`,
                       borderRadius: '9999px',
                       padding: '4px 12px',
                       fontSize: '0.76rem',
@@ -3382,13 +2773,13 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       gap: '5px',
                       transition: 'all 0.15s ease',
                       boxShadow: isOverdueIncome
-                        ? '0 2px 10px rgba(252, 191, 73, 0.25)'
+                        ? `0 2px 10px ${TimelineColor.AMBER}40`
                         : 'none'
                     }
                   },
                   isFutureMonth ? (
                     <>
-                      <Clock size={13} style={{ color: isReceivedIncome ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)' }} />
+                      <Clock size={13} style={{ color: isReceivedIncome ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)' }} />
                       <span style={{ color: isReceivedIncome ? TimelineColor.WHITE : undefined }}>{t('status.toReceive')}</span>
                     </>
                   ) : isCancelled ? (
@@ -3430,7 +2821,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             flexWrap: 'wrap',
             marginTop: '-1px',
             paddingTop: '6px',
-            borderTop: isReceivedIncome ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid var(--border-glass)'
+            borderTop: isReceivedIncome ? `1px solid ${TimelineColor.WHITE}33` : '1px solid var(--border-glass)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {renderEditableAmount('+', isCancelled ? TimelineColor.SLATE : isReceivedIncome ? TimelineColor.WHITE : TimelineColor.WARNING)}
@@ -3451,7 +2842,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             background: isPaidExpense
               ? `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`
               : 'transparent',
-            border: isPaidExpense ? '1px solid rgba(255, 255, 255, 0.25)' : '1px solid var(--border-glass)',
+            border: isPaidExpense ? `1px solid ${TimelineColor.WHITE}40` : '1px solid var(--border-glass)',
             borderRadius: '8px',
             padding: '8px 10px',
             margin: '0',
@@ -3470,8 +2861,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', paddingBottom: '0px' }}>
               {renderReceiptRef(isPaidExpense)}
               {event.priority && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isPaidExpense ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                  <span style={{ fontSize: '0.68rem', color: isPaidExpense ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isPaidExpense ? `1px solid ${TimelineColor.WHITE}4c` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
+                  <span style={{ fontSize: '0.68rem', color: isPaidExpense ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                     {t('timeline.priority')}:
                   </span>
                   <span style={{ fontSize: '0.78rem', fontWeight: '800', color: isPaidExpense ? TimelineColor.WHITE : 'var(--text-main)' }}>
@@ -3488,12 +2879,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   title: t('timeline.clickToChangeStatus'),
                   style: {
                     background: isCancelled
-                      ? 'rgba(148, 163, 184, 0.15)'
+                      ? `${TimelineColor.SLATE_LIGHT}26`
                       : isPaidExpense
-                        ? 'rgba(255, 255, 255, 0.25)'
+                        ? `${TimelineColor.WHITE}40`
                         : isOverdueExpense
-                          ? 'rgba(252, 191, 73, 0.16)'
-                          : 'rgba(245, 158, 11, 0.14)',
+                          ? `${TimelineColor.AMBER}29`
+                          : `${TimelineColor.AMBER}24`,
                     color: isCancelled
                       ? TimelineColor.SLATE
                       : isPaidExpense
@@ -3502,12 +2893,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                           ? TimelineColor.WARNING
                           : TimelineColor.WARNING,
                     border: isCancelled
-                      ? '1px solid rgba(148, 163, 184, 0.35)'
+                      ? `1px solid ${TimelineColor.SLATE_LIGHT}59`
                       : isPaidExpense
-                        ? '1px solid rgba(255, 255, 255, 0.4)'
+                        ? `1px solid ${TimelineColor.WHITE}66`
                         : isOverdueExpense
-                          ? '1px solid rgba(252, 191, 73, 0.4)'
-                          : '1px solid rgba(245, 158, 11, 0.35)',
+                          ? `1px solid ${TimelineColor.AMBER}66`
+                          : `1px solid ${TimelineColor.AMBER}59`,
                     borderRadius: '9999px',
                     padding: '4px 12px',
                     fontSize: '0.76rem',
@@ -3523,7 +2914,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 },
                 isFutureMonth ? (
                   <>
-                    <Clock size={13} style={{ color: isPaidExpense ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)' }} />
+                    <Clock size={13} style={{ color: isPaidExpense ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)' }} />
                     <span style={{ color: isPaidExpense ? TimelineColor.WHITE : undefined }}>{t('status.toPay')}</span>
                   </>
                 ) : isCancelled ? (
@@ -3564,7 +2955,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             flexWrap: 'wrap',
             marginTop: '-1px',
             paddingTop: '6px',
-            borderTop: isPaidExpense ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid var(--border-glass)'
+            borderTop: isPaidExpense ? `1px solid ${TimelineColor.WHITE}33` : '1px solid var(--border-glass)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {renderEditableAmount('-', isCancelled ? TimelineColor.SLATE : isPaidExpense ? TimelineColor.WHITE : TimelineColor.EXPENSE)}
@@ -3585,7 +2976,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             background: isCompletedInvestment
               ? `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`
               : 'transparent',
-            border: isCompletedInvestment ? '1px solid rgba(255, 255, 255, 0.25)' : '1px solid var(--border-glass)',
+            border: isCompletedInvestment ? `1px solid ${TimelineColor.WHITE}40` : '1px solid var(--border-glass)',
             borderRadius: '8px',
             padding: '8px 10px',
             margin: '0',
@@ -3606,8 +2997,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
               {event.category === 'investimento_patrimonio' && Number(event.initialInvestedAmount || 0) > 0 && Number(event.amount || 0) > 0 && Number(event.initialInvestedAmount) !== Number(event.amount) && (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isCompletedInvestment ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                    <span style={{ fontSize: '0.68rem', color: isCompletedInvestment ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isCompletedInvestment ? `1px solid ${TimelineColor.WHITE}4c` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
+                    <span style={{ fontSize: '0.68rem', color: isCompletedInvestment ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                       {t('timeline.acquisition')}:
                     </span>
                     <span style={{ fontSize: '0.80rem', fontWeight: '700', color: isCompletedInvestment ? TimelineColor.WHITE : 'var(--primary-light)' }}>
@@ -3615,7 +3006,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isCompletedInvestment ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isCompletedInvestment ? `1px solid ${TimelineColor.WHITE}4c` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
                     <span style={{ fontSize: '0.68rem', color: isCompletedInvestment ? TimelineColor.WHITE : (Number(event.amount) - Number(event.initialInvestedAmount)) >= 0 ? TimelineColor.INCOME : TimelineColor.EXPENSE, textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
                       <TrendingUp size={11} /> {t('timeline.valuation')}:
                     </span>
@@ -3632,7 +3023,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               )}
 
               {event.category === 'investimento_patrimonio' && event.linkedLoanTimelineName && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isCompletedInvestment ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isCompletedInvestment ? `1px solid ${TimelineColor.WHITE}4c` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
                   <span style={{ fontSize: '0.68rem', color: isCompletedInvestment ? TimelineColor.WHITE : TimelineColor.SKY, textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
                     <CreditCard size={11} /> {t('timeline.financing')}:
                   </span>
@@ -3643,8 +3034,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               )}
 
               {!event.pocketId && !event.pocket_id && event.category !== 'investimento_patrimonio' && Number(event.initialInvestedAmount || 0) > 0 && (event.isFirstOccurrence === true || (!event.isProjected && !event.eventId || event.seriesId) || (event.isFirstOccurrence !== false && !event.isProjected)) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isCompletedInvestment ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                  <span style={{ fontSize: '0.68rem', color: isCompletedInvestment ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isCompletedInvestment ? `1px solid ${TimelineColor.WHITE}4c` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
+                  <span style={{ fontSize: '0.68rem', color: isCompletedInvestment ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                     {t('timeline.initialContribution')}:
                   </span>
                   <span style={{ fontSize: '0.80rem', fontWeight: '800', color: isCompletedInvestment ? TimelineColor.WHITE : 'var(--primary-light)' }}>
@@ -3654,7 +3045,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               )}
 
               {!event.pocketId && !event.pocket_id && event.category !== 'investimento_patrimonio' && Number(event.targetAmount || 0) > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isCompletedInvestment ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isCompletedInvestment ? `1px solid ${TimelineColor.WHITE}4c` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
                   <span style={{ fontSize: '0.68rem', color: isCompletedInvestment ? TimelineColor.WHITE : TimelineColor.INVESTMENT, textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
                     <Target size={11} /> {t('timeline.goal')}:
                   </span>
@@ -3665,12 +3056,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               )}
 
               {(event.isExternal || event.is_external) && (
-                <div style={{ display: 'flex', alignItems: 'center', borderLeft: isCompletedInvestment ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', borderLeft: isCompletedInvestment ? `1px solid ${TimelineColor.WHITE}4c` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
                   <span
                     style={{
-                      background: isCompletedInvestment ? 'rgba(255, 255, 255, 0.2)' : 'rgba(139, 92, 246, 0.14)',
+                      background: isCompletedInvestment ? `${TimelineColor.WHITE}33` : `${TimelineColor.VIOLET}24`,
                       color: isCompletedInvestment ? TimelineColor.WHITE : TimelineColor.PRIMARY_LIGHT,
-                      border: isCompletedInvestment ? '1px solid rgba(255, 255, 255, 0.35)' : '1px solid rgba(139, 92, 246, 0.35)',
+                      border: isCompletedInvestment ? `1px solid ${TimelineColor.WHITE}59` : `1px solid ${TimelineColor.VIOLET}59`,
                       padding: '2px 7px',
                       borderRadius: '5px',
                       fontSize: '0.68rem',
@@ -3696,14 +3087,14 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   title: t('timeline.clickToChangeStatus'),
                   style: {
                     background: isCancelled
-                      ? 'rgba(148, 163, 184, 0.15)'
+                      ? `${TimelineColor.SLATE_LIGHT}26`
                       : event.category === 'investimento_patrimonio'
-                        ? (event.status === 'Financiado' ? 'rgba(2, 132, 199, 0.16)' : (isCompletedInvestment ? 'rgba(255, 255, 255, 0.25)' : 'rgba(16, 185, 129, 0.16)'))
+                        ? (event.status === 'Financiado' ? `${TimelineColor.SKY}29` : (isCompletedInvestment ? `${TimelineColor.WHITE}40` : `${TimelineColor.EMERALD}29`))
                         : isCompletedInvestment
-                          ? 'rgba(255, 255, 255, 0.25)'
+                          ? `${TimelineColor.WHITE}40`
                           : isOverdueInvestment
-                            ? 'rgba(252, 191, 73, 0.16)'
-                            : 'rgba(139, 92, 246, 0.14)',
+                            ? `${TimelineColor.AMBER}29`
+                            : `${TimelineColor.VIOLET}24`,
                     color: isCancelled
                       ? TimelineColor.SLATE
                       : event.category === 'investimento_patrimonio'
@@ -3714,14 +3105,14 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                             ? TimelineColor.WARNING
                             : TimelineColor.INVESTMENT,
                     border: isCancelled
-                      ? '1px solid rgba(148, 163, 184, 0.35)'
+                      ? `1px solid ${TimelineColor.SLATE_LIGHT}59`
                       : event.category === 'investimento_patrimonio'
-                        ? (event.status === 'Financiado' ? '1px solid rgba(2, 132, 199, 0.4)' : (isCompletedInvestment ? '1px solid rgba(255, 255, 255, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)'))
+                        ? (event.status === 'Financiado' ? `1px solid ${TimelineColor.SKY}66` : (isCompletedInvestment ? `1px solid ${TimelineColor.WHITE}66` : `1px solid ${TimelineColor.EMERALD}66`))
                         : isCompletedInvestment
-                          ? '1px solid rgba(255, 255, 255, 0.4)'
+                          ? `1px solid ${TimelineColor.WHITE}66`
                           : isOverdueInvestment
-                            ? '1px solid rgba(252, 191, 73, 0.4)'
-                            : '1px solid rgba(139, 92, 246, 0.35)',
+                            ? `1px solid ${TimelineColor.AMBER}66`
+                            : `1px solid ${TimelineColor.VIOLET}59`,
                     borderRadius: '9999px',
                     padding: '4px 12px',
                     fontSize: '0.76rem',
@@ -3737,7 +3128,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 },
                 isFutureMonth ? (
                   <>
-                    <Clock size={13} style={{ color: isCompletedInvestment ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)' }} />
+                    <Clock size={13} style={{ color: isCompletedInvestment ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)' }} />
                     <span style={{ color: isCompletedInvestment ? TimelineColor.WHITE : undefined }}>{isCompletedInvestment ? t(`status.${effectiveStatusKey}`) : t('status.pending')}</span>
                   </>
                 ) : isCancelled ? (
@@ -3790,7 +3181,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             flexWrap: 'wrap',
             marginTop: '-1px',
             paddingTop: '6px',
-            borderTop: isCompletedInvestment ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid var(--border-glass)'
+            borderTop: isCompletedInvestment ? `1px solid ${TimelineColor.WHITE}33` : '1px solid var(--border-glass)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {event.category === 'investimento_patrimonio' ? (
@@ -3893,7 +3284,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   width: '100%',
                   marginTop: '6px',
                   paddingTop: '6px',
-                  borderTop: '1px solid rgba(139, 92, 246, 0.15)'
+                  borderTop: `1px solid ${TimelineColor.VIOLET}26`
                 }}
               >
                 <div
@@ -3919,7 +3310,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   style={{
                     width: '100%',
                     height: '5px',
-                    background: 'rgba(148, 163, 184, 0.15)',
+                    background: `${TimelineColor.SLATE_LIGHT}26`,
                     borderRadius: '9999px',
                     overflow: 'hidden',
                     position: 'relative'
@@ -3936,7 +3327,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                           : `linear-gradient(90deg, ${TimelineColor.PRIMARY} 0%, ${TimelineColor.PRIMARY_LIGHT} 100%)`,
                       borderRadius: '9999px',
                       transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: '0 0 10px rgba(99, 102, 241, 0.45)'
+                      boxShadow: `0 0 10px ${TimelineColor.PRIMARY}73`
                     }}
                   />
                 </div>
@@ -3960,7 +3351,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             flexDirection: 'column',
             gap: '6px',
             color: TimelineColor.WHITE,
-            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.28)'
+            boxShadow: `0 4px 14px ${TimelineColor.EMERALD}47`
           }}
         >
           {/* Linha 1: [icone] [titulo do evento] [lables] */}
@@ -3969,11 +3360,11 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           {/* Linha 2: [motivo] (left) e [b status] (right) */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.85)', textTransform: 'uppercase', fontWeight: '700' }}>
+              <span style={{ fontSize: '0.7rem', color: `${TimelineColor.WHITE}d9`, textTransform: 'uppercase', fontWeight: '700' }}>
                 {t('loanCard.amortizedValue')}
               </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid rgba(255, 255, 255, 0.25)', paddingLeft: '10px' }}>
-                <span style={{ fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.85)', textTransform: 'uppercase', fontWeight: '700' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: `1px solid ${TimelineColor.WHITE}40`, paddingLeft: '10px' }}>
+                <span style={{ fontSize: '0.68rem', color: `${TimelineColor.WHITE}d9`, textTransform: 'uppercase', fontWeight: '700' }}>
                   {t('loanCard.purpose')}
                 </span>
                 <span style={{ fontSize: '0.80rem', fontWeight: '800', color: TimelineColor.WHITE }}>
@@ -3983,8 +3374,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 </span>
               </div>
               {event.balanceAfter !== undefined && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid rgba(255, 255, 255, 0.25)', paddingLeft: '10px' }}>
-                  <span style={{ fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.85)', textTransform: 'uppercase', fontWeight: '700' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: `1px solid ${TimelineColor.WHITE}40`, paddingLeft: '10px' }}>
+                  <span style={{ fontSize: '0.68rem', color: `${TimelineColor.WHITE}d9`, textTransform: 'uppercase', fontWeight: '700' }}>
                     {t('loanCard.remainingBalanceAfter')}
                   </span>
                   <span style={{ fontSize: '0.80rem', fontWeight: '800', color: TimelineColor.WHITE }}>
@@ -4000,14 +3391,14 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   title: t('timeline.clickToChangeStatus'),
                   style: {
                     background: isCancelled
-                      ? 'rgba(0, 0, 0, 0.2)'
+                      ? 'var(--bg-shade)'
                       : (isCompleted || isPositiveStatus(effectiveStatus) || effectiveStatus === EventStatus.AMORTIZED)
-                        ? 'rgba(255, 255, 255, 0.25)'
-                        : 'rgba(255, 255, 255, 0.18)',
+                        ? `${TimelineColor.WHITE}40`
+                        : `${TimelineColor.WHITE}2e`,
                     color: TimelineColor.WHITE,
                     border: isCancelled
-                      ? '1px solid rgba(255, 255, 255, 0.25)'
-                      : '1px solid rgba(255, 255, 255, 0.4)',
+                      ? `1px solid ${TimelineColor.WHITE}40`
+                      : `1px solid ${TimelineColor.WHITE}66`,
                     borderRadius: '9999px',
                     padding: '4px 12px',
                     fontSize: '0.76rem',
@@ -4023,12 +3414,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 },
                 isFutureMonth ? (
                   <>
-                    <Clock size={13} style={{ color: 'rgba(255, 255, 255, 0.85)' }} />
+                    <Clock size={13} style={{ color: `${TimelineColor.WHITE}d9` }} />
                     <span style={{ color: TimelineColor.WHITE }}>{t('status.pending')}</span>
                   </>
                 ) : isCancelled ? (
                   <>
-                    <Ban size={13} style={{ color: 'rgba(255, 255, 255, 0.85)' }} />
+                    <Ban size={13} style={{ color: `${TimelineColor.WHITE}d9` }} />
                     <span style={{ color: TimelineColor.WHITE }}>{t('status.cancelled')}</span>
                   </>
                 ) : (isCompleted || isPositiveStatus(effectiveStatus) || effectiveStatus === EventStatus.AMORTIZED) ? (
@@ -4038,7 +3429,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   </>
                 ) : (
                   <>
-                    <Clock size={13} style={{ color: 'rgba(255, 255, 255, 0.85)' }} />
+                    <Clock size={13} style={{ color: `${TimelineColor.WHITE}d9` }} />
                     <span style={{ color: TimelineColor.WHITE }}>{t('status.pending')}</span>
                   </>
                 )
@@ -4055,7 +3446,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             flexWrap: 'wrap',
             marginTop: '-1px',
             paddingTop: '6px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.2)'
+            borderTop: `1px solid ${TimelineColor.WHITE}33`
           }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <span style={{ fontSize: '1.05rem', fontWeight: '800', color: TimelineColor.WHITE }}>
@@ -4077,7 +3468,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             background: isPaidLoan
               ? `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`
               : 'transparent',
-            border: isPaidLoan ? '1px solid rgba(255, 255, 255, 0.25)' : '1px solid var(--border-glass)',
+            border: isPaidLoan ? `1px solid ${TimelineColor.WHITE}40` : '1px solid var(--border-glass)',
             borderRadius: '8px',
             padding: '8px 10px',
             margin: '0',
@@ -4094,13 +3485,13 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           {/* Linha 2: [motivo & decomposição] (left) e [b status] (right) */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', paddingBottom: '0px' }}>
-              <span style={{ fontSize: '0.7rem', color: isPaidLoan ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1 }}>
+              <span style={{ fontSize: '0.7rem', color: isPaidLoan ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1 }}>
                 {isAmortized ? t('loanCard.totalPaid') : t('loanCard.totalInstallment')}
               </span>
 
               {reducedBreakdown && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isPaidLoan ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                  <span style={{ fontSize: '0.68rem', color: isPaidLoan ? 'rgba(255, 255, 255, 0.85)' : TimelineColor.INCOME, textTransform: 'uppercase', fontWeight: '700' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isPaidLoan ? `1px solid ${TimelineColor.WHITE}4c` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
+                  <span style={{ fontSize: '0.68rem', color: isPaidLoan ? `${TimelineColor.WHITE}d9` : TimelineColor.INCOME, textTransform: 'uppercase', fontWeight: '700' }}>
                     {t('loanCard.totalAmortized')}:
                   </span>
                   <span style={{ fontSize: '0.80rem', fontWeight: '800', color: isPaidLoan ? TimelineColor.WHITE : TimelineColor.INCOME }} title="Valor abatido/poupado nesta prestação">
@@ -4109,8 +3500,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 </div>
               )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isPaidLoan ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                <span style={{ fontSize: '0.68rem', color: isPaidLoan ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isPaidLoan ? `1px solid ${TimelineColor.WHITE}4c` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
+                <span style={{ fontSize: '0.68rem', color: isPaidLoan ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                   {isAmortized ? t('loanCard.capitalAbated') : t('loanCard.capitalDebt')}:
                 </span>
                 <span style={{ fontSize: '0.80rem', fontWeight: '800', color: isPaidLoan ? TimelineColor.WHITE : (isAmortized ? 'var(--text-dim)' : 'var(--text-main)') }}>
@@ -4120,8 +3511,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 </span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isPaidLoan ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                <span style={{ fontSize: '0.68rem', color: isPaidLoan ? 'rgba(255, 255, 255, 0.85)' : (isAmortized ? TimelineColor.INCOME : 'var(--text-dim)'), textTransform: 'uppercase', fontWeight: '700' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isPaidLoan ? `1px solid ${TimelineColor.WHITE}4c` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
+                <span style={{ fontSize: '0.68rem', color: isPaidLoan ? `${TimelineColor.WHITE}d9` : (isAmortized ? TimelineColor.INCOME : 'var(--text-dim)'), textTransform: 'uppercase', fontWeight: '700' }}>
                   {isAmortized ? t('loanCard.interestSaved') : t('loanCard.interest')}:
                 </span>
                 <span style={{ fontSize: '0.80rem', fontWeight: '800', color: isPaidLoan ? TimelineColor.WHITE : (isAmortized ? TimelineColor.INCOME : TimelineColor.WARNING) }}>
@@ -4132,8 +3523,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               </div>
 
               {!isAmortized && ((event.installmentFee ?? event.taxAmount ?? event.tax_amount ?? 0) > 0) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isPaidLoan ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                  <span style={{ fontSize: '0.68rem', color: isPaidLoan ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isPaidLoan ? `1px solid ${TimelineColor.WHITE}4c` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
+                  <span style={{ fontSize: '0.68rem', color: isPaidLoan ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                     {t('loanCard.stampTax')}:
                   </span>
                   <span style={{ fontSize: '0.80rem', fontWeight: '800', color: isPaidLoan ? TimelineColor.WHITE : TimelineColor.PURPLE }}>
@@ -4143,8 +3534,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               )}
 
               {(event.balanceAfter !== undefined || event.remainingDebtAfter !== undefined || event.remaining_debt_after !== undefined) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isPaidLoan ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                  <span style={{ fontSize: '0.68rem', color: isPaidLoan ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isPaidLoan ? `1px solid ${TimelineColor.WHITE}4c` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
+                  <span style={{ fontSize: '0.68rem', color: isPaidLoan ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                     {t('loanCard.remainingDebt')}:
                   </span>
                   <span style={{ fontSize: '0.80rem', fontWeight: '800', color: isPaidLoan ? TimelineColor.WHITE : (isAmortized ? TimelineColor.SLATE : 'var(--primary-light)') }}>
@@ -4159,9 +3550,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               {isAmortized ? (
                 <div
                   style={{
-                    background: 'rgba(148, 163, 184, 0.12)',
+                    background: `${TimelineColor.SLATE_LIGHT}1f`,
                     color: TimelineColor.SLATE,
-                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                    border: `1px solid ${TimelineColor.SLATE_LIGHT}4c`,
                     borderRadius: '9999px',
                     padding: '4px 12px',
                     fontSize: '0.76rem',
@@ -4184,12 +3575,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     title: t('timeline.clickToChangeStatus'),
                     style: {
                       background: isCancelled
-                        ? 'rgba(148, 163, 184, 0.15)'
+                        ? `${TimelineColor.SLATE_LIGHT}26`
                         : isPaidLoan
-                          ? 'rgba(255, 255, 255, 0.25)'
+                          ? `${TimelineColor.WHITE}40`
                           : isOverdueLoan
-                            ? 'rgba(252, 191, 73, 0.16)'
-                            : 'rgba(245, 158, 11, 0.14)',
+                            ? `${TimelineColor.AMBER}29`
+                            : `${TimelineColor.AMBER}24`,
                       color: isCancelled
                         ? TimelineColor.SLATE
                         : isPaidLoan
@@ -4198,12 +3589,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                             ? TimelineColor.WARNING
                             : TimelineColor.WARNING,
                       border: isCancelled
-                        ? '1px solid rgba(148, 163, 184, 0.35)'
+                        ? `1px solid ${TimelineColor.SLATE_LIGHT}59`
                         : isPaidLoan
-                          ? '1px solid rgba(255, 255, 255, 0.4)'
+                          ? `1px solid ${TimelineColor.WHITE}66`
                           : isOverdueLoan
-                            ? '1px solid rgba(252, 191, 73, 0.4)'
-                            : '1px solid rgba(245, 158, 11, 0.35)',
+                            ? `1px solid ${TimelineColor.AMBER}66`
+                            : `1px solid ${TimelineColor.AMBER}59`,
                       borderRadius: '9999px',
                       padding: '4px 12px',
                       fontSize: '0.76rem',
@@ -4222,7 +3613,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   },
                   isFutureMonth ? (
                     <>
-                      <Clock size={13} style={{ color: isPaidLoan ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)' }} />
+                      <Clock size={13} style={{ color: isPaidLoan ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)' }} />
                       <span style={{ color: isPaidLoan ? TimelineColor.WHITE : undefined }}>{t('status.pending')}</span>
                     </>
                   ) : isCancelled ? (
@@ -4260,7 +3651,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             flexWrap: 'wrap',
             marginTop: '-1px',
             paddingTop: '6px',
-            borderTop: isPaidLoan ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid var(--border-glass)'
+            borderTop: isPaidLoan ? `1px solid ${TimelineColor.WHITE}33` : '1px solid var(--border-glass)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {isAmortized ? (
@@ -4274,7 +3665,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 </div>
               ) : reducedBreakdown ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '0.82rem', color: isPaidLoan ? 'rgba(255, 255, 255, 0.75)' : 'var(--text-dim)', textDecoration: 'line-through' }} title="Valor original antes da amortização extraordinária">
+                  <span style={{ fontSize: '0.82rem', color: isPaidLoan ? `${TimelineColor.WHITE}bf` : 'var(--text-dim)', textDecoration: 'line-through' }} title="Valor original antes da amortização extraordinária">
                     {formatCurrency(reducedBreakdown.origTotal)}
                   </span>
                   <span style={{ fontSize: '0.95rem', fontWeight: '800', color: isPaidLoan ? TimelineColor.WHITE : 'var(--primary-light)' }} title="Novo valor reduzido da parcela">
@@ -4300,7 +3691,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           className="loan-breakdown-strip"
           onClick={() => onEdit && onEdit(event)}
           style={{
-            background: 'rgba(236, 72, 153, 0.03)',
+            background: `${TimelineColor.PINK}08`,
             border: '1px solid var(--border-glass)',
             borderRadius: '8px',
             padding: '8px 12px',
@@ -4312,12 +3703,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             transition: 'all 0.15s ease'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(236, 72, 153, 0.4)';
-            e.currentTarget.style.background = 'rgba(236, 72, 153, 0.06)';
+            e.currentTarget.style.borderColor = `${TimelineColor.PINK}66`;
+            e.currentTarget.style.background = `${TimelineColor.PINK}0f`;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.borderColor = 'var(--border-glass)';
-            e.currentTarget.style.background = 'rgba(236, 72, 153, 0.03)';
+            e.currentTarget.style.background = `${TimelineColor.PINK}08`;
           }}
         >
           {/* Linha 1: [icone] [titulo do evento] [lables] */}
@@ -4352,7 +3743,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       gap: '5px',
                       padding: '2px 8px',
                       borderRadius: '6px',
-                      background: 'rgba(255, 255, 255, 0.04)',
+                      background: `${TimelineColor.WHITE}0a`,
                       border: '1px solid var(--border-glass)',
                       color: 'var(--text-main)',
                       fontSize: '0.74rem',
@@ -4412,9 +3803,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           style={{
             background: isCompleted
               ? `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`
-              : 'rgba(59, 130, 246, 0.03)',
+              : `${TimelineColor.BLUE}08`,
             border: isCompleted
-              ? '1px solid rgba(255, 255, 255, 0.25)'
+              ? `1px solid ${TimelineColor.WHITE}40`
               : '1px solid var(--border-glass)',
             borderRadius: '8px',
             padding: '8px 12px',
@@ -4441,14 +3832,14 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     padding: '2px 8px',
                     borderRadius: '5px',
                     background: isCompleted
-                      ? 'rgba(255, 255, 255, 0.2)'
+                      ? `${TimelineColor.WHITE}33`
                       : (event.priority || '').toLowerCase() === EventPriority.URGENT
-                        ? 'rgba(244, 63, 94, 0.15)'
+                        ? `${TimelineColor.ROSE}26`
                         : (event.priority || '').toLowerCase() === EventPriority.HIGH
-                          ? 'rgba(245, 158, 11, 0.15)'
+                          ? `${TimelineColor.AMBER}26`
                           : (event.priority || '').toLowerCase() === EventPriority.LOW
-                            ? 'rgba(100, 116, 139, 0.15)'
-                            : 'rgba(59, 130, 246, 0.15)',
+                            ? `${TimelineColor.SLATE}26`
+                            : `${TimelineColor.BLUE}26`,
                     color: isCompleted
                       ? TimelineColor.WHITE
                       : (event.priority || '').toLowerCase() === EventPriority.URGENT
@@ -4458,7 +3849,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                           : (event.priority || '').toLowerCase() === EventPriority.LOW
                             ? TimelineColor.SLATE
                             : TimelineColor.BLUE,
-                    border: isCompleted ? '1px solid rgba(255, 255, 255, 0.3)' : 'none'
+                    border: isCompleted ? `1px solid ${TimelineColor.WHITE}4c` : 'none'
                   }}
                 >
                   {event.priority}
@@ -4472,8 +3863,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     fontSize: '0.72rem',
                     fontWeight: '700',
                     color: TimelineColor.WHITE,
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    border: '1px solid rgba(255, 255, 255, 0.35)',
+                    background: `${TimelineColor.WHITE}33`,
+                    border: `1px solid ${TimelineColor.WHITE}59`,
                     padding: '2px 8px',
                     borderRadius: '5px',
                     display: 'inline-flex',
@@ -4492,7 +3883,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     fontSize: '0.72rem',
                     fontWeight: '600',
                     color: TimelineColor.TODO,
-                    background: 'rgba(59, 130, 246, 0.1)',
+                    background: `${TimelineColor.BLUE}1a`,
                     padding: '2px 8px',
                     borderRadius: '5px'
                   }}
@@ -4513,7 +3904,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     padding: '4px 10px',
                     borderRadius: '6px',
                     border: '1px solid var(--border-glass)',
-                    background: 'rgba(255, 255, 255, 0.03)',
+                    background: `${TimelineColor.WHITE}08`,
                     color: 'var(--text-dim)',
                     fontSize: '0.76rem',
                     fontWeight: '700',
@@ -4537,8 +3928,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     gap: '5px',
                     padding: '4px 10px',
                     borderRadius: '6px',
-                    border: isCompleted ? '1px solid rgba(255, 255, 255, 0.4)' : '1px solid var(--border-glass)',
-                    background: isCompleted ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.04)',
+                    border: isCompleted ? `1px solid ${TimelineColor.WHITE}66` : '1px solid var(--border-glass)',
+                    background: isCompleted ? `${TimelineColor.WHITE}40` : `${TimelineColor.WHITE}0a`,
                     color: isCompleted ? TimelineColor.WHITE : 'var(--text-main)',
                     fontSize: '0.76rem',
                     fontWeight: '700',
@@ -4581,16 +3972,16 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               ? paletteTheme.primary
               : isCompleted
                 ? `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`
-                : 'linear-gradient(90deg, rgba(6, 182, 212, 0.08) 0%, rgba(6, 182, 212, 0.02) 100%)',
+                : `linear-gradient(90deg, ${TimelineColor.CYAN}14 0%, ${TimelineColor.CYAN}05 100%)`,
             border: isAnchorCard
               ? 'none'
               : isCompleted
-                ? '1px solid rgba(255, 255, 255, 0.25)'
-                : '1px solid rgba(6, 182, 212, 0.35)',
+                ? `1px solid ${TimelineColor.WHITE}40`
+                : `1px solid ${TimelineColor.CYAN}59`,
             borderLeft: isAnchorCard
               ? 'none'
               : isCompleted
-                ? '1px solid rgba(255, 255, 255, 0.25)'
+                ? `1px solid ${TimelineColor.WHITE}40`
                 : `4px solid ${paletteTheme.primary}`,
             borderRadius: '8px',
             padding: '8px 12px',
@@ -4624,20 +4015,20 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '4px',
-                    background: isCompleted ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.02)',
+                    background: isCompleted ? `${TimelineColor.WHITE}26` : `${TimelineColor.WHITE}05`,
                     padding: '6px 10px',
                     borderRadius: '6px',
-                    border: isCompleted ? '1px solid rgba(255, 255, 255, 0.25)' : '1px solid var(--border-glass)'
+                    border: isCompleted ? `1px solid ${TimelineColor.WHITE}40` : '1px solid var(--border-glass)'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
-                      <span style={{ color: isCompleted ? 'rgba(255, 255, 255, 0.9)' : 'var(--text-dim)', fontWeight: '700' }}>
+                      <span style={{ color: isCompleted ? `${TimelineColor.WHITE}e6` : 'var(--text-dim)', fontWeight: '700' }}>
                         {t('followupModal.subtasksLabel')} ({completedSubtasks}/{subtasks.length})
                       </span>
                       <span style={{ fontWeight: '800', color: isCompleted ? TimelineColor.WHITE : (subtaskRate === 100 ? TimelineColor.SUCCESS : TimelineColor.FOLLOWUP) }}>
                         {subtaskRate}%
                       </span>
                     </div>
-                    <div style={{ width: '100%', height: '4px', background: isCompleted ? 'rgba(255, 255, 255, 0.25)' : 'var(--border-glass)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ width: '100%', height: '4px', background: isCompleted ? `${TimelineColor.WHITE}40` : 'var(--border-glass)', borderRadius: '2px', overflow: 'hidden' }}>
                       <div
                         style={{
                           width: `${subtaskRate}%`,
@@ -4663,9 +4054,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                             fontWeight: '800',
                             padding: '3px 9px',
                             borderRadius: '5px',
-                            background: 'rgba(255, 255, 255, 0.22)',
+                            background: `${TimelineColor.WHITE}38`,
                             color: TimelineColor.WHITE,
-                            border: '1px solid rgba(255, 255, 255, 0.4)',
+                            border: `1px solid ${TimelineColor.WHITE}66`,
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '5px',
@@ -4682,8 +4073,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                             fontWeight: '700',
                             padding: '3px 8px',
                             borderRadius: '5px',
-                            background: 'rgba(255, 255, 255, 0.15)',
-                            border: '1px solid rgba(255, 255, 255, 0.3)',
+                            background: `${TimelineColor.WHITE}26`,
+                            border: `1px solid ${TimelineColor.WHITE}4c`,
                             color: TimelineColor.WHITE,
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -4701,8 +4092,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                           fontWeight: '700',
                           padding: '2px 8px',
                           borderRadius: '5px',
-                          background: 'rgba(255, 255, 255, 0.22)',
-                          border: '1px solid rgba(255, 255, 255, 0.35)',
+                          background: `${TimelineColor.WHITE}38`,
+                          border: `1px solid ${TimelineColor.WHITE}59`,
                           color: TimelineColor.WHITE,
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -4719,7 +4110,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                           fontWeight: '700',
                           padding: '2px 8px',
                           borderRadius: '5px',
-                          background: 'rgba(6, 182, 212, 0.15)',
+                          background: `${TimelineColor.CYAN}26`,
                           color: TimelineColor.FOLLOWUP,
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -4740,8 +4131,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                           gap: '4px',
                           padding: '2px 7px',
                           borderRadius: '4px',
-                          background: isCompleted ? 'rgba(255, 255, 255, 0.18)' : 'rgba(59, 130, 246, 0.08)',
-                          border: isCompleted ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid rgba(59, 130, 246, 0.25)',
+                          background: isCompleted ? `${TimelineColor.WHITE}2e` : `${TimelineColor.BLUE}14`,
+                          border: isCompleted ? `1px solid ${TimelineColor.WHITE}4c` : `1px solid ${TimelineColor.BLUE}40`,
                           fontSize: '0.68rem',
                           color: isCompleted ? TimelineColor.WHITE : TimelineColor.BLUE,
                           fontWeight: '700'
@@ -4759,7 +4150,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                           fontSize: '0.68rem',
                           fontWeight: '600',
                           color: 'var(--text-dim)',
-                          background: 'rgba(255, 255, 255, 0.04)',
+                          background: `${TimelineColor.WHITE}0a`,
                           padding: '2px 6px',
                           borderRadius: '4px',
                           border: '1px solid var(--border-glass)'
@@ -4783,8 +4174,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                           gap: '5px',
                           padding: '4px 10px',
                           borderRadius: '6px',
-                          border: isCompleted ? '1px solid rgba(255, 255, 255, 0.4)' : `1px solid ${TimelineColor.FOLLOWUP}`,
-                          background: isCompleted ? 'rgba(255, 255, 255, 0.25)' : 'rgba(6, 182, 212, 0.15)',
+                          border: isCompleted ? `1px solid ${TimelineColor.WHITE}66` : `1px solid ${TimelineColor.FOLLOWUP}`,
+                          background: isCompleted ? `${TimelineColor.WHITE}40` : `${TimelineColor.CYAN}26`,
                           color: isCompleted ? TimelineColor.WHITE : TimelineColor.FOLLOWUP,
                           fontSize: '0.76rem',
                           fontWeight: '700',
@@ -4830,7 +4221,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               ? `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`
               : 'transparent',
             border: isFlatPositive
-              ? '1px solid rgba(255, 255, 255, 0.25)'
+              ? `1px solid ${TimelineColor.WHITE}40`
               : '1px solid var(--border-glass)',
             borderRadius: '8px',
             padding: '8px 10px',
@@ -4850,13 +4241,13 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             {/* Reminders show neither the type label nor the priority */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', paddingBottom: '0px' }}>
               {!isReminderEvent && (
-                <span style={{ fontSize: '0.7rem', color: isFlatPositive ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1 }}>
+                <span style={{ fontSize: '0.7rem', color: isFlatPositive ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1 }}>
                   {t('common.event')}
                 </span>
               )}
               {event.priority && !isReminderEvent && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isFlatPositive ? '1px solid rgba(255, 255, 255, 0.25)' : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-                  <span style={{ fontSize: '0.68rem', color: isFlatPositive ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isFlatPositive ? `1px solid ${TimelineColor.WHITE}40` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
+                  <span style={{ fontSize: '0.68rem', color: isFlatPositive ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
                     {t('timeline.priority')}:
                   </span>
                   <span style={{ fontSize: '0.78rem', fontWeight: '800', color: isFlatPositive ? TimelineColor.WHITE : 'var(--text-main)' }}>
@@ -4873,12 +4264,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   title: t('timeline.clickToChangeStatus'),
                   style: {
                     background: isCancelled
-                      ? 'rgba(148, 163, 184, 0.15)'
+                      ? `${TimelineColor.SLATE_LIGHT}26`
                       : isFlatPositive
-                        ? 'rgba(255, 255, 255, 0.25)'
+                        ? `${TimelineColor.WHITE}40`
                         : isOverdueReminder
-                          ? 'rgba(252, 191, 73, 0.16)'
-                          : 'rgba(6, 182, 212, 0.14)',
+                          ? `${TimelineColor.AMBER}29`
+                          : `${TimelineColor.CYAN}24`,
                     color: isCancelled
                       ? TimelineColor.SLATE
                       : isFlatPositive
@@ -4887,12 +4278,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                           ? TimelineColor.WARNING
                           : TimelineColor.CYAN,
                     border: isCancelled
-                      ? '1px solid rgba(148, 163, 184, 0.35)'
+                      ? `1px solid ${TimelineColor.SLATE_LIGHT}59`
                       : isFlatPositive
-                        ? '1px solid rgba(255, 255, 255, 0.4)'
+                        ? `1px solid ${TimelineColor.WHITE}66`
                         : isOverdueReminder
-                          ? '1px solid rgba(252, 191, 73, 0.4)'
-                          : '1px solid rgba(6, 182, 212, 0.35)',
+                          ? `1px solid ${TimelineColor.AMBER}66`
+                          : `1px solid ${TimelineColor.CYAN}59`,
                     borderRadius: '9999px',
                     padding: '4px 12px',
                     fontSize: '0.76rem',
@@ -4945,13 +4336,13 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             flexWrap: 'wrap',
             marginTop: '-1px',
             paddingTop: '6px',
-            borderTop: isFlatPositive ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid var(--border-glass, rgba(255, 255, 255, 0.08))'
+            borderTop: isFlatPositive ? `1px solid ${TimelineColor.WHITE}33` : `1px solid var(--border-glass, ${TimelineColor.WHITE}14)`
           }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {event.amount !== undefined && Number(event.amount) > 0 ? (
                 renderEditableAmount('', isFlatPositive ? TimelineColor.WHITE : 'var(--text-main)')
               ) : (
-                <span style={{ fontSize: '0.78rem', color: isFlatPositive ? 'rgba(255, 255, 255, 0.8)' : 'var(--text-muted)' }}>{event.description || ''}</span>
+                <span style={{ fontSize: '0.78rem', color: isFlatPositive ? `${TimelineColor.WHITE}cc` : 'var(--text-muted)' }}>{event.description || ''}</span>
               )}
             </div>
             <div style={{ marginLeft: 'auto' }}>
@@ -5130,7 +4521,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
             style={{
               marginTop: '8px',
               padding: '14px',
-              background: 'rgba(255, 255, 255, 0.03)',
+              background: `${TimelineColor.WHITE}08`,
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
               border: '1px solid var(--border-glass)',
@@ -5174,8 +4565,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '8px 12px',
-                background: 'rgba(99, 102, 241, 0.08)',
-                border: '1px solid rgba(99, 102, 241, 0.25)',
+                background: `${TimelineColor.PRIMARY}14`,
+                border: `1px solid ${TimelineColor.PRIMARY}40`,
                 borderRadius: '8px'
               }}
             >
@@ -5205,7 +4596,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       gap: '8px',
                       padding: '4px 0px',
                       background: 'transparent',
-                      borderBottom: '3px solid rgba(165, 180, 252, 0.65)',
+                      borderBottom: `3px solid ${TimelineColor.PRIMARY_LIGHT}a6`,
                       width: '100%'
                     }}
                   >
@@ -5238,7 +4629,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => setEditingSubpartIdx(null)}
                           style={{
-                            background: '#10b981',
+                            background: TimelineColor.EMERALD,
                             color: '#fff',
                             border: 'none',
                             borderRadius: '4px',
@@ -5310,7 +4701,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   onFocus={(e) => e.target.select()}
                   onChange={(e) => setNewSubpartName(e.target.value)}
                   style={{
-                    background: 'rgba(0, 0, 0, 0.15)',
+                    background: 'var(--bg-shade)',
                     border: '1px solid var(--border-glass)',
                     borderRadius: '6px',
                     padding: '6px 10px',
@@ -5328,7 +4719,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                   onFocus={(e) => e.target.select()}
                   onChange={(e) => setNewSubpartAmount(e.target.value)}
                   style={{
-                    background: 'rgba(0, 0, 0, 0.15)',
+                    background: 'var(--bg-shade)',
                     border: '1px solid var(--border-glass)',
                     borderRadius: '6px',
                     padding: '6px 10px',
@@ -5399,7 +4790,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     style={{
                       background: 'transparent',
                       border: 'none',
-                      color: '#f87171',
+                      color: TimelineColor.DANGER,
                       cursor: 'pointer',
                       fontSize: '0.72rem',
                       fontWeight: '600',
@@ -5434,14 +4825,14 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     fontSize: '0.74rem',
                     padding: '5px 14px',
                     borderRadius: '6px',
-                    background: '#10b981',
-                    color: '#ffffff',
+                    background: TimelineColor.EMERALD,
+                    color: TimelineColor.WHITE,
                     border: 'none',
                     fontWeight: '700',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '4px',
-                    boxShadow: '0 2px 10px rgba(16, 185, 129, 0.3)'
+                    boxShadow: `0 2px 10px ${TimelineColor.EMERALD}4c`
                   }}
                 >
                   <Check size={14} strokeWidth={2.5} />
@@ -5457,7 +4848,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 });
 
 function hexToRgba(hex, alpha = 1) {
-  if (!hex) return `rgba(79, 70, 229, ${alpha})`;
+  if (!hex) return hexToRgba(TimelineColor.PRIMARY, alpha);
   if (hex.startsWith('rgba')) {
     return hex;
   }
@@ -5541,15 +4932,15 @@ const TimelineEventDayCard = React.memo(function TimelineEventDayCard({
   const paletteTheme = getPaletteTheme(baseColor, TimelineColor.PRIMARY);
 
   const bgGradient = isBalance
-    ? 'linear-gradient(135deg, rgba(148, 163, 184, 0.05) 0%, var(--bg-card) 100%)'
+    ? `linear-gradient(135deg, ${TimelineColor.SLATE_LIGHT}0d 0%, var(--bg-card) 100%)`
     : `linear-gradient(135deg, ${hexToRgba(paletteTheme.secondary, 0.10)} 0%, ${hexToRgba(paletteTheme.light, 0.03)} 60%, var(--bg-card) 100%)`;
 
   const borderColor = isBalance
-    ? 'rgba(148, 163, 184, 0.22)'
+    ? `${TimelineColor.SLATE_LIGHT}38`
     : hexToRgba(paletteTheme.medium, 0.32);
 
   const borderLeftColor = isBalance
-    ? 'rgba(148, 163, 184, 0.45)'
+    ? `${TimelineColor.SLATE_LIGHT}73`
     : paletteTheme.primary;
 
   return (
@@ -5596,7 +4987,7 @@ const TimelineEventDayCard = React.memo(function TimelineEventDayCard({
                 fontSize: '0.66rem',
                 fontWeight: '700',
                 color: 'var(--text-dim)',
-                background: 'rgba(255, 255, 255, 0.05)',
+                background: `${TimelineColor.WHITE}0d`,
                 padding: '1px 6px',
                 borderRadius: '4px',
                 border: '1px solid var(--border-glass)'

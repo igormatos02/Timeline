@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, LayoutGrid, Sparkles, Sun, Moon, User, Shield, Settings, ChevronDown, LogOut } from 'lucide-react';
+import { Clock, LayoutGrid, Sparkles, Sun, Moon, Settings, ChevronDown, LogOut } from 'lucide-react';
 import { getCurrentUser } from '../services/api';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { TimelineColor, PersonRole } from '../enums/index.js';

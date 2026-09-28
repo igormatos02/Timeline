@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
   Sparkles,
-  Plus,
   Layers,
   Settings
 } from 'lucide-react';
@@ -23,7 +22,7 @@ import { classifyMovement } from '../../../shared/finance/movements.js';
 import { computeMonthlyFlows, sumMonthlyFlows } from '../../../shared/finance/financialPosition.js';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
-import { DonutChart, PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
+import { PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
 import BarChart7Months from '../ui/BarChart7Months.jsx';
 import IncomeEvolutionChart from '../IncomeEvolutionChart.jsx';
 import { computeMonthDiff } from '../../utils/timelineCharts.js';

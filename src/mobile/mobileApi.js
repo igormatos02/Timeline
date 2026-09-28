@@ -77,6 +77,9 @@ export const getObligations = (timeboardId, personId = null) => request(
 // Admins: the timeboard's entities with their debt balance
 export const getEntities = (timeboardId) => request(`/me/entities?timeboardId=${encodeURIComponent(timeboardId)}`);
 
+// Admins: "where is my money" of the timeboard (same shared engine as the web balance)
+export const getSummary = (timeboardId) => request(`/me/summary?timeboardId=${encodeURIComponent(timeboardId)}`);
+
 export const getPendingInviteCode = () => read(INVITE_CODE_KEY);
 export const setPendingInviteCode = (code) => write(INVITE_CODE_KEY, code || null);
 export const getSelectedTimeboardId = () => read(TIMEBOARD_KEY);

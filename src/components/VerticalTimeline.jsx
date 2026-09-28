@@ -98,9 +98,7 @@ import {
   LoanEventCategory,
   AmortizationEventCategory,
   AmortizationStrategy,
-  EventPeriodicity,
   PersonType,
-  normalizePeriodicity,
   normalizeTimelineType,
   isLoanTimelineType,
   isPositiveStatus,
@@ -113,6 +111,8 @@ import {
 } from '../enums/index.js';
 import { getTimelineDropdownOptions } from '../utils/timelineConfig.jsx';
 import AccountMonthSpaces from './account/AccountMonthSpaces.jsx';
+import FilterSwitch from './sidebar/FilterSwitch.jsx';
+import SidebarToggleFilter from './sidebar/SidebarToggleFilter.jsx';
 import { makeDiaryT } from '../utils/diaryLabels.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { computeMonthlyFlows } from '../../shared/finance/financialPosition.js';
@@ -258,7 +258,6 @@ function VerticalTimeline({
   ].includes(timeline.type);
 
   const isLoanTimelineOrTab = isLoanTimelineType(timeline.type);
-  const isInvestmentTimelineOrTab = normalizeTimelineType(timeline.type) === TimelineType.INVESTMENT;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusFilters, setSelectedStatusFilters] = useState([]);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(EventStatus.ALL);
@@ -270,7 +269,7 @@ function VerticalTimeline({
       setSelectedEntityId(lockedEntityId);
     }
   }, [lockedEntityId, selectedEntityId]);
-  const [selectedLabelFilter, setSelectedLabelFilter] = useState(EventStatus.ALL);
+  const [selectedLabelFilter] = useState(EventStatus.ALL);
   // Empty days / weeks / months are always shown (the sidebar toggle was removed)
   const showEmptyDays = true;
   // Period filter (year / month): show only that month or year instead of scrolling the whole timeline
@@ -647,7 +646,6 @@ function VerticalTimeline({
   }, [timeline?.id]);
 
   const isFinancial = activeTimeboard?.type === TimeboardType.FINANCIAL || isFinancialTimeline;
-  const isProjects = activeTimeboard?.type === TimeboardType.PROJECTS || normalizeTimelineType(timeline?.type) === TimelineType.PROJECT;
   const isReminders = activeTimeboard?.type === TimeboardType.REMINDERS || normalizeTimelineType(timeline?.type) === TimelineType.REMINDER;
 
   const balanceTimeline = (timelines || []).find((tl) => tl && tl.type === TimelineType.BALANCE);
@@ -700,12 +698,6 @@ function VerticalTimeline({
     return [];
   }, [timelines, timeline]);
 
-  const hasBalanceTimeline = useMemo(() => {
-    return effectiveTimelines.some(
-      (t) => normalizeTimelineType(t.type) === TimelineType.BALANCE &&
-        t.status !== TimelineStatus.INACTIVE && t.isActive !== false
-    );
-  }, [effectiveTimelines]);
 
   const hasIncomeTimeline = useMemo(() => {
     return effectiveTimelines.some(
@@ -812,34 +804,7 @@ function VerticalTimeline({
   };
 
   // Switch toggle renderer for sidebar filters
-  const renderFilterSwitch = (checked, activeColor = 'var(--primary)') => (
-    <span
-      style={{
-        width: '28px',
-        height: '16px',
-        borderRadius: '9999px',
-        background: checked ? activeColor : `${TimelineColor.SLATE_LIGHT}40`,
-        position: 'relative',
-        transition: 'background 0.2s ease',
-        flexShrink: 0,
-        display: 'inline-block'
-      }}
-    >
-      <span
-        style={{
-          width: '12px',
-          height: '12px',
-          borderRadius: '50%',
-          background: TimelineColor.WHITE,
-          position: 'absolute',
-          top: '2px',
-          left: checked ? '14px' : '2px',
-          transition: 'left 0.2s ease',
-          boxShadow: 'var(--shadow-lg)'
-        }}
-      />
-    </span>
-  );
+  const renderFilterSwitch = (checked, activeColor = 'var(--primary)') => <FilterSwitch checked={checked} color={activeColor} />;
 
   // Multi-selection of categories for Expense timeline
   const [selectedExpenseCategories, setSelectedExpenseCategories] = useState([]);
@@ -894,51 +859,7 @@ function VerticalTimeline({
   // Agrupamento fixo mensal por agora
   const [groupBy, setGroupBy] = useState('mes');
 
-  // Helper to determine allowed grouping modes based on timeline type and periodicity
-  const getAllowedGroupingModes = () => {
-    if (timeline.type === TimelineType.BALANCE || timeline.type === TimelineType.INCOME) {
-      return [
-        { id: 'dia', name: t('sidebar.day'), icon: <Calendar size={14} /> },
-        { id: 'mes', name: t('sidebar.month'), icon: <Clock size={14} /> },
-        { id: 'ano', name: t('sidebar.year'), icon: <Sparkles size={14} /> }
-      ];
-    }
-    if (!isLoanTimelineType(timeline.type)) {
-      return [
-        { id: 'dia', name: t('sidebar.day'), icon: <Calendar size={14} /> },
-        { id: 'semana', name: t('sidebar.week'), icon: <Layers size={14} /> },
-        { id: 'mes', name: t('sidebar.month'), icon: <Clock size={14} /> },
-        { id: 'ano', name: t('sidebar.year'), icon: <Sparkles size={14} /> }
-      ];
-    }
-    const p = normalizePeriodicity(timeline.periodicity);
-    if (p === EventPeriodicity.ANNUAL) {
-      return [
-        { id: 'ano', name: t('sidebar.year'), icon: <Sparkles size={14} /> }
-      ];
-    }
-    if (p === EventPeriodicity.MONTHLY || p === EventPeriodicity.BIMONTHLY || p === EventPeriodicity.SEMIANNUAL) {
-      return [
-        { id: 'mes', name: t('sidebar.month'), icon: <Clock size={14} /> },
-        { id: 'ano', name: t('sidebar.year'), icon: <Sparkles size={14} /> }
-      ];
-    }
-    if (p === EventPeriodicity.BIWEEKLY) {
-      return [
-        { id: 'semana', name: t('sidebar.week'), icon: <Layers size={14} /> },
-        { id: 'mes', name: t('sidebar.month'), icon: <Clock size={14} /> },
-        { id: 'ano', name: t('sidebar.year'), icon: <Sparkles size={14} /> }
-      ];
-    }
-    return [
-      { id: 'dia', name: t('sidebar.day'), icon: <Calendar size={14} /> },
-      { id: 'semana', name: t('sidebar.week'), icon: <Layers size={14} /> },
-      { id: 'mes', name: t('sidebar.month'), icon: <Clock size={14} /> },
-      { id: 'ano', name: t('sidebar.year'), icon: <Sparkles size={14} /> }
-    ];
-  };
 
-  const allowedGroupingModes = getAllowedGroupingModes();
 
   // Automatically update aggregation view when timeline periodicity changes & ensure valid grouping
   // Keep grouping locked to monthly
@@ -946,25 +867,6 @@ function VerticalTimeline({
     setGroupBy('mes');
   }, [timeline.id]);
 
-  // Scroll and focus on Today / Current period node when clicked by user (positioned right below sticky header dock)
-  const scrollToToday = () => {
-    const todayNode = document.getElementById('timeline-node-today');
-    if (todayNode) {
-      const navbar = document.querySelector('.app-header') || document.querySelector('header');
-      const stickyDock = document.querySelector('.sticky-header-dock');
-
-      const navHeight = navbar ? navbar.offsetHeight : 68;
-      const dockHeight = stickyDock ? stickyDock.offsetHeight : 80;
-      const totalStickyOffset = navHeight + 24 + dockHeight + 14;
-
-      const elementDocTop = todayNode.getBoundingClientRect().top + window.pageYOffset;
-      const targetY = elementDocTop - totalStickyOffset;
-
-      window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
 
   // Scroll memory per timeline/tab & Auto-scroll directly to Today or Specific Month
   const positionOnMonth = React.useCallback((monthKey, behavior = 'instant') => {
@@ -1891,9 +1793,6 @@ function VerticalTimeline({
       .map((item) => ({ ...item, color: colors.get(item.type) }));
   }, [timelineEvents, showSharedReminders, showSharedPosts, t]);
 
-  const availableLabels = useMemo(() => {
-    return Array.from(new Set(allEvents.flatMap((ev) => ev.labels || [])));
-  }, [allEvents]);
 
   // Map events by date (YYYY-MM-DD)
   const eventsByDate = useMemo(() => {
@@ -2230,20 +2129,6 @@ function VerticalTimeline({
 
   const renderMonthView = () => {
 
-    // Helper to verify if an event belongs to active / selected timelines
-    const isEventInActiveTimelines = (ev) => {
-      if (!ev) return false;
-      if (timeline.type === TimelineType.BALANCE) {
-        if (selectedTimelineIds.length === 0) return true;
-        return (
-          selectedTimelineIds.includes(ev.timelineId) ||
-          selectedTimelineIds.includes(ev.timelineOriginId) ||
-          selectedTimelineIds.includes(ev.timeline_id) ||
-          selectedTimelineIds.includes(ev.timeline_origin_id)
-        );
-      }
-      return ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
-    };
 
     // Pre-calculate chronological running cumulative metrics
     const monthCumulativeMap = new Map();
@@ -3568,132 +3453,32 @@ function VerticalTimeline({
           )
         )}
 
-        {/* Account movement filter (savings timeline): inflows, withdrawals, costs, expenses */}
+        {/* Account movement filter (savings timeline): inflows, withdrawals, expenses, transfers */}
         {timeline.type === TimelineType.INVESTMENT && (
-          <div className="sidebar-section">
-            <div
-              className="sidebar-section-title"
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-              onClick={() => toggleSectionCollapse('movements')}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <ChevronDown
-                  size={13}
-                  style={{
-                    transform: collapsedSections['movements'] ? 'rotate(-90deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.18s ease',
-                    color: 'var(--text-muted)'
-                  }}
-                />
-                <span>{t('pocket.movementType')}</span>
-              </div>
-            </div>
-            {!collapsedSections['movements'] && (
-              <div className="sidebar-btn-group">
-                <button
-                  type="button"
-                  className={`sidebar-filter-item ${selectedMovementTypes.length === 0 ? 'active' : ''}`}
-                  onClick={() => setSelectedMovementTypes([])}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Layers size={13} />
-                    <span>{t('pocket.allMovements')}</span>
-                  </div>
-                  {renderFilterSwitch(selectedMovementTypes.length === 0, 'var(--primary)')}
-                </button>
-                {ACCOUNT_MOVEMENT_ITEMS.map(({ id, icon: MovementIcon, color }) => {
-                  const isSelected = selectedMovementTypes.includes(id);
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
-                      onClick={() => {
-                        if (!isListView) window.scrollTo({ top: 0, behavior: 'instant' });
-                        setSelectedMovementTypes((prev) => {
-                          const next = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
-                          return next.length === ACCOUNT_MOVEMENT_ITEMS.length ? [] : next;
-                        });
-                      }}
-                      style={isSelected ? { borderColor: `${color}66` } : {}}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ color, display: 'inline-flex', alignItems: 'center' }}>
-                          <MovementIcon size={13} />
-                        </span>
-                        <span>{t(`pocket.movements.${id}`)}</span>
-                      </div>
-                      {renderFilterSwitch(isSelected, color)}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <SidebarToggleFilter
+            title={t('pocket.movementType')}
+            allLabel={t('pocket.allMovements')}
+            items={ACCOUNT_MOVEMENT_ITEMS.map((item) => ({ ...item, label: t(`pocket.movements.${item.id}`) }))}
+            selected={selectedMovementTypes}
+            onChange={setSelectedMovementTypes}
+            collapsed={Boolean(collapsedSections['movements'])}
+            onToggleCollapse={() => toggleSectionCollapse('movements')}
+            onBeforeChange={() => { if (!isListView) window.scrollTo({ top: 0, behavior: 'instant' }); }}
+          />
         )}
 
         {/* Outflow type filter (Outflows timeline): own expenses, via savings, installments */}
         {timeline.type === TimelineType.EXPENSE && !isReadOnly && (
-          <div className="sidebar-section">
-            <div
-              className="sidebar-section-title"
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-              onClick={() => toggleSectionCollapse('outflowTypes')}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <ChevronDown
-                  size={13}
-                  style={{
-                    transform: collapsedSections['outflowTypes'] ? 'rotate(-90deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.18s ease',
-                    color: 'var(--text-muted)'
-                  }}
-                />
-                <span>{t('outflowType.title')}</span>
-              </div>
-            </div>
-            {!collapsedSections['outflowTypes'] && (
-              <div className="sidebar-btn-group">
-                <button
-                  type="button"
-                  className={`sidebar-filter-item ${selectedOutflowTypes.length === 0 ? 'active' : ''}`}
-                  onClick={() => setSelectedOutflowTypes([])}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Layers size={13} />
-                    <span>{t('outflowType.all')}</span>
-                  </div>
-                  {renderFilterSwitch(selectedOutflowTypes.length === 0, 'var(--primary)')}
-                </button>
-                {OUTFLOW_TYPE_ITEMS.map(({ id, icon: OutflowIcon, color }) => {
-                  const isSelected = selectedOutflowTypes.includes(id);
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
-                      onClick={() => {
-                        if (!isListView) window.scrollTo({ top: 0, behavior: 'instant' });
-                        setSelectedOutflowTypes((prev) => {
-                          const next = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
-                          return next.length === OUTFLOW_TYPE_ITEMS.length ? [] : next;
-                        });
-                      }}
-                      style={isSelected ? { borderColor: `${color}66` } : {}}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ color, display: 'inline-flex', alignItems: 'center' }}>
-                          <OutflowIcon size={13} />
-                        </span>
-                        <span>{t(`outflowType.${id}`)}</span>
-                      </div>
-                      {renderFilterSwitch(isSelected, color)}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <SidebarToggleFilter
+            title={t('outflowType.title')}
+            allLabel={t('outflowType.all')}
+            items={OUTFLOW_TYPE_ITEMS.map((item) => ({ ...item, label: t(`outflowType.${item.id}`) }))}
+            selected={selectedOutflowTypes}
+            onChange={setSelectedOutflowTypes}
+            collapsed={Boolean(collapsedSections['outflowTypes'])}
+            onToggleCollapse={() => toggleSectionCollapse('outflowTypes')}
+            onBeforeChange={() => { if (!isListView) window.scrollTo({ top: 0, behavior: 'instant' }); }}
+          />
         )}
 
         {/* 🌟 6. Entidades / Individuals Filter (Single Selection) */}

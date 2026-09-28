@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Trash2, X, Calendar, Layers } from 'lucide-react';
+import { Trash2, X, Layers } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 
 export default function DeleteTimelineModal({

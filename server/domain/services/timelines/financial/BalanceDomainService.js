@@ -1,7 +1,6 @@
 import { incomeDomainService } from './IncomeDomainService.js';
 import { expenseDomainService } from './ExpenseDomainService.js';
 import { investmentDomainService } from './InvestmentDomainService.js';
-import { loanDomainService } from './LoanDomainService.js';
 import { TimelineStatus, EventStatus } from '../../../../../shared/enums/index.js';
 
 /**

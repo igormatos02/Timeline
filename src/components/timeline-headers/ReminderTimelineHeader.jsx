@@ -1,10 +1,6 @@
 import React, { useMemo } from 'react';
 import {
-  Sparkles,
-  Plus,
   Settings,
-  CheckCircle2,
-  AlertCircle,
   Calendar,
   Clock,
   Cake,
@@ -15,8 +11,6 @@ import { format, parseISO, isAfter, isBefore, addDays, startOfDay } from 'date-f
 import {
   TimelineColor,
   ReminderEventCategory,
-  ReminderEventStatus,
-  EventStatus,
   isPositiveStatus,
   isCancelledStatus
 } from '../../enums/index.js';

@@ -3,17 +3,12 @@ import {
   TrendingUp,
   BarChart2,
   Calendar,
-  Layers,
   Sparkles,
-  Sliders,
-  DollarSign,
-  Info,
-  Clock,
-  ArrowUpRight
+  Clock
 } from 'lucide-react';
 import { format, parseISO, addMonths } from 'date-fns';
 import { formatCurrency } from '../utils/formatCurrency';
-import { EventType, EventStatus, TimelineType, TimelineColor, isPositiveStatus, MovementKind } from '../enums/index.js';
+import { EventType, TimelineType, TimelineColor, isPositiveStatus, MovementKind } from '../enums/index.js';
 import { classifyMovement } from '../../shared/finance/movements.js';
 import { savingsEffect } from '../../shared/finance/savingsSpaces.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';

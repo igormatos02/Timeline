@@ -560,6 +560,31 @@ export class FinancialEventService {
     return { status: found || existing?.status || null, date: match ? date : null };
   }
 
+  // Effective movements are never deleted (only cancelled or corrected): neither the occurrence being deleted nor,
+  // when deleting a whole series, any of its occurrences may be effective ("from now on" stays available)
+  async _assertDeletable(id, directEvent, allRawEvents, deletionMode, options = {}) {
+    const rootId = String(id).split('_')[0];
+    const target = directEvent || (allRawEvents || []).find((e) => e.id === rootId || e.eventId === rootId);
+    if (!target || !isLockableMovement(target)) return;
+    const hasOccurrenceDate = /_\d{4}-\d{2}-\d{2}$/.test(String(id));
+    const occurrenceId = !hasOccurrenceDate && options.date ? `${rootId}_${String(options.date).substring(0, 10)}` : id;
+    const { status } = await this._getOccurrenceState(occurrenceId, target);
+    const lockedError = () => {
+      const error = new Error(t('backend.validation.eventLockedDelete'));
+      error.code = 'EVENT_LOCKED';
+      return error;
+    };
+    if (isPositiveStatus(status)) throw lockedError();
+    if (deletionMode === EventDeletionMode.EVERYTHING) {
+      const seriesKeys = new Set([target.eventId, target.id, rootId].filter(Boolean).map(String));
+      const statusMap = await financialEventStatusRepository.getStatusMap();
+      for (const [key, value] of statusMap.entries()) {
+        const keyEventId = String(key).split('_').slice(2).join('_');
+        if (seriesKeys.has(keyEventId) && isPositiveStatus(value)) throw lockedError();
+      }
+    }
+  }
+
   // Account transfers: origin and destination spaces must differ (null = General) and the amount must be positive
   _validateAccountTransfer(data) {
     if (!isPocketTransferEvent(data)) return;
@@ -1206,6 +1231,7 @@ export class FinancialEventService {
     const deletionMode = options.deletionMode || options.deleteScope || EventDeletionMode.ONLY_THIS;
     const allRawEvents = await eventRepository.getAll();
     const directEvent = await eventRepository.getById(id);
+    await this._assertDeletable(id, directEvent, allRawEvents, deletionMode, options);
 
     if (directEvent && (directEvent.isAmortizationEvent?.() || directEvent.eventType === EventType.AMORTIZATION || directEvent.category === AmortizationEventCategory.REDUCE_TERM || directEvent.category === AmortizationEventCategory.REDUCE_INSTALLMENT)) {
       if (directEvent.date) {

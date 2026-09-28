@@ -1632,6 +1632,7 @@ export const translations = {
 
     // Balance Timeline Header
     balanceHeader: {
+      withdrawnFromSavings: "Withdrawn from savings:",
       badge: "Consolidated Balance",
       newMovement: "New Movement",
       settingsTitle: "Timeline Settings",
@@ -1987,6 +1988,7 @@ export const translations = {
         transferSameSpace: "The origin and the destination of a transfer must be different.",
         transferAmountRequired: "The transfer amount must be greater than zero.",
         eventLockedFields: "This movement is already effective and cannot be changed ({{fields}}). Use \"Correct\" to cancel it and create the right one.",
+        eventLockedDelete: "Effective movements cannot be deleted: cancel or correct them instead (for a series, use \"From this month onwards\").",
         loanNotFound: "Loan not found",
         personNameRequired: "personName is required",
         obligatorIdentificationRequired: "obligatorIdentification is required",
@@ -3856,6 +3858,7 @@ export const translations = {
 
     // Balance Timeline Header
     balanceHeader: {
+      withdrawnFromSavings: "Levantado da Poupança:",
       badge: "Balanço Consolidado",
       newMovement: "Novo Movimento",
       settingsTitle: "Definições da Timeline",
@@ -4211,6 +4214,7 @@ export const translations = {
         transferSameSpace: "A origem e o destino de uma transferência têm de ser diferentes.",
         transferAmountRequired: "O valor da transferência tem de ser maior que zero.",
         eventLockedFields: "Este movimento já está efetivado e não pode ser alterado ({{fields}}). Use \"Corrigir\" para o cancelar e criar o correto.",
+        eventLockedDelete: "Movimentos efetivados não podem ser apagados: cancele-os ou corrija-os (numa série, use \"Deste mês em diante\").",
         loanNotFound: "Empréstimo não encontrado",
         personNameRequired: "personName é obrigatório",
         obligatorIdentificationRequired: "obligatorIdentification é obrigatório",

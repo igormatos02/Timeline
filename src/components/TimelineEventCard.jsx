@@ -2681,7 +2681,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       )}
 
       {/* Botão Eliminar Evento - Não permitido para parcelas de empréstimo ou eventos virtuais */}
-      {onDelete && !isLoanInstallment && !isVirtual && (
+      {/* Effective movements are never deleted: only cancelled or corrected */}
+      {onDelete && !isLoanInstallment && !isVirtual && !isLockedPositive && (
         <button
           type="button"
           className="action-icon-btn delete"

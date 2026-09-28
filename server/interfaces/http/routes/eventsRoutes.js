@@ -127,6 +127,7 @@ eventsRouter.delete('/:id', async (req, res) => {
     const deleted = await eventService.deleteEvent(req.params.id, options);
     res.json({ success: deleted });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    // Effective movements cannot be deleted (409), anything else is a server error
+    res.status(err.code === 'EVENT_LOCKED' ? 409 : 500).json({ error: err.message });
   }
 });

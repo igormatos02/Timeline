@@ -711,7 +711,10 @@ export async function deleteEvent(id, options = {}) {
     headers: getHeaders(),
     body: JSON.stringify(options)
   });
-  if (!res.ok) throw new Error('Failed to delete event');
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || res.statusText);
+  }
   return res.json();
 }
 

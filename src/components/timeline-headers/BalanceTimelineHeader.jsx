@@ -863,9 +863,18 @@ export default function BalanceTimelineHeader({
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.70rem', alignItems: 'center' }}>
                             <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.inflows')}</span>
                             <strong style={{ color: incomePalette.primary, fontSize: '0.74rem' }}>
-                              +{formatCurrency(totalReceivedVal + totalWithdrawalsVal).replace(',00', '')}
+                              +{formatCurrency(totalReceivedVal).replace(',00', '')}
                             </strong>
                           </div>
+                          {/* Withdrawals are not income: shown apart (money back from the savings) */}
+                          {totalWithdrawalsVal > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.70rem', alignItems: 'center' }}>
+                              <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.withdrawnFromSavings')}</span>
+                              <strong style={{ color: investmentPalette.primary, fontSize: '0.74rem' }}>
+                                +{formatCurrency(totalWithdrawalsVal).replace(',00', '')}
+                              </strong>
+                            </div>
+                          )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.70rem', alignItems: 'center' }}>
                             <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.outflows')}</span>
                             <strong style={{ color: expensePalette.primary, fontSize: '0.74rem' }}>-{formatCurrency(totalPaidExpensesVal).replace(',00', '')}</strong>

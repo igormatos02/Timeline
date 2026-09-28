@@ -67,3 +67,22 @@ export const compareEventsWithinDay = createEventDayComparator();
 export function buildPersonsById(persons = []) {
   return new Map((persons || []).filter((p) => p && p.id).map((p) => [String(p.id), p]));
 }
+
+// Events grouped by day (in order of first appearance), each day sorted with the given comparator
+export const groupEventsByDate = (events = [], dayComparator = compareEventsWithinDay) => {
+  const groups = [];
+  const map = new Map();
+  for (const ev of events) {
+    const dateKey = ev.date || ev.dueDate || 'no-date';
+    if (!map.has(dateKey)) {
+      const group = { date: dateKey, events: [] };
+      map.set(dateKey, group);
+      groups.push(group);
+    }
+    map.get(dateKey).events.push(ev);
+  }
+  for (const group of groups) {
+    group.events.sort(dayComparator);
+  }
+  return groups;
+};

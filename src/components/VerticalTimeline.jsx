@@ -1,13 +1,11 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import { EXPENSE_CATEGORY_ITEMS, CONDO_EXPENSE_CATEGORY_ITEMS, CONDO_EXPENSE_CATEGORY_IDS } from './timeline/timelineFilterItems.js';
+import { groupEventsByDate } from '../utils/eventSorting.js';
 import {
   format,
   parseISO,
   eachDayOfInterval,
   eachMonthOfInterval,
-  startOfWeek,
-  endOfWeek,
-  isSameWeek,
-  getWeek,
   addMonths,
   subMonths,
   startOfMonth,
@@ -16,70 +14,34 @@ import {
 import { pt, enUS } from 'date-fns/locale';
 import {
   Plus,
-  Search,
-  X,
   Calendar,
-  EyeOff,
   Layers,
   Clock,
   Sparkles,
   Tag,
   Pin,
   Repeat,
-  BookOpen,
-  Filter,
   DollarSign,
   TrendingUp,
   TrendingDown,
-  Scale,
   PiggyBank,
   Landmark,
   CheckCircle2,
   Play,
-  CheckSquare,
-  ListTree,
   Home,
   CreditCard,
-  ArrowUp,
-  ArrowDown,
   FileText,
   Zap,
-  Bell,
-  FolderKanban,
   Utensils,
-  Droplets,
-  Flame,
-  Wifi,
-  Bus,
-  HeartPulse,
-  GraduationCap,
-  Film,
-  ShoppingBag,
-  Shirt,
-  Wrench,
-  Hammer,
   ShieldCheck,
-  Dog,
-  Plane,
-  ArrowDownRight,
-  ArrowLeftRight,
-  ChevronDown,
-  Users,
   User,
   Building2,
   UserCheck,
-  Loader2,
-  Wallet,
-  ReceiptEuro,
-  ArrowUpRight,
-  ShoppingCart
+  Loader2
 } from 'lucide-react';
-import TimelineEventCard from './TimelineEventCard';
-import { compareEventsWithinDay, createEventDayComparator, buildPersonsById } from '../utils/eventSorting.js';
+import { createEventDayComparator, buildPersonsById } from '../utils/eventSorting.js';
 import { useTimeboard } from '../context/TimeboardContext.jsx';
-import MonthProjectionBadges from './MonthProjectionBadges.jsx';
 import FloatingTaskStack from './FloatingTaskStack';
-import { formatCurrency } from '../utils/formatCurrency';
 import { getPaletteTheme } from '../../shared/config/colorPalettes.js';
 import {
   EventType,
@@ -94,7 +56,6 @@ import {
   getDefaultTimelineColor,
   IncomeEventCategory,
   ExpensesEventCategory,
-  InvestmentEventCategory,
   LoanEventCategory,
   AmortizationEventCategory,
   AmortizationStrategy,
@@ -102,91 +63,31 @@ import {
   normalizeTimelineType,
   isLoanTimelineType,
   isPositiveStatus,
-  isCancelledStatus,
-  AccountMovementType,
-  getAccountMovementType,
-  MovementKind,
-  OutflowType,
-  getOutflowType
+  isCancelledStatus
 } from '../enums/index.js';
 import { getTimelineDropdownOptions } from '../utils/timelineConfig.jsx';
-import AccountMonthSpaces from './account/AccountMonthSpaces.jsx';
 import FilterSwitch from './sidebar/FilterSwitch.jsx';
-import SidebarToggleFilter from './sidebar/SidebarToggleFilter.jsx';
-import { makeDiaryT } from '../utils/diaryLabels.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { computeMonthlyFlows } from '../../shared/finance/financialPosition.js';
-import { savingsEffect, GENERAL_SPACE_KEY, isMovementInSpace } from '../../shared/finance/savingsSpaces.js';
-import { classifyMovement } from '../../shared/finance/movements.js';
+import { GENERAL_SPACE_KEY } from '../../shared/finance/savingsSpaces.js';
 
-const EXPENSE_CATEGORY_ITEMS = [
-  { id: ExpensesEventCategory.FOOD, icon: Utensils, color: TimelineColor.EMERALD },
-  { id: ExpensesEventCategory.RENT, icon: Home, color: TimelineColor.PRIMARY },
-  { id: ExpensesEventCategory.ELECTRICITY, icon: Zap, color: TimelineColor.WARNING },
-  { id: ExpensesEventCategory.WATER, icon: Droplets, color: TimelineColor.CYAN },
-  { id: ExpensesEventCategory.GAS, icon: Flame, color: TimelineColor.AMBER },
-  { id: ExpensesEventCategory.COMMUNICATIONS, icon: Wifi, color: TimelineColor.BLUE },
-  { id: ExpensesEventCategory.TRANSPORTATION, icon: Bus, color: TimelineColor.PURPLE },
-  { id: ExpensesEventCategory.HEALTH, icon: HeartPulse, color: TimelineColor.DANGER },
-  { id: ExpensesEventCategory.EDUCATION, icon: GraduationCap, color: TimelineColor.SUCCESS },
-  { id: ExpensesEventCategory.ENTERTAINMENT, icon: Film, color: TimelineColor.PINK },
-  { id: ExpensesEventCategory.SHOPPING, icon: ShoppingBag, color: TimelineColor.EXPENSE },
-  { id: ExpensesEventCategory.CLOTHING, icon: Shirt, color: TimelineColor.VIOLET },
-  { id: ExpensesEventCategory.CARMAINTENANCE, icon: Wrench, color: TimelineColor.WARNING },
-  { id: ExpensesEventCategory.HOUSE, icon: Hammer, color: TimelineColor.SUCCESS },
-  { id: ExpensesEventCategory.ENSURANCE, icon: ShieldCheck, color: TimelineColor.INFO },
-  { id: ExpensesEventCategory.PETS, icon: Dog, color: TimelineColor.AMBER },
-  { id: ExpensesEventCategory.TRAVEL, icon: Plane, color: TimelineColor.CYAN },
-  { id: ExpensesEventCategory.PERSONAL_CARE, icon: Sparkles, color: TimelineColor.ROSE },
-  { id: ExpensesEventCategory.SERVICES, icon: CreditCard, color: TimelineColor.SLATE },
-];
 
-// Account (savings timeline) movement kinds shown in the movement filter
-const ACCOUNT_MOVEMENT_ITEMS = [
-  { id: AccountMovementType.INFLOW, icon: ArrowUpRight, color: TimelineColor.INVESTMENT },
-  { id: AccountMovementType.WITHDRAWAL, icon: ArrowDownRight, color: TimelineColor.INCOME },
-  { id: AccountMovementType.EXPENSE, icon: ShoppingCart, color: TimelineColor.EXPENSE },
-  { id: AccountMovementType.TRANSFER, icon: ArrowLeftRight, color: TimelineColor.CYAN }
-];
 
-// Outflow kinds shown in the Outflows timeline filter: its own expenses, via savings (references), installments (references)
-const OUTFLOW_TYPE_ITEMS = [
-  { id: OutflowType.REGULAR, icon: ShoppingCart, color: TimelineColor.EXPENSE },
-  { id: OutflowType.SAVINGS, icon: PiggyBank, color: TimelineColor.INVESTMENT },
-  { id: OutflowType.INSTALLMENT, icon: Landmark, color: TimelineColor.LOAN }
-];
-
-// Condominium (condoflow) timeboards only use their own expense categories
-const CONDO_EXPENSE_CATEGORY_ITEMS = Object.entries(CONDO_EXPENSE_CATEGORY_META).map(([id, { icon, color }]) => ({ id, icon, color }));
-const CONDO_EXPENSE_CATEGORY_IDS = Object.keys(CONDO_EXPENSE_CATEGORY_META);
-
-import * as api from '../services/api.js';
 import ReceiptModal from './modals/ReceiptModal.jsx';
-import { CONDO_EXPENSE_CATEGORY_META } from './event-modals/FinancialEventModalConfig.js';
-import PeriodBadgeFilter from './ui/PeriodBadgeFilter.jsx';
 import HistoryPrintModal from './modals/HistoryPrintModal.jsx';
 import { EventActionsProvider } from '../context/EventActionsContext.jsx';
 import { usePermissions } from '../context/PermissionsContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import { buildReceiptHtml, buildClearanceHtml, buildCondoClearanceHtml, buildHistoryHtml, computeReceiptNumber, computeNextReceiptNumber } from '../utils/receiptGenerator.js';
+import { buildClearanceHtml, buildCondoClearanceHtml, buildHistoryHtml } from '../utils/receiptGenerator.js';
+import TimelineSidebar from './timeline/TimelineSidebar.jsx';
+import TimelineMonthView from './timeline/TimelineMonthView.jsx';
+import TimelineYearView from './timeline/TimelineYearView.jsx';
+import TimelineDayView from './timeline/TimelineDayView.jsx';
+import TimelineWeekView from './timeline/TimelineWeekView.jsx';
+import TimelineFilteredListView from './timeline/TimelineFilteredListView.jsx';
+import { useTimelineReceipts } from './timeline/useTimelineReceipts.js';
+import { useTimelineMonthlyFlows } from './timeline/useTimelineMonthlyFlows.js';
+import { useTimelineFilteredEvents } from './timeline/useTimelineFilteredEvents.js';
 
-const groupEventsByDate = (events = [], dayComparator = compareEventsWithinDay) => {
-  const groups = [];
-  const map = new Map();
-  for (const ev of events) {
-    const dateKey = ev.date || ev.dueDate || 'no-date';
-    if (!map.has(dateKey)) {
-      const group = { date: dateKey, events: [] };
-      map.set(dateKey, group);
-      groups.push(group);
-    }
-    map.get(dateKey).events.push(ev);
-  }
-  for (const group of groups) {
-    group.events.sort(dayComparator);
-  }
-  return groups;
-};
 
 function VerticalTimeline({
   lockedEntityId = null,
@@ -289,329 +190,31 @@ function VerticalTimeline({
   });
 
   // Receipt Modal and Generation Overlay State
-  const [receiptModalData, setReceiptModalData] = useState(null);
-  const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
-  const [generatingLabelKey, setGeneratingLabelKey] = useState('receipt.generatingReceipt');
-
-  // Receipts are numbered by the event's own timeline (e.g. income), even when opened from the Balance view
-  const resolveReceiptTimeline = useCallback((targetEvent) => {
-    const ownTimelineId = targetEvent?.timelineOriginId || targetEvent?.timelineId || targetEvent?.timeline_id;
-    return (timelines || []).find((tl) => String(tl.id) === String(ownTimelineId)) || timeline;
-  }, [timelines, timeline]);
-
-  // Advances the receipt counter (cont_year) of the given timeline after the receipt number was used
-  const advanceReceiptCounter = useCallback(async (receiptTimelineId, usedNumber) => {
-    if (!receiptTimelineId || !usedNumber) return;
-    const nextReceiptNumber = computeNextReceiptNumber(usedNumber);
-    // Keep the in-memory timelines in sync so the next receipt proposes the right number
-    [timeline, ...(timelines || [])].forEach((tl) => {
-      if (tl && String(tl.id) === String(receiptTimelineId)) {
-        tl.contYear = nextReceiptNumber;
-        tl.cont_year = nextReceiptNumber;
-      }
-    });
-    try {
-      await api.updateTimeline(receiptTimelineId, {
-        contYear: nextReceiptNumber,
-        cont_year: nextReceiptNumber
-      });
-    } catch (err) {
-      console.error('Error updating timeline cont_year after receipt:', err);
-    }
-  }, [timeline, timelines]);
-
-  const handleReceiptPrint = useCallback(async () => {
-    if (!receiptModalData || !receiptModalData.receiptNumber || !receiptModalData.timelineId) return;
-    const { receiptNumber, timelineId, targetEvent, receiptDate } = receiptModalData;
-
-    // Se o evento já possuía cont_year, não avança o contador da timeline
-    const hadEventContYear = Boolean(
-      (targetEvent?.contYear && targetEvent.contYear > 0) ||
-      (targetEvent?.cont_year && targetEvent.cont_year > 0)
-    );
-
-    // Salvar o receiptNumber no status do evento na tabela financial_event_status
-    if (targetEvent?.id) {
-      targetEvent.contYear = receiptNumber;
-      targetEvent.cont_year = receiptNumber;
-      if (receiptDate) targetEvent.receiptDate = receiptDate;
-      // Show the receipt number / payment date on the card right away
-      onPatchEventLocal?.(targetEvent.id, {
-        contYear: receiptNumber,
-        cont_year: receiptNumber,
-        ...(receiptDate ? { receiptDate } : {})
-      });
-      try {
-        await api.setEventStatus(targetEvent.id, {
-          date: targetEvent.date,
-          status: targetEvent.status,
-          contYear: receiptNumber,
-          cont_year: receiptNumber,
-          // The printed receipt carries this payment date: keep it stored
-          ...(receiptDate ? { receiptDate } : {}),
-          timelineId: targetEvent.timelineId || timelineId,
-          timeboardId: activeTimeboard?.id
-        });
-      } catch (err) {
-        console.error('Error saving cont_year in event status:', err);
-      }
-    }
-
-    // Se o evento ainda NÃO tinha cont_year próprio, incrementa o contador da timeline do recibo
-    if (!hadEventContYear) {
-      await advanceReceiptCounter(timelineId, receiptNumber);
-    }
-
-    // The number is now stored on the occurrence: later changes never advance the counter
-    setReceiptModalData((prev) => (prev ? { ...prev, proposedReceiptNumber: null } : prev));
-  }, [receiptModalData, activeTimeboard, onPatchEventLocal, advanceReceiptCounter]);
-
-  const handleOpenReceipt = useCallback((targetEvent, targetPerson) => {
-    setGeneratingLabelKey('receipt.generatingReceipt');
-    setIsGeneratingReceipt(true);
-    setTimeout(() => {
-      try {
-        const receiptTimeline = resolveReceiptTimeline(targetEvent);
-        const receiptNumber = computeReceiptNumber(receiptTimeline, targetEvent);
-        const hasStoredNumber = Number(targetEvent?.cont_year ?? targetEvent?.contYear) > 0;
-        // Saved payment date of this occurrence (receipt_date), or the event date by default
-        const receiptDate = targetEvent?.receiptDate || targetEvent?.date || format(new Date(), 'yyyy-MM-dd');
-        const html = buildReceiptHtml({
-          event: targetEvent,
-          timeboard: activeTimeboard,
-          timeline: receiptTimeline,
-          receiptNumber,
-          currentUser,
-          obligationPerson: targetPerson,
-          persons,
-          language,
-          t,
-          paymentDate: receiptDate
-        });
-        setReceiptModalData({
-          isOpen: true,
-          htmlContent: html,
-          title: t('receipt.printReceipt'),
-          receiptNumber,
-          timelineId: receiptTimeline?.id,
-          targetEvent,
-          targetPerson,
-          receiptDate,
-          // The receipt number can be changed at any time
-          canEditReceiptNumber: true,
-          // Automatic proposal (timeline counter): saving it advances the counter, a custom number does not
-          proposedReceiptNumber: hasStoredNumber ? null : receiptNumber
-        });
-      } catch (err) {
-        console.error('Error generating receipt HTML:', err);
-      } finally {
-        setIsGeneratingReceipt(false);
-      }
-    }, 450);
-  }, [activeTimeboard, timeline, currentUser, language, t, persons, resolveReceiptTimeline]);
-
-  // The receipt date can be changed in the receipt modal header: rebuild the document with it
-  const handleReceiptDateChange = useCallback((nextDate) => {
-    setReceiptModalData((prev) => {
-      if (!prev || !prev.targetEvent) return prev;
-      const html = buildReceiptHtml({
-        event: prev.targetEvent,
-        timeboard: activeTimeboard,
-        timeline,
-        receiptNumber: prev.receiptNumber,
-        currentUser,
-        obligationPerson: prev.targetPerson,
-        persons,
-        language,
-        t,
-        paymentDate: nextDate
-      });
-      return { ...prev, receiptDate: nextDate, htmlContent: html };
-    });
-  }, [activeTimeboard, timeline, currentUser, persons, language, t]);
-
-  // "Save" in the receipt modal: store the payment date in financial_event_status.receipt_date
-  const handleSaveReceiptDate = useCallback(async (nextDate) => {
-    const targetEvent = receiptModalData?.targetEvent;
-    if (!targetEvent?.id || !nextDate) return;
-    try {
-      await api.setEventStatus(targetEvent.id, {
-        date: targetEvent.date,
-        status: targetEvent.status,
-        receiptDate: nextDate,
-        timelineId: targetEvent.timelineId || timeline?.id,
-        timeboardId: activeTimeboard?.id
-      });
-      // Keep it in memory so the next time the receipt opens it already shows the saved date
-      targetEvent.receiptDate = nextDate;
-      onPatchEventLocal?.(targetEvent.id, { receiptDate: nextDate });
-      setReceiptModalData((prev) => (prev ? { ...prev, receiptDate: nextDate } : prev));
-    } catch (err) {
-      console.error('Error saving receipt date:', err);
-    }
-  }, [receiptModalData, timeline, activeTimeboard, onPatchEventLocal]);
-
-  // Receipt number changed in the receipt modal (at any time): stored on the event status; only the sequential proposal advances the counter.
-  // Returns { error } with a translated message when it cannot be saved (e.g. number already used).
-  const handleSaveReceiptNumber = useCallback(async (rawNumber) => {
-    const targetEvent = receiptModalData?.targetEvent;
-    const number = Number(rawNumber);
-    if (!targetEvent?.id || !Number.isInteger(number) || number <= 0) {
-      return { error: t('receipt.numberInvalid') };
-    }
-    try {
-      await api.setEventStatus(targetEvent.id, {
-        date: targetEvent.date,
-        status: targetEvent.status,
-        contYear: number,
-        cont_year: number,
-        receiptDate: receiptModalData.receiptDate,
-        checkReceiptNumber: true,
-        timelineId: receiptModalData.timelineId || targetEvent.timelineId || timeline?.id,
-        timeboardId: activeTimeboard?.id
-      });
-    } catch (err) {
-      return {
-        error: err.code === 'RECEIPT_NUMBER_TAKEN'
-          ? t('receipt.numberTaken', { number })
-          : t('common.updateFailed', { message: err.message || '' })
-      };
-    }
-
-    targetEvent.contYear = number;
-    targetEvent.cont_year = number;
-    onPatchEventLocal?.(targetEvent.id, { contYear: number, cont_year: number });
-    // Keeping the automatic number uses the timeline counter: advance it (a custom number does not)
-    if (receiptModalData.proposedReceiptNumber && Number(receiptModalData.proposedReceiptNumber) === number) {
-      await advanceReceiptCounter(receiptModalData.timelineId, number);
-    }
-    setReceiptModalData((prev) => {
-      if (!prev) return prev;
-      const html = buildReceiptHtml({
-        event: prev.targetEvent,
-        timeboard: activeTimeboard,
-        timeline,
-        receiptNumber: number,
-        currentUser,
-        obligationPerson: prev.targetPerson,
-        persons,
-        language,
-        t,
-        paymentDate: prev.receiptDate
-      });
-      return { ...prev, receiptNumber: number, htmlContent: html, proposedReceiptNumber: null };
-    });
-    return { ok: true };
-  }, [receiptModalData, timeline, activeTimeboard, currentUser, persons, language, t, onPatchEventLocal, advanceReceiptCounter]);
-
-  // Payment date changed directly on the event card (ticket): store it and refresh the card at once
-  const saveReceiptDate = useCallback(async (targetEvent, nextDate) => {
-    if (!targetEvent?.id || !nextDate) return false;
-    try {
-      await api.setEventStatus(targetEvent.id, {
-        date: targetEvent.date,
-        status: targetEvent.status,
-        receiptDate: nextDate,
-        timelineId: targetEvent.timelineOriginId || targetEvent.timelineId || timeline?.id,
-        timeboardId: activeTimeboard?.id
-      });
-      onPatchEventLocal?.(targetEvent.id, { receiptDate: nextDate });
-      return true;
-    } catch (err) {
-      console.error('Error saving receipt date from the card:', err);
-      return false;
-    }
-  }, [timeline, activeTimeboard, onPatchEventLocal]);
-
-  // Next sequential receipt number proposed for an event without a stored one (its own timeline counter)
-  const getProposedReceiptNumber = useCallback(
-    (targetEvent) => computeReceiptNumber(resolveReceiptTimeline(targetEvent), targetEvent),
-    [resolveReceiptTimeline]
-  );
-
-  // Receipt number added directly on the event card (ticket). Same rules as the receipt modal:
-  // must be unique in the timeline, and only the proposed sequential number advances the counter.
-  // Returns { ok } or { error } with a translated message.
-  const saveReceiptNumber = useCallback(async (targetEvent, rawNumber) => {
-    const number = Number(rawNumber);
-    if (!targetEvent?.id || !Number.isInteger(number) || number <= 0) {
-      return { error: t('receipt.numberInvalid') };
-    }
-    const receiptTimeline = resolveReceiptTimeline(targetEvent);
-    // Only the first number of an occurrence can be the timeline's sequential proposal (which advances the counter)
-    const hadStoredNumber = Number(targetEvent.cont_year ?? targetEvent.contYear) > 0;
-    const proposedNumber = hadStoredNumber ? null : Number(computeReceiptNumber(receiptTimeline, targetEvent));
-    try {
-      await api.setEventStatus(targetEvent.id, {
-        date: targetEvent.date,
-        status: targetEvent.status,
-        contYear: number,
-        cont_year: number,
-        receiptDate: targetEvent.receiptDate || targetEvent.date,
-        checkReceiptNumber: true,
-        timelineId: receiptTimeline?.id || targetEvent.timelineId || timeline?.id,
-        timeboardId: activeTimeboard?.id
-      });
-    } catch (err) {
-      return {
-        error: err.code === 'RECEIPT_NUMBER_TAKEN'
-          ? t('receipt.numberTaken', { number })
-          : t('common.updateFailed', { message: err.message || '' })
-      };
-    }
-    onPatchEventLocal?.(targetEvent.id, { contYear: number, cont_year: number });
-    if (proposedNumber === number) {
-      await advanceReceiptCounter(receiptTimeline?.id, number);
-    }
-    return { ok: true };
-  }, [t, resolveReceiptTimeline, timeline, activeTimeboard, onPatchEventLocal, advanceReceiptCounter]);
-
-  // Comments of one occurrence (year / month): stored in financial_event_notes, not on the event itself
-  const addEventNote = useCallback(async (targetEvent, content) => {
-    if (!targetEvent?.id || !content) return false;
-    try {
-      const note = await api.addEventNote(targetEvent.id, {
-        date: targetEvent.date,
-        content,
-        timelineId: targetEvent.timelineOriginId || targetEvent.timelineId || timeline?.id,
-        timeboardId: activeTimeboard?.id,
-        authorId: currentUser?.id,
-        authorName: currentUser?.name
-      });
-      const current = Array.isArray(targetEvent.monthNotes) ? targetEvent.monthNotes : [];
-      onPatchEventLocal?.(targetEvent.id, { monthNotes: [...current, note] });
-      return true;
-    } catch (err) {
-      showToast(t('common.updateFailed', { message: err.message || '' }), 'error');
-      return false;
-    }
-  }, [timeline, activeTimeboard, currentUser, onPatchEventLocal, showToast, t]);
-
-  const deleteEventNote = useCallback(async (targetEvent, noteId) => {
-    if (!targetEvent?.id || !noteId) return false;
-    try {
-      await api.deleteEventNote(noteId);
-      const current = Array.isArray(targetEvent.monthNotes) ? targetEvent.monthNotes : [];
-      onPatchEventLocal?.(targetEvent.id, { monthNotes: current.filter((n) => n.id !== noteId) });
-      return true;
-    } catch (err) {
-      showToast(t('common.updateFailed', { message: err.message || '' }), 'error');
-      return false;
-    }
-  }, [onPatchEventLocal, showToast, t]);
-
-  const eventActions = useMemo(
-    () => ({
-      saveReceiptDate,
-      saveReceiptNumber,
-      getProposedReceiptNumber,
-      addEventNote,
-      deleteEventNote,
-      correctEvent: onCorrectEvent || null,
-      currentUserId: currentUser?.id || null
-    }),
-    [saveReceiptDate, saveReceiptNumber, getProposedReceiptNumber, addEventNote, deleteEventNote, onCorrectEvent, currentUser?.id]
-  );
+  const {
+    eventActions,
+    generatingLabelKey,
+    handleOpenReceipt,
+    handleReceiptDateChange,
+    handleReceiptPrint,
+    handleSaveReceiptDate,
+    handleSaveReceiptNumber,
+    isGeneratingReceipt,
+    receiptModalData,
+    setGeneratingLabelKey,
+    setIsGeneratingReceipt,
+    setReceiptModalData
+  } = useTimelineReceipts({
+    activeTimeboard,
+    currentUser,
+    language,
+    onCorrectEvent,
+    onPatchEventLocal,
+    persons,
+    showToast,
+    t,
+    timeline,
+    timelines
+  });
 
   const toggleSectionCollapse = (key) => {
     setCollapsedSections((prev) => ({
@@ -1573,209 +1176,37 @@ function VerticalTimeline({
   };
 
   // Filter events based on search query, status, category, and label
-  const filteredEvents = useMemo(() => {
-    if (!timelineEvents) return [];
-    return timelineEvents.filter((ev) => {
-      if (ev.isSharedNotice) {
-        if (ev.timelineType === TimelineType.REMINDER && !showSharedReminders) return false;
-        if (ev.timelineType === TimelineType.DIARY && !showSharedPosts) return false;
-      }
-      const matchesSearch =
-        searchQuery === '' ||
-        ((ev.title || '').toLowerCase().includes(searchQuery.toLowerCase())) ||
-        ((ev.description || '').toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (ev.labels && ev.labels.some((l) => (l || '').toLowerCase().includes(searchQuery.toLowerCase()))) ||
-        matchesReceiptNumber(ev, searchQuery);
-
-      // Na visualização de lista por status ou por categoria, mostrar apenas eventos até ao final do mês atual e meses anteriores
-      if (periodRange && (!ev.date || ev.date < periodRange.startStr || ev.date > periodRange.endStr)) {
-        return false;
-      }
-      if (!periodRange && periodMonthIndex !== null
-        && (!ev.date || Number(ev.date.substring(5, 7)) - 1 !== periodMonthIndex || Number(ev.date.substring(0, 4)) > todayDate.getFullYear())) {
-        return false;
-      }
-      if (isListView && !isPeriodActive) {
-        const currentMonthKey = format(todayDate, 'yyyy-MM');
-        if (ev.date && ev.date.substring(0, 7) > currentMonthKey) {
-          return false;
-        }
-      }
-
-      let matchesStatus = selectedStatusFilters.length === 0;
-      if (!matchesStatus) {
-
-        const isCompleted = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
-        const isCancelled = isCancelledStatus(ev.status);
-        const isOverdue = Boolean(
-          ev.status === EventStatus.OVERDUE ||
-          (ev.date && ev.date < todayStr && !isCompleted && !isCancelled && ev.status !== EventStatus.DELETED)
-        );
-        const isPending = !isCompleted && !isCancelled && !isOverdue && ev.status !== EventStatus.DELETED;
-
-        matchesStatus = selectedStatusFilters.some((statusFilter) => {
-          if (
-            statusFilter === EventStatus.RECEIVED ||
-            statusFilter === EventStatus.PAID ||
-            statusFilter === EventStatus.COMPLETED ||
-            statusFilter === EventStatus.INVESTED ||
-            statusFilter === EventStatus.WITHDRAWN ||
-            statusFilter === EventStatus.SETTLED ||
-            statusFilter === EventStatus.FINISHED ||
-            statusFilter === EventStatus.CLOSED
-          ) {
-            return isCompleted;
-          }
-          if (statusFilter === EventStatus.OVERDUE) {
-            return isOverdue;
-          }
-          if (statusFilter === EventStatus.PENDING) {
-            return isPending || isOverdue;
-          }
-          if (statusFilter === EventStatus.PLANNED) {
-            return isPending;
-          }
-          return ev.status === statusFilter;
-        });
-      }
-
-      let matchesCategory = true;
-      if (timeline.type === TimelineType.EXPENSE) {
-        if (selectedExpenseCategories.length > 0) {
-          const evCat = (ev.category || '').toLowerCase();
-          matchesCategory = selectedExpenseCategories.some((cat) => {
-            const targetCat = cat.toLowerCase();
-            if (evCat === targetCat) return true;
-            if (targetCat === ExpensesEventCategory.OTHER) {
-              const allKnown = (isCondoflow ? CONDO_EXPENSE_CATEGORY_IDS : Object.values(ExpensesEventCategory)).map((v) => v.toLowerCase());
-              return !allKnown.includes(evCat);
-            }
-            return false;
-          });
-        }
-      } else if (selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') {
-        if (timeline.type === TimelineType.INVESTMENT) {
-          matchesCategory = isMovementInSpace(ev, selectedCategoryFilter === GENERAL_SPACE_KEY ? null : selectedCategoryFilter);
-        } else if (timeline.type === TimelineType.INCOME) {
-          const evCat = (ev.category || '').toLowerCase();
-          if (selectedCategoryFilter === IncomeEventCategory.OTHER) {
-            const allKnown = Object.values(IncomeEventCategory).map((v) => v.toLowerCase());
-            matchesCategory = evCat === IncomeEventCategory.OTHER || !allKnown.includes(evCat);
-          } else {
-            matchesCategory = evCat === selectedCategoryFilter ||
-              (selectedCategoryFilter === IncomeEventCategory.SALARY && evCat === 'salario') ||
-              (selectedCategoryFilter === IncomeEventCategory.MEAL_ALLOWANCE && evCat === 'subsidio_alimentacao') ||
-              (selectedCategoryFilter === IncomeEventCategory.FREELANCE && evCat === 'freelancer') ||
-              (selectedCategoryFilter === IncomeEventCategory.INVESTMENT_RETURN && (evCat === 'rendimentos' || evCat === 'dividendos')) ||
-              (selectedCategoryFilter === IncomeEventCategory.RECURRING_INCOME && (evCat === 'renda_recorrente' || evCat === 'recurring'));
-          }
-        } else if (selectedCategoryFilter === EventType.LOAN_INSTALLMENT || selectedCategoryFilter === 'parcela_emprestimo' || selectedCategoryFilter === 'loan_installment' || selectedCategoryFilter === LoanEventCategory.LOAN_INSTALLMENT) {
-          matchesCategory = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || ev.category === 'loan_installment' || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
-        } else if (selectedCategoryFilter === EventType.AMORTIZATION || selectedCategoryFilter === 'amortizacao' || selectedCategoryFilter === 'amortization' || selectedCategoryFilter === LoanEventCategory.AMORTIZATION) {
-          matchesCategory = ev.eventType === EventType.AMORTIZATION || ev.category === 'amortizacao' || ev.category === 'amortization' || ev.category === AmortizationEventCategory.REDUCE_TERM || ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT || ev.category === AmortizationStrategy.REDUCE_TERM || ev.category === AmortizationStrategy.REDUCE_INSTALLMENT;
-        } else {
-          matchesCategory = ev.category === selectedCategoryFilter || ev.eventType === selectedCategoryFilter;
-        }
-      }
-      if (timeline.type === TimelineType.INVESTMENT && selectedMovementTypes.length > 0 && !selectedMovementTypes.includes(getAccountMovementType(ev))) {
-        matchesCategory = false;
-      }
-      if (timeline.type === TimelineType.EXPENSE && selectedOutflowTypes.length > 0
-        && !selectedOutflowTypes.includes(getOutflowType(ev.isReference ? ev.referenceKind : MovementKind.EXPENSE))) {
-        matchesCategory = false;
-      }
-
-      const matchesTimelineMultiSelect =
-        timeline.type !== TimelineType.BALANCE ||
-        selectedTimelineIds.length === 0 ||
-        selectedTimelineIds.includes(ev.timelineId) ||
-        selectedTimelineIds.includes(ev.timelineOriginId) ||
-        selectedTimelineIds.includes(ev.timeline_id) ||
-        selectedTimelineIds.includes(ev.timeline_origin_id);
-
-      const matchesLabel =
-        selectedLabelFilter === EventStatus.ALL ||
-        selectedLabelFilter === 'Todos' ||
-        selectedLabelFilter === 'all' ||
-        (ev.labels && ev.labels.includes(selectedLabelFilter));
-
-      if (!matchesStatus || !matchesCategory || !matchesTimelineMultiSelect || !matchesLabel) {
-        return false;
-      }
-
-      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) {
-        return false;
-      }
-
-      // Timeline ownership filter
-      if (timeline.type === TimelineType.BALANCE) {
-        const isNonFinancial =
-          ev.eventType === EventType.TODO ||
-          ev.timelineType === TimelineType.TODO ||
-          ev.timeline_type === TimelineType.TODO ||
-          ev.category === EventType.TODO ||
-          ev.category === 'tarefa' ||
-          ev.category === 'todo' ||
-          ev.eventType === EventType.FOLLOWUP ||
-          ev.timelineType === TimelineType.FOLLOWUP ||
-          ev.timeline_type === TimelineType.FOLLOWUP ||
-          ev.category === 'followup' ||
-          ev.eventType === EventType.REGISTER ||
-          ev.timelineType === TimelineType.DIARY ||
-          ev.timeline_type === TimelineType.DIARY;
-        if (isNonFinancial) return false;
-        // Outflow references mirror movements already listed in the balance under their owner timeline
-        if (ev.isReference) return false;
-      } else {
-        const isThisTimeline = ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
-        if (!isThisTimeline) return false;
-      }
-
-      // Respeitar os limites do horizonte de tempo. Eventos anteriores ao início de cálculo continuam visíveis
-      // (a partir do mês em que começam); esses meses aparecem esbatidos e não entram nos totais.
-      if (isFinancialTimeline && ev.date) {
-        const maxEndStr = format(maxDateObj, 'yyyy-MM-dd');
-        const minStartStr = format(startDateObj, 'yyyy-MM-dd');
-        if (ev.date > maxEndStr || ev.date < minStartStr) {
-          return false;
-        }
-      }
-
-      return matchesSearch && matchesStatus && matchesCategory && matchesLabel;
-    }).sort((a, b) => {
-      const dateA = a.date || '';
-      const dateB = b.date || '';
-      if (dateA !== dateB) return dateB.localeCompare(dateA);
-      const timeA = a.time || '00:00';
-      const timeB = b.time || '00:00';
-      if (timeA !== timeB) return timeB.localeCompare(timeA);
-      const titleCmp = (b.title || '').localeCompare(a.title || '');
-      if (titleCmp !== 0) return titleCmp;
-      return String(b.id || '').localeCompare(String(a.id || ''));
-    });
-  }, [
-    timelineEvents,
-    searchQuery,
-    selectedStatusFilters,
-    selectedCategoryFilter,
-    selectedExpenseCategories,
-    selectedEntityId,
-    selectedLabelFilter,
-    selectedTimelineIds,
-    timeline.type,
-    timeline.id,
-    isFinancialTimeline,
+  const {
+    filteredEvents
+  } = useTimelineFilteredEvents({
     activeFinancialTab,
     computeFromMonth,
-    showSharedReminders,
-    showSharedPosts,
-    periodRange,
-    periodMonthIndex,
-    isPeriodActive,
     isCondoflow,
+    isEventMatchingEntity,
+    isFinancialTimeline,
+    isListView,
+    isPeriodActive,
+    matchesReceiptNumber,
+    maxDateObj,
+    periodMonthIndex,
+    periodRange,
+    searchQuery,
+    selectedCategoryFilter,
+    selectedEntityId,
+    selectedExpenseCategories,
+    selectedLabelFilter,
     selectedMovementTypes,
     selectedOutflowTypes,
-  ]);
+    selectedStatusFilters,
+    selectedTimelineIds,
+    showSharedPosts,
+    showSharedReminders,
+    startDateObj,
+    timeline,
+    timelineEvents,
+    todayDate,
+    todayStr
+  });
 
   // Shared notice types present in this timeline and the color of their own timeline
   const sharedNoticeToggles = useMemo(() => {
@@ -1840,245 +1271,36 @@ function VerticalTimeline({
   // RENDER ENGINES BY GROUPBY MODE
   // ========================================================
 
-  const renderFutureHorizonButton = () => {
-    if (!onLoadMoreFuture) return null;
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0 28px 0', position: 'relative', zIndex: 10 }}>
-        <button
-          type="button"
-          className="btn btn-secondary btn-sm"
-          onClick={onLoadMoreFuture}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '9px 22px',
-            borderRadius: '24px',
-            background: `linear-gradient(135deg, ${TimelineColor.PRIMARY}2e, ${TimelineColor.PURPLE}2e)`,
-            border: `1px solid ${TimelineColor.PRIMARY}73`,
-            color: 'var(--primary-light)',
-            fontWeight: '700',
-            fontSize: '0.84rem',
-            cursor: 'pointer',
-            boxShadow: 'var(--shadow-lg)',
-            transition: 'all var(--transition-fast)'
-          }}
-        >
-          <ArrowUp size={15} />
-          <span>{t('timeline.projectMoreFuture')}</span>
-        </button>
-      </div>
-    );
-  };
 
-  const renderPastHorizonButton = () => {
-    if (!onLoadMorePast) return null;
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0 16px 0', position: 'relative', zIndex: 10 }}>
-        <button
-          type="button"
-          className="btn btn-secondary btn-sm"
-          onClick={onLoadMorePast}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '9px 22px',
-            borderRadius: '24px',
-            background: `linear-gradient(135deg, ${TimelineColor.PRIMARY}2e, ${TimelineColor.PURPLE}2e)`,
-            border: `1px solid ${TimelineColor.PRIMARY}73`,
-            color: 'var(--primary-light)',
-            fontWeight: '700',
-            fontSize: '0.84rem',
-            cursor: 'pointer',
-            boxShadow: 'var(--shadow-lg)',
-            transition: 'all var(--transition-fast)'
-          }}
-        >
-          <ArrowDown size={15} />
-          <span>{t('timeline.loadMorePast')}</span>
-        </button>
-      </div>
-    );
-  };
 
-  const renderWeekView = () => {
-    const weekMap = new Map();
-
-    // Map events directly into their corresponding weeks
-    filteredEvents.forEach((ev) => {
-      if (!ev || !ev.date) return;
-      try {
-        const evDate = parseISO(ev.date);
-        const weekStart = startOfWeek(evDate, { weekStartsOn: 1 });
-        const weekKey = format(weekStart, 'yyyy-MM-dd');
-        if (!weekMap.has(weekKey)) {
-          const weekEnd = endOfWeek(evDate, { weekStartsOn: 1 });
-          weekMap.set(weekKey, {
-            weekStart,
-            weekEnd,
-            weekNum: getWeek(weekStart),
-            events: []
-          });
-        }
-        weekMap.get(weekKey).events.push(ev);
-      } catch (e) { }
-    });
-
-    // Ensure current week is present
-    const currentWeekStart = startOfWeek(todayDate, { weekStartsOn: 1 });
-    const currentWeekKey = format(currentWeekStart, 'yyyy-MM-dd');
-    if (!weekMap.has(currentWeekKey)) {
-      weekMap.set(currentWeekKey, {
-        weekStart: currentWeekStart,
-        weekEnd: endOfWeek(todayDate, { weekStartsOn: 1 }),
-        weekNum: getWeek(currentWeekStart),
-        events: []
-      });
-    }
-
-    const weeksList = Array.from(weekMap.values()).sort(
-      (a, b) => b.weekStart.getTime() - a.weekStart.getTime()
-    );
-
-    return (
-      <div className="vertical-timeline-container">
-        <div className="timeline-spine" />
-        <div
-          className="timeline-spine-gradient"
-          style={{ background: `linear-gradient(180deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)` }}
-        />
-
-        {/* Botão Carregar Mais Futuro */}
-        {renderFutureHorizonButton()}
-
-        {weeksList.map((weekData) => {
-          const isCurrentWeek = isSameWeek(todayDate, weekData.weekStart, { weekStartsOn: 1 });
-          const weekStartStr = format(weekData.weekStart, language === 'en' ? 'MMM d' : "d 'de' MMM", { locale: dateLocale });
-          const weekEndStr = format(weekData.weekEnd, language === 'en' ? 'MMM d, yyyy' : "d 'de' MMM, yyyy", { locale: dateLocale });
-          const hasEvents = weekData.events.length > 0;
-
-          if (!showEmptyDays && !hasEvents && !isCurrentWeek) return null;
-
-          return (
-            <div
-              key={format(weekData.weekStart, 'yyyy-MM-dd')}
-              id={isCurrentWeek ? 'timeline-node-today' : undefined}
-              className={`timeline-day-row ${isCurrentWeek ? 'is-today' : ''}`}
-            >
-              <div className="day-date-col">
-                <div className="day-date-main">{t('timeline.weekLabel', { week: weekData.weekNum })}</div>
-                <div className="day-date-sub">{format(weekData.weekStart, 'yyyy')}</div>
-                {isCurrentWeek && <span className="today-badge-chip pulse-glow">{t('timeline.currentWeek')}</span>}
-              </div>
-
-              <div className="day-node-wrapper">
-                <div
-                  className={`day-node-dot ${isCurrentWeek ? 'is-today-node' : hasEvents ? 'has-events' : ''
-                    }`}
-                  style={hasEvents && !isCurrentWeek ? { backgroundColor: paletteTheme.primary } : {}}
-                />
-              </div>
-
-              <div className="day-content-col">
-                <div className="group-card">
-                  <div className="group-card-header">
-                    <h3 className="group-card-title">
-                      {t('timeline.weekTitle', { week: weekData.weekNum })} ({weekStartStr} - {weekEndStr})
-                    </h3>
-                    <span className="group-card-badge">
-                      {t('timeline.eventsCount', { count: weekData.events.length })}
-                    </span>
-                  </div>
-
-                  {hasEvents ? (
-                    groupEventsByDate(weekData.events, dayComparator).map((dateGroup, gIdx) => (
-                      <div
-                        key={`${dateGroup.date}_${gIdx}`}
-                        style={{ marginBottom: '8px' }}
-                      >
-                        <TimelineEventCard
-                          events={dateGroup.events}
-                          timelineColor={timeline.color}
-                          allEvents={timeline.events || []}
-                          timelines={effectiveTimelines || timelines}
-                          currentTimelineId={timeline.id}
-                          timelineType={timeline.type}
-                          activeFinancialTab={activeFinancialTab}
-                          onEdit={onEditEvent}
-                          onUpdateEventDirect={onUpdateEventDirect}
-                          onDelete={onDeleteEvent}
-                          onToggleTask={onToggleTask}
-                          onToggleLoanPayment={onToggleLoanPayment}
-                          onPayUpToHere={onPayUpToHere}
-                          onOpenEditInstallment={onOpenEditInstallment}
-                          onNavigateToTimeline={onNavigateToTimeline}
-                          onPrintReceipt={handleOpenReceipt}
-                          persons={persons}
-                        />
-                      </div>
-                    ))
-                  ) : (
-                    <div
-                      className="empty-day-row"
-                      onClick={() => onAddEventForDate?.(format(weekData.weekStart, 'yyyy-MM-dd'))}
-                    >
-                      <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
-                      <span className="empty-day-text">{t('timeline.noEventsWeek')}</span>
-                      <span className="add-event-mini-btn">
-                        <Plus size={12} /> {t('buttons.add')}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Botão Carregar Mais Passado */}
-        {renderPastHorizonButton()}
-      </div>
-    );
-  };
 
   // Month-by-month flows from the shared financial engine (shared/finance): one pass over the events,
   // references and cancelled movements excluded, scoped to the active timelines / entity / selected lines
-  const monthlyFlows = useMemo(() => {
-    const timelineTypeMap = new Map((effectiveTimelines || timelines || []).map((tl) => [String(tl.id), tl.type]));
-    return computeMonthlyFlows({
-      events: timelineEvents,
-      timelineTypeMap,
-      fromMonth: computeFromMonth,
-      include: (ev) => {
-        if (!isEventTimelineActive(ev)) return false;
-        if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return false;
-        if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-          return selectedTimelineIds.includes(ev.timelineId) || selectedTimelineIds.includes(ev.timelineOriginId);
-        }
-        return true;
-      }
-    });
-  }, [timelineEvents, effectiveTimelines, timelines, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
-
-  // Per-month values shown by the month badges (money back from withdrawals counts as income of the month)
-  const monthMapOf = useCallback((pick) => {
-    const map = new Map();
-    monthlyFlows.forEach((entry, key) => map.set(key, pick(entry)));
-    return map;
-  }, [monthlyFlows]);
-  const monthExpensesTotalMap = useMemo(() => monthMapOf((e) => e.projected.expensesFromAvailable), [monthMapOf]);
-  const monthLoansTotalMap = useMemo(() => monthMapOf((e) => e.projected.installments), [monthMapOf]);
-  const monthIncomeTotalMap = useMemo(() => monthMapOf((e) => e.projected.income + e.projected.allWithdrawals), [monthMapOf]);
-  const monthInvestmentsTotalMap = useMemo(() => monthMapOf((e) => e.projected.savingsNet), [monthMapOf]);
-  const monthInvestmentsDeductionsMap = useMemo(() => monthMapOf((e) => e.projected.depositsInternal), [monthMapOf]);
-  const monthInvestmentsExternalMap = useMemo(() => monthMapOf((e) => e.projected.depositsExternal - (e.projected.allWithdrawals - e.projected.withdrawals)), [monthMapOf]);
-  const monthExpensesRealizedMap = useMemo(() => monthMapOf((e) => e.realized.expensesFromAvailable), [monthMapOf]);
-  const monthLoansRealizedMap = useMemo(() => monthMapOf((e) => e.realized.installments), [monthMapOf]);
-  const monthIncomeRealizedMap = useMemo(() => monthMapOf((e) => e.realized.income + e.realized.allWithdrawals), [monthMapOf]);
-  const monthInvestmentsRealizedMap = useMemo(() => monthMapOf((e) => e.realized.savingsNet), [monthMapOf]);
-  const monthInvestmentsDeductionsRealizedMap = useMemo(() => monthMapOf((e) => e.realized.depositsInternal), [monthMapOf]);
-  const monthInvestmentsExternalRealizedMap = useMemo(() => monthMapOf((e) => e.realized.depositsExternal - (e.realized.allWithdrawals - e.realized.withdrawals)), [monthMapOf]);
+  const {
+    monthExpensesRealizedMap,
+    monthExpensesTotalMap,
+    monthIncomeRealizedMap,
+    monthIncomeTotalMap,
+    monthInvestmentsDeductionsMap,
+    monthInvestmentsDeductionsRealizedMap,
+    monthInvestmentsExternalMap,
+    monthInvestmentsExternalRealizedMap,
+    monthInvestmentsRealizedMap,
+    monthInvestmentsTotalMap,
+    monthLoansRealizedMap,
+    monthLoansTotalMap
+  } = useTimelineMonthlyFlows({
+    computeFromMonth,
+    effectiveTimelines,
+    inactiveTimelineIdSet,
+    isEventMatchingEntity,
+    isEventTimelineActive,
+    selectedEntityId,
+    selectedTimelineIds,
+    timeline,
+    timelineEvents,
+    timelines
+  });
 
   const monthsList = useMemo(() => {
     const monthMap = new Map();
@@ -2127,1453 +1349,66 @@ function VerticalTimeline({
     return Array.from(monthMap.values());
   }, [filteredEvents, startDateObj, maxDateObj, todayDate, periodMonthIndex, dayComparator]);
 
-  const renderMonthView = () => {
 
 
-    // Pre-calculate chronological running cumulative metrics
-    const monthCumulativeMap = new Map();
-    const seenInitialInvestments = new Set();
-    let runningIncome = 0;
-    let runningExpense = 0;
-    let runningInvestment = 0;
 
-    const sortedChronologicalMonths = [...monthsList].sort((a, b) => a.monthDate.getTime() - b.monthDate.getTime());
-    sortedChronologicalMonths.forEach((mG) => {
-      let mInc = 0;
-      let mExp = 0;
-      let mInv = 0;
 
-      mG.events.forEach((ev) => {
-        if (!ev || !ev.date || ev.isDeleted) return;
-        if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida') return;
-
-        // Shared financial engine: references never count, savings expenses stay in the savings
-        const movement = classifyMovement(ev);
-        if (movement.isReference) return;
-        const amt = movement.amount;
-        const isIncome = movement.kind === MovementKind.INCOME;
-        const isExpense = movement.kind === MovementKind.EXPENSE || movement.kind === MovementKind.LOAN_INSTALLMENT || movement.kind === MovementKind.AMORTIZATION;
-        const savingsDelta = savingsEffect(movement);
-        const isInvestment = savingsDelta !== 0 || ev.eventType === EventType.INVESTMENT;
-
-        const initialKey = ev.eventId || ev.seriesId || ev.id;
-        let initialAmt = 0;
-        if (isInvestment && ev.initialInvestedAmount && !seenInitialInvestments.has(initialKey)) {
-          initialAmt = Number(ev.initialInvestedAmount) || 0;
-          seenInitialInvestments.add(initialKey);
-        }
-
-        if (isIncome) mInc += amt;
-        if (isExpense) mExp += amt;
-        if (isInvestment) mInv += savingsDelta + initialAmt;
-      });
-
-      runningIncome += mInc;
-      runningExpense += mExp;
-      runningInvestment += mInv;
-
-      monthCumulativeMap.set(format(mG.monthDate, 'yyyy-MM'), {
-        income: runningIncome,
-        expense: runningExpense,
-        investment: runningInvestment
-      });
-    });
-
-    return (
-      <div className="vertical-timeline-container">
-        {/* Left Main Chronological Timeline Spine */}
-        <div className="timeline-spine" />
-        <div
-          className="timeline-spine-gradient"
-          style={{ background: `linear-gradient(180deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)` }}
-        />
-
-        {/* Botão Carregar Mais Futuro */}
-        {renderFutureHorizonButton()}
-
-        {monthsList.map((mGroup) => {
-          const currentMonthKey = format(todayDate, 'yyyy-MM');
-          const monthKeyStr = format(mGroup.monthDate, 'yyyy-MM');
-          const isCurrentMonth = currentMonthKey === monthKeyStr;
-          const isFutureMonth = monthKeyStr > currentMonthKey;
-          const monthTitleStr = format(mGroup.monthDate, 'MMMM yyyy', { locale: dateLocale });
-          const hasEvents = mGroup.events.length > 0;
-
-          const mMonthProjectedExpense = hasExpenseTimeline ? (monthExpensesTotalMap.get(monthKeyStr) || 0) : 0;
-          const mMonthProjectedLoan = hasLoanTimeline ? (monthLoansTotalMap.get(monthKeyStr) || 0) : 0;
-          const mMonthProjectedIncome = hasIncomeTimeline ? (monthIncomeTotalMap.get(monthKeyStr) || 0) : 0;
-          const mMonthProjectedInvestment = hasInvestmentTimeline ? (monthInvestmentsTotalMap.get(monthKeyStr) || 0) : 0;
-          const mMonthProjectedInvestmentInternal = hasInvestmentTimeline ? (monthInvestmentsDeductionsMap.get(monthKeyStr) || 0) : 0;
-          const mMonthProjectedInvestmentExternal = hasInvestmentTimeline ? (monthInvestmentsExternalMap.get(monthKeyStr) || 0) : 0;
-          const mMonthProjectedInvestmentDeduction = mMonthProjectedInvestmentInternal;
-          const mMonthProjectedSaldo = mMonthProjectedIncome - (mMonthProjectedExpense + mMonthProjectedLoan + mMonthProjectedInvestmentDeduction);
-
-          const mMonthRealizedExpense = hasExpenseTimeline ? (monthExpensesRealizedMap.get(monthKeyStr) || 0) : 0;
-          const mMonthRealizedLoan = hasLoanTimeline ? (monthLoansRealizedMap.get(monthKeyStr) || 0) : 0;
-          const mMonthRealizedIncome = hasIncomeTimeline ? (monthIncomeRealizedMap.get(monthKeyStr) || 0) : 0;
-          const mMonthRealizedInvestment = hasInvestmentTimeline ? (monthInvestmentsRealizedMap.get(monthKeyStr) || 0) : 0;
-          const mMonthRealizedInvestmentInternal = hasInvestmentTimeline ? (monthInvestmentsDeductionsRealizedMap.get(monthKeyStr) || 0) : 0;
-          const mMonthRealizedInvestmentExternal = hasInvestmentTimeline ? (monthInvestmentsExternalRealizedMap.get(monthKeyStr) || 0) : 0;
-          const mMonthRealizedInvestmentDeduction = mMonthRealizedInvestmentInternal;
-          const mMonthRealizedSaldo = mMonthRealizedIncome - (mMonthRealizedExpense + mMonthRealizedLoan + mMonthRealizedInvestmentDeduction);
-
-          const isNotComputedMonth = Boolean(isFinancial && computeFromMonth && monthKeyStr < computeFromMonth);
-
-          if (!showEmptyDays && !hasEvents && !isCurrentMonth) return null;
-
-          return (
-            <div
-              key={format(mGroup.monthDate, 'yyyy-MM')}
-              id={isCurrentMonth ? 'timeline-node-today' : `timeline-month-${format(mGroup.monthDate, 'yyyy-MM')}`}
-              data-month-key={format(mGroup.monthDate, 'yyyy-MM')}
-              className={`timeline-day-row ${isCurrentMonth ? 'is-today' : ''} ${isFutureMonth ? 'is-future-month' : ''} ${isNotComputedMonth ? 'is-not-computed-month' : ''}`}
-            >
-              <div className="day-date-col">
-                <div className="day-date-main" style={{ color: isNotComputedMonth ? 'var(--text-dim)' : (isFutureMonth ? 'var(--text-dim)' : 'var(--text-main)') }}>
-                  {format(mGroup.monthDate, 'MMM', { locale: dateLocale }).toUpperCase()}
-                </div>
-                <div className="day-date-sub" style={{ color: isFutureMonth ? 'var(--text-dim)' : 'var(--text-muted)' }}>
-                  {format(mGroup.monthDate, 'yyyy')}
-                </div>
-                {isCurrentMonth && <span className="today-badge-chip pulse-glow">{t('timeline.currentMonth')}</span>}
-              </div>
-
-              <div className="day-node-wrapper">
-                <div
-                  className={`day-node-dot ${isCurrentMonth ? 'is-today-node' : hasEvents ? 'has-events' : ''}`}
-                  style={
-                    hasEvents && !isCurrentMonth
-                      ? {
-                        backgroundColor: isNotComputedMonth
-                          ? `${TimelineColor.SLATE_LIGHT}40`
-                          : (isFutureMonth
-                            ? `${TimelineColor.SLATE_LIGHT}66`
-                            : paletteTheme.primary),
-                        borderColor: isNotComputedMonth
-                          ? `${TimelineColor.SLATE_LIGHT}40`
-                          : (isFutureMonth ? `${TimelineColor.SLATE_LIGHT}4c` : undefined)
-                      }
-                      : {}
-                  }
-                />
-              </div>
-
-              <div className="day-content-col">
-                <div
-                  className="group-card"
-                  style={
-                    isNotComputedMonth
-                      ? { opacity: 0.78, borderStyle: 'dashed', borderColor: `${TimelineColor.SLATE_LIGHT}40` }
-                      : (isFutureMonth ? { borderColor: `${TimelineColor.SLATE_LIGHT}2e` } : undefined)
-                  }
-                >
-                  <div className="group-card-header" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', width: '100%' }}>
-                      <h3
-                        className="group-card-title"
-                        style={{
-                          margin: 0,
-                          textTransform: 'capitalize',
-                          color: isNotComputedMonth ? 'var(--text-dim)' : (isFutureMonth ? 'var(--text-muted)' : 'var(--text-main)'),
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          flexWrap: 'wrap'
-                        }}
-                      >
-                        <Clock size={18} style={{ color: isNotComputedMonth ? 'var(--text-dim)' : (isFutureMonth ? 'var(--text-dim)' : 'var(--primary-light)') }} />
-                        <span>{monthTitleStr}</span>
-                        {isNotComputedMonth && (
-                          <span
-                            className="group-card-badge"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              height: '22px',
-                              padding: '0 8px',
-                              boxSizing: 'border-box',
-                              fontSize: '0.68rem',
-                              fontWeight: '700',
-                              color: 'var(--text-dim)',
-                              borderColor: `${TimelineColor.SLATE_LIGHT}40`,
-                              background: `${TimelineColor.SLATE_LIGHT}14`,
-                              borderRadius: '999px',
-                              letterSpacing: '0.2px',
-                              cursor: 'help'
-                            }}
-                            title={t('timeline.notComputedTooltip')}
-                          >
-                            <EyeOff size={11} style={{ opacity: 0.8 }} />
-                            <span>{t('timeline.notComputed')}</span>
-                          </span>
-                        )}
-                      </h3>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <span
-                          className="group-card-badge"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            height: '26px',
-                            boxSizing: 'border-box',
-                            color: isFutureMonth ? 'var(--text-dim)' : 'var(--text-muted)',
-                            borderColor: isFutureMonth ? `${TimelineColor.SLATE_LIGHT}2e` : 'var(--border-glass)',
-                            background: isFutureMonth ? `${TimelineColor.SLATE_LIGHT}0d` : undefined
-                          }}
-                        >
-                          {t('timeline.eventsCount', { count: mGroup.events.length })}
-                        </span>
-
-                        {onOpenAmortizationModal && isLoanTimelineOrTab && (() => {
-                          const monthLoanEvents = mGroup.events.filter((e) => e.category === LoanEventCategory.INSTALLMENT || e.category === LoanEventCategory.LOAN_INSTALLMENT || e.eventType === EventType.LOAN_INSTALLMENT);
-                          const isAbatidaMonth = monthLoanEvents.length > 0 && monthLoanEvents.every((e) => e.isAbatida || e.status === EventStatus.AMORTIZED || e.status === EventStatus.ABATED);
-                          if (isAbatidaMonth) return null;
-                          return (
-                            <button
-                              type="button"
-                              className="btn btn-sm"
-                              style={{
-                                background: 'linear-gradient(135deg, var(--success) 0%, var(--accent-emerald) 100%)',
-                                boxShadow: '0 4px 14px var(--shadow-glow-emerald)',
-                                padding: '4px 12px',
-                                height: '26px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '5px',
-                                fontSize: '0.74rem',
-                                fontWeight: '700',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                border: 'none',
-                                color: TimelineColor.WHITE
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const targetDayStr = format(mGroup.monthDate, 'yyyy-MM-15');
-                                onOpenAmortizationModal(targetDayStr);
-                              }}
-                              title={t('timeline.amortizeMonthTitle', { month: monthTitleStr })}
-                            >
-                              <TrendingDown size={14} />
-                              <span>{t('buttons.amortize')}</span>
-                            </button>
-                          );
-                        })()}
-
-                        {renderAddEventButton(format(mGroup.monthDate, 'yyyy-MM-01'), t('timeline.addEventMonthTitle', { month: monthTitleStr }))}
-                      </div>
-                    </div>
-
-                    {isFinancialTimeline && !isLoanTimelineOrTab && (
-                      <MonthProjectionBadges
-                        monthProjectedIncome={mMonthProjectedIncome}
-                        monthProjectedExpense={mMonthProjectedExpense}
-                        monthProjectedLoan={mMonthProjectedLoan}
-                        monthProjectedInvestment={mMonthProjectedInvestment}
-                        monthProjectedInvestmentInternal={mMonthProjectedInvestmentInternal}
-                        monthProjectedInvestmentExternal={mMonthProjectedInvestmentExternal}
-                        monthProjectedInvestmentDeduction={mMonthProjectedInvestmentDeduction}
-                        monthProjectedSaldo={mMonthProjectedSaldo}
-                        monthRealizedIncome={mMonthRealizedIncome}
-                        monthRealizedExpense={mMonthRealizedExpense}
-                        monthRealizedLoan={mMonthRealizedLoan}
-                        monthRealizedInvestment={mMonthRealizedInvestment}
-                        monthRealizedInvestmentInternal={mMonthRealizedInvestmentInternal}
-                        monthRealizedInvestmentExternal={mMonthRealizedInvestmentExternal}
-                        monthRealizedInvestmentDeduction={mMonthRealizedInvestmentDeduction}
-                        monthRealizedSaldo={mMonthRealizedSaldo}
-                        projectionMode={monthProjectionMode}
-                        onToggleProjectionMode={setMonthProjectionMode}
-                        timelines={effectiveTimelines || timelines}
-                        hasIncomeTimeline={hasIncomeTimeline}
-                        hasExpenseTimeline={hasExpenseTimeline}
-                        hasLoanTimeline={hasLoanTimeline}
-                        hasInvestmentTimeline={hasInvestmentTimeline}
-                        isFutureMonth={isFutureMonth}
-                        isNotComputedMonth={isNotComputedMonth}
-                        formatCurrency={formatCurrency}
-                        showProgress={!isReadOnly}
-                        t={t}
-                      />
-                    )}
-                  </div>
-
-                  {timeline.type === TimelineType.INVESTMENT ? (
-                    <AccountMonthSpaces
-                      monthKey={format(mGroup.monthDate, 'yyyy-MM')}
-                      monthStartStr={format(mGroup.monthDate, 'yyyy-MM-01')}
-                      isFutureMonth={isFutureMonth}
-                      monthEvents={mGroup.events}
-                      allEvents={timeline.events || []}
-                      pockets={pockets}
-                      spaceFilter={selectedCategoryFilter}
-                      color={timeline.color || TimelineColor.INVESTMENT}
-                      palette={paletteTheme}
-                      onAddInflow={onAddEventForDate ? (dateStr, pocketId) => {
-                        const pocket = (pockets || []).find((p) => p.id === pocketId);
-                        onAddEventForDate(dateStr, EventType.INVESTMENT, {
-                          pocketId: pocketId || null,
-                          pocketName: pocket?.name || null,
-                          category: InvestmentEventCategory.SAVINGS
-                        });
-                      } : undefined}
-                      onAddOutflow={onOpenWithdrawModal ? (dateStr, pocketId) => onOpenWithdrawModal(dateStr, pocketId) : undefined}
-                      onEditPocket={onEditPocket}
-                      onDeletePocket={onDeletePocket}
-                      renderEvents={(spaceEvents) => groupEventsByDate(spaceEvents, dayComparator).map((dateGroup, gIdx) => (
-                        <div key={`${dateGroup.date}_${gIdx}`}>
-                          <TimelineEventCard
-                            events={dateGroup.events}
-                            timelineColor={timeline.color}
-                            allEvents={timeline.events || []}
-                            timelines={effectiveTimelines || timelines}
-                            currentTimelineId={timeline.id}
-                            timelineType={timeline.type}
-                            activeFinancialTab={activeFinancialTab}
-                            persons={persons}
-                            onEdit={onEditEvent}
-                            onUpdateEventDirect={onUpdateEventDirect}
-                            onDelete={onDeleteEvent}
-                            onToggleTask={onToggleTask}
-                            onAddChecklistItem={onAddChecklistItem}
-                            onDeleteChecklistItem={onDeleteChecklistItem}
-                            onToggleLoanPayment={onToggleLoanPayment}
-                            onPayUpToHere={onPayUpToHere}
-                            onOpenEditInstallment={onOpenEditInstallment}
-                            onNavigateToTimeline={onNavigateToTimeline}
-                            onPrintReceipt={handleOpenReceipt}
-                          />
-                        </div>
-                      ))}
-                      t={t}
-                    />
-                  ) : hasEvents ? (
-                    (mGroup.groupedDateEvents || groupEventsByDate(mGroup.events, dayComparator)).map((dateGroup, gIdx) => (
-                      <div
-                        key={`${dateGroup.date}_${gIdx}`}
-                        style={{ marginBottom: '8px' }}
-                      >
-                        <TimelineEventCard
-                          events={dateGroup.events}
-                          timelineColor={timeline.color}
-                          allEvents={timeline.events || []}
-                          timelines={effectiveTimelines || timelines}
-                          currentTimelineId={timeline.id}
-                          timelineType={timeline.type}
-                          activeFinancialTab={activeFinancialTab}
-                          onEdit={onEditEvent}
-                          onUpdateEventDirect={onUpdateEventDirect}
-                          onDelete={onDeleteEvent}
-                          onToggleTask={onToggleTask}
-                          onAddChecklistItem={onAddChecklistItem}
-                          onDeleteChecklistItem={onDeleteChecklistItem}
-                          onToggleLoanPayment={onToggleLoanPayment}
-                          onPayUpToHere={onPayUpToHere}
-                          onOpenEditInstallment={onOpenEditInstallment}
-                          onNavigateToTimeline={onNavigateToTimeline}
-                          onPrintReceipt={handleOpenReceipt}
-                          persons={persons}
-                        />
-                      </div>
-                    ))
-                  ) : (
-                    <div
-                      className="empty-day-row"
-                      onClick={() => {
-                        if (isLoanTimelineOrTab) return;
-                        const nature = timeline.type === TimelineType.EXPENSE
-                          ? EventType.EXPENSE
-                          : timeline.type === TimelineType.INVESTMENT
-                            ? EventType.INVESTMENT
-                            : isReminders
-                              ? EventType.REMINDER
-                              : EventType.INCOME;
-                        onAddEventForDate?.(format(mGroup.monthDate, 'yyyy-MM-01'), nature);
-                      }}
-                      style={{
-                        cursor: isLoanTimelineOrTab ? 'default' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '8px 12px'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
-                        <span className="empty-day-text">
-                          {isLoanTimelineOrTab ? t('timeline.noLoanMonth') : isReminders ? t('reminderHeader.noReminders') : t('timeline.noTabRecords')}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Botão Carregar Mais Passado */}
-        {renderPastHorizonButton()}
-      </div>
-    );
-  };
-
-  const renderYearView = () => {
-    const yearMap = new Map();
-
-    monthsList.forEach((mEntry) => {
-      const yearKey = format(mEntry.monthDate, 'yyyy');
-      if (!yearMap.has(yearKey)) {
-        yearMap.set(yearKey, {
-          yearStr: yearKey,
-          monthsMap: new Map()
-        });
-      }
-
-      const yearEntry = yearMap.get(yearKey);
-      const monthKey = format(mEntry.monthDate, 'yyyy-MM');
-      yearEntry.monthsMap.set(monthKey, {
-        monthDate: mEntry.monthDate,
-        events: mEntry.events
-      });
-    });
-
-    const yearsList = Array.from(yearMap.values());
-
-    return (
-      <div className="vertical-timeline-container">
-        <div className="timeline-spine" />
-        <div
-          className="timeline-spine-gradient"
-          style={{ background: `linear-gradient(180deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)` }}
-        />
-
-        {/* Botão Carregar Mais Futuro */}
-        {renderFutureHorizonButton()}
-
-        {yearsList.map((yGroup) => {
-          const isCurrentYear = format(todayDate, 'yyyy') === yGroup.yearStr;
-          const monthsList = Array.from(yGroup.monthsMap.values());
-          const totalEventsInYear = monthsList.reduce((sum, m) => sum + m.events.length, 0);
-
-          return (
-            <div
-              key={yGroup.yearStr}
-              id={isCurrentYear ? 'timeline-node-today' : undefined}
-              className={`timeline-day-row ${isCurrentYear ? 'is-today' : ''}`}
-            >
-              <div className="day-date-col">
-                <div className="day-date-main">{t('timeline.yearLabel', { year: yGroup.yearStr })}</div>
-                {isCurrentYear && <span className="today-badge-chip pulse-glow">{t('timeline.currentYear')}</span>}
-              </div>
-
-              <div className="day-node-wrapper">
-                <div
-                  className={`day-node-dot ${isCurrentYear ? 'is-today-node' : totalEventsInYear > 0 ? 'has-events' : ''
-                    }`}
-                  style={totalEventsInYear > 0 && !isCurrentYear ? { backgroundColor: paletteTheme.primary } : {}}
-                />
-              </div>
-
-              <div className="day-content-col">
-                <div className="group-card">
-                  <div className="group-card-header">
-                    <h3 className="group-card-title">
-                      <Sparkles size={18} style={{ color: 'var(--primary-light)' }} /> {t('timeline.currentYearTitle', { year: yGroup.yearStr })}
-                    </h3>
-                    <span className="group-card-badge">
-                      {t('timeline.monthsCount', { count: monthsList.length })} • {t('timeline.eventsCount', { count: totalEventsInYear })}
-                    </span>
-                  </div>
-
-                  {monthsList.map((mGroup) => {
-                    const monthTitleStr = format(mGroup.monthDate, 'MMMM yyyy', { locale: dateLocale });
-                    const hasEvents = mGroup.events.length > 0;
-
-                    if (!showEmptyDays && !hasEvents) return null;
-
-                    return (
-                      <div key={format(mGroup.monthDate, 'yyyy-MM')} className="year-month-box">
-                        <div className="year-month-header">
-                          <h4 className="year-month-title" style={{ textTransform: 'capitalize' }}>
-                            🗓️ {monthTitleStr}
-                          </h4>
-                          <span className="event-tag" style={{ background: `${TimelineColor.PRIMARY}33`, color: 'var(--primary-light)' }}>
-                            {t('timeline.eventsCount', { count: mGroup.events.length })}
-                          </span>
-                        </div>
-
-                        {hasEvents ? (
-                          groupEventsByDate(mGroup.events, dayComparator).map((dateGroup, gIdx) => (
-                            <div
-                              key={`${dateGroup.date}_${gIdx}`}
-                              style={{ marginBottom: '8px' }}
-                            >
-                              <TimelineEventCard
-                                events={dateGroup.events}
-                                timelineColor={timeline.color}
-                                allEvents={timeline.events || []}
-                                timelines={effectiveTimelines || timelines}
-                                currentTimelineId={timeline.id}
-                                timelineType={timeline.type}
-                                activeFinancialTab={activeFinancialTab}
-                                onEdit={onEditEvent}
-                                onUpdateEventDirect={onUpdateEventDirect}
-                                onDelete={onDeleteEvent}
-                                onToggleTask={onToggleTask}
-                                onToggleLoanPayment={onToggleLoanPayment}
-                                onPayUpToHere={onPayUpToHere}
-                                onOpenEditInstallment={onOpenEditInstallment}
-                                onNavigateToTimeline={onNavigateToTimeline}
-                                onPrintReceipt={handleOpenReceipt}
-                              />
-                            </div>
-                          ))
-                        ) : (
-                          <div
-                            className="empty-day-row"
-                            onClick={() => onAddEventForDate?.(format(mGroup.monthDate, 'yyyy-MM-01'))}
-                          >
-                            <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
-                            <span className="empty-day-text">{t('timeline.noEventsMonth')}</span>
-                            <span className="add-event-mini-btn">
-                              <Plus size={12} /> {t('buttons.add')}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Botão Carregar Mais Passado */}
-        {renderPastHorizonButton()}
-      </div>
-    );
-  };
-
-  const renderDayView = () => {
-    return (
-      <div className="vertical-timeline-container">
-        <div className="timeline-spine" />
-        <div
-          className="timeline-spine-gradient"
-          style={{ background: `linear-gradient(180deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)` }}
-        />
-
-        {/* Botão Carregar Mais Futuro */}
-        {renderFutureHorizonButton()}
-
-        {daysArray.map((dayDate) => {
-          const dateKey = format(dayDate, 'yyyy-MM-dd');
-          const isTodayNode = dateKey === todayStr;
-          const dayEvents = eventsByDate[dateKey] || [];
-          const hasEvents = dayEvents.length > 0;
-
-          if (!showEmptyDays && !hasEvents && !isTodayNode) {
-            return null;
-          }
-
-          const dayOfWeekStr = format(dayDate, 'EEE', { locale: dateLocale });
-          const dayNumStr = format(dayDate, 'dd');
-          const monthStr = format(dayDate, 'MMM', { locale: dateLocale });
-
-          return (
-            <div
-              key={dateKey}
-              id={isTodayNode ? 'timeline-node-today' : undefined}
-              className={`timeline-day-row ${isTodayNode ? 'is-today' : ''}`}
-            >
-              <div className="day-date-col">
-                <div className="day-date-main">
-                  {dayOfWeekStr.toUpperCase()}, {dayNumStr} {monthStr}
-                </div>
-                <div className="day-date-sub">{format(dayDate, 'yyyy')}</div>
-                {isTodayNode && (
-                  <span className="today-badge-chip pulse-glow">{t('timeline.today').toUpperCase()}</span>
-                )}
-              </div>
-
-              <div className="day-node-wrapper">
-                <div
-                  className={`day-node-dot ${isTodayNode ? 'is-today-node' : hasEvents ? 'has-events' : ''
-                    }`}
-                  onClick={() => onAddEventForDate?.(dateKey)}
-                  title={
-                    hasEvents
-                      ? `${t('timeline.eventsCount', { count: dayEvents.length })}`
-                      : t('timeline.noEventsDay')
-                  }
-                  style={hasEvents && !isTodayNode ? { backgroundColor: paletteTheme.primary } : {}}
-                />
-              </div>
-
-              <div className="day-content-col">
-                {hasEvents ? (
-                  <TimelineEventCard
-                    events={dayEvents}
-                    timelineColor={timeline.color}
-                    allEvents={timeline.events || []}
-                    timelines={effectiveTimelines || timelines}
-                    currentTimelineId={timeline.id}
-                    timelineType={timeline.type}
-                    activeFinancialTab={activeFinancialTab}
-                    onEdit={onEditEvent}
-                    onUpdateEventDirect={onUpdateEventDirect}
-                    onDelete={onDeleteEvent}
-                    onToggleTask={onToggleTask}
-                    onToggleLoanPayment={onToggleLoanPayment}
-                    onPayUpToHere={onPayUpToHere}
-                    onOpenEditInstallment={onOpenEditInstallment}
-                    onNavigateToTimeline={onNavigateToTimeline}
-                    onPrintReceipt={handleOpenReceipt}
-                  />
-                ) : (
-                  <div
-                    className="empty-day-row"
-                    onClick={() => onAddEventForDate?.(dateKey)}
-                  >
-                    <Calendar size={14} style={{ color: 'var(--text-dim)' }} />
-                    <span className="empty-day-text">{t('timeline.noEventsDay')}</span>
-                    <span className="add-event-mini-btn">
-                      <Plus size={12} /> {t('buttons.add')}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Botão Carregar Mais Passado */}
-        {renderPastHorizonButton()}
-      </div>
-    );
-  };
-
-  // "Add" button of the timeline type (income / expense / pocket / reminder / ...), shown on each month header
-  // and on top of the list view. targetDayStr is the default date of the new event.
-  const renderAddEventButton = (targetDayStr, title) => {
-    if (!onAddEventForDate || isLoanTimelineOrTab || isBalancoView) return null;
-    const isInvestment = timeline.type === TimelineType.INVESTMENT || activeFinancialTab === 'investimentos';
-    const addLabel = isFinancialTimeline
-      ? (activeFinancialTab === 'gastos' || timeline.type === TimelineType.EXPENSE
-          ? t('expenseHeader.addExpenseButton')
-          : isInvestment
-            ? t('pocket.addPocket')
-            : t('incomeHeader.addIncome'))
-      : timeline.type === TimelineType.REMINDER
-        ? t('reminderHeader.addReminder')
-        : timeline.type === TimelineType.DIARY
-          ? makeDiaryT(t, activeTimeboard?.type === TimeboardType.CONDOFLOW)('diaryHeader.addEntry')
-          : timeline.type === TimelineType.TODO
-            ? t('todoHeader.addTask')
-            : timeline.type === TimelineType.FOLLOWUP
-              ? t('followupHeader.addFollowup')
-              : timeline.type === TimelineType.PROJECT
-                ? t('projectHeader.newTaskMilestone')
-                : t('buttons.addEvent');
-    const buttonStyle = {
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '6px',
-      padding: '6px 12px',
-      borderRadius: '8px',
-      fontSize: '0.78rem',
-      fontWeight: '700',
-      cursor: 'pointer',
-      background: `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`,
-      borderColor: paletteTheme.primary,
-      color: TimelineColor.WHITE
-    };
-
-    return isInvestment ? (
-      <button
-        type="button"
-        className="btn btn-primary btn-sm"
-        style={buttonStyle}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (onOpenCreatePocket) onOpenCreatePocket({ defaultDate: targetDayStr });
-        }}
-        title={t('pocket.addPocket')}
-      >
-        <PiggyBank size={14} />
-        <span>{addLabel}</span>
-      </button>
-    ) : (
-      <button
-        type="button"
-        className="btn btn-primary btn-sm"
-        style={buttonStyle}
-        onClick={(e) => {
-          e.stopPropagation();
-          onAddEventForDate?.(
-            targetDayStr,
-            timeline.type === TimelineType.EXPENSE || activeFinancialTab === 'gastos'
-              ? EventType.EXPENSE
-              : timeline.type === TimelineType.FOLLOWUP
-                ? EventType.FOLLOWUP
-                : isReminders
-                  ? EventType.REMINDER
-                  : EventType.INCOME
-          );
-        }}
-        title={title}
-      >
-        <Plus size={14} />
-        <span>{addLabel}</span>
-      </button>
-    );
-  };
-
-  const renderFilteredStatusListView = () => {
-    const sortedEvents = [...filteredEvents].sort((a, b) => {
-      const dateA = a.date || a.dueDate || '';
-      const dateB = b.date || b.dueDate || '';
-      return dateB.localeCompare(dateA);
-    });
-
-    const grouped = groupEventsByDate(sortedEvents, dayComparator);
-
-    return (
-      <div className="filtered-events-stack-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', padding: '4px 0 24px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 4px 12px 4px', borderBottom: '1px solid var(--border-glass)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: '700', color: 'var(--text-main)' }}>
-            <Filter size={15} style={{ color: 'var(--primary-light)' }} />
-            <span>{t('timeline.eventsCount', { count: filteredEvents.length })}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {/* Switches for the shared reminders / diary posts (individual view) */}
-            {sharedNoticeToggles.map((item) => (
-              <button
-                key={item.type}
-                type="button"
-                className="btn btn-sm"
-                aria-pressed={item.isOn}
-                onClick={item.toggle}
-                title={item.label}
-                style={{
-                  fontSize: '0.74rem',
-                  padding: '4px 10px',
-                  border: `1px solid ${item.color}`,
-                  background: item.isOn ? item.color : 'transparent',
-                  color: item.isOn ? TimelineColor.WHITE : item.color,
-                  opacity: item.isOn ? 1 : 0.75
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={resetAllFilters}
-              style={{ fontSize: '0.74rem', padding: '4px 10px' }}
-            >
-              {t('status.all')}
-            </button>
-            {renderAddEventButton(todayStr, t('timeline.addEventToday'))}
-          </div>
-        </div>
-
-        {filteredEvents.length === 0 ? (
-          <div style={{ padding: '48px 20px', textAlign: 'center', background: 'transparent', border: 'none' }}>
-            <div className="empty-icon">
-              <Filter size={28} />
-            </div>
-            <h3>{t('timeline.noEventsFoundUpToCurrentMonth')}</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
-              {t('timeline.noEventsFoundAdjustFiltersDesc')}
-            </p>
-          </div>
-        ) : (
-          grouped.map((dateGroup, gIdx) => (
-            <div key={`${dateGroup.date}_${gIdx}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <TimelineEventCard
-              events={dateGroup.events}
-              timelineColor={timeline.color}
-              allEvents={timeline.events || []}
-              timelines={effectiveTimelines || timelines}
-              currentTimelineId={timeline.id}
-              timelineType={timeline.type}
-              activeFinancialTab={activeFinancialTab}
-              showYear={true}
-              onEdit={onEditEvent}
-              onUpdateEventDirect={onUpdateEventDirect}
-              onDelete={onDeleteEvent}
-              onToggleTask={onToggleTask}
-              onAddChecklistItem={onAddChecklistItem}
-              onDeleteChecklistItem={onDeleteChecklistItem}
-              onToggleLoanPayment={onToggleLoanPayment}
-              onPayUpToHere={onPayUpToHere}
-              onOpenEditInstallment={onOpenEditInstallment}
-              onNavigateToTimeline={onNavigateToTimeline}
-              onPrintReceipt={handleOpenReceipt}
-            />
-          </div>
-        ))
-      )}
-      </div>
-    );
-  };
 
   return (
     <EventActionsProvider value={eventActions}>
     <div className="timeline-workspace-layout">
       {/* 🧭 Left Filter Sidebar Cockpit */}
-      <aside className="filter-sidebar">
-        <div className="sidebar-header-title">
-          <Filter size={15} style={{ color: 'var(--primary-light)' }} />
-          <span>{t('sidebar.filtersNavigation')}</span>
-        </div>
-
-        {/* 🌟 0. Timelines do Timeboard vindas da Base de Dados */}
-        {((timelines && timelines.length > 0) || (timeline?.timelines && timeline.timelines.length > 0)) && (
-          <div className="sidebar-section">
-            <div
-              className="sidebar-section-title"
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-              onClick={() => toggleSectionCollapse('timelines')}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <ChevronDown
-                  size={13}
-                  style={{
-                    transform: collapsedSections['timelines'] ? 'rotate(-90deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.18s ease',
-                    color: 'var(--text-muted)'
-                  }}
-                />
-                <span>{t('sidebar.timelines')}</span>
-              </div>
-              {onCreateTimeline && (
-                <div ref={timelineDropdownRef} onClick={(e) => e.stopPropagation()} style={{ position: 'relative', display: 'inline-block' }}>
-                  <button
-                    type="button"
-                    onClick={() => setIsTimelineDropdownOpen((prev) => !prev)}
-                    title={t('sidebar.newTimeline')}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '3px',
-                      padding: '3px 8px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      background: 'var(--primary)',
-                      color: TimelineColor.WHITE,
-                      fontSize: '0.72rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      boxShadow: `0 2px 8px ${TimelineColor.PRIMARY}59`,
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <Plus size={13} />
-                    <span>{t('buttons.new')}</span>
-                  </button>
-
-                  {isTimelineDropdownOpen && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        right: 0,
-                        marginTop: '6px',
-                        minWidth: '200px',
-                        background: 'var(--bg-card)',
-                        backdropFilter: 'blur(16px)',
-                        WebkitBackdropFilter: 'blur(16px)',
-                        border: '1px solid var(--border-glass)',
-                        borderRadius: '10px',
-                        boxShadow: 'var(--shadow-lg)',
-                        padding: '6px',
-                        zIndex: 100,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '2px'
-                      }}
-                    >
-                      {timelineOptions.map((opt, optIdx) => (
-                        <button
-                          key={opt.key || `opt-${optIdx}`}
-                          type="button"
-                          onClick={() => {
-                            setIsTimelineDropdownOpen(false);
-                            if (onCreateTimeline) {
-                              onCreateTimeline(opt.type);
-                            }
-                          }}
-                          style={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '8px 10px',
-                            borderRadius: '6px',
-                            border: '1px solid transparent',
-                            background: 'transparent',
-                            color: 'var(--text-main)',
-                            fontSize: '0.8rem',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            transition: 'all 0.15s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = `${TimelineColor.PRIMARY}24`;
-                            e.currentTarget.style.borderColor = `${TimelineColor.PRIMARY}4c`;
-                            e.currentTarget.style.color = 'var(--primary-light)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.borderColor = 'transparent';
-                            e.currentTarget.style.color = 'var(--text-main)';
-                          }}
-                        >
-                          {opt.icon}
-                          <span>{opt.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            {!collapsedSections['timelines'] && (
-              <div className="sidebar-btn-group">
-              {((timelines && timelines.length > 0) ? timelines : (timeline?.timelines || [])).map((tl, tlIdx) => {
-                const isActive = activeFinancialTab === tl.id || timeline?.id === tl.id;
-                const tlColor = tl.color;
-                const getTimelineIcon = (type) => {
-                  switch (type) {
-                    case TimelineType.INCOME:
-                      return <Wallet size={14} style={{ color: tlColor }} />;
-                    case TimelineType.EXPENSE:
-                      return <ReceiptEuro size={14} style={{ color: tlColor }} />;
-                    case TimelineType.INVESTMENT:
-                      return <PiggyBank size={14} style={{ color: tlColor }} />;
-                    case TimelineType.LOAN:
-                      return <CreditCard size={14} style={{ color: tlColor }} />;
-                    case TimelineType.BALANCE:
-                      return <Scale size={14} style={{ color: tlColor }} />;
-                    case TimelineType.REMINDER:
-                    case 'reminder':
-                    case 'reminders':
-                      return <Bell size={14} style={{ color: tlColor }} />;
-                    case TimelineType.PROJECT:
-                    case 'project':
-                    case 'projects':
-                      return <FolderKanban size={14} style={{ color: tlColor }} />;
-                    case TimelineType.DIARY:
-                    case 'diary':
-                      return <BookOpen size={14} style={{ color: tlColor }} />;
-                    case TimelineType.TODO:
-                    case 'todo':
-                    case 'todos':
-                      return <CheckSquare size={14} style={{ color: tlColor }} />;
-                    case TimelineType.FOLLOWUP:
-                    case 'followup':
-                    case 'followups':
-                      return <ListTree size={14} style={{ color: tlColor }} />;
-                    default:
-                      return <Layers size={14} style={{ color: tlColor }} />;
-                  }
-                };
-
-                return (
-                  <button
-                    key={tl.id || `tl-${tlIdx}`}
-                    type="button"
-                    className={`sidebar-filter-item ${isActive ? 'active' : ''}`}
-                    onClick={() => {
-                      if (onSelectFinancialTab) onSelectFinancialTab(tl.id);
-                      if (onNavigateToTimeline) onNavigateToTimeline(tl.id);
-                    }}
-                    style={isActive ? {
-                      borderColor: tlColor,
-                      background: tlColor ? `${tlColor}20` : undefined,
-                      color: tlColor
-                    } : {}}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-                        {getTimelineIcon(tl.type)}
-                      </span>
-                      <span style={{ fontWeight: '700' }}>{tl.name}</span>
-                    </div>
-                    {isActive && <span style={{ fontSize: '0.75rem', color: tlColor }}>✓</span>}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-        {/* Period Filter (year / month) — for every user, individual members included */}
-        <div className="sidebar-section">
-          <div
-            className="sidebar-section-title"
-            style={{ cursor: 'pointer', userSelect: 'none' }}
-            onClick={() => toggleSectionCollapse('period')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ChevronDown
-                size={13}
-                style={{
-                  transform: collapsedSections['period'] ? 'rotate(-90deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.18s ease',
-                  color: 'var(--text-muted)'
-                }}
-              />
-              <span>{t('sidebar.period')}</span>
-            </div>
-            {isPeriodActive && (
-              <button
-                type="button"
-                className="sidebar-action-link"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPeriodYear('');
-                  setPeriodMonth('');
-                }}
-                style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer', fontSize: '0.72rem', padding: 0, fontWeight: '700' }}
-              >
-                {t('buttons.all')}
-              </button>
-            )}
-          </div>
-          {!collapsedSections['period'] && (
-            <PeriodBadgeFilter
-              year={periodYear}
-              month={periodMonth}
-              years={periodYearOptions}
-              onYearChange={setPeriodYear}
-              onMonthChange={setPeriodMonth}
-            />
-          )}
-        </div>
-
-        {/* 1. Search Box */}
-        <div className="sidebar-section">
-          <div className="search-box">
-            <Search size={15} className="search-icon" />
-            <input
-              type="text"
-              className="search-input"
-              placeholder={t('sidebar.searchPlaceholder')}
-              value={searchQuery}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (!isListView && val.trim().length > 0) {
-                  window.scrollTo({ top: 0, behavior: 'instant' });
-                }
-                setSearchQuery(val);
-              }}
-              style={searchQuery ? { paddingRight: '30px' } : undefined}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                className="search-clear-btn"
-                onClick={() => setSearchQuery('')}
-                title={t('sidebar.clearSearch')}
-                aria-label={t('sidebar.clearSearch')}
-              >
-                <X size={12} />
-              </button>
-            )}
-          </div>
-        </div>
-
-
-        {/* 3. Estado Filter (Multi-Selection) */}
-        <div className="sidebar-section">
-          <div
-            className="sidebar-section-title"
-            style={{ cursor: 'pointer', userSelect: 'none' }}
-            onClick={() => toggleSectionCollapse('status')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ChevronDown
-                size={13}
-                style={{
-                  transform: collapsedSections['status'] ? 'rotate(-90deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.18s ease',
-                  color: 'var(--text-muted)'
-                }}
-              />
-              <span>{t('sidebar.status')}</span>
-            </div>
-            {selectedStatusFilters.length > 0 && (
-              <button
-                type="button"
-                className="sidebar-action-link"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  selectAllStatuses();
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--primary-light)',
-                  cursor: 'pointer',
-                  fontSize: '0.72rem',
-                  padding: 0,
-                  fontWeight: '700'
-                }}
-              >
-                {t('buttons.all')}
-              </button>
-            )}
-          </div>
-          {!collapsedSections['status'] && (
-            <div className="sidebar-btn-group">
-              {getStatusFilterOptions().map((st, stIdx) => {
-                const isAllOption = st.id === EventStatus.ALL;
-                const isSelected = isAllOption ? selectedStatusFilters.length === 0 : selectedStatusFilters.includes(st.id);
-                return (
-                  <button
-                    key={st.id || `st-${stIdx}`}
-                    type="button"
-                    className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
-                    onClick={() => toggleStatusFilter(st.id)}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {st.icon}
-                      <span>{st.name}</span>
-                    </div>
-                    {renderFilterSwitch(isSelected, 'var(--primary)')}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* 4. Timelines Filter (Multi-Selection for Balance) — read-only users only get the status filter */}
-        {timeline.type === TimelineType.BALANCE && !isReadOnly && (
-          <div className="sidebar-section">
-            <div
-              className="sidebar-section-title"
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-              onClick={() => toggleSectionCollapse('integratedTimelines')}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <ChevronDown
-                  size={13}
-                  style={{
-                    transform: collapsedSections['integratedTimelines'] ? 'rotate(-90deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.18s ease',
-                    color: 'var(--text-muted)'
-                  }}
-                />
-                <span>{t('sidebar.integratedTimelines')}</span>
-              </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  selectAllTimelines();
-                }}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--primary-light)',
-                  fontSize: '0.7rem',
-                  cursor: 'pointer',
-                  fontWeight: '700'
-                }}
-              >
-                {selectedTimelineIds.length === availableCreditOptions.length ? t('buttons.deselectAll') : t('buttons.all')}
-              </button>
-            </div>
-            {!collapsedSections['integratedTimelines'] && (
-              <div className="sidebar-btn-group">
-                {availableCreditOptions.map((opt, optIdx) => {
-                  const isSelected = selectedTimelineIds.includes(opt.id);
-                  return (
-                    <button
-                      key={opt.id || `opt-credit-${optIdx}`}
-                      type="button"
-                      className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
-                      onClick={() => toggleTimelineSelection(opt.id)}
-                      style={isSelected ? { borderColor: opt.color } : { opacity: 0.6 }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: opt.color }} />
-                        <span>{opt.name}</span>
-                      </div>
-                      {renderFilterSwitch(isSelected, opt.color)}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 5. Tipo / Natureza Filter */}
-        {isReadOnly ? null : timeline.type === TimelineType.EXPENSE ? (
-          availableExpenseCategoryItems.length > 0 && (
-            <div className="sidebar-section">
-              <div
-                className="sidebar-section-title"
-                style={{ cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => toggleSectionCollapse('categories')}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <ChevronDown
-                    size={13}
-                    style={{
-                      transform: collapsedSections['categories'] ? 'rotate(-90deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.18s ease',
-                      color: 'var(--text-muted)'
-                    }}
-                  />
-                  <span>{t('sidebar.categoryType')}</span>
-                </div>
-                {selectedExpenseCategories.length > 0 && (
-                  <button
-                    type="button"
-                    className="sidebar-action-link"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      selectAllExpenseCategories();
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--primary-light)',
-                      cursor: 'pointer',
-                      fontSize: '0.72rem',
-                      padding: 0,
-                      fontWeight: '700'
-                    }}
-                  >
-                    {t('buttons.all')}
-                  </button>
-                )}
-              </div>
-              {!collapsedSections['categories'] && (
-                <div className="sidebar-btn-group" style={{ maxHeight: '320px', overflowY: 'auto', paddingRight: '2px' }}>
-                  {/* Opção "Todas as Categorias" */}
-                  <button
-                    type="button"
-                    className={`sidebar-filter-item ${selectedExpenseCategories.length === 0 ? 'active' : ''}`}
-                    onClick={() => setSelectedExpenseCategories([])}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Layers size={13} />
-                      <span>{t('sidebar.allCategories')}</span>
-                    </div>
-                    {renderFilterSwitch(selectedExpenseCategories.length === 0, 'var(--primary)')}
-                  </button>
-
-                  {/* Lista de Categorias de Despesas que possuem eventos */}
-                  {availableExpenseCategoryItems.map((cat, catIdx) => {
-                    const isSelected = selectedExpenseCategories.includes(cat.id);
-                    const IconComponent = cat.icon;
-                    return (
-                      <button
-                        key={cat.id || `exp-cat-${catIdx}`}
-                        type="button"
-                        className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
-                        onClick={() => toggleExpenseCategory(cat.id)}
-                        style={isSelected ? { borderColor: `${cat.color}66` } : {}}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ color: cat.color, display: 'inline-flex', alignItems: 'center' }}>
-                            <IconComponent size={13} />
-                          </span>
-                          <span>{t(`${isCondoflow ? 'condoExpenseCategories' : 'expenseCategories'}.${cat.id}`)}</span>
-                        </div>
-                        {renderFilterSwitch(isSelected, cat.color)}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )
-        ) : timeline.type !== TimelineType.BALANCE && (
-          availableCategoryOptions.length > 1 && (
-            <div className="sidebar-section">
-              <div
-                className="sidebar-section-title"
-                style={{ cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => toggleSectionCollapse('categories')}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <ChevronDown
-                    size={13}
-                    style={{
-                      transform: collapsedSections['categories'] ? 'rotate(-90deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.18s ease',
-                      color: 'var(--text-muted)'
-                    }}
-                  />
-                  <span>{timeline.type === TimelineType.INVESTMENT ? t('pocket.filterByPockets') : t('sidebar.categoryType')}</span>
-                </div>
-              </div>
-              {!collapsedSections['categories'] && (
-                <div className="sidebar-btn-group">
-                  {availableCategoryOptions.map((cat, catIdx) => {
-                    const isSelected = selectedCategoryFilter === cat.id;
-                    return (
-                      <button
-                        key={cat.id || `cat-filter-${catIdx}`}
-                        type="button"
-                        className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
-                        onClick={() => {
-                          if (!isListView && cat.id !== EventStatus.ALL) {
-                            window.scrollTo({ top: 0, behavior: 'instant' });
-                          }
-                          setSelectedCategoryFilter(cat.id);
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {cat.icon}
-                          <span>{cat.name}</span>
-                        </div>
-                        {renderFilterSwitch(isSelected, 'var(--primary)')}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )
-        )}
-
-        {/* Account movement filter (savings timeline): inflows, withdrawals, expenses, transfers */}
-        {timeline.type === TimelineType.INVESTMENT && (
-          <SidebarToggleFilter
-            title={t('pocket.movementType')}
-            allLabel={t('pocket.allMovements')}
-            items={ACCOUNT_MOVEMENT_ITEMS.map((item) => ({ ...item, label: t(`pocket.movements.${item.id}`) }))}
-            selected={selectedMovementTypes}
-            onChange={setSelectedMovementTypes}
-            collapsed={Boolean(collapsedSections['movements'])}
-            onToggleCollapse={() => toggleSectionCollapse('movements')}
-            onBeforeChange={() => { if (!isListView) window.scrollTo({ top: 0, behavior: 'instant' }); }}
-          />
-        )}
-
-        {/* Outflow type filter (Outflows timeline): own expenses, via savings, installments */}
-        {timeline.type === TimelineType.EXPENSE && !isReadOnly && (
-          <SidebarToggleFilter
-            title={t('outflowType.title')}
-            allLabel={t('outflowType.all')}
-            items={OUTFLOW_TYPE_ITEMS.map((item) => ({ ...item, label: t(`outflowType.${item.id}`) }))}
-            selected={selectedOutflowTypes}
-            onChange={setSelectedOutflowTypes}
-            collapsed={Boolean(collapsedSections['outflowTypes'])}
-            onToggleCollapse={() => toggleSectionCollapse('outflowTypes')}
-            onBeforeChange={() => { if (!isListView) window.scrollTo({ top: 0, behavior: 'instant' }); }}
-          />
-        )}
-
-        {/* 🌟 6. Entidades / Individuals Filter (Single Selection) */}
-        {timelineEntities.length > 0 && !isReadOnly && (
-          <div className="sidebar-section">
-            <div
-              className="sidebar-section-title"
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-              onClick={() => toggleSectionCollapse('entities')}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <ChevronDown
-                  size={13}
-                  style={{
-                    transform: collapsedSections['entities'] ? 'rotate(-90deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.18s ease',
-                    color: 'var(--text-muted)'
-                  }}
-                />
-                <span>{t('sidebar.entities')}</span>
-              </div>
-              {selectedEntityId && (
-                <button
-                  type="button"
-                  className="sidebar-action-link"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedEntityId(null);
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--primary-light)',
-                    cursor: 'pointer',
-                    fontSize: '0.72rem',
-                    padding: 0,
-                    fontWeight: '700'
-                  }}
-                >
-                  {t('buttons.all')}
-                </button>
-              )}
-            </div>
-
-            {!collapsedSections['entities'] && (
-              <div className="sidebar-btn-group">
-                {/* Opção "Todas as Entidades" */}
-                <button
-                  type="button"
-                  className={`sidebar-filter-item ${!selectedEntityId ? 'active' : ''}`}
-                  onClick={() => setSelectedEntityId(null)}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Users size={13} />
-                    <span>{t('sidebar.allEntities')}</span>
-                  </div>
-                  {renderFilterSwitch(!selectedEntityId, 'var(--primary)')}
-                </button>
-
-                {/* Lista de Entidades que possuem eventos nesta timeline */}
-                {timelineEntities.map((ent) => {
-                  const isSelected = String(selectedEntityId) === String(ent.id);
-                  return (
-                    <button
-                      key={ent.id}
-                      type="button"
-                      className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
-                      onClick={() => setSelectedEntityId((prev) => (String(prev) === String(ent.id) ? null : ent.id))}
-                      title={ent.name}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
-                          {getEntityIcon(ent.type)}
-                        </span>
-                        <span
-                          style={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            fontSize: '0.8rem'
-                          }}
-                        >
-                          {ent.name}
-                        </span>
-                      </div>
-                      {renderFilterSwitch(isSelected, 'var(--primary)')}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-      </aside>
+      <TimelineSidebar
+        activeFinancialTab={activeFinancialTab}
+        availableCategoryOptions={availableCategoryOptions}
+        availableCreditOptions={availableCreditOptions}
+        availableExpenseCategoryItems={availableExpenseCategoryItems}
+        collapsedSections={collapsedSections}
+        getEntityIcon={getEntityIcon}
+        getStatusFilterOptions={getStatusFilterOptions}
+        isCondoflow={isCondoflow}
+        isListView={isListView}
+        isPeriodActive={isPeriodActive}
+        isReadOnly={isReadOnly}
+        isTimelineDropdownOpen={isTimelineDropdownOpen}
+        onCreateTimeline={onCreateTimeline}
+        onNavigateToTimeline={onNavigateToTimeline}
+        onSelectFinancialTab={onSelectFinancialTab}
+        periodMonth={periodMonth}
+        periodYear={periodYear}
+        periodYearOptions={periodYearOptions}
+        renderFilterSwitch={renderFilterSwitch}
+        searchQuery={searchQuery}
+        selectAllExpenseCategories={selectAllExpenseCategories}
+        selectAllStatuses={selectAllStatuses}
+        selectAllTimelines={selectAllTimelines}
+        selectedCategoryFilter={selectedCategoryFilter}
+        selectedEntityId={selectedEntityId}
+        selectedExpenseCategories={selectedExpenseCategories}
+        selectedMovementTypes={selectedMovementTypes}
+        selectedOutflowTypes={selectedOutflowTypes}
+        selectedStatusFilters={selectedStatusFilters}
+        selectedTimelineIds={selectedTimelineIds}
+        setIsTimelineDropdownOpen={setIsTimelineDropdownOpen}
+        setPeriodMonth={setPeriodMonth}
+        setPeriodYear={setPeriodYear}
+        setSearchQuery={setSearchQuery}
+        setSelectedCategoryFilter={setSelectedCategoryFilter}
+        setSelectedEntityId={setSelectedEntityId}
+        setSelectedExpenseCategories={setSelectedExpenseCategories}
+        setSelectedMovementTypes={setSelectedMovementTypes}
+        setSelectedOutflowTypes={setSelectedOutflowTypes}
+        t={t}
+        timeline={timeline}
+        timelineDropdownRef={timelineDropdownRef}
+        timelineEntities={timelineEntities}
+        timelineOptions={timelineOptions}
+        timelines={timelines}
+        toggleExpenseCategory={toggleExpenseCategory}
+        toggleSectionCollapse={toggleSectionCollapse}
+        toggleStatusFilter={toggleStatusFilter}
+        toggleTimelineSelection={toggleTimelineSelection}
+      />
 
       {/* 📜 Right Timeline Content Stream */}
       <div className="timeline-content-stream">
@@ -3623,13 +1458,177 @@ function VerticalTimeline({
         {/* Render Selected Timeline View or Filtered Status/Category/Search Stack List */}
         <div key={`${timeline.id}-${activeFinancialTab || 'all'}-${groupBy}-${selectedStatusFilters.join(',')}-${selectedExpenseCategories.join(',')}-${selectedCategoryFilter}-${searchQuery}-${selectedEntityId || ''}`} className="timeline-view-wrapper">
           {isListView ? (
-            renderFilteredStatusListView()
+            <TimelineFilteredListView
+              activeFinancialTab={activeFinancialTab}
+              activeTimeboard={activeTimeboard}
+              dayComparator={dayComparator}
+              effectiveTimelines={effectiveTimelines}
+              filteredEvents={filteredEvents}
+              handleOpenReceipt={handleOpenReceipt}
+              isBalancoView={isBalancoView}
+              isFinancialTimeline={isFinancialTimeline}
+              isLoanTimelineOrTab={isLoanTimelineOrTab}
+              isReminders={isReminders}
+              onAddChecklistItem={onAddChecklistItem}
+              onAddEventForDate={onAddEventForDate}
+              onDeleteChecklistItem={onDeleteChecklistItem}
+              onDeleteEvent={onDeleteEvent}
+              onEditEvent={onEditEvent}
+              onNavigateToTimeline={onNavigateToTimeline}
+              onOpenCreatePocket={onOpenCreatePocket}
+              onOpenEditInstallment={onOpenEditInstallment}
+              onPayUpToHere={onPayUpToHere}
+              onToggleLoanPayment={onToggleLoanPayment}
+              onToggleTask={onToggleTask}
+              onUpdateEventDirect={onUpdateEventDirect}
+              paletteTheme={paletteTheme}
+              resetAllFilters={resetAllFilters}
+              sharedNoticeToggles={sharedNoticeToggles}
+              t={t}
+              timeline={timeline}
+              timelines={timelines}
+              todayStr={todayStr}
+            />
           ) : (
             <>
-              {groupBy === 'semana' && renderWeekView()}
-              {groupBy === 'mes' && renderMonthView()}
-              {groupBy === 'ano' && renderYearView()}
-              {groupBy === 'dia' && renderDayView()}
+              {groupBy === 'semana' && <TimelineWeekView
+                activeFinancialTab={activeFinancialTab}
+                dateLocale={dateLocale}
+                dayComparator={dayComparator}
+                effectiveTimelines={effectiveTimelines}
+                filteredEvents={filteredEvents}
+                handleOpenReceipt={handleOpenReceipt}
+                language={language}
+                onAddEventForDate={onAddEventForDate}
+                onDeleteEvent={onDeleteEvent}
+                onEditEvent={onEditEvent}
+                onLoadMoreFuture={onLoadMoreFuture}
+                onLoadMorePast={onLoadMorePast}
+                onNavigateToTimeline={onNavigateToTimeline}
+                onOpenEditInstallment={onOpenEditInstallment}
+                onPayUpToHere={onPayUpToHere}
+                onToggleLoanPayment={onToggleLoanPayment}
+                onToggleTask={onToggleTask}
+                onUpdateEventDirect={onUpdateEventDirect}
+                paletteTheme={paletteTheme}
+                persons={persons}
+                showEmptyDays={showEmptyDays}
+                t={t}
+                timeline={timeline}
+                timelines={timelines}
+                todayDate={todayDate}
+              />}
+              {groupBy === 'mes' && <TimelineMonthView
+                activeFinancialTab={activeFinancialTab}
+                activeTimeboard={activeTimeboard}
+                computeFromMonth={computeFromMonth}
+                dateLocale={dateLocale}
+                dayComparator={dayComparator}
+                effectiveTimelines={effectiveTimelines}
+                handleOpenReceipt={handleOpenReceipt}
+                hasExpenseTimeline={hasExpenseTimeline}
+                hasIncomeTimeline={hasIncomeTimeline}
+                hasInvestmentTimeline={hasInvestmentTimeline}
+                hasLoanTimeline={hasLoanTimeline}
+                isBalancoView={isBalancoView}
+                isFinancial={isFinancial}
+                isFinancialTimeline={isFinancialTimeline}
+                isLoanTimelineOrTab={isLoanTimelineOrTab}
+                isReadOnly={isReadOnly}
+                isReminders={isReminders}
+                monthExpensesRealizedMap={monthExpensesRealizedMap}
+                monthExpensesTotalMap={monthExpensesTotalMap}
+                monthIncomeRealizedMap={monthIncomeRealizedMap}
+                monthIncomeTotalMap={monthIncomeTotalMap}
+                monthInvestmentsDeductionsMap={monthInvestmentsDeductionsMap}
+                monthInvestmentsDeductionsRealizedMap={monthInvestmentsDeductionsRealizedMap}
+                monthInvestmentsExternalMap={monthInvestmentsExternalMap}
+                monthInvestmentsExternalRealizedMap={monthInvestmentsExternalRealizedMap}
+                monthInvestmentsRealizedMap={monthInvestmentsRealizedMap}
+                monthInvestmentsTotalMap={monthInvestmentsTotalMap}
+                monthLoansRealizedMap={monthLoansRealizedMap}
+                monthLoansTotalMap={monthLoansTotalMap}
+                monthProjectionMode={monthProjectionMode}
+                monthsList={monthsList}
+                onAddChecklistItem={onAddChecklistItem}
+                onAddEventForDate={onAddEventForDate}
+                onDeleteChecklistItem={onDeleteChecklistItem}
+                onDeleteEvent={onDeleteEvent}
+                onDeletePocket={onDeletePocket}
+                onEditEvent={onEditEvent}
+                onEditPocket={onEditPocket}
+                onLoadMoreFuture={onLoadMoreFuture}
+                onLoadMorePast={onLoadMorePast}
+                onNavigateToTimeline={onNavigateToTimeline}
+                onOpenAmortizationModal={onOpenAmortizationModal}
+                onOpenCreatePocket={onOpenCreatePocket}
+                onOpenEditInstallment={onOpenEditInstallment}
+                onOpenWithdrawModal={onOpenWithdrawModal}
+                onPayUpToHere={onPayUpToHere}
+                onToggleLoanPayment={onToggleLoanPayment}
+                onToggleTask={onToggleTask}
+                onUpdateEventDirect={onUpdateEventDirect}
+                paletteTheme={paletteTheme}
+                persons={persons}
+                pockets={pockets}
+                selectedCategoryFilter={selectedCategoryFilter}
+                setMonthProjectionMode={setMonthProjectionMode}
+                showEmptyDays={showEmptyDays}
+                t={t}
+                timeline={timeline}
+                timelines={timelines}
+                todayDate={todayDate}
+              />}
+              {groupBy === 'ano' && <TimelineYearView
+            monthsList={monthsList}
+                activeFinancialTab={activeFinancialTab}
+                dateLocale={dateLocale}
+                dayComparator={dayComparator}
+                effectiveTimelines={effectiveTimelines}
+                handleOpenReceipt={handleOpenReceipt}
+                onAddEventForDate={onAddEventForDate}
+                onDeleteEvent={onDeleteEvent}
+                onEditEvent={onEditEvent}
+                onLoadMoreFuture={onLoadMoreFuture}
+                onLoadMorePast={onLoadMorePast}
+                onNavigateToTimeline={onNavigateToTimeline}
+                onOpenEditInstallment={onOpenEditInstallment}
+                onPayUpToHere={onPayUpToHere}
+                onToggleLoanPayment={onToggleLoanPayment}
+                onToggleTask={onToggleTask}
+                onUpdateEventDirect={onUpdateEventDirect}
+                paletteTheme={paletteTheme}
+                showEmptyDays={showEmptyDays}
+                t={t}
+                timeline={timeline}
+                timelines={timelines}
+                todayDate={todayDate}
+              />}
+              {groupBy === 'dia' && <TimelineDayView
+                activeFinancialTab={activeFinancialTab}
+                dateLocale={dateLocale}
+                daysArray={daysArray}
+                effectiveTimelines={effectiveTimelines}
+                eventsByDate={eventsByDate}
+                handleOpenReceipt={handleOpenReceipt}
+                onAddEventForDate={onAddEventForDate}
+                onDeleteEvent={onDeleteEvent}
+                onEditEvent={onEditEvent}
+                onLoadMoreFuture={onLoadMoreFuture}
+                onLoadMorePast={onLoadMorePast}
+                onNavigateToTimeline={onNavigateToTimeline}
+                onOpenEditInstallment={onOpenEditInstallment}
+                onPayUpToHere={onPayUpToHere}
+                onToggleLoanPayment={onToggleLoanPayment}
+                onToggleTask={onToggleTask}
+                onUpdateEventDirect={onUpdateEventDirect}
+                paletteTheme={paletteTheme}
+                showEmptyDays={showEmptyDays}
+                t={t}
+                timeline={timeline}
+                timelines={timelines}
+                todayStr={todayStr}
+              />}
             </>
           )}
         </div>

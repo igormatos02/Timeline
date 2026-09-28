@@ -184,6 +184,7 @@ export default function AppModals({
         isOpen={Boolean(deletingEvent)}
         onClose={() => setDeletingEvent(null)}
         event={deletingEvent}
+        events={activeTimeline?.events || rawEvents || []}
         onConfirmDelete={handleConfirmDeleteEvent}
       />
 

@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { resourceAccessParam } from '../middleware/timeboardAccess.js';
 import { todoService } from '../../../application/services/TodoService.js';
+import { requireCapability } from '../middleware/requireCapability.js';
+import { Capability } from '../../../../shared/permissions.js';
 
 export const todoRouter = Router();
 
@@ -31,7 +33,7 @@ todoRouter.get('/:id', async (req, res) => {
 });
 
 // POST /api/todos
-todoRouter.post('/', async (req, res) => {
+todoRouter.post('/', requireCapability(Capability.EDIT), async (req, res) => {
   try {
     const created = await todoService.createTodo(req.body);
     res.status(201).json(created);
@@ -41,7 +43,7 @@ todoRouter.post('/', async (req, res) => {
 });
 
 // PUT /api/todos/:id
-todoRouter.put('/:id', async (req, res) => {
+todoRouter.put('/:id', requireCapability(Capability.EDIT), async (req, res) => {
   try {
     const updated = await todoService.updateTodo(req.params.id, req.body);
     res.json(updated);
@@ -51,7 +53,7 @@ todoRouter.put('/:id', async (req, res) => {
 });
 
 // POST /api/todos/:id/toggle-status
-todoRouter.post('/:id/toggle-status', async (req, res) => {
+todoRouter.post('/:id/toggle-status', requireCapability(Capability.CHANGE_STATUS), async (req, res) => {
   try {
     const updated = await todoService.toggleStatus(req.params.id, req.body?.status);
     res.json(updated);
@@ -61,7 +63,7 @@ todoRouter.post('/:id/toggle-status', async (req, res) => {
 });
 
 // DELETE /api/todos/:id
-todoRouter.delete('/:id', async (req, res) => {
+todoRouter.delete('/:id', requireCapability(Capability.EDIT), async (req, res) => {
   try {
     const deleted = await todoService.deleteTodo(req.params.id);
     res.json({ success: deleted });

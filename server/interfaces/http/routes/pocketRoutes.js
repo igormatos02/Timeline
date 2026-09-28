@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { resourceAccessParam } from '../middleware/timeboardAccess.js';
 import { pocketService } from '../../../application/services/PocketService.js';
+import { requireCapability } from '../middleware/requireCapability.js';
+import { Capability } from '../../../../shared/permissions.js';
 
 export const pocketRouter = Router();
 
@@ -30,7 +32,7 @@ pocketRouter.get('/:id', async (req, res) => {
   }
 });
 
-pocketRouter.post('/', async (req, res) => {
+pocketRouter.post('/', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const created = await pocketService.createPocket(req.body);
     res.status(201).json(created);
@@ -40,7 +42,7 @@ pocketRouter.post('/', async (req, res) => {
   }
 });
 
-pocketRouter.put('/:id', async (req, res) => {
+pocketRouter.put('/:id', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const updated = await pocketService.updatePocket(req.params.id, req.body);
     res.json(updated);
@@ -50,7 +52,7 @@ pocketRouter.put('/:id', async (req, res) => {
   }
 });
 
-pocketRouter.delete('/:id', async (req, res) => {
+pocketRouter.delete('/:id', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     await pocketService.deletePocket(req.params.id);
     res.json({ success: true });

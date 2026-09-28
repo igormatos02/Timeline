@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { resourceAccessParam } from '../middleware/timeboardAccess.js';
 import { timelineService } from '../../../application/services/TimelineService.js';
 import { createT } from '../../../../shared/i18n/index.js';
+import { requireCapability } from '../middleware/requireCapability.js';
+import { Capability } from '../../../../shared/permissions.js';
 
 const t = createT('en');
 
@@ -39,7 +41,7 @@ timelinesRouter.get('/:id', async (req, res) => {
 });
 
 // POST /api/timelines
-timelinesRouter.post('/', async (req, res) => {
+timelinesRouter.post('/', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const newTimeline = await timelineService.createTimeline(req.body);
     res.status(201).json(newTimeline);
@@ -49,7 +51,7 @@ timelinesRouter.post('/', async (req, res) => {
 });
 
 // PUT /api/timelines/:id
-timelinesRouter.put('/:id', async (req, res) => {
+timelinesRouter.put('/:id', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const updated = await timelineService.updateTimeline(req.params.id, req.body);
     if (!updated) return res.status(404).json({ error: t('backend.validation.timelineNotFound') });
@@ -60,7 +62,7 @@ timelinesRouter.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/timelines/:id
-timelinesRouter.delete('/:id', async (req, res) => {
+timelinesRouter.delete('/:id', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const deleted = await timelineService.deleteTimeline(req.params.id);
     res.json({ success: deleted });
@@ -70,7 +72,7 @@ timelinesRouter.delete('/:id', async (req, res) => {
 });
 
 // POST /api/timelines/:id/reset
-timelinesRouter.post('/:id/reset', async (req, res) => {
+timelinesRouter.post('/:id/reset', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const reset = await timelineService.resetTimeline(req.params.id);
     res.json({ success: reset });

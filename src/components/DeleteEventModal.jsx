@@ -1,51 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import { Trash2, X, Calendar, Repeat } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Trash2, X, Calendar, Repeat, AlertTriangle, Lock } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../utils/formatCurrency';
 import { EventRecurrence, EventType, EventDeletionMode, TimelineColor, normalizeRecurrence } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
+import { usePermissions } from '../context/PermissionsContext.jsx';
+import { isLockedMovement } from '../../shared/finance/corrections.js';
 
+// Categories of one-time movements that were stored with a recurring flag in older data
+const ONE_TIME_LEGACY_CATEGORIES = ['saida_esporadica', 'entrada_esporadica', 'amortizacao'];
+
+const seriesKeyOf = (ev) => String(ev?.eventId || ev?.seriesId || String(ev?.id || '').split('_')[0] || '');
+
+/**
+ * Deletes an event, or part of a recurring series:
+ * - only this occurrence, this month onwards, or the whole series;
+ * - effective movements are only deleted by admins (the options are disabled for the other roles, with the
+ *   reason), and the admin is warned of how many effective movements will be removed (recorded in the audit log).
+ */
 export default function DeleteEventModal({
   isOpen,
   onClose,
   event,
+  events = [],
   onConfirmDelete
 }) {
-  const { t } = useTranslation();
+  const { t, dateLocale } = useTranslation();
+  const { canOverride } = usePermissions();
 
   const isIncome = event?.eventType === EventType.INCOME;
   const isExpense = event?.eventType === EventType.EXPENSE;
   const isInvestment = event?.eventType === EventType.INVESTMENT;
-  const isFinancial = isIncome || isExpense || isInvestment;
 
   const normRec = event ? normalizeRecurrence(event) : null;
-  const isRecurring =
-    event &&
+  const isRecurring = Boolean(event) &&
     (normRec === EventRecurrence.RECURRING || normRec === EventRecurrence.LIMITED || Boolean(event.seriesId)) &&
     normRec !== EventRecurrence.ONCE &&
-    event.category !== 'saida_esporadica' &&
-    event.category !== 'entrada_esporadica' &&
-    event.category !== 'amortizacao' &&
+    !ONE_TIME_LEGACY_CATEGORIES.includes(event.category) &&
     !event.isAmortization;
 
-  const showScopeOptions = isFinancial || isRecurring;
+  // Effective movements touched by each option
+  const { occurrenceLocked, fromHereLocked, seriesLocked } = useMemo(() => {
+    if (!event) return { occurrenceLocked: [], fromHereLocked: [], seriesLocked: [] };
+    const key = seriesKeyOf(event);
+    const series = isRecurring
+      ? (events || []).filter((ev) => ev && seriesKeyOf(ev) === key && isLockedMovement(ev))
+      : [];
+    const own = isLockedMovement(event) ? [event] : [];
+    return {
+      occurrenceLocked: own,
+      fromHereLocked: series.filter((ev) => ev.date >= event.date),
+      seriesLocked: series.length ? series : own
+    };
+  }, [event, events, isRecurring]);
 
-  const currentMonth = format(new Date(), 'yyyy-MM');
-  const eventMonth = event?.date ? event.date.substring(0, 7) : '';
-  const isFutureMonth = Boolean(eventMonth && eventMonth > currentMonth);
+  const lockedFor = (mode) => (
+    mode === EventDeletionMode.ONLY_THIS ? occurrenceLocked
+      : mode === EventDeletionMode.FROM_NOW_ON ? fromHereLocked
+        : seriesLocked
+  );
+  const isModeAllowed = (mode) => canOverride || lockedFor(mode).length === 0;
 
-  const [deletionMode, setDeletionMode] = useState(EventDeletionMode.EVERYTHING);
+  const [deletionMode, setDeletionMode] = useState(EventDeletionMode.ONLY_THIS);
 
   useEffect(() => {
-    if (isOpen) {
-      if (isFutureMonth && showScopeOptions) {
-        setDeletionMode(EventDeletionMode.FROM_NOW_ON);
-      } else {
-        setDeletionMode(EventDeletionMode.EVERYTHING);
-      }
-    }
-  }, [isOpen, event, isFutureMonth, showScopeOptions]);
+    if (!isOpen) return;
+    // Safest allowed option first
+    const order = isRecurring
+      ? [EventDeletionMode.ONLY_THIS, EventDeletionMode.FROM_NOW_ON, EventDeletionMode.EVERYTHING]
+      : [EventDeletionMode.EVERYTHING];
+    setDeletionMode(order.find((mode) => canOverride || lockedFor(mode).length === 0) || order[0]);
+    // lockedFor only depends on the memoized lists above
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, event, isRecurring, canOverride, occurrenceLocked, fromHereLocked, seriesLocked]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -58,23 +85,67 @@ export default function DeleteEventModal({
 
   if (!isOpen || !event) return null;
 
-  const formattedDate = event.date
-    ? format(parseISO(event.date), "d 'de' MMMM 'de' yyyy", { locale: pt })
-    : '';
+  const formattedDate = event.date ? format(parseISO(event.date), 'PPP', { locale: dateLocale }) : '';
+  const selectedLocked = lockedFor(deletionMode);
+  const selectedAllowed = isModeAllowed(deletionMode);
+  const lockedTotal = selectedLocked.reduce((sum, ev) => sum + Math.abs(Number(ev.amount || 0)), 0);
 
   const handleDelete = () => {
+    if (!selectedAllowed) return;
     if (onConfirmDelete) {
       onConfirmDelete(event.id, deletionMode, { event, deletionMode });
     }
     onClose();
   };
 
+  const scopeOption = (mode, titleKey, descKey) => {
+    const allowed = isModeAllowed(mode);
+    const isSelected = deletionMode === mode;
+    const locked = lockedFor(mode);
+    return (
+      <div
+        key={mode}
+        onClick={() => allowed && setDeletionMode(mode)}
+        title={allowed ? undefined : t('deleteEventModal.lockedOption', { count: locked.length })}
+        style={{
+          background: isSelected ? `${TimelineColor.EXPENSE}1f` : 'var(--bg-app)',
+          border: isSelected ? `2px solid ${TimelineColor.EXPENSE}` : '1px solid var(--border-glass)',
+          borderRadius: '10px',
+          padding: '10px 14px',
+          cursor: allowed ? 'pointer' : 'not-allowed',
+          opacity: allowed ? 1 : 0.55,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          transition: 'all 0.15s ease'
+        }}
+      >
+        <input
+          type="radio"
+          name="deletionMode"
+          checked={isSelected}
+          disabled={!allowed}
+          onChange={() => allowed && setDeletionMode(mode)}
+          style={{ accentColor: TimelineColor.EXPENSE, cursor: allowed ? 'pointer' : 'not-allowed' }}
+        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <span style={{ fontSize: '0.84rem', fontWeight: '700', color: isSelected ? TimelineColor.EXPENSE : 'var(--text-main)' }}>
+            {t(titleKey)}
+          </span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{t(descKey)}</span>
+          {!allowed && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', fontWeight: '700', color: TimelineColor.WARNING }}>
+              <Lock size={11} /> {t('deleteEventModal.lockedOption', { count: locked.length })}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="modal-overlay">
-      <div
-        className="modal-card"
-        style={{ maxWidth: '500px' }}
-      >
+      <div className="modal-card" style={{ maxWidth: '500px' }}>
         {/* Header */}
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -83,8 +154,8 @@ export default function DeleteEventModal({
                 width: '36px',
                 height: '36px',
                 borderRadius: '10px',
-                background: 'rgba(244, 63, 94, 0.15)',
-                border: '1px solid rgba(244, 63, 94, 0.3)',
+                background: `${TimelineColor.EXPENSE}26`,
+                border: `1px solid ${TimelineColor.EXPENSE}4d`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -103,7 +174,7 @@ export default function DeleteEventModal({
             </div>
           </div>
 
-          <button type="button" className="modal-close-btn" onClick={onClose}>
+          <button type="button" className="modal-close-btn" onClick={onClose} aria-label={t('common.close')}>
             <X size={18} />
           </button>
         </div>
@@ -151,7 +222,7 @@ export default function DeleteEventModal({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
-                  background: 'rgba(99, 102, 241, 0.12)',
+                  background: 'var(--primary-glow)',
                   color: 'var(--primary-light)',
                   padding: '2px 7px',
                   borderRadius: '9999px',
@@ -165,79 +236,38 @@ export default function DeleteEventModal({
           </div>
         </div>
 
-        {/* Scope Selector Options with EventDeletionMode */}
-        {showScopeOptions ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
-            {/* Opção 1: Deste mês em diante (EventDeletionMode.FROM_NOW_ON) - Apenas se superior ao mês corrente */}
-            {isFutureMonth && (
-              <div
-                onClick={() => setDeletionMode(EventDeletionMode.FROM_NOW_ON)}
-                style={{
-                  background: deletionMode === EventDeletionMode.FROM_NOW_ON ? 'rgba(244, 63, 94, 0.12)' : 'var(--bg-app)',
-                  border: deletionMode === EventDeletionMode.FROM_NOW_ON ? `2px solid ${TimelineColor.EXPENSE}` : '1px solid var(--border-glass)',
-                  borderRadius: '10px',
-                  padding: '10px 14px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <input
-                  type="radio"
-                  name="deletionMode"
-                  checked={deletionMode === EventDeletionMode.FROM_NOW_ON}
-                  onChange={() => setDeletionMode(EventDeletionMode.FROM_NOW_ON)}
-                  style={{ accentColor: TimelineColor.EXPENSE, cursor: 'pointer' }}
-                />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.84rem', fontWeight: '700', color: deletionMode === EventDeletionMode.FROM_NOW_ON ? TimelineColor.EXPENSE : 'var(--text-main)' }}>
-                    {t('deleteEventModal.fromNowOnTitle')}
-                  </span>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                    {t('deleteEventModal.fromNowOnDesc')}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Opção 2: Apagar toda a série (EventDeletionMode.EVERYTHING) */}
-            <div
-              onClick={() => setDeletionMode(EventDeletionMode.EVERYTHING)}
-              style={{
-                background: deletionMode === EventDeletionMode.EVERYTHING ? 'rgba(220, 38, 38, 0.16)' : 'var(--bg-app)',
-                border: deletionMode === EventDeletionMode.EVERYTHING ? `2px solid ${TimelineColor.EXPENSE}` : '1px solid var(--border-glass)',
-                borderRadius: '10px',
-                padding: '10px 14px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <input
-                type="radio"
-                name="deletionMode"
-                checked={deletionMode === EventDeletionMode.EVERYTHING}
-                onChange={() => setDeletionMode(EventDeletionMode.EVERYTHING)}
-                style={{ accentColor: TimelineColor.EXPENSE, cursor: 'pointer' }}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.84rem', fontWeight: '800', color: deletionMode === EventDeletionMode.EVERYTHING ? TimelineColor.EXPENSE : 'var(--text-main)' }}>
-                  {t('deleteEventModal.everythingTitle')}
-                </span>
-                <span style={{ fontSize: '0.72rem', color: TimelineColor.EXPENSE }}>
-                  {t('deleteEventModal.everythingDesc')}
-                </span>
-              </div>
-            </div>
+        {/* Scope of the deletion */}
+        {isRecurring ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+            {scopeOption(EventDeletionMode.ONLY_THIS, 'deleteEventModal.onlyThisTitle', 'deleteEventModal.onlyThisDesc')}
+            {scopeOption(EventDeletionMode.FROM_NOW_ON, 'deleteEventModal.fromNowOnTitle', 'deleteEventModal.fromNowOnDesc')}
+            {scopeOption(EventDeletionMode.EVERYTHING, 'deleteEventModal.everythingTitle', 'deleteEventModal.everythingDesc')}
           </div>
         ) : (
-          <p style={{ margin: '0 0 16px 0', fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
+          <p style={{ margin: '0 0 14px 0', fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
             {t('deleteEventModal.confirmSingle')}
           </p>
+        )}
+
+        {/* Admins deleting effective movements: what disappears, and that it is recorded */}
+        {canOverride && selectedLocked.length > 0 && (
+          <div
+            style={{
+              display: 'flex',
+              gap: '10px',
+              alignItems: 'flex-start',
+              padding: '10px 12px',
+              marginBottom: '16px',
+              borderRadius: '10px',
+              background: `${TimelineColor.WARNING}1f`,
+              border: `1px solid ${TimelineColor.WARNING}59`,
+              fontSize: '0.8rem',
+              color: 'var(--text-main)'
+            }}
+          >
+            <AlertTriangle size={16} style={{ color: TimelineColor.WARNING, flexShrink: 0, marginTop: '1px' }} />
+            <span>{t('deleteEventModal.effectiveWarning', { count: selectedLocked.length, amount: formatCurrency(lockedTotal) })}</span>
+          </div>
         )}
 
         {/* Action Buttons */}
@@ -253,19 +283,21 @@ export default function DeleteEventModal({
           <button
             type="button"
             onClick={handleDelete}
+            disabled={!selectedAllowed}
             style={{
               background: TimelineColor.EXPENSE,
               color: TimelineColor.WHITE,
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: 'var(--radius-sm, 8px)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: 'var(--radius-sm)',
               padding: '8px 18px',
               fontSize: '0.86rem',
               fontWeight: '700',
-              cursor: 'pointer',
+              cursor: selectedAllowed ? 'pointer' : 'not-allowed',
+              opacity: selectedAllowed ? 1 : 0.5,
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 4px 14px rgba(244, 63, 94, 0.35)',
+              boxShadow: `0 4px 14px ${TimelineColor.EXPENSE}59`,
               transition: 'all 0.15s ease'
             }}
           >

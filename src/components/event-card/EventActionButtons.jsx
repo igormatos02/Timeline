@@ -1,7 +1,8 @@
 import React from 'react';
 import { useEventCard } from './EventCardContext.jsx';
+import { pendingStatusFor } from '../../../shared/finance/statusRules.js';
 import { DiaryPublishStatus, EventStatus, TimelineColor, isCancelledStatus, isPositiveStatus } from '../../enums/index.js';
-import { Ban, CheckCircle2, Edit3, FileText, Layers, Lock, Printer, Trash2, Wrench, Zap } from 'lucide-react';
+import { Ban, CheckCircle2, Edit3, FileText, Layers, Lock, Printer, Trash2, Undo2, Wrench, Zap } from 'lucide-react';
 import { effectiveStatusFor } from '../../../shared/finance/statusRules.js';
 import CancelEventConfirmModal from '../CancelEventConfirmModal.jsx';
 
@@ -9,6 +10,9 @@ import CancelEventConfirmModal from '../CancelEventConfirmModal.jsx';
 export default function EventActionButtons() {
   const {
     blocksChanges,
+    canChangeStatus,
+    canEdit,
+    canOverride,
     correctEvent,
     currentMonthEndStr,
     effectiveStatus,
@@ -33,6 +37,7 @@ export default function EventActionButtons() {
     isPayingUpToHere,
     isReadOnly,
     isRecurringEvent,
+    isRevertConfirmOpen,
     isTogglingStatus,
     isVirtual,
     localAuto,
@@ -46,6 +51,7 @@ export default function EventActionButtons() {
     openDesmembramento,
     setIsCancelConfirmOpen,
     setIsNotesExpanded,
+    setIsRevertConfirmOpen,
     setLocalAuto,
     setLocalStatus,
     setPostPublishStatus,
@@ -77,15 +83,15 @@ export default function EventActionButtons() {
             pointerEvents: isPayingUpToHere ? 'none' : 'auto',
             transition: 'all 0.15s ease'
           }}
-          title={t('buttons.payUpToHereTitle') || "Marcar como pagas todas as prestações deste empréstimo anteriores a esta parcela (inclusive)"}
+          title={t('buttons.payUpToHereTitle')}
         >
           <CheckCircle2 size={12} style={{ color: TimelineColor.EMERALD }} />
-          <span>{t('buttons.payUpToHere') || "Pagar até aqui"}</span>
+          <span>{t('buttons.payUpToHere')}</span>
         </button>
       )}
 
       {/* Botão de Notas (também disponível para utilizadores só de leitura) */}
-      {(onEdit || isReadOnly) && !isAnchorCard && !isCondoPost && (() => {
+      {(onEdit || isReadOnly || canChangeStatus) && !isAnchorCard && !isCondoPost && (() => {
         const allNotes = getCardNotes();
         const hasNotes = allNotes.length > 0;
 
@@ -158,7 +164,7 @@ export default function EventActionButtons() {
       })()}
 
       {/* Botão / Indicador de Evento Automático (Apenas para Eventos Recorrentes / Parcelamentos e não trancados/cancelados) */}
-      {isRecurringEvent && !isReadOnly && !isLockedPositive && !isCancelled && (
+      {isRecurringEvent && canEdit && !isLockedPositive && !isCancelled && (
         <button
           type="button"
           className="action-icon-btn"
@@ -268,7 +274,7 @@ export default function EventActionButtons() {
       )}
 
       {/* Botão Cancelar Evento: pede confirmação; um evento cancelado não pode ser reativado */}
-      {!isAnchorCard && !isLoanInstallment && !isCondoPost && onToggleLoanPayment && (isCancelled ? (
+      {!isAnchorCard && !isLoanInstallment && !isCondoPost && onToggleLoanPayment && canEdit && (isCancelled ? (
         <span
           className="action-icon-btn"
           title={t('cancelEventConfirm.locked')}
@@ -343,10 +349,49 @@ export default function EventActionButtons() {
         </button>
       )}
 
-      {/* Indicador de Cadeado (Trancado) para eventos financeiros positivos (oculto para utilizadores só de leitura) */}
-      {isLockedPositive && !isReadOnly && (
+      {/* Admins can revert an effective movement to pending (confirmation; recorded in the audit log) */}
+      {isLockedPositive && !isCancelled && canOverride && onToggleLoanPayment && (
+        <>
+          <button
+            type="button"
+            className="action-icon-btn"
+            disabled={isTogglingStatus}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsRevertConfirmOpen(true);
+            }}
+            title={t('timeline.revertToPendingHint')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '3px 5px',
+              borderRadius: '5px',
+              color: isFlatPositive ? TimelineColor.WHITE : 'var(--text-dim)',
+              background: 'transparent',
+              border: '1px solid transparent',
+              cursor: isTogglingStatus ? 'wait' : 'pointer'
+            }}
+          >
+            <Undo2 size={13} />
+          </button>
+          <CancelEventConfirmModal
+            isOpen={isRevertConfirmOpen}
+            eventTitle={event.title || event.name}
+            onClose={() => setIsRevertConfirmOpen(false)}
+            onConfirm={() => handleStatusToggle(null, pendingStatusFor(event))}
+            titleKey="revertEventConfirm.title"
+            messageKey="revertEventConfirm.message"
+            confirmKey="revertEventConfirm.confirm"
+            icon={Undo2}
+            color={TimelineColor.WARNING}
+          />
+        </>
+      )}
+
+      {/* Lock of effective movements: only admins can revert or delete them (explained on hover) */}
+      {isLockedPositive && !isReadOnly && !canOverride && (
         <span
-          title={t('timeline.lockedPositiveNotice')}
+          title={t('timeline.lockedPositiveNoticeNonAdmin')}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -381,8 +426,8 @@ export default function EventActionButtons() {
       )}
 
       {/* Botão Eliminar Evento - Não permitido para parcelas de empréstimo ou eventos virtuais */}
-      {/* Effective movements are never deleted: only cancelled or corrected */}
-      {onDelete && !isLoanInstallment && !isVirtual && !isLockedPositive && (
+      {/* Effective movements are only deleted by admins (recorded in the audit log) */}
+      {onDelete && !isLoanInstallment && !isVirtual && (!isLockedPositive || canOverride) && (
         <button
           type="button"
           className="action-icon-btn delete"

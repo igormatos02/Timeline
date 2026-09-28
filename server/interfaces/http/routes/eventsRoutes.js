@@ -3,6 +3,20 @@ import { resourceAccessParam } from '../middleware/timeboardAccess.js';
 import { eventService } from '../../../application/services/EventService.js';
 import { meService } from '../../../application/services/MeService.js';
 import { PersonRole } from '../../../../shared/enums/index.js';
+import { requireCapability, actorOf } from '../middleware/requireCapability.js';
+import { can } from '../../../../shared/permissions.js';
+import { EventStatus, isCancelledStatus } from '../../../../shared/enums/index.js';
+import { createT } from '../../../../shared/i18n/index.js';
+
+const t = createT('en');
+
+// Cancelling / deleting through a status change is an edit (contributors only mark movements as done)
+const deniesStatusChange = (req, status) => (
+  Boolean(status) && (isCancelledStatus(status) || status === EventStatus.DELETED) &&
+  Boolean(req.timeboardAccess) && !can(req.timeboardAccess.role, Capability.EDIT)
+);
+const noPermission = (res) => res.status(403).json({ error: t('backend.validation.noPermission'), code: 'NO_PERMISSION' });
+import { Capability } from '../../../../shared/permissions.js';
 
 export const eventsRouter = Router();
 
@@ -40,7 +54,7 @@ eventsRouter.get('/:id', async (req, res) => {
 });
 
 // POST /api/events
-eventsRouter.post('/', async (req, res) => {
+eventsRouter.post('/', requireCapability(Capability.EDIT), async (req, res) => {
   try {
     const newEvent = await eventService.createEvent(req.body);
     res.status(201).json(newEvent);
@@ -50,7 +64,7 @@ eventsRouter.post('/', async (req, res) => {
 });
 
 // POST /api/events/pay-up-to
-eventsRouter.post('/pay-up-to', async (req, res) => {
+eventsRouter.post('/pay-up-to', requireCapability(Capability.CHANGE_STATUS), async (req, res) => {
   try {
     const result = await eventService.payUpTo(req.body);
     res.json(result);
@@ -60,9 +74,9 @@ eventsRouter.post('/pay-up-to', async (req, res) => {
 });
 
 // PUT /api/events/:id
-eventsRouter.put('/:id', async (req, res) => {
+eventsRouter.put('/:id', requireCapability(Capability.EDIT), async (req, res) => {
   try {
-    const updated = await eventService.updateEvent(req.params.id, req.body);
+    const updated = await eventService.updateEvent(req.params.id, req.body, { actor: actorOf(req) });
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -70,17 +84,18 @@ eventsRouter.put('/:id', async (req, res) => {
 });
 
 // POST /api/events/:id/toggle-payment
-eventsRouter.post('/:id/toggle-payment', async (req, res) => {
+eventsRouter.post('/:id/toggle-payment', requireCapability(Capability.CHANGE_STATUS), async (req, res) => {
   try {
-    const updated = await eventService.toggleEventPayment(req.params.id, req.body?.status);
+    if (deniesStatusChange(req, req.body?.status)) return noPermission(res);
+    const updated = await eventService.toggleEventPayment(req.params.id, req.body?.status, actorOf(req));
     res.json(updated);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(err.code === 'EVENT_LOCKED' ? 409 : 400).json({ error: err.message, code: err.code });
   }
 });
 
 // POST /api/events/:id/notes (adds a comment to one occurrence: year / month of the given date)
-eventsRouter.post('/:id/notes', async (req, res) => {
+eventsRouter.post('/:id/notes', requireCapability(Capability.NOTE), async (req, res) => {
   try {
     const { date, content, timelineId, timeboardId, authorId, authorName } = req.body || {};
     const note = await eventService.addEventNote(req.params.id, { date, content, timelineId, timeboardId, authorId, authorName });
@@ -91,7 +106,7 @@ eventsRouter.post('/:id/notes', async (req, res) => {
 });
 
 // DELETE /api/events/notes/:noteId
-eventsRouter.delete('/notes/:noteId', async (req, res) => {
+eventsRouter.delete('/notes/:noteId', requireCapability(Capability.NOTE), async (req, res) => {
   try {
     await eventService.deleteEventNote(req.params.noteId);
     res.status(204).end();
@@ -101,10 +116,13 @@ eventsRouter.delete('/notes/:noteId', async (req, res) => {
 });
 
 // POST /api/events/:id/status (Updates or sets status and options like cont_year in financial_event_status)
-eventsRouter.post('/:id/status', async (req, res) => {
+eventsRouter.post('/:id/status', requireCapability(Capability.CHANGE_STATUS), async (req, res) => {
   try {
-    const { date, status, contYear, cont_year, receiptDate, receipt_date, timelineId, timeboardId, checkReceiptNumber } = req.body;
+    const { date, status, contYear, cont_year, receiptDate, receipt_date, timelineId, timeboardId, checkReceiptNumber, reason } = req.body;
+    if (deniesStatusChange(req, status)) return noPermission(res);
     const result = await eventService.setEventStatus(req.params.id, {
+      actor: actorOf(req),
+      reason,
       date,
       status,
       contYear: contYear !== undefined ? contYear : cont_year,
@@ -116,18 +134,19 @@ eventsRouter.post('/:id/status', async (req, res) => {
     });
     res.json(result);
   } catch (err) {
-    res.status(err.code === 'RECEIPT_NUMBER_TAKEN' ? 409 : 400).json({ error: err.message, code: err.code });
+    const httpStatus = err.code === 'RECEIPT_NUMBER_TAKEN' || err.code === 'EVENT_LOCKED' ? 409 : 400;
+    res.status(httpStatus).json({ error: err.message, code: err.code });
   }
 });
 
 // DELETE /api/events/:id
-eventsRouter.delete('/:id', async (req, res) => {
+eventsRouter.delete('/:id', requireCapability(Capability.EDIT), async (req, res) => {
   try {
-    const options = { ...req.query, ...req.body };
+    const options = { ...req.query, ...req.body, actor: actorOf(req) };
     const deleted = await eventService.deleteEvent(req.params.id, options);
     res.json({ success: deleted });
   } catch (err) {
     // Effective movements cannot be deleted (409), anything else is a server error
-    res.status(err.code === 'EVENT_LOCKED' ? 409 : 500).json({ error: err.message });
+    res.status(err.code === 'EVENT_LOCKED' ? 409 : 500).json({ error: err.message, code: err.code });
   }
 });

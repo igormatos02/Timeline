@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { usePermissions } from '../context/PermissionsContext.jsx';
+import AuditHistoryTab from './settings/AuditHistoryTab.jsx';
 import {
   X,
   Settings,
@@ -30,10 +32,11 @@ import {
   DollarSign,
   PanelTop,
   ChevronsDownUp,
-  ChevronsUpDown
+  ChevronsUpDown,
+  History
 } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { PersonRole, PersonType, TimeboardType, InvitationStatus, HeaderDefaultState, TimelineColor } from '../enums/index.js';
+import { PersonRole, PersonType, TimeboardType, InvitationStatus, HeaderDefaultState, TimelineColor, TimeboardSettingsTab } from '../enums/index.js';
 import * as api from '../services/api.js';
 import MonthPickerPopover from './ui/MonthPickerPopover.jsx';
 import CopyIdButton from './ui/CopyIdButton.jsx';
@@ -155,8 +158,10 @@ export default function TimeboardSettingsModal({
     handlePrintTemplateInput();
   };
 
-  // Active Tab: 'general' | 'entities' | 'settings'
-  const [activeTab, setActiveTab] = useState('general');
+  // Active tab (contributors only see the reports; admins also see the change history)
+  const { canManage } = usePermissions();
+  const [selectedTab, setActiveTab] = useState(TimeboardSettingsTab.GENERAL);
+  const activeTab = canManage ? selectedTab : TimeboardSettingsTab.REPORTS;
 
   // General tab form state
   const [generalForm, setGeneralForm] = useState({
@@ -248,7 +253,7 @@ export default function TimeboardSettingsModal({
 
   // Initialize print template editor when ref is available and tab is general
   useEffect(() => {
-    if (isOpen && activeTab === 'general' && printTemplateEditorRef.current) {
+    if (isOpen && activeTab === TimeboardSettingsTab.GENERAL && printTemplateEditorRef.current) {
       const printTemplateMd = generalForm.print_template || timeboard?.printTemplate || timeboard?.print_template || '';
       printTemplateEditorRef.current.innerHTML = markdownToHtml(printTemplateMd);
       const plainText = printTemplateEditorRef.current.innerText || '';
@@ -896,37 +901,51 @@ export default function TimeboardSettingsModal({
         <div className="tb-modal-body-layout">
           {/* Tabs Sidebar */}
           <div className="tb-sidebar-nav">
+            {canManage && (
             <TabButton
-              active={activeTab === 'general'}
-              onClick={() => setActiveTab('general')}
+              active={activeTab === TimeboardSettingsTab.GENERAL}
+              onClick={() => setActiveTab(TimeboardSettingsTab.GENERAL)}
               icon={<Sliders size={18} />}
               label={t('timeboardSettings.tabs.general')}
             />
+            )}
+            {canManage && (
             <TabButton
-              active={activeTab === 'entities'}
-              onClick={() => setActiveTab('entities')}
+              active={activeTab === TimeboardSettingsTab.ENTITIES}
+              onClick={() => setActiveTab(TimeboardSettingsTab.ENTITIES)}
               icon={<Users size={18} />}
               label={t('timeboardSettings.tabs.entities')}
               badge={fullPersonsList.length > 0 ? fullPersonsList.length : null}
             />
+            )}
             <TabButton
-              active={activeTab === 'reports'}
-              onClick={() => setActiveTab('reports')}
+              active={activeTab === TimeboardSettingsTab.REPORTS}
+              onClick={() => setActiveTab(TimeboardSettingsTab.REPORTS)}
               icon={<FileText size={18} />}
               label={t('timeboardSettings.tabs.reports')}
             />
+            {canManage && (
             <TabButton
-              active={activeTab === 'settings'}
-              onClick={() => setActiveTab('settings')}
+              active={activeTab === TimeboardSettingsTab.HISTORY}
+              onClick={() => setActiveTab(TimeboardSettingsTab.HISTORY)}
+              icon={<History size={18} />}
+              label={t('auditLog.tab')}
+            />
+            )}
+            {canManage && (
+            <TabButton
+              active={activeTab === TimeboardSettingsTab.SETTINGS}
+              onClick={() => setActiveTab(TimeboardSettingsTab.SETTINGS)}
               icon={<Settings size={18} />}
               label={t('timeboardSettings.tabs.settings')}
             />
+            )}
           </div>
 
           {/* Tab Content Area */}
           <div className="tb-main-content">
             {/* TAB 1: GERAL */}
-            {activeTab === 'general' && (
+            {activeTab === TimeboardSettingsTab.GENERAL && (
               <div style={{ maxWidth: '720px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-main, #fff)' }}>
@@ -1215,7 +1234,7 @@ export default function TimeboardSettingsModal({
             )}
 
             {/* TAB 2: ENTIDADES & MEMBROS */}
-            {activeTab === 'entities' && (
+            {activeTab === TimeboardSettingsTab.ENTITIES && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {/* Top Control Bar: Filters, Search & Add Button */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
@@ -1582,7 +1601,7 @@ export default function TimeboardSettingsModal({
             )}
 
             {/* TAB: RELATÓRIOS / REPORTS */}
-            {activeTab === 'reports' && (
+            {activeTab === TimeboardSettingsTab.REPORTS && (
               <div style={{ maxWidth: '720px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-main)' }}>
@@ -1603,8 +1622,11 @@ export default function TimeboardSettingsModal({
               </div>
             )}
 
+            {/* TAB: HISTÓRICO DE ALTERAÇÕES (admins) */}
+            {activeTab === TimeboardSettingsTab.HISTORY && <AuditHistoryTab timeboardId={timeboard?.id} />}
+
             {/* TAB: CONFIGURAÇÕES DO TIMEBOARD (COMPUTE FROM) */}
-            {activeTab === 'settings' && (
+            {activeTab === TimeboardSettingsTab.SETTINGS && (
               <form
                 onSubmit={handleSaveSettings}
                 style={{

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Capability, can } from '../shared/permissions.js';
 import { format } from 'date-fns';
 import Navbar from './components/Navbar';
 import { PermissionsProvider } from './context/PermissionsContext.jsx';
@@ -10,7 +11,7 @@ import {
   getLoanMetrics
 } from './utils/loanCalculations';
 import * as api from './services/api';
-import { TimelineType, isLoanTimelineType } from './enums/index.js';
+import { TimelineType, isLoanTimelineType, PersonRole } from './enums/index.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
 import LandingPage from './components/landing/LandingPage.jsx';
@@ -614,9 +615,12 @@ export default function App() {
     );
   }
 
+  // Role on the active timeboard (the owner is admin; older cached timeboards without a role are the owner's)
+  const timeboardRole = isIndividualRole ? PersonRole.INDIVIDUAL : (activeTimeboard?.role || PersonRole.ADMIN);
+
   // 3. Timeline Workspace View (When a specific timeboard is active)
   return (
-    <PermissionsProvider isReadOnly={isIndividualRole}>
+    <PermissionsProvider role={timeboardRole} isReadOnly={isIndividualRole}>
     <TimeboardProvider timeboardType={activeTimeboard?.type} headerDefaultState={activeTimeboard?.headerDefaultState} pockets={pockets}>
     <HeaderRefreshProvider value={refreshTimelines}>
     <div className="app-container">
@@ -629,7 +633,7 @@ export default function App() {
           setActiveTimelineId(null);
           setActiveFinancialTab(null);
         }}
-        onOpenEditTimeboard={isIndividualRole ? undefined : async (tb) => {
+        onOpenEditTimeboard={!can(timeboardRole, Capability.PRINT) ? undefined : async (tb) => {
           try {
             const fresh = await api.fetchTimeboard(tb.id);
             setEditingTimeboard(fresh || tb);

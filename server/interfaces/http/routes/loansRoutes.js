@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { resourceAccessParam, resourceAccessFromBody } from '../middleware/timeboardAccess.js';
 import { loanService } from '../../../application/services/LoanService.js';
+import { requireCapability } from '../middleware/requireCapability.js';
+import { Capability } from '../../../../shared/permissions.js';
 
 export const loansRouter = Router();
 
@@ -29,7 +31,7 @@ loansRouter.get('/timeline/:timelineId', async (req, res) => {
 });
 
 // POST /api/loans
-loansRouter.post('/', async (req, res) => {
+loansRouter.post('/', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const newContract = await loanService.createContract(req.body);
     res.status(201).json(newContract);
@@ -39,7 +41,7 @@ loansRouter.post('/', async (req, res) => {
 });
 
 // PUT /api/loans/:id
-loansRouter.put('/:id', async (req, res) => {
+loansRouter.put('/:id', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const updatedContract = await loanService.updateContract(req.params.id, req.body);
     res.json(updatedContract);
@@ -49,7 +51,7 @@ loansRouter.put('/:id', async (req, res) => {
 });
 
 // POST /api/loans/amortize
-loansRouter.post('/amortize', resourceAccessFromBody('loan', 'loanId'), async (req, res) => {
+loansRouter.post('/amortize', resourceAccessFromBody('loan', 'loanId'), requireCapability(Capability.EDIT), async (req, res) => {
   try {
     const result = await loanService.amortizeLoan(req.body);
     res.json(result);

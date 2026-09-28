@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { format } from 'date-fns';
 import { buildCorrectionDraft, isLockableMovement, isLockedMovement } from '../../../shared/finance/corrections.js';
-import { AmortizationEventCategory, EventDeletionMode, EventRecurrence, EventStatus, EventType, FINANCIAL_ADVANCE_PAYMENT_TYPES, FollowupStatus, TimelineType, isAccountOutflowEvent, isCancelledStatus, isPocketTransferEvent, isPositiveStatus, normalizePeriodicity, normalizeRecurrence } from '../../enums/index.js';
+import { AmortizationEventCategory, EventDeletionMode, EventRecurrence, EventStatus, EventType, FINANCIAL_ADVANCE_PAYMENT_TYPES, FollowupStatus, TimelineType, isAccountOutflowEvent, isCancelledStatus, isPocketTransferEvent, isPositiveStatus, normalizePeriodicity, normalizeRecurrence, StatusChangeReason } from '../../enums/index.js';
 import * as api from '../../services/api';
 import { generateUUID } from '../../utils/uuid.js';
 import { effectiveStatusFor } from '../../../shared/finance/statusRules.js';
@@ -167,7 +167,7 @@ export function useEventCrudActions({
           };
           await api.createEvent(newEvent);
           if (correctionOf?.id) {
-            await api.setEventStatus(correctionOf.id, { date: correctionOf.date, status: EventStatus.CANCELLED, timeboardId: activeTimeboardId });
+            await api.setEventStatus(correctionOf.id, { date: correctionOf.date, status: EventStatus.CANCELLED, timeboardId: activeTimeboardId, reason: StatusChangeReason.CORRECTION });
           }
           await refreshTimelines();
           showToast(t(correctionOf ? 'toast.eventCorrectedSuccess' : 'toast.eventCreatedSuccess'), 'success');
@@ -311,7 +311,7 @@ export function useEventCrudActions({
       targetObj = (activeTimeline?.events || []).find((ev) => ev.id === eventOrId);
     }
     if (targetObj && isLoanInstallment(targetObj)) {
-      showToast('As parcelas de empréstimo não podem ser eliminadas individualmente. Edite ou elimine o contrato.', 'warning');
+      showToast(t('toast.loanInstallmentDeleteBlocked'), 'warning');
       return;
     }
     if (targetObj && targetObj.id) {
@@ -377,7 +377,7 @@ export function useEventCrudActions({
         });
       } catch (err) {
         console.error('Error deleting event:', err);
-        showToast(t('toast.eventDeleteError'), 'error');
+        showToast(err?.message || t('toast.eventDeleteError'), 'error');
       }
     };
 

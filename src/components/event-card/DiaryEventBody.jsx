@@ -9,11 +9,11 @@ import EventActionButtons from './EventActionButtons.jsx';
 // Section of the event card (TimelineEventCard.jsx): reads the card values from EventCardContext.
 export default function DiaryEventBody() {
   const {
+    canEdit,
     event,
     isCancelledPost,
     isCondoPost,
     isCondoflow,
-    isReadOnly,
     onEdit,
     onUpdateEventDirect,
     postPublishStatus,
@@ -50,7 +50,7 @@ export default function DiaryEventBody() {
       <EventCardHeader />
 
       {/* Texto completo do post para utilizadores só de leitura (lido diretamente na timeline) */}
-      {isCondoPost && isReadOnly && event.description && (
+      {isCondoPost && !canEdit && event.description && (
         <div
           style={{
             fontSize: '0.84rem',
@@ -93,7 +93,7 @@ export default function DiaryEventBody() {
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
-            {isCondoPost && !isReadOnly && (() => {
+            {isCondoPost && canEdit && (() => {
               const isPublished = postPublishStatus === DiaryPublishStatus.PUBLISHED;
               const statusColor = isCancelledPost ? TimelineColor.SLATE : (isPublished ? TimelineColor.SUCCESS : TimelineColor.WARNING);
               const pillStyle = {

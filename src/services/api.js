@@ -282,6 +282,16 @@ export async function fetchTimeboard(timeboardId) {
   return res.json();
 }
 
+// Audit log of a timeboard (admins): changes to money already recorded, newest first
+export async function fetchAuditLog(timeboardId) {
+  const res = await apiFetch(`${API_BASE}/timeboards/${timeboardId}/audit`, { headers: getHeaders() });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || res.statusText);
+  }
+  return res.json();
+}
+
 // Timeboard Members (Shared Dashboards)
 export async function fetchTimeboardMembers(timeboardId) {
   if (!timeboardId) return [];
@@ -662,7 +672,12 @@ export async function toggleEventPayment(id, status = null) {
     headers: getHeaders(),
     ...(status ? { body: JSON.stringify({ status }) } : {})
   });
-  if (!res.ok) throw new Error('Failed to toggle event payment');
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const error = new Error(body.error || res.statusText);
+    error.code = body.code;
+    throw error;
+  }
   return res.json();
 }
 

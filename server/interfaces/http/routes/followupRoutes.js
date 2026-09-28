@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { resourceAccessParam } from '../middleware/timeboardAccess.js';
 import { followupService } from '../../../application/services/FollowupService.js';
+import { requireCapability } from '../middleware/requireCapability.js';
+import { Capability } from '../../../../shared/permissions.js';
 
 export const followupRouter = Router();
 
@@ -52,7 +54,7 @@ followupRouter.get('/event/:eventId', async (req, res) => {
 });
 
 // POST /api/followups
-followupRouter.post('/', async (req, res) => {
+followupRouter.post('/', requireCapability(Capability.EDIT), async (req, res) => {
   try {
     const created = await followupService.createFollowup(req.body);
     res.status(201).json(created);
@@ -62,7 +64,7 @@ followupRouter.post('/', async (req, res) => {
 });
 
 // PUT /api/followups/:id
-followupRouter.put('/:id', async (req, res) => {
+followupRouter.put('/:id', requireCapability(Capability.EDIT), async (req, res) => {
   try {
     const updated = await followupService.updateFollowup(req.params.id, req.body);
     res.json(updated);
@@ -72,7 +74,7 @@ followupRouter.put('/:id', async (req, res) => {
 });
 
 // POST /api/followups/:id/toggle-status
-followupRouter.post('/:id/toggle-status', async (req, res) => {
+followupRouter.post('/:id/toggle-status', requireCapability(Capability.CHANGE_STATUS), async (req, res) => {
   try {
     const updated = await followupService.toggleStatus(req.params.id, req.body?.status);
     res.json(updated);
@@ -82,7 +84,7 @@ followupRouter.post('/:id/toggle-status', async (req, res) => {
 });
 
 // DELETE /api/followups/:id
-followupRouter.delete('/:id', async (req, res) => {
+followupRouter.delete('/:id', requireCapability(Capability.EDIT), async (req, res) => {
   try {
     const deleted = await followupService.deleteFollowup(req.params.id);
     res.json({ success: deleted });

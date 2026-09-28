@@ -7,6 +7,7 @@ import { Check, Layers, X } from 'lucide-react';
 // Section of the event card (TimelineEventCard.jsx): reads the card values from EventCardContext.
 export default function EditableAmount({ prefix = '', defaultColor = 'var(--text-main)' }) {
   const {
+    canEdit,
     event,
     handleCancelAmount,
     handleCancelDesmembramento,
@@ -16,7 +17,6 @@ export default function EditableAmount({ prefix = '', defaultColor = 'var(--text
     isDesmembramentoExpanded,
     isEditingAmount,
     isLockedPositive,
-    isReadOnly,
     isRecurring,
     isVirtual,
     openDesmembramento,
@@ -50,7 +50,7 @@ export default function EditableAmount({ prefix = '', defaultColor = 'var(--text
     return (
       <span
         onClick={(e) => {
-          if (isReadOnly || isLockedPositive || isCancelled) return;
+          if (!canEdit || isLockedPositive || isCancelled) return;
           e.stopPropagation();
           if (isDesmembramentoExpanded) {
             handleCancelDesmembramento(e);
@@ -76,7 +76,7 @@ export default function EditableAmount({ prefix = '', defaultColor = 'var(--text
         {prefix}{formatCurrency(Math.abs(Number(event.amount || 0)))}
         <span
           onClick={(e) => {
-            if (isReadOnly || isLockedPositive || isCancelled) return;
+            if (!canEdit || isLockedPositive || isCancelled) return;
             e.stopPropagation();
             if (isDesmembramentoExpanded) {
               handleCancelDesmembramento(e);
@@ -276,7 +276,7 @@ export default function EditableAmount({ prefix = '', defaultColor = 'var(--text
   return (
     <span
       onClick={(e) => {
-        if (isReadOnly || isLockedPositive || isCancelled) return;
+        if (!canEdit || isLockedPositive || isCancelled) return;
         e.stopPropagation();
         setPropagateSubsequent(true);
         setIsEditingAmount(true);

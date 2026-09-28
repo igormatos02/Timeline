@@ -137,17 +137,19 @@ function VerticalTimeline({
     [personsById, isCondoflow]
   );
   // Read-only users (individual role) cannot create or change anything on the timeline.
-  const { isReadOnly } = usePermissions();
-  const onOpenCreatePocket = isReadOnly ? undefined : onOpenCreatePocketProp;
-  const onEditPocket = isReadOnly ? undefined : onEditPocketProp;
-  const onDeletePocket = isReadOnly ? undefined : onDeletePocketProp;
-  const onAddEventForDate = isReadOnly ? undefined : onAddEventForDateProp;
-  const onCompleteFloatingTask = isReadOnly ? undefined : onCompleteFloatingTaskProp;
-  const onAddFloatingTask = isReadOnly ? undefined : onAddFloatingTaskProp;
-  const onUpdateFloatingTaskPriority = isReadOnly ? undefined : onUpdateFloatingTaskPriorityProp;
-  const onOpenAmortizationModal = isReadOnly ? undefined : onOpenAmortizationModalProp;
-  const onOpenWithdrawModal = isReadOnly ? undefined : onOpenWithdrawModalProp;
-  const onCreateTimeline = isReadOnly ? undefined : onCreateTimelineProp;
+  // Actions follow the role on the timeboard (shared/permissions.js): creating / editing needs `canEdit`,
+  // pockets and timelines need `canManage`; `isReadOnly` (individual) also restricts the filters shown
+  const { isReadOnly, canEdit, canManage } = usePermissions();
+  const onOpenCreatePocket = canManage ? onOpenCreatePocketProp : undefined;
+  const onEditPocket = canManage ? onEditPocketProp : undefined;
+  const onDeletePocket = canManage ? onDeletePocketProp : undefined;
+  const onAddEventForDate = canEdit ? onAddEventForDateProp : undefined;
+  const onCompleteFloatingTask = canEdit ? onCompleteFloatingTaskProp : undefined;
+  const onAddFloatingTask = canEdit ? onAddFloatingTaskProp : undefined;
+  const onUpdateFloatingTaskPriority = canEdit ? onUpdateFloatingTaskPriorityProp : undefined;
+  const onOpenAmortizationModal = canEdit ? onOpenAmortizationModalProp : undefined;
+  const onOpenWithdrawModal = canEdit ? onOpenWithdrawModalProp : undefined;
+  const onCreateTimeline = canManage ? onCreateTimelineProp : undefined;
   const dateLocale = language === 'en' ? enUS : pt;
 
   const isFinancialTimeline = [
@@ -1443,7 +1445,7 @@ function VerticalTimeline({
         </div>
 
         {/* 📌 Pilha de Tarefas Pendentes (apenas para timelines de projeto/gerais, oculta em Financeiro, Entradas, Empréstimos e Principal) */}
-        {!isFinancialTimeline && !isReadOnly && (
+        {!isFinancialTimeline && canEdit && (
           <FloatingTaskStack
             pendingTasks={pendingFloatingTasks}
             onCompleteTask={onCompleteFloatingTask}

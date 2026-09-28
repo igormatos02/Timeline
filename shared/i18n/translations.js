@@ -70,6 +70,10 @@ export const translations = {
       copied: "Copied!"
     },
     deleteEventModal: {
+      onlyThisTitle: "Only this occurrence",
+      onlyThisDesc: "Removes this month only; the rest of the series stays.",
+      lockedOption: "Includes {{count}} effective movement(s): only an administrator can delete it",
+      effectiveWarning: "This removes {{count}} effective movement(s) ({{amount}}). The deletion is recorded in the change history.",
       title: "Delete Record",
       subtitle: "Choose the scope of deletion",
       recurringBadge: "Recurring",
@@ -82,6 +86,7 @@ export const translations = {
 
     // Toast Notifications
     toast: {
+      loanInstallmentDeleteBlocked: "Loan installments cannot be deleted one by one. Edit or delete the loan contract.",
       eventSavedSuccess: "Event saved successfully to database!",
       eventCreatedSuccess: "Event created successfully in database!",
       eventCorrectedSuccess: "Movement corrected: the original was cancelled and the correct one created.",
@@ -107,6 +112,8 @@ export const translations = {
 
     // Timeline Rows & Cards
     timeline: {
+      revertToPendingHint: "Revert to pending (admin only; recorded in the change history)",
+      lockedPositiveNoticeNonAdmin: "Effective movement: only an administrator can revert it to pending or delete it",
       changeCategory: "Change category",
       incomes: "Incomes",
       acquisition: "Acquisition",
@@ -390,6 +397,11 @@ export const translations = {
     // Action Hints / Tooltips
     actionNotes: "View / Edit Notes",
     actionAddNote: "Add Note",
+    revertEventConfirm: {
+      title: "Revert to pending?",
+      message: "This movement is effective. Reverting it to pending removes it from the realized totals and is recorded in the change history.",
+      confirm: "Revert to pending"
+    },
     cancelEventConfirm: {
       title: "Cancel event",
       message: "A cancelled event cannot be reactivated. Do you really want to cancel it?",
@@ -1534,6 +1546,29 @@ export const translations = {
       bySpace: "In each space of the account"
     },
 
+    // Change history (audit log) of a timeboard
+    auditLog: {
+      tab: "Change history",
+      title: "Change history",
+      subtitle: "Deletions, reverts to pending, cancellations and corrections of money already recorded.",
+      loading: "Loading history...",
+      empty: "No changes recorded yet.",
+      loadError: "Could not load the history (the database migration 0010 may not have been run yet).",
+      unnamed: "(no name)",
+      unknownUser: "unknown user",
+      byOn: "By {{user}} on {{date}}",
+      occurrence: "occurrence of {{date}}",
+      statusChange: "{{from}} → {{to}}",
+      hadEffective: "Included effective movements",
+      actions: {
+        delete_event: "Deleted",
+        delete_series: "Series deleted",
+        revert_to_pending: "Reverted to pending",
+        cancel: "Cancelled",
+        correct: "Corrected"
+      }
+    },
+
     // Account (savings timeline) spaces: the General space and the pockets
     account: {
       general: "General",
@@ -1985,6 +2020,7 @@ export const translations = {
         eventCancelledLocked: "A cancelled event cannot be reactivated",
         timelineAlreadyExists: "A timeline of type \"{{type}}\" already exists in this timeboard.",
         eventLockedPositive: "Positive financial events are permanently locked and cannot be modified or reverted to pending.",
+        noPermission: "You do not have permission for this action. Ask an administrator of the timeboard.",
         transferSameSpace: "The origin and the destination of a transfer must be different.",
         transferAmountRequired: "The transfer amount must be greater than zero.",
         eventLockedFields: "This movement is already effective and cannot be changed ({{fields}}). Use \"Correct\" to cancel it and create the right one.",
@@ -2296,6 +2332,10 @@ export const translations = {
       copied: "Copiado!"
     },
     deleteEventModal: {
+      onlyThisTitle: "Só esta ocorrência",
+      onlyThisDesc: "Remove apenas este mês; o resto da série mantém-se.",
+      lockedOption: "Inclui {{count}} movimento(s) efetivado(s): só um administrador pode apagar",
+      effectiveWarning: "Vai remover {{count}} movimento(s) efetivado(s) ({{amount}}). A eliminação fica registada no histórico de alterações.",
       title: "Eliminar Registo",
       subtitle: "Escolha o âmbito da eliminação",
       recurringBadge: "Recorrente",
@@ -2308,6 +2348,7 @@ export const translations = {
 
     // Toast Notifications
     toast: {
+      loanInstallmentDeleteBlocked: "As parcelas de empréstimo não podem ser eliminadas individualmente. Edite ou elimine o contrato.",
       eventSavedSuccess: "Evento guardado com sucesso na base de dados!",
       eventCreatedSuccess: "Evento adicionado com sucesso na base de dados!",
       eventCorrectedSuccess: "Movimento corrigido: o original foi cancelado e o correto criado.",
@@ -2333,6 +2374,8 @@ export const translations = {
 
     // Timeline Rows & Cards
     timeline: {
+      revertToPendingHint: "Voltar a pendente (só administrador; fica no histórico de alterações)",
+      lockedPositiveNoticeNonAdmin: "Movimento efetivado: só um administrador o pode voltar a pendente ou apagar",
       changeCategory: "Alterar categoria",
       incomes: "Entradas",
       acquisition: "Aquisição",
@@ -2616,6 +2659,11 @@ export const translations = {
     // Action Hints / Tooltips
     actionNotes: "Ver / Editar Notas",
     actionAddNote: "Adicionar Nota",
+    revertEventConfirm: {
+      title: "Voltar a pendente?",
+      message: "Este movimento está efetivado. Ao voltar a pendente deixa de contar nos totais realizados, e a alteração fica registada no histórico.",
+      confirm: "Voltar a pendente"
+    },
     cancelEventConfirm: {
       title: "Cancelar evento",
       message: "Um evento cancelado não pode ser reativado. Deseja mesmo cancelar?",
@@ -3760,6 +3808,29 @@ export const translations = {
       bySpace: "Em cada espaço da Conta"
     },
 
+    // Histórico de alterações (auditoria) do timeboard
+    auditLog: {
+      tab: "Histórico de alterações",
+      title: "Histórico de alterações",
+      subtitle: "Eliminações, reversões a pendente, cancelamentos e correções de dinheiro já lançado.",
+      loading: "A carregar o histórico...",
+      empty: "Ainda não há alterações registadas.",
+      loadError: "Não foi possível carregar o histórico (a migração 0010 da base de dados pode ainda não ter sido corrida).",
+      unnamed: "(sem nome)",
+      unknownUser: "utilizador desconhecido",
+      byOn: "Por {{user}} em {{date}}",
+      occurrence: "ocorrência de {{date}}",
+      statusChange: "{{from}} → {{to}}",
+      hadEffective: "Incluía movimentos efetivados",
+      actions: {
+        delete_event: "Eliminado",
+        delete_series: "Série eliminada",
+        revert_to_pending: "Voltou a pendente",
+        cancel: "Cancelado",
+        correct: "Corrigido"
+      }
+    },
+
     // Espaços da Conta (timeline de poupança): a Geral e os cofrinhos
     account: {
       general: "Geral",
@@ -4211,6 +4282,7 @@ export const translations = {
         eventCancelledLocked: "Um evento cancelado não pode ser reativado",
         timelineAlreadyExists: "Já existe uma timeline do tipo \"{{type}}\" neste timeboard.",
         eventLockedPositive: "Eventos financeiros positivos estão permanentemente trancados e não podem ser alterados nem revertidos para pendente.",
+        noPermission: "Não tem permissão para esta ação. Peça a um administrador do timeboard.",
         transferSameSpace: "A origem e o destino de uma transferência têm de ser diferentes.",
         transferAmountRequired: "O valor da transferência tem de ser maior que zero.",
         eventLockedFields: "Este movimento já está efetivado e não pode ser alterado ({{fields}}). Use \"Corrigir\" para o cancelar e criar o correto.",

@@ -11,6 +11,7 @@ export default function EventCardHeader() {
   const {
     abatedBreakdown,
     activeFinancialTab,
+    canEdit,
     cardTheme,
     event,
     handleCancelTitle,
@@ -29,7 +30,6 @@ export default function EventCardHeader() {
     isLockedPositive,
     isObligationEvent,
     isOutflowReference,
-    isReadOnly,
     isRecurring,
     isRegisterEvent,
     isTodoEvent,
@@ -205,7 +205,7 @@ export default function EventCardHeader() {
                     if (isAmortized || isAnchorCard || isVirtual || isLockedPositive || isCancelled) return;
                     if (isLoanInstallment && originInfo && onNavigateToTimeline) {
                       onNavigateToTimeline(originInfo.id);
-                    } else if (!isReadOnly) {
+                    } else if (canEdit) {
                       setIsEditingTitle(true);
                     }
                   }}

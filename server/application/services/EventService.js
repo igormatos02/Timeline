@@ -31,13 +31,13 @@ export class EventService {
     return service.createEvent(eventData);
   }
 
-  async updateEvent(id, updates) {
+  async updateEvent(id, updates, context = {}) {
     const service = await this.getServiceForTimeboard(updates.timeboardId);
-    return service.updateEvent(id, updates);
+    return service.updateEvent(id, updates, context);
   }
 
-  async toggleEventPayment(id, explicitStatus = null) {
-    return financialEventService.toggleEventPayment(id, explicitStatus);
+  async toggleEventPayment(id, explicitStatus = null, actor = null) {
+    return financialEventService.toggleEventPayment(id, explicitStatus, actor);
   }
 
   async setEventStatus(id, options = {}) {

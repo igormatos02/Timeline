@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { resourceAccessParam } from '../middleware/timeboardAccess.js';
 import { personService } from '../../../application/services/PersonService.js';
 import { createT } from '../../../../shared/i18n/index.js';
+import { requireCapability } from '../middleware/requireCapability.js';
+import { Capability } from '../../../../shared/permissions.js';
 
 const t = createT('en');
 
@@ -37,7 +39,7 @@ personsRouter.get('/:id', async (req, res) => {
 });
 
 // POST /api/persons
-personsRouter.post('/', async (req, res) => {
+personsRouter.post('/', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const created = await personService.createPerson(req.body);
     res.status(201).json(created);
@@ -47,7 +49,7 @@ personsRouter.post('/', async (req, res) => {
 });
 
 // PUT /api/persons/:id
-personsRouter.put('/:id', async (req, res) => {
+personsRouter.put('/:id', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const updated = await personService.updatePerson(req.params.id, req.body);
     if (!updated) return res.status(404).json({ error: t('backend.validation.personNotFound') });
@@ -58,7 +60,7 @@ personsRouter.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/persons/:id
-personsRouter.delete('/:id', async (req, res) => {
+personsRouter.delete('/:id', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const deleted = await personService.deletePerson(req.params.id);
     res.json({ success: deleted });

@@ -1,4 +1,5 @@
 import React from 'react';
+import { usePermissions } from '../context/PermissionsContext.jsx';
 import VerticalTimeline from '../components/VerticalTimeline';
 import TimelineHeader from '../components/TimelineHeader';
 import { format } from 'date-fns';
@@ -57,6 +58,11 @@ export default function AppMainArea({
   timelines,
   visibleTimelines
 }) {
+  // Buttons follow the role on the timeboard (shared/permissions.js): missing handlers hide them
+  const { canEdit, canManage } = usePermissions();
+  const manage = (handler) => (canManage ? handler : undefined);
+  const edit = (handler) => (canEdit ? handler : undefined);
+
   return (
     <main className="main-layout">
       {timelines.length > 0 && activeTimeline ? (
@@ -108,22 +114,22 @@ export default function AppMainArea({
               allEvents={displayEvents}
               activeFinancialTab={activeFinancialTab}
               pockets={pockets}
-              onOpenCreatePocket={handleOpenCreatePocket}
-              onEditPocket={handleOpenCreatePocket}
-              onDeletePocket={handleRequestDeletePocket}
+              onOpenCreatePocket={manage(handleOpenCreatePocket)}
+              onEditPocket={manage(handleOpenCreatePocket)}
+              onDeletePocket={manage(handleRequestDeletePocket)}
               onSelectFinancialTab={setActiveFinancialTab}
-              onEdit={handleOpenEditTimeline}
-              onToggleStatus={handleToggleTimelineStatus}
-              onDelete={handleRequestDeleteTimeline}
-              onOpenCreateTimeline={handleOpenCreateTimeline}
-              onOpenAmortizationModal={() => handleOpenAmortizationModal()}
+              onEdit={manage(handleOpenEditTimeline)}
+              onToggleStatus={manage(handleToggleTimelineStatus)}
+              onDelete={manage(handleRequestDeleteTimeline)}
+              onOpenCreateTimeline={manage(handleOpenCreateTimeline)}
+              onOpenAmortizationModal={edit(() => handleOpenAmortizationModal())}
               onScrollToOverdue={handleScrollToOverdue}
-              onSaveComputeStartDate={handleSaveComputeStartDate}
+              onSaveComputeStartDate={manage(handleSaveComputeStartDate)}
               isIndividualView={isIndividualView}
               onToggleIndividualView={setIsIndividualView}
               isIndividualRole={isIndividualRole}
               timeboardSummary={timeboardSummary}
-              onAddEvent={(opts) => {
+              onAddEvent={edit((opts) => {
                 if (opts && typeof opts === 'object' && !opts.nativeEvent) {
                   const presetDate = opts.date || format(new Date(), 'yyyy-MM-dd');
                   const nature = opts.nature || (activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income');
@@ -131,7 +137,7 @@ export default function AppMainArea({
                 } else {
                   handleOpenCreateEvent(format(new Date(), 'yyyy-MM-dd'), activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income');
                 }
-              }}
+              })}
             />
           }
         />
@@ -141,7 +147,7 @@ export default function AppMainArea({
           <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
             {t('timeline.noTimelines')}
           </p>
-          {activeTimeboard && !isIndividualRole && (
+          {activeTimeboard && canManage && (
             <button
               type="button"
               className="btn btn-primary btn-sm"

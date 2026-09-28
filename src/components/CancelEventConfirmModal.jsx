@@ -5,10 +5,21 @@ import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { TimelineColor } from '../enums/index.js';
 
 /**
- * Asks for confirmation before cancelling an event: a cancelled event can never be reactivated.
+ * Asks for confirmation before cancelling an event (a cancelled event can never be reactivated) or, with other
+ * texts / icon / color, before another action on an effective event (e.g. an admin reverting it to pending).
  * Rendered in a portal so it is not clipped by the event card.
  */
-export default function CancelEventConfirmModal({ isOpen, eventTitle, onClose, onConfirm }) {
+export default function CancelEventConfirmModal({
+  isOpen,
+  eventTitle,
+  onClose,
+  onConfirm,
+  titleKey = 'cancelEventConfirm.title',
+  messageKey = 'cancelEventConfirm.message',
+  confirmKey = 'cancelEventConfirm.confirm',
+  icon: Icon = Ban,
+  color = TimelineColor.DANGER
+}) {
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -32,19 +43,19 @@ export default function CancelEventConfirmModal({ isOpen, eventTitle, onClose, o
                 width: '36px',
                 height: '36px',
                 borderRadius: '10px',
-                background: `${TimelineColor.DANGER}26`,
-                border: `1px solid ${TimelineColor.DANGER}4d`,
+                background: `${color}26`,
+                border: `1px solid ${color}4d`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: TimelineColor.DANGER
+                color
               }}
             >
-              <Ban size={18} strokeWidth={2.2} />
+              <Icon size={18} strokeWidth={2.2} />
             </div>
             <div>
               <h2 className="modal-title" style={{ fontSize: '1.15rem', margin: 0 }}>
-                {t('cancelEventConfirm.title')}
+                {t(titleKey)}
               </h2>
               {eventTitle && (
                 <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>{eventTitle}</div>
@@ -58,7 +69,7 @@ export default function CancelEventConfirmModal({ isOpen, eventTitle, onClose, o
 
         <div className="modal-body" style={{ padding: '16px 0 8px 0' }}>
           <p style={{ fontSize: '0.92rem', color: 'var(--text-main)', margin: 0, fontWeight: '500' }}>
-            {t('cancelEventConfirm.message')}
+            {t(messageKey)}
           </p>
         </div>
 
@@ -73,9 +84,9 @@ export default function CancelEventConfirmModal({ isOpen, eventTitle, onClose, o
               onConfirm();
               onClose();
             }}
-            style={{ background: TimelineColor.DANGER, borderColor: TimelineColor.DANGER, color: TimelineColor.WHITE }}
+            style={{ background: color, borderColor: color, color: TimelineColor.WHITE }}
           >
-            {t('cancelEventConfirm.confirm')}
+            {t(confirmKey)}
           </button>
         </div>
       </div>

@@ -3,6 +3,9 @@ import { timeboardService } from '../../../application/services/TimeboardService
 import { timeboardInvitationRepository } from '../../../infrastructure/database/supabase/SupabaseTimeboardInvitationRepository.js';
 import { timeboardAccessFromParam } from '../middleware/timeboardAccess.js';
 import { createT } from '../../../../shared/i18n/index.js';
+import { requireCapability } from '../middleware/requireCapability.js';
+import { auditService } from '../../../application/services/AuditService.js';
+import { Capability } from '../../../../shared/permissions.js';
 
 const t = createT('en');
 
@@ -37,7 +40,7 @@ timeboardsRouter.get('/:id/members', async (req, res) => {
 });
 
 // POST /api/timeboards/:id/members
-timeboardsRouter.post('/:id/members', async (req, res) => {
+timeboardsRouter.post('/:id/members', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const { userId, user_id } = req.body;
     const targetUserId = userId || user_id;
@@ -51,7 +54,7 @@ timeboardsRouter.post('/:id/members', async (req, res) => {
 });
 
 // DELETE /api/timeboards/:id/members/:userId
-timeboardsRouter.delete('/:id/members/:userId', async (req, res) => {
+timeboardsRouter.delete('/:id/members/:userId', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const deleted = await timeboardService.removeMember(req.params.id, req.params.userId);
     res.json({ success: deleted });
@@ -61,7 +64,7 @@ timeboardsRouter.delete('/:id/members/:userId', async (req, res) => {
 });
 
 // GET /api/timeboards/:id/invitations
-timeboardsRouter.get('/:id/invitations', async (req, res) => {
+timeboardsRouter.get('/:id/invitations', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const invitations = await timeboardService.getInvitations(req.params.id);
     res.json(invitations);
@@ -72,7 +75,7 @@ timeboardsRouter.get('/:id/invitations', async (req, res) => {
 });
 
 // POST /api/timeboards/:id/invitations/:invitationId/revoke
-timeboardsRouter.post('/:id/invitations/:invitationId/revoke', async (req, res) => {
+timeboardsRouter.post('/:id/invitations/:invitationId/revoke', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const result = await timeboardService.revokeInvitation(req.params.id, req.params.invitationId);
     res.json({ success: true, result });
@@ -83,7 +86,7 @@ timeboardsRouter.post('/:id/invitations/:invitationId/revoke', async (req, res) 
 });
 
 // POST /api/timeboards/:id/persons/:personId/unlink
-timeboardsRouter.post('/:id/persons/:personId/unlink', async (req, res) => {
+timeboardsRouter.post('/:id/persons/:personId/unlink', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const result = await timeboardService.unlinkPersonMember(req.params.id, req.params.personId);
     res.json(result);
@@ -94,7 +97,7 @@ timeboardsRouter.post('/:id/persons/:personId/unlink', async (req, res) => {
 });
 
 // POST /api/timeboards/:id/invite
-timeboardsRouter.post('/:id/invite', async (req, res) => {
+timeboardsRouter.post('/:id/invite', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const { personId, email, role, inviterName, invitedBy, invited_by } = req.body;
     const originUrl = req.headers.origin || req.headers.referer;
@@ -129,6 +132,15 @@ timeboardsRouter.post('/:id/accept-invite', async (req, res) => {
   }
 });
 
+// GET /api/timeboards/:id/audit — admins: audit log of the changes to recorded money (newest first)
+timeboardsRouter.get('/:id/audit', requireCapability(Capability.MANAGE), async (req, res) => {
+  try {
+    res.json(await auditService.list(req.params.id));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/timeboards/:id
 timeboardsRouter.get('/:id', async (req, res) => {
   try {
@@ -152,7 +164,7 @@ timeboardsRouter.post('/', async (req, res) => {
 });
 
 // PUT /api/timeboards/:id
-timeboardsRouter.put('/:id', async (req, res) => {
+timeboardsRouter.put('/:id', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const updated = await timeboardService.updateTimeboard(req.params.id, req.body);
     if (!updated) return res.status(404).json({ error: t('backend.validation.timeboardNotFound') });
@@ -163,7 +175,7 @@ timeboardsRouter.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/timeboards/:id
-timeboardsRouter.delete('/:id', async (req, res) => {
+timeboardsRouter.delete('/:id', requireCapability(Capability.MANAGE), async (req, res) => {
   try {
     const deleted = await timeboardService.deleteTimeboard(req.params.id);
     res.json({ success: deleted });

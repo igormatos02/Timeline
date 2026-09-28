@@ -30,10 +30,14 @@ import {
   isCancelledStatus,
   normalizeRecurrence,
   FINANCIAL_ADVANCE_PAYMENT_TYPES,
-  isPocketTransferEvent
+  isPocketTransferEvent,
+  PersonRole,
+  AuditAction,
+  StatusChangeReason
 } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 import { isLockableMovement, changedLockedFields } from '../../../shared/finance/corrections.js';
+import { auditService } from './AuditService.js';
 
 const t = createT('en');
 
@@ -560,30 +564,75 @@ export class FinancialEventService {
     return { status: found || existing?.status || null, date: match ? date : null };
   }
 
+  // Status change of an occurrence of an effective-lockable movement (shared/finance/corrections.js):
+  // cancelling is recorded in the audit log (as a correction when `reason` says so); reverting an effective
+  // occurrence to pending is only allowed to admins and recorded. Returns the audit entry to record after
+  // the change, or null.
+  async _checkStatusChange({ targetEvent, rootId, targetDate, newStatus, actor = null, reason = null }) {
+    if (!newStatus || !targetDate || !isLockableMovement(targetEvent)) return null;
+    const occurrenceId = `${rootId}_${String(targetDate).substring(0, 10)}`;
+    const { status: currentStatus } = await this._getOccurrenceState(occurrenceId, targetEvent);
+    if (isCancelledStatus(newStatus)) {
+      if (isCancelledStatus(currentStatus)) return null;
+      return { action: reason === StatusChangeReason.CORRECTION ? AuditAction.CORRECT : AuditAction.CANCEL, previousStatus: currentStatus };
+    }
+    const isRevert = !isPositiveStatus(newStatus) && newStatus !== EventStatus.DELETED && isPositiveStatus(currentStatus);
+    if (!isRevert) return null;
+    if (actor?.role !== PersonRole.ADMIN) {
+      const error = new Error(t('backend.validation.eventLockedPositive'));
+      error.code = 'EVENT_LOCKED';
+      throw error;
+    }
+    return { action: AuditAction.REVERT_TO_PENDING, previousStatus: currentStatus };
+  }
+
+  async _recordStatusAudit(audit, { actor, targetEvent, targetDate, newStatus }) {
+    if (!audit) return;
+    await auditService.record({
+      actor,
+      timeboardId: targetEvent.timeboardId || targetEvent.timeboard_id,
+      action: audit.action,
+      event: targetEvent,
+      occurrenceDate: targetDate,
+      details: { previousStatus: audit.previousStatus, newStatus },
+      snapshot: { event: targetEvent }
+    });
+  }
+
   // Effective movements are never deleted (only cancelled or corrected): neither the occurrence being deleted nor,
   // when deleting a whole series, any of its occurrences may be effective ("from now on" stays available)
   async _assertDeletable(id, directEvent, allRawEvents, deletionMode, options = {}) {
     const rootId = String(id).split('_')[0];
     const target = directEvent || (allRawEvents || []).find((e) => e.id === rootId || e.eventId === rootId);
-    if (!target || !isLockableMovement(target)) return;
+    if (!target || !isLockableMovement(target)) return null;
     const hasOccurrenceDate = /_\d{4}-\d{2}-\d{2}$/.test(String(id));
-    const occurrenceId = !hasOccurrenceDate && options.date ? `${rootId}_${String(options.date).substring(0, 10)}` : id;
+    const occurrenceDate = hasOccurrenceDate ? String(id).slice(-10) : (options.date ? String(options.date).substring(0, 10) : null);
+    const occurrenceId = !hasOccurrenceDate && options.date ? `${rootId}_${occurrenceDate}` : id;
     const { status } = await this._getOccurrenceState(occurrenceId, target);
-    const lockedError = () => {
+    const seriesKeys = new Set([target.eventId, target.id, rootId].filter(Boolean).map(String));
+    const statusMap = await financialEventStatusRepository.getStatusMap();
+    const seriesStatuses = [];
+    for (const [key, value] of statusMap.entries()) {
+      const [year, month, ...rest] = String(key).split('_');
+      if (seriesKeys.has(rest.join('_'))) seriesStatuses.push({ year: Number(year), month: Number(month), status: value });
+    }
+    const isWholeSeries = deletionMode === EventDeletionMode.EVERYTHING;
+    const touchesEffective = isPositiveStatus(status) || (isWholeSeries && seriesStatuses.some((row) => isPositiveStatus(row.status)));
+    // Contributors never reach this (route guard); non-admin editors cannot delete effective movements
+    if (touchesEffective && options.actor?.role !== PersonRole.ADMIN) {
       const error = new Error(t('backend.validation.eventLockedDelete'));
       error.code = 'EVENT_LOCKED';
-      return error;
-    };
-    if (isPositiveStatus(status)) throw lockedError();
-    if (deletionMode === EventDeletionMode.EVERYTHING) {
-      const seriesKeys = new Set([target.eventId, target.id, rootId].filter(Boolean).map(String));
-      const statusMap = await financialEventStatusRepository.getStatusMap();
-      for (const [key, value] of statusMap.entries()) {
-        const keyEventId = String(key).split('_').slice(2).join('_');
-        if (seriesKeys.has(keyEventId) && isPositiveStatus(value)) throw lockedError();
-      }
+      throw error;
     }
+    return {
+      action: isWholeSeries || deletionMode === EventDeletionMode.FROM_NOW_ON ? AuditAction.DELETE_SERIES : AuditAction.DELETE_EVENT,
+      target,
+      occurrenceDate,
+      details: { deletionMode, touchesEffective, occurrenceStatus: status || null },
+      snapshot: { event: target, statuses: seriesStatuses }
+    };
   }
+
 
   // Account transfers: origin and destination spaces must differ (null = General) and the amount must be positive
   _validateAccountTransfer(data) {
@@ -660,7 +709,7 @@ export class FinancialEventService {
     return created;
   }
 
-  async updateEvent(id, updates) {
+  async updateEvent(id, updates, context = {}) {
     const { updateScope, propagateForward, ...rawDirectUpdates } = updates;
     const directUpdates = this._sanitizeFutureEventStatus(rawDirectUpdates);
 
@@ -701,8 +750,12 @@ export class FinancialEventService {
       if (isPositiveStatus(occurrenceStatus)) {
         const isCancelling = directUpdates.status === EventStatus.CANCELLED || isCancelledStatus(directUpdates.status);
         if (!isCancelling) {
+          // Only admins revert an effective occurrence to pending (recorded in the audit log)
           if (directUpdates.status && !isPositiveStatus(directUpdates.status)) {
-            throw new Error(t('backend.validation.eventLockedPositive'));
+            if (context.actor?.role !== PersonRole.ADMIN) throw new Error(t('backend.validation.eventLockedPositive'));
+            await this._recordStatusAudit({ action: AuditAction.REVERT_TO_PENDING, previousStatus: occurrenceStatus }, {
+              actor: context.actor, targetEvent: existing, targetDate: occurrenceDate || existing.date, newStatus: directUpdates.status
+            });
           }
           const changed = changedLockedFields(existing, directUpdates, { occurrenceDate });
           if (changed.length > 0) {
@@ -1035,7 +1088,7 @@ export class FinancialEventService {
     return eventRepository.create(singleOverridePayload);
   }
 
-  async toggleEventPayment(id, explicitStatus = null) {
+  async toggleEventPayment(id, explicitStatus = null, actor = null) {
     const rootId = String(id).includes('_') ? String(id).split('_')[0] : id;
     const dateSuffix = String(id).includes('_') ? String(id).split('_')[1] : null;
 
@@ -1085,6 +1138,10 @@ export class FinancialEventService {
       }
     }
 
+    // An explicit status may cancel (recorded) or revert an effective occurrence (admins only, recorded)
+    const statusAudit = explicitStatus
+      ? await this._checkStatusChange({ targetEvent, rootId, targetDate, newStatus: explicitStatus, actor })
+      : null;
     const toggled = calcToggledStatus(targetEvent, explicitStatus);
     const targetEventId = targetEvent.eventId || targetEvent.id;
 
@@ -1093,6 +1150,7 @@ export class FinancialEventService {
       timeboardId: targetEvent.timeboardId || targetEvent.timeboard_id,
       aliases: [targetEvent.id, rootId]
     });
+    await this._recordStatusAudit(statusAudit, { actor, targetEvent, targetDate, newStatus: toggled.status });
 
     if (targetEvent.id && !String(id).includes('_')) {
       try {
@@ -1164,13 +1222,10 @@ export class FinancialEventService {
     const targetEventId = targetEvent.eventId || targetEvent.id;
     const effectiveStatus = options.status || targetEvent.status || EventStatus.PAID;
 
-    // An effective movement never goes back to pending (it can only be cancelled or corrected)
-    const isRevertingToPending = options.status && !isPositiveStatus(options.status) &&
-      !isCancelledStatus(options.status) && options.status !== EventStatus.DELETED;
-    if (isRevertingToPending && targetDate && isLockableMovement(targetEvent)) {
-      const { status: currentStatus } = await this._getOccurrenceState(`${rootId}_${String(targetDate).substring(0, 10)}`, targetEvent);
-      if (isPositiveStatus(currentStatus)) throw new Error(t('backend.validation.eventLockedPositive'));
-    }
+    // Effective movements only go back to pending by an admin; cancellations are recorded (audit log)
+    const statusAudit = await this._checkStatusChange({
+      targetEvent, rootId, targetDate, newStatus: options.status, actor: options.actor || null, reason: options.reason || null
+    });
 
     // Manual receipt number: it must not be used by another receipt of the same timeline
     const requestedReceiptNumber = options.contYear !== undefined ? options.contYear : options.cont_year;
@@ -1198,6 +1253,8 @@ export class FinancialEventService {
       receiptDate: options.receiptDate !== undefined ? options.receiptDate : options.receipt_date
     });
 
+    await this._recordStatusAudit(statusAudit, { actor: options.actor || null, targetEvent, targetDate, newStatus: effectiveStatus });
+
     const contYearVal = options.contYear !== undefined ? options.contYear : options.cont_year;
     const receiptDateVal = options.receiptDate !== undefined ? options.receiptDate : options.receipt_date;
     return {
@@ -1213,6 +1270,24 @@ export class FinancialEventService {
   }
 
   async deleteEvent(id, options = {}) {
+    const context = { ...options };
+    const result = await this._deleteEvent(id, context);
+    const audit = context.__audit;
+    if (audit) {
+      await auditService.record({
+        actor: options.actor,
+        timeboardId: audit.target.timeboardId || audit.target.timeboard_id,
+        action: audit.action,
+        event: audit.target,
+        occurrenceDate: audit.occurrenceDate,
+        details: audit.details,
+        snapshot: audit.snapshot
+      });
+    }
+    return result;
+  }
+
+  async _deleteEvent(id, options = {}) {
     const followupItem = await followupRepository.getById(id);
     if (followupItem) {
       return followupService.deleteFollowup(id);
@@ -1231,7 +1306,7 @@ export class FinancialEventService {
     const deletionMode = options.deletionMode || options.deleteScope || EventDeletionMode.ONLY_THIS;
     const allRawEvents = await eventRepository.getAll();
     const directEvent = await eventRepository.getById(id);
-    await this._assertDeletable(id, directEvent, allRawEvents, deletionMode, options);
+    options.__audit = await this._assertDeletable(id, directEvent, allRawEvents, deletionMode, options);
 
     if (directEvent && (directEvent.isAmortizationEvent?.() || directEvent.eventType === EventType.AMORTIZATION || directEvent.category === AmortizationEventCategory.REDUCE_TERM || directEvent.category === AmortizationEventCategory.REDUCE_INSTALLMENT)) {
       if (directEvent.date) {

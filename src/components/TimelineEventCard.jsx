@@ -86,22 +86,27 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   persons = []
 }) {
   const { t } = useTranslation();
-  // Read-only users (individual role) cannot change events; they can only view and add notes.
-  const { isReadOnly } = usePermissions();
+  // What the user can do on the card follows the role (shared/permissions.js): contributors only mark
+  // movements as done (and add the payment date / receipt number), admins can also revert and delete
+  // effective movements; individual members only view.
+  const { isReadOnly, canEdit, canChangeStatus, canPrint, canOverride } = usePermissions();
   // Condominium timeboards do not use the diary mood
   const { isCondoflow } = useTimeboard();
   const pocketName = usePocketName();
   // References and other in-memory events (withdrawal income, outflows of other timelines) are read-only too
-  const blocksChanges = isReadOnly || Boolean(event.isVirtual || event.isReadOnly);
+  const isInMemoryEvent = Boolean(event.isVirtual || event.isReadOnly);
+  const blocksChanges = !canEdit || isInMemoryEvent;
+  const blocksStatusChanges = !canChangeStatus || isInMemoryEvent;
   const onEdit = blocksChanges ? undefined : onEditProp;
   const onUpdateEventDirect = blocksChanges ? undefined : onUpdateEventDirectProp;
   const onSaveNotes = onUpdateEventDirectProp;
   const onDelete = blocksChanges ? undefined : onDeleteProp;
-  const onToggleLoanPayment = blocksChanges ? undefined : onToggleLoanPaymentProp;
-  const onPayUpToHere = blocksChanges ? undefined : onPayUpToHereProp;
-  const onPrintReceipt = blocksChanges ? undefined : onPrintReceiptProp;
+  const onToggleLoanPayment = blocksStatusChanges ? undefined : onToggleLoanPaymentProp;
+  const onPayUpToHere = blocksStatusChanges ? undefined : onPayUpToHereProp;
+  const onPrintReceipt = !canPrint || isInMemoryEvent ? undefined : onPrintReceiptProp;
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+  const [isRevertConfirmOpen, setIsRevertConfirmOpen] = useState(false);
   // Payment date edited directly on the ticket (paid / received events)
   const { saveReceiptDate, saveReceiptNumber, getProposedReceiptNumber, addEventNote, deleteEventNote, correctEvent, currentUserId } = useEventActions();
   const [isReceiptDateOpen, setIsReceiptDateOpen] = useState(false);
@@ -511,7 +516,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const canAddNote = usesOccurrenceNotes || Boolean(onSaveNotes);
   const canDeleteNote = (note) => {
     if (usesOccurrenceNotes) {
-      return !isReadOnly || (currentUserId && String(note.authorId) === String(currentUserId));
+      return canEdit || (currentUserId && String(note.authorId) === String(currentUserId));
     }
     return Boolean(onUpdateEventDirect || onEdit);
   };
@@ -569,7 +574,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
 
 
-  const canEditPaymentDate = Boolean(saveReceiptDate) && !isReadOnly && isCompleted && !isCancelled && !isVirtual;
+  const canEditPaymentDate = Boolean(saveReceiptDate) && canChangeStatus && isCompleted && !isCancelled && !isVirtual;
 
   // Close the floating payment-date popover on outside click, Escape or scroll (it is anchored to the date)
   useEffect(() => {
@@ -1163,9 +1168,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     blocksChanges,
     canAddNote,
     canChangeCategory,
+    canChangeStatus,
     canDeleteNote,
+    canEdit,
     canEditAmount,
     canEditPaymentDate,
+    canOverride,
     cardTheme,
     categoryAnchorRef,
     categoryPickerPopoverRef,
@@ -1236,6 +1244,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     isRecurringEvent,
     isRegisterEvent,
     isReminderEvent,
+    isRevertConfirmOpen,
     isSavingNote,
     isSavingReceiptDate,
     isSavingReceiptNumber,
@@ -1289,6 +1298,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     setIsNotesExpanded,
     setIsReceiptDateOpen,
     setIsReceiptNumberOpen,
+    setIsRevertConfirmOpen,
     setLocalAuto,
     setLocalStatus,
     setNewItemText,

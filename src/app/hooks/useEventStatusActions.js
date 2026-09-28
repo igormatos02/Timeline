@@ -112,10 +112,11 @@ export function useEventStatusActions({
       await api.toggleEventPayment(installmentId, finalTargetStatus);
     } catch (err) {
       console.error('Error toggling payment status:', err);
-      // Rollback on network failure
+      // Rollback, and say why (e.g. no permission, effective movement locked)
+      showToast(t('common.updateFailed', { message: err?.message || '' }), 'error');
       refreshTimelines();
     }
-  }, [refreshTimelines]);
+  }, [refreshTimelines, showToast, t]);
 
   // Pay all prior loan installments up to (and including) target event
   const handlePayUpToHere = useCallback(async (targetEv) => {

@@ -1,47 +1,41 @@
-import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import Navbar from './components/Navbar';
-import TimelineHeader from './components/TimelineHeader';
 import { PermissionsProvider } from './context/PermissionsContext.jsx';
 import { TimeboardProvider } from './context/TimeboardContext.jsx';
 import { HeaderRefreshProvider } from './context/HeaderRefreshContext.jsx';
-import { computeBalanceTotals, computePocketsInitialTotal } from './utils/balanceMetrics.js';
-import VerticalTimeline from './components/VerticalTimeline';
 
 // Heavy modals are lazy-loaded so they do not bloat the initial bundle
-const CreateTimelineModal = React.lazy(() => import('./components/CreateTimelineModal'));
-const EditTimelineSettingsModal = React.lazy(() => import('./components/EditTimelineSettingsModal'));
-const CreateTimeboardModal = React.lazy(() => import('./components/CreateTimeboardModal'));
-const TimeboardSettingsModal = React.lazy(() => import('./components/TimeboardSettingsModal'));
-const CreateEventModal = React.lazy(() => import('./components/CreateEventModal'));
-const DeleteEventModal = React.lazy(() => import('./components/DeleteEventModal'));
-const DeleteTimelineModal = React.lazy(() => import('./components/DeleteTimelineModal'));
-const AmortizationModal = React.lazy(() => import('./components/AmortizationModal'));
-const EditInstallmentModal = React.lazy(() => import('./components/EditInstallmentModal'));
-const CreatePocketModal = React.lazy(() => import('./components/CreatePocketModal'));
-const DeletePocketModal = React.lazy(() => import('./components/DeletePocketModal'));
-const AccountOutflowModal = React.lazy(() => import('./components/AccountOutflowModal'));
 import {
-  recalculateLoanState,
-  propagateInstallmentAmountForward,
-  getLoanMetrics,
-  generateLoanInstallments,
-  isLoanInstallment
+  getLoanMetrics
 } from './utils/loanCalculations';
-import { buildWithdrawalReferences, buildOutflowReferences } from '../shared/finance/references.js';
-import { isLockedMovement, isLockableMovement, buildCorrectionDraft } from '../shared/finance/corrections.js';
-import { effectiveStatusFor, pendingStatusFor } from '../shared/finance/statusRules.js';
-import { generateUUID } from './utils/uuid.js';
 import * as api from './services/api';
-import { EventType, FINANCIAL_ADVANCE_PAYMENT_TYPES, isAccountOutflowEvent, isPocketTransferEvent, EventStatus, FollowupStatus, TimelineType, TimelineStatus, TimelineColor, getDefaultTimelineColor, EventPriority, EventRecurrence, EventPeriodicity, LoanEventCategory, AmortizationStrategy, AmortizationEventCategory, EventDeletionMode, isPositiveStatus, isCancelledStatus, isLoanTimelineType, normalizeTimelineType, normalizeRecurrence, normalizePeriodicity, LoanAmortizationSystem, PersonRole, TimeboardType, DiaryPublishStatus } from './enums/index.js';
-import { DEFAULT_TENANT } from './constants/tenant.js';
+import { TimelineType, isLoanTimelineType } from './enums/index.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
-import { RotateCcw, X, Plus, Database, Calculator, LocateFixed } from 'lucide-react';
 import LandingPage from './components/landing/LandingPage.jsx';
-import TimeboardsHub from './components/dashboard-hub/TimeboardsHub.jsx';
 import useAuth from './hooks/useAuth.js';
 import './App.css';
+import { useTimeboardActions } from './app/hooks/useTimeboardActions.js';
+import { useEventStatusActions } from './app/hooks/useEventStatusActions.js';
+import { useTaskActions } from './app/hooks/useTaskActions.js';
+import { useEventCrudActions } from './app/hooks/useEventCrudActions.js';
+import { usePocketActions } from './app/hooks/usePocketActions.js';
+import { useTimelineActions } from './app/hooks/useTimelineActions.js';
+import { useBoardTimelineData } from './app/hooks/useBoardTimelineData.js';
+import AppFloatingControls from './app/AppFloatingControls.jsx';
+import InstallmentsUpdatingOverlay from './app/InstallmentsUpdatingOverlay.jsx';
+import SystemLoadingOverlay from './app/SystemLoadingOverlay.jsx';
+import ResetTimelineConfirmModal from './app/ResetTimelineConfirmModal.jsx';
+import AppModals from './app/AppModals.jsx';
+import AppMainArea from './app/AppMainArea.jsx';
+import { useAppPersistence } from './app/hooks/useAppPersistence.js';
+import { useTheme } from './app/hooks/useTheme.js';
+import { useLoanAndOutflowModals } from './app/hooks/useLoanAndOutflowModals.js';
+import { useBoardDataLoading } from './app/hooks/useBoardDataLoading.js';
+import { useTimeboardPersons } from './app/hooks/useTimeboardPersons.js';
+import { useTimeboardsBootstrap } from './app/hooks/useTimeboardsBootstrap.js';
+import AppHubView from './app/AppHubView.jsx';
 
 export default function App() {
   const { showToast } = useToast();
@@ -137,59 +131,20 @@ export default function App() {
 
   // Effect: Handle Pending Invite for Logged-In User — accepted by its code (any account holding the code)
   // or, for older links, by the invited e-mail of the logged-in account
-  useEffect(() => {
-    const inviteCode = pendingInvite?.code || api.getPendingInviteCode();
-    if (!currentUser?.id || (!inviteCode && !pendingInvite?.timeboardId)) return;
-
-    let isMounted = true;
-    (async () => {
-      try {
-        const result = inviteCode
-          ? await api.acceptInviteByCode(inviteCode)
-          : await api.acceptTimeboardInvite(pendingInvite.timeboardId);
-        if (!isMounted) return;
-        const acceptedTimeboardId = result?.timeboard?.id || pendingInvite?.timeboardId;
-
-        showToast(t('invite.acceptedToast'), 'success');
-        api.setPendingInviteCode(null);
-
-        // Clean up URL parameters
-        try {
-          const url = new URL(window.location);
-          ['invite', 'inviteTimeboardId', 'tbId', 'email'].forEach((param) => url.searchParams.delete(param));
-          window.history.replaceState({}, '', url.pathname);
-        } catch (e) { }
-
-        setPendingInvite(null);
-
-        // Fetch fresh timeboards for user and select the accepted timeboard
-        const freshData = await api.fetchTimeboards(currentUser.id);
-        if (freshData && typeof freshData === 'object' && !Array.isArray(freshData)) {
-          const my = freshData.myTimeboards || [];
-          const shared = freshData.sharedTimeboards || [];
-          const all = freshData.all || [...my, ...shared];
-          setMyTimeboards(my);
-          setSharedTimeboards(shared);
-          setTimeboards(all);
-        }
-        if (acceptedTimeboardId) {
-          setActiveTimeboardId(acceptedTimeboardId);
-          setActiveTimelineId(null);
-          setActiveFinancialTab(null);
-          setCurrentView('workspace');
-          localStorage.setItem('chrono_current_view', 'workspace');
-          localStorage.setItem('chrono_active_timeboard_id', acceptedTimeboardId);
-        }
-      } catch (err) {
-        console.error('Error accepting timeboard invite:', err);
-        api.setPendingInviteCode(null);
-        setPendingInvite(null);
-        showToast(err.message || t('invite.acceptFailed'), 'error');
-      }
-    })();
-
-    return () => { isMounted = false; };
-  }, [currentUser?.id, pendingInvite?.timeboardId, pendingInvite?.code]);
+  useTimeboardsBootstrap({
+    currentUser,
+    pendingInvite,
+    setActiveFinancialTab,
+    setActiveTimeboardId,
+    setActiveTimelineId,
+    setCurrentView,
+    setMyTimeboards,
+    setPendingInvite,
+    setSharedTimeboards,
+    setTimeboards,
+    showToast,
+    t
+  });
 
   // Load latest data from Database on mount - Timeboards for current user
   useEffect(() => {
@@ -229,34 +184,17 @@ export default function App() {
     return () => { isMounted = false; };
   }, [currentUser?.id]);
 
-  const [rawEvents, setRawEvents] = useState([]);
-  const [currentUserPerson, setCurrentUserPerson] = useState(null);
-  const [timeboardPersons, setTimeboardPersons] = useState([]);
-
-  const reloadPersons = useCallback(() => {
-    if (!activeTimeboardId || !currentUser?.id) {
-      setCurrentUserPerson(null);
-      setTimeboardPersons([]);
-      return;
-    }
-    api.fetchPersons({ timeboardId: activeTimeboardId })
-      .then((persons) => {
-        if (Array.isArray(persons)) {
-          setTimeboardPersons(persons);
-          const match = persons.find(
-            (p) => (p.userId && p.userId === currentUser.id) ||
-                   (p.user_id && p.user_id === currentUser.id) ||
-                   (p.email && currentUser.email && p.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim())
-          );
-          setCurrentUserPerson(match || null);
-        } else {
-          setTimeboardPersons([]);
-        }
-      })
-      .catch(() => {
-        setTimeboardPersons([]);
-      });
-  }, [activeTimeboardId, currentUser?.id, currentUser?.email]);
+  const {
+    currentUserPerson,
+    rawEvents,
+    reloadPersons,
+    setRawEvents,
+    setTimeboardPersons,
+    timeboardPersons
+  } = useTimeboardPersons({
+    activeTimeboardId,
+    currentUser
+  });
 
   useEffect(() => {
     reloadPersons();
@@ -277,109 +215,26 @@ export default function App() {
   const [eventModalDefaultNature, setEventModalDefaultNature] = useState('income'); // 'income' | 'expense' | 'investment'
   const [futureHorizonYears, setFutureHorizonYears] = useState(1);
   const [pastHorizonYears, setPastHorizonYears] = useState(1);
-  const [isLoadingSystem, setIsLoadingSystem] = useState(true);
-  const scrollYBeforeModalRef = React.useRef(0);
-
-  const timelinesRef = React.useRef(timelines);
-  React.useEffect(() => {
-    timelinesRef.current = timelines;
-  }, [timelines]);
-
-  const fetchEventsForVisiblePeriod = React.useCallback(async (pastYears = pastHorizonYears, futureYears = futureHorizonYears, forceReload = false) => {
-    if (!activeTimeboardId) return;
-
-    try {
-      // Para timelines de empréstimos, buscar a série completa sem truncar por horizonte de 1 ano
-      const params = {
-        timeboardId: activeTimeboardId
-      };
-
-      const evData = await api.fetchEvents(params);
-      if (Array.isArray(evData)) {
-        if (forceReload) {
-          setRawEvents(evData);
-        } else {
-          // Merge sem duplicar eventos existentes na memória
-          setRawEvents((prevEvents) => {
-            const map = new Map(prevEvents.map((e) => [e.id, e]));
-            evData.forEach((e) => map.set(e.id, e));
-            return Array.from(map.values());
-          });
-        }
-      }
-    } catch (e) {
-      console.error('Error fetching events for period:', e);
-    }
-  }, [activeTimeboardId, pastHorizonYears, futureHorizonYears]);
-
-  // Fetch todas as timelines e os eventos de todo o horizonte ao carregar o Timeboard
-  useEffect(() => {
-    if (!activeTimeboardId) return;
-    let isMounted = true;
-    setIsLoadingSystem(true);
-
-    (async () => {
-      try {
-        const data = await api.fetchTimelines({ timeboardId: activeTimeboardId });
-        if (!isMounted) return;
-
-        if (Array.isArray(data)) {
-          setTimelines(data);
-          if (data.length > 0) {
-            const balanceTl = data.find((tl) => tl.type === TimelineType.BALANCE);
-            const defaultTl = balanceTl || data[0];
-
-            // Check if current active timeline or financial tab belongs to the loaded dataset
-            const targetTl = data.find((tl) => tl.id === activeFinancialTab || tl.id === activeTimelineId) || defaultTl;
-
-            setActiveTimelineId(targetTl.id);
-            setActiveFinancialTab(targetTl.id);
-
-            // Buscar eventos apenas UMA vez para todo o Timeboard no mount
-            await fetchEventsForVisiblePeriod(pastHorizonYears, futureHorizonYears, true);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching timelines for timeboard:', err.message);
-      } finally {
-        if (isMounted) {
-          setIsLoadingSystem(false);
-        }
-      }
-    })();
-
-    return () => { isMounted = false; };
-  }, [activeTimeboardId]);
-
-  const refreshTimelines = React.useCallback(async () => {
-    try {
-      const tlData = await api.fetchTimelines({ timeboardId: activeTimeboardId });
-      if (Array.isArray(tlData)) {
-        setTimelines(tlData);
-      }
-      await fetchEventsForVisiblePeriod(pastHorizonYears, futureHorizonYears, true);
-      return tlData;
-    } catch (e) {
-      console.error('Error refreshing timelines:', e);
-    }
-  }, [activeTimeboardId, fetchEventsForVisiblePeriod, pastHorizonYears, futureHorizonYears]);
-
-  // Expandir horizonte de tempo sem descartar o que já está na memória
-  const isInitialHorizonMountRef = React.useRef(true);
-  useEffect(() => {
-    if (isInitialHorizonMountRef.current) {
-      isInitialHorizonMountRef.current = false;
-      return;
-    }
-    if (activeTimeboardId) {
-      fetchEventsForVisiblePeriod(pastHorizonYears, futureHorizonYears, false);
-    }
-  }, [pastHorizonYears, futureHorizonYears]);
-
-  const handleLoadMoreFuture = async () => {
-    const nextYears = futureHorizonYears + 1;
-    setFutureHorizonYears(nextYears);
-  };
+  const {
+    fetchEventsForVisiblePeriod,
+    focusedMonthRef,
+    handleLoadMoreFuture,
+    isLoadingSystem,
+    refreshTimelines,
+    scrollYBeforeModalRef
+  } = useBoardDataLoading({
+    activeFinancialTab,
+    activeTimeboardId,
+    activeTimelineId,
+    futureHorizonYears,
+    pastHorizonYears,
+    setActiveFinancialTab,
+    setActiveTimelineId,
+    setFutureHorizonYears,
+    setRawEvents,
+    setTimelines,
+    timelines
+  });
 
   const handleLoadMorePast = async () => {
     const nextPast = pastHorizonYears + 1;
@@ -387,24 +242,24 @@ export default function App() {
   };
 
   // Loan Specific Modals
-  const [isAmortizationModalOpen, setIsAmortizationModalOpen] = useState(false);
-  const [editingAmortization, setEditingAmortization] = useState(null);
-  const [amortizationDefaultDate, setAmortizationDefaultDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
-  const [editingInstallment, setEditingInstallment] = useState(null);
-
-  // Withdrawal Specific Modal
-  const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
-  const [editingWithdrawal, setEditingWithdrawal] = useState(null);
-  const [withdrawalDefaultDate, setWithdrawalDefaultDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
-  const [withdrawalDefaultPocketId, setWithdrawalDefaultPocketId] = useState(null);
-
-  const handleOpenAmortizationModal = useCallback((dateStr, eventObj = null) => {
-    if (dateStr) {
-      setAmortizationDefaultDate(dateStr);
-    }
-    setEditingAmortization(eventObj || null);
-    setIsAmortizationModalOpen(true);
-  }, []);
+  const {
+    amortizationDefaultDate,
+    editingAmortization,
+    editingInstallment,
+    editingWithdrawal,
+    handleOpenAmortizationModal,
+    isAmortizationModalOpen,
+    isWithdrawalModalOpen,
+    setEditingAmortization,
+    setEditingInstallment,
+    setEditingWithdrawal,
+    setIsAmortizationModalOpen,
+    setIsWithdrawalModalOpen,
+    setWithdrawalDefaultDate,
+    setWithdrawalDefaultPocketId,
+    withdrawalDefaultDate,
+    withdrawalDefaultPocketId
+  } = useLoanAndOutflowModals();
 
   const handleOpenWithdrawalModal = useCallback((dateStr = format(new Date(), 'yyyy-MM-dd'), pocketId = null, eventObj = null) => {
     focusedMonthRef.current = dateStr ? dateStr.substring(0, 7) : null;
@@ -418,242 +273,37 @@ export default function App() {
   }, []);
 
   // Theme (light is default)
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('chrono_theme') || 'light';
-  });
-
-  // Apply theme to document
-  useEffect(() => {
-    try {
-      document.documentElement.setAttribute('data-theme', theme);
-      localStorage.setItem('chrono_theme', theme);
-    } catch (e) { }
-  }, [theme]);
-
-  const handleToggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
+  const {
+    handleToggleTheme,
+    theme
+  } = useTheme();
 
   // Save minimal settings to localStorage safely
-  useEffect(() => {
-    try {
-      localStorage.setItem('chrono_timeboards_v2', JSON.stringify(timeboards));
-    } catch { }
-  }, [timeboards]);
-
-  useEffect(() => {
-    try {
-      if (activeTimeboardId) {
-        localStorage.setItem('chrono_active_timeboard_id', activeTimeboardId);
-      }
-    } catch { }
-  }, [activeTimeboardId]);
-
-  useEffect(() => {
-    try {
-      if (activeTimelineId) {
-        localStorage.setItem('chrono_active_timeline_id', activeTimelineId);
-      }
-    } catch { }
-  }, [activeTimelineId]);
-
-  useEffect(() => {
-    try {
-      if (activeFinancialTab) {
-        localStorage.setItem('chrono_active_financial_tab', activeFinancialTab);
-      }
-    } catch { }
-  }, [activeFinancialTab]);
+  useAppPersistence({
+    activeFinancialTab,
+    activeTimeboardId,
+    activeTimelineId,
+    timeboards
+  });
 
   // Selected Timeboard
-  const activeTimeboard = timeboards.find((tb) => tb.id === activeTimeboardId) || timeboards[0];
-
-  // All timelines belonging to active Timeboard
-  const activeTimeboardTimelines = React.useMemo(() => {
-    if (!activeTimeboardId || !Array.isArray(timelines)) return [];
-    const filtered = timelines.filter((tl) => (tl.timeboardId || tl.timeboard_id) === activeTimeboardId);
-
-    const typePriority = {
-      [TimelineType.BALANCE]: 1,
-      [TimelineType.INCOME]: 2,
-      [TimelineType.EXPENSE]: 3,
-      [TimelineType.INVESTMENT]: 4,
-      [TimelineType.PROJECT]: 5,
-      [TimelineType.REMINDER]: 6,
-      [TimelineType.DIARY]: 7,
-      [TimelineType.TODO]: 8,
-      [TimelineType.FOLLOWUP]: 9
-    };
-
-    return [...filtered].sort((a, b) => {
-      const pA = typePriority[a.type] ?? 99;
-      const pB = typePriority[b.type] ?? 99;
-      if (pA !== pB) {
-        return pA - pB;
-      }
-      return (a.name || '').localeCompare(b.name || '');
-    });
-  }, [timelines, activeTimeboardId]);
-
-  // Savings withdrawals shown as income references in the income timeline (never persisted, never counted)
-  const virtualWithdrawalEvents = useMemo(() => {
-    if (!Array.isArray(rawEvents) || rawEvents.length === 0) return [];
-    const incomeTimeline = (activeTimeboardTimelines || []).find((tl) => tl.type === TimelineType.INCOME);
-    return buildWithdrawalReferences({ events: rawEvents, incomeTimelineId: incomeTimeline?.id });
-  }, [rawEvents, activeTimeboardTimelines]);
-
-  // Users with the individual role only see their own obligations and the individual header
-  const isIndividualRole = activeTimeboard?.role === PersonRole.INDIVIDUAL || currentUserPerson?.role === PersonRole.INDIVIDUAL;
-  const individualEntityId = isIndividualRole ? (activeTimeboard?.personId || currentUserPerson?.id || null) : null;
-
-  // Events used for display — rawEvents enriched with virtual withdrawal income events
-  const displayEvents = useMemo(() => {
-    let events = !virtualWithdrawalEvents.length ? rawEvents : [...rawEvents, ...virtualWithdrawalEvents];
-
-    if (isIndividualRole) {
-      const currentPersonId = activeTimeboard?.personId || currentUserPerson?.id;
-      const currentObligatorId = (
-        activeTimeboard?.obligatorIdentification ||
-        currentUserPerson?.obligatorIdentification ||
-        currentUserPerson?.obligator_identification ||
-        ''
-      ).trim().toLowerCase();
-
-      // Shared notices: open reminders and all diary entries of the timeboard are visible to
-      // individual users in whatever timeline they are viewing.
-      const timelineTypeById = new Map((activeTimeboardTimelines || []).map((tl) => [String(tl.id), normalizeTimelineType(tl.type)]));
-      const timelineColorById = new Map((activeTimeboardTimelines || []).map((tl) => [String(tl.id), tl.color || getDefaultTimelineColor(normalizeTimelineType(tl.type))]));
-      const getNoticeType = (ev) => {
-        const tlType = timelineTypeById.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || ''));
-        if (ev.eventType === EventType.REGISTER || tlType === TimelineType.DIARY) return TimelineType.DIARY;
-        if (ev.eventType === EventType.REMINDER || tlType === TimelineType.REMINDER) return TimelineType.REMINDER;
-        return null;
-      };
-      const isOpenReminder = (ev) => (
-        !ev.isDeleted &&
-        ev.status !== EventStatus.DELETED &&
-        !isCancelledStatus(ev.status) &&
-        !isPositiveStatus(ev.status) &&
-        !ev.isCompleted
-      );
-      const notices = [];
-
-      events = events.filter((ev) => {
-        if (!ev) return false;
-
-        const noticeType = getNoticeType(ev);
-        if (noticeType) {
-          const isVisiblePost = noticeType === TimelineType.DIARY &&
-            (activeTimeboard?.type !== TimeboardType.CONDOFLOW || ev.publishStatus === DiaryPublishStatus.PUBLISHED);
-          if (isVisiblePost || (noticeType === TimelineType.REMINDER && isOpenReminder(ev))) {
-            const noticeTimelineId = ev.timelineId || ev.timelineOriginId || ev.timeline_id;
-            // Keep the color configured on the notice's own timeline (reminders / diary)
-            const noticeColor = timelineColorById.get(String(noticeTimelineId)) || getDefaultTimelineColor(noticeType);
-            notices.push({
-              ...ev,
-              isSharedNotice: true,
-              timelineType: noticeType,
-              noticeTimelineId,
-              timelineOriginColor: noticeColor,
-              timelineColor: noticeColor
-            });
-          }
-          return false;
-        }
-
-        if (!ev.isObligation && !ev.is_obligation) return false;
-
-        const evPersonId = ev.obligationPersonId || ev.obligation_person_id;
-        if (currentPersonId && evPersonId && String(evPersonId) === String(currentPersonId)) {
-          return true;
-        }
-
-        const evObligatorId = (
-          ev.obligatorIdentification ||
-          ev.obligator_identification ||
-          ev.obligationPerson?.obligatorIdentification ||
-          ev.obligationPerson?.obligator_identification ||
-          ''
-        ).trim().toLowerCase();
-
-        if (currentObligatorId && evObligatorId && evObligatorId === currentObligatorId) {
-          return true;
-        }
-
-        return false;
-      });
-
-      events = [...events, ...notices];
-    }
-
-    return events;
-  }, [rawEvents, virtualWithdrawalEvents, activeTimeboard, activeTimeboardTimelines, currentUserPerson, isIndividualRole]);
-
-  // Individual-role users only see the timelines they take part in (those holding their obligations)
-  const visibleTimelines = React.useMemo(() => {
-    if (!isIndividualRole) return activeTimeboardTimelines;
-    const ownTimelineIds = new Set(
-      (displayEvents || []).filter((ev) => !ev.isSharedNotice).map((ev) => ev.timelineId || ev.timeline_id).filter(Boolean).map(String)
-    );
-    return activeTimeboardTimelines.filter((tl) => ownTimelineIds.has(String(tl.id)));
-  }, [isIndividualRole, activeTimeboardTimelines, displayEvents]);
-
-  // Dynamic active timeline representation for the selected tab
-  const activeTimeline = React.useMemo(() => {
-    if (!activeTimeboard || visibleTimelines.length === 0) return null;
-
-    const currentSelectedRaw = visibleTimelines.find(
-      (tl) => tl.id === activeFinancialTab || tl.type === activeFinancialTab || tl.id === activeTimelineId || tl.type === activeTimelineId
-    ) || visibleTimelines[0];
-
-    const currentSelected = {
-      ...currentSelectedRaw,
-      system: currentSelectedRaw.system || currentSelectedRaw.amortizationSystem || currentSelectedRaw.loanContract?.system || currentSelectedRaw.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE,
-      amortizationSystem: currentSelectedRaw.system || currentSelectedRaw.amortizationSystem || currentSelectedRaw.loanContract?.system || currentSelectedRaw.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE
-    };
-
-    const isLoanType = isLoanTimelineType(currentSelected?.type);
-
-    // Shared notices (individual role) are shown as events of the timeline being viewed
-    let computedEvents = (displayEvents || []).map((ev) => (ev.isSharedNotice
-      ? { ...ev, timelineId: currentSelected.id, timelineOriginId: currentSelected.id, timeline_id: currentSelected.id }
-      : ev));
-    const loanTimelines = activeTimeboardTimelines.filter((tl) => isLoanTimelineType(tl.type));
-
-    if (loanTimelines.length > 0) {
-      loanTimelines.forEach((loanTl) => {
-        const enrichedLoanTl = {
-          ...loanTl,
-          system: loanTl.system || loanTl.amortizationSystem || loanTl.loanContract?.system || loanTl.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE,
-          amortizationSystem: loanTl.system || loanTl.amortizationSystem || loanTl.loanContract?.system || loanTl.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE
-        };
-        computedEvents = recalculateLoanState(enrichedLoanTl, computedEvents);
-      });
-    } else if (isLoanType) {
-      computedEvents = recalculateLoanState(currentSelected, computedEvents);
-    }
-
-    // Outflows owned by the account (pocket expenses) and loans (paid installments) shown as references in
-    // the Outflows timeline — after the loan recalculation, so installments carry their final amounts
-    const expenseTimeline = activeTimeboardTimelines.find((tl) => tl.type === TimelineType.EXPENSE);
-    if (expenseTimeline) {
-      const timelineTypeMap = new Map(activeTimeboardTimelines.map((tl) => [String(tl.id), tl.type]));
-      computedEvents = [
-        ...computedEvents,
-        ...buildOutflowReferences({ events: computedEvents, expenseTimelineId: expenseTimeline.id, timelineTypeMap })
-      ];
-    }
-
-    const computedMetrics = isLoanType ? getLoanMetrics(currentSelected, computedEvents) : currentSelected?.loanHeaderResult;
-
-    return {
-      ...currentSelected,
-      loanHeaderResult: computedMetrics,
-      procedureMetrics: computedMetrics,
-      timelines: visibleTimelines,
-      events: computedEvents
-    };
-  }, [activeTimeboard, activeTimeboardTimelines, visibleTimelines, activeFinancialTab, activeTimelineId, displayEvents]);
+  const {
+    activeTimeboard,
+    activeTimeboardTimelines,
+    activeTimeline,
+    displayEvents,
+    individualEntityId,
+    isIndividualRole,
+    visibleTimelines
+  } = useBoardTimelineData({
+    activeFinancialTab,
+    activeTimeboardId,
+    activeTimelineId,
+    currentUserPerson,
+    rawEvents,
+    timeboards,
+    timelines
+  });
 
   // Contagem de eventos da base de dados (templates únicos) e calculados (projeções/ocorrências)
   const dbEventsCount = React.useMemo(() => {
@@ -666,437 +316,34 @@ export default function App() {
     return uniqueRootIds.size;
   }, [rawEvents]);
 
-  const calculatedEventsCount = React.useMemo(() => {
-    return (activeTimeline?.events || rawEvents || []).length;
-  }, [activeTimeline?.events, rawEvents]);
-
-  // ----------------------------------------------------
-  // Timeline Handlers
-  // ----------------------------------------------------
-  const handleOpenCreateTimeline = (initialType = null) => {
-    setEditingTimeline(null);
-    const validInitialType = typeof initialType === 'string' ? initialType : null;
-    setCreateTimelineInitialType(validInitialType);
-    setIsTimelineModalOpen(true);
-  };
-
-  const handleOpenEditTimeline = async () => {
-    if (!activeTimeline) return;
-    let enrichedTimeline = { ...activeTimeline };
-
-    const isLoanType = isLoanTimelineType(activeTimeline.type);
-
-    if (isLoanType) {
-      try {
-        const contract = await api.fetchLoanContract(activeTimeline.id);
-        if (contract) {
-          enrichedTimeline = {
-            ...enrichedTimeline,
-            contractNumber: contract.contractNumber ?? contract.contract_number ?? enrichedTimeline.contractNumber ?? '',
-            bankName: contract.bankName ?? contract.bank_name ?? enrichedTimeline.bankName ?? '',
-            totalDebt: contract.originalCapital ?? contract.original_capital ?? enrichedTimeline.totalDebt ?? '',
-            tanRate: contract.tanRate ?? contract.tan_rate ?? enrichedTimeline.tanRate ?? '',
-            spread: contract.spread ?? enrichedTimeline.spread ?? '',
-            interestStampTaxRate: contract.installmentStampTax ?? contract.installment_stamp_tax ?? enrichedTimeline.interestStampTaxRate ?? '',
-            totalInstallments: contract.totalInstallments ?? contract.total_installments ?? enrichedTimeline.totalInstallments ?? '',
-            dueDay: contract.dueDay ?? contract.due_day ?? enrichedTimeline.dueDay ?? 15,
-            startDate: contract.startDate ?? contract.start_date ?? enrichedTimeline.startDate,
-            system: contract.system || contract.amortizationSystem || enrichedTimeline.system || enrichedTimeline.amortizationSystem || LoanAmortizationSystem.PRICE,
-            amortizationSystem: contract.system || contract.amortizationSystem || enrichedTimeline.system || enrichedTimeline.amortizationSystem || LoanAmortizationSystem.PRICE
-          };
-        }
-      } catch (e) {
-        console.error('Error fetching loan contract for editing:', e);
-      }
-      setEditingTimeline(enrichedTimeline);
-      setIsTimelineModalOpen(true);
-    } else {
-      setEditingTimeline(enrichedTimeline);
-      setIsTimelineSettingsModalOpen(true);
-    }
-  };
-
-  const handleSaveComputeStartDate = async (startDateVal) => {
-    const balanceTimeline = (activeTimeboardTimelines || []).find(
-      (t) => t && t.type === TimelineType.BALANCE
-    );
-    const targetTimeline = balanceTimeline || activeTimeline;
-    if (targetTimeline && targetTimeline.id) {
-      try {
-        await api.updateTimeline(targetTimeline.id, {
-          startDate: startDateVal,
-          start_date: startDateVal
-        });
-        await refreshTimelines();
-      } catch (err) {
-        console.error('Error saving compute start date:', err);
-      }
-    }
-  };
-
-  const handleSaveTimeline = async (formData) => {
-    const isInactive = formData.status === TimelineStatus.INACTIVE;
-    const finalStatus = isInactive ? TimelineStatus.INACTIVE : TimelineStatus.ACTIVE;
-    const timelineType = normalizeTimelineType(formData.type || editingTimeline?.type || TimelineType.LOAN);
-    const isLoan = isLoanTimelineType(timelineType) || isLoanTimelineType(editingTimeline?.type);
-
-    if (editingTimeline && editingTimeline.id) {
-      // Update existing timeline
-      const updatedData = {
-        ...formData,
-        type: timelineType,
-        status: finalStatus
-      };
-      const { events, timelines, loanHeaderResult, procedureMetrics, ...timelinePayload } = updatedData;
-
-      if (isLoan) {
-        setIsUpdatingInstallments(true);
-      }
-
-      try {
-        await api.updateTimeline(editingTimeline.id, timelinePayload);
-
-        if (isLoan) {
-          const parsedTotalDebt = Number(formData.totalDebt) || 0;
-          const parsedTotalInstallments = Number(formData.totalInstallments) || 120;
-          const parsedStampTax = Number(
-            formData.interestStampTaxRate !== undefined && formData.interestStampTaxRate !== ''
-              ? formData.interestStampTaxRate
-              : (formData.installmentStampTax !== undefined && formData.installmentStampTax !== ''
-                ? formData.installmentStampTax
-                : (formData.taxaImpostoSeloJuros !== undefined ? formData.taxaImpostoSeloJuros : 0))
-          ) || 0;
-
-          // 1. Obter contrato existente e atualizar
-          let existingContract = null;
-          try {
-            existingContract = await api.fetchLoanContract(editingTimeline.id);
-          } catch (e) { }
-
-          const dueDayNum = Number(formData.dueDay) || 15;
-          const dueDayStr = dueDayNum.toString().padStart(2, '0');
-          const fullStartDateStr = formData.startDate
-            ? (formData.startDate.length === 7 ? `${formData.startDate}-${dueDayStr}` : formData.startDate)
-            : new Date().toISOString().substring(0, 10);
-
-          const contractPayload = {
-            timelineId: editingTimeline.id,
-            timeboardId: activeTimeboardId,
-            contractName: formData.name,
-            contractNumber: formData.contractNumber || '',
-            bankName: formData.bankName || '',
-            originalCapital: parsedTotalDebt,
-            totalInstallments: parsedTotalInstallments,
-            dueDay: dueDayNum,
-            tanRate: Number(formData.tanRate) || 0,
-            spread: Number(formData.spread) || 0,
-            installmentStampTax: parsedStampTax,
-            startDate: fullStartDateStr,
-            system: formData.system || formData.amortizationSystem || LoanAmortizationSystem.PRICE
-          };
-
-          if (existingContract && existingContract.id) {
-            await api.updateLoanContract(existingContract.id, contractPayload);
-          } else {
-            await api.createLoanContract(contractPayload);
-          }
-
-          // 2. Recalcular sempre os eventos de prestações com os novos valores do contrato
-          const newScheduleEvents = generateLoanInstallments({
-            totalDebt: parsedTotalDebt,
-            totalAmountFinanced: parsedTotalDebt,
-            monthlyInstallment: 0,
-            totalInstallments: parsedTotalInstallments,
-            numberOfInstallments: parsedTotalInstallments,
-            tanRate: Number(formData.tanRate) || 0,
-            spread: Number(formData.spread) || 0,
-            taxaImpostoSeloJuros: parsedStampTax,
-            interestStampTaxRate: parsedStampTax,
-            startDate: fullStartDateStr,
-            debtStartDate: fullStartDateStr,
-            dueDay: dueDayNum,
-            periodicity: formData.periodicity || formData.aggregation || EventPeriodicity.MONTHLY,
-            amortizationSystem: formData.system || formData.amortizationSystem || LoanAmortizationSystem.PRICE
-          });
-
-          // Obter eventos existentes desta timeline (garantindo que vêm da API se rawEvents estiver desatualizado)
-          let allEventsForTimeline = rawEvents.filter(ev => ev.timelineId === editingTimeline.id || ev.timelineOriginId === editingTimeline.id || ev.timeline_id === editingTimeline.id);
-          try {
-            const freshEvents = await api.fetchEvents({ timelineId: editingTimeline.id });
-            if (freshEvents && freshEvents.length > 0) {
-              allEventsForTimeline = freshEvents;
-            }
-          } catch (e) { }
-
-          // Filtrar apenas as prestações de crédito (excluindo amortizações avulsas) ordenadas por prestação/data
-          const existingInstallments = allEventsForTimeline.filter(ev =>
-            (ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.isSystemLoanEvent) &&
-            ev.eventType !== EventType.AMORTIZATION &&
-            ev.category !== AmortizationEventCategory.REDUCE_TERM &&
-            ev.category !== AmortizationEventCategory.REDUCE_INSTALLMENT
-          ).sort((a, b) => {
-            const numA = Number(a.installmentNumber || a.installment_number || 0);
-            const numB = Number(b.installmentNumber || b.installment_number || 0);
-            if (numA && numB) return numA - numB;
-            return (a.date || '').localeCompare(b.date || '');
-          });
-
-          if (newScheduleEvents.length > 0) {
-            const payloadsToSave = [];
-            for (let i = 0; i < newScheduleEvents.length; i++) {
-              const newEv = newScheduleEvents[i];
-              const matchExisting = existingInstallments.find(e => Number(e.installmentNumber || e.installment_number) === Number(newEv.installmentNumber || newEv.installment_number)) || existingInstallments[i];
-
-              if (matchExisting && matchExisting.id) {
-                payloadsToSave.push({
-                  isUpdate: true,
-                  id: matchExisting.id,
-                  payload: {
-                    ...matchExisting,
-                    eventType: EventType.LOAN_INSTALLMENT,
-                    category: LoanEventCategory.LOAN_INSTALLMENT,
-                    isSystemLoanEvent: true,
-                    amount: newEv.installmentAmount ?? newEv.amount,
-                    installmentAmount: newEv.installmentAmount ?? newEv.amount,
-                    installmentCapital: newEv.installmentCapital,
-                    installmentInterest: newEv.installmentInterest,
-                    installmentFee: newEv.installmentFee,
-                    balanceAfter: newEv.balanceAfter,
-                    description: newEv.description,
-                    date: newEv.date,
-                    dueDate: newEv.date,
-                    installmentNumber: newEv.installmentNumber,
-                    totalInstallments: newEv.totalInstallments,
-                    id: matchExisting.id,
-                    timelineId: editingTimeline.id,
-                    timelineOriginId: editingTimeline.id,
-                    timeboardId: activeTimeboardId
-                  }
-                });
-              } else {
-                payloadsToSave.push({
-                  isUpdate: false,
-                  payload: {
-                    ...newEv,
-                    amount: newEv.installmentAmount ?? newEv.amount,
-                    installmentAmount: newEv.installmentAmount ?? newEv.amount,
-                    installmentCapital: newEv.installmentCapital,
-                    installmentInterest: newEv.installmentInterest,
-                    installmentFee: newEv.installmentFee,
-                    eventType: EventType.LOAN_INSTALLMENT,
-                    category: LoanEventCategory.LOAN_INSTALLMENT,
-                    isSystemLoanEvent: true,
-                    timelineId: editingTimeline.id,
-                    timelineOriginId: editingTimeline.id,
-                    timeboardId: activeTimeboardId
-                  }
-                });
-              }
-            }
-
-            // Excluir parcelas excedentes se o total de parcelas diminuiu
-            const excessEvents = existingInstallments.filter(e => {
-              const instNum = Number(e.installmentNumber || e.installment_number || 0);
-              return instNum > newScheduleEvents.length;
-            });
-            if (excessEvents.length > 0) {
-              await Promise.all(excessEvents.map(e => api.deleteEvent(e.id)));
-            }
-
-            // 1. Atualizar UI otimisticamente de imediato
-            const optimisticEvList = payloadsToSave.map(p => p.payload);
-            const excessIds = new Set(excessEvents.map(e => e.id));
-            setRawEvents((prev) => {
-              const updatedIds = new Set(optimisticEvList.filter(e => e.id).map(e => e.id));
-              const filteredPrev = prev.filter(e => !updatedIds.has(e.id) && !excessIds.has(e.id));
-              const merged = [...filteredPrev, ...optimisticEvList];
-              return merged.sort((a, b) => {
-                const instA = Number(a.installmentNumber || a.installment_number || 0);
-                const instB = Number(b.installmentNumber || b.installment_number || 0);
-                if (instA !== instB && instA > 0 && instB > 0) return instA - instB;
-                return (a.date || '').localeCompare(b.date || '');
-              });
-            });
-
-            // 2. Processar requisições em lotes paralelos (batching)
-            const BATCH_SIZE = 10;
-            for (let i = 0; i < payloadsToSave.length; i += BATCH_SIZE) {
-              const batch = payloadsToSave.slice(i, i + BATCH_SIZE);
-              await Promise.all(
-                batch.map(item =>
-                  item.isUpdate
-                    ? api.updateEvent(item.id, item.payload)
-                    : api.createEvent(item.payload)
-                )
-              );
-            }
-          }
-        }
-
-        await refreshTimelines();
-        showToast(
-          isLoan
-            ? t('toast.contractAndInstallmentsUpdatedSuccess')
-            : t('toast.timelineUpdatedSuccess'),
-          'success'
-        );
-      } catch (err) {
-        console.error('Error updating timeline and loan contract:', err);
-        showToast(
-          t('toast.timelineUpdateError', { error: err.message || '' }),
-          'error'
-        );
-      } finally {
-        setIsUpdatingInstallments(false);
-      }
-    } else {
-      // Create new timeline
-      const newTimelineId = generateUUID();
-      const newTl = {
-        ...formData,
-        id: newTimelineId,
-        type: timelineType,
-        status: finalStatus,
-        timeboardId: activeTimeboardId,
-        events: formData.events || []
-      };
-
-      setTimelines((prev) => [newTl, ...prev]);
-      setActiveTimelineId(newTl.id);
-
-      if (isLoan) {
-        setIsUpdatingInstallments(true);
-      }
-
-      try {
-        // 1. Create Timeline (strip embedded events array from timeline payload)
-        const { events, timelines, loanHeaderResult, procedureMetrics, ...createPayload } = newTl;
-        await api.createTimeline(createPayload);
-
-        // 2. If it's a Loan Timeline, create the Loan Contract first, then generate Installments
-        const parsedTotalDebt = Number(formData.totalDebt) || 0;
-        const parsedTotalInstallments = Number(formData.totalInstallments) || 120;
-        const dueDayNum = Number(formData.dueDay) || 15;
-        const dueDayStr = dueDayNum.toString().padStart(2, '0');
-        const fullStartDateStr = formData.startDate
-          ? (formData.startDate.length === 7 ? `${formData.startDate}-${dueDayStr}` : formData.startDate)
-          : new Date().toISOString().substring(0, 10);
-        const parsedStampTax = Number(
-          formData.interestStampTaxRate !== undefined && formData.interestStampTaxRate !== ''
-            ? formData.interestStampTaxRate
-            : (formData.installmentStampTax !== undefined && formData.installmentStampTax !== ''
-              ? formData.installmentStampTax
-              : (formData.taxaImpostoSeloJuros !== undefined ? formData.taxaImpostoSeloJuros : 0))
-        ) || 0;
-
-        if (isLoan) {
-          // Create LoanContract record in DB
-          await api.createLoanContract({
-            timelineId: newTimelineId,
-            timeboardId: activeTimeboardId,
-            contractName: formData.name,
-            contractNumber: formData.contractNumber || '',
-            bankName: formData.bankName || '',
-            originalCapital: parsedTotalDebt,
-            totalInstallments: parsedTotalInstallments,
-            dueDay: dueDayNum,
-            tanRate: Number(formData.tanRate) || 0,
-            spread: Number(formData.spread) || 0,
-            installmentStampTax: parsedStampTax,
-            startDate: fullStartDateStr,
-            system: formData.system || formData.amortizationSystem || LoanAmortizationSystem.PRICE
-          });
-
-          // 3. Create financial events for installments directly from simulated/generated events payload
-          const chosenAmortizationSystem = formData.system || formData.amortizationSystem || LoanAmortizationSystem.PRICE;
-          const installmentEvents = (Array.isArray(formData.events) && formData.events.length > 0)
-            ? formData.events
-            : (parsedTotalDebt > 0 ? generateLoanInstallments({
-              totalDebt: parsedTotalDebt,
-              totalAmountFinanced: parsedTotalDebt,
-              monthlyInstallment: 0, // PMT formula
-              totalInstallments: parsedTotalInstallments,
-              numberOfInstallments: parsedTotalInstallments,
-              tanRate: Number(formData.tanRate) || 0,
-              spread: Number(formData.spread) || 0,
-              taxaImpostoSeloJuros: parsedStampTax,
-              interestStampTaxRate: parsedStampTax,
-              startDate: fullStartDateStr,
-              debtStartDate: fullStartDateStr,
-              dueDay: dueDayNum,
-              periodicity: formData.periodicity || formData.aggregation || EventPeriodicity.MONTHLY,
-              amortizationSystem: chosenAmortizationSystem
-            }) : []);
-
-          if (installmentEvents.length > 0) {
-            const BATCH_SIZE = 10;
-            for (let i = 0; i < installmentEvents.length; i += BATCH_SIZE) {
-              const batch = installmentEvents.slice(i, i + BATCH_SIZE);
-              await Promise.all(
-                batch.map((ev) =>
-                  api.createEvent({
-                    ...ev,
-                    eventType: EventType.LOAN_INSTALLMENT,
-                    category: LoanEventCategory.LOAN_INSTALLMENT,
-                    isSystemLoanEvent: true,
-                    timelineId: newTimelineId,
-                    timelineOriginId: newTimelineId,
-                    timeboardId: activeTimeboardId
-                  })
-                )
-              );
-            }
-          }
-        }
-
-        await refreshTimelines();
-        showToast(
-          isLoan
-            ? t('toast.contractAndInstallmentsCreatedSuccess')
-            : t('toast.timelineCreatedSuccess'),
-          'success'
-        );
-      } catch (err) {
-        console.error('Error creating timeline, contract or generating loan installments:', err);
-        showToast(t('toast.timelineCreateError', { error: err.message || '' }), 'error');
-      } finally {
-        setIsUpdatingInstallments(false);
-      }
-    }
-  };
-
-  const handleToggleTimelineStatus = async (targetTimeline, newStatus) => {
-    if (!targetTimeline || !targetTimeline.id) return;
-    setTimelines((prev) =>
-      prev.map((tl) => (tl.id === targetTimeline.id ? { ...tl, status: newStatus } : tl))
-    );
-    try {
-      await api.updateTimeline(targetTimeline.id, {
-        ...targetTimeline,
-        status: newStatus
-      });
-      await refreshTimelines();
-    } catch (err) {
-      console.error('Error toggling timeline status:', err);
-    }
-  };
-
-  const handleRequestDeleteTimeline = useCallback((timelineOrId) => {
-    let target = null;
-    if (typeof timelineOrId === 'string') {
-      target = timelines.find((tl) => tl.id === timelineOrId);
-    } else if (
-      timelineOrId &&
-      typeof timelineOrId === 'object' &&
-      timelineOrId.id &&
-      typeof timelineOrId.id === 'string' &&
-      !timelineOrId.nativeEvent &&
-      !timelineOrId._reactName
-    ) {
-      target = timelineOrId;
-    }
-    setDeletingTimeline(target || activeTimeline);
-  }, [timelines, activeTimeline]);
+  const {
+    calculatedEventsCount,
+    handleOpenCreateTimeline,
+    handleOpenEditTimeline,
+    handleRequestDeleteTimeline,
+    handleSaveComputeStartDate,
+    handleSaveTimeline,
+    handleToggleTimelineStatus
+  } = useTimelineActions({
+    activeTimeboardId,
+    activeTimeboardTimelines,
+    activeTimeline,
+    editingTimeline,
+    rawEvents,
+    refreshTimelines,
+    setActiveTimelineId,
+    setCreateTimelineInitialType,
+    setDeletingTimeline,
+    setEditingTimeline,
+    setIsTimelineModalOpen,
+    setIsTimelineSettingsModalOpen,
+    setIsUpdatingInstallments,
+    setRawEvents,
+    setTimelines,
+    showToast,
+    t,
+    timelines
+  });
 
   const handleConfirmDeleteTimeline = async (timelineId) => {
     let targetId = null;
@@ -1137,495 +384,67 @@ export default function App() {
   // ----------------------------------------------------
   // Pockets State & Handlers (Investment / Savings)
   // ----------------------------------------------------
-  const [pockets, setPockets] = useState([]);
-  const [isPocketModalOpen, setIsPocketModalOpen] = useState(false);
-  const [selectedPocketForEdit, setSelectedPocketForEdit] = useState(null);
-  const [deletingPocket, setDeletingPocket] = useState(null);
-
-  const investmentTimeline = useMemo(() => {
-    return (activeTimeboardTimelines || []).find(
-      (tl) => normalizeTimelineType(tl?.type) === TimelineType.INVESTMENT
-    );
-  }, [activeTimeboardTimelines]);
-
-  const loadPockets = useCallback(async () => {
-    const targetTimelineId = (normalizeTimelineType(activeTimeline?.type) === TimelineType.INVESTMENT)
-      ? activeTimeline?.id
-      : investmentTimeline?.id;
-
-    if (!targetTimelineId && !activeTimeboard?.id) {
-      setPockets([]);
-      return;
-    }
-
-    try {
-      const params = targetTimelineId
-        ? { timelineId: targetTimelineId }
-        : { timeboardId: activeTimeboard.id };
-      const res = await api.getPockets(params);
-      if (Array.isArray(res)) {
-        setPockets(res);
-      } else if (res && Array.isArray(res.data)) {
-        setPockets(res.data);
-      }
-    } catch (err) {
-      console.error('Error loading pockets:', err);
-    }
-  }, [activeTimeline?.id, activeTimeline?.type, investmentTimeline?.id, activeTimeboard?.id]);
-
-  useEffect(() => {
-    if (activeTimeboard?.id) {
-      loadPockets();
-    } else {
-      setPockets([]);
-    }
-  }, [activeTimeboard?.id, investmentTimeline?.id, loadPockets]);
-
-  // Timeboard balance summary for individual-role users (their displayEvents only hold their own
-  // obligations, so the totals are computed from all timeboard events, like the balance header does).
-  const timeboardSummary = React.useMemo(() => {
-    if (!isIndividualRole) return null;
-    const timelinesList = activeTimeboardTimelines || [];
-    const balanceTimeline = timelinesList.find((tl) => normalizeTimelineType(tl?.type) === TimelineType.BALANCE);
-    const incomeTimeline = timelinesList.find((tl) => normalizeTimelineType(tl?.type) === TimelineType.INCOME);
-
-    const timelineTypeMap = new Map(timelinesList.filter((tl) => tl?.id).map((tl) => [String(tl.id), tl.type]));
-    let events = (rawEvents || []).filter((ev) => {
-      if (!ev || !ev.id) return false;
-      const tlId = ev.timelineId || ev.timelineOriginId || ev.timeline_id;
-      return (tlId && timelineTypeMap.has(String(tlId))) || Boolean(ev.pocketId || ev.pocket_id);
-    });
-    timelinesList.filter((tl) => isLoanTimelineType(tl.type)).forEach((loanTl) => {
-      events = recalculateLoanState({
-        ...loanTl,
-        system: loanTl.system || loanTl.amortizationSystem || loanTl.loanContract?.system || loanTl.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE,
-        amortizationSystem: loanTl.system || loanTl.amortizationSystem || loanTl.loanContract?.system || loanTl.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE
-      }, events);
-    });
-
-    const rawComputeStart = activeTimeboard?.computeFrom || activeTimeboard?.compute_from ||
-      balanceTimeline?.computeFrom || balanceTimeline?.compute_from || balanceTimeline?.startDate || balanceTimeline?.start_date;
-    const computeFromMonth = rawComputeStart && !String(rawComputeStart).startsWith('1900-01') && String(rawComputeStart) !== 'all'
-      ? String(rawComputeStart).substring(0, 7)
-      : '1900-01';
-    const currentMonthStr = format(new Date(), 'yyyy-MM');
-
-    const totals = computeBalanceTotals({
-      events,
-      timelineTypeMap,
-      computeFromMonth,
-      currentMonthStr,
-      targetHorizonMonthStr: currentMonthStr
-    });
-    const incomeInitialValue = Number(incomeTimeline?.initialValue ?? incomeTimeline?.initial_value ?? 0);
-    const pocketsInitial = computePocketsInitialTotal({ pockets, timelines: timelinesList, events });
-
-    return {
-      netBalance: incomeInitialValue + totals.realizedIncome - (totals.realizedExpenses + totals.realizedLoanPaid) - totals.realizedInvestmentsDeductions,
-      savedBalance: totals.realizedInvestmentsTotal + pocketsInitial
-    };
-  }, [isIndividualRole, activeTimeboardTimelines, rawEvents, activeTimeboard, pockets]);
-
-  const handleOpenCreatePocket = useCallback((pocket = null) => {
-    setSelectedPocketForEdit(pocket);
-    setIsPocketModalOpen(true);
-  }, []);
-
-  const handleSavePocket = async (payload, pocketId) => {
-    try {
-      if (pocketId) {
-        await api.updatePocket(pocketId, payload);
-      } else {
-        await api.createPocket(payload);
-      }
-      await loadPockets();
-      showToast(pocketId ? t('toast.pocketUpdatedSuccess') : t('toast.pocketCreatedSuccess'), 'success');
-    } catch (err) {
-      console.error('Error saving pocket:', err);
-      showToast(err.message || t('toast.eventSaveError'), 'error');
-      throw err;
-    }
-  };
-
-  const handleRequestDeletePocket = useCallback((pocketOrId) => {
-    if (!pocketOrId) return;
-    if (typeof pocketOrId === 'object') {
-      setDeletingPocket(pocketOrId);
-    } else {
-      const found = pockets.find((p) => p.id === pocketOrId) || { id: pocketOrId, name: 'Cofrinho' };
-      setDeletingPocket(found);
-    }
-  }, [pockets]);
-
-  const handleConfirmDeletePocket = async (pocketId) => {
-    try {
-      await api.deletePocket(pocketId);
-      await loadPockets();
-      await refreshTimelines();
-      showToast(t('toast.pocketDeletedSuccess'), 'success');
-    } catch (err) {
-      console.error('Error deleting pocket:', err);
-      showToast(err.message || t('toast.eventDeleteError'), 'error');
-    } finally {
-      setDeletingPocket(null);
-    }
-  };
+  const {
+    deletingPocket,
+    handleConfirmDeletePocket,
+    handleOpenCreatePocket,
+    handleRequestDeletePocket,
+    handleSavePocket,
+    isPocketModalOpen,
+    pockets,
+    selectedPocketForEdit,
+    setDeletingPocket,
+    setIsPocketModalOpen,
+    setSelectedPocketForEdit,
+    timeboardSummary
+  } = usePocketActions({
+    activeTimeboard,
+    activeTimeboardTimelines,
+    activeTimeline,
+    isIndividualRole,
+    rawEvents,
+    refreshTimelines,
+    showToast,
+    t
+  });
 
   // ----------------------------------------------------
   // Event Handlers
   // ----------------------------------------------------
-  const focusedMonthRef = React.useRef(null);
-
-  const handleOpenCreateEvent = useCallback((dateStr = format(new Date(), 'yyyy-MM-dd'), nature = 'income', presetData = null) => {
-    focusedMonthRef.current = dateStr ? dateStr.substring(0, 7) : null;
-    scrollYBeforeModalRef.current = window.scrollY;
-    setEditingEvent(presetData);
-    setSelectedDateForNewEvent(dateStr);
-    setEventModalDefaultNature(nature);
-    setIsEventModalOpen(true);
-  }, []);
-
-  const handleOpenEditEvent = useCallback((eventObj) => {
-    focusedMonthRef.current = eventObj?.date ? eventObj.date.substring(0, 7) : null;
-    scrollYBeforeModalRef.current = window.scrollY;
-
-    // Effective movements are locked (only cancelled or corrected) and cancelled ones cannot be edited
-    const isFinancialLocked = Boolean(eventObj) && (
-      isLockedMovement(eventObj) ||
-      (isLockableMovement(eventObj) && isCancelledStatus(eventObj.status))
-    );
-    if (isFinancialLocked) {
-      showToast(t('timeline.cannotEditLockedEvent'), 'warning');
-      return;
-    }
-
-    if (
-      eventObj?.eventType === EventType.AMORTIZATION ||
-      eventObj?.category === AmortizationEventCategory.REDUCE_TERM ||
-      eventObj?.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
-      eventObj?.isAmortization
-    ) {
-      handleOpenAmortizationModal(eventObj.date, eventObj);
-      return;
-    }
-    if (eventObj?.eventType === EventType.WITHDRAWAL || eventObj?.isWithdrawal || isAccountOutflowEvent(eventObj) || isPocketTransferEvent(eventObj)) {
-      handleOpenWithdrawalModal(eventObj.date, eventObj.pocketId || eventObj.pocket_id, eventObj);
-      return;
-    }
-    setEditingEvent(eventObj);
-    const nature = eventObj?.isExpense ? 'expense' : eventObj?.isInvestment ? 'investment' : 'income';
-    setEventModalDefaultNature(nature);
-    setIsEventModalOpen(true);
-  }, [handleOpenAmortizationModal, handleOpenWithdrawalModal]);
-
-  // "Correct" an effective movement: opens the matching form pre-filled with its data (as a new one-time
-  // movement); the original occurrence is cancelled only when the correction is saved (see handleSaveEvent)
-  const handleCorrectEvent = useCallback((eventObj) => {
-    if (!eventObj) return;
-    focusedMonthRef.current = eventObj.date ? eventObj.date.substring(0, 7) : null;
-    scrollYBeforeModalRef.current = window.scrollY;
-    const draft = buildCorrectionDraft(eventObj);
-    if (eventObj.eventType === EventType.WITHDRAWAL || eventObj.isWithdrawal || isAccountOutflowEvent(eventObj) || isPocketTransferEvent(eventObj)) {
-      handleOpenWithdrawalModal(eventObj.date, eventObj.pocketId || eventObj.pocket_id || null, draft);
-      return;
-    }
-    setEditingEvent(draft);
-    setEventModalDefaultNature(eventObj.isExpense ? 'expense' : eventObj.isInvestment ? 'investment' : 'income');
-    setIsEventModalOpen(true);
-  }, [handleOpenWithdrawalModal]);
-
-  const sanitizeFutureEventStatus = (event) => {
-    if (!event || !event.date) return event;
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const isFutureEvent = event.date > todayStr;
-    if (!isFutureEvent) return event;
-    // Income, expense and investment events can be paid / received in advance
-    if (FINANCIAL_ADVANCE_PAYMENT_TYPES.includes(event.eventType) || Boolean(event.isWithdrawal)) return event;
-
-    const isPositive = isPositiveStatus(event.status) || event.status === FollowupStatus.FINISHED || Boolean(event.isCompleted);
-    if (isPositive) {
-      let pendingStatus = EventStatus.PENDING;
-      const evType = event.eventType;
-      const tlType = event.timelineType || event.timeline_type;
-      if (evType === EventType.INVESTMENT) pendingStatus = EventStatus.PLANNED;
-      else if (evType === EventType.REMINDER || tlType === TimelineType.REMINDER || evType === EventType.REGISTER || tlType === TimelineType.DIARY) pendingStatus = EventStatus.OPEN;
-      else if (evType === EventType.FOLLOWUP || tlType === TimelineType.FOLLOWUP) pendingStatus = FollowupStatus.IN_PROGRESS;
-
-      return {
-        ...event,
-        status: pendingStatus,
-        isCompleted: false,
-        completedAtTime: null
-      };
-    }
-    return event;
-  };
-
-  // editTarget: the event being edited (the event modal's one by default; the account outflow modal passes its own)
-  const handleSaveEvent = (rawEventData, editTarget = editingEvent) => {
-    // "Correct": the new movement keeps the original's effective status and the original occurrence is cancelled
-    const { correctionOf, ...correctedData } = rawEventData || {};
-    const eventData = sanitizeFutureEventStatus(correctionOf
-      ? { ...correctedData, status: correctionOf.status || correctedData.status, isCompleted: Boolean(correctionOf.status) || correctedData.isCompleted }
-      : correctedData);
-    const savedScrollPos = scrollYBeforeModalRef.current || window.scrollY;
-
-    // 1. Determinar se o evento pertence a um contrato específico (empréstimo) ou é dinâmico do Timeboard
-    let targetTimelineId = eventData.timelineId || eventData.timelineOriginId || null;
-    // Se não for um ID de timeline real de empréstimo, fica null (movimento geral do Timeboard)
-    const isRealTimeline = activeTimeboardTimelines.some((tl) => tl.id === targetTimelineId);
-    if (!isRealTimeline) {
-      targetTimelineId = null;
-    }
-
-    const saveAsync = async () => {
-      try {
-        if (editTarget && editTarget.id) {
-          const updated = {
-            ...editTarget,
-            ...eventData,
-            timeboardId: activeTimeboardId,
-            timelineId: targetTimelineId,
-            timelineOriginId: targetTimelineId,
-            eventId: editTarget.eventId || editTarget.seriesId
-          };
-          await api.updateEvent(editTarget.id, updated);
-          await refreshTimelines();
-          showToast(t('toast.eventUpdatedSuccess'), 'success');
-        } else {
-          const normRec = normalizeRecurrence(eventData);
-          const isRecurring = normRec === EventRecurrence.RECURRING || normRec === EventRecurrence.LIMITED;
-          const newEvent = {
-            ...eventData,
-            id: generateUUID(),
-            timeboardId: activeTimeboardId,
-            timelineId: targetTimelineId,
-            timelineOriginId: targetTimelineId,
-            eventId: isRecurring ? generateUUID() : null,
-            version: 0,
-            recurrence: normRec,
-            periodicity: normalizePeriodicity(eventData.periodicity || eventData.aggregation),
-            isRecurring
-          };
-          await api.createEvent(newEvent);
-          if (correctionOf?.id) {
-            await api.setEventStatus(correctionOf.id, { date: correctionOf.date, status: EventStatus.CANCELLED, timeboardId: activeTimeboardId });
-          }
-          await refreshTimelines();
-          showToast(t(correctionOf ? 'toast.eventCorrectedSuccess' : 'toast.eventCreatedSuccess'), 'success');
-        }
-
-        const monthKey = eventData.date ? eventData.date.substring(0, 7) : focusedMonthRef.current;
-        const currentMonthKey = format(new Date(), 'yyyy-MM');
-        const scrollToMonthNode = () => {
-          if (monthKey) {
-            const targetNode = document.querySelector(`[data-month-key="${monthKey}"]`) || (monthKey === currentMonthKey ? document.getElementById('timeline-node-today') : null);
-            if (targetNode) {
-              const navbar = document.querySelector('.app-header') || document.querySelector('header');
-              const stickyDock = document.querySelector('.sticky-header-dock');
-              const navHeight = navbar ? navbar.offsetHeight : 68;
-              const dockHeight = stickyDock ? stickyDock.offsetHeight : 80;
-              const totalStickyOffset = navHeight + 24 + dockHeight + 14;
-              const elementDocTop = targetNode.getBoundingClientRect().top + window.pageYOffset;
-              const targetY = elementDocTop - totalStickyOffset;
-              window.scrollTo({ top: Math.max(0, targetY), behavior: 'instant' });
-              return;
-            }
-          }
-          if (typeof savedScrollPos === 'number' && savedScrollPos >= 0) {
-            window.scrollTo({ top: savedScrollPos, left: 0, behavior: 'instant' });
-          }
-        };
-
-        requestAnimationFrame(() => {
-          scrollToMonthNode();
-          setTimeout(scrollToMonthNode, 40);
-        });
-      } catch (err) {
-        console.error('Error saving event:', err);
-        showToast(err.message || t('toast.eventSaveError'), 'error');
-      }
-    };
-
-    saveAsync();
-  };
-
-  const handleUpdateEventDirect = useCallback(async (rawUpdatedEvent) => {
-    if (!rawUpdatedEvent || !rawUpdatedEvent.id) return;
-
-    // Shared notices are shown inside another timeline: restore their own timeline before saving
-    let updatedEvent = rawUpdatedEvent;
-    if (rawUpdatedEvent.isSharedNotice) {
-      const { isSharedNotice: _isSharedNotice, noticeTimelineId, timelineOriginColor: _originColor, timelineColor: _color, ...rest } = rawUpdatedEvent;
-      updatedEvent = { ...rest, timelineId: noticeTimelineId, timelineOriginId: noticeTimelineId, timeline_id: noticeTimelineId };
-    }
-
-    const targetSeriesId = updatedEvent.seriesId || updatedEvent.eventId;
-    const isAutoChange = updatedEvent.automatic !== undefined;
-
-    const resolveMatchingEvent = (ev) => {
-      if (ev.id === updatedEvent.id) {
-        return { ...ev, ...updatedEvent };
-      }
-
-      // Exigir estritamente que pertencem à mesma timeline e partilham seriesId/eventId
-      const isSameSeries = targetSeriesId && ev.timelineId === updatedEvent.timelineId && (
-        ev.seriesId === targetSeriesId ||
-        ev.eventId === targetSeriesId
-      );
-
-      if (isSameSeries) {
-        if (isAutoChange) {
-          const nextAuto = Boolean(updatedEvent.automatic);
-          let newStatus = ev.status;
-          let newIsCompleted = Boolean(ev.isCompleted);
-
-          const isNotCancelledOrDeleted = ev.status !== EventStatus.CANCELLED && ev.status !== EventStatus.DELETED;
-          const todayStr = format(new Date(), 'yyyy-MM-dd');
-          if (nextAuto && ev.date && ev.date <= todayStr && isNotCancelledOrDeleted) {
-            // Shared status words (shared/finance/statusRules.js)
-            newStatus = effectiveStatusFor(ev);
-            newIsCompleted = true;
-          }
-
-          return {
-            ...ev,
-            automatic: nextAuto,
-            isAutomatic: nextAuto,
-            status: newStatus,
-            isCompleted: newIsCompleted
-          };
-        }
-
-        // Per-occurrence data (comments, payment date, receipt number) belongs to the edited month only
-        const {
-          date: _d,
-          id: _i,
-          monthNotes: _monthNotes,
-          receiptDate: _receiptDate,
-          contYear: _contYear,
-          cont_year: _contYearSnake,
-          ...restProps
-        } = updatedEvent;
-        return { ...ev, ...restProps };
-      }
-
-      return ev;
-    };
-
-    // 1. Optimistic update local state preserving specific dates of other monthly instances
-    setRawEvents((prev) => prev.map(resolveMatchingEvent));
-
-    setTimelines((prev) =>
-      prev.map((tl) => ({
-        ...tl,
-        events: (tl.events || []).map(resolveMatchingEvent)
-      }))
-    );
-
-    try {
-      await api.updateEvent(updatedEvent.id, {
-        ...updatedEvent,
-        updateScope: isAutoChange ? 'all_series' : updatedEvent.updateScope
-      });
-      await refreshTimelines();
-    } catch (err) {
-      // The optimistic change was not saved: reload the real state from the server and tell the user
-      console.error('Error updating event directly:', err);
-      showToast(t('common.updateFailed', { message: err?.message || '' }), 'error');
-      await fetchEventsForVisiblePeriod(pastHorizonYears, futureHorizonYears, true);
-    }
-  }, [refreshTimelines, showToast, t, fetchEventsForVisiblePeriod, pastHorizonYears, futureHorizonYears]);
-
-  // Updates an event in the local state only (the change was already saved elsewhere), so cards re-render at once
-  const handlePatchEventLocal = useCallback((eventId, patch) => {
-    if (!eventId || !patch) return;
-    const applyPatch = (ev) => (ev && ev.id === eventId ? { ...ev, ...patch } : ev);
-    setRawEvents((prev) => prev.map(applyPatch));
-    setTimelines((prev) => prev.map((tl) => (tl.events ? { ...tl, events: tl.events.map(applyPatch) } : tl)));
-  }, []);
-
-  const handleRequestDeleteEvent = useCallback((eventOrId) => {
-    scrollYBeforeModalRef.current = window.scrollY;
-    if (!eventOrId) return;
-    let targetObj = eventOrId;
-    if (typeof eventOrId !== 'object' || !eventOrId.id) {
-      targetObj = (activeTimeline?.events || []).find((ev) => ev.id === eventOrId);
-    }
-    if (targetObj && isLoanInstallment(targetObj)) {
-      showToast('As parcelas de empréstimo não podem ser eliminadas individualmente. Edite ou elimine o contrato.', 'warning');
-      return;
-    }
-    if (targetObj && targetObj.id) {
-      setDeletingEvent(targetObj);
-    }
-  }, [activeTimeline]);
-
-  const handleConfirmDeleteEvent = (eventId, deleteScope = EventDeletionMode.EVERYTHING) => {
-    let targetEvent = deletingEvent && (deletingEvent.id === eventId || String(deletingEvent.id) === String(eventId)) ? deletingEvent : null;
-    if (!targetEvent) {
-      timelines.forEach((tl) => {
-        const found = (tl.events || []).find((ev) => String(ev.id) === String(eventId));
-        if (found) targetEvent = found;
-      });
-    }
-
-    if (!targetEvent && activeTimeline) {
-      targetEvent = (activeTimeline.events || []).find((ev) => String(ev.id) === String(eventId));
-    }
-    if (!targetEvent) {
-      targetEvent = { id: eventId };
-    }
-
-    const deleteAsync = async () => {
-      try {
-        const mode = typeof deleteScope === 'string' ? deleteScope : (deleteScope ? EventDeletionMode.EVERYTHING : EventDeletionMode.ONLY_THIS);
-        await api.deleteEvent(eventId, {
-          deletionMode: mode,
-          deleteScope: mode,
-          eventId: targetEvent.eventId || targetEvent.seriesId,
-          date: targetEvent.date
-        });
-        setRawEvents((prev) => prev.filter((ev) => String(ev.id) !== String(eventId)));
-        const monthKey = targetEvent?.date ? targetEvent.date.substring(0, 7) : focusedMonthRef.current;
-        const currentMonthKey = format(new Date(), 'yyyy-MM');
-        const savedScrollPos = scrollYBeforeModalRef.current || window.scrollY;
-        showToast(t('toast.eventDeletedSuccess'), 'success');
-        await refreshTimelines();
-
-        const scrollToMonthNode = () => {
-          if (monthKey) {
-            const targetNode = document.querySelector(`[data-month-key="${monthKey}"]`) || (monthKey === currentMonthKey ? document.getElementById('timeline-node-today') : null);
-            if (targetNode) {
-              const navbar = document.querySelector('.app-header') || document.querySelector('header');
-              const stickyDock = document.querySelector('.sticky-header-dock');
-              const navHeight = navbar ? navbar.offsetHeight : 68;
-              const dockHeight = stickyDock ? stickyDock.offsetHeight : 80;
-              const totalStickyOffset = navHeight + 24 + dockHeight + 14;
-              const elementDocTop = targetNode.getBoundingClientRect().top + window.pageYOffset;
-              const targetY = elementDocTop - totalStickyOffset;
-              window.scrollTo({ top: Math.max(0, targetY), behavior: 'instant' });
-              return;
-            }
-          }
-          if (typeof savedScrollPos === 'number' && savedScrollPos >= 0) {
-            window.scrollTo({ top: savedScrollPos, left: 0, behavior: 'instant' });
-          }
-        };
-
-        requestAnimationFrame(() => {
-          scrollToMonthNode();
-          setTimeout(scrollToMonthNode, 40);
-        });
-      } catch (err) {
-        console.error('Error deleting event:', err);
-        showToast(t('toast.eventDeleteError'), 'error');
-      }
-    };
-
-    deleteAsync();
-    setDeletingEvent(null);
-  };
+  const {
+    handleConfirmDeleteEvent,
+    handleCorrectEvent,
+    handleOpenCreateEvent,
+    handleOpenEditEvent,
+    handlePatchEventLocal,
+    handleRequestDeleteEvent,
+    handleSaveEvent,
+    handleUpdateEventDirect
+  } = useEventCrudActions({
+    focusedMonthRef,
+    activeTimeboardId,
+    activeTimeboardTimelines,
+    activeTimeline,
+    deletingEvent,
+    editingEvent,
+    fetchEventsForVisiblePeriod,
+    futureHorizonYears,
+    handleOpenAmortizationModal,
+    handleOpenWithdrawalModal,
+    pastHorizonYears,
+    refreshTimelines,
+    scrollYBeforeModalRef,
+    setDeletingEvent,
+    setEditingEvent,
+    setEventModalDefaultNature,
+    setIsEventModalOpen,
+    setRawEvents,
+    setSelectedDateForNewEvent,
+    setTimelines,
+    showToast,
+    t,
+    timelines
+  });
 
   const handleConfirmResetTimeline = async () => {
     let targetTlIds = [];
@@ -1648,408 +467,44 @@ export default function App() {
     setIsResetConfirmOpen(false);
   };
 
-  const handleToggleTask = useCallback((eventId, taskIdx) => {
-    if (!activeTimeline) return;
-    const updatedEvents = (activeTimeline.events || []).map((ev) => {
-      if (ev.id === eventId && ev.tasks) {
-        const updatedTasks = ev.tasks.map((task, idx) =>
-          idx === taskIdx ? { ...task, completed: !task.completed } : task
-        );
-        return { ...ev, tasks: updatedTasks };
-      }
-      return ev;
-    });
-
-    setTimelines((prev) =>
-      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
-    );
-  }, [activeTimeline]);
-
-  // Add a new checklist item to any event/task
-  const handleAddChecklistItem = (eventId, itemText) => {
-    if (!activeTimeline || !itemText || !itemText.trim()) return;
-    const updatedEvents = (activeTimeline.events || []).map((ev) => {
-      if (ev.id === eventId) {
-        const currentTasks = ev.tasks || [];
-        return {
-          ...ev,
-          tasks: [...currentTasks, { text: itemText.trim(), completed: false }]
-        };
-      }
-      return ev;
-    });
-
-    setTimelines((prev) =>
-      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
-    );
-  };
-
-  // Delete a checklist item from any event/task
-  const handleDeleteChecklistItem = (eventId, itemIdx) => {
-    if (!activeTimeline) return;
-    const updatedEvents = (activeTimeline.events || []).map((ev) => {
-      if (ev.id === eventId && ev.tasks) {
-        const updatedTasks = ev.tasks.filter((_, idx) => idx !== itemIdx);
-        return { ...ev, tasks: updatedTasks };
-      }
-      return ev;
-    });
-
-    setTimelines((prev) =>
-      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
-    );
-  };
-
-  // Complete a floating pending task and fix it to today's date on the timeline
-  const handleCompleteFloatingTask = (taskId) => {
-    if (!activeTimeline) return;
-    const updatedEvents = (activeTimeline.events || []).map((ev) => {
-      if (ev.id === taskId) {
-        return {
-          ...ev,
-          isCompleted: true,
-          status: EventStatus.COMPLETED,
-          date: format(new Date(), 'yyyy-MM-dd')
-        };
-      }
-      return ev;
-    });
-
-    setTimelines((prev) =>
-      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
-    );
-  };
-
-  // Add a new floating task directly to the top stack
-  const handleAddFloatingTask = (taskData) => {
-    if (!activeTimeline) return;
-    const newFloatingTask = {
-      ...taskData,
-      id: generateUUID()
-    };
-
-    const updatedEvents = [newFloatingTask, ...(activeTimeline.events || [])];
-    setTimelines((prev) =>
-      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
-    );
-  };
-
-  // Update priority of a floating task
-  const handleUpdateFloatingTaskPriority = (taskId, priority) => {
-    if (!activeTimeline) return;
-    const updatedEvents = (activeTimeline.events || []).map((ev) =>
-      ev.id === taskId ? { ...ev, priority } : ev
-    );
-    setTimelines((prev) =>
-      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: updatedEvents } : tl))
-    );
-  };
+  const {
+    handleAddChecklistItem,
+    handleAddFloatingTask,
+    handleCompleteFloatingTask,
+    handleDeleteChecklistItem,
+    handleToggleTask,
+    handleUpdateFloatingTaskPriority
+  } = useTaskActions({
+    activeTimeline,
+    setTimelines
+  });
 
   // ----------------------------------------------------
   // Loan Specific Handlers (Empréstimo)
   // ----------------------------------------------------
 
   // Toggle installment payment / income / expense / investment status (3-state: Negative -> Positive -> Cancelled -> Negative)
-  const handleToggleLoanPayment = useCallback(async (installmentId, explicitStatus = null) => {
-    if (!installmentId) return;
-
-    const clickTimeStr = format(new Date(), 'HH:mm');
-
-    const getNextState = (ev) => {
-      if (explicitStatus) {
-        return {
-          nextStatus: explicitStatus,
-          nextCompleted: isPositiveStatus(explicitStatus)
-        };
-      }
-
-      const isCurrPositive = isPositiveStatus(ev.status) || ev.status === FollowupStatus.FINISHED || Boolean(ev.isCompleted);
-
-      // Effective financial movements are locked (shared/finance/corrections.js)
-      if (isLockableMovement(ev) && isCurrPositive) {
-        return {
-          nextStatus: ev.status,
-          nextCompleted: true
-        };
-      }
-
-      // Shared status words (shared/finance/statusRules.js)
-      if (isCurrPositive) {
-        return {
-          nextStatus: pendingStatusFor(ev),
-          nextCompleted: false
-        };
-      }
-
-      const positiveStatus = effectiveStatusFor(ev);
-
-      return {
-        nextStatus: positiveStatus,
-        nextCompleted: true
-      };
-    };
-
-    let finalTargetStatus = explicitStatus;
-
-    // 1. Optimistic update in rawEvents
-    setRawEvents((prevEvents) =>
-      prevEvents.map((ev) => {
-        if (ev.id !== installmentId) return ev;
-        const { nextStatus, nextCompleted } = getNextState(ev);
-        if (!finalTargetStatus) finalTargetStatus = nextStatus;
-        return {
-          ...ev,
-          status: nextStatus,
-          isCompleted: nextCompleted,
-          completedAtTime: nextCompleted ? clickTimeStr : null
-        };
-      })
-    );
-
-    // 2. Optimistic update in timelines
-    setTimelines((prevTimelines) => {
-      return prevTimelines.map((tl) => {
-        const hasEvent = (tl.events || []).some((e) => e.id === installmentId);
-        if (!hasEvent) return tl;
-
-        const updatedEvents = (tl.events || []).map((ev) => {
-          if (ev.id !== installmentId) return ev;
-          const { nextStatus, nextCompleted } = getNextState(ev);
-          if (!finalTargetStatus) finalTargetStatus = nextStatus;
-          return {
-            ...ev,
-            status: nextStatus,
-            isCompleted: nextCompleted,
-            completedAtTime: nextCompleted ? clickTimeStr : null
-          };
-        });
-
-        const finalEvents = isLoanTimelineType(tl.type)
-          ? recalculateLoanState(tl, updatedEvents)
-          : updatedEvents;
-
-        return { ...tl, events: finalEvents };
-      });
-    });
-
-    // 3. Persist to backend asynchronously in the background
-    try {
-      await api.toggleEventPayment(installmentId, finalTargetStatus);
-    } catch (err) {
-      console.error('Error toggling payment status:', err);
-      // Rollback on network failure
-      refreshTimelines();
-    }
-  }, [refreshTimelines]);
-
-  // Pay all prior loan installments up to (and including) target event
-  const handlePayUpToHere = useCallback(async (targetEv) => {
-    if (!targetEv || !activeTimeline) return;
-    const targetInstNum = Number(targetEv.installmentNumber || targetEv.installment_number || 0);
-    const targetDate = targetEv.date || '';
-    const targetTimelineId = targetEv.timelineOriginId || targetEv.timelineId || targetEv.timeline_id || activeTimeline.id;
-
-    let allTlEvents = rawEvents.filter(
-      (ev) => ev.timelineId === targetTimelineId || ev.timelineOriginId === targetTimelineId || ev.timeline_id === targetTimelineId || ev.timelineId === activeTimeline.id || ev.timelineOriginId === activeTimeline.id
-    );
-
-    // Garantir que obtemos a totalidade das prestações da timeline vindas da API (mesmo as não visíveis no ecrã)
-    try {
-      const freshEvents = await api.fetchEvents({ timelineId: targetTimelineId });
-      if (freshEvents && freshEvents.length > 0) {
-        allTlEvents = freshEvents;
-      }
-    } catch (e) { }
-
-    const eventsToPay = allTlEvents.filter((ev) => {
-      const instNum = Number(ev.installmentNumber || ev.installment_number || 0);
-      const isPaid = ev.status === EventStatus.PAID || Boolean(ev.isCompleted);
-      if (isPaid) return false;
-      if (targetInstNum > 0 && instNum > 0) {
-        return instNum <= targetInstNum;
-      }
-      return ev.date && ev.date <= targetDate;
-    });
-
-    if (eventsToPay.length === 0) {
-      showToast(t('toast.allPreviousPaid'), 'info');
-      return;
-    }
-
-    // 1. Optimistic update in rawEvents
-    const payIds = new Set(eventsToPay.map((e) => e.id));
-    setRawEvents((prev) =>
-      prev.map((ev) => {
-        if (!payIds.has(ev.id)) return ev;
-        return {
-          ...ev,
-          status: EventStatus.PAID,
-          isCompleted: true
-        };
-      })
-    );
-
-    // 2. Atomic single-query update on backend (payUpTo)
-    setIsUpdatingInstallments(true);
-    try {
-      await api.payUpTo({
-        timelineId: targetTimelineId,
-        date: targetDate,
-        installmentNumber: targetInstNum,
-        status: EventStatus.PAID
-      });
-      showToast(t('toast.payUpToSuccess', { count: eventsToPay.length }), 'success');
-      await refreshTimelines();
-    } catch (err) {
-      console.error('Error paying up to here:', err);
-      showToast(t('toast.payUpToError'), 'error');
-    } finally {
-      setIsUpdatingInstallments(false);
-    }
-  }, [activeTimeline, rawEvents, refreshTimelines, t]);
-
-  // Save changes from EditInstallmentModal (amount, principalAmount, interestPortion, interestAmount, propagateForward)
-  const handleSaveEditInstallment = async (installmentId, { status, amount, principalAmount, interestPortion, interestAmount, propagateForward }) => {
-    if (!activeTimeline) return;
-
-    let currentEvents = activeTimeline.events || [];
-
-    if (propagateForward) {
-      // Propagate new base amount, principal and interest to this and all subsequent future installments
-      currentEvents = propagateInstallmentAmountForward(currentEvents, installmentId, amount, principalAmount, interestPortion);
-    }
-
-    // Update the specific installment's values and status
-    const isPaid = status === EventStatus.PAID;
-    const updatedList = currentEvents.map((ev) => {
-      if (ev.id === installmentId) {
-        return {
-          ...ev,
-          amount: Number(amount),
-          principalAmount: Number(principalAmount),
-          interestPortion: Number(interestPortion),
-          interestAmount: Number(interestAmount) || 0,
-          status: status,
-          isCompleted: isPaid
-        };
-      }
-      return ev;
-    });
-
-    const finalEvents = recalculateLoanState(activeTimeline, updatedList);
-
-    setTimelines((prev) =>
-      prev.map((tl) => (tl.id === activeTimeline.id ? { ...tl, events: finalEvents } : tl))
-    );
-
-    const targetEv = updatedList.find((e) => e.id === installmentId);
-    if (targetEv) {
-      try {
-        await api.updateEvent(installmentId, targetEv);
-        await refreshTimelines();
-      } catch (err) {
-        console.error('Error updating installment:', err);
-      }
-    }
-  };
-
-  // Save extraordinary amortization event
-  const handleSaveAmortization = async ({ id, amount, date, strategy, status = EventStatus.AMORTIZED, notes }) => {
-    const amortVal = Number(amount);
-    if (isNaN(amortVal) || amortVal <= 0) return;
-
-    const existingId = id || editingAmortization?.id;
-    if (existingId) {
-      try {
-        await api.deleteEvent(existingId);
-      } catch (e) {
-        console.error('Error rolling back previous amortization version:', e);
-      }
-    }
-
-    let targetTimeline = activeTimeboardTimelines.find((t) => t.id === activeFinancialTab || t.id === activeTimelineId);
-    if (!targetTimeline && isLoanTimelineType(activeTimeline?.type)) {
-      targetTimeline = activeTimeline;
-    }
-    if (!targetTimeline) {
-      targetTimeline = activeTimeboardTimelines.find((t) => isLoanTimelineType(t.type)) || activeTimeboardTimelines[0];
-    }
-
-    if (!targetTimeline) return;
-
-    const loanName = targetTimeline.name || '';
-    const targetDate = date || format(new Date(), 'yyyy-MM-dd');
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const isFutureEvent = targetDate > todayStr;
-    const isCompleted = !isFutureEvent && (status === EventStatus.AMORTIZED || status === EventStatus.PAID);
-
-    const amortEvent = {
-      id: generateUUID(),
-      tenantId: DEFAULT_TENANT.id,
-      timeboardId: activeTimeboardId,
-      timelineId: targetTimeline.id,
-      timelineOriginId: targetTimeline.id,
-      timelineOriginName: loanName,
-      timelineOriginColor: targetTimeline.color || TimelineColor.PRIMARY,
-      description:
-        notes ||
-        (strategy === AmortizationStrategy.REDUCE_TERM
-          ? 'Amortização extraordinária para redução do prazo.'
-          : 'Amortização extraordinária para redução da parcela.'),
-      date: targetDate,
-      dayOfMonth: parseInt(targetDate.substring(8, 10), 10) || 15,
-      time: '12:00',
-      amount: amortVal,
-      amortizationAmount: amortVal,
-      category:
-        strategy === AmortizationStrategy.REDUCE_INSTALLMENT
-          ? AmortizationEventCategory.REDUCE_INSTALLMENT
-          : AmortizationEventCategory.REDUCE_TERM,
-      eventType: EventType.AMORTIZATION,
-      isAmortization: true,
-      isExpense: true,
-      isIncome: false,
-      isInvestment: false,
-      isSystemLoanEvent: true,
-      status: isCompleted ? EventStatus.AMORTIZED : EventStatus.PENDING,
-      isCompleted: isCompleted,
-      priority: EventPriority.HIGH,
-      strategy:
-        strategy === AmortizationStrategy.REDUCE_INSTALLMENT
-          ? AmortizationStrategy.REDUCE_INSTALLMENT
-          : AmortizationStrategy.REDUCE_TERM,
-      amortizationStrategy:
-        strategy === AmortizationStrategy.REDUCE_INSTALLMENT
-          ? AmortizationStrategy.REDUCE_INSTALLMENT
-          : AmortizationStrategy.REDUCE_TERM,
-      notes: notes || '',
-      labels: [
-        'Amortização',
-        strategy === AmortizationStrategy.REDUCE_TERM ? 'Redução Prazo' : 'Redução Parcela'
-      ],
-      version: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    // 1. Atualizar o estado local otimisticamente
-    setRawEvents((prev) => {
-      const filtered = prev.filter((e) => e.id !== amortEvent.id);
-      return [amortEvent, ...filtered];
-    });
-
-    setEditingAmortization(null);
-
-    // 2. Gravar apenas o registo do evento de amortização na base de dados
-    try {
-      await api.createEvent(amortEvent);
-      showToast(t('toast.eventCreatedSuccess') || 'Evento de amortização registado com sucesso!', 'success');
-      await refreshTimelines();
-    } catch (err) {
-      console.error('Error saving amortization event:', err);
-      showToast('Erro ao guardar evento de amortização na base de dados.', 'error');
-    }
-  };
+  const {
+    handlePayUpToHere,
+    handleSaveAmortization,
+    handleSaveEditInstallment,
+    handleToggleLoanPayment
+  } = useEventStatusActions({
+    activeFinancialTab,
+    activeTimeboardId,
+    activeTimeboardTimelines,
+    activeTimeline,
+    activeTimelineId,
+    editingAmortization,
+    rawEvents,
+    refreshTimelines,
+    setEditingAmortization,
+    setIsUpdatingInstallments,
+    setRawEvents,
+    setTimelines,
+    showToast,
+    t
+  });
 
   const loanMetrics = activeTimeline && isLoanTimelineType(activeTimeline.type)
     ? getLoanMetrics(activeTimeline, activeTimeline.events || [])
@@ -2086,125 +541,27 @@ export default function App() {
     }
   };
 
-  const handleSaveTimeboard = async (formData) => {
-    const targetId = formData?.id || editingTimeboard?.id;
-    if (targetId) {
-      // Ensure print_template takes precedence over printTemplate
-      const printTemplateValue = formData.print_template ?? formData.printTemplate ?? null;
-      const updated = {
-        ...formData,
-        print_template: printTemplateValue,
-        printTemplate: printTemplateValue,
-        tenantId: formData?.tenantId || editingTimeboard?.tenantId || DEFAULT_TENANT.id
-      };
-      setTimeboards((prev) =>
-        prev.map((tb) => (tb.id === targetId ? { ...tb, ...updated } : tb))
-      );
-      setMyTimeboards((prev) =>
-        prev.map((tb) => (tb.id === targetId ? { ...tb, ...updated } : tb))
-      );
-      try {
-        const saved = await api.updateTimeboard(targetId, updated);
-        if (saved) {
-          const freshSaved = {
-            ...saved,
-            print_template: saved.print_template ?? saved.printTemplate ?? printTemplateValue,
-            printTemplate: saved.printTemplate ?? saved.print_template ?? printTemplateValue
-          };
-          setTimeboards((prev) =>
-            prev.map((tb) => (tb.id === targetId ? { ...tb, ...freshSaved } : tb))
-          );
-          setMyTimeboards((prev) =>
-            prev.map((tb) => (tb.id === targetId ? { ...tb, ...freshSaved } : tb))
-          );
-          setEditingTimeboard((prev) => (prev?.id === targetId ? { ...prev, ...freshSaved } : prev));
-        }
-        return saved;
-      } catch (err) {
-        console.error('Error updating timeboard:', err);
-        throw err;
-      }
-    } else {
-      const current = currentUser || api.getCurrentUser();
-      const currentUserId = current ? current.id : null;
-
-      const newTb = {
-        ...formData,
-        id: generateUUID(),
-        tenantId: DEFAULT_TENANT.id,
-        ownerId: currentUserId,
-        owner_id: currentUserId
-      };
-
-      // Optimistic update of timeboard list and myTimeboards
-      setTimeboards((prev) => [...prev, newTb]);
-      setMyTimeboards((prev) => [...prev, newTb]);
-      setActiveTimeboardId(newTb.id);
-
-      try {
-        const createdTb = await api.createTimeboard(newTb, language);
-        if (createdTb && createdTb.id) {
-          setTimeboards((prev) => prev.map((tb) => (tb.id === newTb.id ? { ...tb, ...createdTb } : tb)));
-          setMyTimeboards((prev) => prev.map((tb) => (tb.id === newTb.id ? { ...tb, ...createdTb } : tb)));
-        }
-        // Refresh timelines from backend to load newly created default timelines (Balance, Income, Expense, Investments)
-        const updatedTimelines = await api.fetchTimelines({ timeboardId: newTb.id });
-        if (Array.isArray(updatedTimelines) && updatedTimelines.length > 0) {
-          setTimelines((prev) => [...prev.filter((tl) => tl.timeboardId !== newTb.id), ...updatedTimelines]);
-          const balanceTl = updatedTimelines.find((tl) => tl.type === TimelineType.BALANCE);
-          const initialTabId = balanceTl ? balanceTl.id : updatedTimelines[0].id;
-          setActiveTimelineId(initialTabId);
-          setActiveFinancialTab(initialTabId);
-        }
-      } catch (err) {
-        console.error('Error creating timeboard or default timelines:', err);
-      }
-    }
-  };
-
-  const handleDeleteTimeboard = async (timeboardId) => {
-    if (!timeboardId) return;
-    const targetTb = timeboards.find((t) => t.id === timeboardId);
-    const nameStr = targetTb ? ` "${targetTb.name}"` : '';
-    if (window.confirm(`Tem a certeza que deseja eliminar o Timeboard${nameStr}?`)) {
-      const remaining = timeboards.filter((tb) => tb.id !== timeboardId);
-      setTimeboards(remaining);
-
-      // Limpar o estado local de timelines e eventos pertencentes ao timeboard excluído
-      const deletedTimelineIds = new Set(
-        timelines.filter((tl) => tl.timeboardId === timeboardId || tl.timeboard_id === timeboardId).map((tl) => tl.id)
-      );
-      setTimelines((prev) => prev.filter((tl) => tl.timeboardId !== timeboardId && tl.timeboard_id !== timeboardId));
-      setRawEvents((prev) => prev.filter((ev) => ev.timeboardId !== timeboardId && !deletedTimelineIds.has(ev.timelineId)));
-
-      if (remaining.length > 0) {
-        setActiveTimeboardId(remaining[0].id);
-      } else {
-        setActiveTimeboardId(null);
-        setActiveTimelineId(null);
-        setActiveFinancialTab(null);
-      }
-
-      try {
-        await api.deleteTimeboard(timeboardId);
-      } catch (e) {
-        console.error('Error deleting timeboard:', e);
-      }
-    }
-  };
-
-  const handleSelectTimeboardFromHub = (tbId) => {
-    setActiveTimeboardId(tbId);
-    setActiveTimelineId(null);
-    setActiveFinancialTab(null);
-    setCurrentView('workspace');
-    localStorage.setItem('chrono_current_view', 'workspace');
-  };
-
-  const handleNavigateToHub = () => {
-    setCurrentView('hub');
-    localStorage.setItem('chrono_current_view', 'hub');
-  };
+  const {
+    handleDeleteTimeboard,
+    handleNavigateToHub,
+    handleSaveTimeboard,
+    handleSelectTimeboardFromHub
+  } = useTimeboardActions({
+    currentUser,
+    editingTimeboard,
+    language,
+    setActiveFinancialTab,
+    setActiveTimeboardId,
+    setActiveTimelineId,
+    setCurrentView,
+    setEditingTimeboard,
+    setMyTimeboards,
+    setRawEvents,
+    setTimeboards,
+    setTimelines,
+    timeboards,
+    timelines
+  });
 
   const handleAddEventForDate = useCallback(
     (dateStr, nature, presetData = null) => handleOpenCreateEvent(dateStr, nature || (activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income'), presetData),
@@ -2233,57 +590,27 @@ export default function App() {
   // 2. Dashboards / Timeboards Hub View (Second page when logged in)
   if (currentView === 'hub') {
     return (
-      <div className="app-container">
-        <TimeboardsHub
-          timeboards={timeboards}
-          myTimeboards={myTimeboards}
-          sharedTimeboards={sharedTimeboards}
-          currentUser={currentUser}
-          onSelectTimeboard={handleSelectTimeboardFromHub}
-          onOpenCreateTimeboard={() => {
-            setEditingTimeboard(null);
-            setIsTimeboardModalOpen(true);
-          }}
-          onOpenEditTimeboard={async (tb) => {
-            try {
-              const fresh = await api.fetchTimeboard(tb.id);
-              setEditingTimeboard(fresh || tb);
-            } catch {
-              setEditingTimeboard(tb);
-            }
-            setIsTimeboardSettingsModalOpen(true);
-          }}
-          onDeleteTimeboard={handleDeleteTimeboard}
-          onLogout={handleLogout}
-          theme={theme}
-          onToggleTheme={handleToggleTheme}
-          language={language}
-          onToggleLanguage={() => setLanguage(language === 'pt' ? 'en' : 'pt')}
-          t={t}
-        />
-
-        {/* Global Modals for Timeboard management */}
-        <Suspense fallback={null}>
-          <CreateTimeboardModal
-            isOpen={isTimeboardModalOpen}
-            onClose={() => setIsTimeboardModalOpen(false)}
-            onSave={handleSaveTimeboard}
-            onDelete={handleDeleteTimeboard}
-            initialData={null}
-          />
-
-          <TimeboardSettingsModal
-            isOpen={isTimeboardSettingsModalOpen}
-            onClose={() => {
-              setIsTimeboardSettingsModalOpen(false);
-              setEditingTimeboard(null);
-            }}
-            timeboard={editingTimeboard}
-            onSaveTimeboard={handleSaveTimeboard}
-            onDeleteTimeboard={handleDeleteTimeboard}
-          />
-        </Suspense>
-      </div>
+      <AppHubView
+        currentUser={currentUser}
+        editingTimeboard={editingTimeboard}
+        handleDeleteTimeboard={handleDeleteTimeboard}
+        handleLogout={handleLogout}
+        handleSaveTimeboard={handleSaveTimeboard}
+        handleSelectTimeboardFromHub={handleSelectTimeboardFromHub}
+        handleToggleTheme={handleToggleTheme}
+        isTimeboardModalOpen={isTimeboardModalOpen}
+        isTimeboardSettingsModalOpen={isTimeboardSettingsModalOpen}
+        language={language}
+        myTimeboards={myTimeboards}
+        setEditingTimeboard={setEditingTimeboard}
+        setIsTimeboardModalOpen={setIsTimeboardModalOpen}
+        setIsTimeboardSettingsModalOpen={setIsTimeboardSettingsModalOpen}
+        setLanguage={setLanguage}
+        sharedTimeboards={sharedTimeboards}
+        t={t}
+        theme={theme}
+        timeboards={timeboards}
+      />
     );
   }
 
@@ -2318,498 +645,154 @@ export default function App() {
       />
 
       {/* Main Layout Area */}
-      <main className="main-layout">
-        {timelines.length > 0 && activeTimeline ? (
-          <VerticalTimeline
-            timeline={activeTimeline}
-            lockedEntityId={individualEntityId}
-            timelines={visibleTimelines}
-            activeTimeboard={activeTimeboard}
-            currentUser={currentUser}
-            activeFinancialTab={activeFinancialTab}
-            pockets={pockets}
-            persons={timeboardPersons}
-            onOpenCreatePocket={handleOpenCreatePocket}
-            onEditPocket={handleOpenCreatePocket}
-            onDeletePocket={handleRequestDeletePocket}
-            onSelectFinancialTab={(tabKey) => {
-              setActiveFinancialTab(tabKey);
-              setActiveTimelineId(tabKey);
-            }}
-            onCreateTimeline={handleOpenCreateTimeline}
-            futureHorizonYears={futureHorizonYears}
-            pastHorizonYears={pastHorizonYears}
-            onLoadMoreFuture={handleLoadMoreFuture}
-            onLoadMorePast={handleLoadMorePast}
-            onEditEvent={handleOpenEditEvent}
-            onCorrectEvent={handleCorrectEvent}
-            onUpdateEventDirect={handleUpdateEventDirect}
-            onDeleteEvent={handleRequestDeleteEvent}
-            onToggleTask={handleToggleTask}
-            onAddEventForDate={handleAddEventForDate}
-            onCompleteFloatingTask={handleCompleteFloatingTask}
-            onAddFloatingTask={handleAddFloatingTask}
-            onUpdateFloatingTaskPriority={handleUpdateFloatingTaskPriority}
-            onAddChecklistItem={handleAddChecklistItem}
-            onDeleteChecklistItem={handleDeleteChecklistItem}
-            onToggleLoanPayment={handleToggleLoanPayment}
-            onPayUpToHere={handlePayUpToHere}
-            onOpenEditInstallment={handleOpenEditInstallment}
-            onOpenAmortizationModal={handleOpenAmortizationModal}
-            onOpenWithdrawModal={handleOpenWithdrawalModal}
-            onNavigateToTimeline={handleNavigateToTimeline}
-            onPatchEventLocal={handlePatchEventLocal}
-            headerComponent={
-              <TimelineHeader
-                timeboard={activeTimeboard}
-                timeline={activeTimeline}
-                allTimelines={activeTimeboardTimelines}
-                events={activeTimeline?.events || displayEvents}
-                allEvents={displayEvents}
-                activeFinancialTab={activeFinancialTab}
-                pockets={pockets}
-                onOpenCreatePocket={handleOpenCreatePocket}
-                onEditPocket={handleOpenCreatePocket}
-                onDeletePocket={handleRequestDeletePocket}
-                onSelectFinancialTab={setActiveFinancialTab}
-                onEdit={handleOpenEditTimeline}
-                onToggleStatus={handleToggleTimelineStatus}
-                onDelete={handleRequestDeleteTimeline}
-                onOpenCreateTimeline={handleOpenCreateTimeline}
-                onOpenAmortizationModal={() => handleOpenAmortizationModal()}
-                onScrollToOverdue={handleScrollToOverdue}
-                onSaveComputeStartDate={handleSaveComputeStartDate}
-                isIndividualView={isIndividualView}
-                onToggleIndividualView={setIsIndividualView}
-                isIndividualRole={isIndividualRole}
-                timeboardSummary={timeboardSummary}
-                onAddEvent={(opts) => {
-                  if (opts && typeof opts === 'object' && !opts.nativeEvent) {
-                    const presetDate = opts.date || format(new Date(), 'yyyy-MM-dd');
-                    const nature = opts.nature || (activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income');
-                    handleOpenCreateEvent(presetDate, nature, opts);
-                  } else {
-                    handleOpenCreateEvent(format(new Date(), 'yyyy-MM-dd'), activeFinancialTab === 'gastos' ? 'expense' : activeFinancialTab === 'investimentos' ? 'investment' : 'income');
-                  }
-                }}
-              />
-            }
-          />
-        ) : isLoadingSystem ? null : (
-          <div className="empty-timeline-state glass-panel" style={{ marginTop: '40px', textAlign: 'center' }}>
-            <h2>{activeTimeboard ? activeTimeboard.name : t('timeline.noTimeboards')}</h2>
-            <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-              {t('timeline.noTimelines')}
-            </p>
-            {activeTimeboard && !isIndividualRole && (
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                style={{ marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                onClick={handleOpenCreateTimeline}
-              >
-                <Plus size={16} />
-                <span>{t('timeline.createTimeline')}</span>
-              </button>
-            )}
-          </div>
-        )}
-      </main>
+      <AppMainArea
+        activeFinancialTab={activeFinancialTab}
+        activeTimeboard={activeTimeboard}
+        activeTimeboardTimelines={activeTimeboardTimelines}
+        activeTimeline={activeTimeline}
+        currentUser={currentUser}
+        displayEvents={displayEvents}
+        futureHorizonYears={futureHorizonYears}
+        handleAddChecklistItem={handleAddChecklistItem}
+        handleAddEventForDate={handleAddEventForDate}
+        handleAddFloatingTask={handleAddFloatingTask}
+        handleCompleteFloatingTask={handleCompleteFloatingTask}
+        handleCorrectEvent={handleCorrectEvent}
+        handleDeleteChecklistItem={handleDeleteChecklistItem}
+        handleLoadMoreFuture={handleLoadMoreFuture}
+        handleLoadMorePast={handleLoadMorePast}
+        handleNavigateToTimeline={handleNavigateToTimeline}
+        handleOpenAmortizationModal={handleOpenAmortizationModal}
+        handleOpenCreateEvent={handleOpenCreateEvent}
+        handleOpenCreatePocket={handleOpenCreatePocket}
+        handleOpenCreateTimeline={handleOpenCreateTimeline}
+        handleOpenEditEvent={handleOpenEditEvent}
+        handleOpenEditInstallment={handleOpenEditInstallment}
+        handleOpenEditTimeline={handleOpenEditTimeline}
+        handleOpenWithdrawalModal={handleOpenWithdrawalModal}
+        handlePatchEventLocal={handlePatchEventLocal}
+        handlePayUpToHere={handlePayUpToHere}
+        handleRequestDeleteEvent={handleRequestDeleteEvent}
+        handleRequestDeletePocket={handleRequestDeletePocket}
+        handleRequestDeleteTimeline={handleRequestDeleteTimeline}
+        handleSaveComputeStartDate={handleSaveComputeStartDate}
+        handleScrollToOverdue={handleScrollToOverdue}
+        handleToggleLoanPayment={handleToggleLoanPayment}
+        handleToggleTask={handleToggleTask}
+        handleToggleTimelineStatus={handleToggleTimelineStatus}
+        handleUpdateEventDirect={handleUpdateEventDirect}
+        handleUpdateFloatingTaskPriority={handleUpdateFloatingTaskPriority}
+        individualEntityId={individualEntityId}
+        isIndividualRole={isIndividualRole}
+        isIndividualView={isIndividualView}
+        isLoadingSystem={isLoadingSystem}
+        pastHorizonYears={pastHorizonYears}
+        pockets={pockets}
+        setActiveFinancialTab={setActiveFinancialTab}
+        setActiveTimelineId={setActiveTimelineId}
+        setIsIndividualView={setIsIndividualView}
+        t={t}
+        timeboardPersons={timeboardPersons}
+        timeboardSummary={timeboardSummary}
+        timelines={timelines}
+        visibleTimelines={visibleTimelines}
+      />
 
       {/* Modals */}
-      <Suspense fallback={null}>
-        <CreateTimeboardModal
-          isOpen={isTimeboardModalOpen}
-          onClose={() => setIsTimeboardModalOpen(false)}
-          onSave={handleSaveTimeboard}
-          onDelete={handleDeleteTimeboard}
-          initialData={null}
-        />
-
-        <TimeboardSettingsModal
-          isOpen={isTimeboardSettingsModalOpen}
-          onClose={() => {
-            setIsTimeboardSettingsModalOpen(false);
-            setEditingTimeboard(null);
-            reloadPersons();
-          }}
-          timeboard={timeboards.find((t) => t.id === (editingTimeboard?.id || activeTimeboardId)) || editingTimeboard || activeTimeboard}
-          onSaveTimeboard={handleSaveTimeboard}
-          onDeleteTimeboard={handleDeleteTimeboard}
-          timelines={activeTimeboardTimelines}
-          events={rawEvents}
-          pockets={pockets}
-          onEntitySaved={(savedEntity) => {
-            if (!savedEntity || !savedEntity.id) return;
-            setTimeboardPersons((prev) => {
-              const exists = prev.some((p) => p.id === savedEntity.id);
-              if (exists) {
-                return prev.map((p) => (p.id === savedEntity.id ? { ...p, ...savedEntity } : p));
-              }
-              return [...prev, savedEntity];
-            });
-          }}
-        />
-
-        <CreateTimelineModal
-          isOpen={isTimelineModalOpen}
-          onClose={() => setIsTimelineModalOpen(false)}
-          onSave={handleSaveTimeline}
-          initialData={editingTimeline}
-          initialType={createTimelineInitialType}
-          existingTimelines={activeTimeboardTimelines}
-        />
-
-        <EditTimelineSettingsModal
-          isOpen={isTimelineSettingsModalOpen}
-          onClose={() => setIsTimelineSettingsModalOpen(false)}
-          onSave={handleSaveTimeline}
-          onDelete={handleRequestDeleteTimeline}
-          onReset={() => {
-            setIsTimelineSettingsModalOpen(false);
-            setIsResetConfirmOpen(true);
-          }}
-          initialData={editingTimeline}
-        />
-
-        <CreateEventModal
-          isOpen={isEventModalOpen}
-          onClose={() => setIsEventModalOpen(false)}
-          onSave={handleSaveEvent}
-          initialData={editingEvent}
-          pockets={pockets}
-          defaultDate={selectedDateForNewEvent}
-          timeline={activeTimeline}
-          timeboardId={activeTimeboardId}
-          allTimelines={timelines}
-          events={activeTimeline?.events || rawEvents || []}
-          allEvents={rawEvents || activeTimeline?.events || []}
-          defaultNature={eventModalDefaultNature}
-          activeFinancialTab={activeFinancialTab}
-        />
-
-        {/* Loan Modals */}
-        <AmortizationModal
-          isOpen={isAmortizationModalOpen}
-          onClose={() => {
-            setIsAmortizationModalOpen(false);
-            setEditingAmortization(null);
-          }}
-          onSave={handleSaveAmortization}
-          initialEvent={editingAmortization}
-          defaultDate={amortizationDefaultDate}
-          remainingBalance={loanMetrics ? loanMetrics.remainingBalance : undefined}
-        />
-
-        {/* Account outflow modal: withdrawal, expense paid by the account, transfer between spaces */}
-        <AccountOutflowModal
-          isOpen={isWithdrawalModalOpen}
-          onClose={() => {
-            setIsWithdrawalModalOpen(false);
-            setEditingWithdrawal(null);
-            setWithdrawalDefaultPocketId(null);
-          }}
-          onSave={(payload) => handleSaveEvent(payload, editingWithdrawal)}
-          initialData={editingWithdrawal}
-          defaultDate={withdrawalDefaultDate}
-          defaultPocketId={withdrawalDefaultPocketId}
-          pockets={pockets}
-          timeline={activeTimeline}
-          events={activeTimeline?.events || rawEvents || []}
-        />
-
-        <EditInstallmentModal
-          isOpen={Boolean(editingInstallment)}
-          onClose={() => setEditingInstallment(null)}
-          installment={editingInstallment}
-          onSave={handleSaveEditInstallment}
-        />
-
-        {/* Delete Event Confirmation Modal */}
-        <DeleteEventModal
-          isOpen={Boolean(deletingEvent)}
-          onClose={() => setDeletingEvent(null)}
-          event={deletingEvent}
-          onConfirmDelete={handleConfirmDeleteEvent}
-        />
-
-        {/* Delete Timeline Confirmation Modal */}
-        <DeleteTimelineModal
-          isOpen={Boolean(deletingTimeline)}
-          onClose={() => setDeletingTimeline(null)}
-          timeline={deletingTimeline}
-          onConfirmDelete={handleConfirmDeleteTimeline}
-        />
-
-        {/* Pocket Modal */}
-        {isPocketModalOpen && (
-          <CreatePocketModal
-            isOpen={isPocketModalOpen}
-            onClose={() => {
-              setIsPocketModalOpen(false);
-              setSelectedPocketForEdit(null);
-            }}
-            onSave={handleSavePocket}
-            initialData={selectedPocketForEdit}
-            timeline={activeTimeline}
-            timeboardId={activeTimeboardId}
-          />
-        )}
-
-        {/* Delete Pocket Confirmation Modal */}
-        {deletingPocket && (
-          <DeletePocketModal
-            isOpen={Boolean(deletingPocket)}
-            onClose={() => setDeletingPocket(null)}
-            pocket={deletingPocket}
-            timeline={activeTimeline}
-            allEvents={rawEvents}
-            onConfirmDelete={handleConfirmDeletePocket}
-          />
-        )}
-      </Suspense>
+      <AppModals
+        activeFinancialTab={activeFinancialTab}
+        activeTimeboard={activeTimeboard}
+        activeTimeboardId={activeTimeboardId}
+        activeTimeboardTimelines={activeTimeboardTimelines}
+        activeTimeline={activeTimeline}
+        amortizationDefaultDate={amortizationDefaultDate}
+        createTimelineInitialType={createTimelineInitialType}
+        deletingEvent={deletingEvent}
+        deletingPocket={deletingPocket}
+        deletingTimeline={deletingTimeline}
+        editingAmortization={editingAmortization}
+        editingEvent={editingEvent}
+        editingInstallment={editingInstallment}
+        editingTimeboard={editingTimeboard}
+        editingTimeline={editingTimeline}
+        editingWithdrawal={editingWithdrawal}
+        eventModalDefaultNature={eventModalDefaultNature}
+        handleConfirmDeleteEvent={handleConfirmDeleteEvent}
+        handleConfirmDeletePocket={handleConfirmDeletePocket}
+        handleConfirmDeleteTimeline={handleConfirmDeleteTimeline}
+        handleDeleteTimeboard={handleDeleteTimeboard}
+        handleRequestDeleteTimeline={handleRequestDeleteTimeline}
+        handleSaveAmortization={handleSaveAmortization}
+        handleSaveEditInstallment={handleSaveEditInstallment}
+        handleSaveEvent={handleSaveEvent}
+        handleSavePocket={handleSavePocket}
+        handleSaveTimeboard={handleSaveTimeboard}
+        handleSaveTimeline={handleSaveTimeline}
+        isAmortizationModalOpen={isAmortizationModalOpen}
+        isEventModalOpen={isEventModalOpen}
+        isPocketModalOpen={isPocketModalOpen}
+        isTimeboardModalOpen={isTimeboardModalOpen}
+        isTimeboardSettingsModalOpen={isTimeboardSettingsModalOpen}
+        isTimelineModalOpen={isTimelineModalOpen}
+        isTimelineSettingsModalOpen={isTimelineSettingsModalOpen}
+        isWithdrawalModalOpen={isWithdrawalModalOpen}
+        loanMetrics={loanMetrics}
+        pockets={pockets}
+        rawEvents={rawEvents}
+        reloadPersons={reloadPersons}
+        selectedDateForNewEvent={selectedDateForNewEvent}
+        selectedPocketForEdit={selectedPocketForEdit}
+        setDeletingEvent={setDeletingEvent}
+        setDeletingPocket={setDeletingPocket}
+        setDeletingTimeline={setDeletingTimeline}
+        setEditingAmortization={setEditingAmortization}
+        setEditingInstallment={setEditingInstallment}
+        setEditingTimeboard={setEditingTimeboard}
+        setEditingWithdrawal={setEditingWithdrawal}
+        setIsAmortizationModalOpen={setIsAmortizationModalOpen}
+        setIsEventModalOpen={setIsEventModalOpen}
+        setIsPocketModalOpen={setIsPocketModalOpen}
+        setIsResetConfirmOpen={setIsResetConfirmOpen}
+        setIsTimeboardModalOpen={setIsTimeboardModalOpen}
+        setIsTimeboardSettingsModalOpen={setIsTimeboardSettingsModalOpen}
+        setIsTimelineModalOpen={setIsTimelineModalOpen}
+        setIsTimelineSettingsModalOpen={setIsTimelineSettingsModalOpen}
+        setIsWithdrawalModalOpen={setIsWithdrawalModalOpen}
+        setSelectedPocketForEdit={setSelectedPocketForEdit}
+        setTimeboardPersons={setTimeboardPersons}
+        setWithdrawalDefaultPocketId={setWithdrawalDefaultPocketId}
+        timeboards={timeboards}
+        timelines={timelines}
+        withdrawalDefaultDate={withdrawalDefaultDate}
+        withdrawalDefaultPocketId={withdrawalDefaultPocketId}
+      />
 
       {/* Reset Timeline Confirmation Modal */}
       {isResetConfirmOpen && (
-        <div className="modal-overlay" style={{ zIndex: 1100 }}>
-          <div className="modal-card" style={{ maxWidth: '460px' }}>
-            <div className="modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '8px',
-                    background: `${TimelineColor.AMBER}26`,
-                    color: TimelineColor.WARNING,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: `1px solid ${TimelineColor.AMBER}4c`
-                  }}
-                >
-                  <RotateCcw size={18} />
-                </div>
-                <div>
-                  <h3 className="modal-title" style={{ margin: 0, fontSize: '1.15rem' }}>
-                    {t('resetTimelineModal.title')}
-                  </h3>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {activeTimeline?.type === TimelineType.BALANCE
-                      ? t('resetTimelineModal.subtitleBalance')
-                      : t('resetTimelineModal.subtitleTimeline', { name: activeTimeline?.name || '' })}
-                  </div>
-                </div>
-              </div>
-              <button type="button" className="modal-close-btn" onClick={() => setIsResetConfirmOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={{ padding: '16px 0', fontSize: '0.9rem', color: 'var(--text-main)', lineHeight: '1.5' }}>
-              <p style={{ margin: '0 0 12px 0' }}>
-                {t('resetTimelineModal.confirmMessage')}
-              </p>
-              <div
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: 'var(--radius-sm)',
-                  background: `${TimelineColor.DANGER}14`,
-                  border: `1px solid ${TimelineColor.DANGER}40`,
-                  fontSize: '0.82rem',
-                  color: TimelineColor.DANGER
-                }}
-              >
-                ⚠️ {t('resetTimelineModal.warningMessage')}
-              </div>
-            </div>
-
-            <div className="form-footer" style={{ margin: 0, paddingTop: '16px' }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => setIsResetConfirmOpen(false)}
-              >
-                {t('buttons.cancel')}
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleConfirmResetTimeline}
-                style={{
-                  background: TimelineColor.WARNING,
-                  borderColor: TimelineColor.WARNING,
-                  boxShadow: `0 4px 14px ${TimelineColor.AMBER}59`,
-                  fontWeight: '700',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <RotateCcw size={15} />
-                <span>{t('resetTimelineModal.confirmButton')}</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        <ResetTimelineConfirmModal
+          activeTimeline={activeTimeline}
+          handleConfirmResetTimeline={handleConfirmResetTimeline}
+          setIsResetConfirmOpen={setIsResetConfirmOpen}
+          t={t}
+        />
       )}
 
       {/* System Loading Overlay */}
       {isLoadingSystem && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 99999,
-            background: 'var(--overlay-backdrop)',
-            backdropFilter: 'blur(12px)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '18px',
-            color: TimelineColor.WHITE
-          }}
-        >
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              border: `3px solid ${TimelineColor.PRIMARY}33`,
-              borderTopColor: TimelineColor.PRIMARY,
-              borderRadius: '50%',
-              animation: 'spin 0.8s linear infinite'
-            }}
-          />
-          <style>{`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
-          <div style={{ textAlign: 'center' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 4px 0', color: 'var(--text-main)' }}>
-              System Loading...
-            </h3>
-            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', margin: 0 }}>
-              Sincronizando eventos e status do mês corrente
-            </p>
-          </div>
-        </div>
+        <SystemLoadingOverlay />
       )}
 
       {/* Installments Updating Overlay */}
       {isUpdatingInstallments && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 99999,
-            background: 'var(--overlay-backdrop)',
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '16px',
-            color: TimelineColor.WHITE
-          }}
-        >
-          <div
-            style={{
-              width: '52px',
-              height: '52px',
-              border: `4px solid ${TimelineColor.PRIMARY}40`,
-              borderTopColor: TimelineColor.PRIMARY,
-              borderRadius: '50%',
-              animation: 'spin 0.75s linear infinite'
-            }}
-          />
-          <div style={{ textAlign: 'center' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '700', margin: '0 0 6px 0', color: 'var(--text-main)' }}>
-              Atualizando Prestações...
-            </h3>
-            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', margin: 0 }}>
-              Por favor aguarde, a sincronizar o novo plano de amortização e impostos.
-            </p>
-          </div>
-        </div>
+        <InstallmentsUpdatingOverlay />
       )}
       {/* 🚀 Floating Bottom Right Controls (Go to Today + Event Counts) */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '24px',
-          zIndex: 90,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: '8px'
-        }}
-      >
-        {/* Floating Go to Current Month Button */}
-        <button
-          type="button"
-          className="floating-today-btn"
-          onClick={handleScrollToToday}
-          title={t('header.goToTodayTitle')}
-        >
-          <LocateFixed size={14} />
-          <span>{t('header.goToToday')}</span>
-        </button>
-
-        {/* 📊 Floating Event Counts Badge */}
-        <div
-          className="floating-events-count-badge"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '7px 12px',
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-glass)',
-            borderRadius: 'var(--radius-md, 12px)',
-            boxShadow: 'var(--shadow-lg)',
-            backdropFilter: 'blur(12px)',
-            fontSize: '0.74rem',
-            fontWeight: '700',
-            color: 'var(--text-main)',
-            userSelect: 'none',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-          }}
-        >
-          {/* DB Events Count */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-            title={t('header.dbEventsTooltip', { count: dbEventsCount })}
-          >
-            <Database size={13} style={{ color: TimelineColor.PRIMARY }} />
-            <span style={{ color: 'var(--text-main)', fontWeight: '800' }}>{dbEventsCount}</span>
-            <span style={{ fontSize: '0.68rem', fontWeight: '600', color: 'var(--text-dim)' }}>{t('header.dbEvents')}</span>
-          </div>
-
-          <span style={{ width: '1px', height: '12px', background: 'var(--border-glass)', display: 'inline-block' }} />
-
-          {/* Calculated Events Count */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-            title={t('header.calculatedEventsTooltip', { count: calculatedEventsCount })}
-          >
-            <Calculator size={13} style={{ color: TimelineColor.SUCCESS }} />
-            <span style={{ color: 'var(--text-main)', fontWeight: '800' }}>{calculatedEventsCount}</span>
-            <span style={{ fontSize: '0.68rem', fontWeight: '600', color: 'var(--text-dim)' }}>{t('header.calcEvents')}</span>
-          </div>
-        </div>
-      </div>
+      <AppFloatingControls
+        calculatedEventsCount={calculatedEventsCount}
+        dbEventsCount={dbEventsCount}
+        handleScrollToToday={handleScrollToToday}
+        t={t}
+      />
     </div>
     </HeaderRefreshProvider>
     </TimeboardProvider>

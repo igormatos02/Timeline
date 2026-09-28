@@ -1364,6 +1364,14 @@ export const translations = {
 
     // Expense Timeline Header
     expenseHeader: {
+      outflowsThisMonth: "Outflows this month",
+      outflowSplit: {
+        regular: "From available money",
+        savings: "Via savings",
+        installment: "Installments",
+        total: "Total"
+      },
+      outflowSplitPaid: "Paid: {{amount}}",
       badge: "Expenses & Outflows",
       addExpense: "New Expense",
       addExpenseButton: "New Expense",
@@ -1500,6 +1508,22 @@ export const translations = {
       summaryView: "Summary",
       evolutionView: "Evolution",
       initialValue: "Initial Value"
+    },
+
+    // Outflows timeline: outflow type filter and references of outflows owned by other timelines
+    outflowType: {
+      title: "Outflow type",
+      all: "All outflows",
+      regular: "Regular",
+      savings: "Via savings",
+      installment: "Installments"
+    },
+    outflowReference: {
+      savings: "Via savings",
+      installment: "Installment",
+      amortization: "Amortization",
+      goToOrigin: "Read-only reference — click to open {{origin}}",
+      origin: "origin"
     },
 
     // Pocket / Cofrinho
@@ -3556,6 +3580,14 @@ export const translations = {
 
     // Expense Timeline Header
     expenseHeader: {
+      outflowsThisMonth: "Saídas deste mês",
+      outflowSplit: {
+        regular: "Do disponível",
+        savings: "Via Poupança",
+        installment: "Parcelas",
+        total: "Total"
+      },
+      outflowSplitPaid: "Pago: {{amount}}",
       badge: "Gastos e Despesas",
       addExpense: "Novo Gasto",
       addExpenseButton: "Novo Gasto",
@@ -3734,6 +3766,22 @@ export const translations = {
       summaryView: "Resumo",
       evolutionView: "Evolução",
       initialValue: "Valor Inicial"
+    },
+
+    // Timeline de Saídas: filtro por tipo de saída e referências de saídas de outras timelines
+    outflowType: {
+      title: "Tipo de saída",
+      all: "Todas as saídas",
+      regular: "Normais",
+      savings: "Via Poupança",
+      installment: "Parcelas"
+    },
+    outflowReference: {
+      savings: "Via Poupança",
+      installment: "Parcela",
+      amortization: "Amortização",
+      goToOrigin: "Referência só de leitura — clique para abrir {{origin}}",
+      origin: "origem"
     },
 
     // Pocket / Cofrinho

@@ -32,3 +32,4 @@ export { HeaderDefaultState } from './HeaderDefaultState.js';
 export { ProjectionDirection } from './ProjectionDirection.js';
 export { AccountMovementType, getAccountMovementType } from './AccountMovementType.js';
 export { MovementKind, SAVINGS_MOVEMENT_KINDS, LOAN_MOVEMENT_KINDS } from './MovementKind.js';
+export { OutflowType, getOutflowType } from './OutflowType.js';

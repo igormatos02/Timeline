@@ -29,7 +29,7 @@ const LEGACY_LOAN_INSTALLMENT_CATEGORY = 'parcela_emprestimo';
 const LEGACY_AMORTIZATION_CATEGORIES = ['amortizacao', 'amortization'];
 const LEGACY_INVESTMENT_EVENT_TYPES = ['investments'];
 const LEGACY_INVESTMENT_CATEGORIES = ['savings', 'investimento'];
-const VIRTUAL_WITHDRAWAL_ID_PREFIX = 'virtual_withdrawal_';
+export const WITHDRAWAL_REFERENCE_ID_PREFIX = 'virtual_withdrawal_';
 
 /** Not deleted nor cancelled (cancelled movements stay in the history with zero impact). */
 export function isActiveMovement(ev) {
@@ -41,9 +41,13 @@ export function isEffectiveMovement(ev) {
   return Boolean(ev) && (isPositiveStatus(ev.status) || isPositiveStatus(String(ev.status || '').toLowerCase()) || Boolean(ev.isCompleted));
 }
 
-/** A reference of a movement owned by another timeline (never counted where it is shown). */
+/** A reference of a movement owned by another timeline (never counted where it is shown — see references.js). */
 export function isReferenceMovement(ev) {
-  return Boolean(ev) && (Boolean(ev.isVirtualWithdrawal) || String(ev.id || '').startsWith(VIRTUAL_WITHDRAWAL_ID_PREFIX));
+  return Boolean(ev) && (
+    Boolean(ev.isReference) ||
+    Boolean(ev.isVirtualWithdrawal) ||
+    String(ev.id || '').startsWith(WITHDRAWAL_REFERENCE_ID_PREFIX)
+  );
 }
 
 const isExternalFlag = (ev) => Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
@@ -115,7 +119,7 @@ export function classifyMovement(ev, timelineTypeMap = new Map()) {
   const isExternal = isExternalFlag(ev);
 
   let kind = MovementKind.NON_FINANCIAL;
-  if (isReference) kind = MovementKind.WITHDRAWAL;
+  if (isReference) kind = ev.referenceKind || MovementKind.WITHDRAWAL;
   else if (isAmortization) kind = MovementKind.AMORTIZATION;
   else if (isLoan) kind = MovementKind.LOAN_INSTALLMENT;
   else if (isIncome) kind = MovementKind.INCOME;

@@ -3,7 +3,11 @@ import {
   Plus,
   Settings,
   Layers,
-  Sparkles
+  Sparkles,
+  ShoppingCart,
+  PiggyBank,
+  Landmark,
+  Sigma
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { enUS, pt } from 'date-fns/locale';
@@ -16,7 +20,8 @@ import {
   isPositiveStatus,
   TimelineColor,
   TimelineType,
-  normalizeTimelineType
+  normalizeTimelineType,
+  OutflowType
 } from '../../enums/index.js';
 import { TIMELINE_COLOR_PRESETS, getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
@@ -30,6 +35,7 @@ import { computeMonthDiff } from '../../utils/timelineCharts.js';
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
 import { useHeaderCollapsed, useTimeboard } from '../../context/TimeboardContext.jsx';
 import { computeMonthlyFlows, sumMonthlyFlows } from '../../../shared/finance/financialPosition.js';
+import { isReferenceMovement } from '../../../shared/finance/movements.js';
 import { CONDO_EXPENSE_CATEGORY_META } from '../event-modals/FinancialEventModalConfig.js';
 
 // 'yyyy-MM' of the month before `monthKey`
@@ -84,7 +90,9 @@ export default function ExpenseTimelineHeader({
   const metrics = timeline.metrics || {};
 
   const isFiltered = (selectedExpenseCategories && selectedExpenseCategories.length > 0) || (filteredEvents !== undefined);
-  const eventsList = (isFiltered && filteredEvents) ? filteredEvents : (events && events.length > 0 ? events : (timeline.events || []));
+  // Own expenses only: references (pocket expenses, paid installments) are counted in their owner timeline
+  const eventsList = ((isFiltered && filteredEvents) ? filteredEvents : (events && events.length > 0 ? events : (timeline.events || [])))
+    .filter((ev) => !isReferenceMovement(ev));
   const currentMonthStr = new Date().toISOString().substring(0, 7);
 
   // DTO vindo da Stored Procedure SQL Supabase get_expense_timeline_metrics (usado apenas se não estiver filtrado)
@@ -189,6 +197,17 @@ export default function ExpenseTimelineHeader({
     annualTotalIncome = monthlyIncomeTarget * 12;
   }
 
+  // Outflows of the current month split by who pays them: available money, savings, loan installments
+  const monthProjected = sumMonthlyFlows(boardFlows, { fromMonth: currentMonthStr, toMonth: currentMonthStr, side: 'projected' });
+  const monthRealized = sumMonthlyFlows(boardFlows, { fromMonth: currentMonthStr, toMonth: currentMonthStr, side: 'realized' });
+  const outflowSplit = [
+    { id: OutflowType.REGULAR, icon: ShoppingCart, color: TimelineColor.EXPENSE, projected: monthProjected.expensesFromAvailable, realized: monthRealized.expensesFromAvailable },
+    { id: OutflowType.SAVINGS, icon: PiggyBank, color: TimelineColor.INVESTMENT, projected: monthProjected.savingsExpenses, realized: monthRealized.savingsExpenses },
+    { id: OutflowType.INSTALLMENT, icon: Landmark, color: TimelineColor.LOAN, projected: monthProjected.installments + monthProjected.amortizations, realized: monthRealized.installments + monthRealized.amortizations }
+  ];
+  const OUTFLOW_TOTAL_ID = 'total';
+  const outflowTotal = outflowSplit.reduce((acc, item) => ({ projected: acc.projected + item.projected, realized: acc.realized + item.realized }), { projected: 0, realized: 0 });
+
   const annualCommitmentPercent = annualTotalIncome > 0 ? Math.min(100, Math.round((annualTotalExpense / annualTotalIncome) * 100)) : 0;
 
   // 3. ACUMULAÇÃO ATUAL & GASTOS PLANEADOS (Ano Corrente)
@@ -276,8 +295,8 @@ export default function ExpenseTimelineHeader({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.2)',
+                background: 'var(--primary-glow)',
+                border: '1px solid var(--border-glass-glow)',
                 color: 'var(--primary-light)',
                 cursor: 'pointer',
                 padding: '6px 12px',
@@ -370,7 +389,7 @@ export default function ExpenseTimelineHeader({
               {/* Grid Principal 2x2 */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
                 {/* Quadrante 1: GASTOS POR CATEGORIA (PieChart SVG & Legenda) */}
-                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ background: 'var(--bg-glass)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {t('expenseHeader.categoriesTitle')}
                   </div>
@@ -382,7 +401,7 @@ export default function ExpenseTimelineHeader({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
                           <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
                             <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                              <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                              <circle cx="0" cy="0" r="0.82" fill="none" stroke="var(--border-glass)" strokeWidth="0.25" strokeDasharray="3 3" />
                             </svg>
                             <div
                               style={{
@@ -437,7 +456,7 @@ export default function ExpenseTimelineHeader({
                 </div>
 
                 {/* Quadrante 2: COMPROMETIMENTO ANUAL (PieChart Donut SVG Anual) */}
-                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ background: 'var(--bg-glass)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {t('expenseHeader.annualCommitmentTitle')}
                   </div>
@@ -447,7 +466,7 @@ export default function ExpenseTimelineHeader({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
                           <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
                             <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                              <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                              <circle cx="0" cy="0" r="0.82" fill="none" stroke="var(--border-glass)" strokeWidth="0.25" strokeDasharray="3 3" />
                             </svg>
                             <div
                               style={{
@@ -490,7 +509,7 @@ export default function ExpenseTimelineHeader({
                         <DonutChart
                           percent={annualCommitmentPercent}
                           sliceColor={sliceColor}
-                          remainingColor="rgba(255, 255, 255, 0.08)"
+                          remainingColor="var(--border-glass)"
                           title={`${t('expenseHeader.annualCommitmentLabel')} ${annualCommitmentPercent}%`}
                           label={`${annualCommitmentPercent}%`}
                         />
@@ -519,7 +538,7 @@ export default function ExpenseTimelineHeader({
                 </div>
 
                 {/* Quadrante 3: ACUMULAÇÃO ATUAL & GASTOS PLANEADOS (Balanço + Initial Value & Donut Chart Jan - Dez) */}
-                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ background: 'var(--bg-glass)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                       <span style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -562,6 +581,32 @@ export default function ExpenseTimelineHeader({
                       </div>
                     );
                   })()}
+                </div>
+              </div>
+
+              {/* Outflows of the current month: own expenses, via savings, installments and total */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {t('expenseHeader.outflowsThisMonth')}
+                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
+                  {[...outflowSplit, { id: OUTFLOW_TOTAL_ID, icon: Sigma, color: paletteTheme.primary, ...outflowTotal }].map(({ id, icon: SplitIcon, color, projected, realized }) => (
+                    <div
+                      key={id}
+                      style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border-glass)', background: 'var(--bg-glass)', display: 'flex', flexDirection: 'column', gap: '3px' }}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                        <SplitIcon size={13} style={{ color }} />
+                        {t(`expenseHeader.outflowSplit.${id}`)}
+                      </span>
+                      <span style={{ fontSize: '1rem', fontWeight: '800', color: id === OUTFLOW_TOTAL_ID ? color : 'var(--text-main)' }}>
+                        {formatCurrency(projected)}
+                      </span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                        {t('expenseHeader.outflowSplitPaid', { amount: formatCurrency(realized) })}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 

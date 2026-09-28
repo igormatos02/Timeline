@@ -84,7 +84,9 @@ import {
   isNegativeStatus,
   isLoanTimelineType,
   normalizeTimelineType,
-  normalizeRecurrence
+  normalizeRecurrence,
+  getDefaultTimelineColor,
+  MovementKind
 } from '../enums/index.js';
 import {
   INCOME_CATEGORY_META,
@@ -139,17 +141,19 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const { isReadOnly } = usePermissions();
   // Condominium timeboards do not use the diary mood
   const { isCondoflow } = useTimeboard();
-  const onEdit = isReadOnly ? undefined : onEditProp;
-  const onUpdateEventDirect = isReadOnly ? undefined : onUpdateEventDirectProp;
+  // References and other in-memory events (withdrawal income, outflows of other timelines) are read-only too
+  const blocksChanges = isReadOnly || Boolean(event.isVirtual || event.isReadOnly);
+  const onEdit = blocksChanges ? undefined : onEditProp;
+  const onUpdateEventDirect = blocksChanges ? undefined : onUpdateEventDirectProp;
   const onSaveNotes = onUpdateEventDirectProp;
-  const onDelete = isReadOnly ? undefined : onDeleteProp;
-  const onToggleTask = isReadOnly ? undefined : onToggleTaskProp;
-  const onAddChecklistItem = isReadOnly ? undefined : onAddChecklistItemProp;
-  const onDeleteChecklistItem = isReadOnly ? undefined : onDeleteChecklistItemProp;
-  const onToggleLoanPayment = isReadOnly ? undefined : onToggleLoanPaymentProp;
-  const onPayUpToHere = isReadOnly ? undefined : onPayUpToHereProp;
-  const onOpenEditInstallment = isReadOnly ? undefined : onOpenEditInstallmentProp;
-  const onPrintReceipt = isReadOnly ? undefined : onPrintReceiptProp;
+  const onDelete = blocksChanges ? undefined : onDeleteProp;
+  const onToggleTask = blocksChanges ? undefined : onToggleTaskProp;
+  const onAddChecklistItem = blocksChanges ? undefined : onAddChecklistItemProp;
+  const onDeleteChecklistItem = blocksChanges ? undefined : onDeleteChecklistItemProp;
+  const onToggleLoanPayment = blocksChanges ? undefined : onToggleLoanPaymentProp;
+  const onPayUpToHere = blocksChanges ? undefined : onPayUpToHereProp;
+  const onOpenEditInstallment = blocksChanges ? undefined : onOpenEditInstallmentProp;
+  const onPrintReceipt = blocksChanges ? undefined : onPrintReceiptProp;
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
   // Payment date edited directly on the ticket (paid / received events)
@@ -277,6 +281,30 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       ? t('withdrawalModal.savingsWithdrawalWithReason', { reason: cleanVirtualWithdrawalReason })
       : t('withdrawalModal.savingsWithdrawalTitle');
   }, [isVirtualWithdrawal, cleanVirtualWithdrawalReason, t]);
+  // Outflow owned by another timeline (pocket expense, paid installment) shown as a reference in the Outflows timeline
+  const isOutflowReference = Boolean(event.isReference && event.referenceKind);
+  const outflowReferenceInfo = useMemo(() => {
+    if (!isOutflowReference) return null;
+    const originTimeline = (timelines || []).find((tl) => String(tl.id) === String(event.referenceOriginTimelineId));
+    const labelKey = {
+      [MovementKind.SAVINGS_EXPENSE]: 'outflowReference.savings',
+      [MovementKind.LOAN_INSTALLMENT]: 'outflowReference.installment',
+      [MovementKind.AMORTIZATION]: 'outflowReference.amortization'
+    }[event.referenceKind] || 'outflowReference.savings';
+    return {
+      label: t(labelKey),
+      originId: originTimeline?.id || event.referenceOriginTimelineId,
+      originName: originTimeline?.name || t('outflowReference.origin'),
+      color: originTimeline?.color || getDefaultTimelineColor(normalizeTimelineType(originTimeline?.type)),
+      Icon: event.referenceKind === MovementKind.SAVINGS_EXPENSE ? PiggyBank : Landmark
+    };
+  }, [isOutflowReference, timelines, event.referenceOriginTimelineId, event.referenceKind, t]);
+  const openOutflowReferenceOrigin = (e) => {
+    e?.stopPropagation?.();
+    // Same as the sidebar: the origin timeline becomes both the active timeline and the active tab
+    if (outflowReferenceInfo?.originId && onNavigateToTimeline) onNavigateToTimeline(outflowReferenceInfo.originId, outflowReferenceInfo.originId);
+  };
+
   const isLoanInstallment =
     checkIsLoanInstallment(event) ||
     Boolean(event.isSystemLoanEvent && !isAmortization) ||
@@ -2524,6 +2552,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         >
           {isVirtualWithdrawal ? (
             <PiggyBank size={14} strokeWidth={2.2} />
+          ) : outflowReferenceInfo ? (
+            <outflowReferenceInfo.Icon size={14} strokeWidth={2.2} style={{ color: isFlatPositive ? TimelineColor.WHITE : outflowReferenceInfo.color }} />
           ) : isRecurring ? (
             <Repeat size={14} strokeWidth={2.2} />
           ) : isRegisterEvent ? (
@@ -2567,6 +2597,33 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 >
                   {t('withdrawalModal.depositBadge')}
                 </span>
+              )}
+
+              {outflowReferenceInfo && (
+                <button
+                  type="button"
+                  onClick={openOutflowReferenceOrigin}
+                  title={t('outflowReference.goToOrigin', { origin: outflowReferenceInfo.originName })}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.68rem',
+                    fontWeight: '800',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                    padding: '2px 7px',
+                    borderRadius: '5px',
+                    cursor: onNavigateToTimeline ? 'pointer' : 'default',
+                    background: isFlatPositive ? 'var(--bg-glass)' : hexToRgba(outflowReferenceInfo.color, 0.14),
+                    color: isFlatPositive ? TimelineColor.WHITE : outflowReferenceInfo.color,
+                    border: isFlatPositive ? '1px solid var(--border-glass)' : `1px solid ${hexToRgba(outflowReferenceInfo.color, 0.38)}`
+                  }}
+                >
+                  <span>{outflowReferenceInfo.label}</span>
+                  <span style={{ opacity: 0.75, textTransform: 'none', fontWeight: '700' }}>· {outflowReferenceInfo.originName}</span>
+                  <ArrowUpRight size={11} strokeWidth={2.5} />
+                </button>
               )}
 
               {/* Título do evento limpo e editável ao clicar */}
@@ -2620,6 +2677,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
               ) : (
                 <h3
                   onClick={() => {
+                    if (isOutflowReference) {
+                      openOutflowReferenceOrigin();
+                      return;
+                    }
                     if (isAmortized || isAnchorCard || isVirtual || isLockedPositive || isCancelled) return;
                     if (isLoanInstallment && originInfo && onNavigateToTimeline) {
                       onNavigateToTimeline(originInfo.id);
@@ -2632,7 +2693,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                       ? t('timeline.lockedPositiveNotice')
                       : isVirtualWithdrawal
                         ? virtualWithdrawalDisplayTitle
-                        : isVirtual
+                        : outflowReferenceInfo
+                          ? t('outflowReference.goToOrigin', { origin: outflowReferenceInfo.originName })
+                          : isVirtual
                           ? undefined
                           : isAmortized
                             ? t('backend.event.amortizedTooltip')
@@ -2648,7 +2711,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                     fontWeight: '700',
                     color: isFlatPositive ? TimelineColor.WHITE : ((isAmortized || isCancelled) ? 'var(--text-dim)' : 'var(--text-main)'),
                     textDecoration: (isAmortized || isCancelled) ? 'line-through' : 'none',
-                    cursor: (isAmortized || isAnchorCard || isVirtual || isLockedPositive || isCancelled) ? 'default' : 'pointer'
+                    cursor: isOutflowReference ? 'pointer' : ((isAmortized || isAnchorCard || isVirtual || isLockedPositive || isCancelled) ? 'default' : 'pointer')
                   }}
                 >
                   {isVirtualWithdrawal

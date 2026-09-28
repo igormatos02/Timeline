@@ -17,7 +17,7 @@ import { pt, enUS } from 'date-fns/locale';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { computeBalanceTotals, computePocketsInitialTotal } from '../../utils/balanceMetrics.js';
-import { classifyMovement, isActiveMovement } from '../../../shared/finance/movements.js';
+import { classifyMovement, isActiveMovement, isReferenceMovement } from '../../../shared/finance/movements.js';
 import { computeMonthlyFlows } from '../../../shared/finance/financialPosition.js';
 import {
   EventType,
@@ -333,7 +333,8 @@ export default function BalanceTimelineHeader({
     const map = new Map();
     const addIfValid = (e) => {
       if (!e || !e.id) return;
-      if (e.isVirtualWithdrawal || String(e.id).startsWith('virtual_withdrawal_')) return;
+      // References (withdrawal income, outflows of other timelines) are counted in their owner timeline
+      if (isReferenceMovement(e)) return;
       if (validTimelineIds.size > 0) {
         const hasValid = (e.timelineId && validTimelineIds.has(String(e.timelineId))) ||
           (e.timelineOriginId && validTimelineIds.has(String(e.timelineOriginId))) ||
@@ -641,8 +642,8 @@ export default function BalanceTimelineHeader({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.2)',
+                background: 'var(--primary-glow)',
+                border: '1px solid var(--border-glass-glow)',
                 color: 'var(--primary-light)',
                 cursor: 'pointer',
                 padding: '6px 12px',
@@ -735,7 +736,7 @@ export default function BalanceTimelineHeader({
               {/* Grid Principal 2x2 padronizado com Donut SVGs */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
                 {/* Quadrante 1: BALANÇO ATÉ O HORIZONTE */}
-                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ background: 'var(--bg-glass)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {(() => {
                     const totalReceivedVal = finMetrics.totalReceived ?? 0;
                     const totalPaidExpensesVal = finMetrics.totalPaidExpenses ?? 0;
@@ -835,7 +836,7 @@ export default function BalanceTimelineHeader({
                 </div>
 
                 {/* Quadrante 2: DISTRIBUIÇÃO DE RENDIMENTOS NO PERÍODO / ANUAL */}
-                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ background: 'var(--bg-glass)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {projectionMonthsAhead === 0
                       ? t('balanceHeader.annualIncomeBreakdown')
@@ -1022,7 +1023,7 @@ export default function BalanceTimelineHeader({
 
                 {/* Quadrante 3: EMPRÉSTIMOS E FINANCIAMENTOS */}
                 {hasLoanTimeline && (
-                  <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ background: 'var(--bg-glass)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       {t('balanceHeader.loansAndFinancing')}
                     </div>
@@ -1254,7 +1255,7 @@ export default function BalanceTimelineHeader({
                 {/* Slider de Horizonte */}
                 <div
                   style={{
-                    background: 'rgba(255, 255, 255, 0.02)',
+                    background: 'var(--bg-glass)',
                     color: 'var(--text-main)',
                     border: '1px solid var(--border-glass)',
                     borderRadius: '12px',
@@ -1320,7 +1321,7 @@ export default function BalanceTimelineHeader({
                               fontWeight: isSelected ? '800' : '600',
                               cursor: 'pointer',
                               border: isSelected ? 'none' : '1px solid var(--border-glass)',
-                              background: isSelected ? `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)` : 'rgba(255, 255, 255, 0.04)',
+                              background: isSelected ? `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)` : 'var(--bg-glass)',
                               color: isSelected ? 'var(--text-white)' : 'var(--text-muted)',
                               boxShadow: isSelected ? `0 0 10px ${paletteTheme.primary}59` : 'none',
                               transition: 'all 0.15s ease'

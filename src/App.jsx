@@ -30,6 +30,7 @@ import {
   isLoanInstallment,
   isAmortizationEvent
 } from './utils/loanCalculations';
+import { buildWithdrawalReferences, buildOutflowReferences } from '../shared/finance/references.js';
 import { formatCurrency } from './utils/formatCurrency';
 import { generateUUID } from './utils/uuid.js';
 import * as api from './services/api';
@@ -503,53 +504,11 @@ export default function App() {
     });
   }, [timelines, activeTimeboardId]);
 
-  // Derive in-memory virtual income events from withdrawal events.
-  // Each WITHDRAWAL creates a corresponding INCOME-type ghost event on the income timeline
-  // so the user sees the money "returning" as income. These events are never persisted.
+  // Savings withdrawals shown as income references in the income timeline (never persisted, never counted)
   const virtualWithdrawalEvents = useMemo(() => {
     if (!Array.isArray(rawEvents) || rawEvents.length === 0) return [];
     const incomeTimeline = (activeTimeboardTimelines || []).find((tl) => tl.type === TimelineType.INCOME);
-    if (!incomeTimeline) return [];
-
-    const virtual = [];
-    rawEvents.forEach((ev) => {
-      if (!ev || ev.isDeleted) return;
-      const isWithdrawal = ev.eventType === EventType.WITHDRAWAL || Boolean(ev.isWithdrawal);
-      if (!isWithdrawal) return;
-      const amt = Math.abs(Number(ev.amount || 0));
-      const isPositive = isPositiveStatus(ev.status) || Boolean(ev.isCompleted) || ev.status === EventStatus.WITHDRAWN;
-      virtual.push({
-        ...ev,
-        id: `virtual_withdrawal_${ev.id}`,
-        originalWithdrawalId: ev.id,
-        pocketId: null,
-        pocket_id: null,
-        pocket: null,
-        eventId: null,
-        seriesId: null,
-        // Show as income on the income timeline
-        eventType: EventType.INCOME,
-        isIncome: true,
-        isWithdrawal: false,
-        isInvestment: false,
-        category: null,
-        categoryName: null,
-        labels: [],
-        status: isPositive ? EventStatus.RECEIVED : EventStatus.PENDING,
-        isCompleted: isPositive,
-        amount: amt,
-        title: ev.title || ev.name || '',
-        name: ev.title || ev.name || '',
-        timelineId: incomeTimeline.id,
-        timeline_id: incomeTimeline.id,
-        timelineOriginId: incomeTimeline.id,
-        // Mark as virtual — blocks editing and deletion in the UI
-        isVirtual: true,
-        isReadOnly: true,
-        isVirtualWithdrawal: true
-      });
-    });
-    return virtual;
+    return buildWithdrawalReferences({ events: rawEvents, incomeTimelineId: incomeTimeline?.id });
   }, [rawEvents, activeTimeboardTimelines]);
 
   // Users with the individual role only see their own obligations and the individual header
@@ -681,6 +640,17 @@ export default function App() {
       });
     } else if (isLoanType) {
       computedEvents = recalculateLoanState(currentSelected, computedEvents);
+    }
+
+    // Outflows owned by the account (pocket expenses) and loans (paid installments) shown as references in
+    // the Outflows timeline — after the loan recalculation, so installments carry their final amounts
+    const expenseTimeline = activeTimeboardTimelines.find((tl) => tl.type === TimelineType.EXPENSE);
+    if (expenseTimeline) {
+      const timelineTypeMap = new Map(activeTimeboardTimelines.map((tl) => [String(tl.id), tl.type]));
+      computedEvents = [
+        ...computedEvents,
+        ...buildOutflowReferences({ events: computedEvents, expenseTimelineId: expenseTimeline.id, timelineTypeMap })
+      ];
     }
 
     const computedMetrics = isLoanType ? getLoanMetrics(currentSelected, computedEvents) : currentSelected?.loanHeaderResult;

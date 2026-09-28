@@ -175,7 +175,7 @@ export default function IncomeEvolutionChart({
               monthIncome += amt;
               if (activeFinancialTab === 'entradas') eventCount++;
             }
-            if (ev.eventType === EventType.EXPENSE || ev.isExpense || isLoan) {
+            if ((ev.eventType === EventType.EXPENSE || ev.isExpense || isLoan) && !movement.isReference) {
               monthExpense += amt;
               if (activeFinancialTab === 'gastos' || activeFinancialTab === 'emprestimos' || activeFinancialTab === 'jeep' || activeFinancialTab === 'dacia' || activeFinancialTab === 'casa1' || activeFinancialTab === 'casa2') eventCount++;
             }
@@ -320,7 +320,7 @@ export default function IncomeEvolutionChart({
   return (
     <div
       style={{
-        background: 'rgba(255, 255, 255, 0.02)',
+        background: 'var(--border-glass)',
         border: '1px solid var(--border-glass)',
         borderRadius: '16px',
         padding: '18px 20px',
@@ -455,10 +455,10 @@ export default function IncomeEvolutionChart({
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              background: 'rgba(16, 185, 129, 0.08)',
+              background: 'var(--success-glow)',
               padding: '6px 14px',
               borderRadius: '8px',
-              border: '1px solid rgba(16, 185, 129, 0.25)'
+              border: '1px solid var(--success-glow)'
             }}
           >
             <Calendar size={14} style={{ color: TimelineColor.SUCCESS }} />
@@ -558,7 +558,7 @@ export default function IncomeEvolutionChart({
                 y1={y}
                 x2={padding.left + graphWidth}
                 y2={y}
-                stroke="rgba(255, 255, 255, 0.05)"
+                stroke="var(--border-glass)"
                 strokeWidth="1"
                 strokeDasharray="4 4"
               />
@@ -572,7 +572,7 @@ export default function IncomeEvolutionChart({
               y1={getZeroY()}
               x2={padding.left + graphWidth}
               y2={getZeroY()}
-              stroke="rgba(255, 255, 255, 0.25)"
+              stroke="var(--border-glass)"
               strokeWidth="1.5"
             />
           )}
@@ -588,7 +588,7 @@ export default function IncomeEvolutionChart({
                 y1={padding.top}
                 x2={x}
                 y2={padding.top + graphHeight}
-                stroke="rgba(255, 255, 255, 0.08)"
+                stroke="var(--border-glass)"
                 strokeWidth="1"
                 strokeDasharray="2 4"
               />
@@ -607,7 +607,7 @@ export default function IncomeEvolutionChart({
                     y1={y}
                     x2={padding.left + graphWidth}
                     y2={y}
-                    stroke={step === 0 ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.04)'}
+                    stroke={step === 0 ? 'var(--border-glass)' : 'var(--border-glass)'}
                     strokeWidth={step === 0 ? '1.5' : '1'}
                     strokeDasharray={step === 0 ? '' : '3 3'}
                   />
@@ -637,7 +637,7 @@ export default function IncomeEvolutionChart({
                     y1={y}
                     x2={padding.left + graphWidth}
                     y2={y}
-                    stroke={ratio === 0 ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.04)'}
+                    stroke={ratio === 0 ? 'var(--border-glass)' : 'var(--border-glass)'}
                     strokeDasharray="4 4"
                   />
                   <text
@@ -697,7 +697,7 @@ export default function IncomeEvolutionChart({
                 y1={padding.top}
                 x2={getX(hoveredData.index)}
                 y2={padding.top + graphHeight}
-                stroke="rgba(255, 255, 255, 0.35)"
+                stroke="var(--border-glass)"
                 strokeWidth="1.5"
                 strokeDasharray="3 3"
               />
@@ -793,7 +793,7 @@ export default function IncomeEvolutionChart({
                         cx={x}
                         cy={zeroY}
                         r={isHovered ? 3 : 1.5}
-                        fill="rgba(148, 163, 184, 0.35)"
+                        fill="var(--text-dim)"
                       />
                     )}
                   </g>
@@ -835,12 +835,12 @@ export default function IncomeEvolutionChart({
               position: 'absolute',
               top: '10px',
               right: '20px',
-              background: 'rgba(15, 23, 42, 0.92)',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
+              border: '1px solid var(--border-glass)',
               borderRadius: '10px',
               padding: '10px 14px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+              boxShadow: 'var(--shadow-glow)',
               minWidth: '220px',
               pointerEvents: 'none',
               zIndex: 10
@@ -855,7 +855,7 @@ export default function IncomeEvolutionChart({
                   fontSize: '0.65rem',
                   padding: '2px 6px',
                   borderRadius: '4px',
-                  background: chartMode === 'acumulado_real' ? 'rgba(16, 185, 129, 0.2)' : hoveredData.isPast ? 'rgba(16, 185, 129, 0.2)' : hoveredData.isCurrent ? 'rgba(99, 102, 241, 0.2)' : 'rgba(148, 163, 184, 0.15)',
+                  background: chartMode === 'acumulado_real' ? 'var(--success-glow)' : hoveredData.isPast ? 'var(--success-glow)' : hoveredData.isCurrent ? 'var(--primary-glow)' : 'var(--bg-glass)',
                   color: chartMode === 'acumulado_real' ? TimelineColor.SUCCESS : hoveredData.isPast ? TimelineColor.SUCCESS : hoveredData.isCurrent ? 'var(--primary-light)' : 'var(--text-muted)',
                   fontWeight: '700'
                 }}

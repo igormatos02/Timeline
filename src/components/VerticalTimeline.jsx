@@ -122,7 +122,9 @@ import {
   isNegativeStatus,
   AccountMovementType,
   getAccountMovementType,
-  MovementKind
+  MovementKind,
+  OutflowType,
+  getOutflowType
 } from '../enums/index.js';
 import { getTimelineDropdownOptions } from '../utils/timelineConfig.jsx';
 import { makeDiaryT } from '../utils/diaryLabels.js';
@@ -160,6 +162,13 @@ const ACCOUNT_MOVEMENT_ITEMS = [
   { id: AccountMovementType.WITHDRAWAL, icon: ArrowDownRight, color: TimelineColor.INCOME },
   { id: AccountMovementType.COST, icon: Receipt, color: TimelineColor.DANGER },
   { id: AccountMovementType.EXPENSE, icon: ShoppingCart, color: TimelineColor.EXPENSE }
+];
+
+// Outflow kinds shown in the Outflows timeline filter: its own expenses, via savings (references), installments (references)
+const OUTFLOW_TYPE_ITEMS = [
+  { id: OutflowType.REGULAR, icon: ShoppingCart, color: TimelineColor.EXPENSE },
+  { id: OutflowType.SAVINGS, icon: PiggyBank, color: TimelineColor.INVESTMENT },
+  { id: OutflowType.INSTALLMENT, icon: Landmark, color: TimelineColor.LOAN }
 ];
 
 // Condominium (condoflow) timeboards only use their own expense categories
@@ -849,6 +858,8 @@ function VerticalTimeline({
   const [selectedExpenseCategories, setSelectedExpenseCategories] = useState([]);
   // Account (savings timeline) movement filter: inflows, withdrawals, costs and expenses (empty = all)
   const [selectedMovementTypes, setSelectedMovementTypes] = useState([]);
+  // Outflows timeline filter: own expenses, expenses via savings and installments (empty = all)
+  const [selectedOutflowTypes, setSelectedOutflowTypes] = useState([]);
 
   const isCategoryFiltered =
     (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) ||
@@ -861,6 +872,7 @@ function VerticalTimeline({
   const resetAllFilters = () => {
     setSelectedStatusFilters([]);
     setSelectedExpenseCategories([]);
+    setSelectedOutflowTypes([]);
     setSelectedCategoryFilter(EventStatus.ALL);
     setSearchQuery('');
     setShowSharedReminders(true);
@@ -1778,6 +1790,10 @@ function VerticalTimeline({
       if (timeline.type === TimelineType.INVESTMENT && selectedMovementTypes.length > 0 && !selectedMovementTypes.includes(getAccountMovementType(ev))) {
         matchesCategory = false;
       }
+      if (timeline.type === TimelineType.EXPENSE && selectedOutflowTypes.length > 0
+        && !selectedOutflowTypes.includes(getOutflowType(ev.isReference ? ev.referenceKind : MovementKind.EXPENSE))) {
+        matchesCategory = false;
+      }
 
       const matchesTimelineMultiSelect =
         timeline.type !== TimelineType.BALANCE ||
@@ -1818,6 +1834,8 @@ function VerticalTimeline({
           ev.timelineType === TimelineType.DIARY ||
           ev.timeline_type === TimelineType.DIARY;
         if (isNonFinancial) return false;
+        // Outflow references mirror movements already listed in the balance under their owner timeline
+        if (ev.isReference) return false;
       } else {
         const isThisTimeline = ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
         if (!isThisTimeline) return false;
@@ -1866,6 +1884,7 @@ function VerticalTimeline({
     isPeriodActive,
     isCondoflow,
     selectedMovementTypes,
+    selectedOutflowTypes,
   ]);
 
   // Shared notice types present in this timeline and the color of their own timeline
@@ -3960,6 +3979,70 @@ function VerticalTimeline({
                           <MovementIcon size={13} />
                         </span>
                         <span>{t(`pocket.movements.${id}`)}</span>
+                      </div>
+                      {renderFilterSwitch(isSelected, color)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Outflow type filter (Outflows timeline): own expenses, via savings, installments */}
+        {timeline.type === TimelineType.EXPENSE && !isReadOnly && (
+          <div className="sidebar-section">
+            <div
+              className="sidebar-section-title"
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              onClick={() => toggleSectionCollapse('outflowTypes')}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ChevronDown
+                  size={13}
+                  style={{
+                    transform: collapsedSections['outflowTypes'] ? 'rotate(-90deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.18s ease',
+                    color: 'var(--text-muted)'
+                  }}
+                />
+                <span>{t('outflowType.title')}</span>
+              </div>
+            </div>
+            {!collapsedSections['outflowTypes'] && (
+              <div className="sidebar-btn-group">
+                <button
+                  type="button"
+                  className={`sidebar-filter-item ${selectedOutflowTypes.length === 0 ? 'active' : ''}`}
+                  onClick={() => setSelectedOutflowTypes([])}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Layers size={13} />
+                    <span>{t('outflowType.all')}</span>
+                  </div>
+                  {renderFilterSwitch(selectedOutflowTypes.length === 0, 'var(--primary)')}
+                </button>
+                {OUTFLOW_TYPE_ITEMS.map(({ id, icon: OutflowIcon, color }) => {
+                  const isSelected = selectedOutflowTypes.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`sidebar-filter-item ${isSelected ? 'active' : ''}`}
+                      onClick={() => {
+                        if (!isListView) window.scrollTo({ top: 0, behavior: 'instant' });
+                        setSelectedOutflowTypes((prev) => {
+                          const next = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
+                          return next.length === OUTFLOW_TYPE_ITEMS.length ? [] : next;
+                        });
+                      }}
+                      style={isSelected ? { borderColor: `${color}66` } : {}}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ color, display: 'inline-flex', alignItems: 'center' }}>
+                          <OutflowIcon size={13} />
+                        </span>
+                        <span>{t(`outflowType.${id}`)}</span>
                       </div>
                       {renderFilterSwitch(isSelected, color)}
                     </button>

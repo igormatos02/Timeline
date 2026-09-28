@@ -9,19 +9,18 @@ import { format } from 'date-fns';
 import { enUS, pt } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/formatCurrency';
 import {
-  EventType,
   EventStatus,
   isCancelledStatus,
   isPositiveStatus,
   TimelineColor,
   TIMELINE_COLOR_PRESETS,
   TimelineType,
-  isLoanTimelineType,
   IncomeEventCategory,
-  LoanEventCategory,
-  AmortizationEventCategory
+  MovementKind
 } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
+import { classifyMovement } from '../../../shared/finance/movements.js';
+import { computeMonthlyFlows, sumMonthlyFlows } from '../../../shared/finance/financialPosition.js';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 import { DonutChart, PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
@@ -31,6 +30,12 @@ import { computeMonthDiff } from '../../utils/timelineCharts.js';
 import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
 import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
+
+// 'yyyy-MM' of the month before `monthKey`
+const prevMonthKey = (monthKey) => {
+  const [y, m] = monthKey.split('-').map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+};
 
 export default function IncomeTimelineHeader({
   timeline,
@@ -69,6 +74,12 @@ export default function IncomeTimelineHeader({
     return map;
   }, [allTimelines]);
 
+  // Income owned by this timeline (references such as a savings withdrawal shown here are excluded)
+  const isOwnIncome = (ev) => {
+    const movement = classifyMovement(ev, timelineTypeMap);
+    return movement.kind === MovementKind.INCOME && !movement.isReference;
+  };
+
   if (!timeline) return null;
 
   const headerColor = timeline.color || TimelineColor.INCOME;
@@ -105,46 +116,16 @@ export default function IncomeTimelineHeader({
   }
   const allBoardEvents = Array.from(seenEventMap.values());
 
-  let annualTotalIncome = 0;
-  let annualLoans = 0;
-  let annualExpenses = 0;
-  let annualInvestments = 0;
+  // Month-by-month flows of the whole board from the shared financial engine: references (e.g. the
+  // withdrawal shown in this timeline) never count twice, and savings expenses / costs stay in the savings
+  const boardFlows = computeMonthlyFlows({ events: allBoardEvents, timelineTypeMap });
 
-  allBoardEvents.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
-    const evMonthKey = ev.date.substring(0, 7);
-    if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
-      const isWithdrawal = ev.eventType === EventType.WITHDRAWAL || Boolean(ev.isWithdrawal);
-      const isVirtualWithdrawal = Boolean(ev.isVirtualWithdrawal) || (ev.id && String(ev.id).startsWith('virtual_withdrawal_'));
-
-      // If this is an original withdrawal and its virtual mirror is in seenEventMap, skip to avoid double counting
-      if (isWithdrawal && ev.id && seenEventMap.has(`virtual_withdrawal_${ev.id}`)) {
-        return;
-      }
-
-      const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || '')) || ev.timelineType;
-      const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== AmortizationEventCategory.REDUCE_TERM && ev.category !== AmortizationEventCategory.REDUCE_INSTALLMENT);
-      const isLoan = isLoanInstallment || ev.eventType === EventType.LOAN || ev.eventType === EventType.AMORTIZATION || ev.isLoan || isLoanTimelineType(tlType);
-      const isInvestment = !isWithdrawal && !isVirtualWithdrawal && (ev.eventType === EventType.INVESTMENT || ev.isInvestment || tlType === TimelineType.INVESTMENT || Boolean(ev.pocketId || ev.pocket_id));
-      const isExpense = ((ev.eventType === EventType.EXPENSE || ev.isExpense || tlType === TimelineType.EXPENSE) && !isLoan && !isInvestment && !isWithdrawal && !isVirtualWithdrawal);
-      const isIncome = (isWithdrawal || isVirtualWithdrawal || ev.eventType === EventType.INCOME || ev.isIncome || tlType === TimelineType.INCOME) && !isLoan && !isInvestment && !isExpense;
-
-      const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
-      const amt = isLoanInstallment
-        ? Math.abs(Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0)))
-        : Math.abs(Number(ev.amount || 0));
-
-      if (isIncome) {
-        annualTotalIncome += amt;
-      } else if (isLoan) {
-        annualLoans += amt;
-      } else if (isExpense) {
-        annualExpenses += amt;
-      } else if (isInvestment && !isExternal) {
-        annualInvestments += amt;
-      }
-    }
-  });
+  // Next 12 months (all planned movements): money coming into the available money vs what it is committed to
+  const next12 = sumMonthlyFlows(boardFlows, { fromMonth: startMonthKey, toMonth: prevMonthKey(endMonthKey), side: 'projected' });
+  const annualTotalIncome = next12.income + next12.allWithdrawals;
+  const annualLoans = next12.installments + next12.amortizations;
+  const annualExpenses = next12.expensesFromAvailable;
+  const annualInvestments = next12.depositsInternal;
 
   const annualCommitted = annualLoans + annualExpenses + annualInvestments;
   const commitmentPercent = annualTotalIncome > 0
@@ -175,79 +156,10 @@ export default function IncomeTimelineHeader({
   const currentCalendarYear = new Date().getFullYear().toString();
   const endOfYearMonthStr = `${currentCalendarYear}-12`;
 
-  const monthlyTotalsRealized = new Map();
-  const monthlyTotalsProjected = new Map();
-
-  allBoardEvents.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted) return;
-    if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida') return;
-
-    const evMonthKey = ev.date.substring(0, 7);
-    const isAfterStart = !computeFromMonth || computeFromMonth === '1900-01' || evMonthKey >= computeFromMonth;
-    const isUpToCurrentMonth = evMonthKey <= currentMonthStr;
-    const isUpToEndOfYear = evMonthKey <= endOfYearMonthStr;
-
-    if (!isAfterStart || (!isUpToCurrentMonth && !isUpToEndOfYear)) return;
-
-    const isWithdrawal = ev.eventType === EventType.WITHDRAWAL || Boolean(ev.isWithdrawal);
-    const isVirtualWithdrawal = Boolean(ev.isVirtualWithdrawal) || (ev.id && String(ev.id).startsWith('virtual_withdrawal_'));
-
-    // If this is an original withdrawal and its virtual mirror is in seenEventMap, skip to avoid double counting
-    if (isWithdrawal && ev.id && seenEventMap.has(`virtual_withdrawal_${ev.id}`)) {
-      return;
-    }
-
-    const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || '')) || ev.timelineType;
-    const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== AmortizationEventCategory.REDUCE_TERM && ev.category !== AmortizationEventCategory.REDUCE_INSTALLMENT);
-    const isLoan = isLoanInstallment || ev.eventType === EventType.LOAN || ev.eventType === EventType.AMORTIZATION || ev.isLoan || isLoanTimelineType(tlType);
-    const isInvestment = !isWithdrawal && !isVirtualWithdrawal && (ev.eventType === EventType.INVESTMENT || ev.isInvestment || tlType === TimelineType.INVESTMENT || Boolean(ev.pocketId || ev.pocket_id));
-    const isExpense = ((ev.eventType === EventType.EXPENSE || ev.isExpense || tlType === TimelineType.EXPENSE) && !isLoan && !isInvestment && !isWithdrawal && !isVirtualWithdrawal);
-    const isIncome = (isWithdrawal || isVirtualWithdrawal || ev.eventType === EventType.INCOME || ev.isIncome || tlType === TimelineType.INCOME) && !isLoan && !isInvestment && !isExpense;
-
-    const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
-    const amt = isLoanInstallment
-      ? Math.abs(Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0)))
-      : Math.abs(Number(ev.amount || 0));
-
-    // Balanço Realizado (até o mês atual)
-    if (isUpToCurrentMonth) {
-      if (!monthlyTotalsRealized.has(evMonthKey)) {
-        monthlyTotalsRealized.set(evMonthKey, { income: 0, expense: 0, loan: 0, investmentDeduction: 0 });
-      }
-      const mRealized = monthlyTotalsRealized.get(evMonthKey);
-      const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted) || ev.status === EventStatus.WITHDRAWN;
-
-      if (isIncome && isRealized) mRealized.income += amt;
-      else if (isExpense && isRealized) mRealized.expense += amt;
-      else if (isLoan && isRealized) mRealized.loan += amt;
-      else if (isInvestment && !isExternal && isRealized) mRealized.investmentDeduction += amt;
-    }
-
-    // Balanço Projetado (até o final do ano corrente)
-    if (isUpToEndOfYear) {
-      if (!monthlyTotalsProjected.has(evMonthKey)) {
-        monthlyTotalsProjected.set(evMonthKey, { income: 0, expense: 0, loan: 0, investmentDeduction: 0 });
-      }
-      const mProjected = monthlyTotalsProjected.get(evMonthKey);
-
-      if (isIncome) mProjected.income += amt;
-      else if (isExpense) mProjected.expense += amt;
-      else if (isLoan) mProjected.loan += amt;
-      else if (isInvestment && !isExternal) mProjected.investmentDeduction += amt;
-    }
-  });
-
-  let accumulatedRealizedBalance = 0;
-  monthlyTotalsRealized.forEach((mData) => {
-    const monthNet = mData.income - (mData.expense + mData.loan + mData.investmentDeduction);
-    accumulatedRealizedBalance += monthNet;
-  });
-
-  let accumulatedProjectedBalance = 0;
-  monthlyTotalsProjected.forEach((mData) => {
-    const monthNet = mData.income - (mData.expense + mData.loan + mData.investmentDeduction);
-    accumulatedProjectedBalance += monthNet;
-  });
+  // Accumulation of the available money: realized up to the current month, projected up to the end of the year
+  const accumulationFrom = computeFromMonth === '1900-01' ? null : computeFromMonth;
+  const accumulatedRealizedBalance = sumMonthlyFlows(boardFlows, { fromMonth: accumulationFrom, toMonth: currentMonthStr, side: 'realized' }).availableNet;
+  const accumulatedProjectedBalance = sumMonthlyFlows(boardFlows, { fromMonth: accumulationFrom, toMonth: endOfYearMonthStr, side: 'projected' }).availableNet;
 
   const initialValueAmount = Number(timeline.initialValue ?? timeline.initial_value ?? 0);
   const currentAccumulation = initialValueAmount + accumulatedRealizedBalance;
@@ -261,8 +173,7 @@ export default function IncomeTimelineHeader({
     if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
     const evMonthKey = ev.date.substring(0, 7);
     if (computeFromMonth && computeFromMonth !== '1900-01' && evMonthKey < computeFromMonth) return;
-    const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
-    if (!isIncome || !ev.date.startsWith(currentCalendarYear)) return;
+    if (!isOwnIncome(ev) || !ev.date.startsWith(currentCalendarYear)) return;
     const amt = Math.abs(Number(ev.amount || 0));
     yearTotalIncome += amt;
     let cat = (ev.category || '').toLowerCase();
@@ -289,8 +200,7 @@ export default function IncomeTimelineHeader({
     if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
     const evMonthKey = ev.date.substring(0, 7);
     if (computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== EventStatus.ALL && evMonthKey < computeFromMonth) return;
-    const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
-    if (isIncome && ev.date.startsWith(currentCalendarYear)) {
+    if (isOwnIncome(ev) && ev.date.startsWith(currentCalendarYear)) {
       const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
       const amt = Math.abs(Number(ev.amount || 0));
 
@@ -591,8 +501,7 @@ export default function IncomeTimelineHeader({
                   const evMonthKey = ev.date.substring(0, 7);
                   if (computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== EventStatus.ALL && evMonthKey < computeFromMonth) return;
 
-                  const isIncome = ev.eventType === EventType.INCOME || ev.isIncome;
-                  if (isIncome) {
+                  if (isOwnIncome(ev)) {
                     const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
                     if (chartMode === 'realized' && !isReceived) return;
 

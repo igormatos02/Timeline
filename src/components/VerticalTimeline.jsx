@@ -121,12 +121,16 @@ import {
   isCancelledStatus,
   isNegativeStatus,
   AccountMovementType,
-  getAccountMovementType
+  getAccountMovementType,
+  MovementKind
 } from '../enums/index.js';
 import { getTimelineDropdownOptions } from '../utils/timelineConfig.jsx';
 import { makeDiaryT } from '../utils/diaryLabels.js';
-import { pocketHasTarget, isPocketMovementRealized } from '../utils/pocketUtils.js';
+import { pocketHasTarget } from '../utils/pocketUtils.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
+import { computeMonthlyFlows } from '../../shared/finance/financialPosition.js';
+import { computeSpaceBalances, savingsEffect } from '../../shared/finance/savingsSpaces.js';
+import { classifyMovement } from '../../shared/finance/movements.js';
 
 const EXPENSE_CATEGORY_ITEMS = [
   { id: ExpensesEventCategory.FOOD, icon: Utensils, color: TimelineColor.EMERALD },
@@ -2132,398 +2136,43 @@ function VerticalTimeline({
     );
   };
 
-  // Pre-calculate total projected expenses per month across all events in timeboard scope (excluding loans)
-  const monthExpensesTotalMap = useMemo(() => {
-    const map = new Map();
-    (timelineEvents || []).forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted) return;
-      if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
-      if (!isEventTimelineActive(ev)) return;
-      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
-      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-      }
-      const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.category === AmortizationEventCategory.REDUCE_TERM || ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT;
-      const isExpense = (ev.eventType === EventType.EXPENSE || ev.category === ExpensesEventCategory.RECURRING_EXPENSE || ev.isExpense) && !isLoan;
-
-      if (isExpense) {
-        const mKey = ev.date.substring(0, 7);
-        map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
-      }
-    });
-    return map;
-  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
-
-  // Pre-calculate total projected loan payments per month across all events in timeboard scope
-  const monthLoansTotalMap = useMemo(() => {
-    const map = new Map();
-    (timelineEvents || []).forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted) return;
-      if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida) return;
-      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
-      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
-      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-      }
-      const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== AmortizationEventCategory.REDUCE_TERM && ev.category !== AmortizationEventCategory.REDUCE_INSTALLMENT);
-
-      if (isLoanInstallment) {
-        const mKey = ev.date.substring(0, 7);
-        const amt = Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0));
-        map.set(mKey, (map.get(mKey) || 0) + Math.abs(amt));
-      }
-    });
-    return map;
-  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
-
-  // Pre-calculate total projected income per month across all events in timeboard scope
-  const monthIncomeTotalMap = useMemo(() => {
-    const map = new Map();
-    (timelineEvents || []).forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted) return;
-      if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
-      if (!isEventTimelineActive(ev)) return;
-      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
-      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-      }
-      const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.category === AmortizationEventCategory.REDUCE_TERM || ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT;
-      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment;
-      const isIncome = (ev.eventType === EventType.INCOME || ev.category === IncomeEventCategory.RECURRING_INCOME || ev.isIncome) && !isLoan && !isInvestment;
-
-      if (isIncome) {
-        const mKey = ev.date.substring(0, 7);
-        map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
-      }
-    });
-    return map;
-  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
-
-  // Pre-calculate total projected investments per month across all events in timeboard scope (for badge display)
-  const monthInvestmentsTotalMap = useMemo(() => {
-    const map = new Map();
-    (timelineEvents || []).forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted) return;
-      if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
-      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
-      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-      }
-      const isInvestment =
-        ev.eventType === EventType.INVESTMENT ||
-        ev.eventType === EventType.WITHDRAWAL ||
-        ev.category === InvestmentEventCategory.SAVINGS ||
-        ev.isInvestment ||
-        ev.isWithdrawal ||
-        Boolean(ev.pocketId || ev.pocket_id);
-
-      if (isInvestment) {
-        const isWithdrawal = Boolean(
-          ev.isWithdrawal ||
-          ev.eventType === EventType.WITHDRAWAL ||
-          ev.eventType === EventType.EXPENSE ||
-          ev.isExpense ||
-          Number(ev.amount || 0) < 0
-        );
-        const multiplier = isWithdrawal ? -1 : 1;
-        const amt = Math.abs(Number(ev.amount || 0));
-        const mKey = ev.date.substring(0, 7);
-        map.set(mKey, (map.get(mKey) || 0) + multiplier * amt);
-      }
-    });
-    return map;
-  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
-
-  // Pre-calculate total deductible investments from monthly income (excludes external deposits)
-  const monthInvestmentsDeductionsMap = useMemo(() => {
-    const map = new Map();
-    (timelineEvents || []).forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted) return;
-      if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
-      if (!isEventTimelineActive(ev)) return;
-      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
-      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-      }
-      const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
-      if (isExternal) return;
-
-      const isWithdrawal = Boolean(
-        ev.isWithdrawal ||
-        ev.eventType === EventType.WITHDRAWAL ||
-        ev.isVirtualWithdrawal ||
-        (ev.id && String(ev.id).startsWith('virtual_withdrawal_')) ||
-        (ev.eventType === EventType.EXPENSE && (Boolean(ev.pocketId || ev.pocket_id) || ev.isInvestment)) ||
-        Number(ev.amount || 0) < 0
-      );
-      if (isWithdrawal) return;
-
-      const isInvestment =
-        ev.eventType === EventType.INVESTMENT ||
-        ev.category === InvestmentEventCategory.SAVINGS ||
-        ev.isInvestment ||
-        Boolean(ev.pocketId || ev.pocket_id);
-
-      if (isInvestment) {
-        const amt = Math.abs(Number(ev.amount || 0));
-        const mKey = ev.date.substring(0, 7);
-        map.set(mKey, (map.get(mKey) || 0) + amt);
-      }
-    });
-    return map;
-  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
-
-  // Pre-calculate total external deposits / investments per month (excluded from monthly income deduction)
-  const monthInvestmentsExternalMap = useMemo(() => {
-    const map = new Map();
-    (timelineEvents || []).forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted) return;
-      if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED) return;
-      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
-      if (!isEventTimelineActive(ev)) return;
-      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
-      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-      }
-      const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
-      if (!isExternal) return;
-
-      const isInvestment =
-        ev.eventType === EventType.INVESTMENT ||
-        ev.eventType === EventType.WITHDRAWAL ||
-        ev.category === InvestmentEventCategory.SAVINGS ||
-        ev.isInvestment ||
-        ev.isWithdrawal ||
-        Boolean(ev.pocketId || ev.pocket_id);
-
-      if (isInvestment) {
-        const isWithdrawal = Boolean(
-          ev.isWithdrawal ||
-          ev.eventType === EventType.WITHDRAWAL ||
-          ev.eventType === EventType.EXPENSE ||
-          ev.isExpense ||
-          Number(ev.amount || 0) < 0
-        );
-        const multiplier = isWithdrawal ? -1 : 1;
-        const amt = Math.abs(Number(ev.amount || 0));
-        const mKey = ev.date.substring(0, 7);
-        map.set(mKey, (map.get(mKey) || 0) + multiplier * amt);
-      }
-    });
-    return map;
-  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
-
-  // Pre-calculate total realized expenses per month (only positive/paid statuses)
-  const monthExpensesRealizedMap = useMemo(() => {
-    const map = new Map();
-    (timelineEvents || []).forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted) return;
-      if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
-      if (!isEventTimelineActive(ev)) return;
-      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
-      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-      }
-      const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.category === AmortizationEventCategory.REDUCE_TERM || ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT;
-      const isExpense = (ev.eventType === EventType.EXPENSE || ev.category === ExpensesEventCategory.RECURRING_EXPENSE || ev.isExpense) && !isLoan;
-
-      if (isExpense) {
-        const mKey = ev.date.substring(0, 7);
-        const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
-        if (isRealized) {
-          map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
+  // Month-by-month flows from the shared financial engine (shared/finance): one pass over the events,
+  // references and cancelled movements excluded, scoped to the active timelines / entity / selected lines
+  const monthlyFlows = useMemo(() => {
+    const timelineTypeMap = new Map((effectiveTimelines || timelines || []).map((tl) => [String(tl.id), tl.type]));
+    return computeMonthlyFlows({
+      events: timelineEvents,
+      timelineTypeMap,
+      fromMonth: computeFromMonth,
+      include: (ev) => {
+        if (!isEventTimelineActive(ev)) return false;
+        if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return false;
+        if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
+          return selectedTimelineIds.includes(ev.timelineId) || selectedTimelineIds.includes(ev.timelineOriginId);
         }
+        return true;
       }
     });
-    return map;
-  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
+  }, [timelineEvents, effectiveTimelines, timelines, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
 
-  // Pre-calculate total realized loan payments per month
-  const monthLoansRealizedMap = useMemo(() => {
+  // Per-month values shown by the month badges (money back from withdrawals counts as income of the month)
+  const monthMapOf = useCallback((pick) => {
     const map = new Map();
-    (timelineEvents || []).forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted) return;
-      if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida) return;
-      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
-      if (!isEventTimelineActive(ev)) return;
-      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
-      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-      }
-      const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== AmortizationEventCategory.REDUCE_TERM && ev.category !== AmortizationEventCategory.REDUCE_INSTALLMENT);
-      const isLoan = isLoanInstallment || ev.eventType === EventType.LOAN || ev.eventType === EventType.AMORTIZATION || ev.isLoan || ev.category === AmortizationEventCategory.REDUCE_TERM || ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT;
-
-      if (isLoan) {
-        const mKey = ev.date.substring(0, 7);
-        const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
-        if (isRealized) {
-          const amt = isLoanInstallment
-            ? (ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0))
-            : (ev.amount || 0);
-          map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(amt)));
-        }
-      }
-    });
+    monthlyFlows.forEach((entry, key) => map.set(key, pick(entry)));
     return map;
-  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
-
-  // Pre-calculate total realized income per month
-  const monthIncomeRealizedMap = useMemo(() => {
-    const map = new Map();
-    (timelineEvents || []).forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted) return;
-      if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
-      if (!isEventTimelineActive(ev)) return;
-      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
-      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-      }
-      const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.category === AmortizationEventCategory.REDUCE_TERM || ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT;
-      const isInvestment = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment;
-      const isIncome = (ev.eventType === EventType.INCOME || ev.category === IncomeEventCategory.RECURRING_INCOME || ev.isIncome) && !isLoan && !isInvestment;
-
-      if (isIncome) {
-        const mKey = ev.date.substring(0, 7);
-        const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
-        if (isRealized) {
-          map.set(mKey, (map.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
-        }
-      }
-    });
-    return map;
-  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
-
-  // Pre-calculate total realized investments per month
-  const monthInvestmentsRealizedMap = useMemo(() => {
-    const map = new Map();
-    (timelineEvents || []).forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted) return;
-      if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
-      if (!isEventTimelineActive(ev)) return;
-      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
-      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-      }
-      const isInvestment =
-        ev.eventType === EventType.INVESTMENT ||
-        ev.eventType === EventType.WITHDRAWAL ||
-        ev.category === InvestmentEventCategory.SAVINGS ||
-        ev.isInvestment ||
-        ev.isWithdrawal ||
-        Boolean(ev.pocketId || ev.pocket_id);
-
-      if (isInvestment) {
-        const mKey = ev.date.substring(0, 7);
-        const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
-        if (isRealized) {
-          const isWithdrawal = Boolean(
-            ev.isWithdrawal ||
-            ev.eventType === EventType.WITHDRAWAL ||
-            ev.eventType === EventType.EXPENSE ||
-            ev.isExpense ||
-            Number(ev.amount || 0) < 0
-          );
-          const multiplier = isWithdrawal ? -1 : 1;
-          const amt = Math.abs(Number(ev.amount || 0));
-          map.set(mKey, (map.get(mKey) || 0) + multiplier * amt);
-        }
-      }
-    });
-    return map;
-  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
-
-  // Pre-calculate total realized deductible investments per month
-  const monthInvestmentsDeductionsRealizedMap = useMemo(() => {
-    const map = new Map();
-    (timelineEvents || []).forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted) return;
-      if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
-      if (!isEventTimelineActive(ev)) return;
-      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
-      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-      }
-      const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
-      if (isExternal) return;
-
-      const isWithdrawal = Boolean(
-        ev.isWithdrawal ||
-        ev.eventType === EventType.WITHDRAWAL ||
-        ev.isVirtualWithdrawal ||
-        (ev.id && String(ev.id).startsWith('virtual_withdrawal_')) ||
-        (ev.eventType === EventType.EXPENSE && (Boolean(ev.pocketId || ev.pocket_id) || ev.isInvestment)) ||
-        Number(ev.amount || 0) < 0
-      );
-      if (isWithdrawal) return;
-
-      const isInvestment =
-        ev.eventType === EventType.INVESTMENT ||
-        ev.category === InvestmentEventCategory.SAVINGS ||
-        ev.isInvestment ||
-        Boolean(ev.pocketId || ev.pocket_id);
-
-      if (isInvestment) {
-        const mKey = ev.date.substring(0, 7);
-        const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
-        if (isRealized) {
-          const amt = Math.abs(Number(ev.amount || 0));
-          map.set(mKey, (map.get(mKey) || 0) + amt);
-        }
-      }
-    });
-    return map;
-  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
-
-  // Pre-calculate total realized external investments per month
-  const monthInvestmentsExternalRealizedMap = useMemo(() => {
-    const map = new Map();
-    (timelineEvents || []).forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted) return;
-      if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-      if (computeFromMonth && ev.date.substring(0, 7) < computeFromMonth) return;
-      if (!isEventTimelineActive(ev)) return;
-      if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) return;
-      if (timeline.type === TimelineType.BALANCE && selectedTimelineIds && selectedTimelineIds.length > 0) {
-        if (!selectedTimelineIds.includes(ev.timelineId) && !selectedTimelineIds.includes(ev.timelineOriginId)) return;
-      }
-      const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
-      if (!isExternal) return;
-
-      const isInvestment =
-        ev.eventType === EventType.INVESTMENT ||
-        ev.eventType === EventType.WITHDRAWAL ||
-        ev.category === InvestmentEventCategory.SAVINGS ||
-        ev.isInvestment ||
-        ev.isWithdrawal ||
-        Boolean(ev.pocketId || ev.pocket_id);
-
-      if (isInvestment) {
-        const mKey = ev.date.substring(0, 7);
-        const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
-        if (isRealized) {
-          const isWithdrawal = Boolean(
-            ev.isWithdrawal ||
-            ev.eventType === EventType.WITHDRAWAL ||
-            ev.eventType === EventType.EXPENSE ||
-            ev.isExpense ||
-            Number(ev.amount || 0) < 0
-          );
-          const multiplier = isWithdrawal ? -1 : 1;
-          const amt = Math.abs(Number(ev.amount || 0));
-          map.set(mKey, (map.get(mKey) || 0) + multiplier * amt);
-        }
-      }
-    });
-    return map;
-  }, [timelineEvents, selectedTimelineIds, selectedEntityId, timeline.type, inactiveTimelineIdSet, computeFromMonth]);
+  }, [monthlyFlows]);
+  const monthExpensesTotalMap = useMemo(() => monthMapOf((e) => e.projected.expensesFromAvailable), [monthMapOf]);
+  const monthLoansTotalMap = useMemo(() => monthMapOf((e) => e.projected.installments), [monthMapOf]);
+  const monthIncomeTotalMap = useMemo(() => monthMapOf((e) => e.projected.income + e.projected.allWithdrawals), [monthMapOf]);
+  const monthInvestmentsTotalMap = useMemo(() => monthMapOf((e) => e.projected.savingsNet), [monthMapOf]);
+  const monthInvestmentsDeductionsMap = useMemo(() => monthMapOf((e) => e.projected.depositsInternal), [monthMapOf]);
+  const monthInvestmentsExternalMap = useMemo(() => monthMapOf((e) => e.projected.depositsExternal - (e.projected.allWithdrawals - e.projected.withdrawals)), [monthMapOf]);
+  const monthExpensesRealizedMap = useMemo(() => monthMapOf((e) => e.realized.expensesFromAvailable), [monthMapOf]);
+  const monthLoansRealizedMap = useMemo(() => monthMapOf((e) => e.realized.installments), [monthMapOf]);
+  const monthIncomeRealizedMap = useMemo(() => monthMapOf((e) => e.realized.income + e.realized.allWithdrawals), [monthMapOf]);
+  const monthInvestmentsRealizedMap = useMemo(() => monthMapOf((e) => e.realized.savingsNet), [monthMapOf]);
+  const monthInvestmentsDeductionsRealizedMap = useMemo(() => monthMapOf((e) => e.realized.depositsInternal), [monthMapOf]);
+  const monthInvestmentsExternalRealizedMap = useMemo(() => monthMapOf((e) => e.realized.depositsExternal - (e.realized.allWithdrawals - e.realized.withdrawals)), [monthMapOf]);
 
   const monthsList = useMemo(() => {
     const monthMap = new Map();
@@ -2606,28 +2255,14 @@ function VerticalTimeline({
         if (!ev || !ev.date || ev.isDeleted) return;
         if (ev.status === EventStatus.CANCELLED || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida') return;
 
-        const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === 'parcela_emprestimo' || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
-        const amt = isLoanInstallment
-          ? Number(ev.installmentAmount !== undefined ? ev.installmentAmount : (ev.amount || 0))
-          : Number(ev.amount || 0);
-
-        const isLoan = isLoanInstallment || ev.eventType === EventType.AMORTIZATION || ev.category === 'amortizacao';
-        const isIncome = ev.eventType === EventType.INCOME;
-        const isExpense = ev.eventType === EventType.EXPENSE || isLoan;
-        const isInvestment =
-          ev.eventType === EventType.INVESTMENT ||
-          ev.eventType === EventType.WITHDRAWAL ||
-          ev.isInvestment ||
-          ev.isWithdrawal ||
-          Boolean(ev.pocketId || ev.pocket_id);
-        const isWithdrawal = Boolean(
-          ev.isWithdrawal ||
-          ev.eventType === EventType.WITHDRAWAL ||
-          ev.eventType === EventType.EXPENSE ||
-          ev.isExpense ||
-          Number(ev.amount || 0) < 0
-        );
-        const multiplier = isWithdrawal ? -1 : 1;
+        // Shared financial engine: references never count, savings expenses stay in the savings
+        const movement = classifyMovement(ev);
+        if (movement.isReference) return;
+        const amt = movement.amount;
+        const isIncome = movement.kind === MovementKind.INCOME;
+        const isExpense = movement.kind === MovementKind.EXPENSE || movement.kind === MovementKind.LOAN_INSTALLMENT || movement.kind === MovementKind.AMORTIZATION;
+        const savingsDelta = savingsEffect(movement);
+        const isInvestment = savingsDelta !== 0 || ev.eventType === EventType.INVESTMENT;
 
         const initialKey = ev.eventId || ev.seriesId || ev.id;
         let initialAmt = 0;
@@ -2638,7 +2273,7 @@ function VerticalTimeline({
 
         if (isIncome) mInc += amt;
         if (isExpense) mExp += amt;
-        if (isInvestment) mInv += multiplier * Math.abs(amt) + initialAmt;
+        if (isInvestment) mInv += savingsDelta + initialAmt;
       });
 
       runningIncome += mInc;
@@ -2937,27 +2572,14 @@ function VerticalTimeline({
                           const pInitial = Number(pocket.initial_value ?? pocket.initialValue ?? 0);
                           const pTarget = Number(pocket.target_value ?? pocket.targetValue ?? 0);
 
-                          let allPocketContributed = 0;
-                          (timeline.events || []).forEach((ev) => {
-                            if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-                            if (ev.pocketId === pocket.id || ev.pocket_id === pocket.id) {
-                              const evMonth = ev.date.substring(0, 7);
-                              if (evMonth <= monthKey) {
-                                const isWithdrawal = Boolean(ev.isWithdrawal || ev.eventType === EventType.WITHDRAWAL || ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0);
-                                const multiplier = isWithdrawal ? -1 : 1;
-                                const amt = Math.abs(Number(ev.amount || 0));
-
-                                if (isFutureMonth) {
-                                  allPocketContributed += multiplier * amt;
-                                } else if (isPocketMovementRealized(ev)) {
-                                  // Only received movements count as saved
-                                  allPocketContributed += multiplier * amt;
-                                }
-                              }
-                            }
-                          });
-
-                          const pAccumulated = pInitial + allPocketContributed;
+                          // Pocket balance at the end of this month (shared engine): planned movements for future
+                          // months, only effective ones up to the current month
+                          const pAccumulated = computeSpaceBalances({
+                            events: (timeline.events || []).filter((ev) => ev && (ev.pocketId === pocket.id || ev.pocket_id === pocket.id)),
+                            pockets: [pocket],
+                            side: isFutureMonth ? 'projected' : 'realized',
+                            upToMonth: monthKey
+                          }).get(String(pocket.id)) || 0;
                           const pPercent = pTarget > 0 ? Math.min(100, Math.round((pAccumulated / pTarget) * 100)) : 0;
                           const isClosed = Boolean(pocket.date_closed || pocket.dateClosed);
                           const pocketMonthEvents = (mGroup.events || []).filter(

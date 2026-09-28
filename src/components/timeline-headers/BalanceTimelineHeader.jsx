@@ -17,23 +17,20 @@ import { pt, enUS } from 'date-fns/locale';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { computeBalanceTotals, computePocketsInitialTotal } from '../../utils/balanceMetrics.js';
+import { classifyMovement, isActiveMovement } from '../../../shared/finance/movements.js';
+import { computeMonthlyFlows } from '../../../shared/finance/financialPosition.js';
 import {
   EventType,
   EventStatus,
   TimelineType,
   TimelineStatus,
   LoanEventCategory,
-  IncomeEventCategory,
-  ExpenseEventCategory,
-  ExpensesEventCategory,
-  InvestmentEventCategory,
   AmortizationEventCategory,
   AmortizationStrategy,
   TimelineColor,
   TIMELINE_COLOR_PRESETS,
   ProjectionDirection,
-  isAccountOutflowEvent,
-  isPositiveStatus,
+  MovementKind,
   isCancelledStatus,
   isLoanTimelineType,
   normalizeTimelineType
@@ -470,59 +467,20 @@ export default function BalanceTimelineHeader({
     let investDeductionsMap = propMonthInvestmentsDeductionsMap;
 
     if (!incomeMap || !expenseMap || !loanMap || !investDeductionsMap) {
+      // Same monthly flows as the month badges (shared financial engine)
+      const sourceEvents = (filteredEvents !== undefined)
+        ? filteredEvents
+        : ((allEvents && allEvents.length > 0) ? allEvents : (eventsList || []));
+      const flows = computeMonthlyFlows({ events: sourceEvents, timelineTypeMap, fromMonth: effectiveComputeFromMonth });
       incomeMap = new Map();
       expenseMap = new Map();
       loanMap = new Map();
       investDeductionsMap = new Map();
-
-      const sourceEvents = (filteredEvents !== undefined)
-        ? filteredEvents
-        : ((allEvents && allEvents.length > 0) ? allEvents : (eventsList || []));
-      (sourceEvents || []).forEach((ev) => {
-        if (!ev || !ev.date || ev.isDeleted) return;
-        if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-        if (effectiveComputeFromMonth && ev.date.substring(0, 7) < effectiveComputeFromMonth) return;
-
-        const mKey = ev.date.substring(0, 7);
-        const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || ev.category === AmortizationEventCategory.REDUCE_TERM || ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT;
-        const isExpense = (ev.eventType === EventType.EXPENSE || ev.category === ExpensesEventCategory.RECURRING_EXPENSE || ev.isExpense) && !isLoan;
-        const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== AmortizationEventCategory.REDUCE_TERM && ev.category !== AmortizationEventCategory.REDUCE_INSTALLMENT);
-        const isInvestmentForIncome = ev.eventType === EventType.INVESTMENT || ev.category === InvestmentEventCategory.SAVINGS || ev.isInvestment;
-        const isIncome = (ev.eventType === EventType.INCOME || ev.category === IncomeEventCategory.RECURRING_INCOME || ev.isIncome) && !isLoan && !isInvestmentForIncome;
-
-        if (isExpense) {
-          expenseMap.set(mKey, (expenseMap.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
-        }
-        if (isLoanInstallment && !(ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida)) {
-          const amt = Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0));
-          loanMap.set(mKey, (loanMap.get(mKey) || 0) + Math.abs(amt));
-        }
-        if (isIncome) {
-          incomeMap.set(mKey, (incomeMap.get(mKey) || 0) + Math.abs(Number(ev.amount || 0)));
-        }
-
-        const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
-        if (!isExternal) {
-          const isWithdrawal = Boolean(
-            ev.isWithdrawal ||
-            ev.eventType === EventType.WITHDRAWAL ||
-            ev.isVirtualWithdrawal ||
-            (ev.id && String(ev.id).startsWith('virtual_withdrawal_')) ||
-            (ev.eventType === EventType.EXPENSE && (Boolean(ev.pocketId || ev.pocket_id) || ev.isInvestment)) ||
-            Number(ev.amount || 0) < 0
-          );
-          if (!isWithdrawal) {
-            const isInvestment =
-              ev.eventType === EventType.INVESTMENT ||
-              ev.category === InvestmentEventCategory.SAVINGS ||
-              ev.isInvestment ||
-              Boolean(ev.pocketId || ev.pocket_id);
-            if (isInvestment) {
-              const amt = Math.abs(Number(ev.amount || 0));
-              investDeductionsMap.set(mKey, (investDeductionsMap.get(mKey) || 0) + amt);
-            }
-          }
-        }
+      flows.forEach((entry, mKey) => {
+        incomeMap.set(mKey, entry.projected.income + entry.projected.allWithdrawals);
+        expenseMap.set(mKey, entry.projected.expensesFromAvailable);
+        loanMap.set(mKey, entry.projected.installments);
+        investDeductionsMap.set(mKey, entry.projected.depositsInternal);
       });
     }
 
@@ -571,7 +529,9 @@ export default function BalanceTimelineHeader({
     hasInvestmentTimeline,
     dateLocale,
     projectionOffset,
-    currentMonthStr
+    currentMonthStr,
+    timelineTypeMap,
+    filteredEvents
   ]);
 
   if (!timeline) return null;
@@ -932,77 +892,29 @@ export default function BalanceTimelineHeader({
                       });
                     }
 
+                    // Classification from the shared financial engine: references never count, savings
+                    // expenses / costs stay in the savings, withdrawals give money back to the balance
                     eventsList.forEach((ev) => {
-                      if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+                      if (!ev || !ev.date || !isActiveMovement(ev)) return;
                       const mk = ev.date.substring(0, 7);
                       if (mk < startMK || (projectionMonthsAhead === 0 ? mk >= endMK : mk > endMK)) return;
+                      const movement = classifyMovement(ev, timelineTypeMap);
+                      if (movement.isReference || movement.amount <= 0) return;
+                      const absAmt = movement.amount;
 
-                      const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timeline_id || ''));
-
-                      const isLoanInst = ev.eventType === EventType.LOAN_INSTALLMENT ||
-                        ev.eventType === 'loan_installment' ||
-                        ev.category === 'parcela_emprestimo' ||
-                        ev.category === LoanEventCategory.LOAN_INSTALLMENT ||
-                        (Boolean(ev.isSystemLoanEvent) && ev.eventType !== EventType.AMORTIZATION && ev.category !== 'amortizacao');
-
-                      const isAmortization = ev.eventType === EventType.AMORTIZATION ||
-                        ev.eventType === 'amortization' ||
-                        ev.category === 'amortizacao' ||
-                        ev.category === 'amortization' ||
-                        ev.category === AmortizationEventCategory.REDUCE_TERM ||
-                        ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT ||
-                        ev.category === AmortizationStrategy.REDUCE_TERM ||
-                        ev.category === AmortizationStrategy.REDUCE_INSTALLMENT;
-
-                      const isLoan = isLoanInst || isAmortization || isLoanTimelineType(tlType);
-
-                      const amt = isLoanInst
-                        ? Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0))
-                        : Number(ev.amount || 0);
-
-                      const isIncome = (
-                        ev.eventType === EventType.INCOME ||
-                        tlType === TimelineType.INCOME ||
-                        ev.category === IncomeEventCategory.RECURRING_INCOME ||
-                        Boolean(ev.isIncome)
-                      ) && !isLoan;
-
-                      const isInvestment = (
-                        ev.eventType === EventType.INVESTMENT ||
-                        ev.eventType === EventType.WITHDRAWAL ||
-                        tlType === TimelineType.INVESTMENT ||
-                        Boolean(ev.isInvestment) ||
-                        Boolean(ev.isWithdrawal) ||
-                        Boolean(ev.pocketId || ev.pocket_id)
-                      ) && !isLoan;
-
-                      const isWithdrawal = Boolean(
-                        ev.isWithdrawal ||
-                        ev.eventType === EventType.WITHDRAWAL ||
-                        (isInvestment && (ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0))
-                      );
-                      const multiplier = isWithdrawal ? -1 : 1;
-                      const absAmt = Math.abs(amt);
-                      if (absAmt <= 0) return;
-
-                      const isExpense = (
-                        ev.eventType === EventType.EXPENSE ||
-                        tlType === TimelineType.EXPENSE ||
-                        ev.category === ExpenseEventCategory.RECURRING_EXPENSE ||
-                        Boolean(ev.isExpense)
-                      ) && !isIncome && !isInvestment && !isLoan;
-
-                      if (isIncome) {
+                      if (movement.kind === MovementKind.INCOME) {
                         annualIncome += absAmt;
-                      } else if (isExpense) {
+                      } else if (movement.kind === MovementKind.EXPENSE) {
                         annualExpense += absAmt;
-                      } else if (isInvestment && !ev.isExternal && !ev.is_external) {
-                        // Account outflows (pocket cost / expense) do not change the balance
-                        if (!isAccountOutflowEvent(ev)) annualInvestment += multiplier * absAmt;
+                      } else if (movement.kind === MovementKind.DEPOSIT_INTERNAL) {
+                        annualInvestment += absAmt;
+                      } else if (movement.kind === MovementKind.WITHDRAWAL && !movement.isExternal) {
+                        annualInvestment -= absAmt;
                       } else if (
                         hasLoanTimeline &&
                         (annualLoan === 0 || projectionMonthsAhead > 0) &&
-                        (isLoanInst || isAmortization) &&
+                        (movement.kind === MovementKind.LOAN_INSTALLMENT || movement.kind === MovementKind.AMORTIZATION) &&
+                        (movement.isLoanInst || movement.isAmortization) &&
                         activeLoanIds.has(String(ev.timelineId || ev.timeline_id || ''))
                       ) {
                         annualLoan += absAmt;

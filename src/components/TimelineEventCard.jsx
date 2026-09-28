@@ -107,6 +107,7 @@ import { useEventActions } from '../context/EventActionsContext.jsx';
 import DueDatePicker from './ui/DueDatePicker.jsx';
 import CancelEventConfirmModal from './CancelEventConfirmModal.jsx';
 import { makeDiaryT } from '../utils/diaryLabels.js';
+import { getMovementStatusKey } from '../../shared/finance/movements.js';
 
 const RECEIPT_DATE_POPOVER_WIDTH = 270;
 const RECEIPT_NUMBER_POPOVER_WIDTH = 220;
@@ -337,6 +338,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   );
   // Events that take money out of a pocket (shown with a minus sign)
   const isPocketOutflowEvent = isWithdrawalEvent || isAccountOutflow;
+  // Uniform status word of the movement once effective (deposited, credited, withdrawn, paid…)
+  const effectiveStatusKey = getMovementStatusKey({ ...event, status: EventStatus.PAID });
 
   const isIncomeEvent = event.eventType === EventType.INCOME && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
   const isExpenseEvent = event.eventType === EventType.EXPENSE && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
@@ -2262,7 +2265,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     if (isInvestmentEvent) {
       if (isCompletedInvestment) {
         return {
-          label: isWithdrawalEvent ? t('status.withdrawn') : isAccountOutflow ? t('status.paid') : t('status.invested'),
+          label: t(`status.${effectiveStatusKey}`),
           icon: <CheckCircle2 size={11} />,
           bg: 'rgba(99, 102, 241, 0.15)',
           color: 'var(--primary-light)',
@@ -2280,7 +2283,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         };
       }
       return {
-        label: t('status.planned'),
+        label: t('status.pending'),
         icon: <Clock size={11} />,
         bg: 'rgba(99, 102, 241, 0.1)',
         color: 'var(--primary-light)',
@@ -3629,7 +3632,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 isFutureMonth ? (
                   <>
                     <Clock size={13} style={{ color: isCompletedInvestment ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-dim)' }} />
-                    <span style={{ color: isCompletedInvestment ? TimelineColor.WHITE : undefined }}>{t('status.planned')}</span>
+                    <span style={{ color: isCompletedInvestment ? TimelineColor.WHITE : undefined }}>{isCompletedInvestment ? t(`status.${effectiveStatusKey}`) : t('status.pending')}</span>
                   </>
                 ) : isCancelled ? (
                   <>
@@ -3651,7 +3654,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 ) : isCompletedInvestment ? (
                   <>
                     <CheckCircle2 size={13} style={{ color: TimelineColor.WHITE }} />
-                    <span style={{ color: TimelineColor.WHITE }}>{isWithdrawalEvent ? t('status.withdrawn') : isAccountOutflow ? t('status.paid') : t('status.invested')}</span>
+                    <span style={{ color: TimelineColor.WHITE }}>{t(`status.${effectiveStatusKey}`)}</span>
                     <Lock size={11} style={{ color: TimelineColor.WHITE, marginLeft: '2px' }} />
                   </>
                 ) : isOverdueInvestment ? (
@@ -3662,7 +3665,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
                 ) : (
                   <>
                     <Clock size={13} style={{ color: TimelineColor.INVESTMENT }} />
-                    <span>{t('status.planned')}</span>
+                    <span>{t('status.pending')}</span>
                   </>
                 )
               )}

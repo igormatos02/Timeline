@@ -16,10 +16,7 @@ import {
   isPositiveStatus,
   TimelineColor,
   TimelineType,
-  isLoanTimelineType,
-  normalizeTimelineType,
-  LoanEventCategory,
-  AmortizationEventCategory
+  normalizeTimelineType
 } from '../../enums/index.js';
 import { TIMELINE_COLOR_PRESETS, getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
@@ -32,7 +29,14 @@ import { computeMonthDiff } from '../../utils/timelineCharts.js';
 
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
 import { useHeaderCollapsed, useTimeboard } from '../../context/TimeboardContext.jsx';
+import { computeMonthlyFlows, sumMonthlyFlows } from '../../../shared/finance/financialPosition.js';
 import { CONDO_EXPENSE_CATEGORY_META } from '../event-modals/FinancialEventModalConfig.js';
+
+// 'yyyy-MM' of the month before `monthKey`
+const prevMonthKey = (monthKey) => {
+  const [y, m] = monthKey.split('-').map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+};
 
 export default function ExpenseTimelineHeader({
   timeline,
@@ -171,31 +175,13 @@ export default function ExpenseTimelineHeader({
   }
   const allBoardEvents = Array.from(seenEventMap.values());
 
-  let annualTotalExpense = 0;
-  let annualTotalIncome = 0;
+  // Month-by-month flows of the whole board from the shared financial engine (references never count twice)
+  const boardFlows = computeMonthlyFlows({ events: allBoardEvents, timelineTypeMap });
 
-  allBoardEvents.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-    const evMonthKey = ev.date.substring(0, 7);
-
-    if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
-      const isWithdrawal = ev.eventType === EventType.WITHDRAWAL || Boolean(ev.isWithdrawal);
-      const isVirtualWithdrawal = Boolean(ev.isVirtualWithdrawal) || (ev.id && String(ev.id).startsWith('virtual_withdrawal_'));
-      if (isWithdrawal && ev.id && seenEventMap.has(`virtual_withdrawal_${ev.id}`)) {
-        return;
-      }
-
-      const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || '')) || ev.timelineType;
-      const isExpense = ((ev.eventType === EventType.EXPENSE || ev.isExpense || tlType === TimelineType.EXPENSE) && !isWithdrawal && !isVirtualWithdrawal);
-      const isIncome = (isWithdrawal || isVirtualWithdrawal || ev.eventType === EventType.INCOME || ev.isIncome || tlType === TimelineType.INCOME) && !isExpense;
-
-      if (isExpense) {
-        annualTotalExpense += Number(ev.amount || 0);
-      } else if (isIncome) {
-        annualTotalIncome += Number(ev.amount || 0);
-      }
-    }
-  });
+  // Next 12 months (all planned movements): expenses vs money coming into the available money
+  const next12 = sumMonthlyFlows(boardFlows, { fromMonth: startMonthKey, toMonth: prevMonthKey(endMonthKey), side: 'projected' });
+  const annualTotalExpense = next12.expensesFromAvailable;
+  let annualTotalIncome = next12.income + next12.allWithdrawals;
 
   if (annualTotalIncome === 0) {
     const monthlyBudget = timeline.monthlyBudget || metrics.monthlyBudget || 0;
@@ -218,53 +204,12 @@ export default function ExpenseTimelineHeader({
 
   const currentCalendarYear = new Date().getFullYear().toString();
 
-  const monthlyTotalsRealized = new Map();
-
-  allBoardEvents.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted) return;
-    if (isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED || ev.status === EventStatus.ABATED || ev.isAbated || ev.isAbatida || ev.status === 'Abatida') return;
-
-    const evMonthKey = ev.date.substring(0, 7);
-    const isAfterStart = !computeFromMonth || computeFromMonth === '1900-01' || evMonthKey >= computeFromMonth;
-    const isUpToCurrentMonth = evMonthKey <= currentMonthStr;
-
-    if (!isAfterStart || !isUpToCurrentMonth) return;
-
-    const isWithdrawal = ev.eventType === EventType.WITHDRAWAL || Boolean(ev.isWithdrawal);
-    const isVirtualWithdrawal = Boolean(ev.isVirtualWithdrawal) || (ev.id && String(ev.id).startsWith('virtual_withdrawal_'));
-    if (isWithdrawal && ev.id && seenEventMap.has(`virtual_withdrawal_${ev.id}`)) {
-      return;
-    }
-
-    const tlType = timelineTypeMap.get(String(ev.timelineId || ev.timelineOriginId || ev.timeline_id || '')) || ev.timelineType;
-    const isLoanInstallment = ev.eventType === EventType.LOAN_INSTALLMENT || ev.category === LoanEventCategory.INSTALLMENT || ev.category === LoanEventCategory.LOAN_INSTALLMENT || (ev.isSystemLoanEvent && ev.eventType !== EventType.AMORTIZATION && ev.category !== AmortizationEventCategory.REDUCE_TERM && ev.category !== AmortizationEventCategory.REDUCE_INSTALLMENT);
-    const isLoan = isLoanInstallment || ev.eventType === EventType.LOAN || ev.eventType === EventType.AMORTIZATION || ev.isLoan || isLoanTimelineType(tlType);
-    const isInvestment = !isWithdrawal && !isVirtualWithdrawal && (ev.eventType === EventType.INVESTMENT || ev.isInvestment || tlType === TimelineType.INVESTMENT || Boolean(ev.pocketId || ev.pocket_id));
-    const isExpense = ((ev.eventType === EventType.EXPENSE || ev.isExpense || tlType === TimelineType.EXPENSE) && !isLoan && !isInvestment && !isWithdrawal && !isVirtualWithdrawal);
-    const isIncome = (isWithdrawal || isVirtualWithdrawal || ev.eventType === EventType.INCOME || ev.isIncome || tlType === TimelineType.INCOME) && !isLoan && !isInvestment && !isExpense;
-
-    const isExternal = Boolean(ev.isExternal || ev.is_external || ev.isExternal === 'true' || ev.is_external === 'true');
-    const amt = isLoanInstallment
-      ? Math.abs(Number(ev.installmentAmount !== undefined && ev.installmentAmount !== null ? ev.installmentAmount : (ev.amount || 0)))
-      : Math.abs(Number(ev.amount || 0));
-
-    if (!monthlyTotalsRealized.has(evMonthKey)) {
-      monthlyTotalsRealized.set(evMonthKey, { income: 0, expense: 0, loan: 0, investmentDeduction: 0 });
-    }
-    const mRealized = monthlyTotalsRealized.get(evMonthKey);
-    const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted) || ev.status === EventStatus.WITHDRAWN;
-
-    if (isIncome && isRealized) mRealized.income += amt;
-    else if (isExpense && isRealized) mRealized.expense += amt;
-    else if (isLoan && isRealized) mRealized.loan += amt;
-    else if (isInvestment && !isExternal && isRealized) mRealized.investmentDeduction += amt;
-  });
-
-  let accumulatedRealizedBalance = 0;
-  monthlyTotalsRealized.forEach((mData) => {
-    const monthNet = mData.income - (mData.expense + mData.loan + mData.investmentDeduction);
-    accumulatedRealizedBalance += monthNet;
-  });
+  // Accumulation of the available money, realized up to the current month
+  const accumulatedRealizedBalance = sumMonthlyFlows(boardFlows, {
+    fromMonth: computeFromMonth === '1900-01' ? null : computeFromMonth,
+    toMonth: currentMonthStr,
+    side: 'realized'
+  }).availableNet;
 
   const incomeTimeline = (allTimelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.INCOME);
   const incomeInitialValue = Number(incomeTimeline?.initialValue ?? incomeTimeline?.initial_value ?? 0);

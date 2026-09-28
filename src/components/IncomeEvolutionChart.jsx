@@ -13,7 +13,9 @@ import {
 } from 'lucide-react';
 import { format, parseISO, addMonths } from 'date-fns';
 import { formatCurrency } from '../utils/formatCurrency';
-import { EventType, EventStatus, TimelineType, TimelineColor, isPositiveStatus, isAccountOutflowEvent } from '../enums/index.js';
+import { EventType, EventStatus, TimelineType, TimelineColor, isPositiveStatus, MovementKind } from '../enums/index.js';
+import { classifyMovement } from '../../shared/finance/movements.js';
+import { savingsEffect } from '../../shared/finance/savingsSpaces.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { getPaletteTheme } from '../../shared/config/colorPalettes.js';
 
@@ -156,17 +158,16 @@ export default function IncomeEvolutionChart({
           const amt = Number(ev.amount || 0);
           const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
 
+          // Shared financial engine: references (a withdrawal shown as income) never count as income
+          const movement = classifyMovement(ev);
           const isLoan = ev.eventType === EventType.AMORTIZATION || ev.eventType === EventType.LOAN_INSTALLMENT || ev.isSystemLoanEvent;
-          const isIncomeEv = (ev.eventType === EventType.INCOME || ev.isIncome === true) && !isLoan;
-          const isInvestmentEv = ev.eventType === EventType.INVESTMENT || ev.isInvestment === true || Boolean(ev.pocketId || ev.pocket_id);
-          const isWithdrawal = Boolean(
-            ev.isWithdrawal ||
-            ev.eventType === EventType.WITHDRAWAL ||
-            (isInvestmentEv && (ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0))
-          );
-          const multiplier = isWithdrawal ? -1 : 1;
-          const absAmt = Math.abs(Number(ev.amount || 0));
-          const isExternal = Boolean(ev.isExternal || ev.is_external);
+          const isIncomeEv = movement.kind === MovementKind.INCOME && !movement.isReference;
+          const savingsDelta = savingsEffect(movement);
+          const isInvestmentEv = savingsDelta !== 0;
+          // Balance effect: internal deposits leave the available money, withdrawals come back to it
+          const balanceDelta = movement.kind === MovementKind.DEPOSIT_INTERNAL
+            ? movement.amount
+            : (movement.kind === MovementKind.WITHDRAWAL && !movement.isExternal && !movement.isReference ? -movement.amount : 0);
 
           const isValid = chartMode === 'acumulado_real' ? isReceived : true;
           if (isValid) {
@@ -179,11 +180,8 @@ export default function IncomeEvolutionChart({
               if (activeFinancialTab === 'gastos' || activeFinancialTab === 'emprestimos' || activeFinancialTab === 'jeep' || activeFinancialTab === 'dacia' || activeFinancialTab === 'casa1' || activeFinancialTab === 'casa2') eventCount++;
             }
             if (isInvestmentEv) {
-              monthInvestment += multiplier * absAmt;
-              // Account outflows (pocket cost / expense) lower the account but not the balance
-              if (!isExternal && !isAccountOutflowEvent(ev)) {
-                monthInvestmentOutflow += multiplier * absAmt;
-              }
+              monthInvestment += savingsDelta;
+              monthInvestmentOutflow += balanceDelta;
               if (activeFinancialTab === 'investimentos') eventCount++;
             }
             if (timeline?.type === TimelineType.BALANCE) {

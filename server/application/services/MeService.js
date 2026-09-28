@@ -2,13 +2,15 @@ import { eventService } from './EventService.js';
 import { accessService } from './AccessService.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
-import { EventStatus, TimelineType, PersonRole, isPositiveStatus, isCancelledStatus, normalizeTimelineType } from '../../../shared/enums/index.js';
+import { TimelineType, PersonRole, normalizeTimelineType } from '../../../shared/enums/index.js';
+import { isActiveMovement, isEffectiveMovement } from '../../../shared/finance/movements.js';
 
 // Timelines whose events are shared notices visible to individual members
 const NOTICE_TIMELINE_TYPES = [TimelineType.REMINDER, TimelineType.DIARY];
 
-const isActiveEvent = (ev) => ev && ev.date && !ev.isDeleted && ev.status !== EventStatus.DELETED && !isCancelledStatus(ev.status);
-const isSettled = (ev) => isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
+// Movement rules from the shared financial engine (same as the web)
+const isActiveEvent = (ev) => Boolean(ev && ev.date) && isActiveMovement(ev);
+const isSettled = (ev) => isEffectiveMovement(ev);
 // Debt balance: open obligations due up to the end of the current month (same rule as the web individual header)
 const debtLimitDate = () => `${new Date().toISOString().substring(0, 7)}-31`;
 

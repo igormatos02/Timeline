@@ -22,46 +22,22 @@ import {
   ExpenseEventCategory,
   InvestmentEventCategory,
   TimelineColor,
-  isCancelledStatus,
-  isPositiveStatus,
   normalizeRecurrence,
   normalizePeriodicity
 } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { formatCurrency } from '../utils/formatCurrency.js';
 import { generateUUID } from '../utils/uuid.js';
+import { computeSpaceBalances } from '../../shared/finance/savingsSpaces.js';
 
+/**
+ * Money available in a pocket (shared financial engine): its initial value plus the effective movements
+ * (pending deposits, external ones included, do not count yet).
+ */
 export function calculatePocketAvailableBalance(pocket, events = [], upToDate = null, excludeEventId = null) {
   if (!pocket) return 0;
-  const pInitial = Number(pocket.initial_value ?? pocket.initialValue ?? 0);
-  let contributed = 0;
-
-  (events || []).forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-    if (excludeEventId && (ev.id === excludeEventId || ev.eventId === excludeEventId)) return;
-
-    if (ev.pocketId === pocket.id || ev.pocket_id === pocket.id) {
-      if (!upToDate || ev.date <= upToDate) {
-        const isWithdrawal = Boolean(
-          ev.isWithdrawal ||
-          ev.eventType === EventType.WITHDRAWAL ||
-          ev.eventType === EventType.EXPENSE ||
-          ev.isExpense ||
-          Number(ev.amount || 0) < 0
-        );
-        const multiplier = isWithdrawal ? -1 : 1;
-        const amt = Math.abs(Number(ev.amount || 0));
-
-        const isRealized = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
-        const isExternal = Boolean(ev.isExternal || ev.is_external);
-        if (isRealized || isExternal) {
-          contributed += multiplier * amt;
-        }
-      }
-    }
-  });
-
-  return Math.max(0, pInitial + contributed);
+  const balances = computeSpaceBalances({ events, pockets: [pocket], side: 'realized', upToDate, excludeEventId });
+  return Math.max(0, balances.get(String(pocket.id)) || 0);
 }
 
 // Outflows of an account pocket: withdrawal (back to the income timeline), cost and expense (stay in the account)

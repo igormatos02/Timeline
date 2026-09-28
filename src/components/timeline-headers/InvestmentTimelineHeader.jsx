@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { EventStatus, EventType, isCancelledStatus, isPositiveStatus, TimelineColor } from '../../enums/index.js';
+import { EventStatus, EventType, isCancelledStatus, isPositiveStatus, TimelineColor, MovementKind } from '../../enums/index.js';
 import { TIMELINE_COLOR_PRESETS, getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
@@ -16,7 +16,9 @@ import { DonutChart } from '../ui/DonutChart.jsx';
 import BarChart7Months from '../ui/BarChart7Months.jsx';
 import IncomeEvolutionChart from '../IncomeEvolutionChart.jsx';
 import { computeMonthDiff } from '../../utils/timelineCharts.js';
-import { pocketHasTarget, isPocketMovementRealized } from '../../utils/pocketUtils.js';
+import { pocketHasTarget } from '../../utils/pocketUtils.js';
+import { classifyMovement, isActiveMovement } from '../../../shared/finance/movements.js';
+import { computeSpaceBalances, savingsEffect } from '../../../shared/finance/savingsSpaces.js';
 
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
 import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
@@ -82,25 +84,11 @@ export default function InvestmentTimelineHeader({
   // 1. POUPANÇA POR COFRINHOS
   const pocketColors = paletteTheme.colors && paletteTheme.colors.length > 1 ? paletteTheme.colors : TIMELINE_COLOR_PRESETS;
 
+  // Balance of each pocket (shared engine): initial value + effective movements (external ones included)
+  const pocketBalances = computeSpaceBalances({ events: eventsList, pockets, side: 'realized' });
   let totalPocketsAccumulated = 0;
   const rawPocketList = pockets.map((pocket, idx) => {
-    const pInitial = Number(pocket.initial_value ?? pocket.initialValue ?? 0);
-    let pocketContributed = 0;
-
-    eventsList.forEach((ev) => {
-      if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-      if (ev.pocketId === pocket.id || ev.pocket_id === pocket.id) {
-        const isWithdrawal = Boolean(ev.isWithdrawal || ev.eventType === EventType.WITHDRAWAL || ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0);
-        const multiplier = isWithdrawal ? -1 : 1;
-        const amt = Math.abs(Number(ev.amount || 0));
-        // Only received movements count as saved (external or not)
-        if (isPocketMovementRealized(ev)) {
-          pocketContributed += multiplier * amt;
-        }
-      }
-    });
-
-    const accumulated = pInitial + pocketContributed;
+    const accumulated = pocketBalances.get(String(pocket.id)) || 0;
     totalPocketsAccumulated += accumulated;
 
     return {
@@ -141,19 +129,15 @@ export default function InvestmentTimelineHeader({
     ? allEvents
     : (isFiltered ? (events && events.length > 0 ? events : (timeline.events || [])) : eventsList);
 
+  // Money coming into the available money in the next 12 months: income + withdrawals (references never count)
   incomeEventsSource.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status)) return;
-    const isWithdrawal = ev.eventType === EventType.WITHDRAWAL || Boolean(ev.isWithdrawal);
-    const isVirtualWithdrawal = Boolean(ev.isVirtualWithdrawal) || (ev.id && String(ev.id).startsWith('virtual_withdrawal_'));
-    if (isWithdrawal && ev.id && incomeEventsSource.some((other) => other && other.id === `virtual_withdrawal_${ev.id}`)) {
-      return;
-    }
-    const isIncome = isWithdrawal || isVirtualWithdrawal || ev.eventType === EventType.INCOME || ev.isIncome;
-    if (isIncome) {
-      const evMonthKey = ev.date.substring(0, 7);
-      if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
-        annualTotalIncome += Math.abs(Number(ev.amount || 0));
-      }
+    if (!ev || !ev.date || !isActiveMovement(ev)) return;
+    const evMonthKey = ev.date.substring(0, 7);
+    if (evMonthKey < startMonthKey || evMonthKey >= endMonthKey) return;
+    const movement = classifyMovement(ev);
+    if (movement.isReference) return;
+    if (movement.kind === MovementKind.INCOME || movement.kind === MovementKind.WITHDRAWAL) {
+      annualTotalIncome += movement.amount;
     }
   });
 
@@ -164,42 +148,18 @@ export default function InvestmentTimelineHeader({
     : fullEventsSource;
 
   investmentEventsForAnnual.forEach((ev) => {
-    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-    if (ev.isVirtualWithdrawal || (ev.id && String(ev.id).startsWith('virtual_withdrawal_'))) return;
-    const isInvestment =
-      ev.eventType === EventType.INVESTMENT ||
-      ev.eventType === EventType.WITHDRAWAL ||
-      ev.isInvestment ||
-      ev.isWithdrawal ||
-      Boolean(ev.pocketId || ev.pocket_id);
-    const isWithdrawal = Boolean(
-      ev.isWithdrawal ||
-      ev.eventType === EventType.WITHDRAWAL ||
-      ev.eventType === EventType.EXPENSE ||
-      ev.isExpense ||
-      Number(ev.amount || 0) < 0
-    );
-    const multiplier = isWithdrawal ? -1 : 1;
-    const isExternal = Boolean(ev.isExternal || ev.is_external);
-    const amt = Math.abs(Number(ev.amount || 0));
-
-    if (isInvestment) {
-      if (ev.date.startsWith(currentMonthStr)) {
-        if (isExternal) {
-          currentMonthExternalInvested += multiplier * amt;
-        } else {
-          currentMonthRegularInvested += multiplier * amt;
-        }
-      }
-
-      const evMonthKey = ev.date.substring(0, 7);
-      if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
-        if (isExternal) {
-          annualExternalInvested += multiplier * amt;
-        } else {
-          annualRegularInvested += multiplier * amt;
-        }
-      }
+    if (!ev || !ev.date || !isActiveMovement(ev)) return;
+    const movement = classifyMovement(ev);
+    const effect = savingsEffect(movement);
+    if (!effect) return;
+    if (ev.date.startsWith(currentMonthStr)) {
+      if (movement.isExternal) currentMonthExternalInvested += effect;
+      else currentMonthRegularInvested += effect;
+    }
+    const evMonthKey = ev.date.substring(0, 7);
+    if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
+      if (movement.isExternal) annualExternalInvested += effect;
+      else annualRegularInvested += effect;
     }
   });
 
@@ -231,13 +191,10 @@ export default function InvestmentTimelineHeader({
       ev.isWithdrawal ||
       Boolean(ev.pocketId || ev.pocket_id);
     if (isInvestment) {
-      const isWithdrawal = Boolean(ev.isWithdrawal || ev.eventType === EventType.WITHDRAWAL || ev.eventType === EventType.EXPENSE || ev.isExpense || Number(ev.amount || 0) < 0);
-      const multiplier = isWithdrawal ? -1 : 1;
-      const amt = Math.abs(Number(ev.amount || 0));
-
-      // Only received movements count as contributed (external deposits included)
-      if (isPocketMovementRealized(ev)) {
-        totalInstallmentsReceived += multiplier * amt;
+      // Only effective movements count as contributed (external deposits included)
+      const movement = classifyMovement(ev);
+      if (movement.isEffective && savingsEffect(movement)) {
+        totalInstallmentsReceived += savingsEffect(movement);
         totalReceivedCount += 1;
       }
       if (Number(ev.initialInvestedAmount || 0) > 0 && (ev.isFirstOccurrence || !ev.isProjected)) {
@@ -689,16 +646,7 @@ export default function InvestmentTimelineHeader({
                     if (computeFromMonth && evKey < computeFromMonth) return;
                     const foundMonth = last7Months.find((m) => m.key === evKey);
                     if (foundMonth) {
-                      const isWithdrawal = Boolean(
-                        ev.isWithdrawal ||
-                        ev.eventType === EventType.WITHDRAWAL ||
-                        ev.eventType === EventType.EXPENSE ||
-                        ev.isExpense ||
-                        Number(ev.amount || 0) < 0
-                      );
-                      const multiplier = isWithdrawal ? -1 : 1;
-                      const amt = Math.abs(Number(ev.amount || 0));
-                      foundMonth.total += multiplier * amt;
+                      foundMonth.total += savingsEffect(classifyMovement(ev));
                     }
                   }
                 });

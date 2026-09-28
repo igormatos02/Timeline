@@ -217,6 +217,7 @@ function VerticalTimeline({
   onOpenAmortizationModal: onOpenAmortizationModalProp,
   onOpenWithdrawModal: onOpenWithdrawModalProp,
   onNavigateToTimeline,
+  onCorrectEvent,
   onPatchEventLocal,
   onCreateTimeline: onCreateTimelineProp,
   headerComponent,
@@ -607,9 +608,10 @@ function VerticalTimeline({
       getProposedReceiptNumber,
       addEventNote,
       deleteEventNote,
+      correctEvent: onCorrectEvent || null,
       currentUserId: currentUser?.id || null
     }),
-    [saveReceiptDate, saveReceiptNumber, getProposedReceiptNumber, addEventNote, deleteEventNote, currentUser?.id]
+    [saveReceiptDate, saveReceiptNumber, getProposedReceiptNumber, addEventNote, deleteEventNote, onCorrectEvent, currentUser?.id]
   );
 
   const toggleSectionCollapse = (key) => {

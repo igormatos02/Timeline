@@ -84,6 +84,7 @@ export const translations = {
     toast: {
       eventSavedSuccess: "Event saved successfully to database!",
       eventCreatedSuccess: "Event created successfully in database!",
+      eventCorrectedSuccess: "Movement corrected: the original was cancelled and the correct one created.",
       eventUpdatedSuccess: "Event updated successfully in database!",
       eventDeletedSuccess: "Event deleted from database!",
       eventSaveError: "Error saving event to database.",
@@ -441,6 +442,8 @@ export const translations = {
     actionSave: "Save",
     actionCancel: "Cancel",
     actionCancelEvent: "Cancel Event",
+    actionCorrectEvent: "Correct",
+    actionCorrectEventHint: "Opens a pre-filled form: when you save it, this movement is cancelled and the correct one is created",
     actionReactivateEvent: "Reactivate Event",
     actionViewDetails: "View Details",
 
@@ -534,6 +537,7 @@ export const translations = {
 
     // Modal Events
     modal: {
+      correctMovement: "Correct movement",
       day: "Day",
       condoDepositNew: "New Entry",
       condoDepositEdit: "Edit Entry",
@@ -2046,6 +2050,7 @@ export const translations = {
         eventLockedPositive: "Positive financial events are permanently locked and cannot be modified or reverted to pending.",
         transferSameSpace: "The origin and the destination of a transfer must be different.",
         transferAmountRequired: "The transfer amount must be greater than zero.",
+        eventLockedFields: "This movement is already effective and cannot be changed ({{fields}}). Use \"Correct\" to cancel it and create the right one.",
         loanNotFound: "Loan not found",
         personNameRequired: "personName is required",
         obligatorIdentificationRequired: "obligatorIdentification is required",
@@ -2367,6 +2372,7 @@ export const translations = {
     toast: {
       eventSavedSuccess: "Evento guardado com sucesso na base de dados!",
       eventCreatedSuccess: "Evento adicionado com sucesso na base de dados!",
+      eventCorrectedSuccess: "Movimento corrigido: o original foi cancelado e o correto criado.",
       eventUpdatedSuccess: "Evento atualizado com sucesso na base de dados!",
       eventDeletedSuccess: "Evento eliminado da base de dados!",
       eventSaveError: "Erro ao guardar evento na base de dados.",
@@ -2724,6 +2730,8 @@ export const translations = {
     actionSave: "Guardar",
     actionCancel: "Cancelar",
     actionCancelEvent: "Cancelar Evento",
+    actionCorrectEvent: "Corrigir",
+    actionCorrectEventHint: "Abre o formulário preenchido: ao guardar, este movimento é cancelado e o correto é criado",
     actionReactivateEvent: "Reativar Evento",
     actionViewDetails: "Ver Detalhes",
 
@@ -2817,6 +2825,7 @@ export const translations = {
 
     // Modal Events
     modal: {
+      correctMovement: "Corrigir movimento",
       day: "Dia",
       condoDepositNew: "Nova Entrada",
       condoDepositEdit: "Editar Entrada",
@@ -4329,6 +4338,7 @@ export const translations = {
         eventLockedPositive: "Eventos financeiros positivos estão permanentemente trancados e não podem ser alterados nem revertidos para pendente.",
         transferSameSpace: "A origem e o destino de uma transferência têm de ser diferentes.",
         transferAmountRequired: "O valor da transferência tem de ser maior que zero.",
+        eventLockedFields: "Este movimento já está efetivado e não pode ser alterado ({{fields}}). Use \"Corrigir\" para o cancelar e criar o correto.",
         loanNotFound: "Empréstimo não encontrado",
         personNameRequired: "personName é obrigatório",
         obligatorIdentificationRequired: "obligatorIdentification é obrigatório",

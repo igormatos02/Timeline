@@ -37,6 +37,7 @@ import {
   isPocketTransferEvent
 } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
+import { isLockableMovement, changedLockedFields } from '../../../shared/finance/corrections.js';
 
 const t = createT('en');
 
@@ -549,6 +550,20 @@ export class FinancialEventService {
     return data;
   }
 
+  // Status and date of the occurrence being edited: occurrence ids of recurring series end with '_yyyy-MM-dd' and
+  // the status of each occurrence lives in the status table (the row status is only a fallback)
+  async _getOccurrenceState(id, existing) {
+    const match = String(id || '').match(/^(.*)_(\d{4}-\d{2}-\d{2})$/);
+    const date = match ? match[2] : (existing?.date || null);
+    if (!date) return { status: existing?.status || null, date: null };
+    const year = parseInt(date.substring(0, 4), 10);
+    const month = parseInt(date.substring(5, 7), 10);
+    const statusMap = await financialEventStatusRepository.getStatusMap();
+    const keys = [existing?.eventId, existing?.id, match?.[1], id].filter(Boolean);
+    const found = keys.map((key) => statusMap.get(`${year}_${month}_${key}`)).find(Boolean);
+    return { status: found || existing?.status || null, date: match ? date : null };
+  }
+
   // Account transfers: origin and destination spaces must differ (null = General) and the amount must be positive
   _validateAccountTransfer(data) {
     if (!isPocketTransferEvent(data)) return;
@@ -658,14 +673,23 @@ export class FinancialEventService {
       this._validateAccountTransfer({ ...existing, ...directUpdates });
     }
 
-    const isFinancialType = existing?.eventType === EventType.INCOME || existing?.eventType === EventType.EXPENSE || existing?.eventType === EventType.INVESTMENT;
-    const isExistingPositive = existing && isPositiveStatus(existing.status);
-
-    if (isFinancialType && isExistingPositive) {
-      if (directUpdates.status === EventStatus.CANCELLED) {
-        // cancellation is allowed
-      } else if (directUpdates.status && !isPositiveStatus(directUpdates.status)) {
-        throw new Error(t('backend.validation.eventLockedPositive'));
+    // Effective movements are locked (shared/finance/corrections.js): only cancelling, or cosmetic changes
+    // (title, notes, labels, receipt data) are allowed; mistakes are fixed with "Correct"
+    if (existing && isLockableMovement(existing)) {
+      const { status: occurrenceStatus, date: occurrenceDate } = await this._getOccurrenceState(id, existing);
+      if (isPositiveStatus(occurrenceStatus)) {
+        const isCancelling = directUpdates.status === EventStatus.CANCELLED || isCancelledStatus(directUpdates.status);
+        if (!isCancelling) {
+          if (directUpdates.status && !isPositiveStatus(directUpdates.status)) {
+            throw new Error(t('backend.validation.eventLockedPositive'));
+          }
+          const changed = changedLockedFields(existing, directUpdates, { occurrenceDate });
+          if (changed.length > 0) {
+            const error = new Error(t('backend.validation.eventLockedFields', { fields: changed.join(', ') }));
+            error.code = 'EVENT_LOCKED';
+            throw error;
+          }
+        }
       }
     }
 
@@ -1118,6 +1142,14 @@ export class FinancialEventService {
 
     const targetEventId = targetEvent.eventId || targetEvent.id;
     const effectiveStatus = options.status || targetEvent.status || EventStatus.PAID;
+
+    // An effective movement never goes back to pending (it can only be cancelled or corrected)
+    const isRevertingToPending = options.status && !isPositiveStatus(options.status) &&
+      !isCancelledStatus(options.status) && options.status !== EventStatus.DELETED;
+    if (isRevertingToPending && targetDate && isLockableMovement(targetEvent)) {
+      const { status: currentStatus } = await this._getOccurrenceState(`${rootId}_${String(targetDate).substring(0, 10)}`, targetEvent);
+      if (isPositiveStatus(currentStatus)) throw new Error(t('backend.validation.eventLockedPositive'));
+    }
 
     // Manual receipt number: it must not be used by another receipt of the same timeline
     const requestedReceiptNumber = options.contYear !== undefined ? options.contYear : options.cont_year;

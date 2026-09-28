@@ -312,7 +312,9 @@ export default function FinancialEventModal({
       // Space of the account ("Where"): a pocket, or null for the General space
       pocketId: formData.pocketId || null,
       pocket_id: formData.pocketId || null,
-      updateScope: (isEditing && (initialData?.seriesId || initialData?.eventId || initialData?.isRecurring || isRecurring)) ? updateScope : undefined
+      updateScope: (isEditing && (initialData?.seriesId || initialData?.eventId || initialData?.isRecurring || isRecurring)) ? updateScope : undefined,
+      // "Correct" an effective movement: the original occurrence is cancelled once this one is saved
+      correctionOf: initialData?.correctionOf || undefined
     };
 
     if (config.useBreakdown) {
@@ -341,9 +343,11 @@ export default function FinancialEventModal({
       accent={ACCENT}
       icon={config.icon}
       title={
-        isEditing
-          ? t(config.titleKeys?.editKey)
-          : t(config.titleKeys?.newKey)
+        initialData?.correctionOf
+          ? t('modal.correctMovement')
+          : isEditing
+            ? t(config.titleKeys?.editKey)
+            : t(config.titleKeys?.newKey)
       }
       subtitle={timeline?.name}
       footer={

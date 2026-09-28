@@ -159,7 +159,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
   // Payment date edited directly on the ticket (paid / received events)
-  const { saveReceiptDate, saveReceiptNumber, getProposedReceiptNumber, addEventNote, deleteEventNote, currentUserId } = useEventActions();
+  const { saveReceiptDate, saveReceiptNumber, getProposedReceiptNumber, addEventNote, deleteEventNote, correctEvent, currentUserId } = useEventActions();
   const [isReceiptDateOpen, setIsReceiptDateOpen] = useState(false);
   const [receiptDateDraft, setReceiptDateDraft] = useState(null);
   const [isSavingReceiptDate, setIsSavingReceiptDate] = useState(false);
@@ -3144,6 +3144,35 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
           }}
         >
           <Ban size={13} />
+        </button>
+      )}
+
+      {/* "Correct" an effective movement: pre-filled form; the original is cancelled when the correction is saved */}
+      {isLockedPositive && !isCancelled && !blocksChanges && correctEvent && (
+        <button
+          type="button"
+          className="action-icon-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            correctEvent(event);
+          }}
+          title={t('actionCorrectEventHint')}
+          style={{
+            padding: '3px 7px',
+            borderRadius: '5px',
+            color: isFlatPositive ? TimelineColor.WHITE : TimelineColor.WARNING,
+            background: isFlatPositive ? `${TimelineColor.WHITE}33` : `${TimelineColor.WARNING}1f`,
+            border: `1px solid ${isFlatPositive ? `${TimelineColor.WHITE}59` : `${TimelineColor.WARNING}59`}`,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '0.68rem',
+            fontWeight: '700'
+          }}
+        >
+          <Wrench size={12} />
+          <span>{t('actionCorrectEvent')}</span>
         </button>
       )}
 

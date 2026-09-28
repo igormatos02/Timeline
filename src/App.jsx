@@ -31,6 +31,7 @@ import {
   isAmortizationEvent
 } from './utils/loanCalculations';
 import { buildWithdrawalReferences, buildOutflowReferences } from '../shared/finance/references.js';
+import { isLockedMovement, isLockableMovement, buildCorrectionDraft } from '../shared/finance/corrections.js';
 import { formatCurrency } from './utils/formatCurrency';
 import { generateUUID } from './utils/uuid.js';
 import * as api from './services/api';
@@ -1298,9 +1299,11 @@ export default function App() {
     focusedMonthRef.current = eventObj?.date ? eventObj.date.substring(0, 7) : null;
     scrollYBeforeModalRef.current = window.scrollY;
 
-    const isFinancialLocked =
-      (eventObj?.eventType === EventType.INCOME || eventObj?.eventType === EventType.EXPENSE || eventObj?.eventType === EventType.INVESTMENT) &&
-      (isPositiveStatus(eventObj?.status) || isCancelledStatus(eventObj?.status));
+    // Effective movements are locked (only cancelled or corrected) and cancelled ones cannot be edited
+    const isFinancialLocked = Boolean(eventObj) && (
+      isLockedMovement(eventObj) ||
+      (isLockableMovement(eventObj) && isCancelledStatus(eventObj.status))
+    );
     if (isFinancialLocked) {
       showToast(t('timeline.cannotEditLockedEvent'), 'warning');
       return;
@@ -1324,6 +1327,22 @@ export default function App() {
     setEventModalDefaultNature(nature);
     setIsEventModalOpen(true);
   }, [handleOpenAmortizationModal, handleOpenWithdrawalModal]);
+
+  // "Correct" an effective movement: opens the matching form pre-filled with its data (as a new one-time
+  // movement); the original occurrence is cancelled only when the correction is saved (see handleSaveEvent)
+  const handleCorrectEvent = useCallback((eventObj) => {
+    if (!eventObj) return;
+    focusedMonthRef.current = eventObj.date ? eventObj.date.substring(0, 7) : null;
+    scrollYBeforeModalRef.current = window.scrollY;
+    const draft = buildCorrectionDraft(eventObj);
+    if (eventObj.eventType === EventType.WITHDRAWAL || eventObj.isWithdrawal || isAccountOutflowEvent(eventObj) || isPocketTransferEvent(eventObj)) {
+      handleOpenWithdrawalModal(eventObj.date, eventObj.pocketId || eventObj.pocket_id || null, draft);
+      return;
+    }
+    setEditingEvent(draft);
+    setEventModalDefaultNature(eventObj.isExpense ? 'expense' : eventObj.isInvestment ? 'investment' : 'income');
+    setIsEventModalOpen(true);
+  }, [handleOpenWithdrawalModal]);
 
   const sanitizeFutureEventStatus = (event) => {
     if (!event || !event.date) return event;
@@ -1352,8 +1371,13 @@ export default function App() {
     return event;
   };
 
-  const handleSaveEvent = (rawEventData) => {
-    const eventData = sanitizeFutureEventStatus(rawEventData);
+  // editTarget: the event being edited (the event modal's one by default; the account outflow modal passes its own)
+  const handleSaveEvent = (rawEventData, editTarget = editingEvent) => {
+    // "Correct": the new movement keeps the original's effective status and the original occurrence is cancelled
+    const { correctionOf, ...correctedData } = rawEventData || {};
+    const eventData = sanitizeFutureEventStatus(correctionOf
+      ? { ...correctedData, status: correctionOf.status || correctedData.status, isCompleted: Boolean(correctionOf.status) || correctedData.isCompleted }
+      : correctedData);
     const savedScrollPos = scrollYBeforeModalRef.current || window.scrollY;
 
     // 1. Determinar se o evento pertence a um contrato específico (empréstimo) ou é dinâmico do Timeboard
@@ -1366,16 +1390,16 @@ export default function App() {
 
     const saveAsync = async () => {
       try {
-        if (editingEvent && editingEvent.id) {
+        if (editTarget && editTarget.id) {
           const updated = {
-            ...editingEvent,
+            ...editTarget,
             ...eventData,
             timeboardId: activeTimeboardId,
             timelineId: targetTimelineId,
             timelineOriginId: targetTimelineId,
-            eventId: editingEvent.eventId || editingEvent.seriesId
+            eventId: editTarget.eventId || editTarget.seriesId
           };
-          await api.updateEvent(editingEvent.id, updated);
+          await api.updateEvent(editTarget.id, updated);
           await refreshTimelines();
           showToast(t('toast.eventUpdatedSuccess'), 'success');
         } else {
@@ -1394,8 +1418,11 @@ export default function App() {
             isRecurring
           };
           await api.createEvent(newEvent);
+          if (correctionOf?.id) {
+            await api.setEventStatus(correctionOf.id, { date: correctionOf.date, status: EventStatus.CANCELLED, timeboardId: activeTimeboardId });
+          }
           await refreshTimelines();
-          showToast(t('toast.eventCreatedSuccess'), 'success');
+          showToast(t(correctionOf ? 'toast.eventCorrectedSuccess' : 'toast.eventCreatedSuccess'), 'success');
         }
 
         const monthKey = eventData.date ? eventData.date.substring(0, 7) : focusedMonthRef.current;
@@ -1426,7 +1453,7 @@ export default function App() {
         });
       } catch (err) {
         console.error('Error saving event:', err);
-        showToast(err.message || t('toast.eventSaveError') || 'Erro ao guardar evento na base de dados.', 'error');
+        showToast(err.message || t('toast.eventSaveError'), 'error');
       }
     };
 
@@ -2361,6 +2388,7 @@ export default function App() {
             onLoadMoreFuture={handleLoadMoreFuture}
             onLoadMorePast={handleLoadMorePast}
             onEditEvent={handleOpenEditEvent}
+            onCorrectEvent={handleCorrectEvent}
             onUpdateEventDirect={handleUpdateEventDirect}
             onDeleteEvent={handleRequestDeleteEvent}
             onToggleTask={handleToggleTask}
@@ -2527,7 +2555,7 @@ export default function App() {
             setEditingWithdrawal(null);
             setWithdrawalDefaultPocketId(null);
           }}
-          onSave={handleSaveEvent}
+          onSave={(payload) => handleSaveEvent(payload, editingWithdrawal)}
           initialData={editingWithdrawal}
           defaultDate={withdrawalDefaultDate}
           defaultPocketId={withdrawalDefaultPocketId}

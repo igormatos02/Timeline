@@ -6,6 +6,7 @@ import { createContext, useContext } from 'react';
  * - saveReceiptNumber(event, number): stores the receipt number of an occurrence -> { ok } | { error }
  * - getProposedReceiptNumber(event): next sequential receipt number of the event's timeline
  * - addEventNote(event, text) / deleteEventNote(event, noteId): comments of that occurrence (year / month)
+ * - correctEvent(event): "Correct" an effective movement (pre-filled form; the original is cancelled on save)
  * - currentUserId: id of the signed-in user (authors can delete their own comments)
  */
 const EventActionsContext = createContext({
@@ -14,6 +15,7 @@ const EventActionsContext = createContext({
   getProposedReceiptNumber: null,
   addEventNote: null,
   deleteEventNote: null,
+  correctEvent: null,
   currentUserId: null
 });
 

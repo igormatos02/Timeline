@@ -288,7 +288,9 @@ export default function AccountOutflowModal({
       onSubmit={handleSubmit}
       accent={accent}
       icon={OUTFLOW_ICONS[outflowType]}
-      title={isEditing ? t('withdrawalModal.outflowEditTitle') : t('withdrawalModal.outflowTitle')}
+      title={initialData?.correctionOf
+        ? t('modal.correctMovement')
+        : (isEditing ? t('withdrawalModal.outflowEditTitle') : t('withdrawalModal.outflowTitle'))}
       subtitle={timeline?.name || t('withdrawalModal.subtitle')}
       footer={
         <>

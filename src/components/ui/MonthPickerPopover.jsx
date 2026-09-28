@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, parseISO, setMonth, setYear } from 'date-fns';
 import { TimelineColor } from '../../enums/index.js';
@@ -17,6 +17,28 @@ export default function MonthPickerPopover({
   explanation = null,
   allowPast = false
 }) {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        onToggle();
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onToggle();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onToggle]);
+
   const dateObj = baseDate ? parseISO(baseDate) : new Date();
   const baseYearStr = format(dateObj, 'yyyy');
   const baseMonthStr = format(dateObj, 'MM');
@@ -26,11 +48,17 @@ export default function MonthPickerPopover({
     : label;
 
   return (
-    <div style={{
-      marginTop: '10px', padding: '12px',
-      background: `${accent}14`, border: `1px solid ${accent}47`,
-      borderRadius: '10px'
-    }}>
+    <div
+      ref={containerRef}
+      style={{
+        marginTop: '10px',
+        padding: '12px',
+        background: `${accent}14`,
+        border: `1px solid ${accent}47`,
+        borderRadius: '10px',
+        position: 'relative'
+      }}
+    >
       {label && (
         <label style={{
           display: 'flex', alignItems: 'center', gap: '6px',
@@ -62,9 +90,18 @@ export default function MonthPickerPopover({
 
       {isOpen && (
         <div style={{
-          marginTop: '8px', background: 'var(--bg-card)',
-          border: `1px solid ${accent}4d`, borderRadius: '10px',
-          padding: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+          position: 'absolute',
+          top: 'calc(100% + 4px)',
+          left: 0,
+          right: 0,
+          zIndex: 110,
+          background: 'var(--bg-card)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: `1px solid ${accent}4d`,
+          borderRadius: '10px',
+          padding: '12px',
+          boxShadow: 'var(--shadow-lg)'
         }}>
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -78,7 +115,7 @@ export default function MonthPickerPopover({
               }}>
               <ChevronLeft size={16} />
             </button>
-            <span style={{ fontWeight: '800', fontSize: '0.9rem', color: accent }}>{year}</span>
+            <span style={{ fontWeight: '800', fontSize: '0.9rem', color: 'var(--primary-light)' }}>{year}</span>
             <button type="button" onClick={() => onYearChange(year + 1)}
               style={{
                 background: 'transparent', border: 'none',
@@ -99,20 +136,49 @@ export default function MonthPickerPopover({
               const monthLabel = format(sampleDate, 'MMM', { locale: dateLocale });
 
               return (
-                <button key={curMonthKey} type="button" disabled={isPastThanStart}
+                <button
+                  key={curMonthKey}
+                  type="button"
+                  disabled={isPastThanStart}
                   onClick={() => { onChange(curMonthKey); onToggle(); }}
                   style={{
-                    padding: '8px 4px', borderRadius: '6px',
-                    border: isSelectedMonth ? `2px solid ${accent}` : '1px solid var(--border-glass)',
-                    background: isSelectedMonth ? `${accent}40`
-                      : isPastThanStart ? 'rgba(255,255,255,0.01)' : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                    color: isSelectedMonth ? accent : isPastThanStart ? 'var(--text-dim)' : 'var(--text-main)',
-                    fontWeight: isSelectedMonth ? '800' : '600',
-                    fontSize: '0.78rem', textTransform: 'capitalize',
+                    padding: '8px 4px',
+                    borderRadius: '6px',
+                    border: isSelectedMonth
+                      ? '1px solid color-mix(in srgb, var(--primary) 35%, transparent)'
+                      : '1px solid var(--border-glass)',
+                    background: isSelectedMonth
+                      ? 'color-mix(in srgb, var(--primary) 15%, transparent)'
+                      : isPastThanStart
+                      ? 'transparent'
+                      : 'var(--bg-glass)',
+                    color: isSelectedMonth
+                      ? 'var(--primary-light)'
+                      : isPastThanStart
+                      ? 'var(--text-dim)'
+                      : 'var(--text-main)',
+                    fontWeight: isSelectedMonth ? '700' : '500',
+                    fontSize: '0.78rem',
+                    textTransform: 'capitalize',
                     cursor: isPastThanStart ? 'not-allowed' : 'pointer',
-                    opacity: isPastThanStart ? 0.35 : 1
+                    opacity: isPastThanStart ? 0.35 : 1,
+                    transition: 'all 0.15s ease'
                   }}
-                >{monthLabel}</button>
+                  onMouseEnter={(e) => {
+                    if (!isPastThanStart && !isSelectedMonth) {
+                      e.currentTarget.style.background = 'var(--bg-card-hover)';
+                      e.currentTarget.style.borderColor = 'var(--border-glass)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isPastThanStart && !isSelectedMonth) {
+                      e.currentTarget.style.background = 'var(--bg-glass)';
+                      e.currentTarget.style.borderColor = 'var(--border-glass)';
+                    }
+                  }}
+                >
+                  {monthLabel}
+                </button>
               );
             })}
           </div>
@@ -128,3 +194,4 @@ export default function MonthPickerPopover({
     </div>
   );
 }
+

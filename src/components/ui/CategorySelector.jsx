@@ -1,140 +1,275 @@
-import React from 'react';
-import { Search, ChevronDown, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ChevronDown, Check, Search } from 'lucide-react';
+import { TimelineColor } from '../../enums/index.js';
+import { useTranslation } from '../../i18n/LanguageContext.jsx';
 
 export default function CategorySelector({
-  value, onChange, categoryMeta, accent = '#10b981',
-  translationPrefix = 'CATEGORY', t, label = 'Categoria',
-  isOpen, onToggle
+  value,
+  onChange,
+  categoryMeta = {},
+  accent = TimelineColor.EMERALD,
+  translationPrefix = 'incomeCategories',
+  label,
+  isOpen,
+  onToggle,
+  marginBottom = '0'
 }) {
-  const [internalOpen, setInternalOpen] = React.useState(false);
-  const [search, setSearch] = React.useState('');
+  const { t } = useTranslation();
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef(null);
 
   const open = isOpen !== undefined ? isOpen : internalOpen;
-  const toggle = onToggle || (() => setInternalOpen(!internalOpen));
+  const toggle = onToggle || (() => setInternalOpen((prev) => !prev));
+  const close = () => {
+    if (typeof onToggle === 'function' && isOpen) onToggle();
+    else setInternalOpen(false);
+  };
 
-  const currentMeta = categoryMeta[value] || categoryMeta[Object.keys(categoryMeta)[0]];
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        close();
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        close();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  const currentMeta = categoryMeta[value] || Object.values(categoryMeta)[0] || {};
   const CurrentIcon = currentMeta?.icon;
+  const displayLabel = t(`${translationPrefix}.${value}`) || value;
+
+  const entries = Object.entries(categoryMeta);
+  const showSearch = entries.length > 8;
+
+  const filteredEntries = entries.filter(([catKey, meta]) => {
+    if (!search.trim()) return true;
+    const itemLabel = t(`${translationPrefix}.${catKey}`) || catKey;
+    return itemLabel.toLowerCase().includes(search.toLowerCase());
+  });
 
   return (
-    <div style={{ marginBottom: '14px', position: 'relative' }}>
-      <label style={{
-        display: 'block', fontSize: '0.78rem', fontWeight: '700',
-        marginBottom: '6px', color: 'var(--text-main)'
-      }}>{label}</label>
+    <div ref={containerRef} style={{ position: 'relative', marginBottom, minWidth: 0, flex: 1 }}>
+      {label && (
+        <label
+          style={{
+            display: 'block',
+            fontSize: '0.8rem',
+            fontWeight: '600',
+            marginBottom: '5px',
+            color: 'var(--text-muted)'
+          }}
+        >
+          {label}
+        </label>
+      )}
 
-      <button type="button" onClick={toggle}
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={toggle}
         style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 12px', borderRadius: '10px',
-          background: 'var(--bg-glass, rgba(255,255,255,0.03))',
-          border: open ? `1px solid ${accent}` : '1px solid var(--border-glass)',
-          boxShadow: open ? `0 0 12px ${accent}33` : 'none',
-          color: 'var(--text-main)', cursor: 'pointer',
-          transition: 'all 0.2s ease', boxSizing: 'border-box'
-        }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          width: '100%',
+          height: '42px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '6px',
+          background: 'var(--bg-glass)',
+          border: open ? `2px solid ${accent}` : '1px solid var(--border-glass)',
+          borderRadius: '8px',
+          padding: '0 10px',
+          cursor: 'pointer',
+          boxSizing: 'border-box',
+          color: 'var(--text-main)',
+          transition: 'border-color 0.15s ease'
+        }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
           {CurrentIcon && (
-            <div style={{
-              width: '28px', height: '28px', borderRadius: '8px',
-              background: currentMeta.bg, color: currentMeta.color,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-            }}>
-              <CurrentIcon size={16} />
-            </div>
+            <span
+              style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '6px',
+                background: currentMeta.bg || `${accent}24`,
+                color: currentMeta.color || accent,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
+            >
+              <CurrentIcon size={14} />
+            </span>
           )}
-          <span style={{ fontSize: '0.86rem', fontWeight: '700', color: 'var(--text-main)' }}>
-            {t(`${translationPrefix}.${value}`) || value}
+          <span
+            style={{
+              fontSize: '0.88rem',
+              fontWeight: '700',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              color: 'var(--text-main)'
+            }}
+          >
+            {displayLabel}
           </span>
-        </div>
-        <ChevronDown size={16} style={{
-          color: 'var(--text-muted)',
-          transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-          transition: 'transform 0.2s ease'
-        }} />
+        </span>
+        <ChevronDown
+          size={14}
+          style={{
+            color: 'var(--text-muted)',
+            transform: open ? 'rotate(180deg)' : 'none',
+            transition: 'transform 0.2s',
+            flexShrink: 0
+          }}
+        />
       </button>
 
       {open && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '6px',
-          background: 'var(--bg-card, #131722)',
-          border: `1px solid ${accent}59`, borderRadius: '12px',
-          boxShadow: '0 16px 36px rgba(0, 0, 0, 0.85)',
-          padding: '12px', zIndex: 100,
-          backdropFilter: 'blur(16px)', maxHeight: '260px',
-          display: 'flex', flexDirection: 'column'
-        }}>
-          <div style={{ position: 'relative', marginBottom: '8px' }}>
-            <Search size={14} style={{
-              position: 'absolute', left: '10px', top: '50%',
-              transform: 'translateY(-50%)', color: 'var(--text-dim)'
-            }} />
-            <input type="text" value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('sidebar.search') || 'Buscar categoria...'}
-              style={{
-                width: '100%', padding: '6px 10px 6px 30px',
-                fontSize: '0.78rem', borderRadius: '6px',
-                background: 'var(--bg-glass, rgba(255,255,255,0.05))',
-                border: '1px solid var(--border-glass)',
-                color: 'var(--text-main)', outline: 'none',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            zIndex: 100,
+            background: 'var(--bg-card)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid var(--border-glass-glow)',
+            borderRadius: '10px',
+            padding: '8px',
+            boxShadow: 'var(--shadow-lg)',
+            boxSizing: 'border-box',
+            maxHeight: '280px',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          {showSearch && (
+            <div style={{ position: 'relative', marginBottom: '8px' }}>
+              <Search
+                size={13}
+                style={{
+                  position: 'absolute',
+                  left: '9px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-muted)'
+                }}
+              />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t('sidebar.search')}
+                style={{
+                  width: '100%',
+                  height: '32px',
+                  padding: '0 8px 0 28px',
+                  fontSize: '0.78rem',
+                  borderRadius: '6px',
+                  background: 'var(--bg-glass)',
+                  border: '1px solid var(--border-glass)',
+                  color: 'var(--text-main)',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+          )}
 
-          <div style={{
-            overflowY: 'auto', flex: 1, display: 'grid',
-            gridTemplateColumns: '1fr 1fr', gap: '6px', paddingRight: '4px'
-          }}>
-            {Object.entries(categoryMeta)
-              .filter(([_, meta]) => {
-                if (!search.trim()) return true;
-                const label = t(`${translationPrefix}.${meta.key || _}`) || meta.key || _;
-                return label.toLowerCase().includes(search.toLowerCase());
-              })
-              .map(([catVal, meta]) => {
-                const IconComp = meta.icon;
-                const isSelected = value === catVal;
-                return (
-                  <button key={catVal} type="button"
-                    onClick={() => {
-                      onChange(catVal);
-                      setSearch('');
-                      if (typeof onToggle === 'function') onToggle();
-                      else setInternalOpen(false);
-                    }}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      gap: '8px', padding: '6px 10px', borderRadius: '8px',
-                      border: isSelected ? `1px solid ${meta.color}` : '1px solid transparent',
-                      background: isSelected ? meta.bg : 'rgba(255, 255, 255, 0.02)',
-                      color: isSelected ? meta.color : 'var(--text-main)',
-                      cursor: 'pointer', textAlign: 'left',
-                      transition: 'all 0.15s ease'
-                    }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                      <div style={{
-                        width: '22px', height: '22px', borderRadius: '6px',
-                        background: meta.bg, color: meta.color,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        flexShrink: 0
-                      }}>
+          <div
+            style={{
+              overflowY: 'auto',
+              display: 'grid',
+              gridTemplateColumns: entries.length > 4 ? '1fr 1fr' : '1fr',
+              gap: '4px',
+              paddingRight: '2px'
+            }}
+          >
+            {filteredEntries.map(([catKey, meta]) => {
+              const IconComp = meta.icon;
+              const isSelected = value === catKey;
+              const itemLabel = t(`${translationPrefix}.${catKey}`) || catKey;
+
+              return (
+                <button
+                  key={catKey}
+                  type="button"
+                  onClick={() => {
+                    onChange(catKey);
+                    setSearch('');
+                    close();
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '6px',
+                    padding: '7px 8px',
+                    borderRadius: '7px',
+                    border: isSelected ? `1px solid ${meta.color}` : '1px solid var(--border-glass)',
+                    background: isSelected ? meta.bg : 'var(--bg-glass)',
+                    color: isSelected ? meta.color : 'var(--text-main)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease',
+                    boxSizing: 'border-box',
+                    minWidth: 0
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
+                    {IconComp && (
+                      <span
+                        style={{
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '5px',
+                          background: meta.bg,
+                          color: meta.color,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}
+                      >
                         <IconComp size={12} />
-                      </div>
-                      <span style={{
-                        fontSize: '0.76rem', fontWeight: isSelected ? '700' : '500',
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                      }}>
-                        {t(`${translationPrefix}.${catVal}`) || catVal}
                       </span>
-                    </div>
-                    {isSelected && <Check size={14} style={{ color: meta.color, flexShrink: 0 }} />}
-                  </button>
-                );
-              })}
+                    )}
+                    <span
+                      style={{
+                        fontSize: '0.76rem',
+                        fontWeight: isSelected ? '700' : '500',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
+                      {itemLabel}
+                    </span>
+                  </span>
+                  {isSelected && <Check size={13} style={{ color: meta.color, flexShrink: 0 }} />}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
     </div>
   );
 }
+

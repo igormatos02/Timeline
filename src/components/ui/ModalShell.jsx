@@ -1,8 +1,9 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { TimelineColor } from '../../enums/index.js';
 
 export default function ModalShell({
-  isOpen, onClose, onSubmit, accent = '#10b981', maxWidth = '680px',
+  isOpen, onClose, onSubmit, accent = TimelineColor.EMERALD, maxWidth = '680px', minHeight,
   icon: Icon, title, subtitle, children, footer,
   overflowY = true, showBorderGlow = true
 }) {
@@ -81,8 +82,9 @@ export default function ModalShell({
         onClick={(e) => e.stopPropagation()}
         style={{
           maxWidth, width: '100%',
+          ...(minHeight ? { minHeight } : {}),
           ...(overflowY ? { maxHeight: '90vh', overflowY: 'auto' } : {}),
-          background: 'var(--bg-card, #131722)',
+          background: 'var(--bg-card)',
           borderRadius: '16px',
           border: `1px solid ${accent}55`,
           boxShadow: showBorderGlow

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, ChevronDown } from 'lucide-react';
 import { format, parseISO, getDaysInMonth } from 'date-fns';
 import { TimelineColor } from '../../enums/index.js';
@@ -24,24 +24,45 @@ export function clampDueDate({ date, day }, minDate = null, maxDate = null) {
 }
 
 /**
- * DueDatePicker - Year | Month | Day on a single row, each opening its own grid below
- * (same look as the original day picker). Reusable by every event creation modal.
- *
- * Props:
- *   date        - 'yyyy-MM-dd' holding the selected year and month
- *   day         - selected day of month (number)
- *   onChange    - ({ date, day }) => void; the day is clamped to the days of the new month
- *   accent      - highlight color of the event type
- *   dayLabel    - label of the day field (e.g. "Due day")
- *   takenDays   - Set | Array of days to flag as already used (optional)
- *   onOpen      - called when a grid opens, so the parent can close its other popovers (optional)
- *   minDate     - earliest allowed date 'yyyy-MM-dd' (optional)
- *   maxDate     - latest allowed date 'yyyy-MM-dd' (optional)
- *   compact     - smaller fields and grid, for inline use (e.g. on a ticket) (optional)
+ * DueDatePicker - Year | Month | Day on a single row, floating its selection grid
+ * above other elements without pushing content down.
  */
-export default function DueDatePicker({ date, day, onChange, accent = TimelineColor.SUCCESS, dayLabel, takenDays = null, onOpen, minDate = null, maxDate = null, compact = false }) {
+export default function DueDatePicker({
+  date,
+  day,
+  onChange,
+  accent = TimelineColor.SUCCESS,
+  dayLabel,
+  takenDays = null,
+  onOpen,
+  minDate = null,
+  maxDate = null,
+  compact = false,
+  marginBottom = '0'
+}) {
   const { t, dateLocale } = useTranslation();
   const [openPart, setOpenPart] = useState(null);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!openPart) return;
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpenPart(null);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setOpenPart(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openPart]);
 
   const dateObj = date ? parseISO(date) : new Date();
   const year = dateObj.getFullYear();
@@ -78,12 +99,18 @@ export default function DueDatePicker({ date, day, onChange, accent = TimelineCo
     return false;
   };
 
-  const labelStyle = { display: 'block', fontSize: compact ? '0.64rem' : '0.78rem', fontWeight: '700', marginBottom: compact ? '2px' : '5px', color: compact ? 'var(--text-muted)' : 'var(--text-main)' };
+  const labelStyle = {
+    display: 'block',
+    fontSize: compact ? '0.7rem' : '0.8rem',
+    fontWeight: '600',
+    marginBottom: compact ? '2px' : '5px',
+    color: 'var(--text-muted)'
+  };
 
   const renderTrigger = (part, label, text, withIcon = false) => {
     const isOpen = openPart === part;
     return (
-      <div style={{ minWidth: 0 }}>
+      <div style={{ minWidth: 0, flex: 1 }}>
         <label style={labelStyle}>{label}</label>
         <button
           type="button"
@@ -91,24 +118,26 @@ export default function DueDatePicker({ date, day, onChange, accent = TimelineCo
           onClick={() => togglePart(part)}
           style={{
             width: '100%',
+            height: compact ? '28px' : '42px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: compact ? '4px' : '6px',
             background: 'var(--bg-glass)',
-            border: isOpen ? `2px solid ${accent}` : '1px solid var(--border-glass)',
+            border: isOpen ? '2px solid var(--primary)' : '1px solid var(--border-glass)',
             borderRadius: compact ? '6px' : '8px',
-            padding: compact ? '4px 6px' : '10px 12px',
+            padding: compact ? '0 6px' : '0 10px',
             cursor: 'pointer',
             boxSizing: 'border-box',
-            color: 'var(--text-main)'
+            color: 'var(--text-main)',
+            transition: 'border-color 0.15s ease'
           }}
         >
-          <span style={{ display: 'flex', alignItems: 'center', gap: compact ? '4px' : '8px', minWidth: 0 }}>
-            {withIcon && <Calendar size={compact ? 11 : 16} style={{ color: accent, flexShrink: 0 }} />}
-            <span style={{ fontSize: compact ? '0.72rem' : '0.92rem', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{text}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: compact ? '4px' : '6px', minWidth: 0 }}>
+            {withIcon && <Calendar size={compact ? 11 : 15} style={{ color: 'var(--primary-light)', flexShrink: 0 }} />}
+            <span style={{ fontSize: compact ? '0.72rem' : '0.88rem', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{text}</span>
           </span>
-          <ChevronDown size={compact ? 11 : 15} style={{ color: 'var(--text-muted)', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
+          <ChevronDown size={compact ? 11 : 14} style={{ color: 'var(--text-muted)', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
         </button>
       </div>
     );
@@ -123,16 +152,40 @@ export default function DueDatePicker({ date, day, onChange, accent = TimelineCo
       style={{
         opacity: disabled ? 0.35 : 1,
         position: 'relative',
-        padding: compact ? '3px 0' : '7px 0',
+        padding: compact ? '4px 0' : '8px 0',
         fontSize: compact ? '0.68rem' : '0.82rem',
-        fontWeight: isSelected ? '800' : '600',
+        fontWeight: isSelected ? '700' : '500',
         borderRadius: '6px',
-        border: isSelected ? `2px solid ${accent}` : taken ? `1px dashed ${TimelineColor.DANGER}73` : '1px solid var(--border-glass)',
-        background: isSelected ? `${accent}38` : taken ? `${TimelineColor.DANGER}14` : 'var(--bg-glass)',
-        color: isSelected ? accent : taken ? TimelineColor.DANGER : 'var(--text-main)',
+        border: isSelected
+          ? '1px solid color-mix(in srgb, var(--primary) 35%, transparent)'
+          : taken
+          ? `1px solid ${TimelineColor.DANGER}73`
+          : '1px solid var(--border-glass)',
+        background: isSelected
+          ? 'color-mix(in srgb, var(--primary) 15%, transparent)'
+          : taken
+          ? `${TimelineColor.DANGER}14`
+          : 'var(--bg-glass)',
+        color: isSelected
+          ? 'var(--primary-light)'
+          : taken
+          ? TimelineColor.DANGER
+          : 'var(--text-main)',
         cursor: disabled ? 'not-allowed' : 'pointer',
         transition: 'all 0.15s ease',
         textTransform: 'capitalize'
+      }}
+      onMouseEnter={(e) => {
+        if (!disabled && !isSelected) {
+          e.currentTarget.style.background = 'var(--bg-card-hover)';
+          e.currentTarget.style.borderColor = 'var(--border-glass)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!disabled && !isSelected) {
+          e.currentTarget.style.background = taken ? `${TimelineColor.DANGER}14` : 'var(--bg-glass)';
+          e.currentTarget.style.borderColor = taken ? `1px solid ${TimelineColor.DANGER}73` : 'var(--border-glass)';
+        }
       }}
     >
       {content}
@@ -176,10 +229,26 @@ export default function DueDatePicker({ date, day, onChange, accent = TimelineCo
     }
 
     return (
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-glass)', borderRadius: compact ? '8px' : '10px', padding: compact ? '6px' : '12px', marginTop: compact ? '4px' : '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: compact ? '4px' : '8px' }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: 'calc(100% + 4px)',
+          left: 0,
+          right: 0,
+          zIndex: 100,
+          background: 'var(--bg-card)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid var(--border-glass-glow)',
+          borderRadius: compact ? '8px' : '10px',
+          padding: compact ? '8px' : '12px',
+          boxShadow: 'var(--shadow-lg)',
+          boxSizing: 'border-box'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: compact ? '6px' : '10px' }}>
           <span style={{ fontSize: compact ? '0.62rem' : '0.74rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{title}</span>
-          {info && <span style={{ fontSize: compact ? '0.62rem' : '0.74rem', color: accent, fontWeight: '800', textTransform: 'capitalize' }}>{info}</span>}
+          {info && <span style={{ fontSize: compact ? '0.62rem' : '0.74rem', color: 'var(--primary-light)', fontWeight: '800', textTransform: 'capitalize' }}>{info}</span>}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: compact ? '3px' : '6px' }}>{buttons}</div>
       </div>
@@ -187,8 +256,8 @@ export default function DueDatePicker({ date, day, onChange, accent = TimelineCo
   };
 
   return (
-    <div style={{ marginBottom: compact ? '6px' : '14px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr 1.2fr', gap: compact ? '4px' : '8px' }}>
+    <div ref={containerRef} style={{ position: 'relative', marginBottom }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '0.85fr 1.15fr 1.15fr', gap: compact ? '4px' : '6px' }}>
         {renderTrigger(PART.YEAR, t('modal.year'), String(year))}
         {renderTrigger(PART.MONTH, t('modal.month'), format(dateObj, 'MMMM', { locale: dateLocale }))}
         {renderTrigger(PART.DAY, dayLabel || t('modal.dayOfMonth'), t('modal.dayValue', { day }), true)}

@@ -1,12 +1,21 @@
 import React from 'react';
 import { Calendar, ChevronDown } from 'lucide-react';
 import { format, parseISO, getDaysInMonth } from 'date-fns';
+import { TimelineColor } from '../../enums/index.js';
+import { useTranslation } from '../../i18n/LanguageContext.jsx';
 
 export default function DayPickerPopover({
-  value, onChange, accent = '#10b981', dateLocale,
-  baseDate, label = 'Dia de vencimento', isOpen, onToggle,
+  value,
+  onChange,
+  accent = TimelineColor.EMERALD,
+  dateLocale,
+  baseDate,
+  label,
+  isOpen,
+  onToggle,
   takenDays = null
 }) {
+  const { t } = useTranslation();
   const dateObj = baseDate ? parseISO(baseDate) : new Date();
   const totalDays = getDaysInMonth(dateObj);
   const daysArray = Array.from({ length: totalDays }, (_, i) => i + 1);
@@ -20,24 +29,35 @@ export default function DayPickerPopover({
 
   return (
     <div style={{ marginBottom: '14px' }}>
-      <label style={{
-        display: 'block', fontSize: '0.78rem', fontWeight: '700',
-        marginBottom: '5px', color: 'var(--text-main)'
-      }}>{label}</label>
+      <label
+        style={{
+          display: 'block',
+          fontSize: '0.8rem',
+          fontWeight: '600',
+          marginBottom: '5px',
+          color: 'var(--text-muted)'
+        }}
+      >
+        {label || t('modal.dayOfMonth')}
+      </label>
       <div
         style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'var(--bg-glass, rgba(255,255,255,0.03))',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'var(--bg-glass)',
           border: isOpen ? `2px solid ${accent}` : '1px solid var(--border-glass)',
-          borderRadius: '8px', padding: '10px 14px',
-          cursor: 'pointer', boxSizing: 'border-box'
+          borderRadius: '8px',
+          padding: '10px 14px',
+          cursor: 'pointer',
+          boxSizing: 'border-box'
         }}
         onClick={onToggle}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Calendar size={16} style={{ color: accent }} />
           <span style={{ fontSize: '0.92rem', fontWeight: '700', color: 'var(--text-main)' }}>
-            Dia {value}
+            {t('modal.dayValue', { day: value })}
           </span>
         </div>
         <ChevronDown
@@ -50,28 +70,52 @@ export default function DayPickerPopover({
         />
       </div>
       {isOpen && (
-        <div style={{
-          background: 'var(--bg-card, #131722)',
-          border: '1px solid var(--border-glass)',
-          borderRadius: '10px', padding: '12px', marginTop: '8px'
-        }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            marginBottom: '8px'
-          }}>
-            <span style={{
-              fontSize: '0.74rem', fontWeight: '700',
-              color: 'var(--text-muted)', textTransform: 'uppercase'
-            }}>Selecionar Dia</span>
-            <span style={{
-              fontSize: '0.74rem', color: accent, fontWeight: '800'
-            }}>
-              {format(dateObj, 'MMMM yyyy', { locale: dateLocale })} ({totalDays} dias)
+        <div
+          style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-glass-glow)',
+            borderRadius: '10px',
+            padding: '12px',
+            marginTop: '8px',
+            boxShadow: 'var(--shadow-lg)'
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '8px'
+            }}
+          >
+            <span
+              style={{
+                fontSize: '0.74rem',
+                fontWeight: '700',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase'
+              }}
+            >
+              {t('modal.selectDay')}
+            </span>
+            <span
+              style={{
+                fontSize: '0.74rem',
+                color: 'var(--primary-light)',
+                fontWeight: '800',
+                textTransform: 'capitalize'
+              }}
+            >
+              {t('modal.monthWithDays', { month: format(dateObj, 'MMMM yyyy', { locale: dateLocale }), count: totalDays })}
             </span>
           </div>
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px'
-          }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7, 1fr)',
+              gap: '6px'
+            }}
+          >
             {daysArray.map((d) => {
               const isSelected = Number(value) === d;
               const taken = isDayTaken(d);
@@ -79,24 +123,41 @@ export default function DayPickerPopover({
                 <button
                   key={d}
                   type="button"
-                  onClick={() => { onChange(d); onToggle(); }}
+                  onClick={() => {
+                    onChange(d);
+                    onToggle();
+                  }}
                   style={{
                     position: 'relative',
-                    padding: '7px 0', fontSize: '0.82rem',
-                    fontWeight: isSelected ? '800' : '600',
+                    padding: '7px 0',
+                    fontSize: '0.82rem',
+                    fontWeight: isSelected ? '700' : '500',
                     borderRadius: '6px',
                     border: isSelected
-                      ? `2px solid ${accent}`
+                      ? '1px solid color-mix(in srgb, var(--primary) 35%, transparent)'
                       : taken
-                      ? '1px dashed rgba(244, 63, 94, 0.45)'
+                      ? `1px solid ${TimelineColor.DANGER}73`
                       : '1px solid var(--border-glass)',
                     background: isSelected
-                      ? `${accent}38`
+                      ? 'color-mix(in srgb, var(--primary) 15%, transparent)'
                       : taken
-                      ? 'rgba(244, 63, 94, 0.08)'
-                      : 'var(--bg-glass, rgba(255,255,255,0.03))',
-                    color: isSelected ? accent : taken ? '#f43f5e' : 'var(--text-main)',
-                    cursor: 'pointer', transition: 'all 0.15s ease'
+                      ? `${TimelineColor.DANGER}14`
+                      : 'var(--bg-glass)',
+                    color: isSelected ? 'var(--primary-light)' : taken ? TimelineColor.DANGER : 'var(--text-main)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.background = 'var(--bg-card-hover)';
+                      e.currentTarget.style.borderColor = 'var(--border-glass)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.background = taken ? `${TimelineColor.DANGER}14` : 'var(--bg-glass)';
+                      e.currentTarget.style.borderColor = taken ? `1px solid ${TimelineColor.DANGER}73` : 'var(--border-glass)';
+                    }
                   }}
                 >
                   {d}
@@ -109,7 +170,7 @@ export default function DayPickerPopover({
                         width: '4px',
                         height: '4px',
                         borderRadius: '50%',
-                        backgroundColor: '#f43f5e'
+                        backgroundColor: TimelineColor.DANGER
                       }}
                     />
                   )}

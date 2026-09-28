@@ -4,6 +4,11 @@
  */
 export const DEFAULT_APP_URL = 'http://localhost:5173';
 
+// Public contact for privacy / account deletion requests (privacy policy, delete account page)
+export const SUPPORT_EMAIL = 'suporte@timeboard.pt';
+// Public site used by the mobile app for the privacy policy and account deletion links
+export const PUBLIC_SITE_URL = 'https://timeboard.pt';
+
 export function getAppUrl(customUrl = null) {
   if (customUrl) return String(customUrl).replace(/\/$/, '');
 

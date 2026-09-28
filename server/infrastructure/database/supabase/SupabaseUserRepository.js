@@ -161,6 +161,12 @@ export class SupabaseUserRepository {
       throw err;
     }
   }
+
+  async delete(id) {
+    const { error } = await supabase.from(TABLE).delete().eq('id', id);
+    if (error) throw new Error(error.message);
+    return true;
+  }
 }
 
 export const userRepository = new SupabaseUserRepository();

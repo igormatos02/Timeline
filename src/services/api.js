@@ -198,6 +198,14 @@ export async function syncGoogleSession(accessToken) {
   return user;
 }
 
+/** Deletes the logged-in user's account (the session is cleared by the caller). */
+export async function deleteAccount() {
+  const res = await apiFetch(`${API_BASE}/auth/account`, { method: 'DELETE' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error);
+  return data;
+}
+
 export async function logoutUser() {
   clearSession();
   try {

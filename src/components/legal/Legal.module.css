@@ -1,0 +1,146 @@
+/* Public legal pages (privacy policy, account deletion) — theme tokens from src/index.css */
+
+.page {
+  min-height: 100vh;
+  background: var(--bg-main);
+  color: var(--text-main);
+  padding: 24px 16px 48px;
+  box-sizing: border-box;
+}
+
+.container {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.link {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.langSwitch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 10px;
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass);
+}
+
+.langButton {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 5px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.langActive {
+  background: var(--primary);
+  color: var(--text-white);
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.title {
+  font-size: 1.7rem;
+  font-weight: 800;
+  margin: 0 0 6px;
+  letter-spacing: -0.02em;
+}
+
+.updated {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 0 0 16px;
+}
+
+.sectionTitle {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 22px 0 8px;
+}
+
+.paragraph {
+  line-height: 1.65;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  margin: 0 0 10px;
+}
+
+.note {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--primary-glow);
+  border: 1px solid var(--border-glass-glow);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.dangerButton,
+.secondaryButton {
+  padding: 11px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.dangerButton {
+  border: none;
+  background: var(--danger);
+  color: var(--text-white);
+}
+
+.dangerButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.secondaryButton {
+  border: 1px solid var(--border-glass);
+  background: var(--bg-card-hover);
+  color: var(--text-main);
+}
+
+.message {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+.footerLinks {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-size: 0.85rem;
+}

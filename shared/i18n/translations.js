@@ -902,6 +902,59 @@ export const translations = {
       }
     },
 
+    // Public legal pages (privacy policy, account deletion)
+    legal: {
+      backHome: "← Back to Timeboard",
+      lastUpdated: "Last updated: {{date}}",
+      privacyLink: "Privacy policy",
+      deleteAccountLink: "Delete account",
+      privacy: {
+        title: "Privacy Policy",
+        intro: "This policy explains how Timeboard (web and mobile app) handles personal data, in accordance with the General Data Protection Regulation (GDPR).",
+        s1Title: "1. Who we are",
+        s1Body: "Timeboard is a platform for managing financial timelines and condominiums. For the data you enter in your own account we are the data controller. For the data of a condominium or organisation (entities, installments and payments), the controller is the administrator of that timeboard; Timeboard processes it on their behalf.\n\nContact: {{email}}",
+        s2Title: "2. Data we process",
+        s2Body: "Account: name, e-mail, password (stored only as an irreversible hash) or, when you sign in with Google, your Google identity (name, e-mail and photo).\n\nTimeboard data entered by the administrators: entities (name, e-mail, phone, tax identification, unit), financial events, installments and their payment status, receipts and comments.\n\nTechnical data: a session token kept on your device to keep you signed in, and server logs required for security.",
+        s3Title: "3. Why we use them",
+        s3Body: "To create and secure your account, show you your installments and debt balance, send invitation e-mails and let the administrators manage their timeboards. Legal bases: performance of the service you use, the legitimate interest of the administrators in managing the condominium or organisation, and legal obligations.",
+        s4Title: "4. Who processes them",
+        s4Body: "We do not sell personal data nor use it for advertising. We use service providers that process data on our behalf: Supabase (database and authentication), Vercel (hosting of the site and API), Google (Google sign-in) and Brevo (sending e-mails). Data may be processed outside the EU under the safeguards required by the GDPR (such as standard contractual clauses).",
+        s5Title: "5. How long we keep them",
+        s5Body: "Account data is kept while the account exists. When you delete the account, your account and its links to timeboards are removed. Entity and payment records belong to the timeboard administrator and are kept by them, as required for the management and accounting of the condominium or organisation.",
+        s6Title: "6. Security",
+        s6Body: "All communication is encrypted (HTTPS), passwords are stored as a hash, access to each timeboard is checked on the server and each member only sees the data they are allowed to see.",
+        s7Title: "7. Your rights",
+        s7Body: "You may request access, rectification, erasure, restriction, portability and object to the processing of your data, by writing to {{email}}. For data of a condominium or organisation, you may also contact its administrator. You have the right to lodge a complaint with the supervisory authority (in Portugal, the CNPD — www.cnpd.pt).",
+        s8Title: "8. Account deletion",
+        s8Body: "You can delete your account at any time in the mobile app (Delete account) or on the account deletion page of this site.",
+        s9Title: "9. Children",
+        s9Body: "Timeboard is intended for adults and is not directed to children under 16.",
+        s10Title: "10. Changes",
+        s10Body: "We may update this policy; the date of the last update is shown at the top. Relevant changes will be communicated in the app or by e-mail."
+      },
+      deleteAccount: {
+        title: "Delete your Timeboard account",
+        intro: "You can delete your account at any time. This removes your account, your sign-in (e-mail and password or Google) and your links to timeboards.",
+        keptTitle: "What is kept",
+        keptBody: "Entity and payment records of a condominium or organisation belong to its administrator and are kept by them, unlinked from your account.",
+        ownerNote: "If your account owns timeboards, delete them first (in the timeboard settings).",
+        howTitle: "How to delete",
+        howApp: "In the mobile app: sign in and tap \"Delete account\" at the bottom of the screen.",
+        howWeb: "Here: sign in on Timeboard in this browser and use the button below.",
+        howEmail: "Or send a request to {{email}} from the e-mail of your account.",
+        signedInAs: "Signed in as {{email}}",
+        notSignedIn: "You are not signed in on this browser.",
+        signIn: "Sign in",
+        button: "Delete my account",
+        confirmTitle: "Delete account?",
+        confirmBody: "This cannot be undone. Your account and sign-in will be removed.",
+        confirmButton: "Yes, delete",
+        cancel: "Cancel",
+        deleting: "Deleting...",
+        deleted: "Your account was deleted."
+      }
+    },
+
     // Timeboard invitations
     invite: {
       acceptedToast: "Invitation accepted! Welcome to the Timeboard.",
@@ -1921,6 +1974,7 @@ export const translations = {
         googleIdRequired: "Google ID is required for Google authentication",
         invalidGoogleSession: "The Google session is invalid or has expired. Please sign in again.",
         invitationCodeInvalid: "Invalid or expired invitation code.",
+        accountOwnsTimeboards: "Your account owns timeboards ({{names}}). Delete them first, then delete the account.",
         invitationCodeRequired: "Invitation code is required.",
         forbidden: "You do not have access to this timeboard.",
         tooManyAttempts: "Too many attempts. Please try again in a few minutes.",
@@ -3037,6 +3091,59 @@ export const translations = {
       }
     },
 
+    // Páginas legais públicas (política de privacidade, eliminação de conta)
+    legal: {
+      backHome: "← Voltar ao Timeboard",
+      lastUpdated: "Última atualização: {{date}}",
+      privacyLink: "Política de privacidade",
+      deleteAccountLink: "Eliminar conta",
+      privacy: {
+        title: "Política de Privacidade",
+        intro: "Esta política explica como o Timeboard (web e aplicação móvel) trata os dados pessoais, de acordo com o Regulamento Geral sobre a Proteção de Dados (RGPD).",
+        s1Title: "1. Quem somos",
+        s1Body: "O Timeboard é uma plataforma de gestão de timelines financeiras e de condomínios. Para os dados que introduz na sua própria conta, somos o responsável pelo tratamento. Para os dados de um condomínio ou organização (entidades, prestações e pagamentos), o responsável é o administrador desse timeboard; o Timeboard trata-os por conta dele.\n\nContacto: {{email}}",
+        s2Title: "2. Dados que tratamos",
+        s2Body: "Conta: nome, email, palavra-passe (guardada apenas como hash irreversível) ou, quando entra com a Google, a sua identidade Google (nome, email e fotografia).\n\nDados dos timeboards introduzidos pelos administradores: entidades (nome, email, telefone, NIF, fração), eventos financeiros, prestações e o seu estado de pagamento, recibos e comentários.\n\nDados técnicos: um token de sessão guardado no seu dispositivo para manter a sessão iniciada e registos do servidor necessários à segurança.",
+        s3Title: "3. Para que os usamos",
+        s3Body: "Para criar e proteger a sua conta, mostrar-lhe as suas prestações e o saldo devedor, enviar emails de convite e permitir aos administradores gerir os seus timeboards. Fundamentos: execução do serviço que utiliza, interesse legítimo dos administradores na gestão do condomínio ou organização e cumprimento de obrigações legais.",
+        s4Title: "4. Quem os trata",
+        s4Body: "Não vendemos dados pessoais nem os usamos para publicidade. Recorremos a prestadores que tratam dados por nossa conta: Supabase (base de dados e autenticação), Vercel (alojamento do site e da API), Google (login com Google) e Brevo (envio de emails). Os dados podem ser tratados fora da UE com as garantias exigidas pelo RGPD (como cláusulas contratuais-tipo).",
+        s5Title: "5. Durante quanto tempo",
+        s5Body: "Os dados da conta são mantidos enquanto a conta existir. Quando elimina a conta, a conta e as suas ligações aos timeboards são removidas. Os registos de entidades e pagamentos pertencem ao administrador do timeboard e são mantidos por ele, por serem necessários à gestão e contabilidade do condomínio ou organização.",
+        s6Title: "6. Segurança",
+        s6Body: "Toda a comunicação é cifrada (HTTPS), as palavras-passe são guardadas como hash, o acesso a cada timeboard é verificado no servidor e cada membro só vê os dados a que tem acesso.",
+        s7Title: "7. Os seus direitos",
+        s7Body: "Pode pedir o acesso, a retificação, o apagamento, a limitação, a portabilidade e opor-se ao tratamento dos seus dados, escrevendo para {{email}}. Para dados de um condomínio ou organização, pode também contactar o respetivo administrador. Tem o direito de apresentar reclamação à autoridade de controlo (em Portugal, a CNPD — www.cnpd.pt).",
+        s8Title: "8. Eliminação da conta",
+        s8Body: "Pode eliminar a sua conta a qualquer momento na aplicação móvel (Eliminar conta) ou na página de eliminação de conta deste site.",
+        s9Title: "9. Menores",
+        s9Body: "O Timeboard destina-se a adultos e não se dirige a menores de 16 anos.",
+        s10Title: "10. Alterações",
+        s10Body: "Podemos atualizar esta política; a data da última atualização está indicada no topo. Alterações relevantes serão comunicadas na aplicação ou por email."
+      },
+      deleteAccount: {
+        title: "Eliminar a sua conta Timeboard",
+        intro: "Pode eliminar a sua conta a qualquer momento. Isto remove a sua conta, o seu acesso (email e palavra-passe ou Google) e as suas ligações aos timeboards.",
+        keptTitle: "O que é mantido",
+        keptBody: "Os registos de entidades e pagamentos de um condomínio ou organização pertencem ao respetivo administrador e são mantidos por ele, desligados da sua conta.",
+        ownerNote: "Se a sua conta for dona de timeboards, apague-os primeiro (nas definições do timeboard).",
+        howTitle: "Como eliminar",
+        howApp: "Na aplicação móvel: inicie sessão e toque em \"Eliminar conta\" no fundo do ecrã.",
+        howWeb: "Aqui: inicie sessão no Timeboard neste browser e use o botão abaixo.",
+        howEmail: "Ou envie um pedido para {{email}} a partir do email da sua conta.",
+        signedInAs: "Sessão iniciada como {{email}}",
+        notSignedIn: "Não tem sessão iniciada neste browser.",
+        signIn: "Iniciar sessão",
+        button: "Eliminar a minha conta",
+        confirmTitle: "Eliminar conta?",
+        confirmBody: "Esta ação não pode ser desfeita. A sua conta e o seu acesso serão removidos.",
+        confirmButton: "Sim, eliminar",
+        cancel: "Cancelar",
+        deleting: "A eliminar...",
+        deleted: "A sua conta foi eliminada."
+      }
+    },
+
     // Convites de timeboard
     invite: {
       acceptedToast: "Convite aceite com sucesso! Bem-vindo ao Timeboard.",
@@ -4098,6 +4205,7 @@ export const translations = {
         googleIdRequired: "google_id é obrigatório para autenticação com Google.",
         invalidGoogleSession: "A sessão Google é inválida ou expirou. Inicie sessão novamente.",
         invitationCodeInvalid: "Código de convite inválido ou expirado.",
+        accountOwnsTimeboards: "A sua conta é dona de timeboards ({{names}}). Apague-os primeiro e depois elimine a conta.",
         invitationCodeRequired: "O código de convite é obrigatório.",
         forbidden: "Não tem acesso a este timeboard.",
         tooManyAttempts: "Demasiadas tentativas. Tente novamente dentro de alguns minutos.",

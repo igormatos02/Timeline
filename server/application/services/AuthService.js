@@ -2,6 +2,7 @@ import { userRepository } from '../../infrastructure/database/supabase/SupabaseU
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
 import { timeboardInvitationRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardInvitationRepository.js';
 import { timeboardMemberRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardMemberRepository.js';
+import { timeboardRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardRepository.js';
 import { supabase } from '../../infrastructure/database/supabase/supabaseClient.js';
 import { hashPassword, verifyPassword, isHashedPassword } from '../../infrastructure/security/password.js';
 import { createSessionToken } from '../../infrastructure/security/sessionToken.js';
@@ -13,6 +14,42 @@ export class AuthService {
   // Auth responses: the public user plus the signed session token used by every API request
   _withSession(userObj) {
     return { ...userObj, token: createSessionToken(userObj) };
+  }
+
+  /**
+   * Deletes the account (Play Store / GDPR requirement): the user's links to entities and memberships
+   * are removed and the Google identity is deleted from Supabase Auth. The entities and payment records
+   * stay with the timeboard (they are the administrator's records). Owners must delete their timeboards first.
+   */
+  async deleteAccount(userId) {
+    const user = await userRepository.findById(userId);
+    if (!user) throw new Error(t('backend.validation.accountNotFound'));
+
+    const owned = await timeboardRepository.findByOwnerId(userId);
+    if (owned.length > 0) {
+      const err = new Error(t('backend.validation.accountOwnsTimeboards', { names: owned.map((tb) => tb.name).join(', ') }));
+      err.status = 409;
+      throw err;
+    }
+
+    const persons = await personRepository.getByUserId(userId);
+    for (const person of persons) {
+      await personRepository.update(person.id, { userId: null });
+    }
+    const memberships = await timeboardMemberRepository.getByUserId(userId);
+    for (const membership of memberships) {
+      await timeboardMemberRepository.removeMember(membership.timeboardId, userId);
+    }
+    // Google sign-ins also have a Supabase Auth user (its id is stored as googleId)
+    if (user.googleId) {
+      try {
+        await supabase.auth.admin.deleteUser(user.googleId);
+      } catch (err) {
+        console.warn('[AuthService.deleteAccount] Supabase Auth user not deleted:', err.message);
+      }
+    }
+    await userRepository.delete(userId);
+    return { success: true };
   }
 
   async getSessionUser(userId) {

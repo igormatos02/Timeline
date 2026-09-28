@@ -162,6 +162,10 @@ export default function LandingPage({ onAuthSuccess, initialEmail = '', pendingI
       {/* Footer */}
       <footer className="landing-footer">
         <p>© {new Date().getFullYear()} Timeboard. {t('landing.footer')}</p>
+        <p style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+          <a href="/privacidade" style={{ color: 'inherit' }}>{t('legal.privacyLink')}</a>
+          <a href="/eliminar-conta" style={{ color: 'inherit' }}>{t('legal.deleteAccountLink')}</a>
+        </p>
       </footer>
     </div>
   );

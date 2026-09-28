@@ -64,6 +64,7 @@ export const register = async (name, email, password) => saveSession(await reque
 // Google sign-in: the Supabase session (web OAuth or native Android sign-in) is exchanged for an API session
 export const loginWithGoogleSession = async (accessToken) => saveSession(await request('/auth/google', { method: 'POST', body: { accessToken } }));
 export const getMe = () => request('/auth/me');
+export const deleteAccount = () => request('/auth/account', { method: 'DELETE' });
 
 export const lookupInviteCode = (code) => request(`/invitations/code/${encodeURIComponent(code)}`);
 export const acceptInviteByCode = (code) => request('/invitations/accept', { method: 'POST', body: { code } });

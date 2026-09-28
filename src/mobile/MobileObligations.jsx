@@ -5,6 +5,7 @@ import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { TimelineColor, PersonRole, EventStatus } from '../enums/index.js';
 import { formatCurrency } from '../utils/formatCurrency.js';
 import * as mobileApi from './mobileApi.js';
+import { PUBLIC_SITE_URL } from '../../shared/config/appConfig.js';
 import styles from './MobileApp.module.css';
 
 const ALL = 'all';
@@ -41,6 +42,9 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
   const [viewModeChoice, setViewModeChoice] = useState(null);
   const [entities, setEntities] = useState([]);
   const [selectedEntityId, setSelectedEntityId] = useState(null);
+  // Account deletion (Play Store requirement): confirmation step before deleting
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const handleError = useCallback((err) => {
     if (err instanceof mobileApi.SessionExpiredError) onSessionExpired();
@@ -149,6 +153,20 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
   const debt = data?.debtBalance || 0;
   const debtColor = debt > 0 ? TimelineColor.DANGER : TimelineColor.SUCCESS;
   const shownError = error || notice;
+
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    setError('');
+    try {
+      await mobileApi.deleteAccount();
+      await onLogout();
+    } catch (err) {
+      handleError(err);
+      setIsConfirmingDelete(false);
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
 
   return (
     <div className={styles.screen}>
@@ -352,6 +370,29 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
           )}
         </>
       )}
+
+      {/* Account: privacy policy and account deletion */}
+      <div className={styles.accountFooter}>
+        {isConfirmingDelete ? (
+          <div className={styles.card}>
+            <div className={styles.inviteTitle}>{t('legal.deleteAccount.confirmTitle')}</div>
+            <div className={styles.inviteMeta} style={{ margin: '4px 0 12px' }}>
+              {t('legal.deleteAccount.confirmBody')} {t('legal.deleteAccount.keptBody')}
+            </div>
+            <button type="button" className={styles.dangerButton} onClick={handleDeleteAccount} disabled={isDeletingAccount}>
+              {isDeletingAccount ? t('legal.deleteAccount.deleting') : t('legal.deleteAccount.confirmButton')}
+            </button>
+            <button type="button" className={styles.linkButton} style={{ width: '100%', justifyContent: 'center' }} onClick={() => setIsConfirmingDelete(false)} disabled={isDeletingAccount}>
+              {t('legal.deleteAccount.cancel')}
+            </button>
+          </div>
+        ) : (
+          <div className={styles.footerLinks}>
+            <a className={styles.footerLink} href={`${PUBLIC_SITE_URL}/privacidade`} target="_blank" rel="noreferrer">{t('legal.privacyLink')}</a>
+            <button type="button" className={styles.footerDanger} onClick={() => setIsConfirmingDelete(true)}>{t('legal.deleteAccountLink')}</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -47,3 +47,12 @@ authRouter.get('/me', requireAuth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// DELETE /api/auth/account — deletes the logged-in user's account
+authRouter.delete('/account', requireAuth, async (req, res) => {
+  try {
+    res.json(await authService.deleteAccount(req.user.id));
+  } catch (err) {
+    res.status(err.status || 400).json({ error: err.message });
+  }
+});

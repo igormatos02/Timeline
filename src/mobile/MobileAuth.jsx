@@ -3,6 +3,7 @@ import { Sparkles, Ticket, AlertCircle, ArrowRight, LogIn, UserPlus, Loader2 } f
 import { supabase } from '../services/supabaseClient.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import * as mobileApi from './mobileApi.js';
+import { PUBLIC_SITE_URL } from '../../shared/config/appConfig.js';
 import { isNativeApp, signInWithNativeGoogle } from './nativeGoogle.js';
 import styles from './MobileApp.module.css';
 
@@ -234,6 +235,10 @@ export default function MobileAuth({ onLoggedIn, notice, onClearNotice }) {
           {t('auth.inviteCode.haveCode')}
         </button>
       )}
+
+      <div className={styles.footerLinks}>
+        <a className={styles.footerLink} href={`${PUBLIC_SITE_URL}/privacidade`} target="_blank" rel="noreferrer">{t('legal.privacyLink')}</a>
+      </div>
     </div>
   );
 }

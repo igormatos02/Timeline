@@ -594,7 +594,7 @@ export const translations = {
 
       editExpense: "Edit Expense",
       newExpense: "New Expense",
-      expenseTitleLabel: "Expense Description *",
+      expenseTitleLabel: "Description *",
       expenseTitlePlaceholder: "e.g., Rent, Supermarket, Electricity, Car...",
       expenseAmountLabel: "Expense Amount (€) *",
       addExpense: "Add Expense",
@@ -2884,7 +2884,7 @@ export const translations = {
 
       editExpense: "Editar Despesa",
       newExpense: "Nova Despesa",
-      expenseTitleLabel: "Descrição da Despesa *",
+      expenseTitleLabel: "Descrição *",
       expenseTitlePlaceholder: "Ex: Renda / Aluguel, Supermercado, Eletricidade, Carro...",
       expenseAmountLabel: "Valor da Despesa (€) *",
       addExpense: "Adicionar Despesa",
@@ -3581,8 +3581,8 @@ export const translations = {
       },
       outflowSplitPaid: "Pago: {{amount}}",
       badge: "Gastos e Despesas",
-      addExpense: "Novo Gasto",
-      addExpenseButton: "Novo Gasto",
+      addExpense: "Nova Despesa",
+      addExpenseButton: "Nova Despesa",
       resetTitle: "Limpar todos os movimentos desta timeline",
       settingsTitle: "Definições da Timeline",
       deleteTitle: "Excluir esta timeline",

@@ -1,9 +1,7 @@
 import React from 'react';
-import FinancialEventModal from './FinancialEventModal.jsx';
+import { EventType } from '../../../shared/enums/index.js';
+import CashFlowEventModal from './CashFlowEventModal.jsx';
 
-/**
- * @deprecated Use <FinancialEventModal eventType="expense" /> instead.
- */
 export default function ExpenseEventModal(props) {
-  return <FinancialEventModal {...props} eventType="expense" />;
+  return <CashFlowEventModal {...props} eventType={EventType.EXPENSE} />;
 }

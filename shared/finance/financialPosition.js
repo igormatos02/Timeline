@@ -11,7 +11,8 @@ const emptyTotals = () => ({
   withdrawals: 0, // money taken out of the savings into the available money
   withdrawalsExternal: 0, // withdrawals flagged as external (not counted as back in the available money)
   loanPaid: 0, // installments and amortizations paid (or due, in the planned totals)
-  amortized: 0 // capital that reduces the debt
+  amortized: 0, // capital that reduces the debt
+  transfers: 0 // money moved between spaces of the account (never changes any total)
 });
 
 const add = (totals, key, value) => { totals[key] += value; };
@@ -63,6 +64,11 @@ export function computeFinancialPosition({ events = [], timelineTypeMap = new Ma
     }
 
     if (m.amount <= 0) return;
+    if (m.kind === MovementKind.SAVINGS_TRANSFER) {
+      if (inRealized) add(realized, 'transfers', m.amount);
+      if (inPlanned) add(planned, 'transfers', m.amount);
+      return;
+    }
     const bucket = {
       [MovementKind.INCOME]: 'income',
       [MovementKind.EXPENSE]: 'expensesFromAvailable',

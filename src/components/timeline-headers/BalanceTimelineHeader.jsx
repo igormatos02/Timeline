@@ -1,15 +1,12 @@
 import React, { useState, useId } from 'react';
-import { createPortal } from 'react-dom';
 import {
-  Calendar,
   Layers,
   Sparkles,
+  Compass,
   Clock,
   TrendingUp,
   TrendingDown,
   Wallet,
-  Plus,
-  X,
   Settings
 } from 'lucide-react';
 import { format, parseISO, subMonths, addMonths, differenceInCalendarMonths } from 'date-fns';
@@ -17,6 +14,11 @@ import { pt, enUS } from 'date-fns/locale';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { computeBalanceTotals, computePocketsInitialTotal } from '../../utils/balanceMetrics.js';
+import { computeMoneySummary } from '../../../shared/finance/moneySummary.js';
+import MoneySummaryPanel from '../summary/MoneySummaryPanel.jsx';
+
+// Third view of the balance header: "Where is my money"
+const WHERE_VIEW_MODE = 'where';
 import { classifyMovement, isActiveMovement, isReferenceMovement } from '../../../shared/finance/movements.js';
 import { computeMonthlyFlows } from '../../../shared/finance/financialPosition.js';
 import {
@@ -263,8 +265,8 @@ export default function BalanceTimelineHeader({
   _onDelete,
   onAddEvent,
   _onReset,
-  activeViewMode = 'summary',
-  setActiveViewMode,
+  activeViewMode: activeViewModeProp = 'summary',
+  setActiveViewMode: setActiveViewModeProp,
   computeStartDate = null,
   monthExpensesTotalMap: propMonthExpensesTotalMap = null,
   monthLoansTotalMap: propMonthLoansTotalMap = null,
@@ -282,6 +284,11 @@ export default function BalanceTimelineHeader({
 }) {
   const { t, language } = useTranslation();
   const dateLocale = language === 'en' ? enUS : pt;
+  // View of the header (summary / where is my money / evolution): controlled by the parent when it passes a
+  // setter, otherwise kept here (the evolution view is only offered when the parent controls the view)
+  const [localViewMode, setLocalViewMode] = useState(activeViewModeProp);
+  const activeViewMode = setActiveViewModeProp ? activeViewModeProp : localViewMode;
+  const setActiveViewMode = setActiveViewModeProp || setLocalViewMode;
   const currentMonthStr = format(new Date(), 'yyyy-MM');
   const [collapsed, setIsCollapsed] = useHeaderCollapsed();
   const [projectionMonthsAhead, setProjectionMonthsAhead] = useState(0);
@@ -578,6 +585,27 @@ export default function BalanceTimelineHeader({
     targetHorizonMonthStr
   });
 
+  // "Where is my money" (shared engine): effective movements up to the current month, loans from their metrics
+  const moneySummary = activeViewMode === WHERE_VIEW_MODE
+    ? computeMoneySummary({
+        events: eventsList,
+        timelineTypeMap,
+        pockets: effectivePockets,
+        fromMonth: computeFromMonth,
+        asOfMonth: currentMonthStr,
+        horizonMonth: format(addMonths(new Date(), 12), 'yyyy-MM'),
+        initialAvailable: incomeInitialValue,
+        // Same loan source as the loans quadrant: the metrics of each loan timeline
+        loans: activeLoanTimelines.map((loanTimeline) => {
+          const m = loanTimeline.metrics || loanTimeline.loanHeaderResult || loanTimeline.procedureMetrics || {};
+          return {
+            remainingDebt: Number(m.remaining_debt ?? m.remainingDebt ?? m.total_debt ?? m.totalDebt ?? loanTimeline.totalDebt ?? 0),
+            amortizedCapital: Number(m.amortized_capital ?? m.amortizedCapital ?? m.paid_capital ?? 0)
+          };
+        })
+      })
+    : null;
+
   const activeLoanTimelinesSum = activeLoanTimelines.reduce((sum, t) => {
     const m = t.loanHeaderResult || t.procedureMetrics || t.metrics || {};
     return sum + Number(m.remainingDebt ?? m.remaining_debt ?? m.remainingBalance ?? m.remaining_balance ?? m.totalDebt ?? m.total_debt ?? t.totalDebt ?? 0);
@@ -663,8 +691,8 @@ export default function BalanceTimelineHeader({
       {/* Conteúdo Expandido com Métricas e Gráficos */}
       {!collapsed && (
         <div style={{ paddingTop: '14px' }}>
-          {/* Barra de Controles: Switcher Resumo / Gráfico */}
-          {setActiveViewMode && (
+          {/* Barra de Controles: Switcher Resumo / Onde está o dinheiro / Gráfico */}
+          {(
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
               <div
                 style={{
@@ -699,6 +727,7 @@ export default function BalanceTimelineHeader({
                   <Layers size={13} />
                   <span>{t('balanceHeader.summaryView')}</span>
                 </button>
+                {setActiveViewModeProp && (
                 <button
                   type="button"
                   onClick={() => setActiveViewMode('graph')}
@@ -720,11 +749,35 @@ export default function BalanceTimelineHeader({
                   <Sparkles size={13} />
                   <span>{t('balanceHeader.evolutionView')}</span>
                 </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setActiveViewMode(WHERE_VIEW_MODE)}
+                  className={`btn-view-toggle ${activeViewMode === WHERE_VIEW_MODE ? 'active' : ''}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '3px 10px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontSize: '0.74rem',
+                    fontWeight: activeViewMode === WHERE_VIEW_MODE ? '800' : '600',
+                    cursor: 'pointer',
+                    background: activeViewMode === WHERE_VIEW_MODE ? `${paletteTheme.primary}2e` : 'transparent',
+                    color: activeViewMode === WHERE_VIEW_MODE ? paletteTheme.primary : 'var(--text-muted)'
+                  }}
+                >
+                  <Compass size={13} />
+                  <span>{t('moneySummary.tab')}</span>
+                </button>
               </div>
             </div>
           )}
 
-          {activeViewMode === 'graph' ? (
+          {activeViewMode === WHERE_VIEW_MODE ? (
+            <MoneySummaryPanel summary={moneySummary} asOfLabel={currentMonthLabel} t={t} />
+          ) : activeViewMode === 'graph' ? (
             <IncomeEvolutionChart
               timeline={timeline}
               allTimelines={allTimelines}

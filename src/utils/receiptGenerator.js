@@ -855,11 +855,40 @@ export function buildClosingReportHtml({
   currentUser,
   periodLabel,
   report,
+  moneySummary = null,
   language = 'pt',
   t
 }) {
   const { timeboardName, timeboardDesc } = resolveIssuer({ timeboard, currentUser, t });
   const tk = (key, params) => t(`timeboardSettings.reports.closings.${key}`, params);
+
+  // "Where is my money" at the end of the period (positions) and during the period (flows)
+  const moneySummarySection = () => {
+    if (!moneySummary) return '';
+    const ms = (key, params) => t(`moneySummary.${key}`, params);
+    const rows = [
+      [ms('available'), moneySummary.available],
+      [ms('savings'), moneySummary.savingsTotal],
+      ...moneySummary.spaces.map((space) => [`&nbsp;&nbsp;${escapeHtml(space.isGeneral ? t('account.general') : space.name)}`, space.balance]),
+      [ms('received'), moneySummary.received],
+      [ms('expected'), moneySummary.expectedToReceive],
+      [ms('spent'), moneySummary.spentFromAvailable + moneySummary.spentViaSavings],
+      [ms('transferred'), moneySummary.transferred],
+      [ms('withdrawn'), moneySummary.withdrawn],
+      [ms('putIntoSavings'), moneySummary.putIntoSavingsInternal + moneySummary.putIntoSavingsExternal],
+      [ms('loanPaid'), moneySummary.loanPaid],
+      [ms('amortized'), moneySummary.amortized],
+      [ms('owed'), moneySummary.owed]
+    ];
+    return `
+          <div class="section">
+            <div class="section-title"><span>${ms('title')}</span></div>
+            <table class="summary-table">${rows.map(([label, value]) => `
+              <tr><td>${label}</td><td class="num">${formatCurrency(value)}</td></tr>`).join('')}
+              <tr class="balance-row"><td>${ms('wealth')}</td><td class="num">${formatCurrency(moneySummary.wealth)}</td></tr>
+            </table>
+          </div>`;
+  };
   const titleLabel = tk('title');
 
   const rowsTable = (rows, emptyKey) => `
@@ -958,6 +987,8 @@ ${DOCUMENT_TABLE_STYLES}
             </table>
             ${savings.hasExternal ? `<div class="note">${tk('externalNote')}</div>` : ''}
           </div>
+
+          ${moneySummarySection()}
 
           <div class="charts">
             ${barChart('expensesByCategory', expenses.breakdown)}

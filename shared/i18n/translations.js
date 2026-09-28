@@ -1609,6 +1609,29 @@ export const translations = {
     },
 
     // Withdrawal Modal
+    // "Where is my money" summary panel (balance and closings)
+    moneySummary: {
+      title: "Where is my money",
+      asOf: "Effective up to {{date}}",
+      tab: "Where is the money",
+      available: "Available now",
+      savings: "In the account (savings)",
+      received: "Already received",
+      expected: "Expected to receive (12 months)",
+      spent: "Already spent",
+      spentDetail: "{{available}} from the available money + {{savings}} via savings",
+      transferred: "Transferred between spaces",
+      withdrawn: "Withdrawn from savings",
+      putIntoSavings: "Put into savings",
+      externalDetail: "+ {{amount}} of new external money",
+      loanPaid: "Paid on loans",
+      amortized: "Capital already amortized",
+      owed: "Still owed",
+      wealth: "Wealth",
+      wealthDetail: "Available + savings - still owed",
+      bySpace: "In each space of the account"
+    },
+
     // Account (savings timeline) spaces: the General space and the pockets
     account: {
       general: "General",
@@ -3908,6 +3931,29 @@ export const translations = {
     },
 
     // Withdrawal Modal
+    // Painel "Onde está o meu dinheiro" (balanço e fechamentos)
+    moneySummary: {
+      title: "Onde está o meu dinheiro",
+      asOf: "Efetivado até {{date}}",
+      tab: "Onde está o dinheiro",
+      available: "Disponível agora",
+      savings: "Na Conta (poupança)",
+      received: "Já recebi",
+      expected: "Espero receber (12 meses)",
+      spent: "Já gastei",
+      spentDetail: "{{available}} do disponível + {{savings}} via Poupança",
+      transferred: "Transferi entre espaços",
+      withdrawn: "Levantei da Poupança",
+      putIntoSavings: "Coloquei na Poupança",
+      externalDetail: "+ {{amount}} de dinheiro novo externo",
+      loanPaid: "Paguei de empréstimos",
+      amortized: "Capital já amortizado",
+      owed: "Ainda devo",
+      wealth: "Riqueza",
+      wealthDetail: "Disponível + Poupança - ainda devo",
+      bySpace: "Em cada espaço da Conta"
+    },
+
     // Espaços da Conta (timeline de poupança): a Geral e os cofrinhos
     account: {
       general: "Geral",

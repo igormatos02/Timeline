@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FileWarning, Printer, Check, CalendarCheck } from 'lucide-react';
-import { format, parseISO, subMonths, endOfMonth, setMonth } from 'date-fns';
+import { format, parseISO, subMonths, addMonths, endOfMonth, setMonth } from 'date-fns';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import {
   EventType,
@@ -17,10 +17,13 @@ import {
   normalizeTimelineType,
   getDefaultTimelineColor,
   isCancelledStatus,
-  isPositiveStatus
+  isPositiveStatus,
+  isLoanTimelineType
 } from '../../enums/index.js';
 import { buildDebtorsReportHtml, buildClosingReportHtml } from '../../utils/receiptGenerator.js';
 import { computeClosingReport } from '../../utils/closingReport.js';
+import { getLoanMetrics } from '../../utils/loanCalculations.js';
+import { computeMoneySummary } from '../../../shared/finance/moneySummary.js';
 import ReceiptModal from '../modals/ReceiptModal.jsx';
 
 const REPORTS = [
@@ -103,6 +106,45 @@ export default function TimeboardReportsTab({ timeboard, timelines = [], events 
     return Array.from({ length: lastYear - firstYear + 1 }, (_, index) => lastYear - index);
   }, [events, boardTimelines]);
 
+  // "Where is my money" of a closing (shared engine): positions at the end of the period (available, savings,
+  // debts, from the calculation start) and flows during the period (received, spent, transferred...)
+  const buildMoneySummary = (fromDate, toDate) => {
+    const timelineTypeMap = new Map(boardTimelines.map((tl) => [String(tl.id), tl.type]));
+    const incomeTimeline = boardTimelines.find((tl) => normalizeTimelineType(tl.type) === TimelineType.INCOME);
+    const rawComputeFrom = String(timeboard?.computeFrom || timeboard?.compute_from || '');
+    const computeFromMonth = rawComputeFrom && !rawComputeFrom.startsWith('1900-01') ? rawComputeFrom.substring(0, 7) : null;
+    const asOfMonth = toDate.substring(0, 7);
+    const eventsUpToDate = events.filter((ev) => ev?.date && ev.date <= toDate);
+    const loans = boardTimelines
+      .filter((tl) => isLoanTimelineType(tl.type))
+      .map((loanTimeline) => getLoanMetrics(loanTimeline, eventsUpToDate));
+    const common = {
+      events,
+      timelineTypeMap,
+      pockets,
+      asOfMonth,
+      horizonMonth: format(addMonths(parseISO(toDate), 12), 'yyyy-MM'),
+      loans
+    };
+    const positions = computeMoneySummary({
+      ...common,
+      fromMonth: computeFromMonth,
+      initialAvailable: Number(incomeTimeline?.initialValue ?? incomeTimeline?.initial_value ?? 0)
+    });
+    const flows = computeMoneySummary({ ...common, fromMonth: fromDate ? fromDate.substring(0, 7) : computeFromMonth });
+    return {
+      ...positions,
+      received: flows.received,
+      spentFromAvailable: flows.spentFromAvailable,
+      spentViaSavings: flows.spentViaSavings,
+      transferred: flows.transferred,
+      withdrawn: flows.withdrawn,
+      putIntoSavingsInternal: flows.putIntoSavingsInternal,
+      putIntoSavingsExternal: flows.putIntoSavingsExternal,
+      loanPaid: flows.loanPaid
+    };
+  };
+
   const buildClosingsHtml = () => {
     let fromDate;
     let toDate;
@@ -133,7 +175,7 @@ export default function TimeboardReportsTab({ timeboard, timelines = [], events 
       isCondoflow: timeboard?.type === TimeboardType.CONDOFLOW,
       t
     });
-    return buildClosingReportHtml({ timeboard, currentUser, periodLabel, report, language, t });
+    return buildClosingReportHtml({ timeboard, currentUser, periodLabel, report, moneySummary: buildMoneySummary(fromDate, toDate), language, t });
   };
 
   const debtorTimelines = useMemo(

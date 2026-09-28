@@ -1303,6 +1303,17 @@ export const translations = {
 
     // Loan Timeline Header
     loanHeader: {
+      installmentsByState: "Installments",
+      amortizationsByState: "Extraordinary amortizations",
+      capitalSources: "Amortized capital: {{installments}} from paid installments + {{amortizations}} from amortizations",
+      states: {
+        pending: "Pending",
+        overdue: "Overdue",
+        paid: "Paid",
+        abated: "Abated",
+        realized: "Realized",
+        cancelled: "Cancelled"
+      },
       loanBadge: "Loan",
       statusActive: "Active",
       statusInactive: "Inactive",
@@ -3549,6 +3560,17 @@ export const translations = {
 
     // Loan Timeline Header
     loanHeader: {
+      installmentsByState: "Parcelas",
+      amortizationsByState: "Amortizações extraordinárias",
+      capitalSources: "Capital amortizado: {{installments}} das parcelas pagas + {{amortizations}} das amortizações",
+      states: {
+        pending: "Pendentes",
+        overdue: "Em atraso",
+        paid: "Pagas",
+        abated: "Abatidas",
+        realized: "Realizadas",
+        cancelled: "Canceladas"
+      },
       loanBadge: "Empréstimo",
       statusActive: "Ativo",
       statusInactive: "Inativo",

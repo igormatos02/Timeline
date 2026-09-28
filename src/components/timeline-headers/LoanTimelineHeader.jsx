@@ -20,6 +20,7 @@ import { pt } from 'date-fns/locale';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { LoanAmortizationSystem, TimelineColor, TimelineStatus } from '../../enums/index.js';
+import LoanStatusBreakdown from './LoanStatusBreakdown.jsx';
 import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import { DonutChart } from '../ui/DonutChart.jsx';
 import CopyIdButton from '../ui/CopyIdButton.jsx';
@@ -300,8 +301,8 @@ export default function LoanTimelineHeader({
                     height: '20px',
                     borderRadius: '9999px',
                     background: isInactive
-                      ? 'rgba(148, 163, 184, 0.3)'
-                      : `linear-gradient(135deg, ${TimelineColor.SUCCESS} 0%, rgba(5, 150, 105, 1) 100%)`,
+                      ? `${TimelineColor.SLATE_LIGHT}4d`
+                      : `linear-gradient(135deg, ${TimelineColor.SUCCESS} 0%, ${TimelineColor.SUCCESS}d9 100%)`,
                     border: 'none',
                     cursor: 'pointer',
                     position: 'relative',
@@ -310,7 +311,7 @@ export default function LoanTimelineHeader({
                     padding: 0,
                     boxShadow: isInactive
                       ? 'none'
-                      : '0 0 8px rgba(16, 185, 129, 0.4)',
+                      : `0 0 8px ${TimelineColor.SUCCESS}66`,
                     flexShrink: 0
                   }}
                 >
@@ -329,7 +330,7 @@ export default function LoanTimelineHeader({
                       transition:
                         'left 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                       boxShadow:
-                        '0 1px 3px rgba(0,0,0,0.3)'
+                        'var(--shadow-sm)'
                     }}
                   />
                 </button>
@@ -377,10 +378,10 @@ export default function LoanTimelineHeader({
                   padding: '2px 8px',
                   borderRadius: '6px',
                   background: isInactive
-                    ? 'rgba(148, 163, 184, 0.1)'
-                    : 'rgba(99, 102, 241, 0.09)',
+                    ? `${TimelineColor.SLATE_LIGHT}1a`
+                    : 'var(--primary-glow)',
                   border: isInactive
-                    ? '1px solid rgba(148, 163, 184, 0.2)'
+                    ? `1px solid ${TimelineColor.SLATE_LIGHT}33`
                     : `1px solid ${headerColor}33`,
                   color: isInactive ? 'var(--text-muted)' : headerColor,
                   display: 'inline-flex',
@@ -401,7 +402,7 @@ export default function LoanTimelineHeader({
                   fontWeight: '600',
                   padding: '2px 8px',
                   borderRadius: '6px',
-                  background: 'rgba(255, 255, 255, 0.05)',
+                  background: 'var(--bg-glass)',
                   border: '1px solid var(--border-glass)',
                   color: textColorMain,
                   fontFamily: 'monospace',
@@ -435,8 +436,8 @@ export default function LoanTimelineHeader({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.2)',
+                background: 'var(--primary-glow)',
+                border: '1px solid var(--border-glass-glow)',
                 color: 'var(--primary-light)',
                 cursor: 'pointer',
                 padding: '6px 12px',
@@ -481,7 +482,7 @@ export default function LoanTimelineHeader({
             {/* 1. SALDO DEVEDOR card */}
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.02)',
+                background: 'var(--bg-glass)',
                 padding: '14px',
                 borderRadius: '10px',
                 border: '1px solid var(--border-glass)',
@@ -500,8 +501,7 @@ export default function LoanTimelineHeader({
                   letterSpacing: '0.5px'
                 }}
               >
-                {t('loanHeader.remainingDebt') ||
-                  'Saldo Devedor'}
+                {t('loanHeader.remainingDebt')}
               </div>
 
               {(() => {
@@ -561,7 +561,7 @@ export default function LoanTimelineHeader({
             {/* 2. ANNUAL COMMITMENT Donut card */}
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.02)',
+                background: 'var(--bg-glass)',
                 padding: '14px',
                 borderRadius: '10px',
                 border: '1px solid var(--border-glass)',
@@ -588,7 +588,7 @@ export default function LoanTimelineHeader({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
                       <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
                         <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                          <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                          <circle cx="0" cy="0" r="0.82" fill="none" stroke="var(--border-glass)" strokeWidth="0.25" strokeDasharray="3 3" />
                         </svg>
                         <div
                           style={{
@@ -631,7 +631,7 @@ export default function LoanTimelineHeader({
                     <DonutChart
                       percent={annualCommitmentPct}
                       sliceColor={sliceColor}
-                      remainingColor="rgba(255, 255, 255, 0.08)"
+                      remainingColor="var(--border-glass)"
                       title={`${t('loanHeader.annualCommitmentLabel')} ${annualCommitmentPct}%`}
                       label={`${annualCommitmentPct}%`}
                     />
@@ -662,7 +662,7 @@ export default function LoanTimelineHeader({
             {/* 3. CAPITAL AMORTIZADO Donut card */}
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.02)',
+                background: 'var(--bg-glass)',
                 padding: '14px',
                 borderRadius: '10px',
                 border: '1px solid var(--border-glass)',
@@ -680,8 +680,7 @@ export default function LoanTimelineHeader({
                   letterSpacing: '0.5px'
                 }}
               >
-                {t('loanHeader.amortizedCapital') ||
-                  'Capital Amortizado'}
+                {t('loanHeader.amortizedCapital')}
               </div>
 
               {(() => {
@@ -693,7 +692,7 @@ export default function LoanTimelineHeader({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
                       <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
                         <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                          <circle cx="0" cy="0" r="0.82" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.25" strokeDasharray="3 3" />
+                          <circle cx="0" cy="0" r="0.82" fill="none" stroke="var(--border-glass)" strokeWidth="0.25" strokeDasharray="3 3" />
                         </svg>
                         <div
                           style={{
@@ -736,7 +735,7 @@ export default function LoanTimelineHeader({
                     <DonutChart
                       percent={progressPercent}
                       sliceColor={sliceColor}
-                      remainingColor="rgba(255, 255, 255, 0.08)"
+                      remainingColor="var(--border-glass)"
                       title={`${t('loanHeader.amortizedCapital')} ${progressPercent}%`}
                       label={`${progressPercent}%`}
                     />
@@ -775,16 +774,14 @@ export default function LoanTimelineHeader({
               <span>
                 {t(
                   'loanHeader.progressTitle'
-                ) ||
-                  'Progresso de Amortização do Capital'}
+                )}
               </span>
 
               <span>
                 {(
                   t(
                     'loanHeader.percentAmortized'
-                  ) ||
-                  '{percent}% amortizado'
+                  )
                 ).replace(
                   '{percent}',
                   progressPercent
@@ -833,8 +830,7 @@ export default function LoanTimelineHeader({
                   fontWeight: '700'
                 }}
               >
-                {t('loanHeader.installments') ||
-                  'Parcelas'}
+                {t('loanHeader.installments')}
               </div>
 
               <div
@@ -858,8 +854,7 @@ export default function LoanTimelineHeader({
                 {(
                   t(
                     'loanHeader.installmentsRemaining'
-                  ) ||
-                  '{count} restantes'
+                  )
                 ).replace(
                   '{count}',
                   Math.max(0, (timeline.totalInstallments || timeline.loanContract?.totalInstallments || loanMetrics.totalInstallments || 0) - (loanMetrics.paidInstallments || 0))
@@ -878,8 +873,7 @@ export default function LoanTimelineHeader({
               >
                 {t(
                   'loanHeader.estimatedPayoff'
-                ) ||
-                  'Quitação Prevista'}
+                )}
               </div>
 
               <div
@@ -906,8 +900,7 @@ export default function LoanTimelineHeader({
               >
                 {t(
                   'loanHeader.currentInstallment'
-                ) ||
-                  'Prestação Atual'}
+                )}
               </div>
 
               <div
@@ -935,8 +928,7 @@ export default function LoanTimelineHeader({
               >
                 {t(
                   'loanHeader.nextDueDate'
-                ) ||
-                  'Próximo Vencimento'}
+                )}
               </div>
 
               <div
@@ -975,7 +967,7 @@ export default function LoanTimelineHeader({
             <div
               style={{
                 background:
-                  'rgba(255, 255, 255, 0.02)',
+                  'var(--bg-glass)',
                 padding: '12px',
                 borderRadius: '8px',
                 border:
@@ -1027,8 +1019,7 @@ export default function LoanTimelineHeader({
                   >
                     {t(
                       'loanHeader.capitalStillDueLabel'
-                    ) ||
-                      'CAPITAL AINDA DEVIDO'}
+                    )}
                   </span>
 
                   <span
@@ -1058,8 +1049,7 @@ export default function LoanTimelineHeader({
                   >
                     {t(
                       'loanHeader.estimatedFutureInterest'
-                    ) ||
-                      'JUROS FUTUROS ESTIMADOS'}
+                    )}
                   </span>
 
                   <span
@@ -1089,8 +1079,7 @@ export default function LoanTimelineHeader({
                   >
                     {t(
                       'loanHeader.estimatedFutureFees'
-                    ) ||
-                      'IMPOSTOS / TAXAS FUTURAS'}
+                    )}
                   </span>
 
                   <span
@@ -1125,8 +1114,7 @@ export default function LoanTimelineHeader({
                   >
                     {t(
                       'loanHeader.totalFutureToPay'
-                    ) ||
-                      'TOTAL FUTURO A PAGAR'}
+                    )}
                   </span>
 
                   <span
@@ -1150,7 +1138,7 @@ export default function LoanTimelineHeader({
             <div
               style={{
                 background:
-                  'rgba(255, 255, 255, 0.02)',
+                  'var(--bg-glass)',
                 padding: '12px',
                 borderRadius: '8px',
                 border:
@@ -1202,8 +1190,7 @@ export default function LoanTimelineHeader({
                   >
                     {t(
                       'loanHeader.amortizedCapitalLabel'
-                    ) ||
-                      'CAPITAL AMORTIZADO'}
+                    )}
                   </span>
 
                   <span
@@ -1233,8 +1220,7 @@ export default function LoanTimelineHeader({
                   >
                     {t(
                       'loanHeader.interestPaid'
-                    ) ||
-                      'JUROS PAGOS'}
+                    )}
                   </span>
 
                   <span
@@ -1264,8 +1250,7 @@ export default function LoanTimelineHeader({
                   >
                     {t(
                       'loanHeader.feesPaid'
-                    ) ||
-                      'IMPOSTOS / TAXAS PAGAS'}
+                    )}
                   </span>
 
                   <span
@@ -1300,8 +1285,7 @@ export default function LoanTimelineHeader({
                   >
                     {t(
                       'loanHeader.totalAlreadyPaid'
-                    ) ||
-                      'TOTAL JÁ PAGO'}
+                    )}
                   </span>
 
                   <span
@@ -1325,7 +1309,7 @@ export default function LoanTimelineHeader({
             <div
               style={{
                 background:
-                  'rgba(255, 255, 255, 0.02)',
+                  'var(--bg-glass)',
                 padding: '12px',
                 borderRadius: '8px',
                 border:
@@ -1377,8 +1361,7 @@ export default function LoanTimelineHeader({
                   >
                     {t(
                       'loanHeader.originalCapital'
-                    ) ||
-                      'CAPITAL ORIGINAL'}
+                    )}
                   </span>
 
                   <span
@@ -1408,8 +1391,7 @@ export default function LoanTimelineHeader({
                   >
                     {t(
                       'loanHeader.totalEstimatedInterest'
-                    ) ||
-                      'JUROS TOTAIS ESTIMADOS'}
+                    )}
                   </span>
 
                   <span
@@ -1440,8 +1422,7 @@ export default function LoanTimelineHeader({
                   >
                     {t(
                       'loanHeader.totalEstimatedFees'
-                    ) ||
-                      'IMPOSTOS / TAXAS TOTAIS'}
+                    )}
                   </span>
 
                   <span
@@ -1476,8 +1457,7 @@ export default function LoanTimelineHeader({
                   >
                     {t(
                       'loanHeader.totalLoanCost'
-                    ) ||
-                      'CUSTO TOTAL DO EMPRÉSTIMO'}
+                    )}
                   </span>
 
                   <span
@@ -1494,6 +1474,9 @@ export default function LoanTimelineHeader({
               </div>
             </div>
           </div>
+
+          {/* Installments and amortizations by state, and where the amortized capital came from */}
+          <LoanStatusBreakdown breakdown={loanMetrics.statusBreakdown} t={t} />
         </div>
       )}
     </HeaderShell>

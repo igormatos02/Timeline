@@ -25,6 +25,7 @@ import {
   LoanAmortizationSystem
 } from '../enums/index.js';
 import { getPrincipal, getInstallmentAmount, getInstallmentInterest, getInstallmentFee } from '../../shared/finance/loanAmounts.js';
+import { computeLoanStatusBreakdown } from '../../shared/finance/loanPosition.js';
 
 // Installment amount getters live in shared/finance (used by the financial engine too)
 export { getPrincipal, getInstallmentAmount, getInstallmentInterest, getInstallmentFee };
@@ -1493,6 +1494,10 @@ export function getLoanMetrics(
     futureInterest,
     futureFee,
     futureTotal,
+
+    // Installments and amortizations by state (pending / overdue / paid / abated / cancelled; pending /
+    // realized / cancelled) and the source of the amortized capital
+    statusBreakdown: computeLoanStatusBreakdown({ events: timelineEvents, today }),
 
     // Installment counts
     paidInstallments: paidCount,

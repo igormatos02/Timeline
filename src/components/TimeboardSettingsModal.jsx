@@ -73,7 +73,8 @@ export default function TimeboardSettingsModal({
   onEntitySaved,
   timelines = [],
   events = [],
-  pockets = []
+  pockets = [],
+  initialTab = TimeboardSettingsTab.GENERAL
 }) {
   const { t, dateLocale } = useTranslation();
   const currentMonthKey = new Date().toISOString().substring(0, 7);
@@ -160,8 +161,19 @@ export default function TimeboardSettingsModal({
 
   // Active tab (contributors only see the reports; admins also see the change history)
   const { canManage } = usePermissions();
-  const [selectedTab, setActiveTab] = useState(TimeboardSettingsTab.GENERAL);
-  const activeTab = canManage ? selectedTab : TimeboardSettingsTab.REPORTS;
+  const [userSelectedTab, setUserSelectedTab] = useState(null);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) {
+      setUserSelectedTab(null);
+    }
+  }
+
+  const currentTab = userSelectedTab ?? initialTab ?? TimeboardSettingsTab.GENERAL;
+  const activeTab = canManage ? currentTab : TimeboardSettingsTab.REPORTS;
+  const setActiveTab = setUserSelectedTab;
 
   // General tab form state
   const [generalForm, setGeneralForm] = useState({

@@ -90,6 +90,12 @@ import { useTimelineFilteredEvents } from './timeline/useTimelineFilteredEvents.
 
 
 function VerticalTimeline({
+  timeboards = [],
+  activeTimeboardId = null,
+  onSelectTimeboard,
+  onOpenEditTimeboard,
+  onOpenCreateTimeboard,
+  onNavigateToHub,
   lockedEntityId = null,
   timeline,
   timelines = [],
@@ -1359,58 +1365,66 @@ function VerticalTimeline({
   return (
     <EventActionsProvider value={eventActions}>
     <div className="timeline-workspace-layout">
-      {/* 🧭 Left Filter Sidebar Cockpit */}
+      {/* 🧭 Left Unified Sidebar Cockpit */}
       <TimelineSidebar
+        timeboards={timeboards}
+        activeTimeboard={activeTimeboard}
+        activeTimeboardId={activeTimeboardId || activeTimeboard?.id}
+        onSelectTimeboard={onSelectTimeboard}
+        onOpenEditTimeboard={onOpenEditTimeboard}
+        onOpenCreateTimeboard={onOpenCreateTimeboard}
+        onNavigateToHub={onNavigateToHub}
+        currentUser={currentUser}
         activeFinancialTab={activeFinancialTab}
-        availableCategoryOptions={availableCategoryOptions}
-        availableCreditOptions={availableCreditOptions}
-        availableExpenseCategoryItems={availableExpenseCategoryItems}
-        collapsedSections={collapsedSections}
-        getEntityIcon={getEntityIcon}
-        getStatusFilterOptions={getStatusFilterOptions}
-        isCondoflow={isCondoflow}
-        isListView={isListView}
-        isPeriodActive={isPeriodActive}
-        isReadOnly={isReadOnly}
-        isTimelineDropdownOpen={isTimelineDropdownOpen}
-        onCreateTimeline={onCreateTimeline}
-        onNavigateToTimeline={onNavigateToTimeline}
-        onSelectFinancialTab={onSelectFinancialTab}
-        periodMonth={periodMonth}
-        periodYear={periodYear}
-        periodYearOptions={periodYearOptions}
-        renderFilterSwitch={renderFilterSwitch}
-        searchQuery={searchQuery}
-        selectAllExpenseCategories={selectAllExpenseCategories}
-        selectAllStatuses={selectAllStatuses}
-        selectAllTimelines={selectAllTimelines}
-        selectedCategoryFilter={selectedCategoryFilter}
-        selectedEntityId={selectedEntityId}
-        selectedExpenseCategories={selectedExpenseCategories}
-        selectedMovementTypes={selectedMovementTypes}
-        selectedOutflowTypes={selectedOutflowTypes}
-        selectedStatusFilters={selectedStatusFilters}
-        selectedTimelineIds={selectedTimelineIds}
-        setIsTimelineDropdownOpen={setIsTimelineDropdownOpen}
-        setPeriodMonth={setPeriodMonth}
-        setPeriodYear={setPeriodYear}
-        setSearchQuery={setSearchQuery}
-        setSelectedCategoryFilter={setSelectedCategoryFilter}
-        setSelectedEntityId={setSelectedEntityId}
-        setSelectedExpenseCategories={setSelectedExpenseCategories}
-        setSelectedMovementTypes={setSelectedMovementTypes}
-        setSelectedOutflowTypes={setSelectedOutflowTypes}
-        t={t}
-        timeline={timeline}
-        timelineDropdownRef={timelineDropdownRef}
-        timelineEntities={timelineEntities}
-        timelineOptions={timelineOptions}
-        timelines={timelines}
-        toggleExpenseCategory={toggleExpenseCategory}
-        toggleSectionCollapse={toggleSectionCollapse}
-        toggleStatusFilter={toggleStatusFilter}
-        toggleTimelineSelection={toggleTimelineSelection}
-      />
+          availableCategoryOptions={availableCategoryOptions}
+          availableCreditOptions={availableCreditOptions}
+          availableExpenseCategoryItems={availableExpenseCategoryItems}
+          collapsedSections={collapsedSections}
+          getEntityIcon={getEntityIcon}
+          getStatusFilterOptions={getStatusFilterOptions}
+          isCondoflow={isCondoflow}
+          isListView={isListView}
+          isPeriodActive={isPeriodActive}
+          isReadOnly={isReadOnly}
+          isTimelineDropdownOpen={isTimelineDropdownOpen}
+          onCreateTimeline={onCreateTimeline}
+          onNavigateToTimeline={onNavigateToTimeline}
+          onSelectFinancialTab={onSelectFinancialTab}
+          periodMonth={periodMonth}
+          periodYear={periodYear}
+          periodYearOptions={periodYearOptions}
+          renderFilterSwitch={renderFilterSwitch}
+          searchQuery={searchQuery}
+          selectAllExpenseCategories={selectAllExpenseCategories}
+          selectAllStatuses={selectAllStatuses}
+          selectAllTimelines={selectAllTimelines}
+          selectedCategoryFilter={selectedCategoryFilter}
+          selectedEntityId={selectedEntityId}
+          selectedExpenseCategories={selectedExpenseCategories}
+          selectedMovementTypes={selectedMovementTypes}
+          selectedOutflowTypes={selectedOutflowTypes}
+          selectedStatusFilters={selectedStatusFilters}
+          selectedTimelineIds={selectedTimelineIds}
+          setIsTimelineDropdownOpen={setIsTimelineDropdownOpen}
+          setPeriodMonth={setPeriodMonth}
+          setPeriodYear={setPeriodYear}
+          setSearchQuery={setSearchQuery}
+          setSelectedCategoryFilter={setSelectedCategoryFilter}
+          setSelectedEntityId={setSelectedEntityId}
+          setSelectedExpenseCategories={setSelectedExpenseCategories}
+          setSelectedMovementTypes={setSelectedMovementTypes}
+          setSelectedOutflowTypes={setSelectedOutflowTypes}
+          t={t}
+          timeline={timeline}
+          timelineDropdownRef={timelineDropdownRef}
+          timelineEntities={timelineEntities}
+          timelineOptions={timelineOptions}
+          timelines={timelines}
+          toggleExpenseCategory={toggleExpenseCategory}
+          toggleSectionCollapse={toggleSectionCollapse}
+          toggleStatusFilter={toggleStatusFilter}
+          toggleTimelineSelection={toggleTimelineSelection}
+        />
 
       {/* 📜 Right Timeline Content Stream */}
       <div className="timeline-content-stream">

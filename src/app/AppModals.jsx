@@ -67,6 +67,7 @@ export default function AppModals({
   setWithdrawalDefaultPocketId,
   timeboards,
   timelines,
+  timeboardSettingsInitialTab,
   withdrawalDefaultDate,
   withdrawalDefaultPocketId
 }) {
@@ -93,6 +94,7 @@ export default function AppModals({
         timelines={activeTimeboardTimelines}
         events={rawEvents}
         pockets={pockets}
+        initialTab={timeboardSettingsInitialTab}
         onEntitySaved={(savedEntity) => {
           if (!savedEntity || !savedEntity.id) return;
           setTimeboardPersons((prev) => {

@@ -11,7 +11,7 @@ import {
   getLoanMetrics
 } from './utils/loanCalculations';
 import * as api from './services/api';
-import { TimelineType, isLoanTimelineType, PersonRole } from './enums/index.js';
+import { TimelineType, isLoanTimelineType, PersonRole, TimeboardSettingsTab } from './enums/index.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
 import LandingPage from './components/landing/LandingPage.jsx';
@@ -92,6 +92,7 @@ export default function App() {
   });
   const [isTimeboardModalOpen, setIsTimeboardModalOpen] = useState(false);
   const [isTimeboardSettingsModalOpen, setIsTimeboardSettingsModalOpen] = useState(false);
+  const [timeboardSettingsInitialTab, setTimeboardSettingsInitialTab] = useState(TimeboardSettingsTab.GENERAL);
   const [editingTimeboard, setEditingTimeboard] = useState(null);
   const [isUpdatingInstallments, setIsUpdatingInstallments] = useState(false);
 
@@ -576,6 +577,43 @@ export default function App() {
     if (tab) setActiveFinancialTab(tab);
   }, []);
 
+  // Handlers for Topbar Timeboard Actions
+  const handleOpenTimeboardEntities = useCallback(async () => {
+    if (!activeTimeboard) return;
+    try {
+      const fresh = await api.fetchTimeboard(activeTimeboard.id);
+      setEditingTimeboard(fresh || activeTimeboard);
+    } catch {
+      setEditingTimeboard(activeTimeboard);
+    }
+    setTimeboardSettingsInitialTab(TimeboardSettingsTab.ENTITIES);
+    setIsTimeboardSettingsModalOpen(true);
+  }, [activeTimeboard]);
+
+  const handleOpenTimeboardReports = useCallback(async () => {
+    if (!activeTimeboard) return;
+    try {
+      const fresh = await api.fetchTimeboard(activeTimeboard.id);
+      setEditingTimeboard(fresh || activeTimeboard);
+    } catch {
+      setEditingTimeboard(activeTimeboard);
+    }
+    setTimeboardSettingsInitialTab(TimeboardSettingsTab.REPORTS);
+    setIsTimeboardSettingsModalOpen(true);
+  }, [activeTimeboard]);
+
+  const handleOpenTimeboardSettings = useCallback(async () => {
+    if (!activeTimeboard) return;
+    try {
+      const fresh = await api.fetchTimeboard(activeTimeboard.id);
+      setEditingTimeboard(fresh || activeTimeboard);
+    } catch {
+      setEditingTimeboard(activeTimeboard);
+    }
+    setTimeboardSettingsInitialTab(TimeboardSettingsTab.GENERAL);
+    setIsTimeboardSettingsModalOpen(true);
+  }, [activeTimeboard]);
+
   // 1. Landing Page View (When not logged in or explicitly at landing)
   if (!currentUser || currentView === 'landing') {
     return (
@@ -626,6 +664,17 @@ export default function App() {
     <div className="app-container">
       {/* Navbar */}
       <Navbar
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        onNavigateToHub={handleNavigateToHub}
+        onLogout={handleLogout}
+        onOpenEntities={can(timeboardRole, Capability.PRINT) ? handleOpenTimeboardEntities : undefined}
+        onOpenReports={can(timeboardRole, Capability.PRINT) ? handleOpenTimeboardReports : undefined}
+        onOpenSettings={can(timeboardRole, Capability.PRINT) ? handleOpenTimeboardSettings : undefined}
+      />
+
+      {/* Main Layout Area */}
+      <AppMainArea
         timeboards={timeboards}
         activeTimeboardId={activeTimeboardId}
         onSelectTimeboard={(id) => {
@@ -640,16 +689,11 @@ export default function App() {
           } catch {
             setEditingTimeboard(tb);
           }
+          setTimeboardSettingsInitialTab(TimeboardSettingsTab.GENERAL);
           setIsTimeboardSettingsModalOpen(true);
         }}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
+        onOpenCreateTimeboard={() => setIsTimeboardModalOpen(true)}
         onNavigateToHub={handleNavigateToHub}
-        onLogout={handleLogout}
-      />
-
-      {/* Main Layout Area */}
-      <AppMainArea
         activeFinancialTab={activeFinancialTab}
         activeTimeboard={activeTimeboard}
         activeTimeboardTimelines={activeTimeboardTimelines}
@@ -767,6 +811,7 @@ export default function App() {
         setWithdrawalDefaultPocketId={setWithdrawalDefaultPocketId}
         timeboards={timeboards}
         timelines={timelines}
+        timeboardSettingsInitialTab={timeboardSettingsInitialTab}
         withdrawalDefaultDate={withdrawalDefaultDate}
         withdrawalDefaultPocketId={withdrawalDefaultPocketId}
       />

@@ -4,9 +4,18 @@ import { Bell, BookOpen, CheckSquare, ChevronDown, CreditCard, Filter, FolderKan
 import { EventStatus, TimelineColor, TimelineType } from '../../enums/index.js';
 import PeriodBadgeFilter from '../ui/PeriodBadgeFilter.jsx';
 import SidebarToggleFilter from '../sidebar/SidebarToggleFilter.jsx';
+import TimeboardSwitcher from '../sidebar/TimeboardSwitcher.jsx';
 
 // Extracted from VerticalTimeline.jsx (VerticalTimeline): receives every value it uses as a prop.
 export default function TimelineSidebar({
+  timeboards = [],
+  activeTimeboard = null,
+  activeTimeboardId = null,
+  onSelectTimeboard,
+  onOpenEditTimeboard,
+  onOpenCreateTimeboard,
+  onNavigateToHub,
+  currentUser,
   activeFinancialTab,
   availableCategoryOptions,
   availableCreditOptions,
@@ -59,19 +68,37 @@ export default function TimelineSidebar({
 }) {
   return (
     <aside className="filter-sidebar">
-      <div className="sidebar-header-title">
-        <Filter size={15} style={{ color: 'var(--primary-light)' }} />
-        <span>{t('sidebar.filtersNavigation')}</span>
-      </div>
+      {/* 🧭 Unified Timeboard Workspace Header */}
+      {timeboards && timeboards.length > 0 && (
+        <TimeboardSwitcher
+          timeboards={timeboards}
+          activeTimeboard={activeTimeboard}
+          activeTimeboardId={activeTimeboardId || activeTimeboard?.id}
+          onSelectTimeboard={onSelectTimeboard}
+          onOpenEditTimeboard={onOpenEditTimeboard}
+          onOpenCreateTimeboard={onOpenCreateTimeboard}
+          onNavigateToHub={onNavigateToHub}
+          currentUser={currentUser}
+        />
+      )}
 
-      {/* 🌟 0. Timelines do Timeboard vindas da Base de Dados */}
-      {((timelines && timelines.length > 0) || (timeline?.timelines && timeline.timelines.length > 0)) && (
-        <div className="sidebar-section">
-          <div
-            className="sidebar-section-title"
-            style={{ cursor: 'pointer', userSelect: 'none' }}
-            onClick={() => toggleSectionCollapse('timelines')}
-          >
+      {/* Minor Navigation label if no timeboard header */}
+      {(!timeboards || timeboards.length === 0) && (
+        <div className="sidebar-header-title">
+          <Filter size={15} style={{ color: 'var(--primary-light)' }} />
+          <span>{t('sidebar.filtersNavigation')}</span>
+        </div>
+      )}
+
+      <div className="filter-sidebar-content">
+        {/* 🌟 0. Timelines do Timeboard vindas da Base de Dados */}
+        {((timelines && timelines.length > 0) || (timeline?.timelines && timeline.timelines.length > 0)) && (
+          <div className="sidebar-section">
+            <div
+              className="sidebar-section-title"
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              onClick={() => toggleSectionCollapse('timelines')}
+            >
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <ChevronDown
                 size={13}
@@ -702,6 +729,7 @@ export default function TimelineSidebar({
           )}
         </div>
       )}
+      </div>
 
     </aside>
   );

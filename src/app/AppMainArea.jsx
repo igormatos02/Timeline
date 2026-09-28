@@ -7,6 +7,12 @@ import { Plus } from 'lucide-react';
 
 // Extracted from App.jsx (App).
 export default function AppMainArea({
+  timeboards = [],
+  activeTimeboardId,
+  onSelectTimeboard,
+  onOpenEditTimeboard,
+  onOpenCreateTimeboard,
+  onNavigateToHub,
   activeFinancialTab,
   activeTimeboard,
   activeTimeboardTimelines,
@@ -67,6 +73,12 @@ export default function AppMainArea({
     <main className="main-layout">
       {timelines.length > 0 && activeTimeline ? (
         <VerticalTimeline
+          timeboards={timeboards}
+          activeTimeboardId={activeTimeboardId}
+          onSelectTimeboard={onSelectTimeboard}
+          onOpenEditTimeboard={onOpenEditTimeboard}
+          onOpenCreateTimeboard={onOpenCreateTimeboard}
+          onNavigateToHub={onNavigateToHub}
           timeline={activeTimeline}
           lockedEntityId={individualEntityId}
           timelines={visibleTimelines}

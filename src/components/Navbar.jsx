@@ -1,21 +1,33 @@
-import React from 'react';
-import { Clock, LayoutGrid, Sparkles, Sun, Moon, Settings, ChevronDown, LogOut } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Clock,
+  Sparkles,
+  Sun,
+  Moon,
+  Settings,
+  BarChart3,
+  Users,
+  LayoutGrid,
+  ChevronDown,
+  LogOut,
+  Check
+} from 'lucide-react';
 import { getCurrentUser } from '../services/api';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { TimelineColor, PersonRole } from '../enums/index.js';
+import { TimelineColor } from '../enums/index.js';
 import { isGlobalTenant } from '../constants/tenant.js';
 import VersionBadge from './ui/VersionBadge.jsx';
 import LogoutConfirmModal from './LogoutConfirmModal.jsx';
+import Tooltip from './ui/Tooltip.jsx';
 
 export default function Navbar({
-  timeboards = [],
-  activeTimeboardId,
-  onSelectTimeboard,
-  onOpenEditTimeboard,
   theme,
   onToggleTheme,
   onNavigateToHub,
-  onLogout
+  onLogout,
+  onOpenEntities,
+  onOpenReports,
+  onOpenSettings
 }) {
   const currentUser = getCurrentUser() || {
     name: 'Igor Matos',
@@ -23,8 +35,6 @@ export default function Navbar({
     tenantName: 'Espaço Pessoal'
   };
   const { language, setLanguage, t } = useTranslation();
-
-  const activeTimeboard = timeboards.find((tb) => tb.id === activeTimeboardId);
 
   return (
     <header className="app-header">
@@ -34,7 +44,7 @@ export default function Navbar({
           className="brand-logo"
           onClick={onNavigateToHub}
           style={{ cursor: onNavigateToHub ? 'pointer' : 'default' }}
-          title={onNavigateToHub ? 'Voltar à Lista de Dashboards' : undefined}
+          title={onNavigateToHub ? t('header.viewHub') : undefined}
         >
           <div className="logo-icon">
             <Clock size={22} />
@@ -47,93 +57,195 @@ export default function Navbar({
           <VersionBadge style={{ marginLeft: '4px' }} />
         </div>
 
-        {/* Custom Premium Timeboard Selector Dropdown */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <TimeboardDropdownSelector
-            timeboards={timeboards}
-            activeTimeboard={activeTimeboard}
-            activeTimeboardId={activeTimeboardId}
-            onSelectTimeboard={onSelectTimeboard}
-            onOpenEditTimeboard={onOpenEditTimeboard}
-            currentUser={currentUser}
-          />
-        </div>
-
         {/* Actions & User Profile */}
         <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Language Toggle UK / PT */}
-          <div
-            className="language-selector-group"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              background: 'var(--bg-glass)',
-              border: '1px solid var(--border-glass)',
-              borderRadius: '8px',
-              padding: '2px',
-              gap: '2px'
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setLanguage('en')}
-              className={`lang-btn ${language === 'en' ? 'active' : ''}`}
-              title="English (UK)"
+          {/* Active Workspace / Timeboard Quick Actions (Icon-only with rich hints) */}
+          {(onNavigateToHub || onOpenEntities || onOpenReports || onOpenSettings) && (
+            <div
+              className="header-workspace-actions"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px',
-                padding: '4px 8px',
-                borderRadius: '6px',
-                border: 'none',
-                background: language === 'en' ? 'var(--primary)' : 'transparent',
-                color: language === 'en' ? TimelineColor.WHITE : 'var(--text-muted)',
-                cursor: 'pointer',
-                fontSize: '0.78rem',
-                fontWeight: language === 'en' ? '700' : '500',
-                transition: 'all 0.15s ease'
+                gap: '6px'
               }}
             >
-              <span style={{ fontSize: '1rem', lineHeight: 1 }}>🇬🇧</span>
-              <span>EN</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setLanguage('pt')}
-              className={`lang-btn ${language === 'pt' ? 'active' : ''}`}
-              title="Português (PT)"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '4px 8px',
-                borderRadius: '6px',
-                border: 'none',
-                background: language === 'pt' ? 'var(--primary)' : 'transparent',
-                color: language === 'pt' ? TimelineColor.WHITE : 'var(--text-muted)',
-                cursor: 'pointer',
-                fontSize: '0.78rem',
-                fontWeight: language === 'pt' ? '700' : '500',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <span style={{ fontSize: '1rem', lineHeight: 1 }}>🇵🇹</span>
-              <span>PT</span>
-            </button>
-          </div>
+              {onNavigateToHub && (
+                <Tooltip content={t('header.viewHubTooltip')}>
+                  <button
+                    type="button"
+                    className="header-icon-action-btn"
+                    onClick={onNavigateToHub}
+                    aria-label={t('header.viewHubTooltip')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '9px',
+                      background: 'var(--bg-glass)',
+                      border: '1px solid var(--border-glass)',
+                      color: 'var(--text-main)',
+                      cursor: 'pointer',
+                      transition: 'all 0.18s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(99, 102, 241, 0.14)';
+                      e.currentTarget.style.borderColor = 'var(--border-glass-glow)';
+                      e.currentTarget.style.color = 'var(--primary-light)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'var(--bg-glass)';
+                      e.currentTarget.style.borderColor = 'var(--border-glass)';
+                      e.currentTarget.style.color = 'var(--text-main)';
+                      e.currentTarget.style.transform = 'none';
+                    }}
+                  >
+                    <LayoutGrid size={18} />
+                  </button>
+                </Tooltip>
+              )}
 
+              {onOpenEntities && (
+                <Tooltip content={t('header.entitiesTooltip')}>
+                  <button
+                    type="button"
+                    className="header-icon-action-btn"
+                    onClick={onOpenEntities}
+                    aria-label={t('header.entitiesTooltip')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '9px',
+                      background: 'var(--bg-glass)',
+                      border: '1px solid var(--border-glass)',
+                      color: 'var(--text-main)',
+                      cursor: 'pointer',
+                      transition: 'all 0.18s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(99, 102, 241, 0.14)';
+                      e.currentTarget.style.borderColor = 'var(--border-glass-glow)';
+                      e.currentTarget.style.color = 'var(--primary-light)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'var(--bg-glass)';
+                      e.currentTarget.style.borderColor = 'var(--border-glass)';
+                      e.currentTarget.style.color = 'var(--text-main)';
+                      e.currentTarget.style.transform = 'none';
+                    }}
+                  >
+                    <Users size={18} />
+                  </button>
+                </Tooltip>
+              )}
+
+              {onOpenReports && (
+                <Tooltip content={t('header.reportsTooltip')}>
+                  <button
+                    type="button"
+                    className="header-icon-action-btn"
+                    onClick={onOpenReports}
+                    aria-label={t('header.reportsTooltip')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '9px',
+                      background: 'var(--bg-glass)',
+                      border: '1px solid var(--border-glass)',
+                      color: 'var(--text-main)',
+                      cursor: 'pointer',
+                      transition: 'all 0.18s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(99, 102, 241, 0.14)';
+                      e.currentTarget.style.borderColor = 'var(--border-glass-glow)';
+                      e.currentTarget.style.color = 'var(--primary-light)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'var(--bg-glass)';
+                      e.currentTarget.style.borderColor = 'var(--border-glass)';
+                      e.currentTarget.style.color = 'var(--text-main)';
+                      e.currentTarget.style.transform = 'none';
+                    }}
+                  >
+                    <BarChart3 size={18} />
+                  </button>
+                </Tooltip>
+              )}
+
+              {onOpenSettings && (
+                <Tooltip content={t('header.settingsTooltip')}>
+                  <button
+                    type="button"
+                    className="header-icon-action-btn"
+                    onClick={onOpenSettings}
+                    aria-label={t('header.settingsTooltip')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '9px',
+                      background: 'var(--bg-glass)',
+                      border: '1px solid var(--border-glass)',
+                      color: 'var(--text-main)',
+                      cursor: 'pointer',
+                      transition: 'all 0.18s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(99, 102, 241, 0.14)';
+                      e.currentTarget.style.borderColor = 'var(--border-glass-glow)';
+                      e.currentTarget.style.color = 'var(--primary-light)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'var(--bg-glass)';
+                      e.currentTarget.style.borderColor = 'var(--border-glass)';
+                      e.currentTarget.style.color = 'var(--text-main)';
+                      e.currentTarget.style.transform = 'none';
+                    }}
+                  >
+                    <Settings size={18} />
+                  </button>
+                </Tooltip>
+              )}
+
+              {/* Subtle divider separating workspace tools from system settings */}
+              <div
+                style={{
+                  width: '1px',
+                  height: '20px',
+                  background: 'var(--border-glass)',
+                  margin: '0 4px'
+                }}
+              />
+            </div>
+          )}
+
+          {/* Discreet Language Dropdown */}
+          <LanguageDropdown language={language} setLanguage={setLanguage} />
 
           {/* Theme Toggle */}
-          <button
-            className="theme-toggle-btn"
-            onClick={onToggleTheme}
-            title={theme === 'light' ? t('header.toggleThemeDark') : t('header.toggleThemeLight')}
-            aria-label="Alternar tema"
-          >
-            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-          </button>
-
-
+          <Tooltip content={theme === 'light' ? t('header.toggleThemeDark') : t('header.toggleThemeLight')}>
+            <button
+              className="theme-toggle-btn"
+              onClick={onToggleTheme}
+              aria-label={theme === 'light' ? t('header.toggleThemeDark') : t('header.toggleThemeLight')}
+            >
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
+          </Tooltip>
 
           {/* 👤 Logged In User Dropdown */}
           <UserDropdown currentUser={currentUser} onLogout={onLogout} />
@@ -143,19 +255,12 @@ export default function Navbar({
   );
 }
 
-function TimeboardDropdownSelector({
-  timeboards,
-  activeTimeboard,
-  activeTimeboardId,
-  onSelectTimeboard,
-  onOpenEditTimeboard,
-  currentUser
-}) {
+function LanguageDropdown({ language, setLanguage }) {
   const { t } = useTranslation();
-  const [isOpen, setIsOpen] = React.useState(false);
-  const dropdownRef = React.useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
@@ -165,13 +270,6 @@ function TimeboardDropdownSelector({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const formattedType = activeTimeboard?.type
-    ? activeTimeboard.type.charAt(0).toUpperCase() + activeTimeboard.type.slice(1).toLowerCase()
-    : 'Financial';
-
-  const currentUserId = currentUser?.id;
-  const isNotOwner = activeTimeboard && (activeTimeboard.isShared || (activeTimeboard.ownerId && currentUserId && activeTimeboard.ownerId !== currentUserId));
-
   return (
     <div
       ref={dropdownRef}
@@ -180,222 +278,135 @@ function TimeboardDropdownSelector({
         display: 'inline-block'
       }}
     >
+      {/* Discreet Language Badge Trigger (Outside: only PT or EN) */}
       <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          background: 'var(--bg-card)',
-          padding: '6px 10px 6px 12px',
-          borderRadius: 'var(--radius-md, 10px)',
-          border: '1px solid var(--border-glass)',
-          boxShadow: 'var(--shadow-sm)',
-          transition: 'all 0.2s ease',
-          cursor: 'pointer'
-        }}
         onClick={() => setIsOpen((prev) => !prev)}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '5px',
+          height: '36px',
+          padding: '0 10px',
+          borderRadius: '9px',
+          background: isOpen ? 'rgba(99, 102, 241, 0.16)' : 'var(--bg-glass)',
+          border: isOpen ? '1px solid var(--border-glass-glow)' : '1px solid var(--border-glass)',
+          color: 'var(--text-main)',
+          cursor: 'pointer',
+          fontSize: '0.76rem',
+          fontWeight: '700',
+          letterSpacing: '0.5px',
+          userSelect: 'none',
+          transition: 'all 0.15s ease'
+        }}
+        title={t('header.selectLanguage')}
       >
-        <LayoutGrid size={17} style={{ color: 'var(--primary)', flexShrink: 0 }} />
-
-        {/* Selected Timeboard Info */}
-        <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', minWidth: '130px' }}>
-          <span
-            style={{
-              fontSize: '0.86rem',
-              fontWeight: '700',
-              color: 'var(--text-main)',
-              lineHeight: 1.2,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              maxWidth: '160px'
-            }}
-          >
-            {activeTimeboard?.name || t('header.selectTimeboard')}
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}>
-            <span
-              style={{
-                fontSize: '0.66rem',
-                fontWeight: '600',
-                color: 'var(--primary-light)',
-                lineHeight: 1
-              }}
-            >
-              {formattedType}
-            </span>
-            {isNotOwner && (
-              <span
-                style={{
-                  fontSize: '0.62rem',
-                  fontWeight: '700',
-                  color: TimelineColor.PURPLE,
-                  background: 'rgba(168, 85, 247, 0.15)',
-                  border: '1px solid rgba(168, 85, 247, 0.3)',
-                  borderRadius: '4px',
-                  padding: '1px 4px',
-                  lineHeight: 1
-                }}
-              >
-                {activeTimeboard.role === PersonRole.ADMIN
-                  ? t('timeboardSettings.entities.roles.admin')
-                  : activeTimeboard.role === PersonRole.INDIVIDUAL
-                  ? t('timeboardSettings.entities.roles.individual')
-                  : activeTimeboard.role === PersonRole.CONTRIBUTOR
-                  ? t('timeboardSettings.entities.roles.contributor')
-                  : t('timeboardModal.typeShared')}
-              </span>
-            )}
-          </div>
-        </div>
-
+        <span>{language.toUpperCase()}</span>
         <ChevronDown
-          size={15}
+          size={12}
           style={{
             color: 'var(--text-muted)',
-            transition: 'transform 0.2s ease',
-            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-            marginLeft: '4px'
+            transform: isOpen ? 'rotate(180deg)' : 'none',
+            transition: 'transform 0.2s ease'
           }}
         />
-
-        {/* Settings Icon Button */}
-        {onOpenEditTimeboard && activeTimeboard && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsOpen(false);
-              onOpenEditTimeboard(activeTimeboard);
-            }}
-            title="Timeboard Settings"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'rgba(99, 102, 241, 0.1)',
-              border: '1px solid rgba(99, 102, 241, 0.2)',
-              color: 'var(--primary-light)',
-              cursor: 'pointer',
-              padding: '5px',
-              borderRadius: '6px',
-              marginLeft: '4px',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <Settings size={15} />
-          </button>
-        )}
       </div>
 
-      {/* Floating Glassmorphism Options Menu */}
+      {/* Floating Language Options with Flags Inside */}
       {isOpen && (
         <div
           style={{
             position: 'absolute',
             top: 'calc(100% + 6px)',
-            left: 0,
-            width: '240px',
+            right: 0,
+            width: '160px',
             background: 'var(--bg-card)',
             border: '1px solid var(--border-glass-glow)',
-            borderRadius: '12px',
-            boxShadow: '0 16px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.15)',
+            borderRadius: '10px',
+            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.5), 0 0 16px rgba(99, 102, 241, 0.15)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',
-            padding: '6px',
+            padding: '4px',
             zIndex: 9999,
             display: 'flex',
             flexDirection: 'column',
-            gap: '3px'
+            gap: '2px'
           }}
         >
-          <div
+          <button
+            type="button"
+            onClick={() => {
+              setLanguage('pt');
+              setIsOpen(false);
+            }}
             style={{
-              padding: '6px 8px 4px 8px',
-              fontSize: '0.68rem',
-              fontWeight: '800',
-              color: 'var(--text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '6px 8px',
+              borderRadius: '6px',
+              border: 'none',
+              background: language === 'pt' ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+              color: language === 'pt' ? 'var(--primary-light)' : 'var(--text-main)',
+              cursor: 'pointer',
+              fontSize: '0.78rem',
+              fontWeight: language === 'pt' ? '700' : '500',
+              transition: 'background 0.15s ease',
+              textAlign: 'left',
+              width: '100%'
+            }}
+            onMouseEnter={(e) => {
+              if (language !== 'pt') e.currentTarget.style.background = 'rgba(99, 102, 241, 0.08)';
+            }}
+            onMouseLeave={(e) => {
+              if (language !== 'pt') e.currentTarget.style.background = 'transparent';
             }}
           >
-            {t('header.selectTimeboard')}
-          </div>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '1rem', lineHeight: 1 }}>🇵🇹</span>
+              <span>{t('header.languagePt')}</span>
+            </span>
+            {language === 'pt' && (
+              <Check size={14} style={{ color: 'var(--primary)' }} />
+            )}
+          </button>
 
-          {timeboards.map((tb) => {
-            const isSelected = tb.id === activeTimeboardId;
-            const itemType = tb.type
-              ? tb.type.charAt(0).toUpperCase() + tb.type.slice(1).toLowerCase()
-              : 'Financial';
-
-            return (
-              <div
-                key={tb.id}
-                onClick={() => {
-                  if (onSelectTimeboard) onSelectTimeboard(tb.id);
-                  setIsOpen(false);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '8px 10px',
-                  borderRadius: '8px',
-                  background: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                  border: isSelected ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.12)';
-                    e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.25)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.borderColor = 'transparent';
-                  }
-                }}
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-                  <span
-                    style={{
-                      fontSize: '0.86rem',
-                      fontWeight: isSelected ? '700' : '600',
-                      color: isSelected ? 'var(--primary-light)' : 'var(--text-main)',
-                      lineHeight: 1.2
-                    }}
-                  >
-                    {tb.name}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '0.68rem',
-                      color: isSelected ? 'var(--primary-light)' : 'var(--text-dim)',
-                      fontWeight: '500'
-                    }}
-                  >
-                    {itemType}
-                  </span>
-                </div>
-
-                {isSelected && (
-                  <div
-                    style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      background: 'var(--primary)',
-                      boxShadow: '0 0 8px rgba(99, 102, 241, 0.6)'
-                    }}
-                  />
-                )}
-              </div>
-            );
-          })}
+          <button
+            type="button"
+            onClick={() => {
+              setLanguage('en');
+              setIsOpen(false);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '6px 8px',
+              borderRadius: '6px',
+              border: 'none',
+              background: language === 'en' ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+              color: language === 'en' ? 'var(--primary-light)' : 'var(--text-main)',
+              cursor: 'pointer',
+              fontSize: '0.78rem',
+              fontWeight: language === 'en' ? '700' : '500',
+              transition: 'background 0.15s ease',
+              textAlign: 'left',
+              width: '100%'
+            }}
+            onMouseEnter={(e) => {
+              if (language !== 'en') e.currentTarget.style.background = 'rgba(99, 102, 241, 0.08)';
+            }}
+            onMouseLeave={(e) => {
+              if (language !== 'en') e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '1rem', lineHeight: 1 }}>🇬🇧</span>
+              <span>{t('header.languageEn')}</span>
+            </span>
+            {language === 'en' && (
+              <Check size={14} style={{ color: 'var(--primary)' }} />
+            )}
+          </button>
         </div>
       )}
     </div>

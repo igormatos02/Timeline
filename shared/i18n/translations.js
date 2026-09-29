@@ -403,6 +403,7 @@ export const translations = {
       hidden: "Hidden",
       balanceTimeline: "Balance",
       incomeTimeline: "Income Timeline",
+      timelineType: "Type",
       walletTimeline: "Wallet",
       cashTimeline: "Cash",
       expenseTimeline: "Expenses Timeline",
@@ -2213,6 +2214,42 @@ export const translations = {
     },
 
     // Condominium (condoflow) timeboards call diary entries "posts"
+    // Short description of each timeline type in the sidebar, per timeboard type ("default" = financial,
+    // also used when a timeboard type has no text of its own)
+    timelineTypeDescription: {
+      default: {
+        balance: "Overview of everything",
+        wallet: "Money in hand",
+        investments: "Bank movements",
+        loan: "Loans and installments",
+        reminder: "Notices and dates",
+        diary: "Day-to-day records",
+        todo: "Things to do",
+        followup: "Request follow-up",
+        project: "Milestones and deliveries"
+      },
+      condoflow: {
+        balance: "Condominium accounts",
+        wallet: "Cash in hand",
+        investments: "Condominium account",
+        loan: "Condominium loans",
+        reminder: "Meetings and deadlines",
+        diary: "Notices to owners"
+      },
+      projects: {
+        project: "Milestones and deliveries",
+        todo: "Work to do",
+        followup: "Ongoing requests",
+        reminder: "Project deadlines",
+        diary: "Project notes"
+      },
+      reminders: {
+        reminder: "Notices and dates",
+        todo: "Things to do",
+        diary: "Day-to-day records"
+      }
+    },
+
     condoPost: {
       sidebar: {
         diaryTimeline: "Posts",
@@ -2706,6 +2743,7 @@ export const translations = {
       hidden: "Oculto",
       balanceTimeline: "Balanço",
       incomeTimeline: "Linha de Entrada",
+      timelineType: "Tipo",
       walletTimeline: "Carteira",
       cashTimeline: "Caixa",
       expenseTimeline: "Linha de Despesas",
@@ -4516,6 +4554,42 @@ export const translations = {
     },
 
     // Timeboards de condomínio (condoflow) chamam aos registos do diário "posts"
+    // Descrição curta de cada tipo de timeline na barra lateral, por tipo de timeboard ("default" = finanças,
+    // usada também quando um tipo de timeboard não tem texto próprio)
+    timelineTypeDescription: {
+      default: {
+        balance: "Visão geral de tudo",
+        wallet: "Dinheiro em mão",
+        investments: "Movimentos no banco",
+        loan: "Empréstimos e prestações",
+        reminder: "Avisos e datas",
+        diary: "Registos do dia a dia",
+        todo: "Coisas a fazer",
+        followup: "Seguimento de pedidos",
+        project: "Marcos e entregas"
+      },
+      condoflow: {
+        balance: "Contas do condomínio",
+        wallet: "Dinheiro em caixa",
+        investments: "Conta do condomínio",
+        loan: "Empréstimos do condomínio",
+        reminder: "Assembleias e prazos",
+        diary: "Comunicados aos condóminos"
+      },
+      projects: {
+        project: "Marcos e entregas",
+        todo: "Trabalho por fazer",
+        followup: "Pedidos em curso",
+        reminder: "Prazos do projeto",
+        diary: "Notas do projeto"
+      },
+      reminders: {
+        reminder: "Avisos e datas",
+        todo: "Coisas a fazer",
+        diary: "Registos do dia a dia"
+      }
+    },
+
     condoPost: {
       sidebar: {
         diaryTimeline: "Posts",

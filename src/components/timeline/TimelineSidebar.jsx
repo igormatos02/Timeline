@@ -2,7 +2,7 @@ import React from 'react';
 import { ACCOUNT_MOVEMENT_ITEMS, OUTFLOW_TYPE_ITEMS } from './timelineFilterItems.js';
 import { Bell, BookOpen, CheckSquare, ChevronDown, CreditCard, Filter, FolderKanban, Layers, ListTree, Landmark, Plus, ReceiptEuro, Scale, Search, Users, Wallet, X } from 'lucide-react';
 import { EventStatus, TimeboardType, TimelineColor, TimelineType } from '../../enums/index.js';
-import { getTimelineTypeLabelKey } from '../../utils/timelineConfig.jsx';
+import { getTimelineTypeDescription, getTimelineTypeLabelKey } from '../../utils/timelineConfig.jsx';
 import { makeDiaryT } from '../../utils/diaryLabels.js';
 import PeriodBadgeFilter from '../ui/PeriodBadgeFilter.jsx';
 import SidebarToggleFilter from '../sidebar/SidebarToggleFilter.jsx';
@@ -210,9 +210,10 @@ export default function TimelineSidebar({
             {((timelines && timelines.length > 0) ? timelines : (timeline?.timelines || [])).map((tl, tlIdx) => {
               const isActive = activeFinancialTab === tl.id || timeline?.id === tl.id;
               const tlColor = tl.color;
-              // The name is the user's; the type is the system's: always shown under the name
+              // The name is the user's; the type is the system's: its short description under the name,
+              // its label in the tooltip
               const typeLabel = makeDiaryT(t, activeTimeboard?.type === TimeboardType.CONDOFLOW)(getTimelineTypeLabelKey(tl.type));
-              const showTypeLabel = Boolean(typeLabel);
+              const typeDescription = getTimelineTypeDescription(tl.type, activeTimeboard?.type, t);
               const getTimelineIcon = (type) => {
                 switch (type) {
                   case TimelineType.INCOME:
@@ -255,6 +256,7 @@ export default function TimelineSidebar({
                   key={tl.id || `tl-${tlIdx}`}
                   type="button"
                   className={`sidebar-filter-item ${isActive ? 'active' : ''}`}
+                  title={typeLabel ? `${t('sidebar.timelineType')}: ${typeLabel}` : undefined}
                   onClick={() => {
                     if (onSelectFinancialTab) onSelectFinancialTab(tl.id);
                     if (onNavigateToTimeline) onNavigateToTimeline(tl.id);
@@ -271,9 +273,9 @@ export default function TimelineSidebar({
                     </span>
                     <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, textAlign: 'left', lineHeight: 1.2 }}>
                       <span style={{ fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tl.name}</span>
-                      {showTypeLabel && (
+                      {typeDescription && (
                         <span style={{ fontSize: '0.66rem', fontWeight: '600', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {typeLabel}
+                          {typeDescription}
                         </span>
                       )}
                     </span>

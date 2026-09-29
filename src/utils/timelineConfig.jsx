@@ -101,6 +101,25 @@ export function getTimelineTypeIcon(type, size = 14) {
  * Returns metadata options dynamically derived from Object.values(TimelineType).
  * @returns {Array<{type: string, labelKey: string, defaultColor: string, icon: React.ComponentType, singleInstance: boolean}>}
  */
+/**
+ * Short description of a timeline type for the timeboard type (e.g. wallet -> "Dinheiro em caixa" on a condominium);
+ * falls back to the default (financial) text when the timeboard type has none.
+ * @param {string} type - timeline type
+ * @param {string} timeboardType - TimeboardType of the active timeboard
+ * @param {Function} t - translation function (returns the key itself when missing)
+ * @returns {string}
+ */
+export function getTimelineTypeDescription(type, timeboardType, t) {
+  const typeKey = isWalletTimelineType(type) ? TimelineType.WALLET : normalizeTimelineType(type);
+  if (!typeKey) return '';
+  const ownKey = `timelineTypeDescription.${timeboardType}.${typeKey}`;
+  const own = timeboardType ? t(ownKey) : ownKey;
+  if (own && own !== ownKey) return own;
+  const defaultKey = `timelineTypeDescription.default.${typeKey}`;
+  const fallback = t(defaultKey);
+  return fallback && fallback !== defaultKey ? fallback : '';
+}
+
 // Types no longer offered when creating a timeline: the income timeline became the wallet and the expense
 // timeline is replaced by the outflows mode of the balance (existing ones keep working)
 const LEGACY_TIMELINE_TYPES = new Set([TimelineType.INCOME, TimelineType.EXPENSE]);

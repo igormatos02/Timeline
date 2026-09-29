@@ -5,8 +5,8 @@ import { personRepository } from '../../infrastructure/database/supabase/Supabas
 import { timelineService } from './TimelineService.js';
 import { pocketRepository } from '../../infrastructure/database/supabase/SupabasePocketRepository.js';
 import { timeboardRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardRepository.js';
-import { TimelineType, isWalletTimelineType, PersonRole, TimelineStatus, normalizeTimelineType, isLoanTimelineType } from '../../../shared/enums/index.js';
-import { isActiveMovement, isEffectiveMovement } from '../../../shared/finance/movements.js';
+import { TimelineType, isWalletTimelineType, PersonRole, TimelineStatus, normalizeTimelineType, isLoanTimelineType, BalanceViewMode, EntityDirection, isKindInBalanceViewMode } from '../../../shared/enums/index.js';
+import { classifyMovement, isActiveMovement, isEffectiveMovement } from '../../../shared/finance/movements.js';
 import { computeMoneySummary } from '../../../shared/finance/moneySummary.js';
 import { recalculateLoanState, getLoanMetrics } from '../../../shared/finance/loanCalculations.js';
 
@@ -16,6 +16,16 @@ const NOTICE_TIMELINE_TYPES = [TimelineType.REMINDER, TimelineType.DIARY];
 // Movement rules from the shared financial engine (same as the web)
 const isActiveEvent = (ev) => Boolean(ev && ev.date) && isActiveMovement(ev);
 const isSettled = (ev) => isEffectiveMovement(ev);
+
+// Side of an obligation for the person: what the person owes (income side: fees) or what the person has to
+// receive (outflow side: suppliers, refunds) — the two are never added together
+const obligationSide = (ev, timelineTypeMap) => {
+  const kind = classifyMovement(ev, timelineTypeMap).kind;
+  if (isKindInBalanceViewMode(kind, BalanceViewMode.INCOME)) return EntityDirection.OWES;
+  if (isKindInBalanceViewMode(kind, BalanceViewMode.OUTFLOW)) return EntityDirection.RECEIVES;
+  return null;
+};
+const timelineTypeMapOf = (timelines) => new Map((timelines || []).map((tl) => [String(tl.id), tl.type]));
 // Debt balance: open obligations due up to the end of the current month (same rule as the web individual header)
 const debtLimitDate = () => `${new Date().toISOString().substring(0, 7)}-31`;
 
@@ -67,17 +77,27 @@ export class MeService {
   async getEntities(userId, { timeboardId }) {
     const access = await accessService.getTimeboardAccess(userId, timeboardId);
     if (!access || access.role !== PersonRole.ADMIN) return null;
-    const persons = await personRepository.getByTimeboardId(timeboardId);
-    const events = await eventService.getAllEvents({ timeboardId });
+    const [persons, events, timelines] = await Promise.all([
+      personRepository.getByTimeboardId(timeboardId),
+      eventService.getAllEvents({ timeboardId }),
+      timelineRepository.findByTimeboardId(timeboardId)
+    ]);
+    const timelineTypeMap = timelineTypeMapOf(timelines);
     const todayStr = new Date().toISOString().substring(0, 10);
     const summary = new Map();
     (events || []).forEach((ev) => {
       if (!isActiveEvent(ev) || isSettled(ev) || ev.date > debtLimitDate()) return;
       const personId = String(ev.obligationPersonId || ev.obligation_person_id || '');
       if (!personId) return;
-      const entry = summary.get(personId) || { debtBalance: 0, overdueCount: 0 };
-      entry.debtBalance += Math.abs(Number(ev.amount || 0));
-      if (ev.date < todayStr) entry.overdueCount += 1;
+      const side = obligationSide(ev, timelineTypeMap);
+      if (!side) return;
+      const entry = summary.get(personId) || { debtBalance: 0, toReceiveBalance: 0, overdueCount: 0 };
+      if (side === EntityDirection.OWES) {
+        entry.debtBalance += Math.abs(Number(ev.amount || 0));
+        if (ev.date < todayStr) entry.overdueCount += 1;
+      } else {
+        entry.toReceiveBalance += Math.abs(Number(ev.amount || 0));
+      }
       summary.set(personId, entry);
     });
     return persons
@@ -86,6 +106,7 @@ export class MeService {
         name: p.personName || p.email || '',
         role: p.role,
         debtBalance: summary.get(String(p.id))?.debtBalance || 0,
+        toReceiveBalance: summary.get(String(p.id))?.toReceiveBalance || 0,
         overdueCount: summary.get(String(p.id))?.overdueCount || 0
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -131,14 +152,19 @@ export class MeService {
     const access = { ...userAccess, ...target };
     const timelines = await timelineRepository.findByTimeboardId(timeboardId);
     const timelineNameById = new Map(timelines.map((tl) => [String(tl.id), tl.name]));
+    const timelineTypeMap = timelineTypeMapOf(timelines);
     const todayStr = new Date().toISOString().substring(0, 10);
 
     const events = await eventService.getAllEvents({ timeboardId });
     const own = (events || []).filter((ev) => isActiveEvent(ev) && this.isOwnObligation(ev, access));
 
-    const debtBalance = own
-      .filter((ev) => !isSettled(ev) && ev.date <= debtLimitDate())
+    // Open amounts due up to the end of the current month, per side
+    const openDue = own.filter((ev) => !isSettled(ev) && ev.date <= debtLimitDate());
+    const sumSide = (side) => openDue
+      .filter((ev) => obligationSide(ev, timelineTypeMap) === side)
       .reduce((sum, ev) => sum + Math.abs(Number(ev.amount || 0)), 0);
+    const debtBalance = sumSide(EntityDirection.OWES);
+    const toReceiveBalance = sumSide(EntityDirection.RECEIVES);
 
     const periodPrefix = year ? (month ? `${year}-${String(month).padStart(2, '0')}` : String(year)) : '';
     const items = own
@@ -151,6 +177,7 @@ export class MeService {
         status: ev.status,
         isPaid: isSettled(ev),
         isOverdue: !isSettled(ev) && ev.date < todayStr,
+        side: obligationSide(ev, timelineTypeMap),
         timelineName: timelineNameById.get(String(ev.timelineId || ev.timeline_id || '')) || ''
       }))
       .sort((a, b) => b.date.localeCompare(a.date));
@@ -159,6 +186,7 @@ export class MeService {
       personId: access.personId,
       role: userAccess.role,
       debtBalance,
+      toReceiveBalance,
       paidTotal: items.filter((it) => it.isPaid).reduce((sum, it) => sum + it.amount, 0),
       pendingTotal: items.filter((it) => !it.isPaid).reduce((sum, it) => sum + it.amount, 0),
       items

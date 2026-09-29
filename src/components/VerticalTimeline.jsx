@@ -725,13 +725,6 @@ function VerticalTimeline({
   // Events that belong on the timeline (have dates, or completed, or non-floating)
   const timelineEvents = allEvents.filter((ev) => !isFloatingTask(ev));
 
-  // Expense timelines whose expenses belong to the wallet until the database migration moves them
-  const walletStoredExpenseTimelineIds = useMemo(() => {
-    if (!isWalletTimelineType(timeline.type)) return new Set();
-    return new Set((timeline.boardTimelines || timeline.timelines || [])
-      .filter((tl) => normalizeTimelineType(tl?.type) === TimelineType.EXPENSE)
-      .map((tl) => String(tl.id)));
-  }, [timeline.type, timeline.boardTimelines, timeline.timelines]);
 
   // Helper to test if an event belongs to this timeline's scope
   const isEventBelongingToCurrentTimeline = useCallback((ev) => {
@@ -754,10 +747,8 @@ function VerticalTimeline({
       // References mirror movements already listed under their owner timeline (never count them twice)
       return !isNonFinancial && !ev.isReference;
     }
-    if (ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id) return true;
-    // The wallet also owns the expenses still stored in the (hidden) expense timeline
-    return !ev.isReference && walletStoredExpenseTimelineIds.has(String(ev.timelineId || ev.timeline_id || ''));
-  }, [timeline.id, timeline.type, walletStoredExpenseTimelineIds]);
+    return ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
+  }, [timeline.id, timeline.type]);
 
   // Extract unique entities referenced across timeline events
   const timelineEntities = useMemo(() => {

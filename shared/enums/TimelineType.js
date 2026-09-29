@@ -1,8 +1,8 @@
 export const TimelineType = Object.freeze({
   BALANCE: 'balance',
   INCOME: 'income',
-  // Cash wallet ("Carteira" / "Caixa"): the money in hand. Until the database migration, the income timeline
-  // plays this role (see isWalletTimelineType)
+  // Cash wallet ("Carteira" / "Caixa"): the money in hand, with income and expenses. Income timelines were
+  // migrated to it (migration 0011); INCOME stays only to read legacy data (see isWalletTimelineType)
   WALLET: 'wallet',
   EXPENSE: 'expense',
   INVESTMENT: 'investments',
@@ -54,8 +54,8 @@ export function isLoanTimelineType(type) {
 }
 
 /**
- * Whether the timeline is the cash wallet: the new 'wallet' type or, until the database migration
- * (UPDATE timelines SET type = 'wallet' WHERE type = 'income'), the income timeline.
+ * Whether the timeline is the cash wallet: the 'wallet' type or a legacy 'income' timeline (migration 0011
+ * converted them all; the alias keeps any leftover data working).
  * @param {string} type
  * @returns {boolean}
  */

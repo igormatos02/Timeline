@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { AlertCircle, CheckCircle2, FileCheck, Printer, Wallet, Landmark } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
-import { BalanceViewMode, EventStatus, TimelineColor, TimelineType, getDefaultTimelineColor, isCancelledStatus, isKindInBalanceViewMode, isPositiveStatus, isWalletTimelineType, normalizeTimelineType } from '../../enums/index.js';
+import { BalanceViewMode, EventStatus, TimelineColor, TimelineType, getDefaultTimelineColor, isCancelledStatus, isKindInBalanceViewMode, isPositiveStatus, normalizeTimelineType } from '../../enums/index.js';
 import { classifyMovement } from '../../../shared/finance/movements.js';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
@@ -56,17 +56,14 @@ export default function IndividualTimelineHeader({
     [entityYearEvents, timelineTypeMap, direction]
   );
 
-  // Balance: the open amount split by account (the wallet also owns the expenses still stored in the expense
-  // timeline), named as the user named each timeline
+  // Balance: the open amount split by account, named as the user named each timeline
   const isBalanceTimeline = normalizeTimelineType(timeline?.type) === TimelineType.BALANCE;
   const accountBreakdown = useMemo(() => {
     if (!isBalanceTimeline) return [];
-    const walletTimeline = (allTimelines || []).find((tl) => isWalletTimelineType(tl?.type));
     const byAccount = new Map();
     contextEvents.filter(isOpenObligation).forEach((ev) => {
       const ownId = String(ev.timelineId || ev.timeline_id || '');
-      const own = (allTimelines || []).find((tl) => String(tl.id) === ownId);
-      const account = walletTimeline && normalizeTimelineType(own?.type) === TimelineType.EXPENSE ? walletTimeline : own;
+      const account = (allTimelines || []).find((tl) => String(tl.id) === ownId);
       if (!account) return;
       const entry = byAccount.get(String(account.id)) || { id: account.id, name: account.name, color: account.color, amount: 0 };
       entry.amount += Math.abs(Number(ev.amount || 0));

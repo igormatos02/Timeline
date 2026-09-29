@@ -54,15 +54,7 @@ export default function CreateEventModal(props) {
     if (!isExpense) {
       return <IncomeEventModal {...props} timeline={ownTimeline || wallet || timeline} />;
     }
-    // Until the database migration, wallet expenses are stored in the expense timeline (when there is one)
-    const expenseTimeline = (allTimelines || []).find((tl) => normalizeTimelineType(tl?.type) === TimelineType.EXPENSE);
-    return (
-      <ExpenseEventModal
-        {...props}
-        timeline={ownTimeline || expenseTimeline || wallet || timeline}
-        accountName={wallet?.name}
-      />
-    );
+    return <ExpenseEventModal {...props} timeline={ownTimeline || wallet || timeline} />;
   }
 
   switch (normalizedType) {

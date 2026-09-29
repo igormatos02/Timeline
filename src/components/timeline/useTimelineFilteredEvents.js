@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { AmortizationEventCategory, AmortizationStrategy, EventStatus, EventType, ExpensesEventCategory, IncomeEventCategory, LoanEventCategory, MovementKind, TimelineType, getAccountMovementType, getOutflowType, isCancelledStatus, isPositiveStatus, isWalletTimelineType, normalizeTimelineType, BalanceViewMode, isKindInBalanceViewMode } from '../../enums/index.js';
+import { AmortizationEventCategory, AmortizationStrategy, EventStatus, EventType, ExpensesEventCategory, IncomeEventCategory, LoanEventCategory, MovementKind, TimelineType, getAccountMovementType, getOutflowType, isCancelledStatus, isPositiveStatus, isWalletTimelineType, BalanceViewMode, isKindInBalanceViewMode } from '../../enums/index.js';
 import { classifyMovement } from '../../../shared/finance/movements.js';
 import { format } from 'date-fns';
 import { CONDO_EXPENSE_CATEGORY_IDS } from './timelineFilterItems.js';
@@ -38,25 +38,6 @@ export function useTimelineFilteredEvents({
   todayDate,
   todayStr
 }) {
-  // Until the database migration moves them, wallet expenses are stored in the expense timeline: the wallet
-  // lists them as its own (not the references the expense timeline mirrors from the account and loans)
-  const walletExpenseTimelineIds = useMemo(() => {
-    if (!isWalletTimelineType(timeline.type)) return new Set();
-    return new Set((timeline.boardTimelines || timeline.timelines || [])
-      .filter((tl) => normalizeTimelineType(tl?.type) === TimelineType.EXPENSE)
-      .map((tl) => String(tl.id)));
-  }, [timeline.type, timeline.boardTimelines, timeline.timelines]);
-
-  // Balance "integrated timelines" filter: choosing the wallet also covers the expenses still stored in the
-  // (hidden) expense timeline
-  const { walletIdsForFilter, expenseStorageIdsForFilter } = useMemo(() => {
-    const board = timeline.boardTimelines || timeline.timelines || [];
-    return {
-      walletIdsForFilter: board.filter((tl) => isWalletTimelineType(tl?.type)).map((tl) => tl.id),
-      expenseStorageIdsForFilter: new Set(board.filter((tl) => normalizeTimelineType(tl?.type) === TimelineType.EXPENSE).map((tl) => String(tl.id)))
-    };
-  }, [timeline.boardTimelines, timeline.timelines]);
-
   // Timeline types by id, for the movement classification of the balance modes
   const balanceTimelineTypeMap = useMemo(
     () => new Map((timeline.boardTimelines || timeline.timelines || []).map((tl) => [String(tl.id), tl.type])),
@@ -181,9 +162,7 @@ export function useTimelineFilteredEvents({
         selectedTimelineIds.includes(ev.timelineId) ||
         selectedTimelineIds.includes(ev.timelineOriginId) ||
         selectedTimelineIds.includes(ev.timeline_id) ||
-        selectedTimelineIds.includes(ev.timeline_origin_id) ||
-        (walletIdsForFilter.some((id) => selectedTimelineIds.includes(id)) &&
-          expenseStorageIdsForFilter.has(String(ev.timelineId || ev.timeline_id || '')));
+        selectedTimelineIds.includes(ev.timeline_origin_id);
 
       const matchesLabel =
         selectedLabelFilter === EventStatus.ALL ||
@@ -228,8 +207,7 @@ export function useTimelineFilteredEvents({
         }
       } else {
         const isThisTimeline = ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
-        const isStoredWalletExpense = !ev.isReference && walletExpenseTimelineIds.has(String(ev.timelineId || ev.timeline_id || ''));
-        if (!isThisTimeline && !isStoredWalletExpense) return false;
+        if (!isThisTimeline) return false;
       }
 
       // Respeitar os limites do horizonte de tempo. Eventos anteriores ao início de cálculo continuam visíveis
@@ -276,11 +254,8 @@ export function useTimelineFilteredEvents({
     isCondoflow,
     selectedMovementTypes,
     selectedOutflowTypes,
-    walletExpenseTimelineIds,
     balanceMode,
     balanceTimelineTypeMap,
-    walletIdsForFilter,
-    expenseStorageIdsForFilter,
     entityDirectionMode,
   ]);
 

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { LogOut, RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, Loader2, Ticket, Crown, UserCheck } from 'lucide-react';
 import { format, parseISO, setMonth } from 'date-fns';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { TimelineColor, PersonRole, EventStatus } from '../enums/index.js';
+import { TimelineColor, PersonRole, EventStatus, EntityDirection } from '../enums/index.js';
 import { formatCurrency } from '../utils/formatCurrency.js';
 import * as mobileApi from './mobileApi.js';
 import MobileMoneySummary from './MobileMoneySummary.jsx';
@@ -162,6 +162,8 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
   const pendingTotal = inPeriod.filter((item) => !item.isPaid).reduce((sum, item) => sum + item.amount, 0);
   const overdueCount = items.filter((item) => item.isOverdue).length;
   const debt = data?.debtBalance || 0;
+  // What the timeboard owes the person (suppliers, refunds): shown apart, never added to the debt
+  const toReceive = data?.toReceiveBalance || 0;
   const debtColor = debt > 0 ? TimelineColor.DANGER : TimelineColor.SUCCESS;
   const shownError = error || notice;
 
@@ -295,6 +297,11 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
             <div className={styles.debtHint}>
               {debt > 0 ? t('mobile.overdueCount', { count: overdueCount }) : t('mobile.upToDate')}
             </div>
+            {toReceive > 0 && (
+              <div className={styles.debtHint} style={{ fontWeight: 700 }}>
+                {t('mobile.toReceiveBalance', { amount: formatCurrency(toReceive) })}
+              </div>
+            )}
           </div>
 
           {/* Year / month filter */}
@@ -367,6 +374,7 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
                     <div className={styles.itemMeta}>
                       {t('mobile.dueOn', { date: format(parseISO(item.date), 'dd MMM yyyy', { locale: dateLocale }) })}
                       {item.timelineName ? ` · ${item.timelineName}` : ''}
+                      {item.side === EntityDirection.RECEIVES ? ` · ${t('mobile.sideReceives')}` : ''}
                     </div>
                   </div>
                   <div className={styles.itemRight}>

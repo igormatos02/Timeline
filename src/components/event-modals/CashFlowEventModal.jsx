@@ -55,8 +55,6 @@ export default function CashFlowEventModal({
   timeline,
   timeboardId,
   eventType = EventType.INCOME,
-  // Account shown as the subtitle when the movement is stored elsewhere (wallet expenses before the migration)
-  accountName,
   // Bank account pockets (deposits choose the space that receives the money)
   pockets = []
 }) {
@@ -328,7 +326,7 @@ export default function CashFlowEventModal({
             ? t(config.titleKeys.editKey)
             : t(config.titleKeys.newKey)
       }
-      subtitle={accountName || timeline?.name || t(config.subtitleKey)}
+      subtitle={timeline?.name || t(config.subtitleKey)}
       accent={ACCENT}
       minHeight="520px"
       headerRight={

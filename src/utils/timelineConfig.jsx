@@ -124,7 +124,7 @@ export function getTimelineTypeDescription(type, timeboardType, t) {
 // timeline is replaced by the outflows mode of the balance (existing ones keep working)
 const LEGACY_TIMELINE_TYPES = new Set([TimelineType.INCOME, TimelineType.EXPENSE]);
 
-// Types present in a timeboard; the income timeline occupies the wallet slot until the database migration
+// Types present in a timeboard; a legacy income timeline occupies the wallet slot
 function getPresentTimelineTypes(existingTimelines = []) {
   const present = new Set((existingTimelines || []).map((tl) => normalizeTimelineType(tl.type)));
   if ((existingTimelines || []).some((tl) => isWalletTimelineType(tl.type))) present.add(TimelineType.WALLET);

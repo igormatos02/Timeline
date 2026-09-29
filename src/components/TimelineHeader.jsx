@@ -58,7 +58,7 @@ function BalanceHeaderByMode(props) {
  * Renderiza o cabeçalho dedicado para cada tipo de timeline do enum TimelineType.
  */
 function TimelineHeader(rawProps) {
-  const { timeline, timeboard, selectedEntityId, isIndividualView, isIndividualRole } = rawProps;
+  const { timeline, timeboard, selectedEntityId, isIndividualRole } = rawProps;
 
   if (!timeline) return null;
 
@@ -74,16 +74,18 @@ function TimelineHeader(rawProps) {
     );
   }
 
-  // The individual view is only available on condoflow timeboards.
-  const isCondoflow = timeboard?.type === TimeboardType.CONDOFLOW;
-  const props = isCondoflow
-    ? rawProps
-    : { ...rawProps, isIndividualView: false, onToggleIndividualView: undefined };
+  // The global / individual switch is gone: choosing an entity in the filter already means "show this entity"
+  const props = { ...rawProps, isIndividualView: false, onToggleIndividualView: undefined };
 
-  // When an obligator is selected and the user switches to individual view,
-  // replace the regular header with the IndividualTimelineHeader.
-  if (isCondoflow && selectedEntityId && isIndividualView) {
-    return <IndividualTimelineHeader {...props} />;
+  // Condoflow: with an entity selected, the header becomes the entity's own (figures of the current timeline,
+  // the board total next to them); in the balance it keeps the all / income / outflows switch
+  const isCondoflow = timeboard?.type === TimeboardType.CONDOFLOW;
+  if (isCondoflow && selectedEntityId) {
+    const isBalance = normalizeTimelineType(timeline.type) === TimelineType.BALANCE;
+    const headerSwitch = isBalance && props.onChangeBalanceMode
+      ? <BalanceModeSwitch value={props.balanceMode || BalanceViewMode.ALL} onChange={props.onChangeBalanceMode} />
+      : null;
+    return <IndividualTimelineHeader {...props} headerSwitch={headerSwitch} />;
   }
 
   if (isLoanTimelineType(timeline.type)) {

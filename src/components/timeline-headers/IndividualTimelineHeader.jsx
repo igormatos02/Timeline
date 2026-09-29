@@ -1,13 +1,13 @@
 import React, { useMemo } from 'react';
 import { AlertCircle, CheckCircle2, FileCheck, Printer, Wallet, Landmark } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
-import { EventStatus, TimelineColor, getDefaultTimelineColor, isCancelledStatus, isPositiveStatus } from '../../enums/index.js';
+import { BalanceViewMode, EventStatus, TimelineColor, TimelineType, getDefaultTimelineColor, isCancelledStatus, isKindInBalanceViewMode, isPositiveStatus, normalizeTimelineType } from '../../enums/index.js';
+import { classifyMovement } from '../../../shared/finance/movements.js';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import { PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
-import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
 import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
 
 // An obligation is open (overdue or pending) when it is not completed, cancelled or deleted.
@@ -25,8 +25,12 @@ export default function IndividualTimelineHeader({
   entityYearEvents = [],
   selectedEntity = null,
   selectedEntityId,
-  isIndividualView,
-  onToggleIndividualView,
+  // Entity movements in every financial timeline (board total and clearance)
+  entityBoardEvents = [],
+  allTimelines = [],
+  balanceMode = BalanceViewMode.ALL,
+  // The balance mode switch, shown next to the actions
+  headerSwitch = null,
   onOpenClearance,
   onOpenHistory,
   timeboardSummary = null
@@ -34,17 +38,40 @@ export default function IndividualTimelineHeader({
   const { t } = useTranslation();
   const [collapsed, setIsCollapsed] = useHeaderCollapsed();
 
-  const { debtBalance, openCount } = useMemo(() => {
-    const open = (entityEvents || []).filter(isOpenObligation);
-    const total = open.reduce((sum, ev) => sum + Math.abs(Number(ev.amount || 0)), 0);
-    return { debtBalance: total, openCount: open.length };
-  }, [entityEvents]);
+  // Direction of the figures: what the entity owes (income side) or, in the outflows mode of the balance and in
+  // the expense timeline, what is owed to the entity. Both never mix: the wallet holds income and expenses.
+  const isPayable = balanceMode === BalanceViewMode.OUTFLOW || normalizeTimelineType(timeline?.type) === TimelineType.EXPENSE;
+  const direction = isPayable ? BalanceViewMode.OUTFLOW : BalanceViewMode.INCOME;
+  const timelineTypeMap = useMemo(
+    () => new Map((allTimelines || []).map((tl) => [String(tl.id), tl.type])),
+    [allTimelines]
+  );
+  const contextEvents = useMemo(
+    () => (entityEvents || []).filter((ev) => isKindInBalanceViewMode(classifyMovement(ev, timelineTypeMap).kind, direction)),
+    [entityEvents, timelineTypeMap, direction]
+  );
+  const contextYearEvents = useMemo(
+    () => (entityYearEvents || []).filter((ev) => isKindInBalanceViewMode(classifyMovement(ev, timelineTypeMap).kind, direction)),
+    [entityYearEvents, timelineTypeMap, direction]
+  );
+
+  const { debtBalance, openCount, boardDebtBalance } = useMemo(() => {
+    const sumOpen = (list) => list.filter(isOpenObligation).reduce((sum, ev) => sum + Math.abs(Number(ev.amount || 0)), 0);
+    const boardEvents = (entityBoardEvents || []).filter((ev) => isKindInBalanceViewMode(classifyMovement(ev, timelineTypeMap).kind, direction));
+    const contextDebt = sumOpen(contextEvents);
+    return {
+      debtBalance: contextDebt,
+      openCount: contextEvents.filter(isOpenObligation).length,
+      // Without board movements (e.g. the individual role view) the timeline figure is the total
+      boardDebtBalance: boardEvents.length > 0 ? sumOpen(boardEvents) : contextDebt
+    };
+  }, [contextEvents, entityBoardEvents, timelineTypeMap, direction]);
 
   // Current calendar year progress: planned vs realized vs remaining
   const { plannedYear, realizedYear, remainingYear, realizedPct } = useMemo(() => {
     let planned = 0;
     let realized = 0;
-    (entityYearEvents || []).forEach((ev) => {
+    contextYearEvents.forEach((ev) => {
       if (!ev || ev.isDeleted || ev.status === EventStatus.DELETED || isCancelledStatus(ev.status)) return;
       const amt = Math.abs(Number(ev.amount || 0));
       planned += amt;
@@ -52,14 +79,14 @@ export default function IndividualTimelineHeader({
     });
     const pct = planned > 0 ? Math.min(100, Math.round((realized / planned) * 100)) : 0;
     return { plannedYear: planned, realizedYear: realized, remainingYear: Math.max(0, planned - realized), realizedPct: pct };
-  }, [entityYearEvents]);
+  }, [contextYearEvents]);
 
   // Current accumulation: everything already realized by the entity (from the timeline's compute start)
-  const currentAccumulation = useMemo(() => (entityEvents || []).reduce((sum, ev) => {
+  const currentAccumulation = useMemo(() => contextEvents.reduce((sum, ev) => {
     if (!ev || ev.isDeleted || ev.status === EventStatus.DELETED || isCancelledStatus(ev.status)) return sum;
     if (!(isPositiveStatus(ev.status) || ev.isCompleted)) return sum;
     return sum + Math.abs(Number(ev.amount || 0));
-  }, 0), [entityEvents]);
+  }, 0), [contextEvents]);
 
   const paletteTheme = useMemo(
     () => getPaletteTheme(timeline?.color, getDefaultTimelineColor(timeline?.type)),
@@ -86,6 +113,9 @@ export default function IndividualTimelineHeader({
 
   const headerColor = timeline.color || getDefaultTimelineColor(timeline.type);
   const hasDebt = debtBalance > 0;
+  // The clearance declares the whole board: blocked by any open obligation, whatever the timeline shown
+  const hasBoardDebt = boardDebtBalance > 0;
+  const showBoardTotal = Math.abs(boardDebtBalance - debtBalance) >= 0.005;
   const debtColor = hasDebt ? TimelineColor.DANGER : TimelineColor.SUCCESS;
   const entityName = selectedEntity?.name || String(selectedEntityId || '');
 
@@ -124,25 +154,21 @@ export default function IndividualTimelineHeader({
               id="individual-get-clearance"
               className="btn btn-primary btn-sm"
               onClick={onOpenClearance}
-              disabled={hasDebt}
-              title={hasDebt ? t('individualHeader.getClearanceDisabled') : t('individualHeader.getClearance')}
+              disabled={hasBoardDebt}
+              title={hasBoardDebt ? t('individualHeader.getClearanceDisabled') : t('individualHeader.getClearance')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                opacity: hasDebt ? 0.5 : 1,
-                cursor: hasDebt ? 'not-allowed' : 'pointer'
+                opacity: hasBoardDebt ? 0.5 : 1,
+                cursor: hasBoardDebt ? 'not-allowed' : 'pointer'
               }}
             >
               <FileCheck size={14} />
               <span>{t('individualHeader.getClearance')}</span>
             </button>
           )}
-          <EntityViewSwitch
-            selectedEntityId={selectedEntityId}
-            isIndividualView={isIndividualView}
-            onToggle={onToggleIndividualView}
-          />
+          {headerSwitch}
         </div>
       }
     >
@@ -164,7 +190,7 @@ export default function IndividualTimelineHeader({
             {hasDebt
               ? <AlertCircle size={14} style={{ color: debtColor }} />
               : <CheckCircle2 size={14} style={{ color: debtColor }} />}
-            <span>{t('individualHeader.debtBalance')}</span>
+            <span>{t(isPayable ? 'individualHeader.payableBalance' : 'individualHeader.debtBalance')}</span>
           </div>
           <div style={{ fontSize: '1.5rem', fontWeight: '800', color: debtColor, lineHeight: 1.1 }}>
             {formatCurrency(debtBalance)}
@@ -174,6 +200,12 @@ export default function IndividualTimelineHeader({
               ? t('individualHeader.debtBalanceHint', { count: openCount })
               : t('individualHeader.noPendingObligations', { name: entityName })}
           </div>
+          {/* Board total when this timeline only holds part of it (the same debt can be paid in cash or by bank) */}
+          {showBoardTotal && (
+            <div style={{ fontSize: '0.76rem', fontWeight: '700', color: hasBoardDebt ? TimelineColor.DANGER : 'var(--text-main)', paddingTop: '4px', borderTop: '1px dashed var(--border-glass)' }}>
+              {t('individualHeader.boardTotal', { amount: formatCurrency(boardDebtBalance) })}
+            </div>
+          )}
         </div>
 
         {/* Acumulação atual + ano corrente (planeado, realizado e em falta) da entidade selecionada */}

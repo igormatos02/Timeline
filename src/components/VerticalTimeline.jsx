@@ -65,8 +65,10 @@ import {
   isLoanTimelineType,
   isPositiveStatus,
   isCancelledStatus,
-  BalanceViewMode
+  BalanceViewMode,
+  isKindInBalanceViewMode
 } from '../enums/index.js';
+import { classifyMovement } from '../../shared/finance/movements.js';
 import { getTimelineDropdownOptions } from '../utils/timelineConfig.jsx';
 
 const BALANCE_MODE_STORAGE_KEY = 'timeboard.balanceViewMode';
@@ -719,6 +721,14 @@ function VerticalTimeline({
   // Events that belong on the timeline (have dates, or completed, or non-floating)
   const timelineEvents = allEvents.filter((ev) => !isFloatingTask(ev));
 
+  // Expense timelines whose expenses belong to the wallet until the database migration moves them
+  const walletStoredExpenseTimelineIds = useMemo(() => {
+    if (!isWalletTimelineType(timeline.type)) return new Set();
+    return new Set((timeline.boardTimelines || timeline.timelines || [])
+      .filter((tl) => normalizeTimelineType(tl?.type) === TimelineType.EXPENSE)
+      .map((tl) => String(tl.id)));
+  }, [timeline.type, timeline.boardTimelines, timeline.timelines]);
+
   // Helper to test if an event belongs to this timeline's scope
   const isEventBelongingToCurrentTimeline = useCallback((ev) => {
     if (!ev || ev.isDeleted) return false;
@@ -737,10 +747,13 @@ function VerticalTimeline({
         ev.eventType === EventType.REGISTER ||
         ev.timelineType === TimelineType.DIARY ||
         ev.timeline_type === TimelineType.DIARY;
-      return !isNonFinancial;
+      // References mirror movements already listed under their owner timeline (never count them twice)
+      return !isNonFinancial && !ev.isReference;
     }
-    return ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
-  }, [timeline.id, timeline.type]);
+    if (ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id) return true;
+    // The wallet also owns the expenses still stored in the (hidden) expense timeline
+    return !ev.isReference && walletStoredExpenseTimelineIds.has(String(ev.timelineId || ev.timeline_id || ''));
+  }, [timeline.id, timeline.type, walletStoredExpenseTimelineIds]);
 
   // Extract unique entities referenced across timeline events
   const timelineEntities = useMemo(() => {
@@ -898,6 +911,24 @@ function VerticalTimeline({
     });
   }, [timelineEvents, selectedEntityId, computeFromMonth, currentMonthKey, isEventBelongingToCurrentTimeline, isEventMatchingEntity]);
 
+  // Events of the selected entity in every financial timeline of the board (up to the current month): the
+  // individual header shows the board total next to the timeline figure, and the clearance always uses it
+  const entityBoardEvents = useMemo(() => {
+    if (!selectedEntityId) return [];
+    return timelineEvents.filter((ev) => {
+      if (!ev || ev.isDeleted || ev.isSharedNotice || ev.isReference) return false;
+      const evMonth = ev.date ? ev.date.substring(0, 7) : null;
+      if (evMonth && computeFromMonth && evMonth < computeFromMonth) return false;
+      if (evMonth && evMonth > currentMonthKey) return false;
+      return isEventMatchingEntity(ev, selectedEntityId);
+    });
+  }, [timelineEvents, selectedEntityId, computeFromMonth, currentMonthKey, isEventMatchingEntity]);
+
+  const boardTimelineTypeMap = useMemo(
+    () => new Map((timeline.boardTimelines || timeline.timelines || []).map((tl) => [String(tl.id), tl.type])),
+    [timeline.boardTimelines, timeline.timelines]
+  );
+
   // Events of the selected entity for the whole current calendar year (Jan - Dec),
   // used by the individual header's year progress indicator.
   const currentYearKey = format(todayDate, 'yyyy');
@@ -926,15 +957,21 @@ function VerticalTimeline({
           name: selectedEntity.name,
           identification: selectedEntity.identification
         };
-        const isExpenseTimeline = timeline?.type === TimelineType.EXPENSE;
-        const isCondoDeclaration = isExpenseTimeline || isWalletTimelineType(timeline?.type) || timeline?.type === TimelineType.INVESTMENT;
+        // Declarations always cover the whole board: what the entity owes (owner) or, in the outflows mode of
+        // the balance and in the expense timeline, what is owed to the entity (service provider)
+        const isExpenseTimeline = timeline?.type === TimelineType.EXPENSE || activeBalanceMode === BalanceViewMode.OUTFLOW;
+        const isCondoDeclaration = isExpenseTimeline || isWalletTimelineType(timeline?.type) || timeline?.type === TimelineType.INVESTMENT || timeline?.type === TimelineType.BALANCE;
+        const declarationEvents = entityBoardEvents.filter((ev) => isKindInBalanceViewMode(
+          classifyMovement(ev, boardTimelineTypeMap).kind,
+          isExpenseTimeline ? BalanceViewMode.OUTFLOW : BalanceViewMode.INCOME
+        ));
         const documentType = isExpenseTimeline ? ClearanceDocumentType.SERVICE_PROVIDER : ClearanceDocumentType.OWNER;
         let html;
         let title = t('clearance.title');
         if (isCondoDeclaration) {
           const currentYear = format(todayDate, 'yyyy');
           const settledStatus = isExpenseTimeline ? EventStatus.PAID : EventStatus.RECEIVED;
-          const charges = entityEvents
+          const charges = declarationEvents
             .filter((ev) => ev.date && ev.date.startsWith(currentYear) && !isCancelledStatus(ev.status) && ev.status !== EventStatus.DELETED)
             .sort((a, b) => a.date.localeCompare(b.date))
             .map((ev) => {
@@ -945,7 +982,7 @@ function VerticalTimeline({
               return { date: ev.date, amount: ev.amount, statusLabel: t(`status.${statusKey}`) };
             });
           const serviceDescription = Array.from(new Set(
-            entityEvents.map((ev) => (ev.title || '').trim()).filter(Boolean)
+            declarationEvents.map((ev) => (ev.title || '').trim()).filter(Boolean)
           )).join(', ');
           html = buildCondoClearanceHtml({
             timeboard: activeTimeboard,
@@ -981,7 +1018,7 @@ function VerticalTimeline({
         setIsGeneratingReceipt(false);
       }
     }, 450);
-  }, [selectedEntity, entityEvents, todayStr, persons, activeTimeboard, currentUser, timeline?.type, language, t]);
+  }, [selectedEntity, entityBoardEvents, boardTimelineTypeMap, activeBalanceMode, todayStr, persons, activeTimeboard, currentUser, timeline?.type, language, t]);
 
 
   const getEntityIcon = (type) => {
@@ -1470,7 +1507,8 @@ function VerticalTimeline({
               selectedEntity,
               entityEvents,
               entityYearEvents,
-              onOpenClearance: timeline.type !== TimelineType.BALANCE ? handleOpenClearance : undefined,
+              onOpenClearance: handleOpenClearance,
+              entityBoardEvents,
               onOpenHistory: () => setIsHistoryOpen(true),
               monthExpensesTotalMap,
               monthLoansTotalMap,

@@ -14,6 +14,7 @@ export default function TimelineFilteredListView({
   filteredEvents,
   handleOpenReceipt,
   isBalancoView,
+  balanceMode,
   isFinancialTimeline,
   isLoanTimelineOrTab,
   isReminders,
@@ -88,6 +89,7 @@ export default function TimelineFilteredListView({
             activeFinancialTab={activeFinancialTab}
             activeTimeboard={activeTimeboard}
             isBalancoView={isBalancoView}
+                        balanceMode={balanceMode}
             isFinancialTimeline={isFinancialTimeline}
             isLoanTimelineOrTab={isLoanTimelineOrTab}
             isReminders={isReminders}

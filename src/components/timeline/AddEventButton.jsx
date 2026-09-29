@@ -1,5 +1,5 @@
 import React from 'react';
-import { EventType, TimeboardType, TimelineColor, TimelineType, isWalletTimelineType } from '../../enums/index.js';
+import { BalanceViewMode, EventType, TimeboardType, TimelineColor, TimelineType, isWalletTimelineType } from '../../enums/index.js';
 import { makeDiaryT } from '../../utils/diaryLabels.js';
 import { Minus, PiggyBank, Plus } from 'lucide-react';
 
@@ -17,9 +17,45 @@ export default function AddEventButton({
   onOpenCreatePocket,
   paletteTheme,
   t,
-  timeline
+  timeline,
+  balanceMode = BalanceViewMode.ALL
 }) {
-  if (!onAddEventForDate || isLoanTimelineOrTab || isBalancoView) return null;
+  // The balance only adds movements in its income / outflows modes (they go to the wallet)
+  const balanceNature = balanceMode === BalanceViewMode.INCOME
+    ? EventType.INCOME
+    : balanceMode === BalanceViewMode.OUTFLOW ? EventType.EXPENSE : null;
+  if (!onAddEventForDate || isLoanTimelineOrTab || (isBalancoView && !balanceNature)) return null;
+  if (isBalancoView) {
+    const isOutflow = balanceNature === EventType.EXPENSE;
+    const color = isOutflow ? TimelineColor.EXPENSE : TimelineColor.INCOME;
+    return (
+      <button
+        type="button"
+        className="btn btn-primary btn-sm"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '6px 12px',
+          borderRadius: '8px',
+          fontSize: '0.78rem',
+          fontWeight: '700',
+          cursor: 'pointer',
+          background: color,
+          borderColor: color,
+          color: TimelineColor.WHITE
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onAddEventForDate?.(targetDayStr, balanceNature);
+        }}
+        title={title}
+      >
+        {isOutflow ? <Minus size={14} /> : <Plus size={14} />}
+        <span>{t(isOutflow ? 'expenseHeader.addExpenseButton' : 'incomeHeader.addIncome')}</span>
+      </button>
+    );
+  }
   const isInvestment = timeline.type === TimelineType.INVESTMENT || activeFinancialTab === 'investimentos';
   const addLabel = isFinancialTimeline
     ? (activeFinancialTab === 'gastos' || timeline.type === TimelineType.EXPENSE

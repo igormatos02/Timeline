@@ -1510,6 +1510,7 @@ function VerticalTimeline({
               filteredEvents={filteredEvents}
               handleOpenReceipt={handleOpenReceipt}
               isBalancoView={isBalancoView}
+              balanceMode={activeBalanceMode}
               isFinancialTimeline={isFinancialTimeline}
               isLoanTimelineOrTab={isLoanTimelineOrTab}
               isReminders={isReminders}
@@ -1575,6 +1576,7 @@ function VerticalTimeline({
                 hasInvestmentTimeline={hasInvestmentTimeline}
                 hasLoanTimeline={hasLoanTimeline}
                 isBalancoView={isBalancoView}
+              balanceMode={activeBalanceMode}
                 isFinancial={isFinancial}
                 isFinancialTimeline={isFinancialTimeline}
                 isLoanTimelineOrTab={isLoanTimelineOrTab}

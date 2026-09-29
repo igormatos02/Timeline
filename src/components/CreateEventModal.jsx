@@ -41,19 +41,26 @@ export default function CreateEventModal(props) {
     return <FollowupEventModal {...props} />;
   }
 
-  // The wallet holds income and expenses: the movement type (editing) or the requested nature (new) picks the form
-  if (isWalletTimelineType(normalizedType)) {
-    const isExpense = initialData?.eventType === EventType.EXPENSE ||
-      (!initialData?.id && !initialData?.eventId && !initialData?.eventType && defaultNature === EventType.EXPENSE);
-    if (!isExpense) return <IncomeEventModal {...props} />;
-    // Until the database migration, wallet expenses are stored in the expense timeline (when there is one)
+  // The wallet holds income and expenses: the movement type (editing) or the requested nature (new) picks the form.
+  // The income / outflows modes of the balance add and edit wallet movements with the same forms.
+  const isNew = !initialData?.id && !initialData?.eventId && !initialData?.eventType;
+  const isCashFlowMovement = initialData?.eventType === EventType.INCOME || initialData?.eventType === EventType.EXPENSE ||
+    (isNew && (defaultNature === EventType.INCOME || defaultNature === EventType.EXPENSE));
+  const isWalletTimeline = isWalletTimelineType(normalizedType);
+  if (isWalletTimeline || (normalizedType === TimelineType.BALANCE && isCashFlowMovement)) {
+    const wallet = isWalletTimeline ? timeline : (allTimelines || []).find((tl) => isWalletTimelineType(tl?.type));
     const ownTimeline = (allTimelines || []).find((tl) => String(tl.id) === String(initialData?.timelineId || initialData?.timeline_id || ''));
+    const isExpense = initialData?.eventType === EventType.EXPENSE || (isNew && defaultNature === EventType.EXPENSE);
+    if (!isExpense) {
+      return <IncomeEventModal {...props} timeline={ownTimeline || wallet || timeline} />;
+    }
+    // Until the database migration, wallet expenses are stored in the expense timeline (when there is one)
     const expenseTimeline = (allTimelines || []).find((tl) => normalizeTimelineType(tl?.type) === TimelineType.EXPENSE);
     return (
       <ExpenseEventModal
         {...props}
-        timeline={ownTimeline || expenseTimeline || timeline}
-        accountName={timeline?.name}
+        timeline={ownTimeline || expenseTimeline || wallet || timeline}
+        accountName={wallet?.name}
       />
     );
   }

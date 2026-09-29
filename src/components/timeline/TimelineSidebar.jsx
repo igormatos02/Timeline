@@ -210,9 +210,9 @@ export default function TimelineSidebar({
             {((timelines && timelines.length > 0) ? timelines : (timeline?.timelines || [])).map((tl, tlIdx) => {
               const isActive = activeFinancialTab === tl.id || timeline?.id === tl.id;
               const tlColor = tl.color;
-              // The name is the user's; the type is the system's: shown under the name unless they are the same
+              // The name is the user's; the type is the system's: always shown under the name
               const typeLabel = makeDiaryT(t, activeTimeboard?.type === TimeboardType.CONDOFLOW)(getTimelineTypeLabelKey(tl.type));
-              const showTypeLabel = typeLabel && typeLabel.trim().toLowerCase() !== String(tl.name || '').trim().toLowerCase();
+              const showTypeLabel = Boolean(typeLabel);
               const getTimelineIcon = (type) => {
                 switch (type) {
                   case TimelineType.INCOME:

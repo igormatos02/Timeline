@@ -70,6 +70,8 @@ export default function CashFlowEventModal({
   const titleInputRef = useRef(null);
 
   const isEditing = Boolean(initialData?.id || initialData?.eventId);
+  const isSeriesMovement = Boolean(initialData?.seriesId || initialData?.isRecurring || initialData?.is_recurring) ||
+    (isEditing && normalizeRecurrence(initialData || {}) !== EventRecurrence.ONCE);
   const categoryMeta = config.categoryMeta;
   const isAccountDeposit = config.eventType === EventType.INVESTMENT;
   const showCategories = config.showCategories !== false;
@@ -350,7 +352,8 @@ export default function CashFlowEventModal({
       }
       footer={
         <>
-          {isEditing && (
+          {/* The scope only matters for movements that repeat (a series) */}
+          {isEditing && isSeriesMovement && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
                 {t('modal.scope')}:

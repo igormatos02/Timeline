@@ -906,7 +906,7 @@ export default function BalanceTimelineHeader({
                               <span style={{ color: 'var(--text-dim)' }}>
                                 {t(timeboard?.type === TimeboardType.CONDOFLOW ? 'balanceHeader.walletBalanceCondo' : 'balanceHeader.walletBalance')}
                               </span>
-                              <strong style={{ color: incomePalette.primary, fontSize: '0.74rem' }}>{formatCurrency(netVal)}</strong>
+                              <strong style={{ color: netVal < 0 ? TimelineColor.EXPENSE : incomePalette.primary, fontSize: '0.74rem' }}>{formatCurrency(netVal)}</strong>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.70rem', alignItems: 'center' }}>
                               <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.bankBalance')}</span>

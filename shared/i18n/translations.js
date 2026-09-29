@@ -668,7 +668,11 @@ export const translations = {
       noPersonsAvailable: "No entities found for this timeboard. Please add a person or organization in Timeboard Settings.",
       cancel: "Cancel",
       saveChanges: "Save Changes",
-      changeSubsequent: "Apply to subsequent events"
+      changeSubsequent: "Apply to subsequent events",
+      scope: "Apply to",
+      scopeSingle: "This occurrence only",
+      scopeFuture: "This and the following",
+      scopeAll: "The whole series"
     },
 
     // Expense Categories
@@ -3011,7 +3015,11 @@ export const translations = {
       noPersonsAvailable: "Nenhuma entidade cadastrada neste timeboard. Adicione uma entidade nas Definições do Timeboard.",
       cancel: "Cancelar",
       saveChanges: "Salvar Alterações",
-      changeSubsequent: "Aplicar aos eventos futuros"
+      changeSubsequent: "Aplicar aos eventos futuros",
+      scope: "Aplicar a",
+      scopeSingle: "Só esta ocorrência",
+      scopeFuture: "Esta e as seguintes",
+      scopeAll: "Toda a série"
     },
 
     // Expense Categories

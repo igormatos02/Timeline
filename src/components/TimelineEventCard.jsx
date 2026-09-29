@@ -1058,13 +1058,14 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         tab: originId
       };
     }
-    // Wallet expenses still stored in the (hidden) expense timeline belong to the wallet
+    // Wallet expenses (stored in the wallet, or still in the hidden expense timeline) show the wallet
     const walletTimeline = (timelines || []).find((tl) => isWalletTimelineType(tl?.type));
     const originTimeline = (timelines || []).find((tl) => String(tl?.id) === String(originId || ''));
     // (the card only receives the visible timelines: an expense whose timeline is not among them is in the hidden one)
     const isStoredInExpenseTimeline = normalizeTimelineType(event.timelineType || originTimeline?.type) === TimelineType.EXPENSE ||
       (event.eventType === EventType.EXPENSE && !originTimeline);
-    if (walletTimeline && isStoredInExpenseTimeline) {
+    const isInWallet = Boolean(walletTimeline) && String(originTimeline?.id || '') === String(walletTimeline.id);
+    if (walletTimeline && (isStoredInExpenseTimeline || (isInWallet && (isExpenseEvent || event.eventType === EventType.EXPENSE)))) {
       const p = getPaletteTheme(walletTimeline.color || TimelineColor.INCOME, TimelineColor.INCOME);
       return {
         label: walletTimeline.name || t(isCondoflow ? 'sidebar.cashTimeline' : 'sidebar.walletTimeline'),

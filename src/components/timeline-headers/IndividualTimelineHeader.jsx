@@ -28,8 +28,9 @@ export default function IndividualTimelineHeader({
   // Entity movements in every financial timeline (board total and clearance)
   entityBoardEvents = [],
   allTimelines = [],
-  balanceMode = BalanceViewMode.ALL,
-  // The balance mode switch, shown next to the actions
+  // Side of the entity shown (income side = what it owes, outflow side = what it has to receive)
+  entityDirectionMode = BalanceViewMode.INCOME,
+  // The owes / has to receive switch, shown next to the actions
   headerSwitch = null,
   onOpenClearance,
   onOpenHistory,
@@ -38,9 +39,9 @@ export default function IndividualTimelineHeader({
   const { t } = useTranslation();
   const [collapsed, setIsCollapsed] = useHeaderCollapsed();
 
-  // Direction of the figures: what the entity owes (income side) or, in the outflows mode of the balance and in
-  // the expense timeline, what is owed to the entity. Both never mix: the wallet holds income and expenses.
-  const isPayable = balanceMode === BalanceViewMode.OUTFLOW || normalizeTimelineType(timeline?.type) === TimelineType.EXPENSE;
+  // Direction of the figures: what the entity owes (income side) or, on its "to receive" side and in the
+  // expense timeline, what is owed to the entity. Both never mix: the wallet holds income and expenses.
+  const isPayable = entityDirectionMode === BalanceViewMode.OUTFLOW || normalizeTimelineType(timeline?.type) === TimelineType.EXPENSE;
   const direction = isPayable ? BalanceViewMode.OUTFLOW : BalanceViewMode.INCOME;
   const timelineTypeMap = useMemo(
     () => new Map((allTimelines || []).map((tl) => [String(tl.id), tl.type])),

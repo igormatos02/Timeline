@@ -1,6 +1,7 @@
 import React from 'react';
 import { BalanceViewMode, TimelineColor, TimelineType, TimeboardType, isLoanTimelineType, isWalletTimelineType, normalizeTimelineType } from '../enums/index.js';
 import BalanceModeSwitch from './timeline-headers/BalanceModeSwitch.jsx';
+import EntityDirectionSwitch from './timeline-headers/EntityDirectionSwitch.jsx';
 import {
   BalanceTimelineHeader,
   IncomeTimelineHeader,
@@ -78,12 +79,12 @@ function TimelineHeader(rawProps) {
   const props = { ...rawProps, isIndividualView: false, onToggleIndividualView: undefined };
 
   // Condoflow: with an entity selected, the header becomes the entity's own (figures of the current timeline,
-  // the board total next to them); in the balance it keeps the all / income / outflows switch
+  // the board total next to them). Instead of the balance modes it offers the entity's sides (owes / has to
+  // receive), only when the entity has movements on both.
   const isCondoflow = timeboard?.type === TimeboardType.CONDOFLOW;
   if (isCondoflow && selectedEntityId) {
-    const isBalance = normalizeTimelineType(timeline.type) === TimelineType.BALANCE;
-    const headerSwitch = isBalance && props.onChangeBalanceMode
-      ? <BalanceModeSwitch value={props.balanceMode || BalanceViewMode.ALL} onChange={props.onChangeBalanceMode} />
+    const headerSwitch = props.onChangeEntityDirection
+      ? <EntityDirectionSwitch value={props.entityDirection} onChange={props.onChangeEntityDirection} />
       : null;
     return <IndividualTimelineHeader {...props} headerSwitch={headerSwitch} />;
   }

@@ -9,6 +9,8 @@ import { GENERAL_SPACE_KEY, isMovementInSpace } from '../../../shared/finance/sa
 export function useTimelineFilteredEvents({
   activeFinancialTab,
   balanceMode = BalanceViewMode.ALL,
+  // Individual view: only the movements of the entity's side (what it owes / what it has to receive)
+  entityDirectionMode = BalanceViewMode.ALL,
   computeFromMonth,
   isCondoflow,
   isEventMatchingEntity,
@@ -196,6 +198,10 @@ export function useTimelineFilteredEvents({
       if (selectedEntityId && !isEventMatchingEntity(ev, selectedEntityId)) {
         return false;
       }
+      if (entityDirectionMode !== BalanceViewMode.ALL &&
+        !isKindInBalanceViewMode(classifyMovement(ev, balanceTimelineTypeMap).kind, entityDirectionMode)) {
+        return false;
+      }
 
       // Timeline ownership filter
       if (timeline.type === TimelineType.BALANCE) {
@@ -275,6 +281,7 @@ export function useTimelineFilteredEvents({
     balanceTimelineTypeMap,
     walletIdsForFilter,
     expenseStorageIdsForFilter,
+    entityDirectionMode,
   ]);
 
   return {

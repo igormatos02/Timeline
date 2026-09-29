@@ -1314,7 +1314,10 @@ export const translations = {
     // Individual (per-entity) Timeline Header
     individualHeader: {
       debtBalance: "Outstanding Balance",
-      payableBalance: "Owed to the Entity",
+      payableBalance: "To Receive",
+      sideLabel: "Side",
+      sideOwes: "Owes",
+      sideReceives: "To receive",
       boardTotal: "Condominium total: {{amount}}",
       debtBalanceHint: "{{count}} overdue or pending obligations",
       noPendingObligations: "No pending obligations for {{name}}",
@@ -3612,7 +3615,10 @@ export const translations = {
     // Individual (per-entity) Timeline Header
     individualHeader: {
       debtBalance: "Saldo Devedor",
-      payableBalance: "A Pagar à Entidade",
+      payableBalance: "Tem a Receber",
+      sideLabel: "Lado",
+      sideOwes: "Deve",
+      sideReceives: "A receber",
       boardTotal: "Total no condomínio: {{amount}}",
       debtBalanceHint: "{{count}} obrigações em atraso ou pendentes",
       noPendingObligations: "Nenhuma obrigação pendente para {{name}}",

@@ -38,3 +38,4 @@ export { StatusChangeReason } from './StatusChangeReason.js';
 export { TimeboardSettingsTab } from './TimeboardSettingsTab.js';
 export { EventModalTab } from './EventModalTab.js';
 export { BalanceViewMode, isKindInBalanceViewMode } from './BalanceViewMode.js';
+export { EntityDirection, entityDirectionToBalanceMode } from './EntityDirection.js';

@@ -66,7 +66,9 @@ import {
   isPositiveStatus,
   isCancelledStatus,
   BalanceViewMode,
-  isKindInBalanceViewMode
+  isKindInBalanceViewMode,
+  EntityDirection,
+  entityDirectionToBalanceMode
 } from '../enums/index.js';
 import { classifyMovement } from '../../shared/finance/movements.js';
 import { getTimelineDropdownOptions } from '../utils/timelineConfig.jsx';
@@ -448,7 +450,9 @@ function VerticalTimeline({
       // Storage unavailable (private window): the mode just isn't remembered
     }
   }, []);
-  const activeBalanceMode = timeline.type === TimelineType.BALANCE ? balanceMode : BalanceViewMode.ALL;
+  // Condoflow individual view (an entity is filtered): the balance modes give way to the entity's sides
+  const isEntityView = isCondoflow && Boolean(selectedEntityId);
+  const activeBalanceMode = timeline.type === TimelineType.BALANCE && !isEntityView ? balanceMode : BalanceViewMode.ALL;
 
   const isCategoryFiltered =
     (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) ||
@@ -929,6 +933,43 @@ function VerticalTimeline({
     [timeline.boardTimelines, timeline.timelines]
   );
 
+  // Sides of the filtered entity in this timeline: what it owes (income side) and what it has to receive
+  // (outflow side). The side opened by default is the one with money still open, else the one with movements.
+  const [chosenEntityDirection, setChosenEntityDirection] = useState(null);
+  React.useEffect(() => {
+    setChosenEntityDirection(null);
+  }, [selectedEntityId]);
+  const entitySides = useMemo(() => {
+    const sides = {
+      [EntityDirection.OWES]: { count: 0, open: 0 },
+      [EntityDirection.RECEIVES]: { count: 0, open: 0 }
+    };
+    if (!isEntityView) return sides;
+    entityEvents.forEach((ev) => {
+      const kind = classifyMovement(ev, boardTimelineTypeMap).kind;
+      const side = isKindInBalanceViewMode(kind, BalanceViewMode.INCOME)
+        ? EntityDirection.OWES
+        : isKindInBalanceViewMode(kind, BalanceViewMode.OUTFLOW) ? EntityDirection.RECEIVES : null;
+      if (!side || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+      sides[side].count += 1;
+      if (!isPositiveStatus(ev.status) && !ev.isCompleted) sides[side].open += Math.abs(Number(ev.amount || 0));
+    });
+    return sides;
+  }, [isEntityView, entityEvents, boardTimelineTypeMap]);
+  const autoEntityDirection = (() => {
+    const owes = entitySides[EntityDirection.OWES];
+    const receives = entitySides[EntityDirection.RECEIVES];
+    if (owes.open > 0) return EntityDirection.OWES;
+    if (receives.open > 0) return EntityDirection.RECEIVES;
+    if (owes.count === 0 && receives.count > 0) return EntityDirection.RECEIVES;
+    return EntityDirection.OWES;
+  })();
+  const entityDirection = chosenEntityDirection && entitySides[chosenEntityDirection]?.count > 0
+    ? chosenEntityDirection
+    : autoEntityDirection;
+  const hasBothEntityDirections = entitySides[EntityDirection.OWES].count > 0 && entitySides[EntityDirection.RECEIVES].count > 0;
+  const entityDirectionMode = isEntityView ? entityDirectionToBalanceMode(entityDirection) : BalanceViewMode.ALL;
+
   // Events of the selected entity for the whole current calendar year (Jan - Dec),
   // used by the individual header's year progress indicator.
   const currentYearKey = format(todayDate, 'yyyy');
@@ -959,7 +1000,7 @@ function VerticalTimeline({
         };
         // Declarations always cover the whole board: what the entity owes (owner) or, in the outflows mode of
         // the balance and in the expense timeline, what is owed to the entity (service provider)
-        const isExpenseTimeline = timeline?.type === TimelineType.EXPENSE || activeBalanceMode === BalanceViewMode.OUTFLOW;
+        const isExpenseTimeline = timeline?.type === TimelineType.EXPENSE || entityDirectionMode === BalanceViewMode.OUTFLOW;
         const isCondoDeclaration = isExpenseTimeline || isWalletTimelineType(timeline?.type) || timeline?.type === TimelineType.INVESTMENT || timeline?.type === TimelineType.BALANCE;
         const declarationEvents = entityBoardEvents.filter((ev) => isKindInBalanceViewMode(
           classifyMovement(ev, boardTimelineTypeMap).kind,
@@ -1018,7 +1059,7 @@ function VerticalTimeline({
         setIsGeneratingReceipt(false);
       }
     }, 450);
-  }, [selectedEntity, entityBoardEvents, boardTimelineTypeMap, activeBalanceMode, todayStr, persons, activeTimeboard, currentUser, timeline?.type, language, t]);
+  }, [selectedEntity, entityBoardEvents, boardTimelineTypeMap, entityDirectionMode, todayStr, persons, activeTimeboard, currentUser, timeline?.type, language, t]);
 
 
   const getEntityIcon = (type) => {
@@ -1250,6 +1291,7 @@ function VerticalTimeline({
   } = useTimelineFilteredEvents({
     activeFinancialTab,
     balanceMode: activeBalanceMode,
+    entityDirectionMode,
     computeFromMonth,
     isCondoflow,
     isEventMatchingEntity,
@@ -1496,6 +1538,10 @@ function VerticalTimeline({
             ? React.cloneElement(headerComponent, {
               balanceMode: activeBalanceMode,
               onChangeBalanceMode: timeline.type === TimelineType.BALANCE ? handleChangeBalanceMode : undefined,
+              // Individual view: the entity's side (owes / has to receive) and its switch
+              entityDirection,
+              entityDirectionMode,
+              onChangeEntityDirection: hasBothEntityDirections ? setChosenEntityDirection : undefined,
               // The income / outflow modes of the balance compute their header from the movements listed in that mode
               filteredEvents: activeBalanceMode !== BalanceViewMode.ALL || Boolean(selectedEntityId) || (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) || (timeline.type === TimelineType.INVESTMENT && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') || (isWalletTimelineType(timeline.type) && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') ? filteredEvents : undefined,
               events: Boolean(selectedEntityId) ? filteredEvents : undefined,

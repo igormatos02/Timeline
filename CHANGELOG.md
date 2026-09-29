@@ -2,6 +2,74 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.5.0](https://github.com/igormatos02/Timeline/compare/v0.3.0...v0.5.0) (2026-09-29)
+
+
+### Features
+
+* account general space, where field, transfers and bank fees category ([f70227d](https://github.com/igormatos02/Timeline/commit/f70227dc35a8880e8a1109bfffaffec9294b1c8c))
+* account outflows (withdrawal, cost, expense) and account movement filter ([a68b2bb](https://github.com/igormatos02/Timeline/commit/a68b2bbe047e305d88c6d7fd5b16c48cc34d9079))
+* accounts model with wallet, bank account and balance modes ([55e3864](https://github.com/igormatos02/Timeline/commit/55e386484e5809807271b63902178c557ceff378))
+* add all / income / outflows modes to the balance header ([f34ec88](https://github.com/igormatos02/Timeline/commit/f34ec88b882f48882329dfab0dd5a47709a0adcc))
+* add wallet movements from the balance income and outflows modes ([1baa053](https://github.com/igormatos02/Timeline/commit/1baa053970b96fa4a47dc47942e29fc24fc95be1))
+* admin view in the mobile app ([0a47194](https://github.com/igormatos02/Timeline/commit/0a471942fa1f6dacb2ffa46fe34c8f0dd6c15a20))
+* android app with capacitor and native google sign-in ([871c7db](https://github.com/igormatos02/Timeline/commit/871c7db49368f1f76b345c9c1c9594144dccd1bd))
+* authentication, per-timeboard access and invitation codes in the api ([51aa3da](https://github.com/igormatos02/Timeline/commit/51aa3da32e1af326ade467d051152c21fdd39ab4))
+* category badge, receipt number search/editing and search clear button ([2f7d0b1](https://github.com/igormatos02/Timeline/commit/2f7d0b18db5683331fea3f53a8e667fb360756e9))
+* condominium entry modals, optional pocket targets and date picker ([d4857c6](https://github.com/igormatos02/Timeline/commit/d4857c65b992c9761cfba61f2ab46259b9a45077))
+* condominium posts and shared reminders for individual users ([ab28081](https://github.com/igormatos02/Timeline/commit/ab28081ff2ac40e1508b6d416c85b9c3daac31ff))
+* consolidated outflows with savings expenses and paid installments ([92c921e](https://github.com/igormatos02/Timeline/commit/92c921e454527691ff4f9bd2f74e75bf65759c69))
+* correct effective movements and lock them on the server ([09b4e78](https://github.com/igormatos02/Timeline/commit/09b4e789f543f843bc521087dcc598dae7498b54))
+* debtors report timeline selection and overdue account deposits ([3d2e928](https://github.com/igormatos02/Timeline/commit/3d2e928fcce1923dc7d165d032813c1955ab97c4))
+* debtors report, header default state setting and header refresh on expand ([c888f01](https://github.com/igormatos02/Timeline/commit/c888f013c87f70b664134367c7e3a7d795e3d1ce))
+* describe each timeline type in the sidebar per timeboard type ([e22b2e3](https://github.com/igormatos02/Timeline/commit/e22b2e3e32d5c5094cf354ae239b3c30226bae2c))
+* diary and reminder events in their own tables ([727c203](https://github.com/igormatos02/Timeline/commit/727c2033867ab617ac1df23d84e41a7d9fa268ea))
+* effective movements cannot be deleted; withdrawals apart from received ([316c099](https://github.com/igormatos02/Timeline/commit/316c099e20272cb4933f80ca5e01e98a22321048))
+* hide the expense timeline and create wallets for new timeboards ([5689ba7](https://github.com/igormatos02/Timeline/commit/5689ba758d4f61badbcf72880036c395c32900a2))
+* individual role experience and printable history ([3ce09a8](https://github.com/igormatos02/Timeline/commit/3ce09a8cbf8381b974fb1751f5679e3379f4966b))
+* irreversible event cancellation, condoflow ordering and settings modal Esc ([f5553d5](https://github.com/igormatos02/Timeline/commit/f5553d5a591063d4987a3ff037d7162a71af63c6))
+* loan installments and amortizations by state ([13bb5ca](https://github.com/igormatos02/Timeline/commit/13bb5cae0cfbc5bc0fc0a951b9dd289bb96aeb54))
+* mobile app for individual members ([3a7f92b](https://github.com/igormatos02/Timeline/commit/3a7f92b3a3469d664089e1c47d129bbe268c24d8))
+* mobile status filter, ownership and role badges, year chips ([fd3b603](https://github.com/igormatos02/Timeline/commit/fd3b60312904621221c0e24f610fce1ef4917534))
+* month progress bar (realized vs planned) for non-individual roles ([f912488](https://github.com/igormatos02/Timeline/commit/f9124887018aa3e1f59e0a6df624933f16955ca6))
+* owes / to receive sides in the individual header ([40515b5](https://github.com/igormatos02/Timeline/commit/40515b52ff9512b647c5b038d5db136b78eaf6bb))
+* past projection, condoflow expense categories and closings report ([5ee5c82](https://github.com/igormatos02/Timeline/commit/5ee5c82e9a396bb4d1f29c3766c6bfc4893eda11))
+* per-occurrence event comments and amount-only event versioning ([77175b2](https://github.com/igormatos02/Timeline/commit/77175b266b624cc0db5d5e75a90159fcf8ee682e))
+* privacy policy and account deletion ([c12823b](https://github.com/igormatos02/Timeline/commit/c12823b2c355b374b9eb95122055f55cb4ce0e32))
+* receipt payment date and number on tickets, period filter and collapsed headers ([d394d39](https://github.com/igormatos02/Timeline/commit/d394d3997accc9347192dec30a49ae858e62e83b))
+* redesign income form with compact layout and floating subparts ([1f8b998](https://github.com/igormatos02/Timeline/commit/1f8b998cdc56fd2aa8d4313f0e31f12bd424efdb))
+* reorganize sidebar filters ([b9663c0](https://github.com/igormatos02/Timeline/commit/b9663c0f4170b0bf3c82a7aa36672e8f5bb8af3f))
+* resource-level access checks on routes with an id ([76b947e](https://github.com/igormatos02/Timeline/commit/76b947e237b5ae2e96664b711349b5066c441d87))
+* role permissions, admin overrides and change history ([cf0a6dd](https://github.com/igormatos02/Timeline/commit/cf0a6dd5d8b3be6ffb651b5244d7445875aaea62))
+* show the individual header as soon as an entity is filtered ([22045bb](https://github.com/igormatos02/Timeline/commit/22045bbe79abefd9e3fd88bd9a9696f407cc355a))
+* show the timeline type under its name in the sidebar ([7c29da9](https://github.com/igormatos02/Timeline/commit/7c29da931b0990f2c8b968abbd376ac8a05dbf83))
+* show wallet, bank and total balances in the balance header ([fe978b4](https://github.com/igormatos02/Timeline/commit/fe978b4ab23d310b0fc033792bd62cd69e78b525))
+* split the individual balance debt by account ([ec44447](https://github.com/igormatos02/Timeline/commit/ec444474cdab30fd44a68ecea79af312f98d0fc8))
+* treat the income timeline as the cash wallet ([0904e9d](https://github.com/igormatos02/Timeline/commit/0904e9d2586ad33056782dbdc0c67f1a9b607f4b))
+* upgrade to v0.4.0 with redesigned navigation, timeboard switcher and workspace actions ([44fbf58](https://github.com/igormatos02/Timeline/commit/44fbf58fe4c09c88301517d18ffb1d7d8c9d2b01))
+* use the compact cash flow form for expenses ([d52aa97](https://github.com/igormatos02/Timeline/commit/d52aa9775c2916344d614920c3af5c19a083d5bf))
+* use the compact form for bank account deposits ([4f2e2c4](https://github.com/igormatos02/Timeline/commit/4f2e2c4745d3b1ad3d4436316e5ba480aa7f86ae))
+* where is my money summary in the balance and closings ([d1288eb](https://github.com/igormatos02/Timeline/commit/d1288eb9a0a8f9a508f33555abe6c21d59f6f9c4))
+
+
+### Bug Fixes
+
+* always show the timeline type in the sidebar ([dcf4855](https://github.com/igormatos02/Timeline/commit/dcf48552884fca4a82321678d1df2d37e0d83465))
+* edit scope labels, wallet expense badge and negative wallet balance ([18f1df7](https://github.com/igormatos02/Timeline/commit/18f1df71ce059d281d4e5b92b399a3823c3f593f))
+* event statuses and pocket savings ([57e6e5c](https://github.com/igormatos02/Timeline/commit/57e6e5cd590e27cdc37346ed886f2ceed2fa958e))
+* keep event statuses in sync when events are cleared, moved or deleted ([daddef0](https://github.com/igormatos02/Timeline/commit/daddef03a74f30f67d273482a3e7094be4689576))
+* missing imports breaking invitations and headers ([0d53fa2](https://github.com/igormatos02/Timeline/commit/0d53fa220523f4acf50b30c2d7df1b5c35cc62cb))
+
+
+### Refactors
+
+* accept the wallet timeline type wherever the income type is checked ([93a4c3d](https://github.com/igormatos02/Timeline/commit/93a4c3da2e89f73e4892064436770c9150dd4807))
+* architecture pass on shared engine, cards and sidebar ([8064db1](https://github.com/igormatos02/Timeline/commit/8064db115710e72318547b4826bbb50ee05630d5))
+* shared financial engine for balance, headers and savings ([634bfa7](https://github.com/igormatos02/Timeline/commit/634bfa796118cca0db6174b289b3bc0f7b6a5201))
+* split App.jsx into hooks and layout components ([c14163c](https://github.com/igormatos02/Timeline/commit/c14163c097dc970566aeec18079a8f8483f4897c))
+* split TimelineEventCard into sections with a card context ([bb64fd8](https://github.com/igormatos02/Timeline/commit/bb64fd8ecf6f7420f3ff3b4937885c99fc4d7dee))
+* split VerticalTimeline into sidebar, views and hooks ([d2a1299](https://github.com/igormatos02/Timeline/commit/d2a1299da5e74cf2c9c59611fd30759048ad3f56))
+
 ## [0.3.0](https://github.com/igormatos02/Timeline/compare/v0.2.5...v0.3.0) (2026-09-24)
 
 

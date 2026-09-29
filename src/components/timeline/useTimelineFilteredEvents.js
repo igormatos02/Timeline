@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { AmortizationEventCategory, AmortizationStrategy, EventStatus, EventType, ExpensesEventCategory, IncomeEventCategory, LoanEventCategory, MovementKind, TimelineType, getAccountMovementType, getOutflowType, isCancelledStatus, isPositiveStatus, isWalletTimelineType, normalizeTimelineType } from '../../enums/index.js';
+import { AmortizationEventCategory, AmortizationStrategy, EventStatus, EventType, ExpensesEventCategory, IncomeEventCategory, LoanEventCategory, MovementKind, TimelineType, getAccountMovementType, getOutflowType, isCancelledStatus, isPositiveStatus, isWalletTimelineType, normalizeTimelineType, BalanceViewMode, isKindInBalanceViewMode } from '../../enums/index.js';
+import { classifyMovement } from '../../../shared/finance/movements.js';
 import { format } from 'date-fns';
 import { CONDO_EXPENSE_CATEGORY_IDS } from './timelineFilterItems.js';
 import { GENERAL_SPACE_KEY, isMovementInSpace } from '../../../shared/finance/savingsSpaces.js';
@@ -7,6 +8,7 @@ import { GENERAL_SPACE_KEY, isMovementInSpace } from '../../../shared/finance/sa
 // Extracted from VerticalTimeline.jsx (VerticalTimeline).
 export function useTimelineFilteredEvents({
   activeFinancialTab,
+  balanceMode = BalanceViewMode.ALL,
   computeFromMonth,
   isCondoflow,
   isEventMatchingEntity,
@@ -42,6 +44,12 @@ export function useTimelineFilteredEvents({
       .filter((tl) => normalizeTimelineType(tl?.type) === TimelineType.EXPENSE)
       .map((tl) => String(tl.id)));
   }, [timeline.type, timeline.timelines]);
+
+  // Timeline types by id, for the movement classification of the balance modes
+  const balanceTimelineTypeMap = useMemo(
+    () => new Map((timeline.timelines || []).map((tl) => [String(tl.id), tl.type])),
+    [timeline.timelines]
+  );
 
   const filteredEvents = useMemo(() => {
     if (!timelineEvents) return [];
@@ -196,6 +204,10 @@ export function useTimelineFilteredEvents({
         if (isNonFinancial) return false;
         // Outflow references mirror movements already listed in the balance under their owner timeline
         if (ev.isReference) return false;
+        // Income / outflow modes: only the movements of that kind (transfers only in "all")
+        if (balanceMode !== BalanceViewMode.ALL && !isKindInBalanceViewMode(classifyMovement(ev, balanceTimelineTypeMap).kind, balanceMode)) {
+          return false;
+        }
       } else {
         const isThisTimeline = ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
         const isStoredWalletExpense = !ev.isReference && walletExpenseTimelineIds.has(String(ev.timelineId || ev.timeline_id || ''));
@@ -247,6 +259,8 @@ export function useTimelineFilteredEvents({
     selectedMovementTypes,
     selectedOutflowTypes,
     walletExpenseTimelineIds,
+    balanceMode,
+    balanceTimelineTypeMap,
   ]);
 
   return {

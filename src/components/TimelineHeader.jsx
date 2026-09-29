@@ -1,5 +1,6 @@
 import React from 'react';
-import { TimelineType, TimeboardType, isLoanTimelineType } from '../enums/index.js';
+import { BalanceViewMode, TimelineColor, TimelineType, TimeboardType, isLoanTimelineType, isWalletTimelineType, normalizeTimelineType } from '../enums/index.js';
+import BalanceModeSwitch from './timeline-headers/BalanceModeSwitch.jsx';
 import {
   BalanceTimelineHeader,
   IncomeTimelineHeader,
@@ -14,6 +15,43 @@ import {
   DefaultTimelineHeader
 } from './timeline-headers/index.js';
 import IndividualTimelineHeader from './timeline-headers/IndividualTimelineHeader.jsx';
+
+/**
+ * Balance header following the selected mode: the balance itself, the income header (money coming in) or
+ * the expense header (money going out). The income and expense headers keep their look; they receive the
+ * movements listed in that mode and the wallet / outflow colors.
+ */
+function BalanceHeaderByMode(props) {
+  const { timeline, allTimelines = [], balanceMode = BalanceViewMode.ALL, onChangeBalanceMode } = props;
+  const headerSwitch = onChangeBalanceMode
+    ? <BalanceModeSwitch value={balanceMode} onChange={onChangeBalanceMode} />
+    : null;
+  // The mode list only has income (or outflows): the board-wide figures (commitment, accumulation) still
+  // need every movement of the board
+  const allEvents = props.allEvents || timeline.events;
+
+  if (balanceMode === BalanceViewMode.INCOME) {
+    // The wallet provides the color and the starting balance of the available money
+    const wallet = allTimelines.find((tl) => isWalletTimelineType(tl?.type));
+    const incomeTimeline = {
+      ...(wallet || {}),
+      id: timeline.id,
+      name: timeline.name,
+      description: timeline.description,
+      color: wallet?.color || TimelineColor.INCOME,
+      events: timeline.events
+    };
+    return <IncomeTimelineHeader {...props} timeline={incomeTimeline} allEvents={allEvents} headerSwitch={headerSwitch} />;
+  }
+
+  if (balanceMode === BalanceViewMode.OUTFLOW) {
+    const expenseTimeline = allTimelines.find((tl) => normalizeTimelineType(tl?.type) === TimelineType.EXPENSE);
+    const outflowTimeline = { ...timeline, color: expenseTimeline?.color || TimelineColor.EXPENSE };
+    return <ExpenseTimelineHeader {...props} timeline={outflowTimeline} allEvents={allEvents} headerSwitch={headerSwitch} />;
+  }
+
+  return <BalanceTimelineHeader {...props} headerSwitch={headerSwitch} />;
+}
 
 /**
  * Dispatcher do cabeçalho da timeline.
@@ -56,10 +94,9 @@ function TimelineHeader(rawProps) {
 
   switch (typeLower) {
     case TimelineType.BALANCE:
-      return <BalanceTimelineHeader {...props} />;
+      return <BalanceHeaderByMode {...props} />;
 
     case TimelineType.INCOME:
-
     case TimelineType.WALLET:
       return <IncomeTimelineHeader {...props} />;
 

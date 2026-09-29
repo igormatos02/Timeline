@@ -255,6 +255,8 @@ import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
 import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
 
 export default function BalanceTimelineHeader({
+  // Extra control shown next to the header actions (the balance mode switch)
+  headerSwitch = null,
   timeline,
   timeboard = null,
   allTimelines = [],
@@ -657,6 +659,7 @@ export default function BalanceTimelineHeader({
       }
       right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {headerSwitch}
           <EntityViewSwitch
             selectedEntityId={selectedEntityId}
             isIndividualView={isIndividualView}

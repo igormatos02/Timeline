@@ -64,9 +64,12 @@ import {
   normalizeTimelineType,
   isLoanTimelineType,
   isPositiveStatus,
-  isCancelledStatus
+  isCancelledStatus,
+  BalanceViewMode
 } from '../enums/index.js';
 import { getTimelineDropdownOptions } from '../utils/timelineConfig.jsx';
+
+const BALANCE_MODE_STORAGE_KEY = 'timeboard.balanceViewMode';
 import FilterSwitch from './sidebar/FilterSwitch.jsx';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { GENERAL_SPACE_KEY } from '../../shared/finance/savingsSpaces.js';
@@ -425,6 +428,24 @@ function VerticalTimeline({
   const [selectedMovementTypes, setSelectedMovementTypes] = useState([]);
   // Outflows timeline filter: own expenses, expenses via savings and installments (empty = all)
   const [selectedOutflowTypes, setSelectedOutflowTypes] = useState([]);
+  // Balance mode (all / income / outflows): header and list follow it; remembered per browser as a convenience
+  const [balanceMode, setBalanceMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem(BALANCE_MODE_STORAGE_KEY);
+      return Object.values(BalanceViewMode).includes(saved) ? saved : BalanceViewMode.ALL;
+    } catch {
+      return BalanceViewMode.ALL;
+    }
+  });
+  const handleChangeBalanceMode = useCallback((mode) => {
+    setBalanceMode(mode);
+    try {
+      localStorage.setItem(BALANCE_MODE_STORAGE_KEY, mode);
+    } catch {
+      // Storage unavailable (private window): the mode just isn't remembered
+    }
+  }, []);
+  const activeBalanceMode = timeline.type === TimelineType.BALANCE ? balanceMode : BalanceViewMode.ALL;
 
   const isCategoryFiltered =
     (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) ||
@@ -1190,6 +1211,7 @@ function VerticalTimeline({
     filteredEvents
   } = useTimelineFilteredEvents({
     activeFinancialTab,
+    balanceMode: activeBalanceMode,
     computeFromMonth,
     isCondoflow,
     isEventMatchingEntity,
@@ -1434,7 +1456,10 @@ function VerticalTimeline({
         <div className="sticky-header-dock">
           {React.isValidElement(headerComponent)
             ? React.cloneElement(headerComponent, {
-              filteredEvents: Boolean(selectedEntityId) || (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) || (timeline.type === TimelineType.INVESTMENT && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') || (isWalletTimelineType(timeline.type) && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') ? filteredEvents : undefined,
+              balanceMode: activeBalanceMode,
+              onChangeBalanceMode: timeline.type === TimelineType.BALANCE ? handleChangeBalanceMode : undefined,
+              // The income / outflow modes of the balance compute their header from the movements listed in that mode
+              filteredEvents: activeBalanceMode !== BalanceViewMode.ALL || Boolean(selectedEntityId) || (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) || (timeline.type === TimelineType.INVESTMENT && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') || (isWalletTimelineType(timeline.type) && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') ? filteredEvents : undefined,
               events: Boolean(selectedEntityId) ? filteredEvents : undefined,
               allEvents: Boolean(selectedEntityId) ? (timeline.type === TimelineType.BALANCE ? filteredEvents : undefined) : undefined,
               selectedExpenseCategories: timeline.type === TimelineType.EXPENSE ? selectedExpenseCategories : undefined,

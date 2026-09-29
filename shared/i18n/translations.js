@@ -1695,6 +1695,10 @@ export const translations = {
 
     // Balance Timeline Header
     balanceHeader: {
+      viewModeLabel: "Show",
+      viewModeAll: "All",
+      viewModeIncome: "Income",
+      viewModeOutflow: "Outflows",
       withdrawnFromSavings: "Withdrawn from savings:",
       badge: "Consolidated Balance",
       newMovement: "New Movement",
@@ -3985,6 +3989,10 @@ export const translations = {
 
     // Balance Timeline Header
     balanceHeader: {
+      viewModeLabel: "Mostrar",
+      viewModeAll: "Tudo",
+      viewModeIncome: "Entradas",
+      viewModeOutflow: "Saídas",
       withdrawnFromSavings: "Levantado da Poupança:",
       badge: "Balanço Consolidado",
       newMovement: "Novo Movimento",

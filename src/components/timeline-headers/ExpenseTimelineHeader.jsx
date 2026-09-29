@@ -44,6 +44,8 @@ const prevMonthKey = (monthKey) => {
 };
 
 export default function ExpenseTimelineHeader({
+  // Extra control shown next to the header actions (the balance mode switch)
+  headerSwitch = null,
   timeline,
   timeboard = null,
   computeStartDate = null,
@@ -280,6 +282,7 @@ export default function ExpenseTimelineHeader({
       }
       right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {headerSwitch}
           <EntityViewSwitch
             selectedEntityId={selectedEntityId}
             isIndividualView={isIndividualView}

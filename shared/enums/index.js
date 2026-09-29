@@ -37,3 +37,4 @@ export { AuditAction } from './AuditAction.js';
 export { StatusChangeReason } from './StatusChangeReason.js';
 export { TimeboardSettingsTab } from './TimeboardSettingsTab.js';
 export { EventModalTab } from './EventModalTab.js';
+export { BalanceViewMode, isKindInBalanceViewMode } from './BalanceViewMode.js';

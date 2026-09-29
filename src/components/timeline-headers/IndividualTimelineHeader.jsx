@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { AlertCircle, CheckCircle2, FileCheck, Printer, Wallet, Landmark } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
-import { BalanceViewMode, EventStatus, TimelineColor, TimelineType, getDefaultTimelineColor, isCancelledStatus, isKindInBalanceViewMode, isPositiveStatus, normalizeTimelineType } from '../../enums/index.js';
+import { BalanceViewMode, EventStatus, TimelineColor, TimelineType, getDefaultTimelineColor, isCancelledStatus, isKindInBalanceViewMode, isPositiveStatus, isWalletTimelineType, normalizeTimelineType } from '../../enums/index.js';
 import { classifyMovement } from '../../../shared/finance/movements.js';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { getPaletteTheme } from '../../../shared/config/colorPalettes.js';
@@ -55,6 +55,25 @@ export default function IndividualTimelineHeader({
     () => (entityYearEvents || []).filter((ev) => isKindInBalanceViewMode(classifyMovement(ev, timelineTypeMap).kind, direction)),
     [entityYearEvents, timelineTypeMap, direction]
   );
+
+  // Balance: the open amount split by account (the wallet also owns the expenses still stored in the expense
+  // timeline), named as the user named each timeline
+  const isBalanceTimeline = normalizeTimelineType(timeline?.type) === TimelineType.BALANCE;
+  const accountBreakdown = useMemo(() => {
+    if (!isBalanceTimeline) return [];
+    const walletTimeline = (allTimelines || []).find((tl) => isWalletTimelineType(tl?.type));
+    const byAccount = new Map();
+    contextEvents.filter(isOpenObligation).forEach((ev) => {
+      const ownId = String(ev.timelineId || ev.timeline_id || '');
+      const own = (allTimelines || []).find((tl) => String(tl.id) === ownId);
+      const account = walletTimeline && normalizeTimelineType(own?.type) === TimelineType.EXPENSE ? walletTimeline : own;
+      if (!account) return;
+      const entry = byAccount.get(String(account.id)) || { id: account.id, name: account.name, color: account.color, amount: 0 };
+      entry.amount += Math.abs(Number(ev.amount || 0));
+      byAccount.set(String(account.id), entry);
+    });
+    return Array.from(byAccount.values()).sort((a, b) => b.amount - a.amount);
+  }, [isBalanceTimeline, allTimelines, contextEvents]);
 
   const { debtBalance, openCount, boardDebtBalance } = useMemo(() => {
     const sumOpen = (list) => list.filter(isOpenObligation).reduce((sum, ev) => sum + Math.abs(Number(ev.amount || 0)), 0);
@@ -202,6 +221,20 @@ export default function IndividualTimelineHeader({
               : t('individualHeader.noPendingObligations', { name: entityName })}
           </div>
           {/* Board total when this timeline only holds part of it (the same debt can be paid in cash or by bank) */}
+          {/* Balance: how much of it is in each account */}
+          {accountBreakdown.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', paddingTop: '6px', borderTop: '1px dashed var(--border-glass)' }}>
+              {accountBreakdown.map((account) => (
+                <div key={account.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: '0.74rem' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: account.color || 'var(--text-muted)' }} />
+                    {account.name}
+                  </span>
+                  <strong style={{ color: 'var(--text-main)' }}>{formatCurrency(account.amount)}</strong>
+                </div>
+              ))}
+            </div>
+          )}
           {showBoardTotal && (
             <div style={{ fontSize: '0.76rem', fontWeight: '700', color: hasBoardDebt ? TimelineColor.DANGER : 'var(--text-main)', paddingTop: '4px', borderTop: '1px dashed var(--border-glass)' }}>
               {t('individualHeader.boardTotal', { amount: formatCurrency(boardDebtBalance) })}

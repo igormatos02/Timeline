@@ -15,6 +15,7 @@ import { generateLoanInstallments } from '../utils/loanCalculations';
 import { formatCurrency } from '../utils/formatCurrency';
 import {
   TimelineType,
+  isWalletTimelineType,
   TimelineStatus,
   EventPeriodicity,
   TimelineColor,
@@ -25,7 +26,7 @@ import {
   LoanAmortizationSystem
 } from '../enums/index.js';
 import { findPaletteByColor } from '../../shared/config/colorPalettes.js';
-import { getTimelineTypeOptions } from '../utils/timelineConfig.jsx';
+import { getTimelineTypeOptions, getPresentTimelineTypes } from '../utils/timelineConfig.jsx';
 import { makeDiaryT } from '../utils/diaryLabels.js';
 import { useTimeboard } from '../context/TimeboardContext.jsx';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
@@ -54,9 +55,7 @@ export default function CreateTimelineModal({
   const [simulationEvents, setSimulationEvents] = useState([]);
 
   // Compute set of existing timeline types in this timeboard
-  const existingTypesSet = new Set(
-    (existingTimelines || []).map((tl) => normalizeTimelineType(tl.type))
-  );
+  const existingTypesSet = getPresentTimelineTypes(existingTimelines);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -448,7 +447,7 @@ export default function CreateTimelineModal({
           </div>
 
           {/* Valor Inicial para Entradas */}
-          {formData.type === TimelineType.INCOME && (
+          {isWalletTimelineType(formData.type) && (
             <div className="form-group">
               <label className="form-label">{t('createTimelineModal.initialValueLabel')}</label>
               <input

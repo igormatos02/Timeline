@@ -27,6 +27,7 @@ export default function TimelineMonthView({
   hasInvestmentTimeline,
   hasLoanTimeline,
   isBalancoView,
+  balanceMode,
   isFinancial,
   isFinancialTimeline,
   isLoanTimelineOrTab,
@@ -315,6 +316,7 @@ export default function TimelineMonthView({
                         activeFinancialTab={activeFinancialTab}
                         activeTimeboard={activeTimeboard}
                         isBalancoView={isBalancoView}
+                        balanceMode={balanceMode}
                         isFinancialTimeline={isFinancialTimeline}
                         isLoanTimelineOrTab={isLoanTimelineOrTab}
                         isReminders={isReminders}

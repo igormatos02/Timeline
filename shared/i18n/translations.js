@@ -401,16 +401,19 @@ export const translations = {
       showEmpty: "Show empty",
       visible: "Visible",
       hidden: "Hidden",
-      balanceTimeline: "Balance Timeline",
+      balanceTimeline: "Balance",
       incomeTimeline: "Income Timeline",
+      timelineType: "Type",
+      walletTimeline: "Wallet",
+      cashTimeline: "Cash",
       expenseTimeline: "Expenses Timeline",
-      investmentTimeline: "Account",
-      loanTimeline: "Loan Timeline",
-      projectTimeline: "Project Timeline",
-      reminderTimeline: "Reminder Timeline",
-      diaryTimeline: "Diary Timeline",
-      todoTimeline: "To Do Timeline",
-      followupTimeline: "Follow-up Timeline",
+      investmentTimeline: "Bank Account",
+      loanTimeline: "Credit",
+      projectTimeline: "Projects",
+      reminderTimeline: "Reminders",
+      diaryTimeline: "Diary",
+      todoTimeline: "To-do list",
+      followupTimeline: "Follow-up",
       goalsTimeline: "Goals Timeline",
       customTimeline: "Custom Timeline"
     },
@@ -665,7 +668,11 @@ export const translations = {
       noPersonsAvailable: "No entities found for this timeboard. Please add a person or organization in Timeboard Settings.",
       cancel: "Cancel",
       saveChanges: "Save Changes",
-      changeSubsequent: "Apply to subsequent events"
+      changeSubsequent: "Apply to subsequent events",
+      scope: "Apply to",
+      scopeSingle: "This occurrence only",
+      scopeFuture: "This and the following",
+      scopeAll: "The whole series"
     },
 
     // Expense Categories
@@ -1311,6 +1318,11 @@ export const translations = {
     // Individual (per-entity) Timeline Header
     individualHeader: {
       debtBalance: "Outstanding Balance",
+      payableBalance: "To Receive",
+      sideLabel: "Side",
+      sideOwes: "Owes",
+      sideReceives: "To receive",
+      boardTotal: "Condominium total: {{amount}}",
       debtBalanceHint: "{{count}} overdue or pending obligations",
       noPendingObligations: "No pending obligations for {{name}}",
       getClearance: "Get clearance certificate",
@@ -1597,9 +1609,9 @@ export const translations = {
       }
     },
 
-    // Account (savings timeline) spaces: the General space and the pockets
+    // Account (bank timeline) spaces: the current account and the pockets
     account: {
-      general: "General",
+      general: "Current Account",
       where: "Where",
       to: "To",
       transferRoute: "{{from}} → {{to}}",
@@ -1638,7 +1650,7 @@ export const translations = {
       typesDesc: {
         withdrawal: "Moves money from the pocket to the income timeline",
         pocket_expense: "An expense paid by the account, with the expense categories (bank fees included)",
-        pocket_transfer: "Moves money between the General space and the pockets (the account total does not change)"
+        pocket_transfer: "Moves money between the current account and the pockets (the account total does not change)"
       },
       titlePlaceholders: {
         withdrawal: "Ex: Emergency withdrawal, planned purchase...",
@@ -1695,6 +1707,14 @@ export const translations = {
 
     // Balance Timeline Header
     balanceHeader: {
+      viewModeLabel: "Show",
+      viewModeAll: "All",
+      viewModeIncome: "Income",
+      viewModeOutflow: "Outflows",
+      walletBalance: "In the wallet:",
+      walletBalanceCondo: "In cash:",
+      bankBalance: "In the bank:",
+      totalBalance: "Total balance:",
       withdrawnFromSavings: "Withdrawn from savings:",
       badge: "Consolidated Balance",
       newMovement: "New Movement",
@@ -2083,24 +2103,24 @@ export const translations = {
       timeline: {
         balance: "Balance",
         balanceDescription: "Consolidated view of financial flow",
-        income: "Inflow / Income",
-        incomeDescription: "Management of salaries, earnings, and revenues",
+        income: "Wallet",
+        incomeDescription: "Money in hand: income and expenses",
         expenses: "Expenses / Expenditures",
         expensesDescription: "Management of fixed, recurring, and variable expenses",
-        savings: "Savings / Investments",
-        savingsDescription: "Management of savings, equity, and contributions",
+        savings: "Bank Account",
+        savingsDescription: "Bank account movements, with the current account and the pockets",
         projects: "My Projects",
         projectsDescription: "Project planning, milestones and tasks timeline",
         reminders: "My Reminders",
         remindersDescription: "Schedule reminders, alerts and notes",
         condoflowBalance: "Balance",
         condoflowBalanceDescription: "Consolidated view of condominium finances",
-        condoflowIncome: "Receivables",
-        condoflowIncomeDescription: "Management of condo fees and receivables",
+        condoflowIncome: "Cash",
+        condoflowIncomeDescription: "Cash in hand of the condominium: receipts and expenses",
         condoflowExpenses: "Expenses",
         condoflowExpensesDescription: "Management of condominium expenses",
-        condoflowSavings: "Savings",
-        condoflowSavingsDescription: "Reserve fund and investments",
+        condoflowSavings: "Bank Account",
+        condoflowSavingsDescription: "Condominium bank account, with the reserve fund in pockets",
         condoflowDiary: "Diary",
         condoflowDiaryDescription: "Daily notes and occurrences",
         condoflowReminder: "Reminders",
@@ -2201,9 +2221,46 @@ export const translations = {
     },
 
     // Condominium (condoflow) timeboards call diary entries "posts"
+    // Short description of each timeline type in the sidebar, per timeboard type ("default" = financial,
+    // also used when a timeboard type has no text of its own)
+    timelineTypeDescription: {
+      default: {
+        balance: "Overview of everything",
+        wallet: "Money in hand",
+        investments: "Bank movements",
+        loan: "Loans and installments",
+        reminder: "Notices and dates",
+        diary: "Day-to-day records",
+        todo: "Things to do",
+        followup: "Request follow-up",
+        project: "Milestones and deliveries"
+      },
+      condoflow: {
+        balance: "Condominium accounts",
+        wallet: "Cash in hand",
+        investments: "Condominium account",
+        loan: "Condominium loans",
+        reminder: "Meetings and deadlines",
+        diary: "Notices to owners"
+      },
+      projects: {
+        project: "Milestones and deliveries",
+        todo: "Work to do",
+        followup: "Ongoing requests",
+        reminder: "Project deadlines",
+        diary: "Project notes"
+      },
+      reminders: {
+        reminder: "Notices and dates",
+        todo: "Things to do",
+        diary: "Day-to-day records"
+      }
+    },
+
     condoPost: {
       sidebar: {
-        diaryTimeline: "Posts"
+        diaryTimeline: "Posts",
+        walletTimeline: "Cash"
       },
       diaryHeader: {
         badge: "Condominium Posts",
@@ -2691,11 +2748,14 @@ export const translations = {
       showEmpty: "Mostrar vazios",
       visible: "Visível",
       hidden: "Oculto",
-      balanceTimeline: "Linha de Balanço",
+      balanceTimeline: "Balanço",
       incomeTimeline: "Linha de Entrada",
+      timelineType: "Tipo",
+      walletTimeline: "Carteira",
+      cashTimeline: "Caixa",
       expenseTimeline: "Linha de Despesas",
-      investmentTimeline: "Conta",
-      loanTimeline: "Linha Empréstimo",
+      investmentTimeline: "Conta Bancária",
+      loanTimeline: "Crédito",
       projectTimeline: "Projetos",
       reminderTimeline: "Lembretes",
       diaryTimeline: "Diário",
@@ -2955,7 +3015,11 @@ export const translations = {
       noPersonsAvailable: "Nenhuma entidade cadastrada neste timeboard. Adicione uma entidade nas Definições do Timeboard.",
       cancel: "Cancelar",
       saveChanges: "Salvar Alterações",
-      changeSubsequent: "Aplicar aos eventos futuros"
+      changeSubsequent: "Aplicar aos eventos futuros",
+      scope: "Aplicar a",
+      scopeSingle: "Só esta ocorrência",
+      scopeFuture: "Esta e as seguintes",
+      scopeAll: "Toda a série"
     },
 
     // Expense Categories
@@ -3559,6 +3623,11 @@ export const translations = {
     // Individual (per-entity) Timeline Header
     individualHeader: {
       debtBalance: "Saldo Devedor",
+      payableBalance: "Tem a Receber",
+      sideLabel: "Lado",
+      sideOwes: "Deve",
+      sideReceives: "A receber",
+      boardTotal: "Total no condomínio: {{amount}}",
       debtBalanceHint: "{{count}} obrigações em atraso ou pendentes",
       noPendingObligations: "Nenhuma obrigação pendente para {{name}}",
       getClearance: "Obter comprovativo de quitação",
@@ -3887,9 +3956,9 @@ export const translations = {
       }
     },
 
-    // Espaços da Conta (timeline de poupança): a Geral e os cofrinhos
+    // Espaços da Conta (timeline bancária): a Conta Corrente e os cofrinhos
     account: {
-      general: "Geral",
+      general: "Conta Corrente",
       where: "Onde",
       to: "Para",
       transferRoute: "{{from}} → {{to}}",
@@ -3928,7 +3997,7 @@ export const translations = {
       typesDesc: {
         withdrawal: "Move o dinheiro do cofrinho para a timeline de entradas",
         pocket_expense: "Um gasto pago pela Conta, com as categorias das despesas (inclui custos bancários)",
-        pocket_transfer: "Move dinheiro entre a Geral e os cofrinhos (o total da Conta não muda)"
+        pocket_transfer: "Move dinheiro entre a Conta Corrente e os cofrinhos (o total da Conta não muda)"
       },
       titlePlaceholders: {
         withdrawal: "Ex: Retirada de emergência, compra planeada...",
@@ -3985,6 +4054,14 @@ export const translations = {
 
     // Balance Timeline Header
     balanceHeader: {
+      viewModeLabel: "Mostrar",
+      viewModeAll: "Tudo",
+      viewModeIncome: "Entradas",
+      viewModeOutflow: "Saídas",
+      walletBalance: "Na carteira:",
+      walletBalanceCondo: "Em caixa:",
+      bankBalance: "No banco:",
+      totalBalance: "Saldo total:",
       withdrawnFromSavings: "Levantado da Poupança:",
       badge: "Balanço Consolidado",
       newMovement: "Novo Movimento",
@@ -4373,24 +4450,24 @@ export const translations = {
       timeline: {
         balance: "Saldo",
         balanceDescription: "Visão consolidada do fluxo financeiro",
-        income: "Entradas / Rendimentos",
-        incomeDescription: "Gestão de salários, ganhos e receitas",
+        income: "Carteira",
+        incomeDescription: "Dinheiro em mão: entradas e despesas",
         expenses: "Gastos / Despesas",
         expensesDescription: "Gestão de despesas fixas, recorrentes e variáveis",
-        savings: "Poupança / Investimentos",
-        savingsDescription: "Gestão de poupança, património e aportes",
+        savings: "Conta Bancária",
+        savingsDescription: "Movimentos da conta no banco, com a conta corrente e os cofrinhos",
         projects: "Meus Projetos",
         projectsDescription: "Planeamento de projetos, marcos e cronograma de tarefas",
         reminders: "Meus Lembretes",
         remindersDescription: "Agendar lembretes, alertas e notas",
         condoflowBalance: "Balanço",
         condoflowBalanceDescription: "Visão consolidada das finanças do condomínio",
-        condoflowIncome: "Recebimentos",
-        condoflowIncomeDescription: "Gestão de quotas e recebimentos do condomínio",
+        condoflowIncome: "Caixa",
+        condoflowIncomeDescription: "Dinheiro em caixa do condomínio: recebimentos e despesas",
         condoflowExpenses: "Gastos",
         condoflowExpensesDescription: "Gestão de despesas do condomínio",
-        condoflowSavings: "Poupança",
-        condoflowSavingsDescription: "Fundo de reserva e investimentos",
+        condoflowSavings: "Conta Bancária",
+        condoflowSavingsDescription: "Conta bancária do condomínio, com o fundo de reserva em cofrinhos",
         condoflowDiary: "Diário",
         condoflowDiaryDescription: "Notas e ocorrências diárias",
         condoflowReminder: "Lembretes",
@@ -4491,9 +4568,46 @@ export const translations = {
     },
 
     // Timeboards de condomínio (condoflow) chamam aos registos do diário "posts"
+    // Descrição curta de cada tipo de timeline na barra lateral, por tipo de timeboard ("default" = finanças,
+    // usada também quando um tipo de timeboard não tem texto próprio)
+    timelineTypeDescription: {
+      default: {
+        balance: "Visão geral de tudo",
+        wallet: "Dinheiro em mão",
+        investments: "Movimentos no banco",
+        loan: "Empréstimos e prestações",
+        reminder: "Avisos e datas",
+        diary: "Registos do dia a dia",
+        todo: "Coisas a fazer",
+        followup: "Seguimento de pedidos",
+        project: "Marcos e entregas"
+      },
+      condoflow: {
+        balance: "Contas do condomínio",
+        wallet: "Dinheiro em caixa",
+        investments: "Conta do condomínio",
+        loan: "Empréstimos do condomínio",
+        reminder: "Assembleias e prazos",
+        diary: "Comunicados aos condóminos"
+      },
+      projects: {
+        project: "Marcos e entregas",
+        todo: "Trabalho por fazer",
+        followup: "Pedidos em curso",
+        reminder: "Prazos do projeto",
+        diary: "Notas do projeto"
+      },
+      reminders: {
+        reminder: "Avisos e datas",
+        todo: "Coisas a fazer",
+        diary: "Registos do dia a dia"
+      }
+    },
+
     condoPost: {
       sidebar: {
-        diaryTimeline: "Posts"
+        diaryTimeline: "Posts",
+        walletTimeline: "Caixa"
       },
       diaryHeader: {
         badge: "Posts do Condomínio",

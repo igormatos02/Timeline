@@ -1,7 +1,9 @@
 import React from 'react';
 import { ACCOUNT_MOVEMENT_ITEMS, OUTFLOW_TYPE_ITEMS } from './timelineFilterItems.js';
-import { Bell, BookOpen, CheckSquare, ChevronDown, CreditCard, Filter, FolderKanban, Layers, ListTree, PiggyBank, Plus, ReceiptEuro, Scale, Search, Users, Wallet, X } from 'lucide-react';
-import { EventStatus, TimelineColor, TimelineType } from '../../enums/index.js';
+import { Bell, BookOpen, CheckSquare, ChevronDown, CreditCard, Filter, FolderKanban, Layers, ListTree, Landmark, Plus, ReceiptEuro, Scale, Search, Users, Wallet, X } from 'lucide-react';
+import { EventStatus, TimeboardType, TimelineColor, TimelineType } from '../../enums/index.js';
+import { getTimelineTypeDescription, getTimelineTypeLabelKey } from '../../utils/timelineConfig.jsx';
+import { makeDiaryT } from '../../utils/diaryLabels.js';
 import PeriodBadgeFilter from '../ui/PeriodBadgeFilter.jsx';
 import SidebarToggleFilter from '../sidebar/SidebarToggleFilter.jsx';
 import TimeboardSwitcher from '../sidebar/TimeboardSwitcher.jsx';
@@ -208,14 +210,19 @@ export default function TimelineSidebar({
             {((timelines && timelines.length > 0) ? timelines : (timeline?.timelines || [])).map((tl, tlIdx) => {
               const isActive = activeFinancialTab === tl.id || timeline?.id === tl.id;
               const tlColor = tl.color;
+              // The name is the user's; the type is the system's: its short description under the name,
+              // its label in the tooltip
+              const typeLabel = makeDiaryT(t, activeTimeboard?.type === TimeboardType.CONDOFLOW)(getTimelineTypeLabelKey(tl.type));
+              const typeDescription = getTimelineTypeDescription(tl.type, activeTimeboard?.type, t);
               const getTimelineIcon = (type) => {
                 switch (type) {
                   case TimelineType.INCOME:
+                  case TimelineType.WALLET:
                     return <Wallet size={14} style={{ color: tlColor }} />;
                   case TimelineType.EXPENSE:
                     return <ReceiptEuro size={14} style={{ color: tlColor }} />;
                   case TimelineType.INVESTMENT:
-                    return <PiggyBank size={14} style={{ color: tlColor }} />;
+                    return <Landmark size={14} style={{ color: tlColor }} />;
                   case TimelineType.LOAN:
                     return <CreditCard size={14} style={{ color: tlColor }} />;
                   case TimelineType.BALANCE:
@@ -249,6 +256,7 @@ export default function TimelineSidebar({
                   key={tl.id || `tl-${tlIdx}`}
                   type="button"
                   className={`sidebar-filter-item ${isActive ? 'active' : ''}`}
+                  title={typeLabel ? `${t('sidebar.timelineType')}: ${typeLabel}` : undefined}
                   onClick={() => {
                     if (onSelectFinancialTab) onSelectFinancialTab(tl.id);
                     if (onNavigateToTimeline) onNavigateToTimeline(tl.id);
@@ -259,11 +267,18 @@ export default function TimelineSidebar({
                     color: tlColor
                   } : {}}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center' }}>
                       {getTimelineIcon(tl.type)}
                     </span>
-                    <span style={{ fontWeight: '700' }}>{tl.name}</span>
+                    <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, textAlign: 'left', lineHeight: 1.2 }}>
+                      <span style={{ fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tl.name}</span>
+                      {typeDescription && (
+                        <span style={{ fontSize: '0.66rem', fontWeight: '600', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {typeDescription}
+                        </span>
+                      )}
+                    </span>
                   </div>
                   {isActive && <span style={{ fontSize: '0.75rem', color: tlColor }}>✓</span>}
                 </button>

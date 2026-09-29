@@ -15,7 +15,7 @@ import {
   loanDomainService,
   balanceDomainService
 } from '../../domain/services/timelines/financial/index.js';
-import { TimelineType, normalizeTimelineType, TimeboardType } from '../../../shared/enums/index.js';
+import { TimelineType, isWalletTimelineType, normalizeTimelineType, TimeboardType } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -64,7 +64,7 @@ export class TimelineService {
         procedureMetrics: metrics,
         metrics
       };
-    } else if (normType === TimelineType.INCOME) {
+    } else if (isWalletTimelineType(normType)) {
       const incomeEvents = allEvents.filter((ev) => ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id);
       const metrics = incomeDomainService.calculateMetrics(incomeEvents);
       return {
@@ -108,6 +108,7 @@ export class TimelineService {
     const typePriority = {
       [TimelineType.BALANCE]: 1,
       [TimelineType.INCOME]: 2,
+      [TimelineType.WALLET]: 2,
       [TimelineType.EXPENSE]: 3,
       [TimelineType.INVESTMENT]: 4
     };
@@ -148,7 +149,7 @@ export class TimelineService {
 
     const normType = normalizeTimelineType(timeline.type);
 
-    if (normType === TimelineType.INCOME) {
+    if (isWalletTimelineType(normType)) {
       events = incomeDomainService.filterEvents(projectedEvents, id);
       metrics = incomeDomainService.calculateMetrics(events, query.currentMonth);
     } else if (normType === TimelineType.EXPENSE) {
@@ -227,14 +228,17 @@ export class TimelineService {
     const singleInstanceTypes = [
       TimelineType.BALANCE,
       TimelineType.INCOME,
+      TimelineType.WALLET,
       TimelineType.EXPENSE,
       TimelineType.INVESTMENT
     ];
 
     if (timeboardId && singleInstanceTypes.includes(type)) {
       const existingTimelines = await timelineRepository.getAllByTimeboardId(timeboardId);
+      // Until the database migration the income timeline is the wallet: both types share the same slot
       const duplicate = existingTimelines.some(
-        (tl) => normalizeTimelineType(tl.type) === type
+        (tl) => normalizeTimelineType(tl.type) === type ||
+          (isWalletTimelineType(type) && isWalletTimelineType(tl.type))
       );
       if (duplicate) {
         throw new Error(

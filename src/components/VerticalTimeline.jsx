@@ -50,6 +50,7 @@ import {
   HISTORY_PERIOD_MONTHS,
   HistoryPeriod,
   TimelineType,
+  isWalletTimelineType,
   TimelineStatus,
   TimeboardType,
   TimelineColor,
@@ -63,9 +64,16 @@ import {
   normalizeTimelineType,
   isLoanTimelineType,
   isPositiveStatus,
-  isCancelledStatus
+  isCancelledStatus,
+  BalanceViewMode,
+  isKindInBalanceViewMode,
+  EntityDirection,
+  entityDirectionToBalanceMode
 } from '../enums/index.js';
+import { classifyMovement } from '../../shared/finance/movements.js';
 import { getTimelineDropdownOptions } from '../utils/timelineConfig.jsx';
+
+const BALANCE_MODE_STORAGE_KEY = 'timeboard.balanceViewMode';
 import FilterSwitch from './sidebar/FilterSwitch.jsx';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { GENERAL_SPACE_KEY } from '../../shared/finance/savingsSpaces.js';
@@ -161,6 +169,7 @@ function VerticalTimeline({
   const isFinancialTimeline = [
     TimelineType.BALANCE,
     TimelineType.INCOME,
+    TimelineType.WALLET,
     TimelineType.EXPENSE,
     TimelineType.INVESTMENT,
     TimelineType.LOAN
@@ -312,14 +321,15 @@ function VerticalTimeline({
 
   const hasIncomeTimeline = useMemo(() => {
     return effectiveTimelines.some(
-      (t) => normalizeTimelineType(t.type) === TimelineType.INCOME &&
+      (t) => isWalletTimelineType(t.type) &&
         t.status !== TimelineStatus.INACTIVE && t.isActive !== false
     );
   }, [effectiveTimelines]);
 
+  // The wallet holds expenses too (the expense timeline is hidden when there is one)
   const hasExpenseTimeline = useMemo(() => {
     return effectiveTimelines.some(
-      (t) => normalizeTimelineType(t.type) === TimelineType.EXPENSE &&
+      (t) => (normalizeTimelineType(t.type) === TimelineType.EXPENSE || isWalletTimelineType(t.type)) &&
         t.status !== TimelineStatus.INACTIVE && t.isActive !== false
     );
   }, [effectiveTimelines]);
@@ -385,7 +395,7 @@ function VerticalTimeline({
 
   // "Pending" also covers overdue events (there is no separate overdue filter)
   const getStatusFilterOptions = () => {
-    if ([TimelineType.INCOME, TimelineType.BALANCE].includes(timeline.type)) {
+    if (isWalletTimelineType(timeline.type) || timeline.type === TimelineType.BALANCE) {
       return [
         { id: EventStatus.ALL, name: t('status.all'), icon: <Layers size={13} /> },
         { id: EventStatus.RECEIVED, name: t('status.received'), icon: <CheckCircle2 size={13} /> },
@@ -423,6 +433,26 @@ function VerticalTimeline({
   const [selectedMovementTypes, setSelectedMovementTypes] = useState([]);
   // Outflows timeline filter: own expenses, expenses via savings and installments (empty = all)
   const [selectedOutflowTypes, setSelectedOutflowTypes] = useState([]);
+  // Balance mode (all / income / outflows): header and list follow it; remembered per browser as a convenience
+  const [balanceMode, setBalanceMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem(BALANCE_MODE_STORAGE_KEY);
+      return Object.values(BalanceViewMode).includes(saved) ? saved : BalanceViewMode.ALL;
+    } catch {
+      return BalanceViewMode.ALL;
+    }
+  });
+  const handleChangeBalanceMode = useCallback((mode) => {
+    setBalanceMode(mode);
+    try {
+      localStorage.setItem(BALANCE_MODE_STORAGE_KEY, mode);
+    } catch {
+      // Storage unavailable (private window): the mode just isn't remembered
+    }
+  }, []);
+  // Condoflow individual view (an entity is filtered): the balance modes give way to the entity's sides
+  const isEntityView = isCondoflow && Boolean(selectedEntityId);
+  const activeBalanceMode = timeline.type === TimelineType.BALANCE && !isEntityView ? balanceMode : BalanceViewMode.ALL;
 
   const isCategoryFiltered =
     (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) ||
@@ -695,6 +725,14 @@ function VerticalTimeline({
   // Events that belong on the timeline (have dates, or completed, or non-floating)
   const timelineEvents = allEvents.filter((ev) => !isFloatingTask(ev));
 
+  // Expense timelines whose expenses belong to the wallet until the database migration moves them
+  const walletStoredExpenseTimelineIds = useMemo(() => {
+    if (!isWalletTimelineType(timeline.type)) return new Set();
+    return new Set((timeline.boardTimelines || timeline.timelines || [])
+      .filter((tl) => normalizeTimelineType(tl?.type) === TimelineType.EXPENSE)
+      .map((tl) => String(tl.id)));
+  }, [timeline.type, timeline.boardTimelines, timeline.timelines]);
+
   // Helper to test if an event belongs to this timeline's scope
   const isEventBelongingToCurrentTimeline = useCallback((ev) => {
     if (!ev || ev.isDeleted) return false;
@@ -713,10 +751,13 @@ function VerticalTimeline({
         ev.eventType === EventType.REGISTER ||
         ev.timelineType === TimelineType.DIARY ||
         ev.timeline_type === TimelineType.DIARY;
-      return !isNonFinancial;
+      // References mirror movements already listed under their owner timeline (never count them twice)
+      return !isNonFinancial && !ev.isReference;
     }
-    return ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
-  }, [timeline.id, timeline.type]);
+    if (ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id) return true;
+    // The wallet also owns the expenses still stored in the (hidden) expense timeline
+    return !ev.isReference && walletStoredExpenseTimelineIds.has(String(ev.timelineId || ev.timeline_id || ''));
+  }, [timeline.id, timeline.type, walletStoredExpenseTimelineIds]);
 
   // Extract unique entities referenced across timeline events
   const timelineEntities = useMemo(() => {
@@ -874,6 +915,61 @@ function VerticalTimeline({
     });
   }, [timelineEvents, selectedEntityId, computeFromMonth, currentMonthKey, isEventBelongingToCurrentTimeline, isEventMatchingEntity]);
 
+  // Events of the selected entity in every financial timeline of the board (up to the current month): the
+  // individual header shows the board total next to the timeline figure, and the clearance always uses it
+  const entityBoardEvents = useMemo(() => {
+    if (!selectedEntityId) return [];
+    return timelineEvents.filter((ev) => {
+      if (!ev || ev.isDeleted || ev.isSharedNotice || ev.isReference) return false;
+      const evMonth = ev.date ? ev.date.substring(0, 7) : null;
+      if (evMonth && computeFromMonth && evMonth < computeFromMonth) return false;
+      if (evMonth && evMonth > currentMonthKey) return false;
+      return isEventMatchingEntity(ev, selectedEntityId);
+    });
+  }, [timelineEvents, selectedEntityId, computeFromMonth, currentMonthKey, isEventMatchingEntity]);
+
+  const boardTimelineTypeMap = useMemo(
+    () => new Map((timeline.boardTimelines || timeline.timelines || []).map((tl) => [String(tl.id), tl.type])),
+    [timeline.boardTimelines, timeline.timelines]
+  );
+
+  // Sides of the filtered entity in this timeline: what it owes (income side) and what it has to receive
+  // (outflow side). The side opened by default is the one with money still open, else the one with movements.
+  const [chosenEntityDirection, setChosenEntityDirection] = useState(null);
+  React.useEffect(() => {
+    setChosenEntityDirection(null);
+  }, [selectedEntityId]);
+  const entitySides = useMemo(() => {
+    const sides = {
+      [EntityDirection.OWES]: { count: 0, open: 0 },
+      [EntityDirection.RECEIVES]: { count: 0, open: 0 }
+    };
+    if (!isEntityView) return sides;
+    entityEvents.forEach((ev) => {
+      const kind = classifyMovement(ev, boardTimelineTypeMap).kind;
+      const side = isKindInBalanceViewMode(kind, BalanceViewMode.INCOME)
+        ? EntityDirection.OWES
+        : isKindInBalanceViewMode(kind, BalanceViewMode.OUTFLOW) ? EntityDirection.RECEIVES : null;
+      if (!side || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+      sides[side].count += 1;
+      if (!isPositiveStatus(ev.status) && !ev.isCompleted) sides[side].open += Math.abs(Number(ev.amount || 0));
+    });
+    return sides;
+  }, [isEntityView, entityEvents, boardTimelineTypeMap]);
+  const autoEntityDirection = (() => {
+    const owes = entitySides[EntityDirection.OWES];
+    const receives = entitySides[EntityDirection.RECEIVES];
+    if (owes.open > 0) return EntityDirection.OWES;
+    if (receives.open > 0) return EntityDirection.RECEIVES;
+    if (owes.count === 0 && receives.count > 0) return EntityDirection.RECEIVES;
+    return EntityDirection.OWES;
+  })();
+  const entityDirection = chosenEntityDirection && entitySides[chosenEntityDirection]?.count > 0
+    ? chosenEntityDirection
+    : autoEntityDirection;
+  const hasBothEntityDirections = entitySides[EntityDirection.OWES].count > 0 && entitySides[EntityDirection.RECEIVES].count > 0;
+  const entityDirectionMode = isEntityView ? entityDirectionToBalanceMode(entityDirection) : BalanceViewMode.ALL;
+
   // Events of the selected entity for the whole current calendar year (Jan - Dec),
   // used by the individual header's year progress indicator.
   const currentYearKey = format(todayDate, 'yyyy');
@@ -902,15 +998,21 @@ function VerticalTimeline({
           name: selectedEntity.name,
           identification: selectedEntity.identification
         };
-        const isExpenseTimeline = timeline?.type === TimelineType.EXPENSE;
-        const isCondoDeclaration = isExpenseTimeline || timeline?.type === TimelineType.INCOME || timeline?.type === TimelineType.INVESTMENT;
+        // Declarations always cover the whole board: what the entity owes (owner) or, in the outflows mode of
+        // the balance and in the expense timeline, what is owed to the entity (service provider)
+        const isExpenseTimeline = timeline?.type === TimelineType.EXPENSE || entityDirectionMode === BalanceViewMode.OUTFLOW;
+        const isCondoDeclaration = isExpenseTimeline || isWalletTimelineType(timeline?.type) || timeline?.type === TimelineType.INVESTMENT || timeline?.type === TimelineType.BALANCE;
+        const declarationEvents = entityBoardEvents.filter((ev) => isKindInBalanceViewMode(
+          classifyMovement(ev, boardTimelineTypeMap).kind,
+          isExpenseTimeline ? BalanceViewMode.OUTFLOW : BalanceViewMode.INCOME
+        ));
         const documentType = isExpenseTimeline ? ClearanceDocumentType.SERVICE_PROVIDER : ClearanceDocumentType.OWNER;
         let html;
         let title = t('clearance.title');
         if (isCondoDeclaration) {
           const currentYear = format(todayDate, 'yyyy');
           const settledStatus = isExpenseTimeline ? EventStatus.PAID : EventStatus.RECEIVED;
-          const charges = entityEvents
+          const charges = declarationEvents
             .filter((ev) => ev.date && ev.date.startsWith(currentYear) && !isCancelledStatus(ev.status) && ev.status !== EventStatus.DELETED)
             .sort((a, b) => a.date.localeCompare(b.date))
             .map((ev) => {
@@ -921,7 +1023,7 @@ function VerticalTimeline({
               return { date: ev.date, amount: ev.amount, statusLabel: t(`status.${statusKey}`) };
             });
           const serviceDescription = Array.from(new Set(
-            entityEvents.map((ev) => (ev.title || '').trim()).filter(Boolean)
+            declarationEvents.map((ev) => (ev.title || '').trim()).filter(Boolean)
           )).join(', ');
           html = buildCondoClearanceHtml({
             timeboard: activeTimeboard,
@@ -957,7 +1059,7 @@ function VerticalTimeline({
         setIsGeneratingReceipt(false);
       }
     }, 450);
-  }, [selectedEntity, entityEvents, todayStr, persons, activeTimeboard, currentUser, timeline?.type, language, t]);
+  }, [selectedEntity, entityBoardEvents, boardTimelineTypeMap, entityDirectionMode, todayStr, persons, activeTimeboard, currentUser, timeline?.type, language, t]);
 
 
   const getEntityIcon = (type) => {
@@ -997,7 +1099,7 @@ function VerticalTimeline({
     }
 
     if (!timelineEvents || timelineEvents.length === 0) {
-      const allTitle = timeline.type === TimelineType.INCOME
+      const allTitle = isWalletTimelineType(timeline.type)
         ? t('category.all')
         : t('category.allTypes');
       return [{ id: EventStatus.ALL, name: allTitle, icon: <Layers size={13} /> }];
@@ -1019,7 +1121,7 @@ function VerticalTimeline({
           matches: (ev) => ev.eventType === EventType.AMORTIZATION || ev.category === 'amortizacao' || ev.category === 'amortization' || ev.category === LoanEventCategory.AMORTIZATION || ev.category === AmortizationEventCategory.REDUCE_TERM || ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT || ev.category === AmortizationStrategy.REDUCE_TERM || ev.category === AmortizationStrategy.REDUCE_INSTALLMENT
         }
       ];
-    } else if (timeline.type === TimelineType.INCOME) {
+    } else if (isWalletTimelineType(timeline.type)) {
       allOptions = [
         {
           id: IncomeEventCategory.SALARY,
@@ -1111,7 +1213,7 @@ function VerticalTimeline({
       timelineEvents.some((ev) => !ev.isDeleted && (opt.matches ? opt.matches(ev) : (ev.category === opt.id || ev.eventType === opt.id)))
     );
 
-    const allTitle = timeline.type === TimelineType.INCOME
+    const allTitle = isWalletTimelineType(timeline.type)
       ? t('category.all')
       : t('category.allTypes');
 
@@ -1188,6 +1290,8 @@ function VerticalTimeline({
     filteredEvents
   } = useTimelineFilteredEvents({
     activeFinancialTab,
+    balanceMode: activeBalanceMode,
+    entityDirectionMode,
     computeFromMonth,
     isCondoflow,
     isEventMatchingEntity,
@@ -1432,17 +1536,25 @@ function VerticalTimeline({
         <div className="sticky-header-dock">
           {React.isValidElement(headerComponent)
             ? React.cloneElement(headerComponent, {
-              filteredEvents: Boolean(selectedEntityId) || (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) || (timeline.type === TimelineType.INVESTMENT && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') || (timeline.type === TimelineType.INCOME && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') ? filteredEvents : undefined,
+              balanceMode: activeBalanceMode,
+              onChangeBalanceMode: timeline.type === TimelineType.BALANCE ? handleChangeBalanceMode : undefined,
+              // Individual view: the entity's side (owes / has to receive) and its switch
+              entityDirection,
+              entityDirectionMode,
+              onChangeEntityDirection: hasBothEntityDirections ? setChosenEntityDirection : undefined,
+              // The income / outflow modes of the balance compute their header from the movements listed in that mode
+              filteredEvents: activeBalanceMode !== BalanceViewMode.ALL || Boolean(selectedEntityId) || (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) || (timeline.type === TimelineType.INVESTMENT && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') || (isWalletTimelineType(timeline.type) && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') ? filteredEvents : undefined,
               events: Boolean(selectedEntityId) ? filteredEvents : undefined,
               allEvents: Boolean(selectedEntityId) ? (timeline.type === TimelineType.BALANCE ? filteredEvents : undefined) : undefined,
               selectedExpenseCategories: timeline.type === TimelineType.EXPENSE ? selectedExpenseCategories : undefined,
-              selectedCategoryFilter: (timeline.type === TimelineType.INVESTMENT || timeline.type === TimelineType.INCOME) ? selectedCategoryFilter : undefined,
+              selectedCategoryFilter: (timeline.type === TimelineType.INVESTMENT || isWalletTimelineType(timeline.type)) ? selectedCategoryFilter : undefined,
               selectedPocketId: timeline.type === TimelineType.INVESTMENT && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos' ? selectedCategoryFilter : undefined,
               selectedEntityId,
               selectedEntity,
               entityEvents,
               entityYearEvents,
-              onOpenClearance: timeline.type !== TimelineType.BALANCE ? handleOpenClearance : undefined,
+              onOpenClearance: handleOpenClearance,
+              entityBoardEvents,
               onOpenHistory: () => setIsHistoryOpen(true),
               monthExpensesTotalMap,
               monthLoansTotalMap,
@@ -1482,6 +1594,7 @@ function VerticalTimeline({
               filteredEvents={filteredEvents}
               handleOpenReceipt={handleOpenReceipt}
               isBalancoView={isBalancoView}
+              balanceMode={activeBalanceMode}
               isFinancialTimeline={isFinancialTimeline}
               isLoanTimelineOrTab={isLoanTimelineOrTab}
               isReminders={isReminders}
@@ -1547,6 +1660,7 @@ function VerticalTimeline({
                 hasInvestmentTimeline={hasInvestmentTimeline}
                 hasLoanTimeline={hasLoanTimeline}
                 isBalancoView={isBalancoView}
+              balanceMode={activeBalanceMode}
                 isFinancial={isFinancial}
                 isFinancialTimeline={isFinancialTimeline}
                 isLoanTimelineOrTab={isLoanTimelineOrTab}

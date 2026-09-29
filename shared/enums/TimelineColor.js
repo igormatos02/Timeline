@@ -70,6 +70,7 @@ export function getDefaultTimelineColor(type) {
     case TimelineType.BALANCE:
       return TimelineColor.BALANCE;
     case TimelineType.INCOME:
+    case TimelineType.WALLET:
       return TimelineColor.INCOME;
     case TimelineType.EXPENSE:
       return TimelineColor.EXPENSE;

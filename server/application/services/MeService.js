@@ -5,7 +5,7 @@ import { personRepository } from '../../infrastructure/database/supabase/Supabas
 import { timelineService } from './TimelineService.js';
 import { pocketRepository } from '../../infrastructure/database/supabase/SupabasePocketRepository.js';
 import { timeboardRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardRepository.js';
-import { TimelineType, PersonRole, TimelineStatus, normalizeTimelineType, isLoanTimelineType } from '../../../shared/enums/index.js';
+import { TimelineType, isWalletTimelineType, PersonRole, TimelineStatus, normalizeTimelineType, isLoanTimelineType } from '../../../shared/enums/index.js';
 import { isActiveMovement, isEffectiveMovement } from '../../../shared/finance/movements.js';
 import { computeMoneySummary } from '../../../shared/finance/moneySummary.js';
 import { recalculateLoanState, getLoanMetrics } from '../../../shared/finance/loanCalculations.js';
@@ -107,7 +107,7 @@ export class MeService {
     const loanTimelines = (timelines || []).filter((tl) => isLoanTimelineType(tl.type) && (tl.status === TimelineStatus.ACTIVE || !tl.status));
     loanTimelines.forEach((loanTimeline) => { events = recalculateLoanState(loanTimeline, events); });
 
-    const incomeTimeline = (timelines || []).find((tl) => normalizeTimelineType(tl.type) === TimelineType.INCOME);
+    const incomeTimeline = (timelines || []).find((tl) => isWalletTimelineType(tl.type));
     const rawComputeFrom = String(timeboard?.computeFrom || '');
     const today = new Date();
     const horizon = new Date(today.getFullYear() + 1, today.getMonth(), 1);

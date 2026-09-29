@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Scale,
-  PiggyBank,
+  Landmark,
   CreditCard,
   Bell,
   BookOpen,
@@ -16,7 +16,8 @@ import {
   TimeboardType,
   getDefaultTimelineColor,
   isSingleInstanceTimelineType,
-  normalizeTimelineType
+  normalizeTimelineType,
+  isWalletTimelineType
 } from '../enums/index.js';
 import { makeDiaryT } from './diaryLabels.js';
 
@@ -31,7 +32,8 @@ export function getTimelineTypeLabelKey(type) {
     case TimelineType.BALANCE:
       return 'sidebar.balanceTimeline';
     case TimelineType.INCOME:
-      return 'sidebar.incomeTimeline';
+    case TimelineType.WALLET:
+      return 'sidebar.walletTimeline';
     case TimelineType.EXPENSE:
       return 'sidebar.expenseTimeline';
     case TimelineType.INVESTMENT:
@@ -62,11 +64,12 @@ export function getTimelineTypeIconComponent(type) {
     case TimelineType.BALANCE:
       return Scale;
     case TimelineType.INCOME:
+    case TimelineType.WALLET:
       return Wallet;
     case TimelineType.EXPENSE:
       return ReceiptEuro;
     case TimelineType.INVESTMENT:
-      return PiggyBank;
+      return Landmark;
     case TimelineType.LOAN:
       return CreditCard;
     case TimelineType.REMINDER:
@@ -98,8 +101,40 @@ export function getTimelineTypeIcon(type, size = 14) {
  * Returns metadata options dynamically derived from Object.values(TimelineType).
  * @returns {Array<{type: string, labelKey: string, defaultColor: string, icon: React.ComponentType, singleInstance: boolean}>}
  */
+/**
+ * Short description of a timeline type for the timeboard type (e.g. wallet -> "Dinheiro em caixa" on a condominium);
+ * falls back to the default (financial) text when the timeboard type has none.
+ * @param {string} type - timeline type
+ * @param {string} timeboardType - TimeboardType of the active timeboard
+ * @param {Function} t - translation function (returns the key itself when missing)
+ * @returns {string}
+ */
+export function getTimelineTypeDescription(type, timeboardType, t) {
+  const typeKey = isWalletTimelineType(type) ? TimelineType.WALLET : normalizeTimelineType(type);
+  if (!typeKey) return '';
+  const ownKey = `timelineTypeDescription.${timeboardType}.${typeKey}`;
+  const own = timeboardType ? t(ownKey) : ownKey;
+  if (own && own !== ownKey) return own;
+  const defaultKey = `timelineTypeDescription.default.${typeKey}`;
+  const fallback = t(defaultKey);
+  return fallback && fallback !== defaultKey ? fallback : '';
+}
+
+// Types no longer offered when creating a timeline: the income timeline became the wallet and the expense
+// timeline is replaced by the outflows mode of the balance (existing ones keep working)
+const LEGACY_TIMELINE_TYPES = new Set([TimelineType.INCOME, TimelineType.EXPENSE]);
+
+// Types present in a timeboard; the income timeline occupies the wallet slot until the database migration
+function getPresentTimelineTypes(existingTimelines = []) {
+  const present = new Set((existingTimelines || []).map((tl) => normalizeTimelineType(tl.type)));
+  if ((existingTimelines || []).some((tl) => isWalletTimelineType(tl.type))) present.add(TimelineType.WALLET);
+  return present;
+}
+
+export { getPresentTimelineTypes };
+
 export function getTimelineTypeOptions() {
-  return Object.values(TimelineType).map((type) => ({
+  return Object.values(TimelineType).filter((type) => !LEGACY_TIMELINE_TYPES.has(type)).map((type) => ({
     type,
     labelKey: getTimelineTypeLabelKey(type),
     defaultColor: getDefaultTimelineColor(type),
@@ -116,15 +151,14 @@ export function getTimelineTypeOptions() {
  * @returns {Array<{key: string, type: string, label: string, icon: React.ReactElement, color: string}>}
  */
 export function getTimelineDropdownOptions(existingTimelines = [], t, timeboardType = null) {
-  const currentTypes = new Set(
-    (existingTimelines || []).map((tl) => normalizeTimelineType(tl.type))
-  );
+  const currentTypes = getPresentTimelineTypes(existingTimelines);
 
   // Types not allowed in condoflow timeboards
   const condoflowDisallowed = new Set([TimelineType.TODO, TimelineType.FOLLOWUP]);
 
   return Object.values(TimelineType)
     .filter((type) => {
+      if (LEGACY_TIMELINE_TYPES.has(type)) return false;
       if (isSingleInstanceTimelineType(type) && currentTypes.has(type)) {
         return false;
       }

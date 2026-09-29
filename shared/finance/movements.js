@@ -12,6 +12,7 @@ import {
   isPositiveStatus,
   isCancelledStatus,
   isLoanTimelineType,
+  isWalletTimelineType,
   normalizeTimelineType,
   isAccountOutflowEvent,
   isPocketTransferEvent
@@ -82,9 +83,12 @@ export function classifyMovement(ev, timelineTypeMap = new Map()) {
 
   const normalizedTlType = normalizeTimelineType(tlType || ev.timelineType || ev.timeline_type);
 
+  // The wallet holds income and expenses: its timeline type only makes a movement an income when the
+  // movement itself is not an expense (the movement type always wins over the timeline type)
+  const isExpenseTyped = ev.eventType === EventType.EXPENSE || Boolean(ev.isExpense);
   const isIncome = (
     ev.eventType === EventType.INCOME ||
-    normalizedTlType === TimelineType.INCOME ||
+    (isWalletTimelineType(normalizedTlType) && !isExpenseTyped) ||
     ev.category === IncomeEventCategory.RECURRING_INCOME ||
     Boolean(ev.isIncome)
   ) && !isLoan;

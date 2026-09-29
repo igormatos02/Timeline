@@ -232,7 +232,8 @@ const expenseConfig = {
 
 const investmentConfig = {
   accent: TimelineColor.VIOLET,
-  icon: PiggyBank,
+  // The account timeline is the bank account; pockets inside it keep the piggy bank
+  icon: Landmark,
   eventType: EventType.INVESTMENT,
   categoryMeta: INVESTMENT_CATEGORY_META,
   categoryDefault: InvestmentEventCategory.OTHER,

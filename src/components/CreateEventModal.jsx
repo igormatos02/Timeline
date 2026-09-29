@@ -1,5 +1,5 @@
 import React from 'react';
-import { TimelineType, EventType, normalizeTimelineType, isAccountOutflowEvent, isPocketTransferEvent } from '../enums/index.js';
+import { TimelineType, EventType, normalizeTimelineType, isWalletTimelineType, isAccountOutflowEvent, isPocketTransferEvent } from '../enums/index.js';
 import {
   IncomeEventModal,
   ExpenseEventModal,
@@ -19,7 +19,7 @@ import AccountOutflowModal from './AccountOutflowModal.jsx';
  * Roteia para o popup especializado de acordo com o tipo da timeline ativa (TimelineType).
  */
 export default function CreateEventModal(props) {
-  const { isOpen, timeline, initialData } = props;
+  const { isOpen, timeline, initialData, allTimelines, defaultNature } = props;
 
   if (!isOpen) return null;
 
@@ -41,12 +41,33 @@ export default function CreateEventModal(props) {
     return <FollowupEventModal {...props} />;
   }
 
+  // The wallet holds income and expenses: the movement type (editing) or the requested nature (new) picks the form.
+  // The income / outflows modes of the balance add and edit wallet movements with the same forms.
+  const isNew = !initialData?.id && !initialData?.eventId && !initialData?.eventType;
+  const isCashFlowMovement = initialData?.eventType === EventType.INCOME || initialData?.eventType === EventType.EXPENSE ||
+    (isNew && (defaultNature === EventType.INCOME || defaultNature === EventType.EXPENSE));
+  const isWalletTimeline = isWalletTimelineType(normalizedType);
+  if (isWalletTimeline || (normalizedType === TimelineType.BALANCE && isCashFlowMovement)) {
+    const wallet = isWalletTimeline ? timeline : (allTimelines || []).find((tl) => isWalletTimelineType(tl?.type));
+    const ownTimeline = (allTimelines || []).find((tl) => String(tl.id) === String(initialData?.timelineId || initialData?.timeline_id || ''));
+    const isExpense = initialData?.eventType === EventType.EXPENSE || (isNew && defaultNature === EventType.EXPENSE);
+    if (!isExpense) {
+      return <IncomeEventModal {...props} timeline={ownTimeline || wallet || timeline} />;
+    }
+    // Until the database migration, wallet expenses are stored in the expense timeline (when there is one)
+    const expenseTimeline = (allTimelines || []).find((tl) => normalizeTimelineType(tl?.type) === TimelineType.EXPENSE);
+    return (
+      <ExpenseEventModal
+        {...props}
+        timeline={ownTimeline || expenseTimeline || wallet || timeline}
+        accountName={wallet?.name}
+      />
+    );
+  }
+
   switch (normalizedType) {
     case TimelineType.BALANCE:
       return <BalanceEventModal {...props} />;
-
-    case TimelineType.INCOME:
-      return <IncomeEventModal {...props} />;
 
     case TimelineType.EXPENSE:
       return <ExpenseEventModal {...props} />;

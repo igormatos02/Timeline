@@ -372,6 +372,7 @@ export const COLOR_PALETTES = Object.freeze({
 export const TIMELINE_TYPE_PALETTES = Object.freeze({
   [TimelineType.BALANCE]: COLOR_PALETTES[ColorPaletteId.BALANCE],
   [TimelineType.INCOME]: COLOR_PALETTES[ColorPaletteId.INCOME],
+  [TimelineType.WALLET]: COLOR_PALETTES[ColorPaletteId.INCOME],
   [TimelineType.EXPENSE]: COLOR_PALETTES[ColorPaletteId.EXPENSE],
   [TimelineType.INVESTMENT]: COLOR_PALETTES[ColorPaletteId.INVESTMENT],
   [TimelineType.LOAN]: COLOR_PALETTES[ColorPaletteId.LOAN],

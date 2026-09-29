@@ -25,6 +25,7 @@ import {
   EventType,
   EventStatus,
   TimelineType,
+  isWalletTimelineType,
   TimelineStatus,
   LoanEventCategory,
   AmortizationEventCategory,
@@ -35,7 +36,8 @@ import {
   MovementKind,
   isCancelledStatus,
   isLoanTimelineType,
-  normalizeTimelineType
+  normalizeTimelineType,
+  TimeboardType
 } from '../../enums/index.js';
 import * as api from '../../services/api.js';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
@@ -254,6 +256,8 @@ import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
 import { useHeaderCollapsed } from '../../context/TimeboardContext.jsx';
 
 export default function BalanceTimelineHeader({
+  // Extra control shown next to the header actions (the balance mode switch)
+  headerSwitch = null,
   timeline,
   timeboard = null,
   allTimelines = [],
@@ -299,7 +303,7 @@ export default function BalanceTimelineHeader({
   const projectionOffset = isPastProjection ? -projectionMonthsAhead : projectionMonthsAhead;
   const isFutureProjection = !isPastProjection && projectionMonthsAhead > 0;
 
-  const incomeTimeline = React.useMemo(() => (allTimelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.INCOME), [allTimelines]);
+  const incomeTimeline = React.useMemo(() => (allTimelines || []).find((t) => isWalletTimelineType(t?.type)), [allTimelines]);
   const expenseTimeline = React.useMemo(() => (allTimelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.EXPENSE), [allTimelines]);
   const investmentTimeline = React.useMemo(() => (allTimelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.INVESTMENT), [allTimelines]);
   const primaryLoanTimeline = React.useMemo(() => (allTimelines || []).find((t) => isLoanTimelineType(t?.type)), [allTimelines]);
@@ -450,10 +454,10 @@ export default function BalanceTimelineHeader({
     : (allTimelines || []).some((t) => normalizeTimelineType(t?.type) === TimelineType.INVESTMENT && t.status !== TimelineStatus.INACTIVE && t.isActive !== false);
   const hasIncomeTimeline = propHasIncomeTimeline !== undefined
     ? propHasIncomeTimeline
-    : (allTimelines || []).some((t) => normalizeTimelineType(t?.type) === TimelineType.INCOME && t.status !== TimelineStatus.INACTIVE && t.isActive !== false);
+    : (allTimelines || []).some((t) => isWalletTimelineType(t?.type) && t.status !== TimelineStatus.INACTIVE && t.isActive !== false);
   const hasExpenseTimeline = propHasExpenseTimeline !== undefined
     ? propHasExpenseTimeline
-    : (allTimelines || []).some((t) => normalizeTimelineType(t?.type) === TimelineType.EXPENSE && t.status !== TimelineStatus.INACTIVE && t.isActive !== false);
+    : (allTimelines || []).some((t) => (normalizeTimelineType(t?.type) === TimelineType.EXPENSE || isWalletTimelineType(t?.type)) && t.status !== TimelineStatus.INACTIVE && t.isActive !== false);
 
   const effectiveComputeFromMonth = propComputeFromMonth !== undefined
     ? propComputeFromMonth
@@ -557,7 +561,7 @@ export default function BalanceTimelineHeader({
   const incomeInitialValue = Number(
     incomeTimeline?.initialValue ??
     incomeTimeline?.initial_value ??
-    (normalizeTimelineType(timeline?.type) === TimelineType.INCOME ? (timeline.initialValue ?? timeline.initial_value ?? 0) : 0)
+    (isWalletTimelineType(timeline?.type) ? (timeline.initialValue ?? timeline.initial_value ?? 0) : 0)
   );
 
   // 2. Realized totals (REALIZADO até o mês atual) - used in Quadrante 1 (Saldo Líquido Acumulado)
@@ -656,6 +660,7 @@ export default function BalanceTimelineHeader({
       }
       right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {headerSwitch}
           <EntityViewSwitch
             selectedEntityId={selectedEntityId}
             isIndividualView={isIndividualView}
@@ -892,6 +897,27 @@ export default function BalanceTimelineHeader({
                             </div>
                           )}
                         </div>
+
+                        {/* Balance per account: the wallet (money in hand), the bank account (current account and
+                            pockets) and both together */}
+                        {(hasInvestmentTimeline || totalInvestedVal > 0) && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingTop: '6px', borderTop: '1px dashed var(--border-glass)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.70rem', alignItems: 'center' }}>
+                              <span style={{ color: 'var(--text-dim)' }}>
+                                {t(timeboard?.type === TimeboardType.CONDOFLOW ? 'balanceHeader.walletBalanceCondo' : 'balanceHeader.walletBalance')}
+                              </span>
+                              <strong style={{ color: netVal < 0 ? TimelineColor.EXPENSE : incomePalette.primary, fontSize: '0.74rem' }}>{formatCurrency(netVal)}</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.70rem', alignItems: 'center' }}>
+                              <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.bankBalance')}</span>
+                              <strong style={{ color: investmentPalette.primary, fontSize: '0.74rem' }}>{formatCurrency(totalInvestedVal)}</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', alignItems: 'center' }}>
+                              <span style={{ color: 'var(--text-main)', fontWeight: '700' }}>{t('balanceHeader.totalBalance')}</span>
+                              <strong style={{ color: 'var(--text-main)', fontSize: '0.8rem' }}>{formatCurrency(netVal + totalInvestedVal)}</strong>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })()}

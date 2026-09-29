@@ -19,7 +19,7 @@ import {
   isPositiveStatus,
   TimelineColor,
   TimelineType,
-  normalizeTimelineType,
+  isWalletTimelineType,
   OutflowType
 } from '../../enums/index.js';
 import { TIMELINE_COLOR_PRESETS, getPaletteTheme } from '../../../shared/config/colorPalettes.js';
@@ -44,6 +44,8 @@ const prevMonthKey = (monthKey) => {
 };
 
 export default function ExpenseTimelineHeader({
+  // Extra control shown next to the header actions (the balance mode switch)
+  headerSwitch = null,
   timeline,
   timeboard = null,
   computeStartDate = null,
@@ -229,7 +231,7 @@ export default function ExpenseTimelineHeader({
     side: 'realized'
   }).availableNet;
 
-  const incomeTimeline = (allTimelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.INCOME);
+  const incomeTimeline = (allTimelines || []).find((t) => isWalletTimelineType(t?.type));
   const incomeInitialValue = Number(incomeTimeline?.initialValue ?? incomeTimeline?.initial_value ?? 0);
   const ownInitialValue = Number(timeline.initialValue ?? timeline.initial_value ?? 0);
   const initialValueAmount = incomeInitialValue || ownInitialValue;
@@ -280,6 +282,7 @@ export default function ExpenseTimelineHeader({
       }
       right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {headerSwitch}
           <EntityViewSwitch
             selectedEntityId={selectedEntityId}
             isIndividualView={isIndividualView}

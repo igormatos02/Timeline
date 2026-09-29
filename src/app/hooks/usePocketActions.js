@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { LoanAmortizationSystem, TimelineType, isLoanTimelineType, normalizeTimelineType } from '../../enums/index.js';
+import { LoanAmortizationSystem, TimelineType, isWalletTimelineType, isLoanTimelineType, normalizeTimelineType } from '../../enums/index.js';
 import * as api from '../../services/api';
 import { recalculateLoanState } from '../../utils/loanCalculations';
 import { format } from 'date-fns';
@@ -66,7 +66,7 @@ export function usePocketActions({
     if (!isIndividualRole) return null;
     const timelinesList = activeTimeboardTimelines || [];
     const balanceTimeline = timelinesList.find((tl) => normalizeTimelineType(tl?.type) === TimelineType.BALANCE);
-    const incomeTimeline = timelinesList.find((tl) => normalizeTimelineType(tl?.type) === TimelineType.INCOME);
+    const incomeTimeline = timelinesList.find((tl) => isWalletTimelineType(tl?.type));
 
     const timelineTypeMap = new Map(timelinesList.filter((tl) => tl?.id).map((tl) => [String(tl.id), tl.type]));
     let events = (rawEvents || []).filter((ev) => {

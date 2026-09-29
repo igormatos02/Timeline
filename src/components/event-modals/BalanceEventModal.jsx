@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Scale } from 'lucide-react';
 import { format, parseISO, addMonths } from 'date-fns';
-import { TimelineType, EventStatus, EventRecurrence, EventPeriodicity, EventType, normalizeRecurrence, normalizePeriodicity } from '../../enums/index.js';
+import { TimelineType, isWalletTimelineType, EventStatus, EventRecurrence, EventPeriodicity, EventType, normalizeRecurrence, normalizePeriodicity } from '../../enums/index.js';
 import { EVENT_MODAL_CONFIG } from './FinancialEventModalConfig.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { useModalEscape } from '../../hooks/useModalEscape.js';
@@ -63,7 +63,11 @@ export default function BalanceEventModal({
       : movementType === EventType.INVESTMENT
         ? TimelineType.INVESTMENT
         : TimelineType.INCOME;
-    return allTimelines.filter((tl) => tl.type === targetType);
+    const walletTimelines = allTimelines.filter((tl) => isWalletTimelineType(tl.type));
+    if (targetType === TimelineType.INCOME) return walletTimelines;
+    const typed = allTimelines.filter((tl) => tl.type === targetType);
+    // Expenses are stored in the expense timeline until the database migration moves them into the wallet
+    return targetType === TimelineType.EXPENSE && typed.length === 0 ? walletTimelines : typed;
   }, [allTimelines, movementType]);
 
   useEffect(() => {

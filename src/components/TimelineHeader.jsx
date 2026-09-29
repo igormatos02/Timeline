@@ -1,5 +1,7 @@
 import React from 'react';
-import { TimelineType, TimeboardType, isLoanTimelineType } from '../enums/index.js';
+import { BalanceViewMode, TimelineColor, TimelineType, TimeboardType, isLoanTimelineType, isWalletTimelineType, normalizeTimelineType } from '../enums/index.js';
+import BalanceModeSwitch from './timeline-headers/BalanceModeSwitch.jsx';
+import EntityDirectionSwitch from './timeline-headers/EntityDirectionSwitch.jsx';
 import {
   BalanceTimelineHeader,
   IncomeTimelineHeader,
@@ -16,11 +18,48 @@ import {
 import IndividualTimelineHeader from './timeline-headers/IndividualTimelineHeader.jsx';
 
 /**
+ * Balance header following the selected mode: the balance itself, the income header (money coming in) or
+ * the expense header (money going out). The income and expense headers keep their look; they receive the
+ * movements listed in that mode and the wallet / outflow colors.
+ */
+function BalanceHeaderByMode(props) {
+  const { timeline, allTimelines = [], balanceMode = BalanceViewMode.ALL, onChangeBalanceMode } = props;
+  const headerSwitch = onChangeBalanceMode
+    ? <BalanceModeSwitch value={balanceMode} onChange={onChangeBalanceMode} />
+    : null;
+  // The mode list only has income (or outflows): the board-wide figures (commitment, accumulation) still
+  // need every movement of the board
+  const allEvents = props.allEvents || timeline.events;
+
+  if (balanceMode === BalanceViewMode.INCOME) {
+    // The wallet provides the color and the starting balance of the available money
+    const wallet = allTimelines.find((tl) => isWalletTimelineType(tl?.type));
+    const incomeTimeline = {
+      ...(wallet || {}),
+      id: timeline.id,
+      name: timeline.name,
+      description: timeline.description,
+      color: wallet?.color || TimelineColor.INCOME,
+      events: timeline.events
+    };
+    return <IncomeTimelineHeader {...props} timeline={incomeTimeline} allEvents={allEvents} headerSwitch={headerSwitch} />;
+  }
+
+  if (balanceMode === BalanceViewMode.OUTFLOW) {
+    const expenseTimeline = allTimelines.find((tl) => normalizeTimelineType(tl?.type) === TimelineType.EXPENSE);
+    const outflowTimeline = { ...timeline, color: expenseTimeline?.color || TimelineColor.EXPENSE };
+    return <ExpenseTimelineHeader {...props} timeline={outflowTimeline} allEvents={allEvents} headerSwitch={headerSwitch} />;
+  }
+
+  return <BalanceTimelineHeader {...props} headerSwitch={headerSwitch} />;
+}
+
+/**
  * Dispatcher do cabeçalho da timeline.
  * Renderiza o cabeçalho dedicado para cada tipo de timeline do enum TimelineType.
  */
 function TimelineHeader(rawProps) {
-  const { timeline, timeboard, selectedEntityId, isIndividualView, isIndividualRole } = rawProps;
+  const { timeline, timeboard, selectedEntityId, isIndividualRole } = rawProps;
 
   if (!timeline) return null;
 
@@ -36,16 +75,18 @@ function TimelineHeader(rawProps) {
     );
   }
 
-  // The individual view is only available on condoflow timeboards.
-  const isCondoflow = timeboard?.type === TimeboardType.CONDOFLOW;
-  const props = isCondoflow
-    ? rawProps
-    : { ...rawProps, isIndividualView: false, onToggleIndividualView: undefined };
+  // The global / individual switch is gone: choosing an entity in the filter already means "show this entity"
+  const props = { ...rawProps, isIndividualView: false, onToggleIndividualView: undefined };
 
-  // When an obligator is selected and the user switches to individual view,
-  // replace the regular header with the IndividualTimelineHeader.
-  if (isCondoflow && selectedEntityId && isIndividualView) {
-    return <IndividualTimelineHeader {...props} />;
+  // Condoflow: with an entity selected, the header becomes the entity's own (figures of the current timeline,
+  // the board total next to them). Instead of the balance modes it offers the entity's sides (owes / has to
+  // receive), only when the entity has movements on both.
+  const isCondoflow = timeboard?.type === TimeboardType.CONDOFLOW;
+  if (isCondoflow && selectedEntityId) {
+    const headerSwitch = props.onChangeEntityDirection
+      ? <EntityDirectionSwitch value={props.entityDirection} onChange={props.onChangeEntityDirection} />
+      : null;
+    return <IndividualTimelineHeader {...props} headerSwitch={headerSwitch} />;
   }
 
   if (isLoanTimelineType(timeline.type)) {
@@ -56,9 +97,10 @@ function TimelineHeader(rawProps) {
 
   switch (typeLower) {
     case TimelineType.BALANCE:
-      return <BalanceTimelineHeader {...props} />;
+      return <BalanceHeaderByMode {...props} />;
 
     case TimelineType.INCOME:
+    case TimelineType.WALLET:
       return <IncomeTimelineHeader {...props} />;
 
     case TimelineType.EXPENSE:

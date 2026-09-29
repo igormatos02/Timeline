@@ -235,8 +235,10 @@ export class TimelineService {
 
     if (timeboardId && singleInstanceTypes.includes(type)) {
       const existingTimelines = await timelineRepository.getAllByTimeboardId(timeboardId);
+      // Until the database migration the income timeline is the wallet: both types share the same slot
       const duplicate = existingTimelines.some(
-        (tl) => normalizeTimelineType(tl.type) === type
+        (tl) => normalizeTimelineType(tl.type) === type ||
+          (isWalletTimelineType(type) && isWalletTimelineType(tl.type))
       );
       if (duplicate) {
         throw new Error(

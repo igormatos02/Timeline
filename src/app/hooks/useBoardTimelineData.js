@@ -138,12 +138,22 @@ export function useBoardTimelineData({
   }, [rawEvents, virtualWithdrawalEvents, activeTimeboard, activeTimeboardTimelines, currentUserPerson, isIndividualRole]);
 
   // Individual-role users only see the timelines they take part in (those holding their obligations)
+  // The expense timeline is not shown when there is a wallet: its expenses are listed in the wallet (until the
+  // database migration moves them) and in the outflows mode of the balance
   const visibleTimelines = React.useMemo(() => {
-    if (!isIndividualRole) return activeTimeboardTimelines;
+    const walletTimeline = activeTimeboardTimelines.find((tl) => isWalletTimelineType(tl.type));
+    const isHiddenExpenseTimeline = (tl) => Boolean(walletTimeline) && normalizeTimelineType(tl.type) === TimelineType.EXPENSE;
+    const boardTimelines = activeTimeboardTimelines.filter((tl) => !isHiddenExpenseTimeline(tl));
+    if (!isIndividualRole) return boardTimelines;
+    const hiddenIds = new Set(activeTimeboardTimelines.filter(isHiddenExpenseTimeline).map((tl) => String(tl.id)));
     const ownTimelineIds = new Set(
-      (displayEvents || []).filter((ev) => !ev.isSharedNotice).map((ev) => ev.timelineId || ev.timeline_id).filter(Boolean).map(String)
+      (displayEvents || [])
+        .filter((ev) => !ev.isSharedNotice)
+        .map((ev) => String(ev.timelineId || ev.timeline_id || ''))
+        .filter(Boolean)
+        .map((id) => (hiddenIds.has(id) ? String(walletTimeline.id) : id))
     );
-    return activeTimeboardTimelines.filter((tl) => ownTimelineIds.has(String(tl.id)));
+    return boardTimelines.filter((tl) => ownTimelineIds.has(String(tl.id)));
   }, [isIndividualRole, activeTimeboardTimelines, displayEvents]);
 
   // Dynamic active timeline representation for the selected tab
@@ -199,6 +209,8 @@ export function useBoardTimelineData({
       loanHeaderResult: computedMetrics,
       procedureMetrics: computedMetrics,
       timelines: visibleTimelines,
+      // Every timeline of the board, hidden ones included (the wallet still reads the expense timeline)
+      boardTimelines: activeTimeboardTimelines,
       events: computedEvents
     };
   }, [activeTimeboard, activeTimeboardTimelines, visibleTimelines, activeFinancialTab, activeTimelineId, displayEvents]);

@@ -403,8 +403,10 @@ export const translations = {
       hidden: "Hidden",
       balanceTimeline: "Balance Timeline",
       incomeTimeline: "Income Timeline",
+      walletTimeline: "Wallet",
+      cashTimeline: "Cash",
       expenseTimeline: "Expenses Timeline",
-      investmentTimeline: "Account",
+      investmentTimeline: "Bank Account",
       loanTimeline: "Loan Timeline",
       projectTimeline: "Project Timeline",
       reminderTimeline: "Reminder Timeline",
@@ -2211,7 +2213,8 @@ export const translations = {
     // Condominium (condoflow) timeboards call diary entries "posts"
     condoPost: {
       sidebar: {
-        diaryTimeline: "Posts"
+        diaryTimeline: "Posts",
+        walletTimeline: "Cash"
       },
       diaryHeader: {
         badge: "Condominium Posts",
@@ -2701,8 +2704,10 @@ export const translations = {
       hidden: "Oculto",
       balanceTimeline: "Linha de Balanço",
       incomeTimeline: "Linha de Entrada",
+      walletTimeline: "Carteira",
+      cashTimeline: "Caixa",
       expenseTimeline: "Linha de Despesas",
-      investmentTimeline: "Conta",
+      investmentTimeline: "Conta Bancária",
       loanTimeline: "Linha Empréstimo",
       projectTimeline: "Projetos",
       reminderTimeline: "Lembretes",
@@ -4509,7 +4514,8 @@ export const translations = {
     // Timeboards de condomínio (condoflow) chamam aos registos do diário "posts"
     condoPost: {
       sidebar: {
-        diaryTimeline: "Posts"
+        diaryTimeline: "Posts",
+        walletTimeline: "Caixa"
       },
       diaryHeader: {
         badge: "Posts do Condomínio",

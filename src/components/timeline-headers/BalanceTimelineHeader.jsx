@@ -457,7 +457,7 @@ export default function BalanceTimelineHeader({
     : (allTimelines || []).some((t) => isWalletTimelineType(t?.type) && t.status !== TimelineStatus.INACTIVE && t.isActive !== false);
   const hasExpenseTimeline = propHasExpenseTimeline !== undefined
     ? propHasExpenseTimeline
-    : (allTimelines || []).some((t) => normalizeTimelineType(t?.type) === TimelineType.EXPENSE && t.status !== TimelineStatus.INACTIVE && t.isActive !== false);
+    : (allTimelines || []).some((t) => (normalizeTimelineType(t?.type) === TimelineType.EXPENSE || isWalletTimelineType(t?.type)) && t.status !== TimelineStatus.INACTIVE && t.isActive !== false);
 
   const effectiveComputeFromMonth = propComputeFromMonth !== undefined
     ? propComputeFromMonth

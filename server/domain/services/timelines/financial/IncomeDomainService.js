@@ -25,7 +25,8 @@ export class IncomeDomainService {
   calculateMetrics(incomeEvents = [], currentMonthKey = null) {
     const activeMonth = currentMonthKey || new Date().toISOString().substring(0, 7);
 
-    const validEvents = incomeEvents.filter((ev) => !ev.isDeleted && !isCancelledStatus(ev.status));
+    // The wallet timeline also holds expenses: only income counts here
+    const validEvents = incomeEvents.filter((ev) => !ev.isDeleted && !isCancelledStatus(ev.status) && ev.eventType !== EventType.EXPENSE);
 
     const monthlyTotal = validEvents
       .filter((ev) => ev.date && ev.date.startsWith(activeMonth))

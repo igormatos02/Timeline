@@ -26,7 +26,7 @@ import {
   LoanAmortizationSystem
 } from '../enums/index.js';
 import { findPaletteByColor } from '../../shared/config/colorPalettes.js';
-import { getTimelineTypeOptions } from '../utils/timelineConfig.jsx';
+import { getTimelineTypeOptions, getPresentTimelineTypes } from '../utils/timelineConfig.jsx';
 import { makeDiaryT } from '../utils/diaryLabels.js';
 import { useTimeboard } from '../context/TimeboardContext.jsx';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
@@ -55,9 +55,7 @@ export default function CreateTimelineModal({
   const [simulationEvents, setSimulationEvents] = useState([]);
 
   // Compute set of existing timeline types in this timeboard
-  const existingTypesSet = new Set(
-    (existingTimelines || []).map((tl) => normalizeTimelineType(tl.type))
-  );
+  const existingTypesSet = getPresentTimelineTypes(existingTimelines);
 
   const [formData, setFormData] = useState({
     name: '',

@@ -322,9 +322,10 @@ function VerticalTimeline({
     );
   }, [effectiveTimelines]);
 
+  // The wallet holds expenses too (the expense timeline is hidden when there is one)
   const hasExpenseTimeline = useMemo(() => {
     return effectiveTimelines.some(
-      (t) => normalizeTimelineType(t.type) === TimelineType.EXPENSE &&
+      (t) => (normalizeTimelineType(t.type) === TimelineType.EXPENSE || isWalletTimelineType(t.type)) &&
         t.status !== TimelineStatus.INACTIVE && t.isActive !== false
     );
   }, [effectiveTimelines]);

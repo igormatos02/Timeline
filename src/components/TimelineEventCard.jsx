@@ -1058,6 +1058,24 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         tab: originId
       };
     }
+    // Wallet expenses still stored in the (hidden) expense timeline belong to the wallet
+    const walletTimeline = (timelines || []).find((tl) => isWalletTimelineType(tl?.type));
+    const originTimeline = (timelines || []).find((tl) => String(tl?.id) === String(originId || ''));
+    // (the card only receives the visible timelines: an expense whose timeline is not among them is in the hidden one)
+    const isStoredInExpenseTimeline = normalizeTimelineType(event.timelineType || originTimeline?.type) === TimelineType.EXPENSE ||
+      (event.eventType === EventType.EXPENSE && !originTimeline);
+    if (walletTimeline && isStoredInExpenseTimeline) {
+      const p = getPaletteTheme(walletTimeline.color || TimelineColor.INCOME, TimelineColor.INCOME);
+      return {
+        label: walletTimeline.name || t(isCondoflow ? 'sidebar.cashTimeline' : 'sidebar.walletTimeline'),
+        icon: <Wallet size={11} strokeWidth={2.4} />,
+        bg: hexToRgba(p.light, 0.22),
+        color: p.primary,
+        border: hexToRgba(p.medium, 0.40),
+        timelineId: walletTimeline.id,
+        tab: walletTimeline.id
+      };
+    }
     if (isExpenseEvent || event.timelineType === TimelineType.EXPENSE) {
       const p = getPaletteTheme(originColor || TimelineColor.EXPENSE, TimelineColor.EXPENSE);
       return {
@@ -1085,7 +1103,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     if (isIncomeEvent || isWalletTimelineType(event.timelineType)) {
       const p = getPaletteTheme(originColor || TimelineColor.INCOME, TimelineColor.INCOME);
       return {
-        label: originName || t('sidebar.incomeTimeline'),
+        label: originName || walletTimeline?.name || t(isCondoflow ? 'sidebar.cashTimeline' : 'sidebar.walletTimeline'),
         icon: <Wallet size={11} strokeWidth={2.4} />,
         bg: hexToRgba(p.light, 0.22),
         color: p.primary,

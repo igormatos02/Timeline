@@ -40,15 +40,25 @@ export function useTimelineFilteredEvents({
   // lists them as its own (not the references the expense timeline mirrors from the account and loans)
   const walletExpenseTimelineIds = useMemo(() => {
     if (!isWalletTimelineType(timeline.type)) return new Set();
-    return new Set((timeline.timelines || [])
+    return new Set((timeline.boardTimelines || timeline.timelines || [])
       .filter((tl) => normalizeTimelineType(tl?.type) === TimelineType.EXPENSE)
       .map((tl) => String(tl.id)));
-  }, [timeline.type, timeline.timelines]);
+  }, [timeline.type, timeline.boardTimelines, timeline.timelines]);
+
+  // Balance "integrated timelines" filter: choosing the wallet also covers the expenses still stored in the
+  // (hidden) expense timeline
+  const { walletIdsForFilter, expenseStorageIdsForFilter } = useMemo(() => {
+    const board = timeline.boardTimelines || timeline.timelines || [];
+    return {
+      walletIdsForFilter: board.filter((tl) => isWalletTimelineType(tl?.type)).map((tl) => tl.id),
+      expenseStorageIdsForFilter: new Set(board.filter((tl) => normalizeTimelineType(tl?.type) === TimelineType.EXPENSE).map((tl) => String(tl.id)))
+    };
+  }, [timeline.boardTimelines, timeline.timelines]);
 
   // Timeline types by id, for the movement classification of the balance modes
   const balanceTimelineTypeMap = useMemo(
-    () => new Map((timeline.timelines || []).map((tl) => [String(tl.id), tl.type])),
-    [timeline.timelines]
+    () => new Map((timeline.boardTimelines || timeline.timelines || []).map((tl) => [String(tl.id), tl.type])),
+    [timeline.boardTimelines, timeline.timelines]
   );
 
   const filteredEvents = useMemo(() => {
@@ -169,7 +179,9 @@ export function useTimelineFilteredEvents({
         selectedTimelineIds.includes(ev.timelineId) ||
         selectedTimelineIds.includes(ev.timelineOriginId) ||
         selectedTimelineIds.includes(ev.timeline_id) ||
-        selectedTimelineIds.includes(ev.timeline_origin_id);
+        selectedTimelineIds.includes(ev.timeline_origin_id) ||
+        (walletIdsForFilter.some((id) => selectedTimelineIds.includes(id)) &&
+          expenseStorageIdsForFilter.has(String(ev.timelineId || ev.timeline_id || '')));
 
       const matchesLabel =
         selectedLabelFilter === EventStatus.ALL ||
@@ -261,6 +273,8 @@ export function useTimelineFilteredEvents({
     walletExpenseTimelineIds,
     balanceMode,
     balanceTimelineTypeMap,
+    walletIdsForFilter,
+    expenseStorageIdsForFilter,
   ]);
 
   return {

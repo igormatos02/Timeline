@@ -63,7 +63,11 @@ export default function BalanceEventModal({
       : movementType === EventType.INVESTMENT
         ? TimelineType.INVESTMENT
         : TimelineType.INCOME;
-    return allTimelines.filter((tl) => (targetType === TimelineType.INCOME ? isWalletTimelineType(tl.type) : tl.type === targetType));
+    const walletTimelines = allTimelines.filter((tl) => isWalletTimelineType(tl.type));
+    if (targetType === TimelineType.INCOME) return walletTimelines;
+    const typed = allTimelines.filter((tl) => tl.type === targetType);
+    // Expenses are stored in the expense timeline until the database migration moves them into the wallet
+    return targetType === TimelineType.EXPENSE && typed.length === 0 ? walletTimelines : typed;
   }, [allTimelines, movementType]);
 
   useEffect(() => {

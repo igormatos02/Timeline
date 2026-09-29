@@ -172,28 +172,28 @@ export default function MonthProjectionBadges({
             appearance: 'none',
             WebkitAppearance: 'none',
             MozAppearance: 'none',
-            background: 'var(--primary)',
-            border: 'none',
+            background: TimelineColor.WHITE,
+            border: '1px solid var(--border-glass)',
             borderRadius: '6px',
             padding: '2px 22px 2px 24px',
             fontSize: '0.72rem',
             fontWeight: '700',
-            color: TimelineColor.WHITE,
+            color: 'var(--primary)',
             textTransform: 'uppercase',
             letterSpacing: '0.04em',
             cursor: 'pointer',
             outline: 'none',
             height: '24px',
             lineHeight: '20px',
-            boxShadow: 'var(--shadow-glow)',
+            boxShadow: 'var(--shadow-xs)',
             transition: 'all 0.15s ease'
           }}
           title={t('timeline.selectProjectionMode')}
         >
-          <option value="projected" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
+          <option value="projected" style={{ background: TimelineColor.WHITE, color: 'var(--text-main)' }}>
             {t('timeline.monthProjection')}
           </option>
-          <option value="realized" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
+          <option value="realized" style={{ background: TimelineColor.WHITE, color: 'var(--text-main)' }}>
             {t('timeline.realProjection')}
           </option>
         </select>
@@ -204,7 +204,7 @@ export default function MonthProjectionBadges({
               position: 'absolute',
               left: '7px',
               pointerEvents: 'none',
-              color: TimelineColor.WHITE
+              color: 'var(--primary)'
             }}
           />
         ) : (
@@ -214,7 +214,7 @@ export default function MonthProjectionBadges({
               position: 'absolute',
               left: '7px',
               pointerEvents: 'none',
-              color: TimelineColor.WHITE
+              color: 'var(--primary)'
             }}
           />
         )}
@@ -224,7 +224,7 @@ export default function MonthProjectionBadges({
             position: 'absolute',
             right: '6px',
             pointerEvents: 'none',
-            color: TimelineColor.WHITE
+            color: 'var(--primary)'
           }}
         />
       </div>

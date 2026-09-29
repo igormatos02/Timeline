@@ -5,12 +5,11 @@ import { TimelineColor } from '../../enums/index.js';
 import EventCardHeader from './EventCardHeader.jsx';
 import EventReceiptRef from './EventReceiptRef.jsx';
 import StatusDropdownButton from './StatusDropdownButton.jsx';
-import { AlertCircle, Ban, CheckCircle2, Clock, Lock } from 'lucide-react';
+import { ArrowDownLeft, Ban, CheckCircle2, Lock } from 'lucide-react';
 import ReceiptDateEditor from './ReceiptDateEditor.jsx';
 import ReceiptNumberEditor from './ReceiptNumberEditor.jsx';
 import EventCategoryPicker from './EventCategoryPicker.jsx';
 import EditableAmount from './EditableAmount.jsx';
-import EventCategoryBadge from './EventCategoryBadge.jsx';
 import EventActionButtons from './EventActionButtons.jsx';
 
 // Section of the event card (TimelineEventCard.jsx): reads the card values from EventCardContext.
@@ -47,9 +46,11 @@ export default function IncomeEventBody() {
       {/* Linha 1: [icone] [titulo do evento] [lables] */}
       <EventCardHeader />
 
-      {/* Linha 2: [receipt number or empty] (left) e [b status] (right, apenas não virtual) */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
-        <EventReceiptRef onPositiveCard={isReceivedIncome} />
+      {/* Linha 2: [recibo/data de pagamento] (left) e [b status] (right, apenas não virtual) */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <EventReceiptRef onPositiveCard={isReceivedIncome} />
+        </div>
         {!isVirtual && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
             <StatusDropdownButton buttonProps={{
@@ -60,25 +61,20 @@ export default function IncomeEventBody() {
                     ? `${TimelineColor.SLATE_LIGHT}26`
                     : isReceivedIncome
                       ? `${TimelineColor.WHITE}40`
-                      : isOverdueIncome
-                        ? `${TimelineColor.AMBER}29`
-                        : `${TimelineColor.AMBER}24`,
+                      : 'var(--primary)',
                   color: isCancelled
                     ? TimelineColor.SLATE
-                    : isReceivedIncome
-                      ? TimelineColor.WHITE
-                      : isOverdueIncome
-                        ? TimelineColor.WARNING
-                        : TimelineColor.WARNING,
+                    : TimelineColor.WHITE,
                   border: isCancelled
                     ? `1px solid ${TimelineColor.SLATE_LIGHT}59`
                     : isReceivedIncome
                       ? `1px solid ${TimelineColor.WHITE}66`
-                      : isOverdueIncome
-                        ? `1px solid ${TimelineColor.AMBER}66`
-                        : `1px solid ${TimelineColor.AMBER}59`,
+                      : '1px solid transparent',
                   borderRadius: '9999px',
                   padding: '4px 12px',
+                  minWidth: '110px',
+                  height: '26px',
+                  boxSizing: 'border-box',
                   fontSize: '0.76rem',
                   fontWeight: '700',
                   cursor: isTogglingStatus ? 'wait' : 'pointer',
@@ -86,16 +82,17 @@ export default function IncomeEventBody() {
                   pointerEvents: isTogglingStatus ? 'none' : 'auto',
                   display: 'inline-flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: '5px',
                   transition: 'all 0.15s ease',
-                  boxShadow: isOverdueIncome
-                    ? `0 2px 10px ${TimelineColor.AMBER}40`
-                    : 'none'
+                  boxShadow: isCancelled || isReceivedIncome
+                    ? 'none'
+                    : `0 2px 8px ${TimelineColor.PRIMARY}59`
                 }
               }} children={isFutureMonth ? (
                 <>
-                  <Clock size={13} style={{ color: isReceivedIncome ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)' }} />
-                  <span style={{ color: isReceivedIncome ? TimelineColor.WHITE : undefined }}>{t('status.toReceive')}</span>
+                  <ArrowDownLeft size={13} style={{ color: isReceivedIncome ? `${TimelineColor.WHITE}d9` : TimelineColor.WHITE }} />
+                  <span style={{ color: TimelineColor.WHITE }}>{isReceivedIncome ? t('status.received') : t('status.actionReceive')}</span>
                 </>
               ) : isCancelled ? (
                 <>
@@ -108,15 +105,10 @@ export default function IncomeEventBody() {
                   <span style={{ color: TimelineColor.WHITE }}>{t('status.received')}</span>
                   <Lock size={11} style={{ color: TimelineColor.WHITE, marginLeft: '2px' }} />
                 </>
-              ) : isOverdueIncome ? (
-                <>
-                  <AlertCircle size={13} style={{ color: TimelineColor.WARNING }} />
-                  <span>{t('status.overdue')}</span>
-                </>
               ) : (
                 <>
-                  <Clock size={13} style={{ color: TimelineColor.WARNING }} />
-                  <span>{t('status.toReceive')}</span>
+                  <ArrowDownLeft size={13} style={{ color: TimelineColor.WHITE }} />
+                  <span>{t('status.actionReceive')}</span>
                 </>
               )} />
           </div>
@@ -138,8 +130,7 @@ export default function IncomeEventBody() {
         borderTop: isReceivedIncome ? `1px solid ${TimelineColor.WHITE}33` : '1px solid var(--border-glass)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <EditableAmount prefix={'+'} defaultColor={isCancelled ? TimelineColor.SLATE : isReceivedIncome ? TimelineColor.WHITE : TimelineColor.WARNING} />
-          <EventCategoryBadge onPositiveCard={isReceivedIncome} />
+          <EditableAmount prefix={'+'} defaultColor={isCancelled ? TimelineColor.SLATE : isReceivedIncome ? TimelineColor.WHITE : TimelineColor.INCOME} />
         </div>
         <div style={{ marginLeft: 'auto' }}>
           <EventActionButtons />

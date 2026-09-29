@@ -25,6 +25,7 @@ export default function EventActionButtons() {
     isCancelConfirmOpen,
     isCancelled,
     isCancelledPost,
+    isCompleted,
     isCondoPost,
     isDesmembramentoExpanded,
     isFlatPositive,
@@ -324,8 +325,8 @@ export default function EventActionButtons() {
         </>
       ))}
 
-      {/* Botão Imprimir Recibo - Apenas para evento com obligator e status positivo */}
-      {isObligationEvent && onPrintReceipt && isPositiveStatus(effectiveStatus) && (
+      {/* Botão Imprimir Recibo */}
+      {onPrintReceipt && (isPositiveStatus(effectiveStatus) || isObligationEvent || isCompleted) && !isCancelled && (
         <button
           type="button"
           className="action-icon-btn"

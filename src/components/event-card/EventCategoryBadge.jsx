@@ -41,7 +41,7 @@ export default function EventCategoryBadge({ onPositiveCard }) {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '4px',
-        marginLeft: '8px',
+        margin: '0',
         padding: '2px 8px',
         borderRadius: '9999px',
         fontSize: '0.68rem',

@@ -5,14 +5,13 @@ import { EventType, TimelineColor } from '../../enums/index.js';
 import EventCardHeader from './EventCardHeader.jsx';
 import EventReceiptRef from './EventReceiptRef.jsx';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { AlertCircle, Ban, CheckCircle2, Clock, CreditCard, ExternalLink, Landmark, Lock, Target, TrendingUp } from 'lucide-react';
+import { Ban, CheckCircle2, Clock, CreditCard, ExternalLink, Landmark, Lock, Target, TrendingUp } from 'lucide-react';
 import StatusDropdownButton from './StatusDropdownButton.jsx';
 import ReceiptDateEditor from './ReceiptDateEditor.jsx';
 import ReceiptNumberEditor from './ReceiptNumberEditor.jsx';
 import EventCategoryPicker from './EventCategoryPicker.jsx';
 import EditableAmount from './EditableAmount.jsx';
 import EventOutflowTypeBadge from './EventOutflowTypeBadge.jsx';
-import EventCategoryBadge from './EventCategoryBadge.jsx';
 import EventActionButtons from './EventActionButtons.jsx';
 
 // Section of the event card (TimelineEventCard.jsx): reads the card values from EventCardContext.
@@ -56,9 +55,9 @@ export default function InvestmentEventBody() {
       {/* Linha 1: [icone] [titulo do evento] [lables] */}
       <EventCardHeader />
 
-      {/* Linha 2: [receipt number or category label] (left) e [b status] (right) */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', paddingBottom: '0px' }}>
+      {/* Linha 2: [recibo/data & info] (left) e [b status] (right) */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', paddingBottom: '0px' }}>
           <EventReceiptRef onPositiveCard={isCompletedInvestment} />
 
           {event.category === 'investimento_patrimonio' && Number(event.initialInvestedAmount || 0) > 0 && Number(event.amount || 0) > 0 && Number(event.initialInvestedAmount) !== Number(event.amount) && (
@@ -157,29 +156,24 @@ export default function InvestmentEventBody() {
                     ? (event.status === 'Financiado' ? `${TimelineColor.SKY}29` : (isCompletedInvestment ? `${TimelineColor.WHITE}40` : `${TimelineColor.EMERALD}29`))
                     : isCompletedInvestment
                       ? `${TimelineColor.WHITE}40`
-                      : isOverdueInvestment
-                        ? `${TimelineColor.AMBER}29`
-                        : `${TimelineColor.VIOLET}24`,
+                      : 'var(--primary)',
                 color: isCancelled
                   ? TimelineColor.SLATE
                   : event.category === 'investimento_patrimonio'
                     ? (event.status === 'Financiado' ? TimelineColor.CYAN : (isCompletedInvestment ? TimelineColor.WHITE : TimelineColor.INCOME))
-                    : isCompletedInvestment
-                      ? TimelineColor.WHITE
-                      : isOverdueInvestment
-                        ? TimelineColor.WARNING
-                        : TimelineColor.INVESTMENT,
+                    : TimelineColor.WHITE,
                 border: isCancelled
                   ? `1px solid ${TimelineColor.SLATE_LIGHT}59`
                   : event.category === 'investimento_patrimonio'
                     ? (event.status === 'Financiado' ? `1px solid ${TimelineColor.SKY}66` : (isCompletedInvestment ? `1px solid ${TimelineColor.WHITE}66` : `1px solid ${TimelineColor.EMERALD}66`))
                     : isCompletedInvestment
                       ? `1px solid ${TimelineColor.WHITE}66`
-                      : isOverdueInvestment
-                        ? `1px solid ${TimelineColor.AMBER}66`
-                        : `1px solid ${TimelineColor.VIOLET}59`,
+                      : '1px solid transparent',
                 borderRadius: '9999px',
                 padding: '4px 12px',
+                minWidth: '110px',
+                height: '26px',
+                boxSizing: 'border-box',
                 fontSize: '0.76rem',
                 fontWeight: '700',
                 cursor: isTogglingStatus ? 'wait' : 'pointer',
@@ -187,13 +181,17 @@ export default function InvestmentEventBody() {
                 pointerEvents: isTogglingStatus ? 'none' : 'auto',
                 display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '5px',
-                transition: 'all 0.15s ease'
+                transition: 'all 0.15s ease',
+                boxShadow: isCancelled || isCompletedInvestment
+                  ? 'none'
+                  : `0 2px 8px ${TimelineColor.PRIMARY}59`
               }
             }} children={isFutureMonth ? (
               <>
-                <Clock size={13} style={{ color: isCompletedInvestment ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)' }} />
-                <span style={{ color: isCompletedInvestment ? TimelineColor.WHITE : undefined }}>{isCompletedInvestment ? t(`status.${effectiveStatusKey}`) : t('status.pending')}</span>
+                <TrendingUp size={13} style={{ color: isCompletedInvestment ? `${TimelineColor.WHITE}d9` : TimelineColor.WHITE }} />
+                <span style={{ color: TimelineColor.WHITE }}>{isCompletedInvestment ? t(`status.${effectiveStatusKey}`) : t('status.actionContribute')}</span>
               </>
             ) : isCancelled ? (
               <>
@@ -218,15 +216,10 @@ export default function InvestmentEventBody() {
                 <span style={{ color: TimelineColor.WHITE }}>{t(`status.${effectiveStatusKey}`)}</span>
                 <Lock size={11} style={{ color: TimelineColor.WHITE, marginLeft: '2px' }} />
               </>
-            ) : isOverdueInvestment ? (
-              <>
-                <AlertCircle size={13} style={{ color: TimelineColor.WARNING }} />
-                <span>{t('status.overdue')}</span>
-              </>
             ) : (
               <>
-                <Clock size={13} style={{ color: TimelineColor.INVESTMENT }} />
-                <span>{t('status.pending')}</span>
+                <TrendingUp size={13} style={{ color: TimelineColor.WHITE }} />
+                <span>{t('status.actionContribute')}</span>
               </>
             )} />
         </div>
@@ -263,7 +256,6 @@ export default function InvestmentEventBody() {
                 : TimelineColor.INVESTMENT} />
           )}
           <EventOutflowTypeBadge onPositiveCard={isCompletedInvestment} />
-          <EventCategoryBadge onPositiveCard={isCompletedInvestment} />
         </div>
         <div style={{ marginLeft: 'auto' }}>
           <EventActionButtons />

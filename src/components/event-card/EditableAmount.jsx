@@ -248,7 +248,7 @@ export default function EditableAmount({ prefix = '', defaultColor = 'var(--text
                 style={{
                   width: '7px',
                   height: '7px',
-                  background: '#fff',
+                  background: TimelineColor.WHITE,
                   borderRadius: '50%',
                   position: 'absolute',
                   top: '2px',

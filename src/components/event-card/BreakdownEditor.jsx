@@ -148,7 +148,7 @@ export default function BreakdownEditor() {
                     onClick={() => setEditingSubpartIdx(null)}
                     style={{
                       background: TimelineColor.EMERALD,
-                      color: '#fff',
+                      color: TimelineColor.WHITE,
                       border: 'none',
                       borderRadius: '4px',
                       padding: '2px 5px',

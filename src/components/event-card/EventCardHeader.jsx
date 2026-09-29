@@ -5,12 +5,12 @@ import { PersonType, TimelineColor } from '../../enums/index.js';
 import { ArrowUpRight, BookOpen, Building2, Check, CheckCircle2, CheckSquare, FileCheck2, Flag, ListTree, PiggyBank, Repeat, Sparkles, Tag, User, UserCheck, X, Zap } from 'lucide-react';
 import CopyIdButton from '../ui/CopyIdButton.jsx';
 import { formatCurrency } from '../../utils/formatCurrency';
+import EventCategoryBadge from './EventCategoryBadge.jsx';
 
 // Section of the event card (TimelineEventCard.jsx): reads the card values from EventCardContext.
 export default function EventCardHeader() {
   const {
     abatedBreakdown,
-    activeFinancialTab,
     canEdit,
     cardTheme,
     event,
@@ -19,13 +19,11 @@ export default function EventCardHeader() {
     isAmortization,
     isAmortized,
     isAnchorCard,
-    isBalanceView,
     isCancelled,
     isCompleted,
     isEditingTitle,
     isFlatPositive,
     isFollowupEvent,
-    isInvestmentEvent,
     isLoanInstallment,
     isLockedPositive,
     isObligationEvent,
@@ -47,7 +45,8 @@ export default function EventCardHeader() {
     virtualWithdrawalDisplayTitle
   } = useEventCard();
 
-  return (<div
+  return (
+    <div
       style={{
         display: 'flex',
         alignItems: 'flex-start',
@@ -96,8 +95,7 @@ export default function EventCardHeader() {
           )}
         </span>
 
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, gap: '2px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
               {isVirtualWithdrawal && (
                 <span
@@ -249,6 +247,9 @@ export default function EventCardHeader() {
                 </span>
               )}
 
+              {/* Badge de Categoria logo após o botão de copiar */}
+              <EventCategoryBadge onPositiveCard={isFlatPositive} />
+
               {/* Labels / Tags next to Title */}
               <div className="tag-list" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
                 {/* Custom Labels / Etiquetas */}
@@ -319,59 +320,27 @@ export default function EventCardHeader() {
                     <User size={10} /> {event.author}
                   </span>
                 )}
-
-                {/* Origin / Sub-vision Clean Text Indicator - On Balanço, Principal or Gastos for loans/investments */}
-                {(isBalanceView || (activeFinancialTab === 'gastos' && (isLoanInstallment || isInvestmentEvent))) && originInfo && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onNavigateToTimeline) {
-                        onNavigateToTimeline(originInfo.timelineId, originInfo.tab);
-                      }
-                    }}
-                    style={{
-                      background: activeFinancialTab === 'gastos' ? `${TimelineColor.PRIMARY}14` : 'transparent',
-                      border: activeFinancialTab === 'gastos' ? `1px solid ${TimelineColor.PRIMARY}40` : '1px solid var(--border-glass)',
-                      borderRadius: '5px',
-                      padding: '2px 7px',
-                      color: originInfo.color,
-                      fontWeight: '700',
-                      fontSize: '0.70rem',
-                      cursor: onNavigateToTimeline ? 'pointer' : 'default',
-                      pointerEvents: 'auto',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '3px',
-                      flexShrink: 0
-                    }}
-                    title={`Ir para a timeline do ${originInfo.label}`}
-                  >
-                    <span>{originInfo.label}</span>
-                    <ArrowUpRight size={11} strokeWidth={2.5} style={{ opacity: 0.8 }} />
-                  </button>
-                )}
               </div>
             </div>
 
-            {/* Informações da Obrigação: obligation ID em cima e person name abaixo alinhado à direita */}
+            {/* Informações da Obrigação à direita */}
             {isObligationEvent && (() => {
-              const personDisplayName = obligationPerson?.name || obligationPerson?.personName || event.obligationPersonName || event.obligation_person_name || '';
-              const personIdCode = obligationPerson?.obligatorIdentification || obligationPerson?.obligator_identification || obligationPerson?.taxId || obligationPerson?.tax_id || event.obligatorIdentification || event.obligator_identification || event.obligationIdentifier || event.obligation_identifier || '';
-              const personType = obligationPerson?.type || PersonType.PERSON;
+                const personDisplayName = obligationPerson?.name || obligationPerson?.personName || event.obligationPersonName || event.obligation_person_name || '';
+                const personIdCode = obligationPerson?.obligatorIdentification || obligationPerson?.obligator_identification || obligationPerson?.taxId || obligationPerson?.tax_id || event.obligatorIdentification || event.obligator_identification || event.obligationIdentifier || event.obligation_identifier || '';
+                const personType = obligationPerson?.type || PersonType.PERSON;
 
-              return (
-                <div
-                  style={{
-                    marginLeft: 'auto',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-end',
-                    justifyContent: 'center',
-                    gap: '2px',
-                    flexShrink: 0,
-                    textAlign: 'right'
-                  }}
+                return (
+                  <div
+                    style={{
+                      marginLeft: 'auto',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-end',
+                      justifyContent: 'center',
+                      gap: '2px',
+                      flexShrink: 0,
+                      textAlign: 'right'
+                    }}
                   title={
                     personDisplayName
                       ? `Obrigação: ${personIdCode ? `${personIdCode} - ` : ''}${personDisplayName} (${personType === PersonType.ORGANIZATION
@@ -444,10 +413,8 @@ export default function EventCardHeader() {
                 </div>
               );
             })()}
-          </div>
-
-
         </div>
       </div>
-    </div>);
+    </div>
+  );
 }

@@ -3,8 +3,9 @@ import { useEventCard } from './EventCardContext.jsx';
 import { hexToRgba } from './cardUtils.js';
 import { TimelineColor } from '../../enums/index.js';
 import EventCardHeader from './EventCardHeader.jsx';
+import EventCategoryPicker from './EventCategoryPicker.jsx';
 import StatusDropdownButton from './StatusDropdownButton.jsx';
-import { AlertCircle, Ban, CheckCircle2, Clock } from 'lucide-react';
+import { Ban, Check, CheckCircle2 } from 'lucide-react';
 import EditableAmount from './EditableAmount.jsx';
 import EventActionButtons from './EventActionButtons.jsx';
 
@@ -47,23 +48,13 @@ export default function GenericEventBody() {
       <EventCardHeader />
 
       {/* Linha 2: [motivo/tipo] (left) e [b status] (right) */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
         {/* Reminders show neither the type label nor the priority */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', paddingBottom: '0px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', paddingBottom: '0px' }}>
           {!isReminderEvent && (
             <span style={{ fontSize: '0.7rem', color: isFlatPositive ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1 }}>
               {t('common.event')}
             </span>
-          )}
-          {event.priority && !isReminderEvent && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isFlatPositive ? `1px solid ${TimelineColor.WHITE}40` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-              <span style={{ fontSize: '0.68rem', color: isFlatPositive ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                {t('timeline.priority')}:
-              </span>
-              <span style={{ fontSize: '0.78rem', fontWeight: '800', color: isFlatPositive ? TimelineColor.WHITE : 'var(--text-main)' }}>
-                {event.priority}
-              </span>
-            </div>
           )}
         </div>
 
@@ -76,25 +67,20 @@ export default function GenericEventBody() {
                   ? `${TimelineColor.SLATE_LIGHT}26`
                   : isFlatPositive
                     ? `${TimelineColor.WHITE}40`
-                    : isOverdueReminder
-                      ? `${TimelineColor.AMBER}29`
-                      : `${TimelineColor.CYAN}24`,
+                    : 'var(--primary)',
                 color: isCancelled
                   ? TimelineColor.SLATE
-                  : isFlatPositive
-                    ? TimelineColor.WHITE
-                    : isOverdueReminder
-                      ? TimelineColor.WARNING
-                      : TimelineColor.CYAN,
+                  : TimelineColor.WHITE,
                 border: isCancelled
                   ? `1px solid ${TimelineColor.SLATE_LIGHT}59`
                   : isFlatPositive
                     ? `1px solid ${TimelineColor.WHITE}66`
-                    : isOverdueReminder
-                      ? `1px solid ${TimelineColor.AMBER}66`
-                      : `1px solid ${TimelineColor.CYAN}59`,
+                    : '1px solid transparent',
                 borderRadius: '9999px',
                 padding: '4px 12px',
+                minWidth: '110px',
+                height: '26px',
+                boxSizing: 'border-box',
                 fontSize: '0.76rem',
                 fontWeight: '700',
                 cursor: isTogglingStatus ? 'not-allowed' : 'pointer',
@@ -102,13 +88,17 @@ export default function GenericEventBody() {
                 pointerEvents: isTogglingStatus ? 'none' : 'auto',
                 display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '5px',
-                transition: 'all 0.15s ease'
+                transition: 'all 0.15s ease',
+                boxShadow: isCancelled || isFlatPositive
+                  ? 'none'
+                  : `0 2px 8px ${TimelineColor.PRIMARY}59`
               }
             }} children={isFutureMonth ? (
               <>
-                <Clock size={13} style={{ color: 'var(--text-dim)' }} />
-                <span>{t('status.open')}</span>
+                <Check size={13} style={{ color: isFlatPositive ? `${TimelineColor.WHITE}d9` : TimelineColor.WHITE }} />
+                <span style={{ color: TimelineColor.WHITE }}>{isFlatPositive ? t('status.closed') : (isReminderEvent ? t('status.actionComplete') : t('status.open'))}</span>
               </>
             ) : isCancelled ? (
               <>
@@ -120,19 +110,15 @@ export default function GenericEventBody() {
                 <CheckCircle2 size={13} style={{ color: isFlatPositive ? TimelineColor.WHITE : TimelineColor.SUCCESS }} />
                 <span>{t('status.closed')}</span>
               </>
-            ) : isOverdueReminder ? (
-              <>
-                <AlertCircle size={13} style={{ color: TimelineColor.WARNING }} />
-                <span>{t('status.overdue')}</span>
-              </>
             ) : (
               <>
-                <Clock size={13} style={{ color: TimelineColor.CYAN }} />
-                <span>{t('status.open')}</span>
+                <Check size={13} style={{ color: TimelineColor.WHITE }} />
+                <span>{isReminderEvent ? t('status.actionComplete') : t('status.open')}</span>
               </>
             )} />
         </div>
       </div>
+      <EventCategoryPicker />
 
       {/* Linha 3: [Valor] & [event action buttons] */}
       <div style={{

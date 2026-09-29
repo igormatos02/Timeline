@@ -5,12 +5,11 @@ import { TimelineColor } from '../../enums/index.js';
 import EventCardHeader from './EventCardHeader.jsx';
 import EventReceiptRef from './EventReceiptRef.jsx';
 import StatusDropdownButton from './StatusDropdownButton.jsx';
-import { AlertCircle, Ban, CheckCircle2, Clock, Lock } from 'lucide-react';
+import { ArrowUpRight, Ban, CheckCircle2, Lock } from 'lucide-react';
 import ReceiptDateEditor from './ReceiptDateEditor.jsx';
 import ReceiptNumberEditor from './ReceiptNumberEditor.jsx';
 import EventCategoryPicker from './EventCategoryPicker.jsx';
 import EditableAmount from './EditableAmount.jsx';
-import EventCategoryBadge from './EventCategoryBadge.jsx';
 import EventActionButtons from './EventActionButtons.jsx';
 
 // Section of the event card (TimelineEventCard.jsx): reads the card values from EventCardContext.
@@ -47,20 +46,10 @@ export default function ExpenseEventBody() {
       {/* Linha 1: [icone] [titulo do evento] [lables] */}
       <EventCardHeader />
 
-      {/* Linha 2: [receipt number or empty] (left) e [b status] (right) */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', paddingBottom: '0px' }}>
+      {/* Linha 2: [recibo/data de pagamento] (left) e [b status] (right) */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <EventReceiptRef onPositiveCard={isPaidExpense} />
-          {event.priority && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderLeft: isPaidExpense ? `1px solid ${TimelineColor.WHITE}4c` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
-              <span style={{ fontSize: '0.68rem', color: isPaidExpense ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700' }}>
-                {t('timeline.priority')}:
-              </span>
-              <span style={{ fontSize: '0.78rem', fontWeight: '800', color: isPaidExpense ? TimelineColor.WHITE : 'var(--text-main)' }}>
-                {event.priority}
-              </span>
-            </div>
-          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
@@ -72,25 +61,20 @@ export default function ExpenseEventBody() {
                   ? `${TimelineColor.SLATE_LIGHT}26`
                   : isPaidExpense
                     ? `${TimelineColor.WHITE}40`
-                    : isOverdueExpense
-                      ? `${TimelineColor.AMBER}29`
-                      : `${TimelineColor.AMBER}24`,
+                    : 'var(--primary)',
                 color: isCancelled
                   ? TimelineColor.SLATE
-                  : isPaidExpense
-                    ? TimelineColor.WHITE
-                    : isOverdueExpense
-                      ? TimelineColor.WARNING
-                      : TimelineColor.WARNING,
+                  : TimelineColor.WHITE,
                 border: isCancelled
                   ? `1px solid ${TimelineColor.SLATE_LIGHT}59`
                   : isPaidExpense
                     ? `1px solid ${TimelineColor.WHITE}66`
-                    : isOverdueExpense
-                      ? `1px solid ${TimelineColor.AMBER}66`
-                      : `1px solid ${TimelineColor.AMBER}59`,
+                    : '1px solid transparent',
                 borderRadius: '9999px',
                 padding: '4px 12px',
+                minWidth: '110px',
+                height: '26px',
+                boxSizing: 'border-box',
                 fontSize: '0.76rem',
                 fontWeight: '700',
                 cursor: isTogglingStatus ? 'wait' : 'pointer',
@@ -98,13 +82,17 @@ export default function ExpenseEventBody() {
                 pointerEvents: isTogglingStatus ? 'none' : 'auto',
                 display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '5px',
-                transition: 'all 0.15s ease'
+                transition: 'all 0.15s ease',
+                boxShadow: isCancelled || isPaidExpense
+                  ? 'none'
+                  : `0 2px 8px ${TimelineColor.PRIMARY}59`
               }
             }} children={isFutureMonth ? (
               <>
-                <Clock size={13} style={{ color: isPaidExpense ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)' }} />
-                <span style={{ color: isPaidExpense ? TimelineColor.WHITE : undefined }}>{t('status.toPay')}</span>
+                <ArrowUpRight size={13} style={{ color: isPaidExpense ? `${TimelineColor.WHITE}d9` : TimelineColor.WHITE }} />
+                <span style={{ color: TimelineColor.WHITE }}>{isPaidExpense ? t('status.paid') : t('status.actionPay')}</span>
               </>
             ) : isCancelled ? (
               <>
@@ -117,15 +105,10 @@ export default function ExpenseEventBody() {
                 <span style={{ color: TimelineColor.WHITE }}>{t('status.paid')}</span>
                 <Lock size={11} style={{ color: TimelineColor.WHITE, marginLeft: '2px' }} />
               </>
-            ) : isOverdueExpense ? (
-              <>
-                <AlertCircle size={13} style={{ color: TimelineColor.WARNING }} />
-                <span>{t('status.overdue')}</span>
-              </>
             ) : (
               <>
-                <Clock size={13} style={{ color: TimelineColor.WARNING }} />
-                <span>{t('status.toPay')}</span>
+                <ArrowUpRight size={13} style={{ color: TimelineColor.WHITE }} />
+                <span>{t('status.actionPay')}</span>
               </>
             )} />
         </div>
@@ -147,7 +130,6 @@ export default function ExpenseEventBody() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <EditableAmount prefix={'-'} defaultColor={isCancelled ? TimelineColor.SLATE : isPaidExpense ? TimelineColor.WHITE : TimelineColor.EXPENSE} />
-          <EventCategoryBadge onPositiveCard={isPaidExpense} />
         </div>
         <div style={{ marginLeft: 'auto' }}>
           <EventActionButtons />

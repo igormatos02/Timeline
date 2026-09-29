@@ -2,7 +2,7 @@ import React from 'react';
 import { useEventCard } from './EventCardContext.jsx';
 import { RECEIPT_DATE_POPOVER_WIDTH, RECEIPT_NUMBER_POPOVER_WIDTH } from './cardUtils.js';
 import { TimelineColor } from '../../enums/index.js';
-import { FileText, Plus } from 'lucide-react';
+import { AlertCircle, FileText, Plus } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 // Section of the event card (TimelineEventCard.jsx): reads the card values from EventCardContext.
@@ -13,8 +13,17 @@ export default function EventReceiptRef({ onPositiveCard }) {
     getProposedReceiptNumber,
     isCancelled,
     isCompleted,
-    isObligationEvent,
-    onPrintReceipt,
+    isExpenseEvent,
+    isIncomeEvent,
+    isInvestmentEvent,
+    isLoanInstallment,
+    isOverdue,
+    isOverdueExpense,
+    isOverdueIncome,
+    isOverdueInvestment,
+    isOverdueLoan,
+    isOverdueReminder,
+    isReminderEvent,
     receiptDateAnchorRef,
     receiptNumberAnchorRef,
     saveReceiptNumber,
@@ -33,7 +42,7 @@ export default function EventReceiptRef({ onPositiveCard }) {
   const paymentDate = isCompleted && !isCancelled ? (event.receiptDate || event.date) : null;
   // The receipt number can be added or changed at any time (same rules as the receipt modal)
   const canManageReceiptNumber = Boolean(paymentDate) && canEditPaymentDate
-    && isObligationEvent && Boolean(onPrintReceipt) && Boolean(saveReceiptNumber);
+    && Boolean(saveReceiptNumber);
   const canAddReceiptNumber = !hasReceiptNumber && canManageReceiptNumber;
   const canChangeReceiptNumber = hasReceiptNumber && canManageReceiptNumber;
   const openReceiptNumberPopover = (e, initialValue) => {
@@ -46,7 +55,56 @@ export default function EventReceiptRef({ onPositiveCard }) {
     setIsReceiptNumberOpen((open) => !open);
   };
   if (!hasReceiptNumber && !paymentDate) {
-    return <span style={{ fontSize: '0.7rem', lineHeight: 1 }}>&nbsp;</span>;
+    if (isCancelled) return null;
+    const isEventOverdue = Boolean(isOverdue || isOverdueIncome || isOverdueExpense || isOverdueInvestment || isOverdueLoan || isOverdueReminder);
+    const pendingLabel = isIncomeEvent
+      ? t('status.toReceive')
+      : (isExpenseEvent || isLoanInstallment)
+      ? t('status.toPay')
+      : isInvestmentEvent
+      ? t('status.toCredit')
+      : isReminderEvent
+      ? t('status.open')
+      : t('status.pending');
+
+    return (
+      <span
+        style={{
+          fontSize: '0.68rem',
+          color: onPositiveCard ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)',
+          textTransform: 'uppercase',
+          fontWeight: '700',
+          letterSpacing: '0.04em',
+          lineHeight: 1,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}
+      >
+        {isEventOverdue && (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '3px',
+              background: `${TimelineColor.AMBER}29`,
+              color: TimelineColor.WARNING,
+              border: `1px solid ${TimelineColor.AMBER}66`,
+              borderRadius: '4px',
+              padding: '1px 5px',
+              fontSize: '0.62rem',
+              fontWeight: '800',
+              lineHeight: '13px',
+              letterSpacing: '0.02em'
+            }}
+          >
+            <AlertCircle size={10} />
+            {t('status.overdue')}
+          </span>
+        )}
+        <span>{pendingLabel}</span>
+      </span>
+    );
   }
   return (
     <span style={{ fontSize: '0.7rem', color: onPositiveCard ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -128,4 +186,4 @@ export default function EventReceiptRef({ onPositiveCard }) {
       ) : t('receipt.paymentDateShort', { date: format(parseISO(paymentDate), 'dd/MM/yyyy') }))}
     </span>
   );
-  }
+}

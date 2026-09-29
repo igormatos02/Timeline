@@ -324,7 +324,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const effectiveStatusKey = getMovementStatusKey({ ...event, status: EventStatus.PAID });
 
   const isIncomeEvent = event.eventType === EventType.INCOME && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
-  const isExpenseEvent = event.eventType === EventType.EXPENSE && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
+  const isExpenseEvent = (event.eventType === EventType.EXPENSE || Boolean(event.isExpense)) && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
   const isInvestmentEvent = (event.eventType === EventType.INVESTMENT || isPocketOutflowEvent || isTransferEvent) && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
 
   const baseItemColor = useMemo(() => {
@@ -338,6 +338,12 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         return incomeEvent.timelineColor;
       }
       return COLOR_PALETTES[ColorPaletteId.LIGHT_BLUE]?.shades?.SHADE_1 || COLOR_PALETTES[ColorPaletteId.LIGHT_BLUE]?.colors[0];
+    }
+
+    if (isExpenseEvent || event.timelineType === TimelineType.EXPENSE || event.eventType === EventType.EXPENSE || Boolean(event.isExpense)) {
+      const expenseTl = (timelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.EXPENSE);
+      if (expenseTl?.color) return expenseTl.color;
+      return TimelineColor.EXPENSE;
     }
 
     const explicitOriginColor = event.timelineOriginColor || (event.timelineOriginId && event.timelineColor);
@@ -358,11 +364,6 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         const incomeTl = (timelines || []).find((t) => isWalletTimelineType(t?.type));
         if (incomeTl?.color) return incomeTl.color;
         return TimelineColor.INCOME;
-      }
-      if (isExpenseEvent || event.timelineType === TimelineType.EXPENSE || event.eventType === EventType.EXPENSE) {
-        const expenseTl = (timelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.EXPENSE);
-        if (expenseTl?.color) return expenseTl.color;
-        return TimelineColor.EXPENSE;
       }
       if (isInvestmentEvent || event.timelineType === TimelineType.INVESTMENT || event.eventType === EventType.INVESTMENT) {
         const investTl = (timelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.INVESTMENT);
@@ -795,29 +796,6 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const [newSubpartAmount, setNewSubpartAmount] = useState('');
   const [editingSubpartIdx, setEditingSubpartIdx] = useState(null);
 
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
-  const [catOpenUpwards, setCatOpenUpwards] = useState(false);
-  const categoryDropdownRef = useRef(null);
-
-  useEffect(() => {
-    if (!isCategoryDropdownOpen) return;
-    if (categoryDropdownRef.current) {
-      const rect = categoryDropdownRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      if (spaceBelow < 260 && rect.top > 260) {
-        setCatOpenUpwards(true);
-      } else {
-        setCatOpenUpwards(false);
-      }
-    }
-    const handleClickOutside = (e) => {
-      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target)) {
-        setIsCategoryDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isCategoryDropdownOpen]);
 
 
 
@@ -1058,23 +1036,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         tab: originId
       };
     }
-    // Wallet expenses show the wallet
-    const walletTimeline = (timelines || []).find((tl) => isWalletTimelineType(tl?.type));
-    const originTimeline = (timelines || []).find((tl) => String(tl?.id) === String(originId || ''));
-    const isInWallet = Boolean(walletTimeline) && String(originTimeline?.id || '') === String(walletTimeline.id);
-    if (isInWallet && (isExpenseEvent || event.eventType === EventType.EXPENSE)) {
-      const p = getPaletteTheme(walletTimeline.color || TimelineColor.INCOME, TimelineColor.INCOME);
-      return {
-        label: walletTimeline.name || t(isCondoflow ? 'sidebar.cashTimeline' : 'sidebar.walletTimeline'),
-        icon: <Wallet size={11} strokeWidth={2.4} />,
-        bg: hexToRgba(p.light, 0.22),
-        color: p.primary,
-        border: hexToRgba(p.medium, 0.40),
-        timelineId: walletTimeline.id,
-        tab: walletTimeline.id
-      };
-    }
-    if (isExpenseEvent || event.timelineType === TimelineType.EXPENSE) {
+    if (isExpenseEvent || event.timelineType === TimelineType.EXPENSE || event.eventType === EventType.EXPENSE || Boolean(event.isExpense)) {
       const p = getPaletteTheme(originColor || TimelineColor.EXPENSE, TimelineColor.EXPENSE);
       return {
         label: originName || t('sidebar.expenseTimeline'),
@@ -1086,6 +1048,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         tab: originId
       };
     }
+    const walletTimeline = (timelines || []).find((tl) => isWalletTimelineType(tl?.type));
     if (isInvestmentEvent || event.timelineType === TimelineType.INVESTMENT) {
       const p = getPaletteTheme(originColor || TimelineColor.INVESTMENT, TimelineColor.INVESTMENT);
       return {
@@ -1235,15 +1198,18 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     isDesmembramentoExpanded,
     isEditingAmount,
     isEditingTitle,
+    isExpenseEvent,
     isFlatPositive,
     isFollowupEvent,
     isFutureMonth,
+    isIncomeEvent,
     isInvestmentEvent,
     isLoanInstallment,
     isLockedPositive,
     isNotesExpanded,
     isObligationEvent,
     isOutflowReference,
+    isOverdue,
     isOverdueExpense,
     isOverdueIncome,
     isOverdueInvestment,
@@ -1460,31 +1426,12 @@ const TimelineEventDayCard = React.memo(function TimelineEventDayCard({
   const baseColor = isBalance
     ? TimelineColor.SLATE
     : (sharedNoticeColor || timelineColor || firstEvent.timelineColor || TimelineColor.PRIMARY);
-
-  const paletteTheme = getPaletteTheme(baseColor, TimelineColor.PRIMARY);
-
-  const bgGradient = isBalance
-    ? `linear-gradient(135deg, ${TimelineColor.SLATE_LIGHT}0d 0%, var(--bg-card) 100%)`
-    : `linear-gradient(135deg, ${hexToRgba(paletteTheme.secondary, 0.10)} 0%, ${hexToRgba(paletteTheme.light, 0.03)} 60%, var(--bg-card) 100%)`;
-
-  const borderColor = isBalance
-    ? `${TimelineColor.SLATE_LIGHT}38`
-    : hexToRgba(paletteTheme.medium, 0.32);
-
-  const borderLeftColor = isBalance
-    ? `${TimelineColor.SLATE_LIGHT}73`
-    : paletteTheme.primary;
-
   return (
     <div
       className="event-card"
       style={{
-        background: bgGradient,
-        border: `1px solid ${borderColor}`,
-        borderLeft: `4px solid ${borderLeftColor}`,
-        borderTopColor: borderColor,
-        borderRightColor: borderColor,
-        borderBottomColor: borderColor,
+        background: 'transparent',
+        border: '1px solid var(--border-glass)',
         padding: '8px 10px 8px 10px',
         display: 'flex',
         flexDirection: 'column',
@@ -1507,7 +1454,7 @@ const TimelineEventDayCard = React.memo(function TimelineEventDayCard({
             padding: '2px 4px 2px 4px'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: baseColor, fontSize: '0.80rem', fontWeight: '700', textTransform: 'capitalize' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: TimelineColor.PRIMARY, fontSize: '0.80rem', fontWeight: '700', textTransform: 'capitalize' }}>
             <Calendar size={13} style={{ flexShrink: 0, opacity: 0.9 }} />
             <span style={{ letterSpacing: '0.01em' }}>
               {formattedDateStr}

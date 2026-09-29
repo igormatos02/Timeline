@@ -133,6 +133,8 @@ export const translations = {
 
     // Timeline Rows & Cards
     timeline: {
+      movementInflow: "Inflow",
+      movementOutflow: "Outflow",
       revertToPendingHint: "Revert to pending (admin only; recorded in the change history)",
       lockedPositiveNoticeNonAdmin: "Effective movement: only an administrator can revert it to pending or delete it",
       changeCategory: "Change category",
@@ -532,6 +534,7 @@ export const translations = {
       closed: "Closed",
       toReceive: "To Receive",
       toPay: "To Pay",
+      toCredit: "To Credit",
       nextIncome: "Next Income",
       receivedAt: "Received",
       paidAt: "Paid",
@@ -539,7 +542,11 @@ export const translations = {
       withdrawnAt: "Withdrawn",
       settledAt: "Settled",
       financed: "Financed",
-      paidOff: "Paid Off"
+      paidOff: "Paid Off",
+      actionReceive: "Receive",
+      actionPay: "Pay",
+      actionContribute: "Contribute",
+      actionComplete: "Complete"
     },
 
     // Recurrence
@@ -2482,6 +2489,8 @@ export const translations = {
 
     // Timeline Rows & Cards
     timeline: {
+      movementInflow: "Entrada",
+      movementOutflow: "Saída",
       revertToPendingHint: "Voltar a pendente (só administrador; fica no histórico de alterações)",
       lockedPositiveNoticeNonAdmin: "Movimento efetivado: só um administrador o pode voltar a pendente ou apagar",
       changeCategory: "Alterar categoria",
@@ -2881,6 +2890,7 @@ export const translations = {
       closed: "Concluído",
       toReceive: "A Receber",
       toPay: "A Pagar",
+      toCredit: "A Creditar",
       nextIncome: "Próxima Entrada",
       receivedAt: "Recebido",
       paidAt: "Pago",
@@ -2888,7 +2898,11 @@ export const translations = {
       withdrawnAt: "Retirado",
       settledAt: "Liquidado",
       financed: "Financiado",
-      paidOff: "Quitado"
+      paidOff: "Quitado",
+      actionReceive: "Receber",
+      actionPay: "Pagar",
+      actionContribute: "Aportar",
+      actionComplete: "Concluir"
     },
 
     // Recurrence

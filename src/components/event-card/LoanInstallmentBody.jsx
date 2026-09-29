@@ -4,7 +4,7 @@ import { hexToRgba } from './cardUtils.js';
 import { TimelineColor } from '../../enums/index.js';
 import EventCardHeader from './EventCardHeader.jsx';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { AlertCircle, Ban, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowUpRight, Ban, CheckCircle2 } from 'lucide-react';
 import StatusDropdownButton from './StatusDropdownButton.jsx';
 import EventActionButtons from './EventActionButtons.jsx';
 
@@ -140,25 +140,20 @@ export default function LoanInstallmentBody() {
                     ? `${TimelineColor.SLATE_LIGHT}26`
                     : isPaidLoan
                       ? `${TimelineColor.WHITE}40`
-                      : isOverdueLoan
-                        ? `${TimelineColor.AMBER}29`
-                        : `${TimelineColor.AMBER}24`,
+                      : 'var(--primary)',
                   color: isCancelled
                     ? TimelineColor.SLATE
-                    : isPaidLoan
-                      ? TimelineColor.WHITE
-                      : isOverdueLoan
-                        ? TimelineColor.WARNING
-                        : TimelineColor.WARNING,
+                    : TimelineColor.WHITE,
                   border: isCancelled
                     ? `1px solid ${TimelineColor.SLATE_LIGHT}59`
                     : isPaidLoan
                       ? `1px solid ${TimelineColor.WHITE}66`
-                      : isOverdueLoan
-                        ? `1px solid ${TimelineColor.AMBER}66`
-                        : `1px solid ${TimelineColor.AMBER}59`,
+                      : '1px solid transparent',
                   borderRadius: '9999px',
                   padding: '4px 12px',
+                  minWidth: '110px',
+                  height: '26px',
+                  boxSizing: 'border-box',
                   fontSize: '0.76rem',
                   fontWeight: '700',
                   cursor: isTogglingStatus ? 'wait' : 'pointer',
@@ -166,16 +161,17 @@ export default function LoanInstallmentBody() {
                   pointerEvents: isTogglingStatus ? 'none' : 'auto',
                   display: 'inline-flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: '5px',
                   transition: 'all 0.15s ease',
-                  boxShadow: isPaidLoan
+                  boxShadow: isCancelled || isPaidLoan
                     ? 'none'
-                    : 'none'
+                    : `0 2px 8px ${TimelineColor.PRIMARY}59`
                 }
               }} children={isFutureMonth ? (
                 <>
-                  <Clock size={13} style={{ color: isPaidLoan ? `${TimelineColor.WHITE}d9` : 'var(--text-dim)' }} />
-                  <span style={{ color: isPaidLoan ? TimelineColor.WHITE : undefined }}>{t('status.pending')}</span>
+                  <ArrowUpRight size={13} style={{ color: isPaidLoan ? `${TimelineColor.WHITE}d9` : TimelineColor.WHITE }} />
+                  <span style={{ color: TimelineColor.WHITE }}>{isPaidLoan ? t('status.settled') : t('status.actionPay')}</span>
                 </>
               ) : isCancelled ? (
                 <>
@@ -187,15 +183,10 @@ export default function LoanInstallmentBody() {
                   <CheckCircle2 size={13} style={{ color: TimelineColor.WHITE }} />
                   <span style={{ color: TimelineColor.WHITE }}>{t('status.settled')}</span>
                 </>
-              ) : isOverdueLoan ? (
-                <>
-                  <AlertCircle size={13} style={{ color: TimelineColor.WARNING }} />
-                  <span>{t('status.overdue')}</span>
-                </>
               ) : (
                 <>
-                  <Clock size={13} style={{ color: TimelineColor.WARNING }} />
-                  <span>{t('status.pending')}</span>
+                  <ArrowUpRight size={13} style={{ color: TimelineColor.WHITE }} />
+                  <span>{t('status.actionPay')}</span>
                 </>
               )} />
           )}

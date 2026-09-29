@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { format, parseISO, addMonths } from 'date-fns';
 import { formatCurrency } from '../utils/formatCurrency';
-import { EventType, TimelineType, TimelineColor, isPositiveStatus, MovementKind } from '../enums/index.js';
+import { EventType, TimelineType, isWalletTimelineType, TimelineColor, isPositiveStatus, MovementKind } from '../enums/index.js';
 import { classifyMovement } from '../../shared/finance/movements.js';
 import { savingsEffect } from '../../shared/finance/savingsSpaces.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
@@ -35,7 +35,7 @@ export default function IncomeEvolutionChart({
   const [hoveredData, setHoveredData] = useState(null);
 
   const activeTimelineList = allTimelines?.length > 0 ? allTimelines : (timelines?.length > 0 ? timelines : []);
-  const incomeTimeline = activeTimelineList.find((t) => t?.type === TimelineType.INCOME);
+  const incomeTimeline = activeTimelineList.find((t) => isWalletTimelineType(t?.type));
   const expenseTimeline = activeTimelineList.find((t) => t?.type === TimelineType.EXPENSE);
   const investmentTimeline = activeTimelineList.find((t) => t?.type === TimelineType.INVESTMENT);
 
@@ -43,7 +43,7 @@ export default function IncomeEvolutionChart({
   const isBalance = timeline?.type === TimelineType.BALANCE;
   const isExpense = timeline?.type === TimelineType.EXPENSE || timeline?.type === TimelineType.LOAN;
   const isInvestment = timeline?.type === TimelineType.INVESTMENT;
-  const isIncome = timeline?.type === TimelineType.INCOME;
+  const isIncome = isWalletTimelineType(timeline?.type);
 
   const paletteTheme = useMemo(() => {
     const fallback = isExpense ? TimelineColor.EXPENSE : isInvestment ? TimelineColor.INVESTMENT : isBalance ? TimelineColor.CYAN : TimelineColor.INCOME;
@@ -187,7 +187,7 @@ export default function IncomeEvolutionChart({
       }
 
       let monthTotal = 0;
-      if (timeline?.type === TimelineType.INCOME) {
+      if (isWalletTimelineType(timeline?.type)) {
         monthTotal = monthIncome;
       } else if (timeline?.type === TimelineType.EXPENSE || timeline?.type === TimelineType.LOAN) {
         monthTotal = monthExpense;

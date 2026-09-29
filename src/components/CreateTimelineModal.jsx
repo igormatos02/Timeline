@@ -15,6 +15,7 @@ import { generateLoanInstallments } from '../utils/loanCalculations';
 import { formatCurrency } from '../utils/formatCurrency';
 import {
   TimelineType,
+  isWalletTimelineType,
   TimelineStatus,
   EventPeriodicity,
   TimelineColor,
@@ -448,7 +449,7 @@ export default function CreateTimelineModal({
           </div>
 
           {/* Valor Inicial para Entradas */}
-          {formData.type === TimelineType.INCOME && (
+          {isWalletTimelineType(formData.type) && (
             <div className="form-group">
               <label className="form-label">{t('createTimelineModal.initialValueLabel')}</label>
               <input

@@ -12,6 +12,7 @@ import {
   ClosingPeriod,
   TimeboardType,
   TimelineType,
+  isWalletTimelineType,
   AccountMovementType,
   getAccountMovementType,
   normalizeTimelineType,
@@ -44,7 +45,7 @@ const PERIOD_OPTIONS = [
 const GROUP_BY_OPTIONS = [ReportGroupBy.TIMELINE, ReportGroupBy.DEBTOR, ReportGroupBy.DATE];
 
 // Timelines that can have debtors: income and account (owners' deposits into the account)
-const DEBTOR_TIMELINE_TYPES = [TimelineType.INCOME, TimelineType.INVESTMENT];
+const DEBTOR_TIMELINE_TYPES = [TimelineType.INCOME, TimelineType.WALLET, TimelineType.INVESTMENT];
 
 // An obligation is owed when it is overdue and not settled, cancelled or deleted:
 // income events and account inflows (not withdrawals, costs or expenses of the account)
@@ -110,7 +111,7 @@ export default function TimeboardReportsTab({ timeboard, timelines = [], events 
   // debts, from the calculation start) and flows during the period (received, spent, transferred...)
   const buildMoneySummary = (fromDate, toDate) => {
     const timelineTypeMap = new Map(boardTimelines.map((tl) => [String(tl.id), tl.type]));
-    const incomeTimeline = boardTimelines.find((tl) => normalizeTimelineType(tl.type) === TimelineType.INCOME);
+    const incomeTimeline = boardTimelines.find((tl) => isWalletTimelineType(tl.type));
     const rawComputeFrom = String(timeboard?.computeFrom || timeboard?.compute_from || '');
     const computeFromMonth = rawComputeFrom && !rawComputeFrom.startsWith('1900-01') ? rawComputeFrom.substring(0, 7) : null;
     const asOfMonth = toDate.substring(0, 7);

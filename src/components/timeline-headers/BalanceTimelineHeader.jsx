@@ -25,6 +25,7 @@ import {
   EventType,
   EventStatus,
   TimelineType,
+  isWalletTimelineType,
   TimelineStatus,
   LoanEventCategory,
   AmortizationEventCategory,
@@ -299,7 +300,7 @@ export default function BalanceTimelineHeader({
   const projectionOffset = isPastProjection ? -projectionMonthsAhead : projectionMonthsAhead;
   const isFutureProjection = !isPastProjection && projectionMonthsAhead > 0;
 
-  const incomeTimeline = React.useMemo(() => (allTimelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.INCOME), [allTimelines]);
+  const incomeTimeline = React.useMemo(() => (allTimelines || []).find((t) => isWalletTimelineType(t?.type)), [allTimelines]);
   const expenseTimeline = React.useMemo(() => (allTimelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.EXPENSE), [allTimelines]);
   const investmentTimeline = React.useMemo(() => (allTimelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.INVESTMENT), [allTimelines]);
   const primaryLoanTimeline = React.useMemo(() => (allTimelines || []).find((t) => isLoanTimelineType(t?.type)), [allTimelines]);
@@ -450,7 +451,7 @@ export default function BalanceTimelineHeader({
     : (allTimelines || []).some((t) => normalizeTimelineType(t?.type) === TimelineType.INVESTMENT && t.status !== TimelineStatus.INACTIVE && t.isActive !== false);
   const hasIncomeTimeline = propHasIncomeTimeline !== undefined
     ? propHasIncomeTimeline
-    : (allTimelines || []).some((t) => normalizeTimelineType(t?.type) === TimelineType.INCOME && t.status !== TimelineStatus.INACTIVE && t.isActive !== false);
+    : (allTimelines || []).some((t) => isWalletTimelineType(t?.type) && t.status !== TimelineStatus.INACTIVE && t.isActive !== false);
   const hasExpenseTimeline = propHasExpenseTimeline !== undefined
     ? propHasExpenseTimeline
     : (allTimelines || []).some((t) => normalizeTimelineType(t?.type) === TimelineType.EXPENSE && t.status !== TimelineStatus.INACTIVE && t.isActive !== false);
@@ -557,7 +558,7 @@ export default function BalanceTimelineHeader({
   const incomeInitialValue = Number(
     incomeTimeline?.initialValue ??
     incomeTimeline?.initial_value ??
-    (normalizeTimelineType(timeline?.type) === TimelineType.INCOME ? (timeline.initialValue ?? timeline.initial_value ?? 0) : 0)
+    (isWalletTimelineType(timeline?.type) ? (timeline.initialValue ?? timeline.initial_value ?? 0) : 0)
   );
 
   // 2. Realized totals (REALIZADO até o mês atual) - used in Quadrante 1 (Saldo Líquido Acumulado)

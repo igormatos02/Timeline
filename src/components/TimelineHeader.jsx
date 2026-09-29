@@ -59,6 +59,8 @@ function TimelineHeader(rawProps) {
       return <BalanceTimelineHeader {...props} />;
 
     case TimelineType.INCOME:
+
+    case TimelineType.WALLET:
       return <IncomeTimelineHeader {...props} />;
 
     case TimelineType.EXPENSE:

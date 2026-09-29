@@ -1,4 +1,4 @@
-import { TimelineType, TimelineStatus, EventPeriodicity, isLoanTimelineType } from '../../../shared/enums/index.js';
+import { TimelineType, isWalletTimelineType, TimelineStatus, EventPeriodicity, isLoanTimelineType } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -73,7 +73,7 @@ export class Timeline {
   }
 
   isUniquePerTimeboard() {
-    return this.type === TimelineType.INCOME || this.type === TimelineType.EXPENSE;
+    return isWalletTimelineType(this.type) || this.type === TimelineType.EXPENSE;
   }
 
   canBeDeleted() {

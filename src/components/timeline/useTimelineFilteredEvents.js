@@ -126,7 +126,7 @@ export function useTimelineFilteredEvents({
       } else if (selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') {
         if (timeline.type === TimelineType.INVESTMENT) {
           matchesCategory = isMovementInSpace(ev, selectedCategoryFilter === GENERAL_SPACE_KEY ? null : selectedCategoryFilter);
-        } else if (timeline.type === TimelineType.INCOME) {
+        } else if (isWalletTimelineType(timeline.type)) {
           const evCat = (ev.category || '').toLowerCase();
           if (selectedCategoryFilter === IncomeEventCategory.OTHER) {
             const allKnown = Object.values(IncomeEventCategory).map((v) => v.toLowerCase());

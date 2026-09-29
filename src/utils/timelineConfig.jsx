@@ -31,6 +31,7 @@ export function getTimelineTypeLabelKey(type) {
     case TimelineType.BALANCE:
       return 'sidebar.balanceTimeline';
     case TimelineType.INCOME:
+    case TimelineType.WALLET:
       return 'sidebar.incomeTimeline';
     case TimelineType.EXPENSE:
       return 'sidebar.expenseTimeline';
@@ -62,6 +63,7 @@ export function getTimelineTypeIconComponent(type) {
     case TimelineType.BALANCE:
       return Scale;
     case TimelineType.INCOME:
+    case TimelineType.WALLET:
       return Wallet;
     case TimelineType.EXPENSE:
       return ReceiptEuro;

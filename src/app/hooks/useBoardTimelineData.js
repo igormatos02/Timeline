@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { DiaryPublishStatus, EventStatus, EventType, LoanAmortizationSystem, PersonRole, TimeboardType, TimelineType, getDefaultTimelineColor, isCancelledStatus, isLoanTimelineType, isPositiveStatus, normalizeTimelineType } from '../../enums/index.js';
+import { DiaryPublishStatus, EventStatus, EventType, LoanAmortizationSystem, PersonRole, TimeboardType, TimelineType, isWalletTimelineType, getDefaultTimelineColor, isCancelledStatus, isLoanTimelineType, isPositiveStatus, normalizeTimelineType } from '../../enums/index.js';
 import { buildOutflowReferences, buildWithdrawalReferences } from '../../../shared/finance/references.js';
 import { getLoanMetrics, recalculateLoanState } from '../../utils/loanCalculations';
 
@@ -23,6 +23,7 @@ export function useBoardTimelineData({
     const typePriority = {
       [TimelineType.BALANCE]: 1,
       [TimelineType.INCOME]: 2,
+      [TimelineType.WALLET]: 2,
       [TimelineType.EXPENSE]: 3,
       [TimelineType.INVESTMENT]: 4,
       [TimelineType.PROJECT]: 5,
@@ -45,7 +46,7 @@ export function useBoardTimelineData({
   // Savings withdrawals shown as income references in the income timeline (never persisted, never counted)
   const virtualWithdrawalEvents = useMemo(() => {
     if (!Array.isArray(rawEvents) || rawEvents.length === 0) return [];
-    const incomeTimeline = (activeTimeboardTimelines || []).find((tl) => tl.type === TimelineType.INCOME);
+    const incomeTimeline = (activeTimeboardTimelines || []).find((tl) => isWalletTimelineType(tl.type));
     return buildWithdrawalReferences({ events: rawEvents, incomeTimelineId: incomeTimeline?.id });
   }, [rawEvents, activeTimeboardTimelines]);
 

@@ -211,6 +211,7 @@ export default function TimelineSidebar({
               const getTimelineIcon = (type) => {
                 switch (type) {
                   case TimelineType.INCOME:
+                  case TimelineType.WALLET:
                     return <Wallet size={14} style={{ color: tlColor }} />;
                   case TimelineType.EXPENSE:
                     return <ReceiptEuro size={14} style={{ color: tlColor }} />;

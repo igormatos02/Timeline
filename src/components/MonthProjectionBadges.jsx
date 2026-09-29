@@ -4,6 +4,7 @@ import { formatCurrency as defaultFormatCurrency } from '../utils/formatCurrency
 import {
   TimelineColor,
   TimelineType,
+  isWalletTimelineType,
   normalizeTimelineType,
   isLoanTimelineType
 } from '../enums/index.js';
@@ -60,7 +61,7 @@ export default function MonthProjectionBadges({
   const t = propT || contextT;
 
   const incomeColor = useMemo(() => {
-    const tl = (timelines || []).find((x) => normalizeTimelineType(x?.type) === TimelineType.INCOME);
+    const tl = (timelines || []).find((x) => isWalletTimelineType(x?.type));
     return tl?.color || TimelineColor.INCOME;
   }, [timelines]);
 

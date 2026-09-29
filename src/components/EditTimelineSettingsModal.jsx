@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Check, Settings, Trash2, RotateCcw } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { TimelineStatus, TimelineColor, TIMELINE_COLOR_PRESETS, TimelineType, normalizeTimelineType } from '../enums/index.js';
+import { TimelineStatus, TimelineColor, TIMELINE_COLOR_PRESETS, isWalletTimelineType, normalizeTimelineType } from '../enums/index.js';
 import { findPaletteByColor } from '../../shared/config/colorPalettes.js';
 
 export default function EditTimelineSettingsModal({
@@ -23,7 +23,7 @@ export default function EditTimelineSettingsModal({
   });
 
   const resolvedType = normalizeTimelineType(initialData?.type);
-  const isIncome = resolvedType === TimelineType.INCOME;
+  const isIncome = isWalletTimelineType(resolvedType);
 
   useEffect(() => {
     if (!isOpen) return;

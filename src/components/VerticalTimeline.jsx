@@ -50,6 +50,7 @@ import {
   HISTORY_PERIOD_MONTHS,
   HistoryPeriod,
   TimelineType,
+  isWalletTimelineType,
   TimelineStatus,
   TimeboardType,
   TimelineColor,
@@ -161,6 +162,7 @@ function VerticalTimeline({
   const isFinancialTimeline = [
     TimelineType.BALANCE,
     TimelineType.INCOME,
+    TimelineType.WALLET,
     TimelineType.EXPENSE,
     TimelineType.INVESTMENT,
     TimelineType.LOAN
@@ -312,7 +314,7 @@ function VerticalTimeline({
 
   const hasIncomeTimeline = useMemo(() => {
     return effectiveTimelines.some(
-      (t) => normalizeTimelineType(t.type) === TimelineType.INCOME &&
+      (t) => isWalletTimelineType(t.type) &&
         t.status !== TimelineStatus.INACTIVE && t.isActive !== false
     );
   }, [effectiveTimelines]);
@@ -385,7 +387,7 @@ function VerticalTimeline({
 
   // "Pending" also covers overdue events (there is no separate overdue filter)
   const getStatusFilterOptions = () => {
-    if ([TimelineType.INCOME, TimelineType.BALANCE].includes(timeline.type)) {
+    if (isWalletTimelineType(timeline.type) || timeline.type === TimelineType.BALANCE) {
       return [
         { id: EventStatus.ALL, name: t('status.all'), icon: <Layers size={13} /> },
         { id: EventStatus.RECEIVED, name: t('status.received'), icon: <CheckCircle2 size={13} /> },
@@ -903,7 +905,7 @@ function VerticalTimeline({
           identification: selectedEntity.identification
         };
         const isExpenseTimeline = timeline?.type === TimelineType.EXPENSE;
-        const isCondoDeclaration = isExpenseTimeline || timeline?.type === TimelineType.INCOME || timeline?.type === TimelineType.INVESTMENT;
+        const isCondoDeclaration = isExpenseTimeline || isWalletTimelineType(timeline?.type) || timeline?.type === TimelineType.INVESTMENT;
         const documentType = isExpenseTimeline ? ClearanceDocumentType.SERVICE_PROVIDER : ClearanceDocumentType.OWNER;
         let html;
         let title = t('clearance.title');
@@ -997,7 +999,7 @@ function VerticalTimeline({
     }
 
     if (!timelineEvents || timelineEvents.length === 0) {
-      const allTitle = timeline.type === TimelineType.INCOME
+      const allTitle = isWalletTimelineType(timeline.type)
         ? t('category.all')
         : t('category.allTypes');
       return [{ id: EventStatus.ALL, name: allTitle, icon: <Layers size={13} /> }];
@@ -1019,7 +1021,7 @@ function VerticalTimeline({
           matches: (ev) => ev.eventType === EventType.AMORTIZATION || ev.category === 'amortizacao' || ev.category === 'amortization' || ev.category === LoanEventCategory.AMORTIZATION || ev.category === AmortizationEventCategory.REDUCE_TERM || ev.category === AmortizationEventCategory.REDUCE_INSTALLMENT || ev.category === AmortizationStrategy.REDUCE_TERM || ev.category === AmortizationStrategy.REDUCE_INSTALLMENT
         }
       ];
-    } else if (timeline.type === TimelineType.INCOME) {
+    } else if (isWalletTimelineType(timeline.type)) {
       allOptions = [
         {
           id: IncomeEventCategory.SALARY,
@@ -1111,7 +1113,7 @@ function VerticalTimeline({
       timelineEvents.some((ev) => !ev.isDeleted && (opt.matches ? opt.matches(ev) : (ev.category === opt.id || ev.eventType === opt.id)))
     );
 
-    const allTitle = timeline.type === TimelineType.INCOME
+    const allTitle = isWalletTimelineType(timeline.type)
       ? t('category.all')
       : t('category.allTypes');
 
@@ -1432,11 +1434,11 @@ function VerticalTimeline({
         <div className="sticky-header-dock">
           {React.isValidElement(headerComponent)
             ? React.cloneElement(headerComponent, {
-              filteredEvents: Boolean(selectedEntityId) || (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) || (timeline.type === TimelineType.INVESTMENT && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') || (timeline.type === TimelineType.INCOME && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') ? filteredEvents : undefined,
+              filteredEvents: Boolean(selectedEntityId) || (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) || (timeline.type === TimelineType.INVESTMENT && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') || (isWalletTimelineType(timeline.type) && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos') ? filteredEvents : undefined,
               events: Boolean(selectedEntityId) ? filteredEvents : undefined,
               allEvents: Boolean(selectedEntityId) ? (timeline.type === TimelineType.BALANCE ? filteredEvents : undefined) : undefined,
               selectedExpenseCategories: timeline.type === TimelineType.EXPENSE ? selectedExpenseCategories : undefined,
-              selectedCategoryFilter: (timeline.type === TimelineType.INVESTMENT || timeline.type === TimelineType.INCOME) ? selectedCategoryFilter : undefined,
+              selectedCategoryFilter: (timeline.type === TimelineType.INVESTMENT || isWalletTimelineType(timeline.type)) ? selectedCategoryFilter : undefined,
               selectedPocketId: timeline.type === TimelineType.INVESTMENT && selectedCategoryFilter !== EventStatus.ALL && selectedCategoryFilter !== 'all' && selectedCategoryFilter !== 'Todos' ? selectedCategoryFilter : undefined,
               selectedEntityId,
               selectedEntity,

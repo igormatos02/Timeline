@@ -23,6 +23,7 @@ import {
   TimelineColor,
   EventType,
   TimelineType,
+  isWalletTimelineType,
   EventStatus,
   FollowupStatus,
   EventRecurrence,
@@ -328,7 +329,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
   const baseItemColor = useMemo(() => {
     if (isWithdrawalEvent) {
-      const incomeTimeline = (timelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.INCOME);
+      const incomeTimeline = (timelines || []).find((t) => isWalletTimelineType(t?.type));
       if (incomeTimeline?.color) {
         return incomeTimeline.color;
       }
@@ -353,8 +354,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     }
 
     if (isBalanceView) {
-      if (isIncomeEvent || event.timelineType === TimelineType.INCOME || event.eventType === EventType.INCOME) {
-        const incomeTl = (timelines || []).find((t) => normalizeTimelineType(t?.type) === TimelineType.INCOME);
+      if (isIncomeEvent || isWalletTimelineType(event.timelineType) || event.eventType === EventType.INCOME) {
+        const incomeTl = (timelines || []).find((t) => isWalletTimelineType(t?.type));
         if (incomeTl?.color) return incomeTl.color;
         return TimelineColor.INCOME;
       }
@@ -1081,7 +1082,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
         tab: originId
       };
     }
-    if (isIncomeEvent || event.timelineType === TimelineType.INCOME) {
+    if (isIncomeEvent || isWalletTimelineType(event.timelineType)) {
       const p = getPaletteTheme(originColor || TimelineColor.INCOME, TimelineColor.INCOME);
       return {
         label: originName || t('sidebar.incomeTimeline'),

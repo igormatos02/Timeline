@@ -1,6 +1,9 @@
 export const TimelineType = Object.freeze({
   BALANCE: 'balance',
   INCOME: 'income',
+  // Cash wallet ("Carteira" / "Caixa"): the money in hand. Until the database migration, the income timeline
+  // plays this role (see isWalletTimelineType)
+  WALLET: 'wallet',
   EXPENSE: 'expense',
   INVESTMENT: 'investments',
   LOAN: 'loan',
@@ -20,6 +23,7 @@ const VALID_TIMELINE_TYPES = new Set(Object.values(TimelineType));
 export const SINGLE_INSTANCE_TIMELINE_TYPES = Object.freeze(new Set([
   TimelineType.BALANCE,
   TimelineType.INCOME,
+  TimelineType.WALLET,
   TimelineType.EXPENSE,
   TimelineType.INVESTMENT
 ]));
@@ -47,5 +51,16 @@ export function normalizeTimelineType(type) {
 export function isLoanTimelineType(type) {
   if (!type) return false;
   return normalizeTimelineType(type) === TimelineType.LOAN;
+}
+
+/**
+ * Whether the timeline is the cash wallet: the new 'wallet' type or, until the database migration
+ * (UPDATE timelines SET type = 'wallet' WHERE type = 'income'), the income timeline.
+ * @param {string} type
+ * @returns {boolean}
+ */
+export function isWalletTimelineType(type) {
+  const normalized = normalizeTimelineType(type);
+  return normalized === TimelineType.WALLET || normalized === TimelineType.INCOME;
 }
 

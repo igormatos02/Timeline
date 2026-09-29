@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { AlertCircle, CheckCircle2, FileCheck, Printer, Wallet, PiggyBank } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileCheck, Printer, Wallet, Landmark } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { EventStatus, TimelineColor, getDefaultTimelineColor, isCancelledStatus, isPositiveStatus } from '../../enums/index.js';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -245,7 +245,7 @@ export default function IndividualTimelineHeader({
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: '600' }}>
-                <PiggyBank size={14} style={{ color: TimelineColor.INVESTMENT }} />
+                <Landmark size={14} style={{ color: TimelineColor.INVESTMENT }} />
                 {t('balanceHeader.inAccount')}
               </span>
               <strong style={{ fontSize: '1.1rem', fontWeight: '800', color: TimelineColor.INVESTMENT }}>

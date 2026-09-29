@@ -1,7 +1,7 @@
 import React from 'react';
-import { EventType, TimeboardType, TimelineColor, TimelineType } from '../../enums/index.js';
+import { EventType, TimeboardType, TimelineColor, TimelineType, isWalletTimelineType } from '../../enums/index.js';
 import { makeDiaryT } from '../../utils/diaryLabels.js';
-import { PiggyBank, Plus } from 'lucide-react';
+import { Minus, PiggyBank, Plus } from 'lucide-react';
 
 // Extracted from VerticalTimeline.jsx (VerticalTimeline): receives every value it uses as a prop.
 export default function AddEventButton({
@@ -51,6 +51,33 @@ export default function AddEventButton({
     borderColor: paletteTheme.primary,
     color: TimelineColor.WHITE
   };
+
+  // The wallet is an account: money comes in (income) and goes out (expense) from the same timeline
+  const isWallet = isFinancialTimeline && !isInvestment && activeFinancialTab !== 'gastos' && isWalletTimelineType(timeline.type);
+  if (isWallet) {
+    const openAdd = (nature) => (e) => {
+      e.stopPropagation();
+      onAddEventForDate?.(targetDayStr, nature);
+    };
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+        <button type="button" className="btn btn-primary btn-sm" style={buttonStyle} onClick={openAdd(EventType.INCOME)} title={title}>
+          <Plus size={14} />
+          <span>{t('incomeHeader.addIncome')}</span>
+        </button>
+        <button
+          type="button"
+          className="btn btn-primary btn-sm"
+          style={{ ...buttonStyle, background: TimelineColor.EXPENSE, borderColor: TimelineColor.EXPENSE }}
+          onClick={openAdd(EventType.EXPENSE)}
+          title={title}
+        >
+          <Minus size={14} />
+          <span>{t('expenseHeader.addExpenseButton')}</span>
+        </button>
+      </span>
+    );
+  }
 
   return isInvestment ? (
     <button

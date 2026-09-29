@@ -48,7 +48,9 @@ export default function CashFlowEventModal({
   defaultDate,
   timeline,
   timeboardId,
-  eventType = EventType.INCOME
+  eventType = EventType.INCOME,
+  // Account shown as the subtitle when the movement is stored elsewhere (wallet expenses before the migration)
+  accountName
 }) {
   const { isCondoflow } = useTimeboard();
   const config = useMemo(
@@ -291,7 +293,7 @@ export default function CashFlowEventModal({
             ? t(config.titleKeys.editKey)
             : t(config.titleKeys.newKey)
       }
-      subtitle={timeline?.name || t(config.subtitleKey)}
+      subtitle={accountName || timeline?.name || t(config.subtitleKey)}
       accent={ACCENT}
       minHeight="520px"
       headerRight={

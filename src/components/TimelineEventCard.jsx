@@ -1073,7 +1073,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       const p = getPaletteTheme(originColor || TimelineColor.INVESTMENT, TimelineColor.INVESTMENT);
       return {
         label: originName || t('sidebar.investmentTimeline'),
-        icon: <PiggyBank size={11} strokeWidth={2.4} />,
+        icon: <Landmark size={11} strokeWidth={2.4} />,
         bg: hexToRgba(p.light, 0.22),
         color: p.primary,
         border: hexToRgba(p.medium, 0.40),

@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Scale,
-  PiggyBank,
+  Landmark,
   CreditCard,
   Bell,
   BookOpen,
@@ -66,7 +66,7 @@ export function getTimelineTypeIconComponent(type) {
     case TimelineType.EXPENSE:
       return ReceiptEuro;
     case TimelineType.INVESTMENT:
-      return PiggyBank;
+      return Landmark;
     case TimelineType.LOAN:
       return CreditCard;
     case TimelineType.REMINDER:

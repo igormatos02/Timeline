@@ -1,6 +1,6 @@
 import React from 'react';
 import { ACCOUNT_MOVEMENT_ITEMS, OUTFLOW_TYPE_ITEMS } from './timelineFilterItems.js';
-import { Bell, BookOpen, CheckSquare, ChevronDown, CreditCard, Filter, FolderKanban, Layers, ListTree, PiggyBank, Plus, ReceiptEuro, Scale, Search, Users, Wallet, X } from 'lucide-react';
+import { Bell, BookOpen, CheckSquare, ChevronDown, CreditCard, Filter, FolderKanban, Layers, ListTree, Landmark, Plus, ReceiptEuro, Scale, Search, Users, Wallet, X } from 'lucide-react';
 import { EventStatus, TimelineColor, TimelineType } from '../../enums/index.js';
 import PeriodBadgeFilter from '../ui/PeriodBadgeFilter.jsx';
 import SidebarToggleFilter from '../sidebar/SidebarToggleFilter.jsx';
@@ -215,7 +215,7 @@ export default function TimelineSidebar({
                   case TimelineType.EXPENSE:
                     return <ReceiptEuro size={14} style={{ color: tlColor }} />;
                   case TimelineType.INVESTMENT:
-                    return <PiggyBank size={14} style={{ color: tlColor }} />;
+                    return <Landmark size={14} style={{ color: tlColor }} />;
                   case TimelineType.LOAN:
                     return <CreditCard size={14} style={{ color: tlColor }} />;
                   case TimelineType.BALANCE:

@@ -1597,9 +1597,9 @@ export const translations = {
       }
     },
 
-    // Account (savings timeline) spaces: the General space and the pockets
+    // Account (bank timeline) spaces: the current account and the pockets
     account: {
-      general: "General",
+      general: "Current Account",
       where: "Where",
       to: "To",
       transferRoute: "{{from}} → {{to}}",
@@ -1638,7 +1638,7 @@ export const translations = {
       typesDesc: {
         withdrawal: "Moves money from the pocket to the income timeline",
         pocket_expense: "An expense paid by the account, with the expense categories (bank fees included)",
-        pocket_transfer: "Moves money between the General space and the pockets (the account total does not change)"
+        pocket_transfer: "Moves money between the current account and the pockets (the account total does not change)"
       },
       titlePlaceholders: {
         withdrawal: "Ex: Emergency withdrawal, planned purchase...",
@@ -2083,24 +2083,24 @@ export const translations = {
       timeline: {
         balance: "Balance",
         balanceDescription: "Consolidated view of financial flow",
-        income: "Inflow / Income",
-        incomeDescription: "Management of salaries, earnings, and revenues",
+        income: "Wallet",
+        incomeDescription: "Money in hand: income and expenses",
         expenses: "Expenses / Expenditures",
         expensesDescription: "Management of fixed, recurring, and variable expenses",
-        savings: "Savings / Investments",
-        savingsDescription: "Management of savings, equity, and contributions",
+        savings: "Bank Account",
+        savingsDescription: "Bank account movements, with the current account and the pockets",
         projects: "My Projects",
         projectsDescription: "Project planning, milestones and tasks timeline",
         reminders: "My Reminders",
         remindersDescription: "Schedule reminders, alerts and notes",
         condoflowBalance: "Balance",
         condoflowBalanceDescription: "Consolidated view of condominium finances",
-        condoflowIncome: "Receivables",
-        condoflowIncomeDescription: "Management of condo fees and receivables",
+        condoflowIncome: "Cash",
+        condoflowIncomeDescription: "Cash in hand of the condominium: receipts and expenses",
         condoflowExpenses: "Expenses",
         condoflowExpensesDescription: "Management of condominium expenses",
-        condoflowSavings: "Savings",
-        condoflowSavingsDescription: "Reserve fund and investments",
+        condoflowSavings: "Bank Account",
+        condoflowSavingsDescription: "Condominium bank account, with the reserve fund in pockets",
         condoflowDiary: "Diary",
         condoflowDiaryDescription: "Daily notes and occurrences",
         condoflowReminder: "Reminders",
@@ -3887,9 +3887,9 @@ export const translations = {
       }
     },
 
-    // Espaços da Conta (timeline de poupança): a Geral e os cofrinhos
+    // Espaços da Conta (timeline bancária): a Conta Corrente e os cofrinhos
     account: {
-      general: "Geral",
+      general: "Conta Corrente",
       where: "Onde",
       to: "Para",
       transferRoute: "{{from}} → {{to}}",
@@ -3928,7 +3928,7 @@ export const translations = {
       typesDesc: {
         withdrawal: "Move o dinheiro do cofrinho para a timeline de entradas",
         pocket_expense: "Um gasto pago pela Conta, com as categorias das despesas (inclui custos bancários)",
-        pocket_transfer: "Move dinheiro entre a Geral e os cofrinhos (o total da Conta não muda)"
+        pocket_transfer: "Move dinheiro entre a Conta Corrente e os cofrinhos (o total da Conta não muda)"
       },
       titlePlaceholders: {
         withdrawal: "Ex: Retirada de emergência, compra planeada...",
@@ -4373,24 +4373,24 @@ export const translations = {
       timeline: {
         balance: "Saldo",
         balanceDescription: "Visão consolidada do fluxo financeiro",
-        income: "Entradas / Rendimentos",
-        incomeDescription: "Gestão de salários, ganhos e receitas",
+        income: "Carteira",
+        incomeDescription: "Dinheiro em mão: entradas e despesas",
         expenses: "Gastos / Despesas",
         expensesDescription: "Gestão de despesas fixas, recorrentes e variáveis",
-        savings: "Poupança / Investimentos",
-        savingsDescription: "Gestão de poupança, património e aportes",
+        savings: "Conta Bancária",
+        savingsDescription: "Movimentos da conta no banco, com a conta corrente e os cofrinhos",
         projects: "Meus Projetos",
         projectsDescription: "Planeamento de projetos, marcos e cronograma de tarefas",
         reminders: "Meus Lembretes",
         remindersDescription: "Agendar lembretes, alertas e notas",
         condoflowBalance: "Balanço",
         condoflowBalanceDescription: "Visão consolidada das finanças do condomínio",
-        condoflowIncome: "Recebimentos",
-        condoflowIncomeDescription: "Gestão de quotas e recebimentos do condomínio",
+        condoflowIncome: "Caixa",
+        condoflowIncomeDescription: "Dinheiro em caixa do condomínio: recebimentos e despesas",
         condoflowExpenses: "Gastos",
         condoflowExpensesDescription: "Gestão de despesas do condomínio",
-        condoflowSavings: "Poupança",
-        condoflowSavingsDescription: "Fundo de reserva e investimentos",
+        condoflowSavings: "Conta Bancária",
+        condoflowSavingsDescription: "Conta bancária do condomínio, com o fundo de reserva em cofrinhos",
         condoflowDiary: "Diário",
         condoflowDiaryDescription: "Notas e ocorrências diárias",
         condoflowReminder: "Lembretes",

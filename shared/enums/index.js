@@ -1,6 +1,6 @@
 export { TimelineAssociationType } from './TimelineAssociationType.js';
 export { EventType, FINANCIAL_ADVANCE_PAYMENT_TYPES, ACCOUNT_OUTFLOW_TYPES, isAccountOutflowEvent, isPocketTransferEvent } from './EventType.js';
-export { TimelineType, isLoanTimelineType, normalizeTimelineType, SINGLE_INSTANCE_TIMELINE_TYPES, isSingleInstanceTimelineType } from './TimelineType.js';
+export { TimelineType, isLoanTimelineType, isWalletTimelineType, normalizeTimelineType, SINGLE_INSTANCE_TIMELINE_TYPES, isSingleInstanceTimelineType } from './TimelineType.js';
 export { EventStatus, EventStatusLabel, getEventStatusLabel, isPositiveStatus, isNegativeStatus, isCancelledStatus, ReminderEventStatus } from './EventStatus.js';
 export { EventPeriodicity, normalizePeriodicity } from './EventPeriodicity.js';
 export { EventPeriodicity as EventAggregation } from './EventPeriodicity.js';

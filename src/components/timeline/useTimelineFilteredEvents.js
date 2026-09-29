@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { AmortizationEventCategory, AmortizationStrategy, EventStatus, EventType, ExpensesEventCategory, IncomeEventCategory, LoanEventCategory, MovementKind, TimelineType, getAccountMovementType, getOutflowType, isCancelledStatus, isPositiveStatus } from '../../enums/index.js';
+import { AmortizationEventCategory, AmortizationStrategy, EventStatus, EventType, ExpensesEventCategory, IncomeEventCategory, LoanEventCategory, MovementKind, TimelineType, getAccountMovementType, getOutflowType, isCancelledStatus, isPositiveStatus, isWalletTimelineType, normalizeTimelineType } from '../../enums/index.js';
 import { format } from 'date-fns';
 import { CONDO_EXPENSE_CATEGORY_IDS } from './timelineFilterItems.js';
 import { GENERAL_SPACE_KEY, isMovementInSpace } from '../../../shared/finance/savingsSpaces.js';
@@ -34,6 +34,15 @@ export function useTimelineFilteredEvents({
   todayDate,
   todayStr
 }) {
+  // Until the database migration moves them, wallet expenses are stored in the expense timeline: the wallet
+  // lists them as its own (not the references the expense timeline mirrors from the account and loans)
+  const walletExpenseTimelineIds = useMemo(() => {
+    if (!isWalletTimelineType(timeline.type)) return new Set();
+    return new Set((timeline.timelines || [])
+      .filter((tl) => normalizeTimelineType(tl?.type) === TimelineType.EXPENSE)
+      .map((tl) => String(tl.id)));
+  }, [timeline.type, timeline.timelines]);
+
   const filteredEvents = useMemo(() => {
     if (!timelineEvents) return [];
     return timelineEvents.filter((ev) => {
@@ -189,7 +198,8 @@ export function useTimelineFilteredEvents({
         if (ev.isReference) return false;
       } else {
         const isThisTimeline = ev.timelineId === timeline.id || ev.timelineOriginId === timeline.id || ev.timeline_id === timeline.id;
-        if (!isThisTimeline) return false;
+        const isStoredWalletExpense = !ev.isReference && walletExpenseTimelineIds.has(String(ev.timelineId || ev.timeline_id || ''));
+        if (!isThisTimeline && !isStoredWalletExpense) return false;
       }
 
       // Respeitar os limites do horizonte de tempo. Eventos anteriores ao início de cálculo continuam visíveis
@@ -236,6 +246,7 @@ export function useTimelineFilteredEvents({
     isCondoflow,
     selectedMovementTypes,
     selectedOutflowTypes,
+    walletExpenseTimelineIds,
   ]);
 
   return {

@@ -3,7 +3,9 @@ import {
   Zap,
   Users,
   FileText,
-  Sparkles
+  Sparkles,
+  Wallet,
+  ExternalLink
 } from 'lucide-react';
 import { format, parseISO, addMonths, getDaysInMonth } from 'date-fns';
 import {
@@ -13,7 +15,8 @@ import {
   EventType,
   EventModalTab,
   normalizeRecurrence,
-  normalizePeriodicity
+  normalizePeriodicity,
+  TimelineColor
 } from '../../../shared/enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { useModalEscape } from '../../hooks/useModalEscape.js';
@@ -23,7 +26,9 @@ import RecurrenceSelector from '../ui/RecurrenceSelector.jsx';
 import PeriodicitySelector from '../ui/PeriodicitySelector.jsx';
 import MonthPickerPopover from '../ui/MonthPickerPopover.jsx';
 import CategorySelector from '../ui/CategorySelector.jsx';
-import DueDatePicker from '../ui/DueDatePicker.jsx';
+import DueDatePicker, { clampDueDate } from '../ui/DueDatePicker.jsx';
+import AccountSpaceSelector from '../ui/AccountSpaceSelector.jsx';
+import OptionBoxGroup from '../ui/OptionBoxGroup.jsx';
 import FloatingBreakdownPopover from '../ui/FloatingBreakdownPopover.jsx';
 import ObligationSelector from '../ObligationSelector.jsx';
 import { EVENT_MODAL_CONFIG, resolveEventModalConfig } from './FinancialEventModalConfig.js';
@@ -37,7 +42,8 @@ const resolveCategory = (config, category) => {
 };
 
 /**
- * Compact form for money coming in or going out (income and expense timelines).
+ * Compact form for money coming in or going out: wallet income and expenses, and deposits into the bank account
+ * (with the space that receives the money and where it comes from).
  * Colors, titles, labels and categories come from FinancialEventModalConfig for the given event type.
  */
 export default function CashFlowEventModal({
@@ -50,7 +56,9 @@ export default function CashFlowEventModal({
   timeboardId,
   eventType = EventType.INCOME,
   // Account shown as the subtitle when the movement is stored elsewhere (wallet expenses before the migration)
-  accountName
+  accountName,
+  // Bank account pockets (deposits choose the space that receives the money)
+  pockets = []
 }) {
   const { isCondoflow } = useTimeboard();
   const config = useMemo(
@@ -63,6 +71,9 @@ export default function CashFlowEventModal({
 
   const isEditing = Boolean(initialData?.id || initialData?.eventId);
   const categoryMeta = config.categoryMeta;
+  const isAccountDeposit = config.eventType === EventType.INVESTMENT;
+  const showCategories = config.showCategories !== false;
+  const useBreakdown = config.useBreakdown !== false;
 
   // Active section disclosures / tabs
   const [activeTab, setActiveTab] = useState(EventModalTab.OBLIGATION);
@@ -91,8 +102,24 @@ export default function CashFlowEventModal({
     category: config.categoryDefault,
     isObligation: false,
     obligationPersonId: '',
-    pocketId: null
+    pocketId: null,
+    isExternal: Boolean(config.defaultIsExternal)
   });
+
+  // Deposits into a pocket: allowed between the pocket creation date and its closing date (if any)
+  const activePocket = (pockets || []).find((p) => String(p.id) === String(formData.pocketId || ''));
+  const pocketMinDate = activePocket?.dateCreated || activePocket?.date_created ? String(activePocket.dateCreated || activePocket.date_created).substring(0, 10) : null;
+  const pocketMaxDate = activePocket?.dateClosed || activePocket?.date_closed ? String(activePocket.dateClosed || activePocket.date_closed).substring(0, 10) : null;
+
+  // Keep the chosen date inside the pocket range (e.g. "add" clicked in a month before the pocket existed)
+  useEffect(() => {
+    if (!isOpen || !isAccountDeposit || (!pocketMinDate && !pocketMaxDate) || !formData.date) return;
+    const clamped = clampDueDate({ date: formData.date, day: formData.dayOfMonth }, pocketMinDate, pocketMaxDate);
+    const currentBase = format(parseISO(formData.date), 'yyyy-MM-01');
+    if (clamped.date !== currentBase || clamped.day !== Number(formData.dayOfMonth)) {
+      setFormData((prev) => ({ ...prev, date: clamped.date, dayOfMonth: clamped.day }));
+    }
+  }, [isOpen, isAccountDeposit, formData.date, formData.dayOfMonth, pocketMinDate, pocketMaxDate]);
 
   // A single subpart is not a breakdown: closing the popover with one (or none) goes back to the plain amount
   const closeBreakdown = () => {
@@ -166,7 +193,10 @@ export default function CashFlowEventModal({
         category: resolveCategory(config, initialData?.category),
         isObligation: Boolean(initialData?.isObligation || initialData?.is_obligation),
         obligationPersonId: initialData?.obligationPersonId || initialData?.obligation_person_id || '',
-        pocketId: initialData?.pocketId || initialData?.pocket_id || null
+        pocketId: initialData?.pocketId || initialData?.pocket_id || null,
+        isExternal: config.showIsExternal
+          ? Boolean(initialData?.isExternal ?? initialData?.is_external ?? config.defaultIsExternal)
+          : false
       });
 
       // Default active tab to obligation or description if editing
@@ -197,7 +227,8 @@ export default function CashFlowEventModal({
         category: config.categoryDefault,
         isObligation: false,
         obligationPersonId: '',
-        pocketId: null
+        pocketId: null,
+        isExternal: Boolean(config.defaultIsExternal)
       });
       setActiveTab(EventModalTab.OBLIGATION);
       setBreakdownItems([]);
@@ -262,7 +293,9 @@ export default function CashFlowEventModal({
       timeboardId: timeboardId || timeline?.timeboardId || timeline?.timeboard_id || null,
       pocketId: formData.pocketId || null,
       pocket_id: formData.pocketId || null,
-      breakdownItems: breakdownItems.length > 0 ? breakdownItems : undefined,
+      breakdownItems: useBreakdown && breakdownItems.length > 0 ? breakdownItems : undefined,
+      // Deposits: new money from outside or money coming from the wallet
+      ...(config.showIsExternal ? { isExternal: Boolean(formData.isExternal), is_external: Boolean(formData.isExternal) } : {}),
       updateScope: isEditing ? updateScope : undefined,
       // "Correct" an effective movement: the original occurrence is cancelled once this one is saved
       correctionOf: initialData?.correctionOf || undefined
@@ -383,7 +416,7 @@ export default function CashFlowEventModal({
     >
       <div onKeyDown={handleKeyDown} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {/* 🌟 1. TWO-COLUMN GRID: TITLE & CATEGORY */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1.5fr) minmax(150px, 1fr)', gap: '10px', alignItems: 'flex-start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: showCategories ? 'minmax(200px, 1.5fr) minmax(150px, 1fr)' : '1fr', gap: '10px', alignItems: 'flex-start' }}>
           {/* Hero Title Column */}
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '5px', color: 'var(--text-muted)' }}>
@@ -418,6 +451,7 @@ export default function CashFlowEventModal({
           </div>
 
           {/* Category Column */}
+          {showCategories && (
           <div>
             <CategorySelector
               value={formData.category}
@@ -437,6 +471,7 @@ export default function CashFlowEventModal({
               marginBottom="0"
             />
           </div>
+          )}
         </div>
 
         {/* 🌟 2. TWO-COLUMN GRID: AMOUNT & DUE DATE */}
@@ -458,7 +493,7 @@ export default function CashFlowEventModal({
                   ({breakdownItems.length} {t('modal.subparts').toLowerCase()})
                 </span>
               ) : null}
-              onBreakdownToggle={() => {
+              onBreakdownToggle={!useBreakdown ? undefined : () => {
                 if (isBreakdownOpen) closeBreakdown();
                 else setIsBreakdownOpen(true);
                 setIsCategoryOpen(false);
@@ -473,7 +508,7 @@ export default function CashFlowEventModal({
             />
 
             <FloatingBreakdownPopover
-              isOpen={isBreakdownOpen}
+              isOpen={useBreakdown && isBreakdownOpen}
               onClose={closeBreakdown}
               items={breakdownItems}
               onChange={setBreakdownItems}
@@ -491,6 +526,8 @@ export default function CashFlowEventModal({
               onChange={({ date, day }) => setFormData((prev) => ({ ...prev, date, dayOfMonth: day }))}
               accent={ACCENT}
               dayLabel={t('modal.dayOfMonth')}
+              minDate={isAccountDeposit ? pocketMinDate : null}
+              maxDate={isAccountDeposit ? pocketMaxDate : null}
               onOpen={() => {
                 setIsEndMonthPickerOpen(false);
                 setIsCategoryOpen(false);
@@ -502,6 +539,29 @@ export default function CashFlowEventModal({
             />
           </div>
         </div>
+
+        {/* Deposits into the bank account: the space that receives the money and where the money comes from */}
+        {isAccountDeposit && (pockets || []).length > 0 && (
+          <AccountSpaceSelector
+            label={t('account.where')}
+            pockets={pockets}
+            value={formData.pocketId || null}
+            onChange={(pocketId) => setFormData((prev) => ({ ...prev, pocketId }))}
+            generalLabel={t('account.general')}
+            color={ACCENT}
+          />
+        )}
+        {isAccountDeposit && config.showIsExternal && (
+          <OptionBoxGroup
+            label={t('account.depositOrigin')}
+            value={formData.isExternal}
+            onChange={(isExternal) => setFormData((prev) => ({ ...prev, isExternal }))}
+            options={[
+              { id: false, label: t('account.depositInternal'), tooltip: t('account.depositInternalDesc'), icon: Wallet, color: ACCENT },
+              { id: true, label: t('account.depositExternal'), tooltip: t('account.depositExternalDesc'), icon: ExternalLink, color: TimelineColor.CYAN }
+            ]}
+          />
+        )}
 
         {/* 🌟 3. TWO-COLUMN ROW: RECURRENCE & PERIODICITY */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', alignItems: 'flex-start' }}>

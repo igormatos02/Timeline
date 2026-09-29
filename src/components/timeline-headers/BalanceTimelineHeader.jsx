@@ -36,7 +36,8 @@ import {
   MovementKind,
   isCancelledStatus,
   isLoanTimelineType,
-  normalizeTimelineType
+  normalizeTimelineType,
+  TimeboardType
 } from '../../enums/index.js';
 import * as api from '../../services/api.js';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
@@ -896,6 +897,27 @@ export default function BalanceTimelineHeader({
                             </div>
                           )}
                         </div>
+
+                        {/* Balance per account: the wallet (money in hand), the bank account (current account and
+                            pockets) and both together */}
+                        {(hasInvestmentTimeline || totalInvestedVal > 0) && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingTop: '6px', borderTop: '1px dashed var(--border-glass)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.70rem', alignItems: 'center' }}>
+                              <span style={{ color: 'var(--text-dim)' }}>
+                                {t(timeboard?.type === TimeboardType.CONDOFLOW ? 'balanceHeader.walletBalanceCondo' : 'balanceHeader.walletBalance')}
+                              </span>
+                              <strong style={{ color: incomePalette.primary, fontSize: '0.74rem' }}>{formatCurrency(netVal)}</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.70rem', alignItems: 'center' }}>
+                              <span style={{ color: 'var(--text-dim)' }}>{t('balanceHeader.bankBalance')}</span>
+                              <strong style={{ color: investmentPalette.primary, fontSize: '0.74rem' }}>{formatCurrency(totalInvestedVal)}</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', alignItems: 'center' }}>
+                              <span style={{ color: 'var(--text-main)', fontWeight: '700' }}>{t('balanceHeader.totalBalance')}</span>
+                              <strong style={{ color: 'var(--text-main)', fontSize: '0.8rem' }}>{formatCurrency(netVal + totalInvestedVal)}</strong>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })()}

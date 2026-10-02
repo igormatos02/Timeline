@@ -19,6 +19,8 @@ export const ExpensesEventCategory = Object.freeze({
   CLOTHING: 'clothing',
   SERVICES: 'services',
   BANK_FEES: 'bank_fees',
+  // Money sent to someone else that is not a purchase (a donation, settling a debt with a friend)
+  TRANSFERS_DONATIONS: 'transfers_donations',
   CLEANING: 'cleaning',
   CONDOMINIUM: 'condominium',
   RESERVE: 'reserve',

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { DiaryPublishStatus, EventStatus, EventType, LoanAmortizationSystem, PersonRole, TimeboardType, TimelineType, isWalletTimelineType, getDefaultTimelineColor, isCancelledStatus, isLoanTimelineType, isPositiveStatus, normalizeTimelineType } from '../../enums/index.js';
-import { buildOutflowReferences, buildWithdrawalReferences } from '../../../shared/finance/references.js';
+import { buildDepositReferences, buildOutflowReferences, buildWithdrawalReferences } from '../../../shared/finance/references.js';
 import { getLoanMetrics, recalculateLoanState } from '../../utils/loanCalculations';
 
 // Extracted from App.jsx (App).
@@ -47,7 +47,12 @@ export function useBoardTimelineData({
   const virtualWithdrawalEvents = useMemo(() => {
     if (!Array.isArray(rawEvents) || rawEvents.length === 0) return [];
     const incomeTimeline = (activeTimeboardTimelines || []).find((tl) => isWalletTimelineType(tl.type));
-    return buildWithdrawalReferences({ events: rawEvents, incomeTimelineId: incomeTimeline?.id });
+    const timelineTypeMap = new Map((activeTimeboardTimelines || []).map((tl) => [String(tl.id), tl.type]));
+    // The wallet shows both directions of its moves with the bank: withdrawals in, deposits out
+    return [
+      ...buildWithdrawalReferences({ events: rawEvents, incomeTimelineId: incomeTimeline?.id }),
+      ...buildDepositReferences({ events: rawEvents, walletTimelineId: incomeTimeline?.id, timelineTypeMap })
+    ];
   }, [rawEvents, activeTimeboardTimelines]);
 
   // Users with the individual role only see their own obligations and the individual header

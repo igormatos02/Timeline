@@ -24,6 +24,7 @@ import {
   InvestmentEventCategory,
   TimelineColor,
   normalizeRecurrence,
+  PocketTransferKind,
   normalizePeriodicity
 } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
@@ -166,6 +167,14 @@ export default function AccountOutflowModal({
   const isWithdrawal = outflowType === EventType.WITHDRAWAL;
   const isPocketExpense = outflowType === EventType.POCKET_EXPENSE;
   const isTransfer = outflowType === EventType.POCKET_TRANSFER;
+  // Pocket contribution / withdrawal: a transfer between the current account and one pocket, both ends fixed
+  // (from the pocket buttons, or when editing such a transfer); a pocket never moves money anywhere else
+  const pocketTransferKind = isTransfer
+    ? (initialData?.transferKind || (isEditing
+      ? (!originId && targetId ? PocketTransferKind.CONTRIBUTION : (originId && !targetId ? PocketTransferKind.WITHDRAWAL : null))
+      : null))
+    : null;
+  const transferPocketId = pocketTransferKind === PocketTransferKind.CONTRIBUTION ? targetId : originId;
   const isRecurring = !isWithdrawal && (recurrence === EventRecurrence.RECURRING || recurrence === EventRecurrence.LIMITED);
   const isSeriesEdit = isEditing && Boolean(initialData?.seriesId || initialData?.eventId || initialData?.isRecurring);
   const accent = OUTFLOW_COLORS[outflowType];
@@ -177,7 +186,8 @@ export default function AccountOutflowModal({
 
   // Without pockets everything happens in the General space: no "Where" choice and nothing to transfer to
   const hasPockets = (pockets || []).length > 0;
-  const outflowOptions = OUTFLOW_TYPES.filter((type) => hasPockets || type !== EventType.POCKET_TRANSFER).map((type) => ({
+  // Transfers with pockets are made from the pocket buttons (contribution / withdrawal), never chosen here
+  const outflowOptions = OUTFLOW_TYPES.filter((type) => type !== EventType.POCKET_TRANSFER).map((type) => ({
     id: type,
     label: t(`withdrawalModal.types.${type}`),
     icon: OUTFLOW_ICONS[type],
@@ -290,7 +300,9 @@ export default function AccountOutflowModal({
       icon={OUTFLOW_ICONS[outflowType]}
       title={initialData?.correctionOf
         ? t('modal.correctMovement')
-        : (isEditing ? t('withdrawalModal.outflowEditTitle') : t('withdrawalModal.outflowTitle'))}
+        : pocketTransferKind
+          ? t(pocketTransferKind === PocketTransferKind.CONTRIBUTION ? 'account.contributionTitle' : 'account.pocketWithdrawalTitle', { pocket: spaceName(transferPocketId) })
+          : (isEditing ? t('withdrawalModal.outflowEditTitle') : t('withdrawalModal.outflowTitle'))}
       subtitle={timeline?.name || t('withdrawalModal.subtitle')}
       footer={
         <>
@@ -337,8 +349,8 @@ export default function AccountOutflowModal({
         </div>
       )}
 
-      {/* Outflow type (fixed when editing) */}
-      {!isEditing && (
+      {/* Outflow type (fixed when editing, and for a pocket contribution / withdrawal) */}
+      {!isEditing && !pocketTransferKind && (
         <OptionBoxGroup
           label={t('withdrawalModal.typeLabel')}
           options={outflowOptions}
@@ -347,8 +359,9 @@ export default function AccountOutflowModal({
         />
       )}
 
-      {/* Origin space ("Where") with the balances; destination of a transfer */}
-      {hasPockets && (
+      {/* Origin space ("Where") with the balances; destination of a transfer. Expenses and withdrawals happen in
+          the current account and a pocket transfer has both ends fixed, so neither offers the choice */}
+      {hasPockets && isTransfer && !pocketTransferKind && (
       <AccountSpaceSelector
         label={t('account.where')}
         pockets={pockets}
@@ -358,7 +371,7 @@ export default function AccountOutflowModal({
         generalLabel={t('account.general')}
       />
       )}
-      {isTransfer && (
+      {isTransfer && !pocketTransferKind && (
         <AccountSpaceSelector
           label={t('account.to')}
           pockets={pockets}

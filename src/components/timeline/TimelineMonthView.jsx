@@ -1,6 +1,6 @@
 import React from 'react';
 import { groupEventsByDate } from '../../utils/eventSorting.js';
-import { EventStatus, EventType, InvestmentEventCategory, LoanEventCategory, MovementKind, TimelineColor, TimelineType } from '../../enums/index.js';
+import { EventStatus, EventType, InvestmentEventCategory, LoanEventCategory, MovementKind, PocketTransferKind, TimelineColor, TimelineType } from '../../enums/index.js';
 import { classifyMovement } from '../../../shared/finance/movements.js';
 import { savingsEffect } from '../../../shared/finance/savingsSpaces.js';
 import { differenceInCalendarMonths, format } from 'date-fns';
@@ -395,6 +395,19 @@ export default function TimelineMonthView({
                         category: InvestmentEventCategory.SAVINGS
                       });
                     } : undefined}
+                    // Pockets only move money to / from the current account (a transfer with both ends fixed)
+                    onContribute={onOpenWithdrawModal ? (dateStr, pocketId) => onOpenWithdrawModal(dateStr, null, {
+                      eventType: EventType.POCKET_TRANSFER,
+                      transferKind: PocketTransferKind.CONTRIBUTION,
+                      pocketId: null,
+                      targetPocketId: pocketId
+                    }) : undefined}
+                    onWithdraw={onOpenWithdrawModal ? (dateStr, pocketId) => onOpenWithdrawModal(dateStr, pocketId, {
+                      eventType: EventType.POCKET_TRANSFER,
+                      transferKind: PocketTransferKind.WITHDRAWAL,
+                      pocketId,
+                      targetPocketId: null
+                    }) : undefined}
                     onEditPocket={onEditPocket}
                     onDeletePocket={onDeletePocket}
                     renderEvents={(spaceEvents) => groupEventsByDate(spaceEvents, dayComparator).map((dateGroup, gIdx) => (

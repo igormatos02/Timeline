@@ -18,7 +18,8 @@ const ALL_SPACES_FILTERS = [EventStatus.ALL, 'all', 'Todos'];
  *   pockets            - pockets of the account
  *   spaceFilter        - pocket filter of the sidebar: all, GENERAL_SPACE_KEY or a pocket id
  *   color, palette     - timeline color and palette theme
- *   onAddInflow(dateStr, pocketId | null), onAddOutflow(dateStr, pocketId | null)
+ *   onAddMovement(dateStr, null)       - movement of the current account
+ *   onContribute(dateStr, pocketId), onWithdraw(dateStr, pocketId) - pocket contribution / withdrawal
  *   onEditPocket(pocket), onDeletePocket(pocket)
  *   renderEvents(events) - renders the movement cards of a space
  *   t
@@ -36,6 +37,8 @@ export default function AccountMonthSpaces({
   onAddMovement,
   onAddInflow,
   onAddOutflow,
+  onContribute,
+  onWithdraw,
   onEditPocket,
   onDeletePocket,
   renderEvents,
@@ -99,7 +102,8 @@ export default function AccountMonthSpaces({
           isFutureMonth={isFutureMonth}
           color={color}
           palette={palette}
-          onAddMovement={handleAddMovement ? () => handleAddMovement(monthStartStr, pocket.id) : undefined}
+          onContribute={onContribute ? () => onContribute(monthStartStr, pocket.id) : undefined}
+          onWithdraw={onWithdraw ? () => onWithdraw(monthStartStr, pocket.id) : undefined}
           onEdit={onEditPocket ? () => onEditPocket(pocket) : undefined}
           onDelete={onDeletePocket ? () => onDeletePocket(pocket) : undefined}
           t={t}

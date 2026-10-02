@@ -9,6 +9,7 @@ import { classifyMovement, isActiveMovement, isEffectiveMovement, WITHDRAWAL_REF
 
 export { WITHDRAWAL_REFERENCE_ID_PREFIX };
 export const OUTFLOW_REFERENCE_ID_PREFIX = 'ref_outflow_';
+export const DEPOSIT_REFERENCE_ID_PREFIX = 'ref_deposit_';
 
 // Fields that make an event look like a pocket, recurring series or loan installment — cleared on references
 const OWNER_ONLY_FIELDS = Object.freeze({
@@ -62,6 +63,46 @@ export function buildWithdrawalReferences({ events = [], incomeTimelineId }) {
       isVirtual: true,
       isReadOnly: true,
       isVirtualWithdrawal: true
+    });
+  });
+  return references;
+}
+
+/**
+ * Deposits of cash into the bank (made in the bank account) shown as outflows of the wallet, so the wallet
+ * tells where its money went. Like every reference, they never count: the deposit counts in the account.
+ */
+export function buildDepositReferences({ events = [], walletTimelineId, timelineTypeMap = new Map() }) {
+  if (!walletTimelineId) return [];
+  const references = [];
+  (events || []).forEach((ev) => {
+    if (!ev || !ev.date || !isActiveMovement(ev)) return;
+    const movement = classifyMovement(ev, timelineTypeMap);
+    if (movement.isReference || movement.kind !== MovementKind.DEPOSIT_INTERNAL) return;
+    const originTimelineId = ev.timelineId || ev.timeline_id || ev.timelineOriginId || null;
+    const isEffective = isEffectiveMovement(ev);
+    references.push({
+      ...ev,
+      ...OWNER_ONLY_FIELDS,
+      ...placeOn(walletTimelineId),
+      id: `${DEPOSIT_REFERENCE_ID_PREFIX}${ev.id}`,
+      eventType: EventType.EXPENSE,
+      isExpense: true,
+      isIncome: false,
+      isWithdrawal: false,
+      isInvestment: false,
+      category: null,
+      status: isEffective ? EventStatus.PAID : EventStatus.PENDING,
+      isCompleted: isEffective,
+      amount: movement.amount,
+      title: ev.title || ev.name || '',
+      name: ev.title || ev.name || '',
+      isVirtual: true,
+      isReadOnly: true,
+      isReference: true,
+      referenceKind: movement.kind,
+      referenceOriginId: ev.id,
+      referenceOriginTimelineId: originTimelineId ? String(originTimelineId) : null
     });
   });
   return references;

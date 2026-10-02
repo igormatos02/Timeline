@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, Bus, CreditCard, Dog, Droplets, Film, Flame, GraduationCap, Hammer, HeartPulse, Home, Landmark, PiggyBank, Plane, ShieldCheck, Shirt, ShoppingBag, ShoppingCart, Sparkles, Utensils, Wifi, Wrench, Zap } from 'lucide-react';
+import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, Bus, CreditCard, Dog, Gift, Receipt, Droplets, Film, Flame, GraduationCap, Hammer, HeartPulse, Home, Landmark, PiggyBank, Plane, ShieldCheck, Shirt, ShoppingBag, ShoppingCart, Sparkles, Utensils, Wifi, Wrench, Zap } from 'lucide-react';
 import { ExpensesEventCategory, TimelineColor, AccountMovementType, OutflowType } from '../../enums/index.js';
 import { CONDO_EXPENSE_CATEGORY_META } from '../event-modals/FinancialEventModalConfig.js';
 
@@ -23,6 +23,8 @@ export const EXPENSE_CATEGORY_ITEMS = [
   { id: ExpensesEventCategory.TRAVEL, icon: Plane, color: TimelineColor.CYAN },
   { id: ExpensesEventCategory.PERSONAL_CARE, icon: Sparkles, color: TimelineColor.ROSE },
   { id: ExpensesEventCategory.SERVICES, icon: CreditCard, color: TimelineColor.SLATE },
+  { id: ExpensesEventCategory.BANK_FEES, icon: Receipt, color: TimelineColor.SLATE },
+  { id: ExpensesEventCategory.TRANSFERS_DONATIONS, icon: Gift, color: TimelineColor.PINK },
 ];
 
 // Account (savings timeline) movement kinds shown in the movement filter

@@ -32,7 +32,8 @@ import {
   Clock,
   Undo2,
   SprayCan,
-  Receipt
+  Receipt,
+  Gift
 } from 'lucide-react';
 import { EventStatus, EventType, IncomeEventCategory, ExpenseEventCategory, InvestmentEventCategory, ReminderEventCategory, TimelineColor } from '../../../shared/enums/index.js';
 
@@ -69,6 +70,7 @@ export const CONDO_EXPENSE_CATEGORY_META = {
   [ExpenseEventCategory.CLEANING]: { icon: SprayCan, color: TimelineColor.CYAN, bg: `${TimelineColor.CYAN}26` },
   [ExpenseEventCategory.SERVICES]: { icon: Wrench, color: TimelineColor.VIOLET, bg: `${TimelineColor.VIOLET}26` },
   [ExpenseEventCategory.BANK_FEES]: { icon: Receipt, color: TimelineColor.SLATE, bg: `${TimelineColor.SLATE}26` },
+  [ExpenseEventCategory.TRANSFERS_DONATIONS]: { icon: Gift, color: TimelineColor.PINK, bg: `${TimelineColor.PINK}26` },
   [ExpenseEventCategory.OTHER]: { icon: Tag, color: TimelineColor.SLATE, bg: `${TimelineColor.SLATE}26` }
 };
 
@@ -145,6 +147,7 @@ export const EXPENSE_CATEGORY_META = {
   [ExpenseEventCategory.PERSONAL_CARE]: { icon: Sparkles, color: TimelineColor.ROSE, bg: `${TimelineColor.ROSE}26` },
   [ExpenseEventCategory.SERVICES]: { icon: Pin, color: TimelineColor.ROSE, bg: `${TimelineColor.ROSE}26` },
   [ExpenseEventCategory.BANK_FEES]: { icon: Receipt, color: TimelineColor.SLATE, bg: `${TimelineColor.SLATE}26` },
+  [ExpenseEventCategory.TRANSFERS_DONATIONS]: { icon: Gift, color: TimelineColor.PINK, bg: `${TimelineColor.PINK}26` },
   [ExpenseEventCategory.CONDOMINIUM]: { icon: Landmark, color: TimelineColor.ROSE, bg: `${TimelineColor.ROSE}26` },
   [ExpenseEventCategory.RESERVE]: { icon: PiggyBank, color: TimelineColor.ROSE, bg: `${TimelineColor.ROSE}26` },
   [ExpenseEventCategory.OTHER]: { icon: Tag, color: TimelineColor.ROSE, bg: `${TimelineColor.ROSE}26` }

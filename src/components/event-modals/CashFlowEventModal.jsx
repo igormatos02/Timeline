@@ -8,6 +8,8 @@ import {
   Wallet,
   ExternalLink,
   ArrowDownLeft,
+  ShoppingCart,
+  Banknote,
   ArrowUpRight
 } from 'lucide-react';
 import { format, parseISO, addMonths, getDaysInMonth } from 'date-fns';
@@ -20,6 +22,11 @@ import {
   normalizeRecurrence,
   normalizePeriodicity,
   TimelineType,
+  InvestmentEventCategory,
+  AccountOperation,
+  accountOperationEventType,
+  accountOperationOf,
+  isAccountOutflowOperation,
   TimelineColor
 } from '../../../shared/enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
@@ -86,8 +93,21 @@ export default function CashFlowEventModal({
   const isInvestmentTimeline = timeline?.type === TimelineType.INVESTMENT ||
     initialData?.eventType === EventType.INVESTMENT ||
     eventType === EventType.INVESTMENT;
-  const isInflow = currentEventType === EventType.INCOME || currentEventType === EventType.INVESTMENT;
-  const isOutflow = currentEventType === EventType.EXPENSE || currentEventType === EventType.WITHDRAWAL;
+  // Current account of the bank account: four operations (receive / deposit from the cash wallet / pay /
+  // withdraw to the cash wallet), each stored as an existing movement type; pockets never take them
+  const isAccountMode = isInvestmentTimeline;
+  const [accountOperation, setAccountOperation] = useState(() => accountOperationOf(initialData));
+  useEffect(() => {
+    if (isOpen) setAccountOperation(accountOperationOf(initialData));
+  }, [isOpen, initialData]);
+  const isAccountTransferOperation = isAccountMode &&
+    (accountOperation === AccountOperation.DEPOSIT || accountOperation === AccountOperation.WITHDRAW);
+  const isInflow = isAccountMode
+    ? !isAccountOutflowOperation(accountOperation)
+    : (currentEventType === EventType.INCOME || currentEventType === EventType.INVESTMENT);
+  const isOutflow = isAccountMode
+    ? isAccountOutflowOperation(accountOperation)
+    : (currentEventType === EventType.EXPENSE || currentEventType === EventType.WITHDRAWAL);
 
   const handleTypeSwitch = (nextType) => {
     const targetType = isInvestmentTimeline && (nextType === EventType.INCOME || nextType === EventType.INVESTMENT)
@@ -103,16 +123,32 @@ export default function CashFlowEventModal({
     }));
   };
 
+  const handleAccountOperation = (operation) => {
+    if (operation === accountOperation) return;
+    setAccountOperation(operation);
+    handleTypeSwitch(operation === AccountOperation.PAY ? EventType.EXPENSE : EventType.INVESTMENT);
+    if (operation === AccountOperation.WITHDRAW) {
+      setFormData((prev) => ({ ...prev, recurrence: EventRecurrence.ONCE }));
+    }
+  };
+  const handleFlowSwitch = (isOutflowSide) => {
+    if (isAccountMode) handleAccountOperation(isOutflowSide ? AccountOperation.PAY : AccountOperation.RECEIVE);
+    else handleTypeSwitch(isOutflowSide ? EventType.EXPENSE : EventType.INCOME);
+  };
+
   const isEditing = Boolean(initialData?.id || initialData?.eventId);
   const isSeriesMovement = Boolean(initialData?.seriesId || initialData?.isRecurring || initialData?.is_recurring) ||
     (isEditing && normalizeRecurrence(initialData || {}) !== EventRecurrence.ONCE);
   const categoryMeta = config.categoryMeta;
   const isAccountDeposit = config.eventType === EventType.INVESTMENT || isInvestmentTimeline;
-  const showCategories = config.showCategories !== false;
+  // Moves between the cash wallet and the bank have no category nor person: only money changing place
+  const showCategories = config.showCategories !== false && !isAccountTransferOperation;
+  const allowsObligation = !isAccountTransferOperation;
   const useBreakdown = config.useBreakdown !== false;
 
   const effectivePockets = (pockets && pockets.length > 0) ? pockets : (timeline?.pockets || []);
-  const showSpaceSelector = isInvestmentTimeline && effectivePockets.length > 0;
+  // Account movements happen in the current account (pockets only take contributions / withdrawals)
+  const showSpaceSelector = false;
 
   // Active section disclosures / tabs
   const [activeTab, setActiveTab] = useState(EventModalTab.OBLIGATION);
@@ -344,6 +380,42 @@ export default function CashFlowEventModal({
       correctionOf: initialData?.correctionOf || undefined
     };
 
+    if (isAccountMode) {
+      const isOutflowOperation = isAccountOutflowOperation(accountOperation);
+      payload.eventType = accountOperationEventType(accountOperation);
+      // New movements belong to the current account (an edited legacy pocket movement keeps its space)
+      if (!isEditing) {
+        payload.pocketId = null;
+        payload.pocket_id = null;
+      }
+      if (isOutflowOperation) {
+        // Stored like the account outflow form: negative amount, flagged as an account movement
+        payload.amount = -Math.abs(finalAmount);
+        payload.isInvestment = true;
+        payload.isWithdrawal = accountOperation === AccountOperation.WITHDRAW;
+        delete payload.isExternal;
+        delete payload.is_external;
+      } else {
+        const isExternal = accountOperation === AccountOperation.RECEIVE;
+        payload.isExternal = isExternal;
+        payload.is_external = isExternal;
+      }
+      if (isAccountTransferOperation) {
+        payload.isObligation = false;
+        payload.obligationPersonId = null;
+        payload.category = InvestmentEventCategory.OTHER;
+        payload.breakdownItems = undefined;
+      }
+      if (accountOperation === AccountOperation.WITHDRAW) {
+        payload.recurrence = EventRecurrence.ONCE;
+        payload.isRecurring = false;
+        payload.recurrenceEndDate = null;
+        payload.endDate = null;
+        payload.limitDate = null;
+        payload.limit_date = null;
+      }
+    }
+
     onSave(payload);
     onClose();
   };
@@ -482,7 +554,7 @@ export default function CashFlowEventModal({
             {/* ENTRADA */}
             <button
               type="button"
-              onClick={() => handleTypeSwitch(isInvestmentTimeline ? EventType.INVESTMENT : EventType.INCOME)}
+              onClick={() => handleFlowSwitch(false)}
               style={{
                 position: 'relative',
                 display: 'flex',
@@ -504,7 +576,7 @@ export default function CashFlowEventModal({
                     inset: 0,
                     borderRadius: '8px',
                     background: `linear-gradient(135deg, ${TimelineColor.EMERALD}, ${TimelineColor.TEAL})`,
-                    boxShadow: `0 4px 14px ${TimelineColor.EMERALD}55, 0 1px 3px rgba(0, 0, 0, 0.2)`,
+                    boxShadow: `0 4px 14px ${TimelineColor.EMERALD}55, var(--shadow-xs)`,
                     zIndex: 0
                   }}
                   transition={{ type: 'spring', stiffness: 420, damping: 32 }}
@@ -533,7 +605,7 @@ export default function CashFlowEventModal({
                     alignItems: 'center',
                     justifyContent: 'center',
                     background: isInflow
-                      ? 'rgba(255, 255, 255, 0.25)'
+                      ? 'color-mix(in srgb, var(--text-white) 25%, transparent)'
                       : `${TimelineColor.EMERALD}20`,
                     color: isInflow
                       ? TimelineColor.WHITE
@@ -550,7 +622,7 @@ export default function CashFlowEventModal({
             {/* SAÍDA */}
             <button
               type="button"
-              onClick={() => handleTypeSwitch(EventType.EXPENSE)}
+              onClick={() => handleFlowSwitch(true)}
               style={{
                 position: 'relative',
                 display: 'flex',
@@ -572,7 +644,7 @@ export default function CashFlowEventModal({
                     inset: 0,
                     borderRadius: '8px',
                     background: `linear-gradient(135deg, ${TimelineColor.EXPENSE}, ${TimelineColor.ROSE})`,
-                    boxShadow: `0 4px 14px ${TimelineColor.EXPENSE}55, 0 1px 3px rgba(0, 0, 0, 0.2)`,
+                    boxShadow: `0 4px 14px ${TimelineColor.EXPENSE}55, var(--shadow-xs)`,
                     zIndex: 0
                   }}
                   transition={{ type: 'spring', stiffness: 420, damping: 32 }}
@@ -601,7 +673,7 @@ export default function CashFlowEventModal({
                     alignItems: 'center',
                     justifyContent: 'center',
                     background: isOutflow
-                      ? 'rgba(255, 255, 255, 0.25)'
+                      ? 'color-mix(in srgb, var(--text-white) 25%, transparent)'
                       : `${TimelineColor.EXPENSE}20`,
                     color: isOutflow
                       ? TimelineColor.WHITE
@@ -615,6 +687,24 @@ export default function CashFlowEventModal({
               </div>
             </button>
           </div>
+        )}
+
+        {/* Current account: which kind of inflow / outflow */}
+        {isAccountMode && (allowTypeSwitch || !isAccountOutflowOperation(accountOperation)) && (
+          <OptionBoxGroup
+            label={t('account.operationLabel')}
+            value={accountOperation}
+            onChange={handleAccountOperation}
+            options={(isOutflow
+              ? [
+                { id: AccountOperation.PAY, label: t('account.opPay'), tooltip: t('account.opPayDesc'), icon: ShoppingCart, color: TimelineColor.EXPENSE },
+                { id: AccountOperation.WITHDRAW, label: t('account.opWithdraw'), tooltip: t('account.opWithdrawDesc'), icon: Banknote, color: TimelineColor.AMBER }
+              ]
+              : [
+                { id: AccountOperation.RECEIVE, label: t('account.opReceive'), tooltip: t('account.opReceiveDesc'), icon: ExternalLink, color: TimelineColor.EMERALD },
+                { id: AccountOperation.DEPOSIT, label: t('account.opDeposit'), tooltip: t('account.opDepositDesc'), icon: Wallet, color: TimelineColor.CYAN }
+              ])}
+          />
         )}
 
         {/* 🌟 1. SECTION: TITLE & CATEGORY */}
@@ -633,7 +723,7 @@ export default function CashFlowEventModal({
           {/* Hero Title Column */}
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '5px', color: 'var(--text-muted)' }}>
-              {t(config.titleLabelKey)}
+              {t(isAccountMode ? 'modal.incomeTitleLabel' : config.titleLabelKey)}
             </label>
             <input
               ref={titleInputRef}
@@ -641,7 +731,7 @@ export default function CashFlowEventModal({
               required
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder={t(config.titlePlaceholderKey)}
+              placeholder={t(isAccountMode ? `account.${accountOperation}Placeholder` : config.titlePlaceholderKey)}
               className="form-input"
               style={{
                 width: '100%',
@@ -698,7 +788,7 @@ export default function CashFlowEventModal({
           {/* Amount Column */}
           <div style={{ position: 'relative' }}>
             <EuroInput
-              label={t(config.amountLabelKey)}
+              label={t(isAccountMode ? 'modal.amountLabel' : config.amountLabelKey)}
               value={displayedAmount}
               accent={ACCENT}
               readOnly={breakdownItems.length > 0}
@@ -770,7 +860,7 @@ export default function CashFlowEventModal({
             color={ACCENT}
           />
         )}
-        {isInflow && isAccountDeposit && config.showIsExternal && (
+        {!isAccountMode && isInflow && isAccountDeposit && config.showIsExternal && (
           <OptionBoxGroup
             label={t('account.depositOrigin')}
             value={formData.isExternal}
@@ -798,6 +888,7 @@ export default function CashFlowEventModal({
             {/* Recurrence */}
             <div>
               <RecurrenceSelector
+                disabled={isAccountMode && accountOperation === AccountOperation.WITHDRAW}
                 value={formData.recurrence}
                 onChange={(recId) => {
                   setFormData((prev) => {
@@ -825,7 +916,8 @@ export default function CashFlowEventModal({
               />
             </div>
 
-            {/* Periodicity (disabled and empty for movements that don't repeat) */}
+            {/* Periodicity (disabled and empty for movements that don't repeat; none for withdrawals) */}
+            {!(isAccountMode && accountOperation === AccountOperation.WITHDRAW) && (
             <div>
               <PeriodicitySelector
                 value={formData.periodicity}
@@ -844,6 +936,7 @@ export default function CashFlowEventModal({
                 marginBottom="0"
               />
             </div>
+            )}
           </div>
 
           {/* Floating End Month Picker when Limited */}
@@ -899,6 +992,7 @@ export default function CashFlowEventModal({
             {/* Left: Tab items with underline indicator */}
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               {/* Obligation Tab */}
+              {allowsObligation && (
               <button
                 type="button"
                 onClick={() => setActiveTab((prev) => (prev === EventModalTab.OBLIGATION ? null : EventModalTab.OBLIGATION))}
@@ -924,9 +1018,10 @@ export default function CashFlowEventModal({
                   <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: ACCENT }} />
                 ) : null}
               </button>
+              )}
 
               {/* Separator */}
-              <span style={{ color: 'var(--border-glass)', fontSize: '0.85rem', userSelect: 'none', opacity: 0.8 }}>|</span>
+              {allowsObligation && <span style={{ color: 'var(--border-glass)', fontSize: '0.85rem', userSelect: 'none', opacity: 0.8 }}>|</span>}
 
               {/* Description Tab */}
               <button
@@ -1025,7 +1120,7 @@ export default function CashFlowEventModal({
                 />
               )}
 
-              {activeTab === EventModalTab.OBLIGATION && (
+              {allowsObligation && activeTab === EventModalTab.OBLIGATION && (
                 <div style={{ width: '100%' }}>
                   <ObligationSelector
                     isObligation={Boolean(formData.obligationPersonId)}

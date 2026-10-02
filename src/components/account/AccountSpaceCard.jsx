@@ -1,5 +1,5 @@
 import React from 'react';
-import { PiggyBank, Landmark, Pencil, Trash2, Plus, Target } from 'lucide-react';
+import { PiggyBank, Landmark, Pencil, Trash2, Plus, Target, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import { TimelineColor } from '../../enums/index.js';
 import { formatCurrency } from '../../utils/formatCurrency.js';
 
@@ -15,7 +15,8 @@ import { formatCurrency } from '../../utils/formatCurrency.js';
  *   target, initialValue         - goal of a pocket (target 0 = no goal bar)
  *   isFutureMonth                - future months show forecasts
  *   color, palette               - timeline color and palette theme ({ primary, secondary })
- *   onAddMovement, onAddInflow   - add movement action (hidden when missing or closed)
+ *   onAddMovement, onAddInflow   - add movement action of the current account (hidden when missing or closed)
+ *   onContribute, onWithdraw     - pocket actions: contribution from / withdrawal to the current account
  *   onEdit, onDelete             - pocket actions (never on the General space)
  *   children                     - the month movements of the space (or nothing)
  *   t                            - translation function
@@ -34,6 +35,8 @@ export default function AccountSpaceCard({
   onAddMovement,
   onAddInflow,
   onAddOutflow,
+  onContribute,
+  onWithdraw,
   onEdit,
   onDelete,
   children,
@@ -116,7 +119,32 @@ export default function AccountSpaceCard({
               <Trash2 size={13} />
             </button>
           )}
-          {!isClosed && (onAddMovement || onAddInflow) && (
+          {/* Pockets only move money to / from the current account: contribution and withdrawal */}
+          {!isGeneral && !isClosed && onContribute && (
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={(e) => { e.stopPropagation(); onContribute(); }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: '700', background: color, borderColor: color, color: TimelineColor.WHITE, cursor: 'pointer' }}
+              title={t('account.contributionHint')}
+            >
+              <ArrowDownToLine size={14} />
+              <span>{t('account.contribution')}</span>
+            </button>
+          )}
+          {!isGeneral && !isClosed && onWithdraw && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={(e) => { e.stopPropagation(); onWithdraw(); }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer' }}
+              title={t('account.pocketWithdrawalHint')}
+            >
+              <ArrowUpFromLine size={14} />
+              <span>{t('account.pocketWithdrawal')}</span>
+            </button>
+          )}
+          {isGeneral && !isClosed && (onAddMovement || onAddInflow) && (
             <button
               type="button"
               className="btn btn-primary btn-sm"

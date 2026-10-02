@@ -39,3 +39,5 @@ export { TimeboardSettingsTab } from './TimeboardSettingsTab.js';
 export { EventModalTab } from './EventModalTab.js';
 export { BalanceViewMode, isKindInBalanceViewMode } from './BalanceViewMode.js';
 export { EntityDirection, entityDirectionToBalanceMode } from './EntityDirection.js';
+export { PocketTransferKind } from './PocketTransferKind.js';
+export { AccountOperation, accountOperationEventType, accountOperationOf, isAccountOutflowOperation } from './AccountOperation.js';

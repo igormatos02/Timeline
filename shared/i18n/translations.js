@@ -711,6 +711,7 @@ export const translations = {
       cleaning: "Cleaning",
       services: "Services",
       bank_fees: "Bank fees / Commissions",
+      transfers_donations: "Transfers & donations",
       other: "Other"
     },
 
@@ -722,6 +723,7 @@ export const translations = {
       cleaning: "Cleaning of the common areas",
       services: "Maintenance and other contracted services",
       bank_fees: "Account maintenance, transfer fees and other bank charges",
+      transfers_donations: "Money sent to someone else that is not a purchase (a donation, a refund)",
       other: "Other condominium expenses"
     },
 
@@ -1427,6 +1429,7 @@ export const translations = {
       personal_care: "Personal Care",
       services: "Services",
       bank_fees: "Bank fees / Commissions",
+      transfers_donations: "Transfers & donations",
       cleaning: "Cleaning",
       condominium: "Condominium",
       reserve: "Reserve Fund",
@@ -1521,6 +1524,7 @@ export const translations = {
       savings: "Via savings",
       installment: "Installment",
       amortization: "Amortization",
+      bankDeposit: "Bank deposit",
       goToOrigin: "Read-only reference — click to open {{origin}}",
       origin: "origin"
     },
@@ -1638,6 +1642,25 @@ export const translations = {
     // Account (bank timeline) spaces: the current account and the pockets
     account: {
       general: "Current Account",
+      operationLabel: "Movement",
+      opReceive: "Receive",
+      opReceiveDesc: "Money from outside comes into the account (fees, salary, refunds)",
+      opDeposit: "Deposit from cash",
+      opDepositDesc: "Money from the cash wallet goes into the bank",
+      opPay: "Pay",
+      opPayDesc: "An expense paid by the account (bank fees and transfers to others included)",
+      opWithdraw: "Withdraw to cash",
+      opWithdrawDesc: "Money from the bank goes to the cash wallet",
+      receivePlaceholder: "e.g. Monthly fee, salary...",
+      depositPlaceholder: "e.g. Cash deposit at the branch",
+      payPlaceholder: "e.g. Electricity, bank fee, donation...",
+      withdrawPlaceholder: "e.g. ATM withdrawal",
+      contribution: "Contribution",
+      contributionHint: "Move money from the current account into this pocket",
+      contributionTitle: "Contribution to {{pocket}}",
+      pocketWithdrawal: "Withdrawal",
+      pocketWithdrawalHint: "Move money from this pocket back to the current account",
+      pocketWithdrawalTitle: "Withdrawal from {{pocket}}",
       where: "Where",
       to: "To",
       transferRoute: "{{from}} → {{to}}",
@@ -3084,6 +3107,7 @@ export const translations = {
       cleaning: "Limpeza",
       services: "Serviços",
       bank_fees: "Custos bancários / Comissões",
+      transfers_donations: "Transferências e doações",
       other: "Outros"
     },
 
@@ -3095,6 +3119,7 @@ export const translations = {
       cleaning: "Limpeza das partes comuns",
       services: "Manutenção e outros serviços contratados",
       bank_fees: "Manutenção de conta, transferências e outras comissões bancárias",
+      transfers_donations: "Dinheiro enviado a outra pessoa que não é uma compra (uma doação, um reembolso)",
       other: "Outras despesas do condomínio"
     },
 
@@ -3758,6 +3783,7 @@ export const translations = {
       personal_care: "Cuidados Pessoais",
       services: "Serviços / Assinaturas",
       bank_fees: "Custos bancários / Comissões",
+      transfers_donations: "Transferências e doações",
       cleaning: "Limpeza",
       condominium: "Condomínio",
       reserve: "Fundo de Reserva",
@@ -3894,6 +3920,7 @@ export const translations = {
       savings: "Via Poupança",
       installment: "Parcela",
       amortization: "Amortização",
+      bankDeposit: "Depósito no banco",
       goToOrigin: "Referência só de leitura — clique para abrir {{origin}}",
       origin: "origem"
     },
@@ -4011,6 +4038,25 @@ export const translations = {
     // Espaços da Conta (timeline bancária): a Conta Corrente e os cofrinhos
     account: {
       general: "Conta Corrente",
+      operationLabel: "Movimento",
+      opReceive: "Receber",
+      opReceiveDesc: "Dinheiro de fora que entra na conta (quotas, salário, reembolsos)",
+      opDeposit: "Depósito da caixa",
+      opDepositDesc: "Dinheiro da carteira / caixa que entra no banco",
+      opPay: "Pagar",
+      opPayDesc: "Uma despesa paga pela conta (inclui custos bancários e transferências para outros)",
+      opWithdraw: "Levantamento p/ caixa",
+      opWithdrawDesc: "Dinheiro do banco que vai para a carteira / caixa",
+      receivePlaceholder: "Ex: Quota mensal, salário...",
+      depositPlaceholder: "Ex: Depósito de dinheiro no balcão",
+      payPlaceholder: "Ex: Eletricidade, comissão bancária, doação...",
+      withdrawPlaceholder: "Ex: Levantamento no multibanco",
+      contribution: "Aporte",
+      contributionHint: "Passar dinheiro da conta corrente para este cofrinho",
+      contributionTitle: "Aporte em {{pocket}}",
+      pocketWithdrawal: "Retirada",
+      pocketWithdrawalHint: "Devolver dinheiro deste cofrinho à conta corrente",
+      pocketWithdrawalTitle: "Retirada de {{pocket}}",
       where: "Onde",
       to: "Para",
       transferRoute: "{{from}} → {{to}}",

@@ -241,7 +241,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     const labelKey = {
       [MovementKind.SAVINGS_EXPENSE]: 'outflowReference.savings',
       [MovementKind.LOAN_INSTALLMENT]: 'outflowReference.installment',
-      [MovementKind.AMORTIZATION]: 'outflowReference.amortization'
+      [MovementKind.AMORTIZATION]: 'outflowReference.amortization',
+      [MovementKind.DEPOSIT_INTERNAL]: 'outflowReference.bankDeposit'
     }[event.referenceKind] || 'outflowReference.savings';
     return {
       label: t(labelKey),

@@ -1,7 +1,6 @@
-import React, { useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import React from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
-import { useHeaderRefresh } from '../../context/HeaderRefreshContext.jsx';
 
 export default function HeaderShell({
   collapsed,
@@ -19,23 +18,9 @@ export default function HeaderShell({
   style
 }) {
   const { t } = useTranslation();
-  const refreshData = useHeaderRefresh();
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const isRefreshingRef = useRef(false);
-  const onToggleProp = onToggle || onToggleCollapse;
-
-  // Expanding the header reloads the data, so its figures always match the latest changes
-  const actualOnToggle = (...args) => {
-    const isExpanding = collapsed;
-    if (onToggleProp) onToggleProp(...args);
-    if (!isExpanding || !refreshData || isRefreshingRef.current) return;
-    isRefreshingRef.current = true;
-    setIsRefreshing(true);
-    Promise.resolve(refreshData()).finally(() => {
-      isRefreshingRef.current = false;
-      setIsRefreshing(false);
-    });
-  };
+  // Opening / closing only toggles the view: the data is already current (every save updates it), so
+  // nothing is reloaded here (reloading made large timeboards freeze each time the header was opened)
+  const actualOnToggle = onToggle || onToggleCollapse;
   const actualColor = headerColor || accentColor;
   const actualLeft = left || header;
   const actualRight = right || actions;
@@ -84,9 +69,7 @@ export default function HeaderShell({
               flexShrink: 0
             }}
           >
-            {isRefreshing
-              ? <Loader2 size={15} className="animate-spin" />
-              : (collapsed ? <ChevronDown size={17} /> : <ChevronUp size={17} />)}
+            {collapsed ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
           </button>
 
           {actualLeft}

@@ -4,7 +4,6 @@ import { format } from 'date-fns';
 import Navbar from './components/Navbar';
 import { PermissionsProvider } from './context/PermissionsContext.jsx';
 import { TimeboardProvider } from './context/TimeboardContext.jsx';
-import { HeaderRefreshProvider } from './context/HeaderRefreshContext.jsx';
 
 // Heavy modals are lazy-loaded so they do not bloat the initial bundle
 import {
@@ -663,7 +662,7 @@ export default function App() {
   return (
     <PermissionsProvider role={timeboardRole} isReadOnly={isIndividualRole}>
     <TimeboardProvider timeboardType={activeTimeboard?.type} headerDefaultState={activeTimeboard?.headerDefaultState} pockets={pockets}>
-    <HeaderRefreshProvider value={refreshTimelines}>
+    <>
     <div className="app-container">
       {/* Navbar */}
       <Navbar
@@ -846,7 +845,7 @@ export default function App() {
         t={t}
       />
     </div>
-    </HeaderRefreshProvider>
+    </>
     </TimeboardProvider>
     </PermissionsProvider>
   );

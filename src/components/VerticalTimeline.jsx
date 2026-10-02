@@ -74,6 +74,8 @@ import { classifyMovement } from '../../shared/finance/movements.js';
 import { getTimelineDropdownOptions } from '../utils/timelineConfig.jsx';
 
 const BALANCE_MODE_STORAGE_KEY = 'timeboard.balanceViewMode';
+// Future months shown per click on "load future months"
+const FUTURE_MONTHS_STEP = 12;
 // Shared empty list: a new [] each render would invalidate the memoized lists built from the events
 const EMPTY_EVENTS = [];
 import FilterSwitch from './sidebar/FilterSwitch.jsx';
@@ -1270,11 +1272,21 @@ function VerticalTimeline({
     return Array.from({ length: max - min + 1 }, (_, i) => max - i);
   }, [timelineEvents, isEventBelongingToCurrentTimeline, computeFromMonth]);
 
+  // Future months are only rendered on demand: the timeline opens on the current month and each click on
+  // "load future months" shows 12 more. The data keeps being loaded ahead (header projections need it);
+  // when the months shown go past the loaded horizon, more data is loaded too.
+  const [shownFutureMonths, setShownFutureMonths] = useState(0);
+  const handleShowMoreFuture = useCallback(() => {
+    const next = shownFutureMonths + FUTURE_MONTHS_STEP;
+    setShownFutureMonths(next);
+    if (next > Math.max(1, futureHorizonYears) * 12) onLoadMoreFuture?.();
+  }, [shownFutureMonths, futureHorizonYears, onLoadMoreFuture]);
+
   const startDateObj = periodRange ? periodRange.start : defaultStartDateObj;
   const maxDateObj = useMemo(() => (periodRange
     ? periodRange.end
-    : (periodMonthIndex !== null ? new Date(todayDate.getFullYear(), 11, 31) : addMonths(currentMonthEnd, Math.max(1, futureHorizonYears) * 12))
-  ), [periodRange, periodMonthIndex, todayDate, currentMonthEnd, futureHorizonYears]);
+    : (periodMonthIndex !== null ? new Date(todayDate.getFullYear(), 11, 31) : addMonths(currentMonthEnd, shownFutureMonths))
+  ), [periodRange, periodMonthIndex, todayDate, currentMonthEnd, shownFutureMonths]);
 
   // A search made only of digits (optionally prefixed by "REC") also finds the receipt number of the occurrence
   const matchesReceiptNumber = (ev, query) => {
@@ -1631,7 +1643,7 @@ function VerticalTimeline({
                 onAddEventForDate={onAddEventForDate}
                 onDeleteEvent={onDeleteEvent}
                 onEditEvent={onEditEvent}
-                onLoadMoreFuture={onLoadMoreFuture}
+                onLoadMoreFuture={onLoadMoreFuture ? handleShowMoreFuture : undefined}
                 onLoadMorePast={onLoadMorePast}
                 onNavigateToTimeline={onNavigateToTimeline}
                 onOpenEditInstallment={onOpenEditInstallment}
@@ -1687,7 +1699,7 @@ function VerticalTimeline({
                 onDeletePocket={onDeletePocket}
                 onEditEvent={onEditEvent}
                 onEditPocket={onEditPocket}
-                onLoadMoreFuture={onLoadMoreFuture}
+                onLoadMoreFuture={onLoadMoreFuture ? handleShowMoreFuture : undefined}
                 onLoadMorePast={onLoadMorePast}
                 onNavigateToTimeline={onNavigateToTimeline}
                 onOpenAmortizationModal={onOpenAmortizationModal}
@@ -1719,7 +1731,7 @@ function VerticalTimeline({
                 onAddEventForDate={onAddEventForDate}
                 onDeleteEvent={onDeleteEvent}
                 onEditEvent={onEditEvent}
-                onLoadMoreFuture={onLoadMoreFuture}
+                onLoadMoreFuture={onLoadMoreFuture ? handleShowMoreFuture : undefined}
                 onLoadMorePast={onLoadMorePast}
                 onNavigateToTimeline={onNavigateToTimeline}
                 onOpenEditInstallment={onOpenEditInstallment}
@@ -1744,7 +1756,7 @@ function VerticalTimeline({
                 onAddEventForDate={onAddEventForDate}
                 onDeleteEvent={onDeleteEvent}
                 onEditEvent={onEditEvent}
-                onLoadMoreFuture={onLoadMoreFuture}
+                onLoadMoreFuture={onLoadMoreFuture ? handleShowMoreFuture : undefined}
                 onLoadMorePast={onLoadMorePast}
                 onNavigateToTimeline={onNavigateToTimeline}
                 onOpenEditInstallment={onOpenEditInstallment}

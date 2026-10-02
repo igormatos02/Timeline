@@ -3,13 +3,17 @@ import { groupEventsByDate } from '../../utils/eventSorting.js';
 import { EventStatus, EventType, InvestmentEventCategory, LoanEventCategory, MovementKind, TimelineColor, TimelineType } from '../../enums/index.js';
 import { classifyMovement } from '../../../shared/finance/movements.js';
 import { savingsEffect } from '../../../shared/finance/savingsSpaces.js';
-import { format } from 'date-fns';
+import { differenceInCalendarMonths, format } from 'date-fns';
 import FutureHorizonButton from './FutureHorizonButton.jsx';
 import { Calendar, Clock, EyeOff, TrendingDown } from 'lucide-react';
 import AddEventButton from './AddEventButton.jsx';
 import MonthProjectionBadges from '../MonthProjectionBadges.jsx';
 import { formatCurrency } from '../../utils/formatCurrency';
 import AccountMonthSpaces from '../account/AccountMonthSpaces.jsx';
+import LazyMonthBody from './LazyMonthBody.jsx';
+
+// Approximate height of an event card, for the placeholder of months not rendered yet
+const ESTIMATED_CARD_HEIGHT = 96;
 import TimelineEventCard from '../TimelineEventCard';
 import PastHorizonButton from './PastHorizonButton.jsx';
 
@@ -166,6 +170,10 @@ export default function TimelineMonthView({
         const mMonthRealizedSaldo = mMonthRealizedIncome - (mMonthRealizedExpense + mMonthRealizedLoan + mMonthRealizedInvestmentDeduction);
 
         const isNotComputedMonth = Boolean(isFinancial && computeFromMonth && monthKeyStr < computeFromMonth);
+        // Months around today render at once: the view opens positioned on the current month, and the months
+        // just above it (the next ones) must already have their real height
+        const monthsFromToday = differenceInCalendarMonths(mGroup.monthDate, todayDate);
+        const isNearToday = monthsFromToday >= -1 && monthsFromToday <= 2;
 
         if (!showEmptyDays && !hasEvents && !isCurrentMonth) return null;
 
@@ -363,7 +371,12 @@ export default function TimelineMonthView({
                   )}
                 </div>
 
-                {timeline.type === TimelineType.INVESTMENT ? (
+                {/* Cards only for months near the viewport (the current month and empty months render at once) */}
+                <LazyMonthBody
+                  eager={isNearToday || !hasEvents || timeline.type === TimelineType.INVESTMENT}
+                  estimatedHeight={mGroup.events.length * ESTIMATED_CARD_HEIGHT}
+                >
+                {() => (timeline.type === TimelineType.INVESTMENT ? (
                   <AccountMonthSpaces
                     monthKey={format(mGroup.monthDate, 'yyyy-MM')}
                     monthStartStr={format(mGroup.monthDate, 'yyyy-MM-01')}
@@ -469,7 +482,8 @@ export default function TimelineMonthView({
                       </span>
                     </div>
                   </div>
-                )}
+                ))}
+                </LazyMonthBody>
               </div>
             </div>
           </div>

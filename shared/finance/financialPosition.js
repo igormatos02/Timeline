@@ -33,7 +33,7 @@ const add = (totals, key, value) => { totals[key] += value; };
  *
  * Months are 'yyyy-MM'; `fromMonth` null or '1900-01' = no lower bound.
  */
-export function computeFinancialPosition({ events = [], timelineTypeMap = new Map(), fromMonth = null, asOfMonth, horizonMonth }) {
+function computeFinancialPositionUncached({ events = [], timelineTypeMap = new Map(), fromMonth = null, asOfMonth, horizonMonth }) {
   const realized = emptyTotals();
   const planned = emptyTotals();
   const hasLowerBound = Boolean(fromMonth) && fromMonth !== '1900-01';
@@ -116,7 +116,7 @@ const emptyMonth = () => ({
  * Derived per month: savingsNet (deposits - withdrawals - savings expenses), savingsFromAvailable
  * (internal deposits - withdrawals) and availableNet (income - expenses - loan payments - savingsFromAvailable).
  */
-export function computeMonthlyFlows({ events = [], timelineTypeMap = new Map(), fromMonth = null, include = null }) {
+function computeMonthlyFlowsUncached({ events = [], timelineTypeMap = new Map(), fromMonth = null, include = null }) {
   const months = new Map();
   const hasLowerBound = Boolean(fromMonth) && fromMonth !== '1900-01';
   const monthOf = (key) => {
@@ -178,4 +178,74 @@ export function sumMonthlyFlows(flows, { fromMonth = null, toMonth = null, side 
     Object.entries(entry[side]).forEach(([field, value]) => { total[field] = (total[field] || 0) + value; });
   });
   return new Proxy(total, { get: (target, field) => target[field] || 0 });
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Memoization: headers, badges and panels ask for the same board figures many times per render. The results
+// are cached per events array (WeakMap: dropped with the array) and per timeline types / months asked, so the
+// same events with the same timelines are computed once. Callers must treat the results as read-only.
+// ---------------------------------------------------------------------------------------------------------
+const typeMapSignatures = new WeakMap();
+const timelineTypesSignature = (timelineTypeMap) => {
+  if (!timelineTypeMap || typeof timelineTypeMap !== 'object') return '';
+  let signature = typeMapSignatures.get(timelineTypeMap);
+  if (signature === undefined) {
+    signature = Array.from(timelineTypeMap.entries()).map(([id, type]) => `${id}:${type}`).sort().join(',');
+    typeMapSignatures.set(timelineTypeMap, signature);
+  }
+  return signature;
+};
+
+const resultsByEvents = new WeakMap();
+const cachedResult = (events, key, compute) => {
+  if (!Array.isArray(events)) return compute();
+  let byKey = resultsByEvents.get(events);
+  if (!byKey) {
+    byKey = new Map();
+    resultsByEvents.set(events, byKey);
+  }
+  if (!byKey.has(key)) byKey.set(key, compute());
+  return byKey.get(key);
+};
+
+/** Realized and planned totals of the board (see computeFinancialPositionUncached), memoized. */
+export function computeFinancialPosition(options = {}) {
+  const { events = [], timelineTypeMap, fromMonth = null, asOfMonth, horizonMonth } = options;
+  const key = `position|${fromMonth}|${asOfMonth}|${horizonMonth}|${timelineTypesSignature(timelineTypeMap)}`;
+  return cachedResult(events, key, () => computeFinancialPositionUncached(options));
+}
+
+/** Month-by-month flows of the board (see computeMonthlyFlowsUncached), memoized when no `include` filter is given. */
+export function computeMonthlyFlows(options = {}) {
+  const { events = [], timelineTypeMap, fromMonth = null, include = null } = options;
+  if (include) return computeMonthlyFlowsUncached(options);
+  const key = `flows|${fromMonth}|${timelineTypesSignature(timelineTypeMap)}`;
+  return cachedResult(events, key, () => computeMonthlyFlowsUncached(options));
+}
+
+// Board events gathered by the headers (timelines' own events + all events + the listed ones, without
+// duplicates), cached per input arrays so the same inputs give the same array (and hit the caches above)
+const boardEventsCache = new WeakMap();
+const EMPTY = [];
+export function collectBoardEvents(allTimelines = EMPTY, allEvents = EMPTY, listedEvents = EMPTY) {
+  const timelinesKey = Array.isArray(allTimelines) ? allTimelines : EMPTY;
+  const eventsKey = Array.isArray(allEvents) ? allEvents : EMPTY;
+  const listedKey = Array.isArray(listedEvents) ? listedEvents : EMPTY;
+  let byEvents = boardEventsCache.get(timelinesKey);
+  if (!byEvents) { byEvents = new WeakMap(); boardEventsCache.set(timelinesKey, byEvents); }
+  let byListed = byEvents.get(eventsKey);
+  if (!byListed) { byListed = new WeakMap(); byEvents.set(eventsKey, byListed); }
+  if (byListed.has(listedKey)) return byListed.get(listedKey);
+
+  const seen = new Map();
+  const add = (ev) => {
+    if (!ev) return;
+    seen.set(ev.id || `${ev.date}-${ev.title}-${ev.amount}`, ev);
+  };
+  timelinesKey.forEach((tl) => (tl?.events || EMPTY).forEach(add));
+  eventsKey.forEach(add);
+  listedKey.forEach(add);
+  const result = Array.from(seen.values());
+  byListed.set(listedKey, result);
+  return result;
 }

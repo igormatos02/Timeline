@@ -33,7 +33,7 @@ import { computeMonthDiff } from '../../utils/timelineCharts.js';
 
 import EntityViewSwitch from '../ui/EntityViewSwitch.jsx';
 import { useHeaderCollapsed, useTimeboard } from '../../context/TimeboardContext.jsx';
-import { computeMonthlyFlows, sumMonthlyFlows } from '../../../shared/finance/financialPosition.js';
+import { collectBoardEvents, computeMonthlyFlows, sumMonthlyFlows } from '../../../shared/finance/financialPosition.js';
 import { isReferenceMovement } from '../../../shared/finance/movements.js';
 import { CONDO_EXPENSE_CATEGORY_META } from '../event-modals/FinancialEventModalConfig.js';
 
@@ -42,6 +42,9 @@ const prevMonthKey = (monthKey) => {
   const [y, m] = monthKey.split('-').map(Number);
   return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
 };
+
+// Shared empty list (a new [] each render would defeat the board figures cache)
+const EMPTY_EVENTS = [];
 
 export default function ExpenseTimelineHeader({
   // Extra control shown next to the header actions (the balance mode switch)
@@ -92,8 +95,8 @@ export default function ExpenseTimelineHeader({
 
   const isFiltered = (selectedExpenseCategories && selectedExpenseCategories.length > 0) || (filteredEvents !== undefined);
   // Own expenses only: references (pocket expenses, paid installments) are counted in their owner timeline
-  const eventsList = ((isFiltered && filteredEvents) ? filteredEvents : (events && events.length > 0 ? events : (timeline.events || [])))
-    .filter((ev) => !isReferenceMovement(ev));
+  const listedSource = (isFiltered && filteredEvents) ? filteredEvents : (events && events.length > 0 ? events : (timeline.events || EMPTY_EVENTS));
+  const eventsList = listedSource.filter((ev) => !isReferenceMovement(ev));
   const currentMonthStr = new Date().toISOString().substring(0, 7);
 
   // DTO vindo da Stored Procedure SQL Supabase get_expense_timeline_metrics (usado apenas se não estiver filtrado)
@@ -170,19 +173,9 @@ export default function ExpenseTimelineHeader({
   const endMonthNum = endTotalMonths % 12;
   const endMonthKey = `${endYear}-${String(endMonthNum + 1).padStart(2, '0')}`;
 
-  // Coletar eventos únicos de todos os tracks para cálculo de consumo cruzado e acumulação
-  const seenEventMap = new Map();
-  const rawEventsList = [
-    ...(allTimelines || []).flatMap((tl) => tl.events || []),
-    ...(allEvents || []),
-    ...(eventsList || [])
-  ];
-  for (const ev of rawEventsList) {
-    if (!ev) continue;
-    const key = ev.id || `${ev.date}-${ev.title}-${ev.amount}`;
-    seenEventMap.set(key, ev);
-  }
-  const allBoardEvents = Array.from(seenEventMap.values());
+  // Unique events of the whole board (cached per input arrays, so the board figures below are computed once)
+  // (the unfiltered source: a stable array; the board flows skip references anyway)
+  const allBoardEvents = collectBoardEvents(allTimelines, allEvents, listedSource);
 
   // Month-by-month flows of the whole board from the shared financial engine (references never count twice)
   const boardFlows = computeMonthlyFlows({ events: allBoardEvents, timelineTypeMap });

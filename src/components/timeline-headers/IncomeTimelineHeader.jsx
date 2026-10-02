@@ -19,7 +19,7 @@ import {
 } from '../../enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import { classifyMovement } from '../../../shared/finance/movements.js';
-import { computeMonthlyFlows, sumMonthlyFlows } from '../../../shared/finance/financialPosition.js';
+import { collectBoardEvents, computeMonthlyFlows, sumMonthlyFlows } from '../../../shared/finance/financialPosition.js';
 import HeaderTitleBlock from '../ui/HeaderTitleBlock.jsx';
 import HeaderShell from '../ui/HeaderShell.jsx';
 import { PieDonut, DonutLegend } from '../ui/DonutChart.jsx';
@@ -35,6 +35,9 @@ const prevMonthKey = (monthKey) => {
   const [y, m] = monthKey.split('-').map(Number);
   return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
 };
+
+// Shared empty list (a new [] each render would defeat the board figures cache)
+const EMPTY_EVENTS = [];
 
 export default function IncomeTimelineHeader({
   // Extra control shown next to the header actions (the balance mode switch)
@@ -86,7 +89,7 @@ export default function IncomeTimelineHeader({
   const headerColor = timeline.color || TimelineColor.INCOME;
   const isFiltered = (selectedCategoryFilter && selectedCategoryFilter !== EventStatus.ALL) || (filteredEvents !== undefined);
 
-  const eventsList = (isFiltered && filteredEvents) ? filteredEvents : (timeline.events || events || []);
+  const eventsList = (isFiltered && filteredEvents) ? filteredEvents : (timeline.events || events || EMPTY_EVENTS);
   const currentMonthStr = new Date().toISOString().substring(0, 7);
 
   // 1. RENDIMENTOS POR ORIGEM / CATEGORIA & TOTAL DO MÊS
@@ -103,19 +106,8 @@ export default function IncomeTimelineHeader({
   const endMonthNum = endTotalMonths % 12;
   const endMonthKey = `${endYear}-${String(endMonthNum + 1).padStart(2, '0')}`;
 
-  // Coletar eventos únicos de todos os tracks para cálculo de consumo cruzado e acumulação
-  const seenEventMap = new Map();
-  const rawEventsList = [
-    ...(allTimelines || []).flatMap((tl) => tl.events || []),
-    ...(allEvents || []),
-    ...eventsList
-  ];
-  for (const ev of rawEventsList) {
-    if (!ev) continue;
-    const key = ev.id || `${ev.date}-${ev.title}-${ev.amount}`;
-    seenEventMap.set(key, ev);
-  }
-  const allBoardEvents = Array.from(seenEventMap.values());
+  // Unique events of the whole board (cached per input arrays, so the board figures below are computed once)
+  const allBoardEvents = collectBoardEvents(allTimelines, allEvents, eventsList);
 
   // Month-by-month flows of the whole board from the shared financial engine: references (e.g. the
   // withdrawal shown in this timeline) never count twice, and savings expenses / costs stay in the savings

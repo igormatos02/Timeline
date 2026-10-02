@@ -72,7 +72,15 @@ export const translations = {
       reset: "Reset",
       payUpToHere: "Pay up to here",
       payUpToHereTitle: "Mark all previous installments of this loan up to this one as paid",
-      withdrawal: "Withdrawal"
+      withdrawal: "Withdrawal",
+      addMovement: "Add Movement"
+    },
+
+    movement: {
+      inflow: "Inflow",
+      outflow: "Outflow",
+      movementInflow: "Inflow",
+      movementOutflow: "Outflow"
     },
 
     // Common
@@ -129,6 +137,15 @@ export const translations = {
       pocketCreatedSuccess: "Pocket created successfully!",
       pocketUpdatedSuccess: "Pocket updated successfully!",
       pocketDeletedSuccess: "Pocket deleted successfully!"
+    },
+
+    flow: {
+      origin: "Source",
+      destination: "Destination",
+      wallet: "Wallet",
+      account: "Account",
+      inflowTitle: "Money coming into the wallet",
+      outflowTitle: "Money leaving the wallet"
     },
 
     // Timeline Rows & Cards
@@ -598,21 +615,21 @@ export const translations = {
       editIncome: "Edit Income",
       newIncome: "New Income Event",
       incomeTitleLabel: "Description *",
-      incomeTitlePlaceholder: "e.g., Monthly Salary, Bonus, Dividends...",
+      incomeTitlePlaceholder: "e.g., Salary, Bonus...",
       incomeAmountLabel: "Amount to Receive (€) *",
       addIncome: "Add Income",
 
       editExpense: "Edit Expense",
       newExpense: "New Expense",
       expenseTitleLabel: "Description *",
-      expenseTitlePlaceholder: "e.g., Rent, Supermarket, Electricity, Car...",
+      expenseTitlePlaceholder: "e.g., Rent, Groceries...",
       expenseAmountLabel: "Expense Amount (€) *",
       addExpense: "Add Expense",
 
       editInvestment: "Edit Inflow",
       newInvestment: "New Inflow",
       investmentTitleLabel: "Inflow Description *",
-      investmentTitlePlaceholder: "e.g., Index Funds, Treasury, Real Estate...",
+      investmentTitlePlaceholder: "e.g., Savings, Funds...",
       investmentAmountLabel: "Invested Amount (€) *",
       investmentSubtype: "Investment / Asset Type",
       monthlyInvestmentAmount: "Monthly Deposit / Amount (€)",
@@ -626,7 +643,7 @@ export const translations = {
       movementType: "Movement Type",
       targetTimeline: "Movement Destination (Timeline)",
       movementTitleLabel: "Movement Title *",
-      movementTitlePlaceholder: "e.g., Salary, Rent, Savings...",
+      movementTitlePlaceholder: "e.g., Salary, Expenses...",
 
       titleLabel: "Title / Description *",
       amountLabel: "Amount (€) *",
@@ -2428,7 +2445,15 @@ export const translations = {
       reset: "Reset",
       payUpToHere: "Pagar até aqui",
       payUpToHereTitle: "Marcar como pagas todas as prestações deste empréstimo anteriores a esta parcela (inclusive)",
-      withdrawal: "Retirada"
+      withdrawal: "Retirada",
+      addMovement: "Adicionar Movimento"
+    },
+
+    movement: {
+      inflow: "Entrada",
+      outflow: "Saída",
+      movementInflow: "Entrada",
+      movementOutflow: "Saída"
     },
 
     // Common
@@ -2485,6 +2510,15 @@ export const translations = {
       pocketCreatedSuccess: "Cofrinho criado com sucesso!",
       pocketUpdatedSuccess: "Cofrinho atualizado com sucesso!",
       pocketDeletedSuccess: "Cofrinho eliminado com sucesso!"
+    },
+
+    flow: {
+      origin: "Origem",
+      destination: "Destino",
+      wallet: "Carteira",
+      account: "Conta",
+      inflowTitle: "Dinheiro a entrar na carteira",
+      outflowTitle: "Dinheiro a sair da carteira"
     },
 
     // Timeline Rows & Cards
@@ -2954,21 +2988,21 @@ export const translations = {
       editIncome: "Editar Entrada",
       newIncome: "Nova Entrada",
       incomeTitleLabel: "Descrição *",
-      incomeTitlePlaceholder: "Ex: Salário Mensal, Bónus, Dividendos...",
+      incomeTitlePlaceholder: "Ex: Salário, Bónus...",
       incomeAmountLabel: "Valor a Receber (€) *",
       addIncome: "Adicionar Entrada",
 
       editExpense: "Editar Despesa",
       newExpense: "Nova Despesa",
       expenseTitleLabel: "Descrição *",
-      expenseTitlePlaceholder: "Ex: Renda / Aluguel, Supermercado, Eletricidade, Carro...",
+      expenseTitlePlaceholder: "Ex: Renda, Supermercado...",
       expenseAmountLabel: "Valor da Despesa (€) *",
       addExpense: "Adicionar Despesa",
 
       editInvestment: "Editar Entrada",
       newInvestment: "Nova Entrada",
       investmentTitleLabel: "Descrição da Entrada *",
-      investmentTitlePlaceholder: "Ex: Fundos de Investimento, Poupança, Ações...",
+      investmentTitlePlaceholder: "Ex: Poupança, Fundos...",
       investmentAmountLabel: "Valor Investido (€) *",
       investmentSubtype: "Tipo de Aplicação / Investimento",
       monthlyInvestmentAmount: "Aporte Mensal / Valor (€)",
@@ -2982,7 +3016,7 @@ export const translations = {
       movementType: "Tipo de Movimento",
       targetTimeline: "Destino do Movimento (Timeline)",
       movementTitleLabel: "Título do Movimento *",
-      movementTitlePlaceholder: "Ex: Salário, Aluguel, Aporte Poupança...",
+      movementTitlePlaceholder: "Ex: Salário, Despesas...",
 
       titleLabel: "Título / Descrição *",
       amountLabel: "Valor (€) *",

@@ -87,6 +87,62 @@ export default function IncomeTimelineHeader({
   if (!timeline) return null;
 
   const headerColor = timeline.color || TimelineColor.INCOME;
+  // Header frame (title, actions, switches); the body below is only computed and rendered when it is open
+  const renderShell = (body) => (
+      <HeaderShell
+        timeline={timeline}
+        collapsed={collapsed}
+        onToggle={() => setIsCollapsed(!collapsed)}
+        headerColor={headerColor}
+        left={
+          <HeaderTitleBlock
+            color={headerColor}
+            name={timeline.name}
+            description={timeline.description}
+            id={timeline.id}
+          />
+        }
+        right={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {headerSwitch}
+            <EntityViewSwitch
+              selectedEntityId={selectedEntityId}
+              isIndividualView={isIndividualView}
+              onToggle={onToggleIndividualView}
+            />
+            {onEdit && (
+              <button
+                type="button"
+                onClick={onEdit}
+                title={t('common.edit')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'var(--bg-app)',
+                  border: '1px solid var(--border-glass-glow)',
+                  color: 'var(--primary-light)',
+                  cursor: 'pointer',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontSize: '0.78rem',
+                  fontWeight: '600',
+                  transition: 'background-color 0.15s ease, border-color 0.15s ease'
+                }}
+              >
+                <Settings size={14} />
+                <span>{t('common.edit')}</span>
+              </button>
+            )}
+          </div>
+        }
+      >
+      {body}
+    </HeaderShell>
+  );
+  // Closed header: nothing of the body is computed (it ran on every render before, even when hidden)
+  if (collapsed) return renderShell(null);
+
   const isFiltered = (selectedCategoryFilter && selectedCategoryFilter !== EventStatus.ALL) || (filteredEvents !== undefined);
 
   const eventsList = (isFiltered && filteredEvents) ? filteredEvents : (timeline.events || events || EMPTY_EVENTS);
@@ -212,333 +268,286 @@ export default function IncomeTimelineHeader({
     ? Math.min(100, Math.round((calendarYearReceivedIncome / calendarYearProjectedIncome) * 100))
     : 0;
 
-  return (
-    <HeaderShell
-      timeline={timeline}
-      collapsed={collapsed}
-      onToggle={() => setIsCollapsed(!collapsed)}
-      headerColor={headerColor}
-      left={
-        <HeaderTitleBlock
-          color={headerColor}
-          name={timeline.name}
-          description={timeline.description}
-          id={timeline.id}
-        />
-      }
-      right={
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {headerSwitch}
-          <EntityViewSwitch
-            selectedEntityId={selectedEntityId}
-            isIndividualView={isIndividualView}
-            onToggle={onToggleIndividualView}
-          />
-          {onEdit && (
-            <button
-              type="button"
-              onClick={onEdit}
-              title={t('common.edit')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: 'var(--bg-app)',
-                border: '1px solid var(--border-glass-glow)',
-                color: 'var(--primary-light)',
-                cursor: 'pointer',
-                padding: '6px 12px',
-                borderRadius: '8px',
-                fontSize: '0.78rem',
-                fontWeight: '600',
-                transition: 'background-color 0.15s ease, border-color 0.15s ease'
-              }}
-            >
-              <Settings size={14} />
-              <span>{t('common.edit')}</span>
-            </button>
-          )}
-        </div>
-      }
-    >
-      {/* Conteúdo Expandido */}
-      {!collapsed && (
-        <div style={{ paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Alternador de Modo de Visão */}
-          {setActiveViewMode && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  background: 'var(--bg-app)',
-                  border: '1px solid var(--border-glass)',
-                  borderRadius: '8px',
-                  padding: '3px',
-                  gap: '3px',
-                  height: '32px',
-                  alignItems: 'center'
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setActiveViewMode('summary')}
-                  className={`btn-view-toggle ${activeViewMode === 'summary' ? 'active' : ''}`}
+  return renderShell(
+    <>
+        {/* Conteúdo Expandido */}
+        {!collapsed && (
+          <div style={{ paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Alternador de Modo de Visão */}
+            {setActiveViewMode && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
+                <div
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    padding: '3px 10px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    fontSize: '0.74rem',
-                    fontWeight: activeViewMode === 'summary' ? '800' : '600',
-                    cursor: 'pointer',
-                    background: activeViewMode === 'summary' ? `${paletteTheme.primary}2e` : 'transparent',
-                    color: activeViewMode === 'summary' ? paletteTheme.primary : 'var(--text-muted)'
+                    display: 'inline-flex',
+                    background: 'var(--bg-app)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: '8px',
+                    padding: '3px',
+                    gap: '3px',
+                    height: '32px',
+                    alignItems: 'center'
                   }}
                 >
-                  <Layers size={13} />
-                  <span>{t('incomeHeader.summaryView')}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveViewMode('graph')}
-                  className={`btn-view-toggle ${activeViewMode === 'graph' ? 'active' : ''}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    padding: '3px 10px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    fontSize: '0.74rem',
-                    fontWeight: activeViewMode === 'graph' ? '800' : '600',
-                    cursor: 'pointer',
-                    background: activeViewMode === 'graph' ? `${paletteTheme.primary}2e` : 'transparent',
-                    color: activeViewMode === 'graph' ? paletteTheme.primary : 'var(--text-muted)'
-                  }}
-                >
-                  <Sparkles size={13} />
-                  <span>{t('incomeHeader.evolutionView')}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveViewMode('summary')}
+                    className={`btn-view-toggle ${activeViewMode === 'summary' ? 'active' : ''}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '3px 10px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      fontSize: '0.74rem',
+                      fontWeight: activeViewMode === 'summary' ? '800' : '600',
+                      cursor: 'pointer',
+                      background: activeViewMode === 'summary' ? `${paletteTheme.primary}2e` : 'transparent',
+                      color: activeViewMode === 'summary' ? paletteTheme.primary : 'var(--text-muted)'
+                    }}
+                  >
+                    <Layers size={13} />
+                    <span>{t('incomeHeader.summaryView')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveViewMode('graph')}
+                    className={`btn-view-toggle ${activeViewMode === 'graph' ? 'active' : ''}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '3px 10px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      fontSize: '0.74rem',
+                      fontWeight: activeViewMode === 'graph' ? '800' : '600',
+                      cursor: 'pointer',
+                      background: activeViewMode === 'graph' ? `${paletteTheme.primary}2e` : 'transparent',
+                      color: activeViewMode === 'graph' ? paletteTheme.primary : 'var(--text-muted)'
+                    }}
+                  >
+                    <Sparkles size={13} />
+                    <span>{t('incomeHeader.evolutionView')}</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-
-          {activeViewMode === 'graph' ? (
-            <IncomeEvolutionChart
-              timeline={timeline}
-              allTimelines={allTimelines}
-              events={eventsList}
-              computeStartDate={computeStartDate}
-            />
-          ) : (
-            <>
-              {/* Grid Principal 2x2 */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-                {/* Quadrante 1: RENDIMENTOS POR ORIGEM (PieChart SVG & Legenda) */}
-                <div style={{ background: 'var(--bg-app)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {t('incomeHeader.sourcesTitleYear', { year: currentCalendarYear })}
-                  </div>
-                  {(() => {
-                    const categoryColors = paletteTheme.colors && paletteTheme.colors.length > 1 ? paletteTheme.colors : TIMELINE_COLOR_PRESETS;
-
-                    if (!categoryList || categoryList.length === 0) {
-                      return (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
-                          <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
-                            <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                              <circle cx="0" cy="0" r="0.82" fill="none" stroke="var(--border-glass)" strokeWidth="0.25" strokeDasharray="3 3" />
-                            </svg>
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                width: '42px',
-                                height: '42px',
-                                borderRadius: '50%',
-                                background: 'var(--bg-card)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                border: '1px solid var(--border-glass)',
-                                fontSize: '0.7rem',
-                                fontWeight: '700',
-                                color: 'var(--text-dim)'
-                              }}
-                            >
-                              0%
+            )}
+  
+            {activeViewMode === 'graph' ? (
+              <IncomeEvolutionChart
+                timeline={timeline}
+                allTimelines={allTimelines}
+                events={eventsList}
+                computeStartDate={computeStartDate}
+              />
+            ) : (
+              <>
+                {/* Grid Principal 2x2 */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+                  {/* Quadrante 1: RENDIMENTOS POR ORIGEM (PieChart SVG & Legenda) */}
+                  <div style={{ background: 'var(--bg-app)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {t('incomeHeader.sourcesTitleYear', { year: currentCalendarYear })}
+                    </div>
+                    {(() => {
+                      const categoryColors = paletteTheme.colors && paletteTheme.colors.length > 1 ? paletteTheme.colors : TIMELINE_COLOR_PRESETS;
+  
+                      if (!categoryList || categoryList.length === 0) {
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
+                            <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
+                              <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                                <circle cx="0" cy="0" r="0.82" fill="none" stroke="var(--border-glass)" strokeWidth="0.25" strokeDasharray="3 3" />
+                              </svg>
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  top: '50%',
+                                  left: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                  width: '42px',
+                                  height: '42px',
+                                  borderRadius: '50%',
+                                  background: 'var(--bg-card)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  border: '1px solid var(--border-glass)',
+                                  fontSize: '0.7rem',
+                                  fontWeight: '700',
+                                  color: 'var(--text-dim)'
+                                }}
+                              >
+                                0%
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                              <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                                {t('incomeHeader.noIncome')}
+                              </span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
+                                {t('incomeHeader.noIncomeHint')}
+                              </span>
                             </div>
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                            <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                              {t('incomeHeader.noIncome')}
-                            </span>
-                            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
-                              {t('incomeHeader.noIncomeHint')}
-                            </span>
-                          </div>
+                        );
+                      }
+  
+                      const items = categoryList.map((c, i) => ({
+                        ...c,
+                        color: categoryColors[i % categoryColors.length]
+                      }));
+  
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                          <PieDonut items={items} centerColor={paletteTheme.primary} />
+                          <DonutLegend items={items} />
                         </div>
                       );
-                    }
-
-                    const items = categoryList.map((c, i) => ({
-                      ...c,
-                      color: categoryColors[i % categoryColors.length]
-                    }));
-
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                        <PieDonut items={items} centerColor={paletteTheme.primary} />
-                        <DonutLegend items={items} />
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Quadrante 2: CONSUMO DA ENTRADA (Donut Chart de Comprometimento) */}
-                <div style={{ background: 'var(--bg-app)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {t('incomeHeader.incomeConsumptionTitle')}
+                    })()}
                   </div>
-                  {(() => {
-                    const consumptionItems = [
-                      {
-                        name: t('incomeHeader.committedLabel'),
-                        percent: Math.min(100, commitmentPercent),
-                        color: consumptionColor
-                      },
-                      {
-                        name: t('incomeHeader.freeAvailableLabel'),
-                        percent: availablePercent,
-                        color: TimelineColor.SUCCESS
-                      }
-                    ];
-
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                        <PieDonut items={consumptionItems} centerLabel={`${commitmentPercent}%`} centerColor={consumptionColor} />
-                        <DonutLegend items={consumptionItems} />
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Quadrante 3: ACUMULAÇÃO ATUAL & PROJETADA (Balanço + Initial Value & Donut Chart Jan - Dez) */}
-                <div style={{ background: 'var(--bg-app)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                      <span style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {t('incomeHeader.currentAccumulationTitle')}
-                      </span>
-                      <span style={{ fontSize: '0.96rem', fontWeight: '800', color: currentAccumulation >= 0 ? TimelineColor.SUCCESS : TimelineColor.DANGER }}>
-                        {formatCurrency(currentAccumulation)}
-                      </span>
+  
+                  {/* Quadrante 2: CONSUMO DA ENTRADA (Donut Chart de Comprometimento) */}
+                  <div style={{ background: 'var(--bg-app)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {t('incomeHeader.incomeConsumptionTitle')}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '0.74rem' }}>
-                      <span style={{ color: 'var(--text-muted)', fontWeight: '600' }}>
-                        {t('incomeHeader.projectedAccumulationLabel', { year: currentCalendarYear })}
-                      </span>
-                      <strong style={{ color: currentProjectedAccumulation >= 0 ? TimelineColor.SUCCESS : TimelineColor.DANGER, fontSize: '0.86rem' }}>
-                        {formatCurrency(currentProjectedAccumulation)}
-                      </strong>
-                    </div>
+                    {(() => {
+                      const consumptionItems = [
+                        {
+                          name: t('incomeHeader.committedLabel'),
+                          percent: Math.min(100, commitmentPercent),
+                          color: consumptionColor
+                        },
+                        {
+                          name: t('incomeHeader.freeAvailableLabel'),
+                          percent: availablePercent,
+                          color: TimelineColor.SUCCESS
+                        }
+                      ];
+  
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                          <PieDonut items={consumptionItems} centerLabel={`${commitmentPercent}%`} centerColor={consumptionColor} />
+                          <DonutLegend items={consumptionItems} />
+                        </div>
+                      );
+                    })()}
                   </div>
-                  {(() => {
-                    const receivedPct = calendarYearPercent;
-                    const toReceivePct = Math.max(0, 100 - receivedPct);
-
-                    const accumulationItems = [
-                      {
-                        name: t('incomeHeader.receivedYearLabel', { year: currentCalendarYear }),
-                        percent: receivedPct,
-                        color: paletteTheme.primary
-                      },
-                      {
-                        name: t('incomeHeader.totalToReceiveYearLabel', { year: currentCalendarYear }),
-                        percent: toReceivePct,
-                        color: paletteTheme.light || paletteTheme.secondary
-                      }
-                    ];
-
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                        <PieDonut items={accumulationItems} centerLabel={`${receivedPct}%`} centerColor={paletteTheme.primary} />
-                        <DonutLegend items={accumulationItems} />
+  
+                  {/* Quadrante 3: ACUMULAÇÃO ATUAL & PROJETADA (Balanço + Initial Value & Donut Chart Jan - Dez) */}
+                  <div style={{ background: 'var(--bg-app)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <span style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          {t('incomeHeader.currentAccumulationTitle')}
+                        </span>
+                        <span style={{ fontSize: '0.96rem', fontWeight: '800', color: currentAccumulation >= 0 ? TimelineColor.SUCCESS : TimelineColor.DANGER }}>
+                          {formatCurrency(currentAccumulation)}
+                        </span>
                       </div>
-                    );
-                  })()}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '0.74rem' }}>
+                        <span style={{ color: 'var(--text-muted)', fontWeight: '600' }}>
+                          {t('incomeHeader.projectedAccumulationLabel', { year: currentCalendarYear })}
+                        </span>
+                        <strong style={{ color: currentProjectedAccumulation >= 0 ? TimelineColor.SUCCESS : TimelineColor.DANGER, fontSize: '0.86rem' }}>
+                          {formatCurrency(currentProjectedAccumulation)}
+                        </strong>
+                      </div>
+                    </div>
+                    {(() => {
+                      const receivedPct = calendarYearPercent;
+                      const toReceivePct = Math.max(0, 100 - receivedPct);
+  
+                      const accumulationItems = [
+                        {
+                          name: t('incomeHeader.receivedYearLabel', { year: currentCalendarYear }),
+                          percent: receivedPct,
+                          color: paletteTheme.primary
+                        },
+                        {
+                          name: t('incomeHeader.totalToReceiveYearLabel', { year: currentCalendarYear }),
+                          percent: toReceivePct,
+                          color: paletteTheme.light || paletteTheme.secondary
+                        }
+                      ];
+  
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                          <PieDonut items={accumulationItems} centerLabel={`${receivedPct}%`} centerColor={paletteTheme.primary} />
+                          <DonutLegend items={accumulationItems} />
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
-              </div>
-
-              {/* Rodapé com Comparações, Projeção Anual & Gráfico de Colunas dos últimos 6 meses + mês atual */}
-              {(() => {
-                const currentDateObj = new Date();
-                const last7Months = [];
-                for (let i = 6; i >= 0; i--) {
-                  const year = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - i, 1).getFullYear();
-                  const month = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - i, 1).getMonth() + 1;
-                  const monthStr = String(month).padStart(2, '0');
-                  const key = `${year}-${monthStr}`;
-
-                  const d = new Date(year, month - 1, 1);
-                  const label = format(d, 'MMM', { locale: dateLocale }).replace('.', '').toUpperCase();
-                  const isNotComputed = Boolean(computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== EventStatus.ALL && key < computeFromMonth);
-                  last7Months.push({ key, label, total: 0, isNotComputed });
-                }
-
-                eventsList.forEach((ev) => {
-                  if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-                  const evMonthKey = ev.date.substring(0, 7);
-                  if (computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== EventStatus.ALL && evMonthKey < computeFromMonth) return;
-
-                  if (isOwnIncome(ev)) {
-                    const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
-                    if (chartMode === 'realized' && !isReceived) return;
-
-                    const foundMonth = last7Months.find((m) => m.key === evMonthKey);
-                    if (foundMonth) {
-                      foundMonth.total += Math.abs(Number(ev.amount || 0));
-                    }
+  
+                {/* Rodapé com Comparações, Projeção Anual & Gráfico de Colunas dos últimos 6 meses + mês atual */}
+                {(() => {
+                  const currentDateObj = new Date();
+                  const last7Months = [];
+                  for (let i = 6; i >= 0; i--) {
+                    const year = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - i, 1).getFullYear();
+                    const month = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - i, 1).getMonth() + 1;
+                    const monthStr = String(month).padStart(2, '0');
+                    const key = `${year}-${monthStr}`;
+  
+                    const d = new Date(year, month - 1, 1);
+                    const label = format(d, 'MMM', { locale: dateLocale }).replace('.', '').toUpperCase();
+                    const isNotComputed = Boolean(computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== EventStatus.ALL && key < computeFromMonth);
+                    last7Months.push({ key, label, total: 0, isNotComputed });
                   }
-                });
-
-                const { diffPercentStr, isDiffPositive } = computeMonthDiff(last7Months);
-                const annualProj = availableAmount;
-
-                return (
-                  <BarChart7Months
-                    months={last7Months}
-                    chartTitle={t('incomeHeader.chartTitle')}
-                    monthVsPrevLabel={t('incomeHeader.monthVsPrevMonth')}
-                    diffPercentStr={diffPercentStr}
-                    isGoodChange={isDiffPositive}
-                    goodColor={paletteTheme.primary}
-                    badColor={TimelineColor.DANGER}
-                    middleLabel={t('incomeHeader.annualIncomingLabel')}
-                    middleValue={annualTotalIncome}
-                    middleColor={paletteTheme.primary}
-                    sparklesLabel={t('incomeHeader.annualProjectionLabel')}
-                    projection={annualProj}
-                    sparklesColor={paletteTheme.primary}
-                    projectionColor={paletteTheme.primary}
-                    currentGradient={`linear-gradient(180deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`}
-                    mutedGradientTop={paletteTheme.primary}
-                    mutedGradientBottom={paletteTheme.secondary}
-                    currentTextColor={paletteTheme.primary}
-                    mode={chartMode}
-                    onToggleMode={setChartMode}
-                    accentColor={paletteTheme.primary}
-                  />
-                );
-              })()}
-            </>
-          )}
-        </div>
-      )}
-    </HeaderShell>
+  
+                  eventsList.forEach((ev) => {
+                    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+                    const evMonthKey = ev.date.substring(0, 7);
+                    if (computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== EventStatus.ALL && evMonthKey < computeFromMonth) return;
+  
+                    if (isOwnIncome(ev)) {
+                      const isReceived = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
+                      if (chartMode === 'realized' && !isReceived) return;
+  
+                      const foundMonth = last7Months.find((m) => m.key === evMonthKey);
+                      if (foundMonth) {
+                        foundMonth.total += Math.abs(Number(ev.amount || 0));
+                      }
+                    }
+                  });
+  
+                  const { diffPercentStr, isDiffPositive } = computeMonthDiff(last7Months);
+                  const annualProj = availableAmount;
+  
+                  return (
+                    <BarChart7Months
+                      months={last7Months}
+                      chartTitle={t('incomeHeader.chartTitle')}
+                      monthVsPrevLabel={t('incomeHeader.monthVsPrevMonth')}
+                      diffPercentStr={diffPercentStr}
+                      isGoodChange={isDiffPositive}
+                      goodColor={paletteTheme.primary}
+                      badColor={TimelineColor.DANGER}
+                      middleLabel={t('incomeHeader.annualIncomingLabel')}
+                      middleValue={annualTotalIncome}
+                      middleColor={paletteTheme.primary}
+                      sparklesLabel={t('incomeHeader.annualProjectionLabel')}
+                      projection={annualProj}
+                      sparklesColor={paletteTheme.primary}
+                      projectionColor={paletteTheme.primary}
+                      currentGradient={`linear-gradient(180deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`}
+                      mutedGradientTop={paletteTheme.primary}
+                      mutedGradientBottom={paletteTheme.secondary}
+                      currentTextColor={paletteTheme.primary}
+                      mode={chartMode}
+                      onToggleMode={setChartMode}
+                      accentColor={paletteTheme.primary}
+                    />
+                  );
+                })()}
+              </>
+            )}
+          </div>
+        )}
+    </>
   );
 }

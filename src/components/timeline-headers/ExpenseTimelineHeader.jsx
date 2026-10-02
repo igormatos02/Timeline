@@ -91,6 +91,62 @@ export default function ExpenseTimelineHeader({
   if (!timeline) return null;
 
   const headerColor = paletteTheme.primary;
+  // Header frame (title, actions, switches); the body below is only computed and rendered when it is open
+  const renderShell = (body) => (
+      <HeaderShell
+        timeline={timeline}
+        collapsed={collapsed}
+        onToggle={() => setIsCollapsed(!collapsed)}
+        headerColor={headerColor}
+        left={
+          <HeaderTitleBlock
+            color={headerColor}
+            name={timeline.name}
+            description={timeline.description}
+            id={timeline.id}
+          />
+        }
+        right={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {headerSwitch}
+            <EntityViewSwitch
+              selectedEntityId={selectedEntityId}
+              isIndividualView={isIndividualView}
+              onToggle={onToggleIndividualView}
+            />
+            {onEdit && (
+              <button
+                type="button"
+                onClick={onEdit}
+                title={t('common.edit')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'var(--primary-glow)',
+                  border: '1px solid var(--border-glass-glow)',
+                  color: 'var(--primary-light)',
+                  cursor: 'pointer',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontSize: '0.78rem',
+                  fontWeight: '600',
+                  transition: 'background-color 0.15s ease, border-color 0.15s ease'
+                }}
+              >
+                <Settings size={14} />
+                <span>{t('common.edit')}</span>
+              </button>
+            )}
+          </div>
+        }
+      >
+      {body}
+    </HeaderShell>
+  );
+  // Closed header: nothing of the body is computed (it ran on every render before, even when hidden)
+  if (collapsed) return renderShell(null);
+
   const metrics = timeline.metrics || {};
 
   const isFiltered = (selectedExpenseCategories && selectedExpenseCategories.length > 0) || (filteredEvents !== undefined);
@@ -259,419 +315,372 @@ export default function ExpenseTimelineHeader({
     : 0;
   const calendarYearToPayPercent = Math.max(0, 100 - calendarYearPaidPercent);
 
-  return (
-    <HeaderShell
-      timeline={timeline}
-      collapsed={collapsed}
-      onToggle={() => setIsCollapsed(!collapsed)}
-      headerColor={headerColor}
-      left={
-        <HeaderTitleBlock
-          color={headerColor}
-          name={timeline.name}
-          description={timeline.description}
-          id={timeline.id}
-        />
-      }
-      right={
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {headerSwitch}
-          <EntityViewSwitch
-            selectedEntityId={selectedEntityId}
-            isIndividualView={isIndividualView}
-            onToggle={onToggleIndividualView}
-          />
-          {onEdit && (
-            <button
-              type="button"
-              onClick={onEdit}
-              title={t('common.edit')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: 'var(--primary-glow)',
-                border: '1px solid var(--border-glass-glow)',
-                color: 'var(--primary-light)',
-                cursor: 'pointer',
-                padding: '6px 12px',
-                borderRadius: '8px',
-                fontSize: '0.78rem',
-                fontWeight: '600',
-                transition: 'background-color 0.15s ease, border-color 0.15s ease'
-              }}
-            >
-              <Settings size={14} />
-              <span>{t('common.edit')}</span>
-            </button>
-          )}
-        </div>
-      }
-    >
-      {/* Conteúdo Expandido com Métricas de Despesas */}
-      {!collapsed && (
-        <div style={{ paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Alternador de Modo de Visão */}
-          {setActiveViewMode && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  background: 'var(--bg-app)',
-                  border: '1px solid var(--border-glass)',
-                  borderRadius: '8px',
-                  padding: '3px',
-                  gap: '3px',
-                  height: '32px',
-                  alignItems: 'center'
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setActiveViewMode('summary')}
-                  className={`btn-view-toggle ${activeViewMode === 'summary' ? 'active' : ''}`}
+  return renderShell(
+    <>
+        {/* Conteúdo Expandido com Métricas de Despesas */}
+        {!collapsed && (
+          <div style={{ paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Alternador de Modo de Visão */}
+            {setActiveViewMode && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
+                <div
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    padding: '3px 10px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    fontSize: '0.74rem',
-                    fontWeight: activeViewMode === 'summary' ? '800' : '600',
-                    cursor: 'pointer',
-                    background: activeViewMode === 'summary' ? `${paletteTheme.primary}2e` : 'transparent',
-                    color: activeViewMode === 'summary' ? paletteTheme.primary : 'var(--text-muted)'
+                    display: 'inline-flex',
+                    background: 'var(--bg-app)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: '8px',
+                    padding: '3px',
+                    gap: '3px',
+                    height: '32px',
+                    alignItems: 'center'
                   }}
                 >
-                  <Layers size={13} />
-                  <span>{t('expenseHeader.summaryView')}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveViewMode('graph')}
-                  className={`btn-view-toggle ${activeViewMode === 'graph' ? 'active' : ''}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    padding: '3px 10px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    fontSize: '0.74rem',
-                    fontWeight: activeViewMode === 'graph' ? '800' : '600',
-                    cursor: 'pointer',
-                    background: activeViewMode === 'graph' ? `${paletteTheme.primary}2e` : 'transparent',
-                    color: activeViewMode === 'graph' ? paletteTheme.primary : 'var(--text-muted)'
-                  }}
-                >
-                  <Sparkles size={13} />
-                  <span>{t('expenseHeader.evolutionView')}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveViewMode('summary')}
+                    className={`btn-view-toggle ${activeViewMode === 'summary' ? 'active' : ''}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '3px 10px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      fontSize: '0.74rem',
+                      fontWeight: activeViewMode === 'summary' ? '800' : '600',
+                      cursor: 'pointer',
+                      background: activeViewMode === 'summary' ? `${paletteTheme.primary}2e` : 'transparent',
+                      color: activeViewMode === 'summary' ? paletteTheme.primary : 'var(--text-muted)'
+                    }}
+                  >
+                    <Layers size={13} />
+                    <span>{t('expenseHeader.summaryView')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveViewMode('graph')}
+                    className={`btn-view-toggle ${activeViewMode === 'graph' ? 'active' : ''}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '3px 10px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      fontSize: '0.74rem',
+                      fontWeight: activeViewMode === 'graph' ? '800' : '600',
+                      cursor: 'pointer',
+                      background: activeViewMode === 'graph' ? `${paletteTheme.primary}2e` : 'transparent',
+                      color: activeViewMode === 'graph' ? paletteTheme.primary : 'var(--text-muted)'
+                    }}
+                  >
+                    <Sparkles size={13} />
+                    <span>{t('expenseHeader.evolutionView')}</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-
-          {activeViewMode === 'graph' ? (
-            <IncomeEvolutionChart
-              timeline={timeline}
-              allTimelines={allTimelines}
-              events={eventsList}
-              computeStartDate={computeStartDate}
-            />
-          ) : (
-            <>
-              {/* Grid Principal 2x2 */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-                {/* Quadrante 1: GASTOS POR CATEGORIA (PieChart SVG & Legenda) */}
-                <div style={{ background: 'var(--bg-glass)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {t('expenseHeader.categoriesTitle')}
-                  </div>
-                  {(() => {
-                    const categoryColors = paletteTheme.colors && paletteTheme.colors.length > 1 ? paletteTheme.colors : TIMELINE_COLOR_PRESETS;
-
-                    if (!categoryList || categoryList.length === 0) {
-                      return (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
-                          <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
-                            <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                              <circle cx="0" cy="0" r="0.82" fill="none" stroke="var(--border-glass)" strokeWidth="0.25" strokeDasharray="3 3" />
-                            </svg>
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                width: '42px',
-                                height: '42px',
-                                borderRadius: '50%',
-                                background: 'var(--bg-card)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                border: '1px solid var(--border-glass)',
-                                fontSize: '0.7rem',
-                                fontWeight: '700',
-                                color: 'var(--text-dim)'
-                              }}
-                            >
-                              0%
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                            <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                              {t('expenseHeader.noExpenses')}
-                            </span>
-                            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
-                              {t('expenseHeader.noExpensesHint')}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    const items = categoryList.map((c, i) => ({
-                      ...c,
-                      color: categoryColors[i % categoryColors.length],
-                      title: `${t(`${categoryNamespace}.${c.name}`)}: ${c.percent}%`
-                    }));
-
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                        <PieDonut items={items} centerFontSize="0.66rem" />
-                        <DonutLegend
-                          items={items}
-                          nameFormatter={(item) => t(`${categoryNamespace}.${item.name}`)}
-                        />
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Quadrante 2: COMPROMETIMENTO ANUAL (PieChart Donut SVG Anual) */}
-                <div style={{ background: 'var(--bg-glass)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {t('expenseHeader.annualCommitmentTitle')}
-                  </div>
-                  {(() => {
-                    if (annualTotalExpense === 0 && annualTotalIncome === 0) {
-                      return (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
-                          <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
-                            <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                              <circle cx="0" cy="0" r="0.82" fill="none" stroke="var(--border-glass)" strokeWidth="0.25" strokeDasharray="3 3" />
-                            </svg>
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                width: '42px',
-                                height: '42px',
-                                borderRadius: '50%',
-                                background: 'var(--bg-card)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                border: '1px solid var(--border-glass)',
-                                fontSize: '0.7rem',
-                                fontWeight: '700',
-                                color: 'var(--text-dim)'
-                              }}
-                            >
-                              0%
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                            <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                              {t('expenseHeader.noAnnualCommitment')}
-                            </span>
-                            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
-                              {t('expenseHeader.noAnnualCommitmentHint')}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    const sliceColor = annualCommitmentPercent > 85 ? TimelineColor.DANGER : paletteTheme.primary;
-
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                        <DonutChart
-                          percent={annualCommitmentPercent}
-                          sliceColor={sliceColor}
-                          remainingColor="var(--border-glass)"
-                          title={`${t('expenseHeader.annualCommitmentLabel')} ${annualCommitmentPercent}%`}
-                          label={`${annualCommitmentPercent}%`}
-                        />
-
-                        {/* Informações Numéricas de Gastos vs Entradas Anuais */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                          <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
-                            {t('expenseHeader.annualCommitmentLabel')}
-                          </div>
-                          <div style={{ fontSize: '0.94rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                            {formatCurrency(annualTotalExpense)}
-                          </div>
-                          {annualTotalIncome > 0 ? (
-                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                              {t('expenseHeader.ofAnnualTotal', { amount: formatCurrency(annualTotalIncome) })}
-                            </div>
-                          ) : (
-                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                              {t('expenseHeader.projectedNext12Months')}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Quadrante 3: ACUMULAÇÃO ATUAL & GASTOS PLANEADOS (Balanço + Initial Value & Donut Chart Jan - Dez) */}
-                <div style={{ background: 'var(--bg-glass)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                      <span style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {t('expenseHeader.currentAccumulationTitle')}
-                      </span>
-                      <span style={{ fontSize: '0.96rem', fontWeight: '800', color: currentAccumulation >= 0 ? TimelineColor.SUCCESS : TimelineColor.DANGER }}>
-                        {formatCurrency(currentAccumulation)}
-                      </span>
+            )}
+  
+            {activeViewMode === 'graph' ? (
+              <IncomeEvolutionChart
+                timeline={timeline}
+                allTimelines={allTimelines}
+                events={eventsList}
+                computeStartDate={computeStartDate}
+              />
+            ) : (
+              <>
+                {/* Grid Principal 2x2 */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+                  {/* Quadrante 1: GASTOS POR CATEGORIA (PieChart SVG & Legenda) */}
+                  <div style={{ background: 'var(--bg-glass)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {t('expenseHeader.categoriesTitle')}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '0.74rem' }}>
-                      <span style={{ color: 'var(--text-muted)', fontWeight: '600' }}>
-                        {t('expenseHeader.plannedYearLabel', { year: currentCalendarYear })}
-                      </span>
-                      <strong style={{ color: 'var(--text-main)', fontSize: '0.86rem' }}>
-                        {formatCurrency(calendarYearPlannedExpense)}
-                      </strong>
-                    </div>
-                  </div>
-                  {(() => {
-                    const paidPct = calendarYearPaidPercent;
-                    const toPayPct = calendarYearToPayPercent;
-
-                    const accumulationItems = [
-                      {
-                        name: t('expenseHeader.paidYearLabel', { year: currentCalendarYear }),
-                        percent: paidPct,
-                        color: paletteTheme.primary
-                      },
-                      {
-                        name: t('expenseHeader.totalToPayYearLabel', { year: currentCalendarYear }),
-                        percent: toPayPct,
-                        color: paletteTheme.light || TimelineColor.SLATE
+                    {(() => {
+                      const categoryColors = paletteTheme.colors && paletteTheme.colors.length > 1 ? paletteTheme.colors : TIMELINE_COLOR_PRESETS;
+  
+                      if (!categoryList || categoryList.length === 0) {
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
+                            <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
+                              <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                                <circle cx="0" cy="0" r="0.82" fill="none" stroke="var(--border-glass)" strokeWidth="0.25" strokeDasharray="3 3" />
+                              </svg>
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  top: '50%',
+                                  left: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                  width: '42px',
+                                  height: '42px',
+                                  borderRadius: '50%',
+                                  background: 'var(--bg-card)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  border: '1px solid var(--border-glass)',
+                                  fontSize: '0.7rem',
+                                  fontWeight: '700',
+                                  color: 'var(--text-dim)'
+                                }}
+                              >
+                                0%
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                              <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                                {t('expenseHeader.noExpenses')}
+                              </span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
+                                {t('expenseHeader.noExpensesHint')}
+                              </span>
+                            </div>
+                          </div>
+                        );
                       }
-                    ];
-
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
-                        <PieDonut items={accumulationItems} centerLabel={`${paidPct}%`} centerColor={paletteTheme.primary} />
-                        <DonutLegend items={accumulationItems} />
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-
-              {/* Outflows of the current month: own expenses, via savings, installments and total */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-                <span style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {t('expenseHeader.outflowsThisMonth')}
-                </span>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
-                  {[...outflowSplit, { id: OUTFLOW_TOTAL_ID, icon: Sigma, color: paletteTheme.primary, ...outflowTotal }].map(({ id, icon: SplitIcon, color, projected, realized }) => (
-                    <div
-                      key={id}
-                      style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border-glass)', background: 'var(--bg-glass)', display: 'flex', flexDirection: 'column', gap: '3px' }}
-                    >
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                        <SplitIcon size={13} style={{ color }} />
-                        {t(`expenseHeader.outflowSplit.${id}`)}
-                      </span>
-                      <span style={{ fontSize: '1rem', fontWeight: '800', color: id === OUTFLOW_TOTAL_ID ? color : 'var(--text-main)' }}>
-                        {formatCurrency(projected)}
-                      </span>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
-                        {t('expenseHeader.outflowSplitPaid', { amount: formatCurrency(realized) })}
-                      </span>
+  
+                      const items = categoryList.map((c, i) => ({
+                        ...c,
+                        color: categoryColors[i % categoryColors.length],
+                        title: `${t(`${categoryNamespace}.${c.name}`)}: ${c.percent}%`
+                      }));
+  
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                          <PieDonut items={items} centerFontSize="0.66rem" />
+                          <DonutLegend
+                            items={items}
+                            nameFormatter={(item) => t(`${categoryNamespace}.${item.name}`)}
+                          />
+                        </div>
+                      );
+                    })()}
+                  </div>
+  
+                  {/* Quadrante 2: COMPROMETIMENTO ANUAL (PieChart Donut SVG Anual) */}
+                  <div style={{ background: 'var(--bg-glass)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {t('expenseHeader.annualCommitmentTitle')}
                     </div>
-                  ))}
+                    {(() => {
+                      if (annualTotalExpense === 0 && annualTotalIncome === 0) {
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px', padding: '6px 0' }}>
+                            <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
+                              <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                                <circle cx="0" cy="0" r="0.82" fill="none" stroke="var(--border-glass)" strokeWidth="0.25" strokeDasharray="3 3" />
+                              </svg>
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  top: '50%',
+                                  left: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                  width: '42px',
+                                  height: '42px',
+                                  borderRadius: '50%',
+                                  background: 'var(--bg-card)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  border: '1px solid var(--border-glass)',
+                                  fontSize: '0.7rem',
+                                  fontWeight: '700',
+                                  color: 'var(--text-dim)'
+                                }}
+                              >
+                                0%
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                              <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                                {t('expenseHeader.noAnnualCommitment')}
+                              </span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>
+                                {t('expenseHeader.noAnnualCommitmentHint')}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }
+  
+                      const sliceColor = annualCommitmentPercent > 85 ? TimelineColor.DANGER : paletteTheme.primary;
+  
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                          <DonutChart
+                            percent={annualCommitmentPercent}
+                            sliceColor={sliceColor}
+                            remainingColor="var(--border-glass)"
+                            title={`${t('expenseHeader.annualCommitmentLabel')} ${annualCommitmentPercent}%`}
+                            label={`${annualCommitmentPercent}%`}
+                          />
+  
+                          {/* Informações Numéricas de Gastos vs Entradas Anuais */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                            <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: '600' }}>
+                              {t('expenseHeader.annualCommitmentLabel')}
+                            </div>
+                            <div style={{ fontSize: '0.94rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                              {formatCurrency(annualTotalExpense)}
+                            </div>
+                            {annualTotalIncome > 0 ? (
+                              <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                                {t('expenseHeader.ofAnnualTotal', { amount: formatCurrency(annualTotalIncome) })}
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                                {t('expenseHeader.projectedNext12Months')}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+  
+                  {/* Quadrante 3: ACUMULAÇÃO ATUAL & GASTOS PLANEADOS (Balanço + Initial Value & Donut Chart Jan - Dez) */}
+                  <div style={{ background: 'var(--bg-glass)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <span style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          {t('expenseHeader.currentAccumulationTitle')}
+                        </span>
+                        <span style={{ fontSize: '0.96rem', fontWeight: '800', color: currentAccumulation >= 0 ? TimelineColor.SUCCESS : TimelineColor.DANGER }}>
+                          {formatCurrency(currentAccumulation)}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '0.74rem' }}>
+                        <span style={{ color: 'var(--text-muted)', fontWeight: '600' }}>
+                          {t('expenseHeader.plannedYearLabel', { year: currentCalendarYear })}
+                        </span>
+                        <strong style={{ color: 'var(--text-main)', fontSize: '0.86rem' }}>
+                          {formatCurrency(calendarYearPlannedExpense)}
+                        </strong>
+                      </div>
+                    </div>
+                    {(() => {
+                      const paidPct = calendarYearPaidPercent;
+                      const toPayPct = calendarYearToPayPercent;
+  
+                      const accumulationItems = [
+                        {
+                          name: t('expenseHeader.paidYearLabel', { year: currentCalendarYear }),
+                          percent: paidPct,
+                          color: paletteTheme.primary
+                        },
+                        {
+                          name: t('expenseHeader.totalToPayYearLabel', { year: currentCalendarYear }),
+                          percent: toPayPct,
+                          color: paletteTheme.light || TimelineColor.SLATE
+                        }
+                      ];
+  
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
+                          <PieDonut items={accumulationItems} centerLabel={`${paidPct}%`} centerColor={paletteTheme.primary} />
+                          <DonutLegend items={accumulationItems} />
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
-              </div>
-
-              {/* Rodapé com Comparações, Projeção Anual & Gráfico de Colunas dos últimos 6 meses + mês atual */}
-              {(() => {
-                // Gerar estrutura dos últimos 6 meses + mês atual (total 7 meses)
-                const currentDateObj = new Date();
-                const last7Months = [];
-                for (let i = 6; i >= 0; i--) {
-                  const year = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - i, 1).getFullYear();
-                  const month = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - i, 1).getMonth() + 1;
-                  const monthStr = String(month).padStart(2, '0');
-                  const key = `${year}-${monthStr}`;
-
-                  const d = new Date(year, month - 1, 1);
-                  const label = format(d, 'MMM', { locale: dateLocale }).replace('.', '').toUpperCase();
-                  const isNotComputed = Boolean(computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== 'all' && key < computeFromMonth);
-                  last7Months.push({ key, label, total: 0, isNotComputed });
-                }
-
-                // Calcular volume de despesas de cada um dos 7 meses
-                eventsList.forEach((ev) => {
-                  if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
-                  const isExpense = ev.eventType === EventType.EXPENSE || ev.isExpense;
-                  if (isExpense) {
-                    const isPaid = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
-                    if (chartMode === 'realized' && !isPaid) return;
-
-                    const evKey = ev.date.substring(0, 7);
-                    if (computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== 'all' && evKey < computeFromMonth) return;
-                    const foundMonth = last7Months.find((m) => m.key === evKey);
-                    if (foundMonth) {
-                      foundMonth.total += Math.abs(Number(ev.amount || 0));
-                    }
+  
+                {/* Outflows of the current month: own expenses, via savings, installments and total */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {t('expenseHeader.outflowsThisMonth')}
+                  </span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
+                    {[...outflowSplit, { id: OUTFLOW_TOTAL_ID, icon: Sigma, color: paletteTheme.primary, ...outflowTotal }].map(({ id, icon: SplitIcon, color, projected, realized }) => (
+                      <div
+                        key={id}
+                        style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border-glass)', background: 'var(--bg-glass)', display: 'flex', flexDirection: 'column', gap: '3px' }}
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: '700', color: 'var(--text-muted)' }}>
+                          <SplitIcon size={13} style={{ color }} />
+                          {t(`expenseHeader.outflowSplit.${id}`)}
+                        </span>
+                        <span style={{ fontSize: '1rem', fontWeight: '800', color: id === OUTFLOW_TOTAL_ID ? color : 'var(--text-main)' }}>
+                          {formatCurrency(projected)}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                          {t('expenseHeader.outflowSplitPaid', { amount: formatCurrency(realized) })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+  
+                {/* Rodapé com Comparações, Projeção Anual & Gráfico de Colunas dos últimos 6 meses + mês atual */}
+                {(() => {
+                  // Gerar estrutura dos últimos 6 meses + mês atual (total 7 meses)
+                  const currentDateObj = new Date();
+                  const last7Months = [];
+                  for (let i = 6; i >= 0; i--) {
+                    const year = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - i, 1).getFullYear();
+                    const month = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - i, 1).getMonth() + 1;
+                    const monthStr = String(month).padStart(2, '0');
+                    const key = `${year}-${monthStr}`;
+  
+                    const d = new Date(year, month - 1, 1);
+                    const label = format(d, 'MMM', { locale: dateLocale }).replace('.', '').toUpperCase();
+                    const isNotComputed = Boolean(computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== 'all' && key < computeFromMonth);
+                    last7Months.push({ key, label, total: 0, isNotComputed });
                   }
-                });
-
-                const { diffPercentStr, isDiffPositive } = computeMonthDiff(last7Months);
-                const isDiffNegative = diffPercentStr === '0,0%' || !isDiffPositive;
-
-                // Projeção anual calculada a partir da soma real dos eventos projetados nos próximos 12 meses
-                const annualProj = annualTotalExpense;
-
-                return (
-                  <BarChart7Months
-                    months={last7Months}
-                    chartTitle={t('expenseHeader.chartTitle')}
-                    monthVsPrevLabel={t('expenseHeader.monthVsPrevMonth')}
-                    diffPercentStr={diffPercentStr}
-                    isGoodChange={isDiffNegative}
-                    goodColor={TimelineColor.SUCCESS}
-                    badColor={paletteTheme.primary}
-                    sparklesLabel={t('expenseHeader.annualProjection')}
-                    projection={annualProj}
-                    sparklesColor={paletteTheme.primary}
-                    projectionColor={paletteTheme.primary}
-                    currentGradient={`linear-gradient(180deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`}
-                    mutedGradientTop={paletteTheme.primary}
-                    mutedGradientBottom={paletteTheme.secondary}
-                    currentTextColor={paletteTheme.primary}
-                    mode={chartMode}
-                    onToggleMode={setChartMode}
-                    accentColor={paletteTheme.primary}
-                  />
-                );
-              })()}
-            </>
-          )}
-        </div>
-      )}
-    </HeaderShell>
+  
+                  // Calcular volume de despesas de cada um dos 7 meses
+                  eventsList.forEach((ev) => {
+                    if (!ev || !ev.date || ev.isDeleted || isCancelledStatus(ev.status) || ev.status === EventStatus.DELETED) return;
+                    const isExpense = ev.eventType === EventType.EXPENSE || ev.isExpense;
+                    if (isExpense) {
+                      const isPaid = isPositiveStatus(ev.status) || Boolean(ev.isCompleted);
+                      if (chartMode === 'realized' && !isPaid) return;
+  
+                      const evKey = ev.date.substring(0, 7);
+                      if (computeFromMonth && computeFromMonth !== '1900-01' && computeFromMonth !== 'all' && evKey < computeFromMonth) return;
+                      const foundMonth = last7Months.find((m) => m.key === evKey);
+                      if (foundMonth) {
+                        foundMonth.total += Math.abs(Number(ev.amount || 0));
+                      }
+                    }
+                  });
+  
+                  const { diffPercentStr, isDiffPositive } = computeMonthDiff(last7Months);
+                  const isDiffNegative = diffPercentStr === '0,0%' || !isDiffPositive;
+  
+                  // Projeção anual calculada a partir da soma real dos eventos projetados nos próximos 12 meses
+                  const annualProj = annualTotalExpense;
+  
+                  return (
+                    <BarChart7Months
+                      months={last7Months}
+                      chartTitle={t('expenseHeader.chartTitle')}
+                      monthVsPrevLabel={t('expenseHeader.monthVsPrevMonth')}
+                      diffPercentStr={diffPercentStr}
+                      isGoodChange={isDiffNegative}
+                      goodColor={TimelineColor.SUCCESS}
+                      badColor={paletteTheme.primary}
+                      sparklesLabel={t('expenseHeader.annualProjection')}
+                      projection={annualProj}
+                      sparklesColor={paletteTheme.primary}
+                      projectionColor={paletteTheme.primary}
+                      currentGradient={`linear-gradient(180deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`}
+                      mutedGradientTop={paletteTheme.primary}
+                      mutedGradientBottom={paletteTheme.secondary}
+                      currentTextColor={paletteTheme.primary}
+                      mode={chartMode}
+                      onToggleMode={setChartMode}
+                      accentColor={paletteTheme.primary}
+                    />
+                  );
+                })()}
+              </>
+            )}
+          </div>
+        )}
+    </>
   );
 }

@@ -562,7 +562,7 @@ export const translations = {
       paidOff: "Paid Off",
       actionReceive: "Receive",
       actionPay: "Pay",
-      actionContribute: "Contribute",
+      actionContribute: "Credit",
       actionComplete: "Complete"
     },
 
@@ -2958,7 +2958,7 @@ export const translations = {
       paidOff: "Quitado",
       actionReceive: "Receber",
       actionPay: "Pagar",
-      actionContribute: "Aportar",
+      actionContribute: "Creditar",
       actionComplete: "Concluir"
     },
 

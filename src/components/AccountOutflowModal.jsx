@@ -138,8 +138,9 @@ export default function AccountOutflowModal({
       setTitle(initialData?.title || initialData?.name || '');
       setAmount(initialData?.amount ? Math.abs(Number(initialData.amount)).toString() : '');
       setDayOfMonth(initialDay);
-      setRecurrence(initialData ? normalizeRecurrence(initialData) : EventRecurrence.ONCE);
-      setPeriodicity(initialData ? normalizePeriodicity(initialData.periodicity) : EventPeriodicity.MONTHLY);
+      // A draft (pocket contribution / withdrawal) has no recurrence yet: it starts as a one-time movement
+      setRecurrence(initialData?.id ? normalizeRecurrence(initialData) : EventRecurrence.ONCE);
+      setPeriodicity(initialData?.id ? normalizePeriodicity(initialData.periodicity) : EventPeriodicity.MONTHLY);
       setRecurrenceEndDate(initialData?.limitDate || initialData?.limit_date || initialData?.recurrenceEndDate || '');
       setCategory(resolveInitialCategory(initialData, expenseCategoryMeta));
       setIsAutomatic(Boolean(initialData?.isAutomatic ?? initialData?.automatic ?? false));
@@ -327,7 +328,11 @@ export default function AccountOutflowModal({
             disabled={loading || maxAvailable <= 0}
           >
             {isEditing ? <Check size={14} /> : <ArrowDownRight size={14} />}
-            <span>{isEditing ? t('withdrawalModal.saveOutflow') : t('withdrawalModal.confirmOutflow')}</span>
+            <span>{isEditing
+              ? t('withdrawalModal.saveOutflow')
+              : (pocketTransferKind
+                ? t(pocketTransferKind === PocketTransferKind.CONTRIBUTION ? 'account.contribution' : 'account.pocketWithdrawal')
+                : t('withdrawalModal.confirmOutflow'))}</span>
           </button>
         </>
       }

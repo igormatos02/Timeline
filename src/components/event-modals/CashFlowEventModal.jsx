@@ -112,7 +112,7 @@ export default function CashFlowEventModal({
   const useBreakdown = config.useBreakdown !== false;
 
   const effectivePockets = (pockets && pockets.length > 0) ? pockets : (timeline?.pockets || []);
-  const showSpaceSelector = effectivePockets.length > 0 || isInvestmentTimeline;
+  const showSpaceSelector = isInvestmentTimeline && effectivePockets.length > 0;
 
   // Active section disclosures / tabs
   const [activeTab, setActiveTab] = useState(EventModalTab.OBLIGATION);
@@ -371,11 +371,12 @@ export default function CashFlowEventModal({
       }
       subtitle={timeline?.name || t(config.subtitleKey)}
       accent={ACCENT}
-      headerBg={ACCENT}
       headerBanner={
-        allowTypeSwitch ? (
+        // Temporariamente escondido a pedido do usuário
+        /* allowTypeSwitch ? (
           <FlowStreamAnimation type={currentEventType} />
-        ) : null
+        ) : null */
+        null
       }
       minHeight="520px"
       headerRight={
@@ -616,8 +617,19 @@ export default function CashFlowEventModal({
           </div>
         )}
 
-        {/* 🌟 1. TWO-COLUMN GRID: TITLE & CATEGORY */}
-        <div style={{ display: 'grid', gridTemplateColumns: showCategories ? 'minmax(200px, 1.5fr) minmax(150px, 1fr)' : '1fr', gap: '10px', alignItems: 'flex-start' }}>
+        {/* 🌟 1. SECTION: TITLE & CATEGORY */}
+        <div
+          style={{
+            position: 'relative',
+            display: 'grid',
+            gridTemplateColumns: showCategories ? 'minmax(200px, 1.5fr) minmax(150px, 1fr)' : '1fr',
+            gap: '10px',
+            alignItems: 'flex-start',
+            padding: '10px 12px',
+            borderRadius: '12px',
+            border: '1px solid var(--border-glass)'
+          }}
+        >
           {/* Hero Title Column */}
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '5px', color: 'var(--text-muted)' }}>
@@ -630,24 +642,19 @@ export default function CashFlowEventModal({
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               placeholder={t(config.titlePlaceholderKey)}
+              className="form-input"
               style={{
                 width: '100%',
                 height: '42px',
                 padding: '0 14px',
-                background: 'var(--bg-glass)',
-                border: '1px solid var(--border-glass)',
                 borderRadius: '8px',
                 color: 'var(--text-main)',
                 fontSize: '0.92rem',
                 fontWeight: '600',
-                outline: 'none',
                 boxSizing: 'border-box',
                 display: 'flex',
-                alignItems: 'center',
-                transition: 'border-color 0.15s ease'
+                alignItems: 'center'
               }}
-              onFocus={(e) => (e.target.style.borderColor = ACCENT)}
-              onBlur={(e) => (e.target.style.borderColor = 'var(--border-glass)')}
             />
           </div>
 
@@ -675,8 +682,19 @@ export default function CashFlowEventModal({
           )}
         </div>
 
-        {/* 🌟 2. TWO-COLUMN GRID: AMOUNT & DUE DATE */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(130px, 0.75fr) minmax(260px, 1.25fr)', gap: '10px', alignItems: 'flex-start' }}>
+        {/* 🌟 2. SECTION: AMOUNT & DUE DATE */}
+        <div
+          style={{
+            position: 'relative',
+            display: 'grid',
+            gridTemplateColumns: 'minmax(130px, 0.75fr) minmax(260px, 1.25fr)',
+            gap: '10px',
+            alignItems: 'flex-start',
+            padding: '10px 12px',
+            borderRadius: '12px',
+            border: '1px solid var(--border-glass)'
+          }}
+        >
           {/* Amount Column */}
           <div style={{ position: 'relative' }}>
             <EuroInput
@@ -764,97 +782,118 @@ export default function CashFlowEventModal({
           />
         )}
 
-        {/* 🌟 3. TWO-COLUMN ROW: RECURRENCE & PERIODICITY */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', alignItems: 'flex-start' }}>
-          {/* Recurrence */}
-          <div>
-            <RecurrenceSelector
-              value={formData.recurrence}
-              onChange={(recId) => {
-                setFormData((prev) => {
-                  if (recId === EventRecurrence.LIMITED && !prev.recurrenceEndDate) {
-                    return {
-                      ...prev,
-                      recurrence: recId,
-                      recurrenceEndDate: format(addMonths(parseISO(prev.date || format(new Date(), 'yyyy-MM-dd')), 6), 'yyyy-MM')
-                    };
-                  }
-                  return { ...prev, recurrence: recId };
-                });
-              }}
-              accent={ACCENT}
-              label={t('modal.recurrence')}
-              isOpen={isRecurrenceOpen}
-              onToggle={() => {
-                setIsRecurrenceOpen((prev) => !prev);
-                setIsCategoryOpen(false);
-                setIsPeriodicityOpen(false);
-                setIsEndMonthPickerOpen(false);
-                if (isBreakdownOpen) closeBreakdown();
-              }}
-              marginBottom="0"
-            />
+        {/* 🌟 3. SECTION: RECURRENCE & PERIODICITY */}
+        <div
+          style={{
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            padding: '10px 12px',
+            borderRadius: '12px',
+            border: '1px solid var(--border-glass)'
+          }}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', alignItems: 'flex-start' }}>
+            {/* Recurrence */}
+            <div>
+              <RecurrenceSelector
+                value={formData.recurrence}
+                onChange={(recId) => {
+                  setFormData((prev) => {
+                    if (recId === EventRecurrence.LIMITED && !prev.recurrenceEndDate) {
+                      return {
+                        ...prev,
+                        recurrence: recId,
+                        recurrenceEndDate: format(addMonths(parseISO(prev.date || format(new Date(), 'yyyy-MM-dd')), 6), 'yyyy-MM')
+                      };
+                    }
+                    return { ...prev, recurrence: recId };
+                  });
+                }}
+                accent={ACCENT}
+                label={t('modal.recurrence')}
+                isOpen={isRecurrenceOpen}
+                onToggle={() => {
+                  setIsRecurrenceOpen((prev) => !prev);
+                  setIsCategoryOpen(false);
+                  setIsPeriodicityOpen(false);
+                  setIsEndMonthPickerOpen(false);
+                  if (isBreakdownOpen) closeBreakdown();
+                }}
+                marginBottom="0"
+              />
+            </div>
+
+            {/* Periodicity (disabled and empty for movements that don't repeat) */}
+            <div>
+              <PeriodicitySelector
+                value={formData.periodicity}
+                onChange={(pId) => setFormData((prev) => ({ ...prev, periodicity: pId }))}
+                accent={ACCENT}
+                label={t('modal.periodicity')}
+                isOpen={isPeriodicityOpen}
+                onToggle={() => {
+                  setIsPeriodicityOpen((prev) => !prev);
+                  setIsCategoryOpen(false);
+                  setIsRecurrenceOpen(false);
+                  setIsEndMonthPickerOpen(false);
+                  if (isBreakdownOpen) closeBreakdown();
+                }}
+                disabled={formData.recurrence === EventRecurrence.ONCE}
+                marginBottom="0"
+              />
+            </div>
           </div>
 
-          {/* Periodicity (disabled and empty for movements that don't repeat) */}
-          <div>
-            <PeriodicitySelector
-              value={formData.periodicity}
-              onChange={(pId) => setFormData((prev) => ({ ...prev, periodicity: pId }))}
+          {/* Floating End Month Picker when Limited */}
+          {formData.recurrence === EventRecurrence.LIMITED && (
+            <MonthPickerPopover
+              value={formData.recurrenceEndDate}
+              onChange={(month) => setFormData({ ...formData, recurrenceEndDate: month })}
               accent={ACCENT}
-              label={t('modal.periodicity')}
-              isOpen={isPeriodicityOpen}
+              dateLocale={dateLocale}
+              label={t('modal.endMonth')}
+              isOpen={isEndMonthPickerOpen}
               onToggle={() => {
-                setIsPeriodicityOpen((prev) => !prev);
+                setIsEndMonthPickerOpen((prev) => !prev);
                 setIsCategoryOpen(false);
                 setIsRecurrenceOpen(false);
-                setIsEndMonthPickerOpen(false);
+                setIsPeriodicityOpen(false);
                 if (isBreakdownOpen) closeBreakdown();
               }}
-              disabled={formData.recurrence === EventRecurrence.ONCE}
-              marginBottom="0"
+              year={endMonthPickerYear}
+              onYearChange={setEndMonthPickerYear}
+              baseDate={formData.date}
+              explanation={t('modal.periodExplanation', {
+                start: format(parseISO(formData.date), 'MMMM yyyy', { locale: dateLocale }),
+                end: formData.recurrenceEndDate
+                  ? format(parseISO(`${formData.recurrenceEndDate}-01`), 'MMMM yyyy', { locale: dateLocale })
+                  : '...'
+              })}
             />
-          </div>
+          )}
         </div>
 
-        {/* Floating End Month Picker when Limited */}
-        {formData.recurrence === EventRecurrence.LIMITED && (
-          <MonthPickerPopover
-            value={formData.recurrenceEndDate}
-            onChange={(month) => setFormData({ ...formData, recurrenceEndDate: month })}
-            accent={ACCENT}
-            dateLocale={dateLocale}
-            label={t('modal.endMonth')}
-            isOpen={isEndMonthPickerOpen}
-            onToggle={() => {
-              setIsEndMonthPickerOpen((prev) => !prev);
-              setIsCategoryOpen(false);
-              setIsRecurrenceOpen(false);
-              setIsPeriodicityOpen(false);
-              if (isBreakdownOpen) closeBreakdown();
-            }}
-            year={endMonthPickerYear}
-            onYearChange={setEndMonthPickerYear}
-            baseDate={formData.date}
-            explanation={t('modal.periodExplanation', {
-              start: format(parseISO(formData.date), 'MMMM yyyy', { locale: dateLocale }),
-              end: formData.recurrenceEndDate
-                ? format(parseISO(`${formData.recurrenceEndDate}-01`), 'MMMM yyyy', { locale: dateLocale })
-                : '...'
-            })}
-          />
-        )}
-
-        {/* 🌟 4. PROGRESSIVE DISCLOSURE TABS (MAIS OPÇÕES) */}
-        <div style={{ paddingTop: '8px', borderTop: '1px solid var(--border-glass)' }}>
+        {/* 🌟 4. SECTION: MORE OPTIONS / TABS (RESTANTE ABAIXO) */}
+        <div
+          style={{
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: activeTab ? '8px' : '0px',
+            padding: '8px 12px',
+            borderRadius: '12px',
+            border: '1px solid var(--border-glass)'
+          }}
+        >
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              borderBottom: '1px solid var(--border-glass)',
-              paddingBottom: '0px',
-              marginBottom: activeTab ? '10px' : '0'
+              borderBottom: activeTab ? '1px solid var(--border-glass)' : 'none',
+              paddingBottom: activeTab ? '6px' : '0px'
             }}
           >
             {/* Left: Tab items with underline indicator */}
@@ -867,7 +906,7 @@ export default function CashFlowEventModal({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '6px 2px 8px 2px',
+                  padding: '4px 2px 6px 2px',
                   background: 'transparent',
                   border: 'none',
                   borderBottom: activeTab === EventModalTab.OBLIGATION ? `2px solid ${ACCENT}` : '2px solid transparent',
@@ -897,7 +936,7 @@ export default function CashFlowEventModal({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '6px 2px 8px 2px',
+                  padding: '4px 2px 6px 2px',
                   background: 'transparent',
                   border: 'none',
                   borderBottom: activeTab === EventModalTab.DESCRIPTION ? `2px solid ${ACCENT}` : '2px solid transparent',
@@ -925,7 +964,7 @@ export default function CashFlowEventModal({
                 alignItems: 'center',
                 gap: '6px',
                 cursor: 'pointer',
-                padding: '3px 0 6px 0',
+                padding: '2px 0 4px 0',
                 userSelect: 'none'
               }}
             >
@@ -963,66 +1002,41 @@ export default function CashFlowEventModal({
 
           {/* Active Tab Panel */}
           {activeTab && (
-            <div style={{ marginTop: '8px', minHeight: '78px' }}>
+            <div style={{ marginTop: '4px', minHeight: '68px' }}>
               {activeTab === EventModalTab.DESCRIPTION && (
-                <div
+                <textarea
+                  rows={2}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder={t('modal.descriptionNotesPlaceholder')}
+                  className="form-textarea"
                   style={{
-                    background: 'var(--bg-card)',
-                    padding: '10px 12px',
+                    width: '100%',
+                    height: '56px',
+                    minHeight: '56px',
+                    padding: '8px 10px',
                     borderRadius: '8px',
-                    border: '1px solid var(--border-glass)',
-                    minHeight: '78px',
-                    boxSizing: 'border-box'
+                    color: 'var(--text-main)',
+                    fontSize: '0.84rem',
+                    boxSizing: 'border-box',
+                    resize: 'none',
+                    fontFamily: 'inherit'
                   }}
-                >
-                  <textarea
-                    rows={2}
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder={t('modal.descriptionNotesPlaceholder')}
-                    style={{
-                      width: '100%',
-                      height: '56px',
-                      padding: '8px 10px',
-                      background: 'var(--bg-glass)',
-                      border: '1px solid var(--border-glass)',
-                      borderRadius: '6px',
-                      color: 'var(--text-main)',
-                      fontSize: '0.84rem',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                      resize: 'none',
-                      fontFamily: 'inherit'
-                    }}
-                  />
-                </div>
+                />
               )}
 
               {activeTab === EventModalTab.OBLIGATION && (
-                <div
-                  style={{
-                    background: 'var(--bg-card)',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-glass)',
-                    minHeight: '78px',
-                    boxSizing: 'border-box',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                >
-                  <div style={{ width: '100%' }}>
-                    <ObligationSelector
-                      isObligation={Boolean(formData.obligationPersonId)}
-                      obligationPersonId={formData.obligationPersonId}
-                      timeboardId={timeboardId}
-                      accentColor={ACCENT}
-                      t={t}
-                      onChange={({ isObligation, obligationPersonId }) => {
-                        setFormData((prev) => ({ ...prev, isObligation, obligationPersonId }));
-                      }}
-                    />
-                  </div>
+                <div style={{ width: '100%' }}>
+                  <ObligationSelector
+                    isObligation={Boolean(formData.obligationPersonId)}
+                    obligationPersonId={formData.obligationPersonId}
+                    timeboardId={timeboardId}
+                    accentColor={ACCENT}
+                    t={t}
+                    onChange={({ isObligation, obligationPersonId }) => {
+                      setFormData((prev) => ({ ...prev, isObligation, obligationPersonId }));
+                    }}
+                  />
                 </div>
               )}
             </div>

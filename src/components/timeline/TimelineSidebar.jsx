@@ -87,7 +87,7 @@ export default function TimelineSidebar({
       {/* Minor Navigation label if no timeboard header */}
       {(!timeboards || timeboards.length === 0) && (
         <div className="sidebar-header-title">
-          <Filter size={15} style={{ color: 'var(--primary-light)' }} />
+          <Filter size={15} style={{ color: 'var(--text-white)' }} />
           <span>{t('sidebar.filtersNavigation')}</span>
         </div>
       )}

@@ -34,10 +34,17 @@ const PARTICLES = [
   { id: 28, delay: 5.1, duration: 3.2, size: 6.4, opacity: 1.0, top: '52%' }
 ];
 
-export default function FlowStreamAnimation({ type = EventType.INCOME }) {
+export default function FlowStreamAnimation({ type = EventType.INCOME, accent }) {
   const { t } = useTranslation();
   const isInflow = type === EventType.INCOME || type === EventType.INVESTMENT;
   const isAccount = type === EventType.INVESTMENT;
+  const accentColor = accent || (
+    type === EventType.EXPENSE
+      ? TimelineColor.RED
+      : type === EventType.INVESTMENT
+        ? TimelineColor.PURPLE
+        : TimelineColor.EMERALD
+  );
 
   return (
     <div
@@ -46,7 +53,7 @@ export default function FlowStreamAnimation({ type = EventType.INCOME }) {
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
-        padding: '4px 6px 0px',
+        padding: '2px 4px 0px',
         background: 'transparent',
         border: 'none',
         position: 'relative',
@@ -78,61 +85,61 @@ export default function FlowStreamAnimation({ type = EventType.INCOME }) {
         @keyframes focusBlinkPulseLight {
           0%, 100% {
             transform: scale(1);
-            filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.4));
+            filter: drop-shadow(0 0 2px ${accentColor}66);
             opacity: 1;
           }
           50% {
-            transform: scale(1.06);
-            filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.75));
+            transform: scale(1.08);
+            filter: drop-shadow(0 0 6px ${accentColor}cc);
             opacity: 0.9;
           }
         }
         @keyframes walletBlinkPulseLight {
           0%, 100% {
             transform: scale(1);
-            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+            box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
           }
           50% {
-            transform: scale(1.03);
-            box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.25);
+            transform: scale(1.04);
+            box-shadow: 0 0 8px 1px ${accentColor}40;
           }
         }
       `}</style>
 
-      {/* 🌟 1. ESTAÇÃO ESQUERDA: ORIGEM (Bolinha dentro de um círculo) */}
+      {/* 🌟 1. ESTAÇÃO ESQUERDA: ORIGEM */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '6px',
-          width: '64px',
+          gap: '3px',
+          width: '56px',
           zIndex: 2,
           flexShrink: 0
         }}
       >
-        <div style={{ height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div
             style={{
-              width: '28px',
-              height: '28px',
+              width: '20px',
+              height: '20px',
               borderRadius: '50%',
-              border: isInflow ? `2px solid ${TimelineColor.WHITE}` : '1.5px solid rgba(255, 255, 255, 0.35)',
-              background: isInflow ? 'rgba(255, 255, 255, 0.28)' : 'transparent',
+              border: isInflow ? `2px solid ${accentColor}` : '1.5px solid var(--border-glass)',
+              background: isInflow ? `${accentColor}25` : 'transparent',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              transition: 'border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               animation: isInflow ? 'focusBlinkPulseLight 2s ease-in-out infinite' : 'none'
             }}
           >
             {/* Bolinha interna */}
             <div
               style={{
-                width: '9px',
-                height: '9px',
+                width: '6px',
+                height: '6px',
                 borderRadius: '50%',
-                background: isInflow ? TimelineColor.WHITE : 'rgba(255, 255, 255, 0.45)',
+                background: isInflow ? accentColor : 'var(--text-dim)',
                 transition: 'background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             />
@@ -140,8 +147,8 @@ export default function FlowStreamAnimation({ type = EventType.INCOME }) {
         </div>
         <span
           style={{
-            fontSize: '0.72rem',
-            color: isInflow ? TimelineColor.WHITE : 'rgba(255, 255, 255, 0.65)',
+            fontSize: '0.68rem',
+            color: isInflow ? 'var(--text-main)' : 'var(--text-muted)',
             fontWeight: isInflow ? '700' : '500',
             transition: 'color 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             textAlign: 'center'
@@ -155,7 +162,7 @@ export default function FlowStreamAnimation({ type = EventType.INCOME }) {
       <div
         style={{
           flex: 1,
-          height: '44px',
+          height: '30px',
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
@@ -163,7 +170,7 @@ export default function FlowStreamAnimation({ type = EventType.INCOME }) {
           overflow: 'visible'
         }}
       >
-        {/* Linha de trilho reta perfeitamente centralizada */}
+        {/* Linha de trilho reta */}
         <div
           style={{
             position: 'absolute',
@@ -173,14 +180,14 @@ export default function FlowStreamAnimation({ type = EventType.INCOME }) {
             height: '1.5px',
             transform: 'translateY(-50%)',
             background: isInflow
-              ? 'rgba(255, 255, 255, 0.28)'
-              : 'rgba(255, 255, 255, 0.16)',
+              ? `${accentColor}44`
+              : 'var(--border-glass)',
             borderRadius: '2px',
             transition: 'background 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         />
 
-        {/* Chuva rica de bolinhas no fluxo horizontal quando Entrada */}
+        {/* Partículas no fluxo horizontal quando Entrada */}
         {isInflow && PARTICLES.map((p) => (
           <span
             key={p.id}
@@ -188,14 +195,14 @@ export default function FlowStreamAnimation({ type = EventType.INCOME }) {
               position: 'absolute',
               top: p.top,
               left: '0%',
-              width: `${p.size}px`,
-              height: `${p.size}px`,
+              width: `${(p.size * 0.7).toFixed(1)}px`,
+              height: `${(p.size * 0.7).toFixed(1)}px`,
               borderRadius: '50%',
-              background: TimelineColor.WHITE,
+              background: accentColor,
               opacity: 0,
               boxShadow: p.size > 5
-                ? '0 0 6px rgba(255, 255, 255, 0.9), 0 0 2px rgba(255, 255, 255, 1)'
-                : '0 0 3px rgba(255, 255, 255, 0.7)',
+                ? `0 0 5px ${accentColor}cc, 0 0 2px ${accentColor}`
+                : `0 0 3px ${accentColor}99`,
               animation: `linearShowerFlow ${p.duration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
               animationDelay: `${p.delay}s`,
               animationFillMode: 'both',
@@ -206,26 +213,26 @@ export default function FlowStreamAnimation({ type = EventType.INCOME }) {
         ))}
       </div>
 
-      {/* 🌟 3. ESTAÇÃO CENTRAL: CARTEIRA (Ícone de carteira em círculo maior) */}
+      {/* 🌟 3. ESTAÇÃO CENTRAL: CARTEIRA */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '6px',
-          width: '64px',
+          gap: '3px',
+          width: '56px',
           zIndex: 2,
           flexShrink: 0
         }}
       >
-        <div style={{ height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div
             style={{
-              width: '42px',
-              height: '42px',
+              width: '30px',
+              height: '30px',
               borderRadius: '50%',
-              border: `2px solid ${TimelineColor.WHITE}`,
-              background: 'rgba(255, 255, 255, 0.22)',
+              border: `2px solid ${accentColor}`,
+              background: `${accentColor}18`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -234,16 +241,16 @@ export default function FlowStreamAnimation({ type = EventType.INCOME }) {
             }}
           >
             {isAccount ? (
-              <Landmark size={19} style={{ color: TimelineColor.WHITE }} />
+              <Landmark size={14} style={{ color: accentColor }} />
             ) : (
-              <Wallet size={19} style={{ color: TimelineColor.WHITE }} />
+              <Wallet size={14} style={{ color: accentColor }} />
             )}
           </div>
         </div>
         <span
           style={{
-            fontSize: '0.74rem',
-            color: TimelineColor.WHITE,
+            fontSize: '0.70rem',
+            color: 'var(--text-main)',
             fontWeight: '700',
             textAlign: 'center'
           }}
@@ -256,7 +263,7 @@ export default function FlowStreamAnimation({ type = EventType.INCOME }) {
       <div
         style={{
           flex: 1,
-          height: '44px',
+          height: '30px',
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
@@ -264,7 +271,7 @@ export default function FlowStreamAnimation({ type = EventType.INCOME }) {
           overflow: 'visible'
         }}
       >
-        {/* Linha de trilho reta perfeitamente centralizada */}
+        {/* Linha de trilho reta */}
         <div
           style={{
             position: 'absolute',
@@ -274,14 +281,14 @@ export default function FlowStreamAnimation({ type = EventType.INCOME }) {
             height: '1.5px',
             transform: 'translateY(-50%)',
             background: !isInflow
-              ? 'rgba(255, 255, 255, 0.28)'
-              : 'rgba(255, 255, 255, 0.16)',
+              ? `${accentColor}44`
+              : 'var(--border-glass)',
             borderRadius: '2px',
             transition: 'background 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         />
 
-        {/* Chuva rica de bolinhas no fluxo horizontal quando Saída */}
+        {/* Partículas no fluxo horizontal quando Saída */}
         {!isInflow && PARTICLES.map((p) => (
           <span
             key={p.id}
@@ -289,14 +296,14 @@ export default function FlowStreamAnimation({ type = EventType.INCOME }) {
               position: 'absolute',
               top: p.top,
               left: '0%',
-              width: `${p.size}px`,
-              height: `${p.size}px`,
+              width: `${(p.size * 0.7).toFixed(1)}px`,
+              height: `${(p.size * 0.7).toFixed(1)}px`,
               borderRadius: '50%',
-              background: TimelineColor.WHITE,
+              background: accentColor,
               opacity: 0,
               boxShadow: p.size > 5
-                ? '0 0 6px rgba(255, 255, 255, 0.9), 0 0 2px rgba(255, 255, 255, 1)'
-                : '0 0 3px rgba(255, 255, 255, 0.7)',
+                ? `0 0 5px ${accentColor}cc, 0 0 2px ${accentColor}`
+                : `0 0 3px ${accentColor}99`,
               animation: `linearShowerFlow ${p.duration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
               animationDelay: `${p.delay}s`,
               animationFillMode: 'both',
@@ -307,40 +314,40 @@ export default function FlowStreamAnimation({ type = EventType.INCOME }) {
         ))}
       </div>
 
-      {/* 🌟 5. ESTAÇÃO DIREITA: DESTINO (Bolinha dentro de um círculo igual à origem) */}
+      {/* 🌟 5. ESTAÇÃO DIREITA: DESTINO */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '6px',
-          width: '64px',
+          gap: '3px',
+          width: '56px',
           zIndex: 2,
           flexShrink: 0
         }}
       >
-        <div style={{ height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div
             style={{
-              width: '28px',
-              height: '28px',
+              width: '20px',
+              height: '20px',
               borderRadius: '50%',
-              border: !isInflow ? `2px solid ${TimelineColor.WHITE}` : '1.5px solid rgba(255, 255, 255, 0.35)',
-              background: !isInflow ? 'rgba(255, 255, 255, 0.28)' : 'transparent',
+              border: !isInflow ? `2px solid ${accentColor}` : '1.5px solid var(--border-glass)',
+              background: !isInflow ? `${accentColor}25` : 'transparent',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              transition: 'border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               animation: !isInflow ? 'focusBlinkPulseLight 1.6s ease-in-out infinite' : 'none'
             }}
           >
             {/* Bolinha interna */}
             <div
               style={{
-                width: '9px',
-                height: '9px',
+                width: '6px',
+                height: '6px',
                 borderRadius: '50%',
-                background: !isInflow ? TimelineColor.WHITE : 'rgba(255, 255, 255, 0.45)',
+                background: !isInflow ? accentColor : 'var(--text-dim)',
                 transition: 'background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             />
@@ -348,8 +355,8 @@ export default function FlowStreamAnimation({ type = EventType.INCOME }) {
         </div>
         <span
           style={{
-            fontSize: '0.72rem',
-            color: !isInflow ? TimelineColor.WHITE : 'rgba(255, 255, 255, 0.65)',
+            fontSize: '0.68rem',
+            color: !isInflow ? 'var(--text-main)' : 'var(--text-muted)',
             fontWeight: !isInflow ? '700' : '500',
             transition: 'color 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             textAlign: 'center'

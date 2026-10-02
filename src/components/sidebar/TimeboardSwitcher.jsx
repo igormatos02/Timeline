@@ -125,12 +125,12 @@ export default function TimeboardSwitcher({
           gap: '8px',
           cursor: 'pointer',
           userSelect: 'none',
-          background: isOpen ? 'rgba(99, 102, 241, 0.12)' : 'transparent',
+          background: isOpen ? 'color-mix(in srgb, var(--overlay-backdrop) 15%, transparent)' : 'transparent',
           transition: 'background 0.15s ease'
         }}
         onClick={() => setIsOpen((prev) => !prev)}
         onMouseEnter={(e) => {
-          if (!isOpen) e.currentTarget.style.background = 'rgba(99, 102, 241, 0.06)';
+          if (!isOpen) e.currentTarget.style.background = 'color-mix(in srgb, var(--text-white) 8%, transparent)';
         }}
         onMouseLeave={(e) => {
           if (!isOpen) e.currentTarget.style.background = 'transparent';
@@ -144,12 +144,12 @@ export default function TimeboardSwitcher({
               width: '28px',
               height: '28px',
               borderRadius: '7px',
-              background: 'var(--bg-glass)',
-              border: '1px solid var(--border-glass)',
+              background: 'color-mix(in srgb, var(--text-white) 20%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--text-white) 28%, transparent)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: activeMeta.color,
+              color: 'var(--text-white)',
               flexShrink: 0
             }}
           >
@@ -162,7 +162,7 @@ export default function TimeboardSwitcher({
               style={{
                 fontSize: '0.84rem',
                 fontWeight: '700',
-                color: 'var(--text-main)',
+                color: 'var(--text-white)',
                 lineHeight: 1.2,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -176,7 +176,7 @@ export default function TimeboardSwitcher({
                 style={{
                   fontSize: '0.66rem',
                   fontWeight: '600',
-                  color: 'var(--primary-light)',
+                  color: 'color-mix(in srgb, var(--text-white) 85%, transparent)',
                   lineHeight: 1
                 }}
               >
@@ -187,9 +187,9 @@ export default function TimeboardSwitcher({
                   style={{
                     fontSize: '0.58rem',
                     fontWeight: '700',
-                    color: TimelineColor.PURPLE,
-                    background: 'rgba(168, 85, 247, 0.15)',
-                    border: '1px solid rgba(168, 85, 247, 0.3)',
+                    color: 'var(--text-white)',
+                    background: 'color-mix(in srgb, var(--text-white) 20%, transparent)',
+                    border: '1px solid color-mix(in srgb, var(--text-white) 35%, transparent)',
                     borderRadius: '4px',
                     padding: '1px 4px',
                     lineHeight: 1
@@ -217,19 +217,19 @@ export default function TimeboardSwitcher({
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.2)',
-                color: 'var(--primary-light)',
+                background: 'color-mix(in srgb, var(--text-white) 18%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--text-white) 25%, transparent)',
+                color: 'var(--text-white)',
                 cursor: 'pointer',
                 padding: '4px',
                 borderRadius: '6px',
                 transition: 'all 0.15s ease'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
+                e.currentTarget.style.background = 'color-mix(in srgb, var(--text-white) 28%, transparent)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
+                e.currentTarget.style.background = 'color-mix(in srgb, var(--text-white) 18%, transparent)';
               }}
             >
               <Settings size={14} />
@@ -239,7 +239,7 @@ export default function TimeboardSwitcher({
           <ChevronDown
             size={15}
             style={{
-              color: 'var(--text-muted)',
+              color: 'color-mix(in srgb, var(--text-white) 85%, transparent)',
               transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'
             }}

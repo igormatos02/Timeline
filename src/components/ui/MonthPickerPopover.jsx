@@ -73,9 +73,11 @@ export default function MonthPickerPopover({
         onClick={onToggle}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'var(--bg-card)',
-          border: isOpen ? `2px solid ${accent}` : `1px solid ${accent}59`,
-          borderRadius: '8px', padding: '9px 12px', cursor: 'pointer'
+          background: isOpen ? 'var(--input-focus-bg)' : 'var(--bg-glass)',
+          border: isOpen ? '1px solid var(--input-focus-border)' : '1px solid var(--border-glass)',
+          boxShadow: isOpen ? 'var(--input-focus-glow)' : 'none',
+          borderRadius: '8px', padding: '9px 12px', cursor: 'pointer',
+          transition: 'all var(--transition-fast)'
         }}
       >
         <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-main)', textTransform: 'capitalize' }}>

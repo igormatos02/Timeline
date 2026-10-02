@@ -80,14 +80,15 @@ export default function RecurrenceSelector({
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '6px',
-          background: 'var(--bg-glass)',
-          border: open ? '2px solid var(--primary)' : '1px solid var(--border-glass)',
+          background: open ? 'var(--input-focus-bg)' : 'var(--bg-glass)',
+          border: open ? '1px solid var(--input-focus-border)' : '1px solid var(--border-glass)',
+          boxShadow: open ? 'var(--input-focus-glow)' : 'none',
           borderRadius: '8px',
           padding: '0 10px',
           cursor: 'pointer',
           boxSizing: 'border-box',
           color: 'var(--text-main)',
-          transition: 'border-color 0.15s ease'
+          transition: 'all var(--transition-fast)'
         }}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>

@@ -15,29 +15,29 @@ export default function ModalShell({
       {headerBanner ? (
         <div
           style={{
-            margin: '-24px -24px 18px -24px',
-            backgroundColor: headerBg || accent,
-            borderBottom: '1px solid rgba(0, 0, 0, 0.22)',
+            margin: '-24px -24px 14px -24px',
+            backgroundColor: headerBg || 'transparent',
+            borderBottom: '1px solid var(--border-glass)',
             borderRadius: '16px 16px 0 0',
             overflow: 'hidden',
             transition: 'background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
-          {/* 🌟 PARTE 1 (SUPERIOR): Título, Caixa e Botão Fechar em tom mais intenso */}
+          {/* 🌟 PARTE 1 (SUPERIOR): Título, Caixa e Botão Fechar */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '14px 24px 12px 24px',
-              background: 'rgba(0, 0, 0, 0.16)',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.12)'
+              padding: '16px 24px 10px 24px',
+              background: 'transparent',
+              borderBottom: '1px solid var(--border-glass)'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {Icon && (
                 <div style={{
-                  background: 'rgba(255, 255, 255, 0.22)', color: TimelineColor.WHITE, padding: '7px',
+                  background: `${accent}22`, color: accent, padding: '7px',
                   borderRadius: '9px', display: 'flex', alignItems: 'center'
                 }}>
                   <Icon size={18} />
@@ -46,11 +46,11 @@ export default function ModalShell({
               <div>
                 <h3 style={{
                   margin: 0, fontSize: '1.12rem', fontWeight: '800',
-                  color: TimelineColor.WHITE, letterSpacing: '-0.01em'
+                  color: 'var(--text-main)', letterSpacing: '-0.01em'
                 }}>{title}</h3>
                 {subtitle && (
                   <div style={{
-                    fontSize: '0.74rem', color: `${TimelineColor.WHITE}d9`, fontWeight: '700'
+                    fontSize: '0.74rem', color: accent, fontWeight: '700'
                   }}>{subtitle}</div>
                 )}
               </div>
@@ -61,20 +61,26 @@ export default function ModalShell({
               onClick={onClose}
               aria-label="Fechar"
               style={{
-                background: 'rgba(255, 255, 255, 0.16)', border: 'none',
-                color: TimelineColor.WHITE, cursor: 'pointer',
+                background: 'transparent', border: 'none',
+                color: 'var(--text-dim)', cursor: 'pointer',
                 borderRadius: '6px', padding: '5px', display: 'flex', alignItems: 'center',
-                transition: 'background 0.15s ease'
+                transition: 'all 0.15s ease'
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.28)')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.16)')}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--text-main)';
+                e.currentTarget.style.background = 'var(--bg-glass)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--text-dim)';
+                e.currentTarget.style.background = 'transparent';
+              }}
             >
               <X size={18} />
             </button>
           </div>
 
           {/* 🌟 PARTE 2 (INFERIOR): Animação de Fluxo */}
-          <div style={{ padding: '10px 20px 12px 20px' }}>
+          <div style={{ padding: '6px 20px 8px 20px' }}>
             {headerBanner}
           </div>
         </div>

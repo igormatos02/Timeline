@@ -123,14 +123,15 @@ export default function DueDatePicker({
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: compact ? '4px' : '6px',
-            background: 'var(--bg-glass)',
-            border: isOpen ? '2px solid var(--primary)' : '1px solid var(--border-glass)',
+            background: isOpen ? 'var(--input-focus-bg)' : 'var(--bg-glass)',
+            border: isOpen ? '1px solid var(--input-focus-border)' : '1px solid var(--border-glass)',
+            boxShadow: isOpen ? 'var(--input-focus-glow)' : 'none',
             borderRadius: compact ? '6px' : '8px',
             padding: compact ? '0 6px' : '0 10px',
             cursor: 'pointer',
             boxSizing: 'border-box',
             color: 'var(--text-main)',
-            transition: 'border-color 0.15s ease'
+            transition: 'all var(--transition-fast)'
           }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: compact ? '4px' : '6px', minWidth: 0 }}>

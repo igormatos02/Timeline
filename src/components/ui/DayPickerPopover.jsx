@@ -45,12 +45,14 @@ export default function DayPickerPopover({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'var(--bg-glass)',
-          border: isOpen ? `2px solid ${accent}` : '1px solid var(--border-glass)',
+          background: isOpen ? 'var(--input-focus-bg)' : 'var(--bg-glass)',
+          border: isOpen ? '1px solid var(--input-focus-border)' : '1px solid var(--border-glass)',
+          boxShadow: isOpen ? 'var(--input-focus-glow)' : 'none',
           borderRadius: '8px',
           padding: '10px 14px',
           cursor: 'pointer',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          transition: 'all var(--transition-fast)'
         }}
         onClick={onToggle}
       >

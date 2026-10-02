@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useDeferredValue } from 'react';
 import { EXPENSE_CATEGORY_ITEMS, CONDO_EXPENSE_CATEGORY_ITEMS, CONDO_EXPENSE_CATEGORY_IDS } from './timeline/timelineFilterItems.js';
 import { groupEventsByDate } from '../utils/eventSorting.js';
 import {
@@ -74,6 +74,8 @@ import { classifyMovement } from '../../shared/finance/movements.js';
 import { getTimelineDropdownOptions } from '../utils/timelineConfig.jsx';
 
 const BALANCE_MODE_STORAGE_KEY = 'timeboard.balanceViewMode';
+// Shared empty list: a new [] each render would invalidate the memoized lists built from the events
+const EMPTY_EVENTS = [];
 import FilterSwitch from './sidebar/FilterSwitch.jsx';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { GENERAL_SPACE_KEY } from '../../shared/finance/savingsSpaces.js';
@@ -452,7 +454,10 @@ function VerticalTimeline({
   }, []);
   // Condoflow individual view (an entity is filtered): the balance modes give way to the entity's sides
   const isEntityView = isCondoflow && Boolean(selectedEntityId);
-  const activeBalanceMode = timeline.type === TimelineType.BALANCE && !isEntityView ? balanceMode : BalanceViewMode.ALL;
+  const selectedBalanceMode = timeline.type === TimelineType.BALANCE && !isEntityView ? balanceMode : BalanceViewMode.ALL;
+  // The switch shows the chosen mode at once; the header and the list follow with the deferred value, a
+  // render React can interrupt, so the click never freezes the page on large timeboards
+  const activeBalanceMode = useDeferredValue(selectedBalanceMode);
 
   const isCategoryFiltered =
     (timeline.type === TimelineType.EXPENSE && selectedExpenseCategories.length > 0) ||
@@ -618,12 +623,13 @@ function VerticalTimeline({
     prevIsListViewRef.current = isListView;
   }, [isListView, positionOnToday]);
 
-  // Reference to Today using current system date
-  const todayDate = new Date();
-  const todayStr = format(todayDate, 'yyyy-MM-dd');
+  // Reference to Today: a stable object for the whole day, so the memoized lists below are not rebuilt on
+  // every render (a new Date() each render invalidated all of them)
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const todayDate = useMemo(() => parseISO(todayStr), [todayStr]);
 
   // Extract pending floating tasks (tasks without a fixed date that are not completed)
-  const allEvents = timeline.events || [];
+  const allEvents = timeline.events || EMPTY_EVENTS;
   const isFloatingTask = (ev) =>
     Boolean(
       (ev.category === EventType.TODO || ev.category === 'todo' || ev.category === 'tarefa' || ev.eventType === EventType.TODO || ev.timelineType === TimelineType.TODO || ev.timeline_type === TimelineType.TODO) &&
@@ -722,8 +728,9 @@ function VerticalTimeline({
     });
   }, [allEvents, selectedEntityId, isEventMatchingEntity]);
 
-  // Events that belong on the timeline (have dates, or completed, or non-floating)
-  const timelineEvents = allEvents.filter((ev) => !isFloatingTask(ev));
+  // Events that belong on the timeline (have dates, or completed, or non-floating); memoized so every list
+  // derived from it is only rebuilt when the events change
+  const timelineEvents = useMemo(() => allEvents.filter((ev) => !isFloatingTask(ev)), [allEvents]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   // Helper to test if an event belongs to this timeline's scope
@@ -1217,8 +1224,8 @@ function VerticalTimeline({
   const isBalancoView = timeline.type === TimelineType.BALANCE;
 
   // Determine earliest and latest dates in timeline dynamically
-  const currentMonthStart = startOfMonth(todayDate);
-  const currentMonthEnd = endOfMonth(todayDate);
+  const currentMonthStart = useMemo(() => startOfMonth(todayDate), [todayDate]);
+  const currentMonthEnd = useMemo(() => endOfMonth(todayDate), [todayDate]);
 
   const effectivePastYears = Math.max(1, pastHorizonYears);
   // Events are shown from the month they start in: extend the past horizon to the earliest event of this timeline
@@ -1230,11 +1237,11 @@ function VerticalTimeline({
     });
     return earliest;
   }, [timelineEvents, isEventBelongingToCurrentTimeline]);
-  const horizonStartDateObj = subMonths(currentMonthStart, effectivePastYears * 12);
-  const earliestEventMonthStart = earliestEventDate ? startOfMonth(parseISO(earliestEventDate)) : null;
-  const defaultStartDateObj = earliestEventMonthStart && earliestEventMonthStart < horizonStartDateObj
-    ? earliestEventMonthStart
-    : horizonStartDateObj;
+  const defaultStartDateObj = useMemo(() => {
+    const horizonStart = subMonths(currentMonthStart, effectivePastYears * 12);
+    const earliestEventMonthStart = earliestEventDate ? startOfMonth(parseISO(earliestEventDate)) : null;
+    return earliestEventMonthStart && earliestEventMonthStart < horizonStart ? earliestEventMonthStart : horizonStart;
+  }, [currentMonthStart, effectivePastYears, earliestEventDate]);
 
   // Selected period: a year (optionally with a month) renders only that range;
   // a month alone (e.g. every August) renders that month of every year up to the current one
@@ -1264,9 +1271,10 @@ function VerticalTimeline({
   }, [timelineEvents, isEventBelongingToCurrentTimeline, computeFromMonth]);
 
   const startDateObj = periodRange ? periodRange.start : defaultStartDateObj;
-  const maxDateObj = periodRange
+  const maxDateObj = useMemo(() => (periodRange
     ? periodRange.end
-    : (periodMonthIndex !== null ? new Date(todayDate.getFullYear(), 11, 31) : addMonths(currentMonthEnd, Math.max(1, futureHorizonYears) * 12));
+    : (periodMonthIndex !== null ? new Date(todayDate.getFullYear(), 11, 31) : addMonths(currentMonthEnd, Math.max(1, futureHorizonYears) * 12))
+  ), [periodRange, periodMonthIndex, todayDate, currentMonthEnd, futureHorizonYears]);
 
   // A search made only of digits (optionally prefixed by "REC") also finds the receipt number of the occurrence
   const matchesReceiptNumber = (ev, query) => {
@@ -1528,6 +1536,7 @@ function VerticalTimeline({
           {React.isValidElement(headerComponent)
             ? React.cloneElement(headerComponent, {
               balanceMode: activeBalanceMode,
+              selectedBalanceMode,
               onChangeBalanceMode: timeline.type === TimelineType.BALANCE ? handleChangeBalanceMode : undefined,
               // Individual view: the entity's side (owes / has to receive) and its switch
               entityDirection,

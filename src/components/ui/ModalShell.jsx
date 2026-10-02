@@ -5,50 +5,119 @@ import { TimelineColor } from '../../enums/index.js';
 export default function ModalShell({
   isOpen, onClose, onSubmit, accent = TimelineColor.EMERALD, maxWidth = '680px', minHeight,
   icon: Icon, title, subtitle, children, footer,
-  overflowY = true, showBorderGlow = true
+  overflowY = true, showBorderGlow = true,
+  headerBanner, headerBg
 }) {
   if (!isOpen) return null;
 
   const content = (
     <>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: '20px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {Icon && (
-            <div style={{
-              background: `${accent}22`, color: accent, padding: '8px',
-              borderRadius: '10px', display: 'flex', alignItems: 'center'
-            }}>
-              <Icon size={20} />
-            </div>
-          )}
-          <div>
-            <h3 style={{
-              margin: 0, fontSize: '1.2rem', fontWeight: '800',
-              color: 'var(--text-main)'
-            }}>{title}</h3>
-            {subtitle && (
-              <div style={{
-                fontSize: '0.76rem', color: accent, fontWeight: '700'
-              }}>{subtitle}</div>
-            )}
-          </div>
-        </div>
-        <button
-          type="button"
-          className="action-icon-btn"
-          onClick={onClose}
-          aria-label="Fechar"
+      {headerBanner ? (
+        <div
           style={{
-            background: 'transparent', border: 'none',
-            color: 'var(--text-dim)', cursor: 'pointer'
+            margin: '-24px -24px 18px -24px',
+            backgroundColor: headerBg || accent,
+            borderBottom: '1px solid rgba(0, 0, 0, 0.22)',
+            borderRadius: '16px 16px 0 0',
+            overflow: 'hidden',
+            transition: 'background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
-          <X size={18} />
-        </button>
-      </div>
+          {/* 🌟 PARTE 1 (SUPERIOR): Título, Caixa e Botão Fechar em tom mais intenso */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '14px 24px 12px 24px',
+              background: 'rgba(0, 0, 0, 0.16)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.12)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {Icon && (
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.22)', color: TimelineColor.WHITE, padding: '7px',
+                  borderRadius: '9px', display: 'flex', alignItems: 'center'
+                }}>
+                  <Icon size={18} />
+                </div>
+              )}
+              <div>
+                <h3 style={{
+                  margin: 0, fontSize: '1.12rem', fontWeight: '800',
+                  color: TimelineColor.WHITE, letterSpacing: '-0.01em'
+                }}>{title}</h3>
+                {subtitle && (
+                  <div style={{
+                    fontSize: '0.74rem', color: `${TimelineColor.WHITE}d9`, fontWeight: '700'
+                  }}>{subtitle}</div>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="action-icon-btn"
+              onClick={onClose}
+              aria-label="Fechar"
+              style={{
+                background: 'rgba(255, 255, 255, 0.16)', border: 'none',
+                color: TimelineColor.WHITE, cursor: 'pointer',
+                borderRadius: '6px', padding: '5px', display: 'flex', alignItems: 'center',
+                transition: 'background 0.15s ease'
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.28)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.16)')}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* 🌟 PARTE 2 (INFERIOR): Animação de Fluxo */}
+          <div style={{ padding: '10px 20px 12px 20px' }}>
+            {headerBanner}
+          </div>
+        </div>
+      ) : (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: '20px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {Icon && (
+              <div style={{
+                background: `${accent}22`, color: accent, padding: '8px',
+                borderRadius: '10px', display: 'flex', alignItems: 'center'
+              }}>
+                <Icon size={20} />
+              </div>
+            )}
+            <div>
+              <h3 style={{
+                margin: 0, fontSize: '1.2rem', fontWeight: '800',
+                color: 'var(--text-main)'
+              }}>{title}</h3>
+              {subtitle && (
+                <div style={{
+                  fontSize: '0.76rem', color: accent, fontWeight: '700'
+                }}>{subtitle}</div>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="action-icon-btn"
+            onClick={onClose}
+            aria-label="Fechar"
+            style={{
+              background: 'transparent', border: 'none',
+              color: 'var(--text-dim)', cursor: 'pointer'
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
 
       {children}
 
@@ -90,6 +159,7 @@ export default function ModalShell({
           boxShadow: showBorderGlow
             ? `0 24px 60px rgba(0, 0, 0, 0.85), 0 0 35px ${accent}22`
             : '0 24px 60px rgba(0, 0, 0, 0.85)',
+          transition: 'border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           padding: '24px', boxSizing: 'border-box'
         }}
       >

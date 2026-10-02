@@ -1,12 +1,12 @@
 import React from 'react';
-import { PiggyBank, Landmark, Pencil, Trash2, Plus, ArrowDownRight, Target } from 'lucide-react';
+import { PiggyBank, Landmark, Pencil, Trash2, Plus, Target } from 'lucide-react';
 import { TimelineColor } from '../../enums/index.js';
 import { formatCurrency } from '../../utils/formatCurrency.js';
 
 /**
  * One space of the account in a month of the account timeline: the General space or a pocket.
  * Shows its balance at the end of the month, the goal progress (pockets with a target), the actions
- * (add inflow / outflow, edit / delete pocket) and the month movements (rendered by the parent).
+ * (add movement, edit / delete pocket) and the month movements (rendered by the parent).
  *
  * Props:
  *   name, isGeneral, isClosed    - identity of the space
@@ -15,7 +15,7 @@ import { formatCurrency } from '../../utils/formatCurrency.js';
  *   target, initialValue         - goal of a pocket (target 0 = no goal bar)
  *   isFutureMonth                - future months show forecasts
  *   color, palette               - timeline color and palette theme ({ primary, secondary })
- *   onAddInflow, onAddOutflow    - add movement actions (hidden when missing or closed)
+ *   onAddMovement, onAddInflow   - add movement action (hidden when missing or closed)
  *   onEdit, onDelete             - pocket actions (never on the General space)
  *   children                     - the month movements of the space (or nothing)
  *   t                            - translation function
@@ -31,6 +31,7 @@ export default function AccountSpaceCard({
   isFutureMonth = false,
   color = TimelineColor.INVESTMENT,
   palette,
+  onAddMovement,
   onAddInflow,
   onAddOutflow,
   onEdit,
@@ -115,50 +116,32 @@ export default function AccountSpaceCard({
               <Trash2 size={13} />
             </button>
           )}
-          {!isClosed && onAddInflow && (
+          {!isClosed && (onAddMovement || onAddInflow) && (
             <button
               type="button"
-              className="btn btn-primary btn-xs"
-              onClick={(e) => { e.stopPropagation(); onAddInflow(); }}
+              className="btn btn-primary btn-sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onAddMovement) onAddMovement();
+                else if (onAddInflow) onAddInflow();
+              }}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                fontSize: '0.74rem',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
                 fontWeight: '700',
                 background: color,
-                borderColor: color
+                borderColor: color,
+                color: TimelineColor.WHITE,
+                cursor: 'pointer'
               }}
+              title={t('buttons.addMovement')}
             >
-              <Plus size={12} strokeWidth={2.5} />
-              <span>{t('pocket.addInflow')}</span>
-            </button>
-          )}
-          {!isClosed && onAddOutflow && (
-            <button
-              type="button"
-              className="btn btn-xs"
-              title={t('pocket.addOutflow')}
-              onClick={(e) => { e.stopPropagation(); onAddOutflow(); }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                fontSize: '0.74rem',
-                fontWeight: '700',
-                background: `${TimelineColor.DANGER}1f`,
-                color: TimelineColor.DANGER,
-                border: `1px solid ${TimelineColor.DANGER}59`,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <ArrowDownRight size={12} strokeWidth={2.4} />
-              <span>{t('pocket.addOutflow')}</span>
+              <Plus size={14} />
+              <span>{t('buttons.addMovement')}</span>
             </button>
           )}
         </div>

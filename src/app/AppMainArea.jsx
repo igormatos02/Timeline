@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { startTransition } from 'react';
 import { usePermissions } from '../context/PermissionsContext.jsx';
 import VerticalTimeline from '../components/VerticalTimeline';
 import TimelineHeader from '../components/TimelineHeader';
@@ -91,8 +91,11 @@ export default function AppMainArea({
           onEditPocket={handleOpenCreatePocket}
           onDeletePocket={handleRequestDeletePocket}
           onSelectFinancialTab={(tabKey) => {
-            setActiveFinancialTab(tabKey);
-            setActiveTimelineId(tabKey);
+            // A transition: rendering a large timeline can be interrupted instead of freezing the click
+            startTransition(() => {
+              setActiveFinancialTab(tabKey);
+              setActiveTimelineId(tabKey);
+            });
           }}
           onCreateTimeline={handleOpenCreateTimeline}
           futureHorizonYears={futureHorizonYears}

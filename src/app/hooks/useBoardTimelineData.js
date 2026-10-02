@@ -156,40 +156,15 @@ export function useBoardTimelineData({
     return boardTimelines.filter((tl) => ownTimelineIds.has(String(tl.id)));
   }, [isIndividualRole, activeTimeboardTimelines, displayEvents]);
 
-  // Dynamic active timeline representation for the selected tab
-  const activeTimeline = React.useMemo(() => {
-    if (!activeTimeboard || visibleTimelines.length === 0) return null;
-
-    const currentSelectedRaw = visibleTimelines.find(
-      (tl) => tl.id === activeFinancialTab || tl.type === activeFinancialTab || tl.id === activeTimelineId || tl.type === activeTimelineId
-    ) || visibleTimelines[0];
-
-    const currentSelected = {
-      ...currentSelectedRaw,
-      system: currentSelectedRaw.system || currentSelectedRaw.amortizationSystem || currentSelectedRaw.loanContract?.system || currentSelectedRaw.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE,
-      amortizationSystem: currentSelectedRaw.system || currentSelectedRaw.amortizationSystem || currentSelectedRaw.loanContract?.system || currentSelectedRaw.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE
-    };
-
-    const isLoanType = isLoanTimelineType(currentSelected?.type);
-
-    // Shared notices (individual role) are shown as events of the timeline being viewed
-    let computedEvents = (displayEvents || []).map((ev) => (ev.isSharedNotice
-      ? { ...ev, timelineId: currentSelected.id, timelineOriginId: currentSelected.id, timeline_id: currentSelected.id }
-      : ev));
-    const loanTimelines = activeTimeboardTimelines.filter((tl) => isLoanTimelineType(tl.type));
-
-    if (loanTimelines.length > 0) {
-      loanTimelines.forEach((loanTl) => {
-        const enrichedLoanTl = {
-          ...loanTl,
-          system: loanTl.system || loanTl.amortizationSystem || loanTl.loanContract?.system || loanTl.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE,
-          amortizationSystem: loanTl.system || loanTl.amortizationSystem || loanTl.loanContract?.system || loanTl.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE
-        };
-        computedEvents = recalculateLoanState(enrichedLoanTl, computedEvents);
-      });
-    } else if (isLoanType) {
-      computedEvents = recalculateLoanState(currentSelected, computedEvents);
-    }
+  // Board events with the loans recalculated and the outflow references added: they depend only on the
+  // board's events and timelines, so switching timeline reuses them (and keeps the same array reference,
+  // which lets the memoized lists of the timeline view skip their work)
+  const boardEvents = React.useMemo(() => {
+    let computedEvents = displayEvents || [];
+    activeTimeboardTimelines.filter((tl) => isLoanTimelineType(tl.type)).forEach((loanTl) => {
+      const system = loanTl.system || loanTl.amortizationSystem || loanTl.loanContract?.system || loanTl.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE;
+      computedEvents = recalculateLoanState({ ...loanTl, system, amortizationSystem: system }, computedEvents);
+    });
 
     // Outflows owned by the account (pocket expenses) and loans (paid installments) shown as references in
     // the Outflows timeline — after the loan recalculation, so installments carry their final amounts
@@ -201,6 +176,28 @@ export function useBoardTimelineData({
         ...buildOutflowReferences({ events: computedEvents, expenseTimelineId: expenseTimeline.id, timelineTypeMap })
       ];
     }
+    return computedEvents;
+  }, [activeTimeboardTimelines, displayEvents]);
+
+  // Dynamic active timeline representation for the selected tab
+  const activeTimeline = React.useMemo(() => {
+    if (!activeTimeboard || visibleTimelines.length === 0) return null;
+
+    const currentSelectedRaw = visibleTimelines.find(
+      (tl) => tl.id === activeFinancialTab || tl.type === activeFinancialTab || tl.id === activeTimelineId || tl.type === activeTimelineId
+    ) || visibleTimelines[0];
+
+    const system = currentSelectedRaw.system || currentSelectedRaw.amortizationSystem || currentSelectedRaw.loanContract?.system || currentSelectedRaw.loanContract?.amortizationSystem || LoanAmortizationSystem.PRICE;
+    const currentSelected = { ...currentSelectedRaw, system, amortizationSystem: system };
+    const isLoanType = isLoanTimelineType(currentSelected?.type);
+
+    // Shared notices (individual role) are shown as events of the timeline being viewed
+    const hasSharedNotices = boardEvents.some((ev) => ev.isSharedNotice);
+    const computedEvents = hasSharedNotices
+      ? boardEvents.map((ev) => (ev.isSharedNotice
+        ? { ...ev, timelineId: currentSelected.id, timelineOriginId: currentSelected.id, timeline_id: currentSelected.id }
+        : ev))
+      : boardEvents;
 
     const computedMetrics = isLoanType ? getLoanMetrics(currentSelected, computedEvents) : currentSelected?.loanHeaderResult;
 
@@ -209,11 +206,11 @@ export function useBoardTimelineData({
       loanHeaderResult: computedMetrics,
       procedureMetrics: computedMetrics,
       timelines: visibleTimelines,
-      // Every timeline of the board, hidden ones included (the wallet still reads the expense timeline)
+      // Every timeline of the board, hidden ones included
       boardTimelines: activeTimeboardTimelines,
       events: computedEvents
     };
-  }, [activeTimeboard, activeTimeboardTimelines, visibleTimelines, activeFinancialTab, activeTimelineId, displayEvents]);
+  }, [activeTimeboard, activeTimeboardTimelines, visibleTimelines, activeFinancialTab, activeTimelineId, boardEvents]);
 
   return {
     activeTimeboard,

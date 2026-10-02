@@ -23,9 +23,10 @@ import IndividualTimelineHeader from './timeline-headers/IndividualTimelineHeade
  * movements listed in that mode and the wallet / outflow colors.
  */
 function BalanceHeaderByMode(props) {
-  const { timeline, allTimelines = [], balanceMode = BalanceViewMode.ALL, onChangeBalanceMode } = props;
+  const { timeline, allTimelines = [], balanceMode = BalanceViewMode.ALL, selectedBalanceMode, onChangeBalanceMode } = props;
+  // The switch shows the mode just chosen; the header content follows the (deferred) mode being rendered
   const headerSwitch = onChangeBalanceMode
-    ? <BalanceModeSwitch value={balanceMode} onChange={onChangeBalanceMode} />
+    ? <BalanceModeSwitch value={selectedBalanceMode || balanceMode} onChange={onChangeBalanceMode} />
     : null;
   // The mode list only has income (or outflows): the board-wide figures (commitment, accumulation) still
   // need every movement of the board

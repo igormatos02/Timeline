@@ -33,7 +33,6 @@ export default function EventActionButtons() {
     isLoanInstallment,
     isLockedPositive,
     isNotesExpanded,
-    isObligationEvent,
     isPaidLoan,
     isPayingUpToHere,
     isReadOnly,
@@ -326,7 +325,7 @@ export default function EventActionButtons() {
       ))}
 
       {/* Botão Imprimir Recibo */}
-      {onPrintReceipt && (isPositiveStatus(effectiveStatus) || isObligationEvent || isCompleted) && !isCancelled && (
+      {onPrintReceipt && (isPositiveStatus(effectiveStatus) || isCompleted) && !isCancelled && (
         <button
           type="button"
           className="action-icon-btn"

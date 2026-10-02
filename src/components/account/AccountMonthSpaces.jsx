@@ -33,6 +33,7 @@ export default function AccountMonthSpaces({
   spaceFilter = EventStatus.ALL,
   color = TimelineColor.INVESTMENT,
   palette,
+  onAddMovement,
   onAddInflow,
   onAddOutflow,
   onEditPocket,
@@ -41,6 +42,7 @@ export default function AccountMonthSpaces({
   t
 }) {
   const isAllSpaces = ALL_SPACES_FILTERS.includes(spaceFilter);
+  const handleAddMovement = onAddMovement || onAddInflow;
 
   // Pockets open in this month (and matching the sidebar filter)
   const visiblePockets = (pockets || []).filter((pocket) => {
@@ -79,8 +81,7 @@ export default function AccountMonthSpaces({
           isFutureMonth={isFutureMonth}
           color={color}
           palette={palette}
-          onAddInflow={onAddInflow ? () => onAddInflow(monthStartStr, null) : undefined}
-          onAddOutflow={onAddOutflow ? () => onAddOutflow(monthStartStr, null) : undefined}
+          onAddMovement={handleAddMovement ? () => handleAddMovement(monthStartStr, null) : undefined}
           t={t}
         >
           {renderSpaceEvents(null)}
@@ -98,8 +99,7 @@ export default function AccountMonthSpaces({
           isFutureMonth={isFutureMonth}
           color={color}
           palette={palette}
-          onAddInflow={onAddInflow ? () => onAddInflow(monthStartStr, pocket.id) : undefined}
-          onAddOutflow={onAddOutflow ? () => onAddOutflow(monthStartStr, pocket.id) : undefined}
+          onAddMovement={handleAddMovement ? () => handleAddMovement(monthStartStr, pocket.id) : undefined}
           onEdit={onEditPocket ? () => onEditPocket(pocket) : undefined}
           onDelete={onDeletePocket ? () => onDeletePocket(pocket) : undefined}
           t={t}

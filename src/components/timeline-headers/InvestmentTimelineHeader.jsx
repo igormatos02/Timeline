@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import {
   Sparkles,
   Layers,
-  Settings
+  Settings,
+  PiggyBank
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -273,6 +274,31 @@ export default function InvestmentTimelineHeader({
             isIndividualView={isIndividualView}
             onToggle={onToggleIndividualView}
           />
+          {onOpenCreatePocket && (
+            <button
+              type="button"
+              onClick={() => onOpenCreatePocket()}
+              title={t('pocket.addPocket')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`,
+                border: 'none',
+                color: TimelineColor.WHITE,
+                cursor: 'pointer',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                fontWeight: '700',
+                boxShadow: `0 2px 8px ${paletteTheme.primary}40`,
+                transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+              }}
+            >
+              <PiggyBank size={14} />
+              <span>{t('pocket.addPocket')}</span>
+            </button>
+          )}
           {onEdit && (
             <button
               type="button"

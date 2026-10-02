@@ -1,4 +1,5 @@
 export { default as FinancialEventModal } from './FinancialEventModal.jsx';
+export { default as CashFlowEventModal } from './CashFlowEventModal.jsx';
 export { default as IncomeEventModal } from './IncomeEventModal.jsx';
 export { default as ExpenseEventModal } from './ExpenseEventModal.jsx';
 export { default as InvestmentEventModal } from './InvestmentEventModal.jsx';

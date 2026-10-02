@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, startTransition } from 'react';
 import { Capability, can } from '../shared/permissions.js';
 import { format } from 'date-fns';
 import Navbar from './components/Navbar';
@@ -573,8 +573,11 @@ export default function App() {
   const handleOpenEditInstallment = useCallback((inst) => setEditingInstallment(inst), []);
 
   const handleNavigateToTimeline = useCallback((timelineId, tab) => {
-    if (timelineId) setActiveTimelineId(timelineId);
-    if (tab) setActiveFinancialTab(tab);
+    // A transition: rendering a large timeline can be interrupted instead of freezing the click
+    startTransition(() => {
+      if (timelineId) setActiveTimelineId(timelineId);
+      if (tab) setActiveFinancialTab(tab);
+    });
   }, []);
 
   // Handlers for Topbar Timeboard Actions

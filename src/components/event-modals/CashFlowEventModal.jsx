@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { motion } from 'framer-motion';
 import {
   Zap,
   Users,
   FileText,
   Sparkles,
   Wallet,
-  ExternalLink
+  ExternalLink,
+  ArrowDownLeft,
+  ArrowUpRight
 } from 'lucide-react';
 import { format, parseISO, addMonths, getDaysInMonth } from 'date-fns';
 import {
@@ -16,6 +19,7 @@ import {
   EventModalTab,
   normalizeRecurrence,
   normalizePeriodicity,
+  TimelineType,
   TimelineColor
 } from '../../../shared/enums/index.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
@@ -31,6 +35,7 @@ import AccountSpaceSelector from '../ui/AccountSpaceSelector.jsx';
 import OptionBoxGroup from '../ui/OptionBoxGroup.jsx';
 import FloatingBreakdownPopover from '../ui/FloatingBreakdownPopover.jsx';
 import ObligationSelector from '../ObligationSelector.jsx';
+import FlowStreamAnimation from '../ui/FlowStreamAnimation.jsx';
 import { EVENT_MODAL_CONFIG, resolveEventModalConfig } from './FinancialEventModalConfig.js';
 import { useTimeboard } from '../../context/TimeboardContext.jsx';
 
@@ -55,25 +60,59 @@ export default function CashFlowEventModal({
   timeline,
   timeboardId,
   eventType = EventType.INCOME,
+  allowTypeSwitch = false,
   // Bank account pockets (deposits choose the space that receives the money)
   pockets = []
 }) {
   const { isCondoflow } = useTimeboard();
+  const [currentEventType, setCurrentEventType] = useState(
+    initialData?.eventType || eventType || EventType.INCOME
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentEventType(initialData?.eventType || eventType || EventType.INCOME);
+    }
+  }, [isOpen, initialData?.eventType, eventType]);
+
   const config = useMemo(
-    () => resolveEventModalConfig(EVENT_MODAL_CONFIG[eventType] || EVENT_MODAL_CONFIG[EventType.INCOME], isCondoflow),
-    [eventType, isCondoflow]
+    () => resolveEventModalConfig(EVENT_MODAL_CONFIG[currentEventType] || EVENT_MODAL_CONFIG[EventType.INCOME], isCondoflow),
+    [currentEventType, isCondoflow]
   );
   const ACCENT = config.accent;
   const { t, dateLocale } = useTranslation();
   const titleInputRef = useRef(null);
 
+  const isInvestmentTimeline = timeline?.type === TimelineType.INVESTMENT ||
+    initialData?.eventType === EventType.INVESTMENT ||
+    eventType === EventType.INVESTMENT;
+  const isInflow = currentEventType === EventType.INCOME || currentEventType === EventType.INVESTMENT;
+  const isOutflow = currentEventType === EventType.EXPENSE || currentEventType === EventType.WITHDRAWAL;
+
+  const handleTypeSwitch = (nextType) => {
+    const targetType = isInvestmentTimeline && (nextType === EventType.INCOME || nextType === EventType.INVESTMENT)
+      ? EventType.INVESTMENT
+      : nextType;
+    if (targetType === currentEventType) return;
+    setCurrentEventType(targetType);
+    const nextConfig = resolveEventModalConfig(EVENT_MODAL_CONFIG[targetType] || EVENT_MODAL_CONFIG[EventType.INCOME], isCondoflow);
+    setFormData((prev) => ({
+      ...prev,
+      category: nextConfig.categoryDefault,
+      status: nextConfig.defaultStatus
+    }));
+  };
+
   const isEditing = Boolean(initialData?.id || initialData?.eventId);
   const isSeriesMovement = Boolean(initialData?.seriesId || initialData?.isRecurring || initialData?.is_recurring) ||
     (isEditing && normalizeRecurrence(initialData || {}) !== EventRecurrence.ONCE);
   const categoryMeta = config.categoryMeta;
-  const isAccountDeposit = config.eventType === EventType.INVESTMENT;
+  const isAccountDeposit = config.eventType === EventType.INVESTMENT || isInvestmentTimeline;
   const showCategories = config.showCategories !== false;
   const useBreakdown = config.useBreakdown !== false;
+
+  const effectivePockets = (pockets && pockets.length > 0) ? pockets : (timeline?.pockets || []);
+  const showSpaceSelector = effectivePockets.length > 0 || isInvestmentTimeline;
 
   // Active section disclosures / tabs
   const [activeTab, setActiveTab] = useState(EventModalTab.OBLIGATION);
@@ -107,7 +146,7 @@ export default function CashFlowEventModal({
   });
 
   // Deposits into a pocket: allowed between the pocket creation date and its closing date (if any)
-  const activePocket = (pockets || []).find((p) => String(p.id) === String(formData.pocketId || ''));
+  const activePocket = (effectivePockets || []).find((p) => String(p.id) === String(formData.pocketId || ''));
   const pocketMinDate = activePocket?.dateCreated || activePocket?.date_created ? String(activePocket.dateCreated || activePocket.date_created).substring(0, 10) : null;
   const pocketMaxDate = activePocket?.dateClosed || activePocket?.date_closed ? String(activePocket.dateClosed || activePocket.date_closed).substring(0, 10) : null;
 
@@ -174,6 +213,10 @@ export default function CashFlowEventModal({
     }
 
     const defaultEndMonth = format(addMonths(parseISO(targetDate), 6), 'yyyy-MM');
+    const initialConfig = resolveEventModalConfig(
+      EVENT_MODAL_CONFIG[initialData?.eventType || eventType || EventType.INCOME] || EVENT_MODAL_CONFIG[EventType.INCOME],
+      isCondoflow
+    );
 
     if (initialData) {
       // Saved events keep their recurrence in several legacy shapes (isRecurring, limitDate...)
@@ -184,18 +227,18 @@ export default function CashFlowEventModal({
         date: targetDate,
         dayOfMonth: parsedDay,
         time: initialData?.time || '09:00',
-        status: initialData?.status || config.defaultStatus,
+        status: initialData?.status || initialConfig.defaultStatus,
         recurrence: isEditing ? normalizeRecurrence(initialData) : (initialData?.recurrence || EventRecurrence.ONCE),
         periodicity: normalizePeriodicity(initialData?.periodicity || initialData?.aggregation),
         recurrenceEndDate: endDate ? String(endDate).substring(0, 7) : defaultEndMonth,
         amount: initialData?.amount !== undefined ? initialData.amount : '',
         isAutomatic: Boolean(initialData?.isAutomatic),
-        category: resolveCategory(config, initialData?.category),
+        category: resolveCategory(initialConfig, initialData?.category),
         isObligation: Boolean(initialData?.isObligation || initialData?.is_obligation),
         obligationPersonId: initialData?.obligationPersonId || initialData?.obligation_person_id || '',
         pocketId: initialData?.pocketId || initialData?.pocket_id || null,
-        isExternal: config.showIsExternal
-          ? Boolean(initialData?.isExternal ?? initialData?.is_external ?? config.defaultIsExternal)
+        isExternal: initialConfig.showIsExternal
+          ? Boolean(initialData?.isExternal ?? initialData?.is_external ?? initialConfig.defaultIsExternal)
           : false
       });
 
@@ -218,24 +261,24 @@ export default function CashFlowEventModal({
         date: targetDate,
         dayOfMonth: parsedDay,
         time: '09:00',
-        status: config.defaultStatus,
+        status: initialConfig.defaultStatus,
         recurrence: EventRecurrence.ONCE,
         periodicity: EventPeriodicity.MONTHLY,
         recurrenceEndDate: defaultEndMonth,
         amount: '',
         isAutomatic: false,
-        category: config.categoryDefault,
+        category: initialConfig.categoryDefault,
         isObligation: false,
         obligationPersonId: '',
         pocketId: null,
-        isExternal: Boolean(config.defaultIsExternal)
+        isExternal: Boolean(initialConfig.defaultIsExternal)
       });
       setActiveTab(EventModalTab.OBLIGATION);
       setBreakdownItems([]);
     }
     setIsBreakdownOpen(false);
     setUpdateScope(EventUpdateMode.SINGLE);
-  }, [initialData, defaultDate, isOpen, isEditing, config]);
+  }, [initialData, defaultDate, isOpen, isEditing, eventType, isCondoflow]);
 
   const totalBreakdownAmount = breakdownItems.reduce(
     (acc, it) => acc + (parseFloat(it.amount) || 0), 0
@@ -324,10 +367,16 @@ export default function CashFlowEventModal({
           ? t('modal.correctMovement')
           : isEditing
             ? t(config.titleKeys.editKey)
-            : t(config.titleKeys.newKey)
+            : (allowTypeSwitch ? t('buttons.addMovement') : t(config.titleKeys.newKey))
       }
       subtitle={timeline?.name || t(config.subtitleKey)}
       accent={ACCENT}
+      headerBg={ACCENT}
+      headerBanner={
+        allowTypeSwitch ? (
+          <FlowStreamAnimation type={currentEventType} />
+        ) : null
+      }
       minHeight="520px"
       headerRight={
         <div
@@ -410,12 +459,163 @@ export default function CashFlowEventModal({
               boxShadow: `0 4px 14px ${ACCENT}40`
             }}
           >
-            {isEditing ? t('buttons.save') : t(config.titleKeys.addKey)}
+            {isEditing ? t('buttons.save') : (allowTypeSwitch ? t('buttons.addMovement') : t(config.titleKeys.addKey))}
           </button>
         </>
       }
     >
-      <div onKeyDown={handleKeyDown} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div onKeyDown={handleKeyDown} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {/* 🌟 TYPE SELECTOR (PRIMEIRA ESCOLHA NO CORPO - FLUID SLIDING SEGMENTED CONTROL) */}
+        {allowTypeSwitch && (
+          <div
+            style={{
+              position: 'relative',
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '6px',
+              padding: '4px',
+              borderRadius: '12px',
+              border: '1px solid var(--border-glass)'
+            }}
+          >
+            {/* ENTRADA */}
+            <button
+              type="button"
+              onClick={() => handleTypeSwitch(isInvestmentTimeline ? EventType.INVESTMENT : EventType.INCOME)}
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                outline: 'none'
+              }}
+            >
+              {isInflow && (
+                <motion.div
+                  layoutId="cashFlowActiveTypePill"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    borderRadius: '8px',
+                    background: `linear-gradient(135deg, ${TimelineColor.EMERALD}, ${TimelineColor.TEAL})`,
+                    boxShadow: `0 4px 14px ${TimelineColor.EMERALD}55, 0 1px 3px rgba(0, 0, 0, 0.2)`,
+                    zIndex: 0
+                  }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                />
+              )}
+              <div
+                style={{
+                  position: 'relative',
+                  zIndex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  color: isInflow ? TimelineColor.WHITE : 'var(--text-muted)',
+                  fontSize: '0.88rem',
+                  fontWeight: isInflow ? '700' : '600',
+                  transition: 'color 0.2s ease'
+                }}
+              >
+                <div
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: isInflow
+                      ? 'rgba(255, 255, 255, 0.25)'
+                      : `${TimelineColor.EMERALD}20`,
+                    color: isInflow
+                      ? TimelineColor.WHITE
+                      : TimelineColor.EMERALD,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <ArrowDownLeft size={14} strokeWidth={2.6} />
+                </div>
+                <span>{t('movement.movementInflow')}</span>
+              </div>
+            </button>
+
+            {/* SAÍDA */}
+            <button
+              type="button"
+              onClick={() => handleTypeSwitch(EventType.EXPENSE)}
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                outline: 'none'
+              }}
+            >
+              {isOutflow && (
+                <motion.div
+                  layoutId="cashFlowActiveTypePill"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    borderRadius: '8px',
+                    background: `linear-gradient(135deg, ${TimelineColor.EXPENSE}, ${TimelineColor.ROSE})`,
+                    boxShadow: `0 4px 14px ${TimelineColor.EXPENSE}55, 0 1px 3px rgba(0, 0, 0, 0.2)`,
+                    zIndex: 0
+                  }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                />
+              )}
+              <div
+                style={{
+                  position: 'relative',
+                  zIndex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  color: isOutflow ? TimelineColor.WHITE : 'var(--text-muted)',
+                  fontSize: '0.88rem',
+                  fontWeight: isOutflow ? '700' : '600',
+                  transition: 'color 0.2s ease'
+                }}
+              >
+                <div
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: isOutflow
+                      ? 'rgba(255, 255, 255, 0.25)'
+                      : `${TimelineColor.EXPENSE}20`,
+                    color: isOutflow
+                      ? TimelineColor.WHITE
+                      : TimelineColor.EXPENSE,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <ArrowUpRight size={14} strokeWidth={2.6} />
+                </div>
+                <span>{t('movement.movementOutflow')}</span>
+              </div>
+            </button>
+          </div>
+        )}
+
         {/* 🌟 1. TWO-COLUMN GRID: TITLE & CATEGORY */}
         <div style={{ display: 'grid', gridTemplateColumns: showCategories ? 'minmax(200px, 1.5fr) minmax(150px, 1fr)' : '1fr', gap: '10px', alignItems: 'flex-start' }}>
           {/* Hero Title Column */}
@@ -542,17 +742,17 @@ export default function CashFlowEventModal({
         </div>
 
         {/* Deposits into the bank account: the space that receives the money and where the money comes from */}
-        {isAccountDeposit && (pockets || []).length > 0 && (
+        {showSpaceSelector && effectivePockets.length > 0 && (
           <AccountSpaceSelector
             label={t('account.where')}
-            pockets={pockets}
+            pockets={effectivePockets}
             value={formData.pocketId || null}
             onChange={(pocketId) => setFormData((prev) => ({ ...prev, pocketId }))}
             generalLabel={t('account.general')}
             color={ACCENT}
           />
         )}
-        {isAccountDeposit && config.showIsExternal && (
+        {isInflow && isAccountDeposit && config.showIsExternal && (
           <OptionBoxGroup
             label={t('account.depositOrigin')}
             value={formData.isExternal}

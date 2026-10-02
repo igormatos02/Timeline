@@ -374,7 +374,7 @@ export default function TimelineMonthView({
                     spaceFilter={selectedCategoryFilter}
                     color={timeline.color || TimelineColor.INVESTMENT}
                     palette={paletteTheme}
-                    onAddInflow={onAddEventForDate ? (dateStr, pocketId) => {
+                    onAddMovement={onAddEventForDate ? (dateStr, pocketId) => {
                       const pocket = (pockets || []).find((p) => p.id === pocketId);
                       onAddEventForDate(dateStr, EventType.INVESTMENT, {
                         pocketId: pocketId || null,
@@ -382,7 +382,6 @@ export default function TimelineMonthView({
                         category: InvestmentEventCategory.SAVINGS
                       });
                     } : undefined}
-                    onAddOutflow={onOpenWithdrawModal ? (dateStr, pocketId) => onOpenWithdrawModal(dateStr, pocketId) : undefined}
                     onEditPocket={onEditPocket}
                     onDeletePocket={onDeletePocket}
                     renderEvents={(spaceEvents) => groupEventsByDate(spaceEvents, dayComparator).map((dateGroup, gIdx) => (

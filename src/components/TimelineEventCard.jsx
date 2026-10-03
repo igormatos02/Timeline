@@ -36,7 +36,8 @@ import {
   normalizeTimelineType,
   normalizeRecurrence,
   getDefaultTimelineColor,
-  MovementKind
+  MovementKind,
+  AccountOperation
 } from '../enums/index.js';
 import {
   INCOME_CATEGORY_META,
@@ -362,6 +363,15 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const isIncomeEvent = event.eventType === EventType.INCOME && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
   const isExpenseEvent = (event.eventType === EventType.EXPENSE || Boolean(event.isExpense)) && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
   const isInvestmentEvent = (event.eventType === EventType.INVESTMENT || isPocketOutflowEvent || isTransferEvent) && !isRegisterEvent && !isTodoEvent && !isReminderEvent && !isFollowupEvent;
+  // Operation of an account movement (receive, deposit, pay, withdraw): names its action button and pending label
+  const accountOperation = useMemo(() => {
+    if (!isInvestmentEvent || isTransferEvent) return null;
+    const { kind } = classifyMovement(event);
+    if (kind === MovementKind.DEPOSIT_EXTERNAL) return AccountOperation.RECEIVE;
+    if (kind === MovementKind.SAVINGS_EXPENSE) return AccountOperation.PAY;
+    if (kind === MovementKind.WITHDRAWAL) return AccountOperation.WITHDRAW;
+    return AccountOperation.DEPOSIT;
+  }, [isInvestmentEvent, isTransferEvent, event]);
 
   const baseItemColor = useMemo(() => {
     if (isWithdrawalEvent) {
@@ -1246,6 +1256,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     isObligationEvent,
     isOutflowReference,
     isDepositReference,
+    accountOperation,
     walletBankTransfer,
     isOverdue,
     isOverdueExpense,

@@ -1,11 +1,11 @@
 import React from 'react';
 import { useEventCard } from './EventCardContext.jsx';
 import { hexToRgba } from './cardUtils.js';
-import { EventType, TimelineColor } from '../../enums/index.js';
+import { AccountOperation, EventType, TimelineColor } from '../../enums/index.js';
 import EventCardHeader from './EventCardHeader.jsx';
 import EventReceiptRef from './EventReceiptRef.jsx';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { ArrowRight, Ban, CheckCircle2, Clock, CreditCard, ExternalLink, Landmark, Lock, Target, TrendingUp } from 'lucide-react';
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, Ban, Banknote, CheckCircle2, Clock, CreditCard, ExternalLink, Landmark, Lock, Target, TrendingUp } from 'lucide-react';
 import StatusDropdownButton from './StatusDropdownButton.jsx';
 import ReceiptDateEditor from './ReceiptDateEditor.jsx';
 import ReceiptNumberEditor from './ReceiptNumberEditor.jsx';
@@ -17,6 +17,7 @@ import EventActionButtons from './EventActionButtons.jsx';
 // Section of the event card (TimelineEventCard.jsx): reads the card values from EventCardContext.
 export default function InvestmentEventBody() {
   const {
+    accountOperation,
     activeFinancialTab,
     allEvents,
     effectiveStatusKey,
@@ -34,6 +35,14 @@ export default function InvestmentEventBody() {
     todayStr,
     walletBankTransfer
   } = useEventCard();
+  // Action of the pending movement: receive / pay / withdraw like the wallet, credit for deposits and transfers
+  const ACTION_BY_OPERATION = {
+    [AccountOperation.RECEIVE]: { labelKey: 'status.actionReceive', Icon: ArrowDownLeft },
+    [AccountOperation.PAY]: { labelKey: 'status.actionPay', Icon: ArrowUpRight },
+    [AccountOperation.WITHDRAW]: { labelKey: 'status.actionWithdraw', Icon: Banknote }
+  };
+  const { labelKey: actionLabelKey, Icon: ActionIcon } = ACTION_BY_OPERATION[accountOperation]
+    || { labelKey: 'status.actionContribute', Icon: TrendingUp };
 
   return (
     <div
@@ -191,8 +200,8 @@ export default function InvestmentEventBody() {
               }
             }} children={isFutureMonth ? (
               <>
-                <TrendingUp size={13} style={{ color: isCompletedInvestment ? `${TimelineColor.WHITE}d9` : TimelineColor.WHITE }} />
-                <span style={{ color: TimelineColor.WHITE }}>{isCompletedInvestment ? t(`status.${effectiveStatusKey}`) : t('status.actionContribute')}</span>
+                <ActionIcon size={13} style={{ color: isCompletedInvestment ? `${TimelineColor.WHITE}d9` : TimelineColor.WHITE }} />
+                <span style={{ color: TimelineColor.WHITE }}>{isCompletedInvestment ? t(`status.${effectiveStatusKey}`) : t(actionLabelKey)}</span>
               </>
             ) : isCancelled ? (
               <>
@@ -219,8 +228,8 @@ export default function InvestmentEventBody() {
               </>
             ) : (
               <>
-                <TrendingUp size={13} style={{ color: TimelineColor.WHITE }} />
-                <span>{t('status.actionContribute')}</span>
+                <ActionIcon size={13} style={{ color: TimelineColor.WHITE }} />
+                <span>{t(actionLabelKey)}</span>
               </>
             )} />
         </div>

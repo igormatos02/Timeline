@@ -1,13 +1,14 @@
 import React from 'react';
 import { useEventCard } from './EventCardContext.jsx';
 import { RECEIPT_DATE_POPOVER_WIDTH, RECEIPT_NUMBER_POPOVER_WIDTH } from './cardUtils.js';
-import { TimelineColor } from '../../enums/index.js';
+import { AccountOperation, TimelineColor } from '../../enums/index.js';
 import { AlertCircle, FileText, Plus } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 // Section of the event card (TimelineEventCard.jsx): reads the card values from EventCardContext.
 export default function EventReceiptRef({ onPositiveCard }) {
   const {
+    accountOperation,
     canEditPaymentDate,
     event,
     getProposedReceiptNumber,
@@ -65,6 +66,12 @@ export default function EventReceiptRef({ onPositiveCard }) {
       ? t('status.toReceive')
       : (isExpenseEvent || isLoanInstallment)
       ? t('status.toPay')
+      : accountOperation === AccountOperation.RECEIVE
+      ? t('status.toReceive')
+      : accountOperation === AccountOperation.PAY
+      ? t('status.toPay')
+      : accountOperation === AccountOperation.WITHDRAW
+      ? t('status.toWithdraw')
       : isInvestmentEvent
       ? t('status.toCredit')
       : isReminderEvent

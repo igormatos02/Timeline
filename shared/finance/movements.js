@@ -164,7 +164,7 @@ const EFFECTIVE_STATUS_KEY = Object.freeze({
   [MovementKind.INCOME]: 'received',
   [MovementKind.EXPENSE]: 'paid',
   [MovementKind.DEPOSIT_INTERNAL]: 'deposited',
-  [MovementKind.DEPOSIT_EXTERNAL]: 'credited',
+  [MovementKind.DEPOSIT_EXTERNAL]: 'received',
   [MovementKind.WITHDRAWAL]: 'withdrawn',
   [MovementKind.SAVINGS_EXPENSE]: 'paid',
   [MovementKind.SAVINGS_TRANSFER]: 'transferred',

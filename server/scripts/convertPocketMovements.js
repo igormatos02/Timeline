@@ -26,7 +26,12 @@ import { EventType, EventStatus, isPositiveStatus, isCancelledStatus, normalizeT
 
 const EVENTS = 'financial_events';
 const STATUSES = 'financial_event_status';
-const TRANSFER_EVENT_SUFFIX = '-pt';
+// event_id is a UUID in financial_event_status: each converted series gets a new UUID (same for all its versions)
+const transferSeriesIds = new Map();
+const transferSeriesIdOf = (eventId) => {
+  if (!transferSeriesIds.has(eventId)) transferSeriesIds.set(eventId, crypto.randomUUID());
+  return transferSeriesIds.get(eventId);
+};
 const args = process.argv.slice(2);
 const mode = args.includes('--apply') ? 'apply' : (args.includes('--rollback') ? 'rollback' : 'dry-run');
 
@@ -156,7 +161,7 @@ async function run() {
   const saveBackup = () => fs.writeFileSync(backupFile, JSON.stringify(backup, null, 2));
 
   for (const { row, plan } of toConvert) {
-    const transferEventId = `${row.event_id}${TRANSFER_EVENT_SUFFIX}`;
+    const transferEventId = transferSeriesIdOf(row.event_id);
     const transfer = transferRowFrom(row, plan, transferEventId);
     const { error: insertError } = await supabase.from(EVENTS).insert(transfer);
     if (insertError) { saveBackup(); fail(`Creating the transfer of ${row.id} failed (rollback file: ${backupFile}):`, insertError); }
@@ -173,7 +178,7 @@ async function run() {
     const statusRow = {
       year: status.year,
       month: status.month,
-      event_id: `${status.event_id}${TRANSFER_EVENT_SUFFIX}`,
+      event_id: transferSeriesIdOf(status.event_id),
       status: transferStatusOf(status.status),
       timeline_id: status.timeline_id,
       timeboard_id: status.timeboard_id

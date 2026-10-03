@@ -13,6 +13,7 @@ export default function EventReceiptRef({ onPositiveCard }) {
     getProposedReceiptNumber,
     isCancelled,
     isCompleted,
+    isDepositReference,
     isExpenseEvent,
     isIncomeEvent,
     isInvestmentEvent,
@@ -57,7 +58,10 @@ export default function EventReceiptRef({ onPositiveCard }) {
   if (!hasReceiptNumber && !paymentDate) {
     if (isCancelled) return null;
     const isEventOverdue = Boolean(isOverdue || isOverdueIncome || isOverdueExpense || isOverdueInvestment || isOverdueLoan || isOverdueReminder);
-    const pendingLabel = isIncomeEvent
+    // A bank deposit shown in the wallet is still to be deposited (not to be paid)
+    const pendingLabel = isDepositReference
+      ? t('status.toDeposit')
+      : isIncomeEvent
       ? t('status.toReceive')
       : (isExpenseEvent || isLoanInstallment)
       ? t('status.toPay')

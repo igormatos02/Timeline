@@ -45,7 +45,8 @@ export function useEventStatusActions({
         });
         if (realized.availableNet + 0.001 < Math.abs(Number(target.amount || 0))) {
           showToast(t('account.walletInsufficientForDeposit'), 'error');
-          return;
+          // Tells the card to undo its immediate status change
+          return false;
         }
       }
     }

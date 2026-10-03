@@ -171,7 +171,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
     setIsTogglingStatus(true);
     try {
-      await onToggleLoanPayment(event.id, nextStatus);
+      const applied = await onToggleLoanPayment(event.id, nextStatus);
+      // Refused (e.g. not enough money in the wallet for a deposit): back to the stored status
+      if (applied === false) setLocalStatus(event.status);
     } catch (err) {
       console.error('Error toggling status:', err);
       setLocalStatus(event.status);

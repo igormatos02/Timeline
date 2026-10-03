@@ -5,7 +5,7 @@ import { TimelineColor } from '../../enums/index.js';
 import EventCardHeader from './EventCardHeader.jsx';
 import EventReceiptRef from './EventReceiptRef.jsx';
 import StatusDropdownButton from './StatusDropdownButton.jsx';
-import { ArrowUpRight, Ban, CheckCircle2, Lock } from 'lucide-react';
+import { ArrowUpRight, Ban, CheckCircle2, Lock, TrendingUp } from 'lucide-react';
 import ReceiptDateEditor from './ReceiptDateEditor.jsx';
 import ReceiptNumberEditor from './ReceiptNumberEditor.jsx';
 import EventCategoryPicker from './EventCategoryPicker.jsx';
@@ -28,6 +28,8 @@ export default function ExpenseEventBody() {
   // A bank deposit shown in the wallet is credited (not paid) and, once done, deposited
   const pendingLabel = t(isDepositReference ? 'status.actionContribute' : 'status.actionPay');
   const doneLabel = t(isDepositReference ? 'status.deposited' : 'status.paid');
+  // Same icon as the credit action of the account and balance cards
+  const PendingIcon = isDepositReference ? TrendingUp : ArrowUpRight;
 
   return (
     <div
@@ -95,7 +97,7 @@ export default function ExpenseEventBody() {
               }
             }} children={isFutureMonth ? (
               <>
-                <ArrowUpRight size={13} style={{ color: isPaidExpense ? `${TimelineColor.WHITE}d9` : TimelineColor.WHITE }} />
+                <PendingIcon size={13} style={{ color: isPaidExpense ? `${TimelineColor.WHITE}d9` : TimelineColor.WHITE }} />
                 <span style={{ color: TimelineColor.WHITE }}>{isPaidExpense ? doneLabel : pendingLabel}</span>
               </>
             ) : isCancelled ? (
@@ -111,7 +113,7 @@ export default function ExpenseEventBody() {
               </>
             ) : (
               <>
-                <ArrowUpRight size={13} style={{ color: TimelineColor.WHITE }} />
+                <PendingIcon size={13} style={{ color: TimelineColor.WHITE }} />
                 <span>{pendingLabel}</span>
               </>
             )} />

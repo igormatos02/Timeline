@@ -42,7 +42,8 @@ export default function EventCardHeader() {
     setTempTitle,
     t,
     tempTitle,
-    virtualWithdrawalDisplayTitle
+    virtualWithdrawalDisplayTitle,
+    walletBankTransfer
   } = useEventCard();
 
   return (
@@ -248,7 +249,7 @@ export default function EventCardHeader() {
               )}
 
               {/* Badge de Categoria logo após o botão de copiar */}
-              <EventCategoryBadge onPositiveCard={isFlatPositive} />
+              {!walletBankTransfer && <EventCategoryBadge onPositiveCard={isFlatPositive} />}
 
               {/* Labels / Tags next to Title */}
               <div className="tag-list" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>

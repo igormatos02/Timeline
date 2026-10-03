@@ -1,8 +1,10 @@
 import { useCallback } from 'react';
 import { format } from 'date-fns';
-import { AmortizationEventCategory, AmortizationStrategy, EventPriority, EventStatus, EventType, FollowupStatus, TimelineColor, isLoanTimelineType, isPositiveStatus } from '../../enums/index.js';
+import { AmortizationEventCategory, AmortizationStrategy, EventPriority, EventStatus, EventType, FollowupStatus, MovementKind, TimelineColor, isLoanTimelineType, isPositiveStatus } from '../../enums/index.js';
 import { isLockableMovement } from '../../../shared/finance/corrections.js';
 import { effectiveStatusFor, pendingStatusFor } from '../../../shared/finance/statusRules.js';
+import { classifyMovement, isEffectiveMovement } from '../../../shared/finance/movements.js';
+import { collectBoardEvents, computeFinancialPosition } from '../../../shared/finance/financialPosition.js';
 import { propagateInstallmentAmountForward, recalculateLoanState } from '../../utils/loanCalculations';
 import * as api from '../../services/api';
 import { generateUUID } from '../../utils/uuid.js';
@@ -27,6 +29,26 @@ export function useEventStatusActions({
 }) {
   const handleToggleLoanPayment = useCallback(async (installmentId, explicitStatus = null) => {
     if (!installmentId) return;
+
+    // A deposit from the wallet into the bank only becomes effective when the wallet has the money
+    const boardEvents = collectBoardEvents(activeTimeboardTimelines, rawEvents);
+    const target = boardEvents.find((ev) => ev.id === installmentId);
+    if (target && !isEffectiveMovement(target) && (!explicitStatus || isPositiveStatus(explicitStatus))) {
+      const timelineTypeMap = new Map((activeTimeboardTimelines || []).map((tl) => [String(tl.id), tl.type]));
+      if (classifyMovement(target, timelineTypeMap).kind === MovementKind.DEPOSIT_INTERNAL) {
+        const depositMonth = String(target.date || '').substring(0, 7);
+        const { realized } = computeFinancialPosition({
+          events: boardEvents,
+          timelineTypeMap,
+          asOfMonth: depositMonth,
+          horizonMonth: depositMonth
+        });
+        if (realized.availableNet + 0.001 < Math.abs(Number(target.amount || 0))) {
+          showToast(t('account.walletInsufficientForDeposit'), 'error');
+          return;
+        }
+      }
+    }
 
     const clickTimeStr = format(new Date(), 'HH:mm');
 
@@ -116,7 +138,7 @@ export function useEventStatusActions({
       showToast(t('common.updateFailed', { message: err?.message || '' }), 'error');
       refreshTimelines();
     }
-  }, [refreshTimelines, showToast, t]);
+  }, [activeTimeboardTimelines, rawEvents, refreshTimelines, showToast, t]);
 
   // Pay all prior loan installments up to (and including) target event
   const handlePayUpToHere = useCallback(async (targetEv) => {

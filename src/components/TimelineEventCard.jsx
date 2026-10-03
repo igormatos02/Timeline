@@ -54,7 +54,7 @@ import { usePermissions } from '../context/PermissionsContext.jsx';
 import { useTimeboard, usePocketName } from '../context/TimeboardContext.jsx';
 import { useEventActions } from '../context/EventActionsContext.jsx';
 import { makeDiaryT } from '../utils/diaryLabels.js';
-import { getMovementStatusKey } from '../../shared/finance/movements.js';
+import { classifyMovement, getMovementStatusKey } from '../../shared/finance/movements.js';
 import GenericEventBody from './event-card/GenericEventBody.jsx';
 import FollowupEventBody from './event-card/FollowupEventBody.jsx';
 import TodoEventBody from './event-card/TodoEventBody.jsx';
@@ -96,8 +96,10 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const pocketName = usePocketName();
   // References and other in-memory events (withdrawal income, outflows of other timelines) are read-only too
   const isInMemoryEvent = Boolean(event.isVirtual || event.isReadOnly);
+  // A bank deposit shown in the wallet can be credited from there: its status changes the account movement
+  const isDepositReference = Boolean(event.isReference && event.referenceKind === MovementKind.DEPOSIT_INTERNAL && event.referenceOriginId);
   const blocksChanges = !canEdit || isInMemoryEvent;
-  const blocksStatusChanges = !canChangeStatus || isInMemoryEvent;
+  const blocksStatusChanges = !canChangeStatus || (isInMemoryEvent && !isDepositReference);
   const onEdit = blocksChanges ? undefined : onEditProp;
   const onUpdateEventDirect = blocksChanges ? undefined : onUpdateEventDirectProp;
   const onSaveNotes = onUpdateEventDirectProp;
@@ -149,6 +151,19 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       return;
     }
 
+    // Deposit reference: credits the account movement (the reference is rebuilt from it, no local status)
+    if (isDepositReference) {
+      // Only crediting is done from the wallet: other status changes belong to the account
+      if (explicitStatus && !isPositiveStatus(explicitStatus)) return;
+      setIsTogglingStatus(true);
+      try {
+        await onToggleLoanPayment(event.referenceOriginId, explicitStatus || EventStatus.INVESTED);
+      } finally {
+        setIsTogglingStatus(false);
+      }
+      return;
+    }
+
     const nextStatus = explicitStatus || (isCurrPositive
       ? (event.eventType === EventType.INVESTMENT ? EventStatus.PLANNED : EventStatus.PENDING)
       : (event.eventType === EventType.INCOME ? EventStatus.RECEIVED : EventStatus.PAID));
@@ -163,7 +178,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     } finally {
       setIsTogglingStatus(false);
     }
-  }, [event, localStatus, isTogglingStatus, onToggleLoanPayment]);
+  }, [event, localStatus, isTogglingStatus, onToggleLoanPayment, isDepositReference]);
 
   const handlePayUpToHereClick = React.useCallback(async (e) => {
     if (e && e.stopPropagation) e.stopPropagation();
@@ -233,6 +248,24 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       ? t('withdrawalModal.savingsWithdrawalWithReason', { reason: cleanVirtualWithdrawalReason })
       : t('withdrawalModal.savingsWithdrawalTitle');
   }, [isVirtualWithdrawal, cleanVirtualWithdrawalReason, t]);
+  // Balance view: money that only moves between the wallet and the bank (deposit / withdrawal to the wallet)
+  // is one movement with two ends — shown as "wallet -X -> account +X", never as an income or an expense
+  const walletBankTransfer = useMemo(() => {
+    if (!isBalanceView || event.isReference) return null;
+    const timelineTypeMap = new Map((timelines || []).map((tl) => [String(tl.id), tl.type]));
+    const { kind, isExternal } = classifyMovement(event, timelineTypeMap);
+    const isDeposit = kind === MovementKind.DEPOSIT_INTERNAL;
+    if (!isDeposit && !(kind === MovementKind.WITHDRAWAL && !isExternal)) return null;
+    const accountId = String(event.timelineId || event.timeline_id || event.timelineOriginId || '');
+    const account = (timelines || []).find((tl) => String(tl.id) === accountId);
+    const wallet = (timelines || []).find((tl) => isWalletTimelineType(normalizeTimelineType(tl.type)));
+    const walletName = wallet?.title || wallet?.name || t('flow.wallet');
+    const accountName = account?.title || account?.name || t('flow.account');
+    return isDeposit
+      ? { fromName: walletName, toName: accountName }
+      : { fromName: accountName, toName: walletName };
+  }, [isBalanceView, event, timelines, t]);
+
   // Outflow owned by another timeline (pocket expense, paid installment) shown as a reference in the Outflows timeline
   const isOutflowReference = Boolean(event.isReference && event.referenceKind);
   const outflowReferenceInfo = useMemo(() => {
@@ -1210,6 +1243,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     isNotesExpanded,
     isObligationEvent,
     isOutflowReference,
+    isDepositReference,
+    walletBankTransfer,
     isOverdue,
     isOverdueExpense,
     isOverdueIncome,

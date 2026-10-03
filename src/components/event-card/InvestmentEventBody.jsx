@@ -5,7 +5,7 @@ import { EventType, TimelineColor } from '../../enums/index.js';
 import EventCardHeader from './EventCardHeader.jsx';
 import EventReceiptRef from './EventReceiptRef.jsx';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { Ban, CheckCircle2, Clock, CreditCard, ExternalLink, Landmark, Lock, Target, TrendingUp } from 'lucide-react';
+import { ArrowRight, Ban, CheckCircle2, Clock, CreditCard, ExternalLink, Landmark, Lock, Target, TrendingUp } from 'lucide-react';
 import StatusDropdownButton from './StatusDropdownButton.jsx';
 import ReceiptDateEditor from './ReceiptDateEditor.jsx';
 import ReceiptNumberEditor from './ReceiptNumberEditor.jsx';
@@ -31,7 +31,8 @@ export default function InvestmentEventBody() {
     paletteTheme,
     t,
     timelineType,
-    todayStr
+    todayStr,
+    walletBankTransfer
   } = useEventCard();
 
   return (
@@ -226,7 +227,7 @@ export default function InvestmentEventBody() {
       </div>
       <ReceiptDateEditor />
       <ReceiptNumberEditor />
-      <EventCategoryPicker />
+      {!walletBankTransfer && <EventCategoryPicker />}
 
       {/* Linha 3: [Valor] (left) e [event action buttons] (right) */}
       <div style={{
@@ -240,7 +241,18 @@ export default function InvestmentEventBody() {
         borderTop: isCompletedInvestment ? `1px solid ${TimelineColor.WHITE}33` : '1px solid var(--border-glass)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          {event.category === 'investimento_patrimonio' ? (
+          {walletBankTransfer ? (
+            // Balance view: one movement between the wallet and the bank, with both ends
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '0.86rem', fontWeight: '800' }}>
+              <span style={{ color: isCompletedInvestment ? TimelineColor.WHITE : TimelineColor.EXPENSE }}>
+                {walletBankTransfer.fromName} -{formatCurrency(Math.abs(Number(event.amount || 0)))}
+              </span>
+              <ArrowRight size={14} style={{ color: isCompletedInvestment ? TimelineColor.WHITE : 'var(--text-dim)' }} />
+              <span style={{ color: isCompletedInvestment ? TimelineColor.WHITE : TimelineColor.INCOME }}>
+                {walletBankTransfer.toName} +{formatCurrency(Math.abs(Number(event.amount || 0)))}
+              </span>
+            </span>
+          ) : event.category === 'investimento_patrimonio' ? (
             <span style={{ fontSize: '1.05rem', fontWeight: '800', color: isCompletedInvestment ? TimelineColor.WHITE : TimelineColor.INVESTMENT }}>
               +{formatCurrency(event.amount || event.initialInvestedAmount || 0)}
             </span>

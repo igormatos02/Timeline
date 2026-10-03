@@ -17,6 +17,7 @@ export default function ExpenseEventBody() {
   const {
     event,
     isCancelled,
+    isDepositReference,
     isFutureMonth,
     isOverdueExpense,
     isPaidExpense,
@@ -24,6 +25,9 @@ export default function ExpenseEventBody() {
     paletteTheme,
     t
   } = useEventCard();
+  // A bank deposit shown in the wallet is credited (not paid) and, once done, deposited
+  const pendingLabel = t(isDepositReference ? 'status.actionContribute' : 'status.actionPay');
+  const doneLabel = t(isDepositReference ? 'status.deposited' : 'status.paid');
 
   return (
     <div
@@ -92,7 +96,7 @@ export default function ExpenseEventBody() {
             }} children={isFutureMonth ? (
               <>
                 <ArrowUpRight size={13} style={{ color: isPaidExpense ? `${TimelineColor.WHITE}d9` : TimelineColor.WHITE }} />
-                <span style={{ color: TimelineColor.WHITE }}>{isPaidExpense ? t('status.paid') : t('status.actionPay')}</span>
+                <span style={{ color: TimelineColor.WHITE }}>{isPaidExpense ? doneLabel : pendingLabel}</span>
               </>
             ) : isCancelled ? (
               <>
@@ -102,13 +106,13 @@ export default function ExpenseEventBody() {
             ) : isPaidExpense ? (
               <>
                 <CheckCircle2 size={13} style={{ color: TimelineColor.WHITE }} />
-                <span style={{ color: TimelineColor.WHITE }}>{t('status.paid')}</span>
+                <span style={{ color: TimelineColor.WHITE }}>{doneLabel}</span>
                 <Lock size={11} style={{ color: TimelineColor.WHITE, marginLeft: '2px' }} />
               </>
             ) : (
               <>
                 <ArrowUpRight size={13} style={{ color: TimelineColor.WHITE }} />
-                <span>{t('status.actionPay')}</span>
+                <span>{pendingLabel}</span>
               </>
             )} />
         </div>

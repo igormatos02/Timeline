@@ -11,6 +11,7 @@ import ReceiptDateEditor from './ReceiptDateEditor.jsx';
 import ReceiptNumberEditor from './ReceiptNumberEditor.jsx';
 import EventCategoryPicker from './EventCategoryPicker.jsx';
 import EditableAmount from './EditableAmount.jsx';
+import EventCategoryBadge from './EventCategoryBadge.jsx';
 import EventActionButtons from './EventActionButtons.jsx';
 
 // Section of the event card (TimelineEventCard.jsx): reads the card values from EventCardContext.
@@ -150,8 +151,9 @@ export default function IncomeEventBody() {
         borderTop: isReceivedIncome ? `1px solid ${TimelineColor.WHITE}33` : '1px solid var(--border-glass)',
         color: isReceivedIncome ? TimelineColor.WHITE : 'inherit'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <EditableAmount prefix={'+'} defaultColor={isCancelled ? TimelineColor.SLATE : isReceivedIncome ? TimelineColor.WHITE : incomeAccentColor} />
+          <EventCategoryBadge onPositiveCard={isReceivedIncome} />
         </div>
         <div style={{ marginLeft: 'auto' }}>
           <EventActionButtons />

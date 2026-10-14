@@ -33,6 +33,9 @@ export default function EventCardHeader() {
     isRegisterEvent,
     isTodoEvent,
     isVirtual,
+    isExpenseEvent,
+    isIncomeEvent,
+    isInvestmentEvent,
     isVirtualWithdrawal,
     obligationPerson,
     onNavigateToTimeline,
@@ -229,8 +232,10 @@ export default function EventCardHeader() {
                 </span>
               )}
 
-              {/* Badge de Categoria logo após o botão de copiar */}
-              {!walletBankTransfer && <EventCategoryBadge onPositiveCard={isFlatPositive} />}
+              {/* Category badge after the copy button; money movements show it next to the amount */}
+              {!walletBankTransfer && !isIncomeEvent && !isExpenseEvent && !isInvestmentEvent && (
+                <EventCategoryBadge onPositiveCard={isFlatPositive} />
+              )}
 
               {/* Labels / Tags next to Title */}
               <div className="tag-list" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>

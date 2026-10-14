@@ -13,6 +13,7 @@ import ReceiptNumberEditor from './ReceiptNumberEditor.jsx';
 import EventCategoryPicker from './EventCategoryPicker.jsx';
 import EditableAmount from './EditableAmount.jsx';
 import EventOutflowTypeBadge from './EventOutflowTypeBadge.jsx';
+import EventCategoryBadge from './EventCategoryBadge.jsx';
 import EventActionButtons from './EventActionButtons.jsx';
 
 // Section of the event card (TimelineEventCard.jsx): reads the card values from EventCardContext.
@@ -271,7 +272,7 @@ export default function InvestmentEventBody() {
         paddingTop: '6px',
         borderTop: isCompletedInvestment ? `1px solid ${TimelineColor.WHITE}33` : '1px solid var(--border-glass)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {walletBankTransfer ? (
             // Balance view: one movement between the wallet and the bank, with both ends
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '0.86rem', fontWeight: '800' }}>
@@ -297,6 +298,7 @@ export default function InvestmentEventBody() {
                 : investmentAccentColor} />
           )}
           <EventOutflowTypeBadge onPositiveCard={isCompletedInvestment} />
+          {!walletBankTransfer && <EventCategoryBadge onPositiveCard={isCompletedInvestment} />}
         </div>
         <div style={{ marginLeft: 'auto' }}>
           <EventActionButtons />

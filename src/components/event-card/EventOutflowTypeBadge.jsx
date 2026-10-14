@@ -25,7 +25,6 @@ export default function EventOutflowTypeBadge({ onPositiveCard }) {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '4px',
-        marginLeft: '8px',
         padding: '2px 8px',
         borderRadius: '9999px',
         fontSize: '0.68rem',

@@ -20,6 +20,7 @@ import {
   EventPeriodicity,
   TimelineColor,
   TIMELINE_COLOR_PRESETS,
+  getFixedTimelineColor,
   isLoanTimelineType,
   isSingleInstanceTimelineType,
   normalizeTimelineType,
@@ -112,7 +113,7 @@ export default function CreateTimelineModal({
         totalInstallments: getVal('totalInstallments', 'total_installments'),
         status: initialData.status === TimelineStatus.INACTIVE ? TimelineStatus.INACTIVE : TimelineStatus.ACTIVE,
         type: resolvedType,
-        color: initialData.color || TimelineColor.LOAN,
+        color: getFixedTimelineColor(resolvedType) || initialData.color || TimelineColor.LOAN,
         initialValue: getVal('initialValue', 'initial_value') !== '' ? getVal('initialValue', 'initial_value') : '',
         totalDebt: getVal('totalDebt', 'originalCapital', 'original_capital'),
         installmentAmount: getVal('installmentAmount', 'installment_amount'),
@@ -255,6 +256,8 @@ export default function CreateTimelineModal({
   };
 
   const colors = TIMELINE_COLOR_PRESETS;
+  // Balance, wallet and savings keep their palette: no color choice for them
+  const fixedColor = getFixedTimelineColor(formData.type);
 
   const monthNames = Array.from({ length: 12 }, (_, i) => {
     const d = setMonth(new Date(2026, 0, 1), i);
@@ -894,6 +897,12 @@ export default function CreateTimelineModal({
           {/* Seletor de Cor */}
           <div className="form-group">
             <label className="form-label">{t('createTimelineModal.colorLabel')}</label>
+            {fixedColor ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: fixedColor, border: `3px solid ${TimelineColor.WHITE}`, boxShadow: `0 0 12px ${fixedColor}`, flexShrink: 0 }} />
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('createTimelineModal.fixedColorHint')}</span>
+              </div>
+            ) : (
             <div style={{ display: 'flex', gap: '10px', marginTop: '6px', flexWrap: 'wrap' }}>
               {colors.map((c) => {
                 const palette = findPaletteByColor(c);
@@ -917,6 +926,7 @@ export default function CreateTimelineModal({
                 );
               })}
             </div>
+            )}
           </div>
 
           {/* Tabela de Simulação de Prestações (Apenas para Empréstimo) */}

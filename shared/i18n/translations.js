@@ -318,6 +318,7 @@ export const translations = {
       totalInstallmentsLabel: "Number of Installments",
       totalInstallmentsPlaceholder: "e.g., 120, 240, 360",
       colorLabel: "Accent Color",
+      fixedColorHint: "This timeline always uses this color.",
       simulationTitle: "Payment Schedule Simulation",
       simulateButton: "Simulate",
       originalCapital: "ORIGINAL CAPITAL",
@@ -362,6 +363,7 @@ export const translations = {
       descriptionLabel: "Description",
       descriptionPlaceholder: "Describe the purpose of this timeline...",
       colorLabel: "Accent Color",
+      fixedColorHint: "This timeline always uses this color.",
       deleteTitle: "Delete this Timeline"
     },
 
@@ -1528,6 +1530,7 @@ export const translations = {
       installment: "Installment",
       amortization: "Amortization",
       bankDeposit: "Bank deposit",
+      bankWithdrawal: "Bank withdrawal",
       goToOrigin: "Read-only reference — click to open {{origin}}",
       origin: "origin"
     },
@@ -2718,6 +2721,7 @@ export const translations = {
       totalInstallmentsLabel: "Nº de Prestações",
       totalInstallmentsPlaceholder: "Ex: 120, 240, 360",
       colorLabel: "Cor de Destaque",
+      fixedColorHint: "Esta timeline usa sempre esta cor.",
       simulationTitle: "Simulação do Plano de Pagamentos",
       simulateButton: "Simular",
       originalCapital: "CAPITAL ORIGINAL",
@@ -2762,6 +2766,7 @@ export const translations = {
       descriptionLabel: "Descrição",
       descriptionPlaceholder: "Descreva o propósito desta timeline...",
       colorLabel: "Cor de Destaque",
+      fixedColorHint: "Esta timeline usa sempre esta cor.",
       deleteTitle: "Eliminar esta Timeline"
     },
 
@@ -3928,6 +3933,7 @@ export const translations = {
       installment: "Parcela",
       amortization: "Amortização",
       bankDeposit: "Depósito no banco",
+      bankWithdrawal: "Retirada do banco",
       goToOrigin: "Referência só de leitura — clique para abrir {{origin}}",
       origin: "origem"
     },

@@ -23,6 +23,7 @@ export default function EventCardHeader() {
     isCompleted,
     isEditingTitle,
     isFlatPositive,
+    paletteTheme,
     isFollowupEvent,
     isLoanInstallment,
     isLockedPositive,
@@ -66,7 +67,7 @@ export default function EventCardHeader() {
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: isFlatPositive ? TimelineColor.WHITE : (isVirtualWithdrawal ? TimelineColor.INVESTMENT : 'var(--primary-light)'),
+            color: isFlatPositive ? TimelineColor.WHITE : (isVirtualWithdrawal ? paletteTheme.primary : 'var(--primary-light)'),
             opacity: isFlatPositive ? 1 : 0.85,
             flexShrink: 0
           }}
@@ -98,26 +99,6 @@ export default function EventCardHeader() {
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
-              {isVirtualWithdrawal && (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '0.68rem',
-                    fontWeight: '800',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                    padding: '2px 7px',
-                    borderRadius: '5px',
-                    background: isFlatPositive ? `${TimelineColor.WHITE}38` : hexToRgba(TimelineColor.INCOME, 0.16),
-                    color: isFlatPositive ? TimelineColor.WHITE : TimelineColor.INCOME,
-                    border: isFlatPositive ? `1px solid ${TimelineColor.WHITE}59` : `1px solid ${hexToRgba(TimelineColor.INCOME, 0.38)}`
-                  }}
-                >
-                  {t('withdrawalModal.depositBadge')}
-                </span>
-              )}
 
               {outflowReferenceInfo && (
                 <button
@@ -135,9 +116,9 @@ export default function EventCardHeader() {
                     padding: '2px 7px',
                     borderRadius: '5px',
                     cursor: onNavigateToTimeline ? 'pointer' : 'default',
-                    background: isFlatPositive ? 'var(--bg-glass)' : hexToRgba(outflowReferenceInfo.color, 0.14),
+                    background: 'transparent',
                     color: isFlatPositive ? TimelineColor.WHITE : outflowReferenceInfo.color,
-                    border: isFlatPositive ? '1px solid var(--border-glass)' : `1px solid ${hexToRgba(outflowReferenceInfo.color, 0.38)}`
+                    border: isFlatPositive ? `1px solid ${TimelineColor.WHITE}59` : `1px solid ${hexToRgba(outflowReferenceInfo.color, 0.38)}`
                   }}
                 >
                   <span>{outflowReferenceInfo.label}</span>

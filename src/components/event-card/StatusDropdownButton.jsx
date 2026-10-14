@@ -4,7 +4,7 @@ import { TimelineColor } from '../../enums/index.js';
 import { Loader2 } from 'lucide-react';
 
 // Section of the event card (TimelineEventCard.jsx): reads the card values from EventCardContext.
-export default function StatusDropdownButton({ buttonProps, children }) {
+export default function StatusDropdownButton({ buttonProps, children, readOnly = false }) {
   const {
     canChangeStatus,
     handleStatusToggle,
@@ -17,8 +17,8 @@ export default function StatusDropdownButton({ buttonProps, children }) {
     t
   } = useEventCard();
 
-  // Read-only users: status is an indicator, not a button (reminders show no status at all)
-  if (!canChangeStatus) {
+  // Read-only users or cards (references): status is an indicator, not a button (reminders show no status at all)
+  if (!canChangeStatus || readOnly) {
     if (isReminderEvent) return null;
     return (
       <span

@@ -1,4 +1,4 @@
-import { TimelineType } from './TimelineType.js';
+import { TimelineType, normalizeTimelineType } from './TimelineType.js';
 
 export const TimelineColor = Object.freeze({
   BALANCE: '#0ea5e9',
@@ -37,6 +37,9 @@ export const TimelineColor = Object.freeze({
   SLATE_LIGHT: '#94a3b8',
   TEAL: '#14b8a6',
   ORANGE: '#f97316',
+  BROWN: '#a68069',
+  INDIGO: '#6366f1',
+  LIGHT_BLUE: '#96c4c4',
   WHITE: '#ffffff'
 });
 
@@ -60,22 +63,35 @@ export const TIMELINE_COLOR_PRESETS = Object.freeze([
   '#756f4b'                 // Caqui
 ]);
 
+// Balance, wallet and savings (investment) timelines always use these palettes: they cannot be changed when editing
+const FIXED_TIMELINE_COLORS = Object.freeze({
+  [TimelineType.BALANCE]: TimelineColor.LIGHT_BLUE,
+  [TimelineType.WALLET]: TimelineColor.BROWN,
+  // Legacy income timelines are the wallet (see isWalletTimelineType)
+  [TimelineType.INCOME]: TimelineColor.BROWN,
+  [TimelineType.INVESTMENT]: TimelineColor.INDIGO
+});
+
+/**
+ * Returns the fixed color of a timeline type, or null when the user can pick the color.
+ * @param {string} type
+ * @returns {string|null}
+ */
+export function getFixedTimelineColor(type) {
+  return FIXED_TIMELINE_COLORS[normalizeTimelineType(type)] || null;
+}
+
 /**
  * Returns default color for a given TimelineType enum.
  * @param {string} type
  * @returns {string}
  */
 export function getDefaultTimelineColor(type) {
+  const fixedColor = getFixedTimelineColor(type);
+  if (fixedColor) return fixedColor;
   switch (type) {
-    case TimelineType.BALANCE:
-      return TimelineColor.BALANCE;
-    case TimelineType.INCOME:
-    case TimelineType.WALLET:
-      return TimelineColor.INCOME;
     case TimelineType.EXPENSE:
       return TimelineColor.EXPENSE;
-    case TimelineType.INVESTMENT:
-      return TimelineColor.INVESTMENT;
     case TimelineType.LOAN:
       return TimelineColor.LOAN;
     case TimelineType.REMINDER:

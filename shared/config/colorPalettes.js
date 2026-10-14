@@ -37,6 +37,7 @@ export const COLOR_PALETTES = Object.freeze({
   [ColorPaletteId.PURPLE]: Object.freeze({
     id: ColorPaletteId.PURPLE,
     name: 'Purple',
+    cardColor: '#8f7193',
     colors: Object.freeze([
       '#8f7193',
       '#a788ab',
@@ -56,6 +57,7 @@ export const COLOR_PALETTES = Object.freeze({
   [ColorPaletteId.BROWN]: Object.freeze({
     id: ColorPaletteId.BROWN,
     name: 'Brown',
+    cardColor: '#a68069',
     colors: Object.freeze([
       '#a68069',
       '#bf9780',
@@ -75,6 +77,7 @@ export const COLOR_PALETTES = Object.freeze({
   [ColorPaletteId.BLUE]: Object.freeze({
     id: ColorPaletteId.BLUE,
     name: 'Blue',
+    cardColor: '#5086c1',
     colors: Object.freeze([
       '#5086c1',
       '#6a9eda',
@@ -94,6 +97,7 @@ export const COLOR_PALETTES = Object.freeze({
   [ColorPaletteId.LIGHT_BLUE]: Object.freeze({
     id: ColorPaletteId.LIGHT_BLUE,
     name: 'Light Blue',
+    cardColor: '#96c4c4',
     colors: Object.freeze([
       '#96c4c4',
       '#aedddd',
@@ -113,6 +117,7 @@ export const COLOR_PALETTES = Object.freeze({
   [ColorPaletteId.RED]: Object.freeze({
     id: ColorPaletteId.RED,
     name: 'Red',
+    cardColor: '#c63637',
     colors: Object.freeze([
       '#c63637',
       '#e2504c',
@@ -132,6 +137,7 @@ export const COLOR_PALETTES = Object.freeze({
   [ColorPaletteId.PINK]: Object.freeze({
     id: ColorPaletteId.PINK,
     name: 'Pink',
+    cardColor: '#c999af',
     colors: Object.freeze([
       '#c999af',
       '#e3b1c8',
@@ -151,6 +157,7 @@ export const COLOR_PALETTES = Object.freeze({
   [ColorPaletteId.CAQUI]: Object.freeze({
     id: ColorPaletteId.CAQUI,
     name: 'Caqui',
+    cardColor: '#756f4b',
     colors: Object.freeze([
       '#756f4b',
       '#a9a27c',
@@ -170,6 +177,7 @@ export const COLOR_PALETTES = Object.freeze({
     id: ColorPaletteId.BALANCE,
     timelineType: TimelineType.BALANCE,
     name: 'Balance (Sky)',
+    cardColor: '#0ea5e9',
     colors: Object.freeze([
       '#0ea5e9',
       '#0284c7',
@@ -190,6 +198,7 @@ export const COLOR_PALETTES = Object.freeze({
     id: ColorPaletteId.INCOME,
     timelineType: TimelineType.INCOME,
     name: 'Income (Emerald)',
+    cardColor: '#10b981',
     colors: Object.freeze([
       '#10b981',
       '#059669',
@@ -210,6 +219,7 @@ export const COLOR_PALETTES = Object.freeze({
     id: ColorPaletteId.EXPENSE,
     timelineType: TimelineType.EXPENSE,
     name: 'Expense (Rose)',
+    cardColor: '#f43f5e',
     colors: Object.freeze([
       '#f43f5e',
       '#e11d48',
@@ -230,6 +240,7 @@ export const COLOR_PALETTES = Object.freeze({
     id: ColorPaletteId.INVESTMENT,
     timelineType: TimelineType.INVESTMENT,
     name: 'Investment (Violet)',
+    cardColor: '#8b5cf6',
     colors: Object.freeze([
       '#8b5cf6',
       '#7c3aed',
@@ -250,6 +261,7 @@ export const COLOR_PALETTES = Object.freeze({
     id: ColorPaletteId.LOAN,
     timelineType: TimelineType.LOAN,
     name: 'Loan (Indigo)',
+    cardColor: '#6366f1',
     colors: Object.freeze([
       '#6366f1',
       '#4f46e5',
@@ -270,6 +282,7 @@ export const COLOR_PALETTES = Object.freeze({
     id: ColorPaletteId.REMINDER,
     timelineType: TimelineType.REMINDER,
     name: 'Reminder (Amber)',
+    cardColor: '#f59e0b',
     colors: Object.freeze([
       '#f59e0b',
       '#d97706',
@@ -290,6 +303,7 @@ export const COLOR_PALETTES = Object.freeze({
     id: ColorPaletteId.DIARY,
     timelineType: TimelineType.DIARY,
     name: 'Diary (Pink)',
+    cardColor: '#ec4899',
     colors: Object.freeze([
       '#ec4899',
       '#db2777',
@@ -310,6 +324,7 @@ export const COLOR_PALETTES = Object.freeze({
     id: ColorPaletteId.TODO,
     timelineType: TimelineType.TODO,
     name: 'Todo (Blue)',
+    cardColor: '#3b82f6',
     colors: Object.freeze([
       '#3b82f6',
       '#2563eb',
@@ -330,6 +345,7 @@ export const COLOR_PALETTES = Object.freeze({
     id: ColorPaletteId.FOLLOWUP,
     timelineType: TimelineType.FOLLOWUP,
     name: 'Followup (Cyan)',
+    cardColor: '#06b6d4',
     colors: Object.freeze([
       '#06b6d4',
       '#0891b2',
@@ -349,6 +365,7 @@ export const COLOR_PALETTES = Object.freeze({
   [ColorPaletteId.PROJECT]: Object.freeze({
     id: ColorPaletteId.PROJECT,
     name: 'Project (Purple)',
+    cardColor: '#a855f7',
     colors: Object.freeze([
       '#a855f7',
       '#9333ea',
@@ -370,11 +387,11 @@ export const COLOR_PALETTES = Object.freeze({
  * Mapping of TimelineType to its default palette.
  */
 export const TIMELINE_TYPE_PALETTES = Object.freeze({
-  [TimelineType.BALANCE]: COLOR_PALETTES[ColorPaletteId.BALANCE],
-  [TimelineType.INCOME]: COLOR_PALETTES[ColorPaletteId.INCOME],
-  [TimelineType.WALLET]: COLOR_PALETTES[ColorPaletteId.INCOME],
+  [TimelineType.BALANCE]: COLOR_PALETTES[ColorPaletteId.LIGHT_BLUE],
+  [TimelineType.INCOME]: COLOR_PALETTES[ColorPaletteId.BROWN],
+  [TimelineType.WALLET]: COLOR_PALETTES[ColorPaletteId.BROWN],
   [TimelineType.EXPENSE]: COLOR_PALETTES[ColorPaletteId.EXPENSE],
-  [TimelineType.INVESTMENT]: COLOR_PALETTES[ColorPaletteId.INVESTMENT],
+  [TimelineType.INVESTMENT]: COLOR_PALETTES[ColorPaletteId.LOAN],
   [TimelineType.LOAN]: COLOR_PALETTES[ColorPaletteId.LOAN],
   [TimelineType.REMINDER]: COLOR_PALETTES[ColorPaletteId.REMINDER],
   [TimelineType.DIARY]: COLOR_PALETTES[ColorPaletteId.DIARY],
@@ -436,6 +453,7 @@ export const TIMELINE_PALETTE_PRESETS = Object.freeze(
     id: palette.id,
     name: palette.name,
     color: palette.colors[0],
+    cardColor: palette.cardColor || palette.colors[0],
     colors: palette.colors
   }))
 );
@@ -493,6 +511,7 @@ export function getPaletteTheme(colorOrPaletteId, fallbackColor = TimelineColor.
       medium: baseColor,
       light: baseColor,
       lightest: baseColor,
+      cardColor: baseColor,
       colors: [baseColor]
     };
   }
@@ -506,7 +525,17 @@ export function getPaletteTheme(colorOrPaletteId, fallbackColor = TimelineColor.
     medium: c[2] || c[1] || c[0],
     light: c[3] || c[2] || c[0],
     lightest: c[4] || c[3] || c[0],
+    cardColor: palette.cardColor || c[0],
     colors: c
   };
 }
 
+/**
+ * Diagonal gradient of a palette (its first two shades), used by the completed movement cards.
+ * @param {string} colorOrPaletteId
+ * @returns {string}
+ */
+export function getPaletteGradient(colorOrPaletteId) {
+  const { primary, secondary } = getPaletteTheme(colorOrPaletteId);
+  return `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`;
+}

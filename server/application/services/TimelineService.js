@@ -15,7 +15,7 @@ import {
   loanDomainService,
   balanceDomainService
 } from '../../domain/services/timelines/financial/index.js';
-import { TimelineType, isWalletTimelineType, normalizeTimelineType, TimeboardType } from '../../../shared/enums/index.js';
+import { TimelineType, isWalletTimelineType, normalizeTimelineType, TimeboardType, getFixedTimelineColor } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -252,12 +252,16 @@ export class TimelineService {
       canDelete: true,
       isSystemDefault: false,
       ...data,
-      type
+      type,
+      color: getFixedTimelineColor(type) || data.color
     });
   }
 
   async updateTimeline(id, updates) {
-    return timelineRepository.update(id, updates);
+    // Balance, wallet and savings keep their fixed palette: a color sent by the client is replaced by it
+    const timeline = await timelineRepository.getById(id);
+    const fixedColor = getFixedTimelineColor(updates.type || timeline?.type);
+    return timelineRepository.update(id, fixedColor ? { ...updates, color: fixedColor } : updates);
   }
 
   async deleteTimeline(id) {

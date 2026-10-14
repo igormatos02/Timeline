@@ -199,8 +199,9 @@ export function useTimelineFilteredEvents({
           ev.timelineType === TimelineType.DIARY ||
           ev.timeline_type === TimelineType.DIARY;
         if (isNonFinancial) return false;
-        // Outflow references mirror movements already listed in the balance under their owner timeline
-        if (ev.isReference) return false;
+        // References (outflows, deposits, withdrawals in the wallet) mirror movements already listed in the
+        // balance under their owner timeline, with both ends
+        if (ev.isReference || ev.isVirtualWithdrawal) return false;
         // Income / outflow modes: only the movements of that kind (transfers only in "all")
         if (balanceMode !== BalanceViewMode.ALL && !isKindInBalanceViewMode(classifyMovement(ev, balanceTimelineTypeMap).kind, balanceMode)) {
           return false;

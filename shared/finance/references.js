@@ -49,6 +49,10 @@ export function buildWithdrawalReferences({ events = [], incomeTimelineId }) {
       ...placeOn(incomeTimelineId),
       id: `${WITHDRAWAL_REFERENCE_ID_PREFIX}${ev.id}`,
       originalWithdrawalId: ev.id,
+      // The savings timeline the money came from (shown and opened from the card badge)
+      referenceOriginTimelineId: ev.timelineId || ev.timeline_id || ev.timelineOriginId
+        ? String(ev.timelineId || ev.timeline_id || ev.timelineOriginId)
+        : null,
       eventType: EventType.INCOME,
       isIncome: true,
       isWithdrawal: false,

@@ -1,4 +1,4 @@
-import { TimelineType, isWalletTimelineType, TimelineStatus, EventPeriodicity, isLoanTimelineType } from '../../../shared/enums/index.js';
+import { TimelineType, isWalletTimelineType, TimelineStatus, EventPeriodicity, isLoanTimelineType, getFixedTimelineColor } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -41,7 +41,8 @@ export class Timeline {
     this.timeboardId = timeboardId;
     this.name = name;
     this.type = type;
-    this.color = color;
+    // Balance, wallet and savings keep their fixed palette whatever color was stored
+    this.color = getFixedTimelineColor(type) || color;
     this.description = description;
     this.contYear = contYear !== null && contYear !== undefined ? Number(contYear) : null;
     this.isSystemDefault = Boolean(isSystemDefault);

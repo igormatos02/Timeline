@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Check, Settings, Trash2, RotateCcw } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { TimelineStatus, TimelineColor, TIMELINE_COLOR_PRESETS, isWalletTimelineType, normalizeTimelineType } from '../enums/index.js';
+import { TimelineStatus, TimelineColor, TIMELINE_COLOR_PRESETS, getFixedTimelineColor, isWalletTimelineType, normalizeTimelineType } from '../enums/index.js';
 import { findPaletteByColor } from '../../shared/config/colorPalettes.js';
 
 export default function EditTimelineSettingsModal({
@@ -24,6 +24,8 @@ export default function EditTimelineSettingsModal({
 
   const resolvedType = normalizeTimelineType(initialData?.type);
   const isIncome = isWalletTimelineType(resolvedType);
+  // Balance, wallet and savings keep their palette: no color choice for them
+  const fixedColor = getFixedTimelineColor(resolvedType);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -34,7 +36,7 @@ export default function EditTimelineSettingsModal({
       setFormData({
         name: initialData.name || '',
         description: initialData.description || '',
-        color: initialData.color || TimelineColor.PRIMARY,
+        color: getFixedTimelineColor(initialData.type) || initialData.color || TimelineColor.PRIMARY,
         status: initialData.status === TimelineStatus.INACTIVE ? TimelineStatus.INACTIVE : TimelineStatus.ACTIVE,
         initialValue: initVal !== '' ? String(initVal) : ''
       });
@@ -224,6 +226,12 @@ export default function EditTimelineSettingsModal({
             <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
               {t('editTimelineSettingsModal.colorLabel')}
             </label>
+            {fixedColor ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+                <div style={{ width: '30px', height: '30px', borderRadius: '50%', backgroundColor: fixedColor, border: `3px solid ${TimelineColor.WHITE}`, boxShadow: `0 0 12px ${fixedColor}`, flexShrink: 0 }} />
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('editTimelineSettingsModal.fixedColorHint')}</span>
+              </div>
+            ) : (
             <div style={{ display: 'flex', gap: '10px', marginTop: '4px', flexWrap: 'wrap' }}>
               {colors.map((c) => {
                 const palette = findPaletteByColor(c);
@@ -247,6 +255,7 @@ export default function EditTimelineSettingsModal({
                 );
               })}
             </div>
+            )}
           </div>
 
           {/* Action Buttons */}

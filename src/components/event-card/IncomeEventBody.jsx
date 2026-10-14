@@ -1,7 +1,8 @@
 import React from 'react';
 import { useEventCard } from './EventCardContext.jsx';
 import { hexToRgba } from './cardUtils.js';
-import { TimelineColor } from '../../enums/index.js';
+import { MovementKind, TimelineColor } from '../../enums/index.js';
+import { getPaletteGradient } from '../../../shared/config/colorPalettes.js';
 import EventCardHeader from './EventCardHeader.jsx';
 import EventReceiptRef from './EventReceiptRef.jsx';
 import StatusDropdownButton from './StatusDropdownButton.jsx';
@@ -15,22 +16,30 @@ import EventActionButtons from './EventActionButtons.jsx';
 // Section of the event card (TimelineEventCard.jsx): reads the card values from EventCardContext.
 export default function IncomeEventBody() {
   const {
+    event,
     isCancelled,
     isFutureMonth,
     isOverdueIncome,
     isReceivedIncome,
     isTogglingStatus,
     isVirtual,
+    isVirtualWithdrawal,
     paletteTheme,
     t
   } = useEventCard();
+
+  const isWithdrawal = Boolean(isVirtualWithdrawal || event?.referenceKind === MovementKind.WITHDRAWAL || event?.isWithdrawal);
+
+  // A withdrawal from savings uses the card palette (see TimelineEventCard baseItemColor), an income the green
+  const incomeGradient = getPaletteGradient(isWithdrawal ? paletteTheme.primary : TimelineColor.INCOME);
+  const incomeAccentColor = isWithdrawal ? paletteTheme.primary : TimelineColor.SUCCESS;
 
   return (
     <div
       className={`loan-breakdown-strip ${isReceivedIncome ? 'flat-positive-card flat-positive-income' : ''}`}
       style={{
         background: isReceivedIncome
-          ? `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`
+          ? incomeGradient
           : 'transparent',
         border: isReceivedIncome ? `1px solid ${TimelineColor.WHITE}40` : '1px solid var(--border-glass)',
         borderRadius: '8px',
@@ -40,27 +49,37 @@ export default function IncomeEventBody() {
         flexDirection: 'column',
         gap: '4px',
         color: isReceivedIncome ? TimelineColor.WHITE : 'inherit',
-        boxShadow: isReceivedIncome ? `0 4px 14px ${hexToRgba(paletteTheme.primary, 0.35)}` : 'none'
+        boxShadow: isReceivedIncome ? `0 4px 14px ${hexToRgba(incomeAccentColor, 0.35)}` : 'none'
       }}
     >
-      {/* Linha 1: [icone] [titulo do evento] [lables] */}
-      <EventCardHeader />
+      {/* Parte Superior: Informações do Evento */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+          color: isReceivedIncome ? TimelineColor.WHITE : 'inherit'
+        }}
+      >
+        {/* Linha 1: [icone] [titulo do evento] [lables] */}
+        <EventCardHeader />
 
-      {/* Linha 2: [recibo/data de pagamento] (left) e [b status] (right, apenas não virtual) */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <EventReceiptRef onPositiveCard={isReceivedIncome} />
-        </div>
-        {!isVirtual && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
-            <StatusDropdownButton buttonProps={{
+        {/* Linha 2: [recibo/data de pagamento] (left) e [b status] (right, apenas não virtual) */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <EventReceiptRef onPositiveCard={isReceivedIncome} />
+          </div>
+          {/* A withdrawal from savings shows its status read-only: it changes in the savings timeline */}
+          {(!isVirtual || isWithdrawal) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+              <StatusDropdownButton readOnly={isVirtual} buttonProps={{
                 className: 'btn btn-sm',
                 title: t('timeline.clickToChangeStatus'),
                 style: {
                   background: isCancelled
                     ? `${TimelineColor.SLATE_LIGHT}26`
                     : isReceivedIncome
-                      ? `${TimelineColor.WHITE}40`
+                      ? incomeGradient
                       : 'var(--primary)',
                   color: isCancelled
                     ? TimelineColor.SLATE
@@ -92,7 +111,7 @@ export default function IncomeEventBody() {
               }} children={isFutureMonth ? (
                 <>
                   <ArrowDownLeft size={13} style={{ color: isReceivedIncome ? `${TimelineColor.WHITE}d9` : TimelineColor.WHITE }} />
-                  <span style={{ color: TimelineColor.WHITE }}>{isReceivedIncome ? t('status.received') : t('status.actionReceive')}</span>
+                  <span style={{ color: TimelineColor.WHITE }}>{isReceivedIncome ? t(isWithdrawal ? 'status.withdrawn' : 'status.received') : t(isWithdrawal ? 'status.toWithdraw' : 'status.actionReceive')}</span>
                 </>
               ) : isCancelled ? (
                 <>
@@ -102,23 +121,24 @@ export default function IncomeEventBody() {
               ) : isReceivedIncome ? (
                 <>
                   <CheckCircle2 size={13} style={{ color: TimelineColor.WHITE }} />
-                  <span style={{ color: TimelineColor.WHITE }}>{t('status.received')}</span>
+                  <span style={{ color: TimelineColor.WHITE }}>{t(isWithdrawal ? 'status.withdrawn' : 'status.received')}</span>
                   <Lock size={11} style={{ color: TimelineColor.WHITE, marginLeft: '2px' }} />
                 </>
               ) : (
                 <>
                   <ArrowDownLeft size={13} style={{ color: TimelineColor.WHITE }} />
-                  <span>{t('status.actionReceive')}</span>
+                  <span>{t(isWithdrawal ? 'status.toWithdraw' : 'status.actionReceive')}</span>
                 </>
               )} />
-          </div>
-        )}
+            </div>
+          )}
+        </div>
+        <ReceiptDateEditor />
+        <ReceiptNumberEditor />
+        <EventCategoryPicker />
       </div>
-      <ReceiptDateEditor />
-      <ReceiptNumberEditor />
-      <EventCategoryPicker />
 
-      {/* Linha 3: [Valor] (left) e [event action buttons] (right) */}
+      {/* Parte Inferior: [Valor] (left) e [event action buttons] (right) */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -127,10 +147,11 @@ export default function IncomeEventBody() {
         flexWrap: 'wrap',
         marginTop: '-1px',
         paddingTop: '6px',
-        borderTop: isReceivedIncome ? `1px solid ${TimelineColor.WHITE}33` : '1px solid var(--border-glass)'
+        borderTop: isReceivedIncome ? `1px solid ${TimelineColor.WHITE}33` : '1px solid var(--border-glass)',
+        color: isReceivedIncome ? TimelineColor.WHITE : 'inherit'
       }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <EditableAmount prefix={'+'} defaultColor={isCancelled ? TimelineColor.SLATE : isReceivedIncome ? TimelineColor.WHITE : TimelineColor.INCOME} />
+          <EditableAmount prefix={'+'} defaultColor={isCancelled ? TimelineColor.SLATE : isReceivedIncome ? TimelineColor.WHITE : incomeAccentColor} />
         </div>
         <div style={{ marginLeft: 'auto' }}>
           <EventActionButtons />

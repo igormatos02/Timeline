@@ -36,6 +36,7 @@ import {
   normalizeTimelineType,
   normalizeRecurrence,
   getDefaultTimelineColor,
+  getFixedTimelineColor,
   MovementKind,
   AccountOperation
 } from '../enums/index.js';
@@ -47,7 +48,7 @@ import {
   CONDO_EXPENSE_CATEGORY_META,
   CONDO_INVESTMENT_CATEGORY_META
 } from './event-modals/FinancialEventModalConfig.js';
-import { getPaletteTheme, ColorPaletteId, COLOR_PALETTES } from '../../shared/config/colorPalettes.js';
+import { getPaletteTheme } from '../../shared/config/colorPalettes.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import * as api from '../services/api.js';
 import { createEventDayComparator, buildPersonsById } from '../utils/eventSorting.js';
@@ -253,28 +254,46 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   }, [isVirtualWithdrawal, cleanVirtualWithdrawalReason, t]);
   // Balance view: money that only moves between the wallet and the bank (deposit / withdrawal to the wallet)
   // is one movement with two ends — shown as "wallet -X -> account +X", never as an income or an expense
-  const walletBankTransfer = useMemo(() => {
-    if (!isBalanceView || event.isReference) return null;
+  // Money moved between the wallet and the bank (deposit / withdrawal to the wallet): it has no receipt
+  const walletBankKind = useMemo(() => {
+    if (event.isReference) return null;
     const timelineTypeMap = new Map((timelines || []).map((tl) => [String(tl.id), tl.type]));
     const { kind, isExternal } = classifyMovement(event, timelineTypeMap);
-    const isDeposit = kind === MovementKind.DEPOSIT_INTERNAL;
-    if (!isDeposit && !(kind === MovementKind.WITHDRAWAL && !isExternal)) return null;
+    if (kind === MovementKind.DEPOSIT_INTERNAL) return kind;
+    return kind === MovementKind.WITHDRAWAL && !isExternal ? kind : null;
+  }, [event, timelines]);
+  const isWalletBankMovement = Boolean(walletBankKind || isDepositReference || isVirtualWithdrawal);
+  const walletBankTransfer = useMemo(() => {
+    if (!isBalanceView || !walletBankKind) return null;
+    const isDeposit = walletBankKind === MovementKind.DEPOSIT_INTERNAL;
     const accountId = String(event.timelineId || event.timeline_id || event.timelineOriginId || '');
     const account = (timelines || []).find((tl) => String(tl.id) === accountId);
     const wallet = (timelines || []).find((tl) => isWalletTimelineType(normalizeTimelineType(tl.type)));
     const walletName = wallet?.title || wallet?.name || t('flow.wallet');
     const accountName = account?.title || account?.name || t('flow.account');
     return isDeposit
-      ? { fromName: walletName, toName: accountName }
-      : { fromName: accountName, toName: walletName };
-  }, [isBalanceView, event, timelines, t]);
+      ? { isDeposit, accountId: account?.id || accountId, accountName, fromName: walletName, toName: accountName }
+      : { isDeposit, accountId: account?.id || accountId, accountName, fromName: accountName, toName: walletName };
+  }, [isBalanceView, walletBankKind, event, timelines, t]);
 
   // Outflow owned by another timeline (pocket expense, paid installment) shown as a reference in the Outflows timeline
   const isOutflowReference = Boolean(event.isReference && event.referenceKind);
   const outflowReferenceInfo = useMemo(() => {
-    if (!isOutflowReference) return null;
+    // Balance: a deposit / withdrawal between the wallet and the bank carries the same badge as in the wallet
+    if (walletBankTransfer) {
+      const account = (timelines || []).find((tl) => String(tl.id) === String(walletBankTransfer.accountId));
+      return {
+        label: t(walletBankTransfer.isDeposit ? 'outflowReference.bankDeposit' : 'outflowReference.bankWithdrawal'),
+        originId: walletBankTransfer.accountId,
+        originName: walletBankTransfer.accountName,
+        color: account?.color || getDefaultTimelineColor(TimelineType.INVESTMENT),
+        Icon: Landmark
+      };
+    }
+    if (!isOutflowReference && !isVirtualWithdrawal) return null;
     const originTimeline = (timelines || []).find((tl) => String(tl.id) === String(event.referenceOriginTimelineId));
-    const labelKey = {
+    // A savings withdrawal shown in the wallet: "Bank withdrawal · <savings timeline>"
+    const labelKey = isVirtualWithdrawal ? 'outflowReference.bankWithdrawal' : {
       [MovementKind.SAVINGS_EXPENSE]: 'outflowReference.savings',
       [MovementKind.LOAN_INSTALLMENT]: 'outflowReference.installment',
       [MovementKind.AMORTIZATION]: 'outflowReference.amortization',
@@ -287,7 +306,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       color: originTimeline?.color || getDefaultTimelineColor(normalizeTimelineType(originTimeline?.type)),
       Icon: event.referenceKind === MovementKind.SAVINGS_EXPENSE ? PiggyBank : Landmark
     };
-  }, [isOutflowReference, timelines, event.referenceOriginTimelineId, event.referenceKind, t]);
+  }, [walletBankTransfer, isOutflowReference, isVirtualWithdrawal, timelines, event.referenceOriginTimelineId, event.referenceKind, t]);
   const openOutflowReferenceOrigin = (e) => {
     e?.stopPropagation?.();
     // Same as the sidebar: the origin timeline becomes both the active timeline and the active tab
@@ -374,16 +393,11 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   }, [isInvestmentEvent, isTransferEvent, event]);
 
   const baseItemColor = useMemo(() => {
-    if (isWithdrawalEvent) {
-      const incomeTimeline = (timelines || []).find((t) => isWalletTimelineType(t?.type));
-      if (incomeTimeline?.color) {
-        return incomeTimeline.color;
-      }
-      const incomeEvent = (allEvents || []).find((e) => e.eventType === EventType.INCOME && e.timelineColor);
-      if (incomeEvent?.timelineColor) {
-        return incomeEvent.timelineColor;
-      }
-      return COLOR_PALETTES[ColorPaletteId.LIGHT_BLUE]?.shades?.SHADE_1 || COLOR_PALETTES[ColorPaletteId.LIGHT_BLUE]?.colors[0];
+    // Wallet <-> bank movements take the palette of where the money goes, in both timelines:
+    // a deposit into the bank is indigo (savings), a withdrawal to the cash is brown (wallet)
+    if (isDepositReference || accountOperation === AccountOperation.DEPOSIT) return getFixedTimelineColor(TimelineType.INVESTMENT);
+    if (isWithdrawalEvent || isVirtualWithdrawal || event.referenceKind === MovementKind.WITHDRAWAL) {
+      return getFixedTimelineColor(TimelineType.WALLET);
     }
 
     if (isExpenseEvent || event.timelineType === TimelineType.EXPENSE || event.eventType === EventType.EXPENSE || Boolean(event.isExpense)) {
@@ -445,6 +459,9 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
 
     return event.timelineColor || timelineColor || (event.timelineOriginId ? event.timelineColor : null) || TimelineColor.PRIMARY;
   }, [
+    accountOperation,
+    isDepositReference,
+    isVirtualWithdrawal,
     isWithdrawalEvent,
     event,
     timelines,
@@ -1257,6 +1274,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     isOutflowReference,
     isDepositReference,
     accountOperation,
+    isWalletBankMovement,
     walletBankTransfer,
     isOverdue,
     isOverdueExpense,
@@ -1358,7 +1376,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     <EventCardProvider value={eventCardContext}>
     <div
       className={`event-inner-item ${isMemoryCard ? 'memory-card' : ''}`}
-      style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' }}
+      // --card-accent: the timeline palette color used by the hover border of the card strips (App.css)
+      style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%', '--card-accent': paletteTheme.primary }}
     >
       {/* 💰 Income (Entrada) Financial Highlight Strip (boc in) */}
       {isIncomeEvent && (

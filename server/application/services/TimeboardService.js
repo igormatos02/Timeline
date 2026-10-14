@@ -9,7 +9,7 @@ import { personRepository } from '../../infrastructure/database/supabase/Supabas
 import { userRepository } from '../../infrastructure/database/supabase/SupabaseUserRepository.js';
 import { emailService } from './EmailService.js';
 import { getAppUrl } from '../../../shared/config/appConfig.js';
-import { TimeboardType, TimelineType, TimelineColor, TimelineStatus, EventPeriodicity, InvitationStatus, PersonRole, PersonType } from '../../../shared/enums/index.js';
+import { TimeboardType, TimelineType, TimelineColor, TimelineStatus, EventPeriodicity, InvitationStatus, PersonRole, PersonType, getFixedTimelineColor } from '../../../shared/enums/index.js';
 import { generateInviteCode, normalizeInviteCode, formatInviteCode, maskEmail, INVITE_CODE_TTL_DAYS } from '../../infrastructure/security/inviteCode.js';
 import { createT } from '../../../shared/i18n/index.js';
 
@@ -329,7 +329,7 @@ export class TimeboardService {
           timeboardId: createdTimeboard.id,
           name: t('backend.timeline.balance'),
           type: TimelineType.BALANCE,
-          color: TimelineColor.BALANCE,
+          color: getFixedTimelineColor(TimelineType.BALANCE),
           description: t('backend.timeline.balanceDescription'),
           isSystemDefault: true,
           canDelete: false,
@@ -343,7 +343,7 @@ export class TimeboardService {
           timeboardId: createdTimeboard.id,
           name: t('backend.timeline.income'),
           type: TimelineType.WALLET,
-          color: TimelineColor.INCOME,
+          color: getFixedTimelineColor(TimelineType.WALLET),
           description: t('backend.timeline.incomeDescription'),
           isSystemDefault: false,
           canDelete: true,
@@ -357,7 +357,7 @@ export class TimeboardService {
           timeboardId: createdTimeboard.id,
           name: t('backend.timeline.savings'),
           type: TimelineType.INVESTMENT,
-          color: TimelineColor.PRIMARY,
+          color: getFixedTimelineColor(TimelineType.INVESTMENT),
           description: t('backend.timeline.savingsDescription'),
           isSystemDefault: false,
           canDelete: true,
@@ -408,7 +408,7 @@ export class TimeboardService {
           timeboardId: createdTimeboard.id,
           name: t('backend.timeline.condoflowBalance'),
           type: TimelineType.BALANCE,
-          color: TimelineColor.CONDOFLOW,
+          color: getFixedTimelineColor(TimelineType.BALANCE),
           description: t('backend.timeline.condoflowBalanceDescription'),
           isSystemDefault: true,
           canDelete: false,
@@ -422,7 +422,7 @@ export class TimeboardService {
           timeboardId: createdTimeboard.id,
           name: t('backend.timeline.condoflowIncome'),
           type: TimelineType.WALLET,
-          color: TimelineColor.INCOME,
+          color: getFixedTimelineColor(TimelineType.WALLET),
           description: t('backend.timeline.condoflowIncomeDescription'),
           isSystemDefault: false,
           canDelete: true,
@@ -436,7 +436,7 @@ export class TimeboardService {
           timeboardId: createdTimeboard.id,
           name: t('backend.timeline.condoflowSavings'),
           type: TimelineType.INVESTMENT,
-          color: TimelineColor.INVESTMENT,
+          color: getFixedTimelineColor(TimelineType.INVESTMENT),
           description: t('backend.timeline.condoflowSavingsDescription'),
           isSystemDefault: false,
           canDelete: true,

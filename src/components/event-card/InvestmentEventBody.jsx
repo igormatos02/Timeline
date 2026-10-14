@@ -1,7 +1,8 @@
 import React from 'react';
 import { useEventCard } from './EventCardContext.jsx';
 import { hexToRgba } from './cardUtils.js';
-import { AccountOperation, EventType, TimelineColor } from '../../enums/index.js';
+import { AccountOperation, EventType, TimelineColor, TimelineType, getFixedTimelineColor } from '../../enums/index.js';
+import { getPaletteGradient, getPaletteTheme } from '../../../shared/config/colorPalettes.js';
 import EventCardHeader from './EventCardHeader.jsx';
 import EventReceiptRef from './EventReceiptRef.jsx';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -44,12 +45,33 @@ export default function InvestmentEventBody() {
   const { labelKey: actionLabelKey, Icon: ActionIcon } = ACTION_BY_OPERATION[accountOperation]
     || { labelKey: 'status.actionContribute', Icon: TrendingUp };
 
+  // Same colors as in the wallet, by where the money goes: deposits indigo (savings palette),
+  // withdrawals to the cash brown (wallet palette)
+  const operationTheme = React.useMemo(() => {
+    if (accountOperation === AccountOperation.WITHDRAW) return getPaletteTheme(getFixedTimelineColor(TimelineType.WALLET));
+    if (isTransferEvent) return paletteTheme;
+    return getPaletteTheme(getFixedTimelineColor(TimelineType.INVESTMENT));
+  }, [accountOperation, isTransferEvent, paletteTheme]);
+
+  const investmentGradient = React.useMemo(() => {
+    if (accountOperation === AccountOperation.PAY) return getPaletteGradient(TimelineColor.EXPENSE);
+    if (accountOperation === AccountOperation.RECEIVE) return getPaletteGradient(TimelineColor.INCOME);
+    return getPaletteGradient(operationTheme.primary);
+  }, [accountOperation, operationTheme]);
+
+  const investmentAccentColor = React.useMemo(() => {
+    if (accountOperation === AccountOperation.PAY) return TimelineColor.EXPENSE;
+    if (accountOperation === AccountOperation.RECEIVE) return TimelineColor.SUCCESS;
+    if (isTransferEvent) return TimelineColor.CYAN;
+    return operationTheme.primary;
+  }, [accountOperation, isTransferEvent, operationTheme]);
+
   return (
     <div
       className={`loan-breakdown-strip ${isCompletedInvestment ? 'flat-positive-card flat-positive-investment' : ''}`}
       style={{
         background: isCompletedInvestment
-          ? `linear-gradient(135deg, ${paletteTheme.primary} 0%, ${paletteTheme.secondary} 100%)`
+          ? investmentGradient
           : 'transparent',
         border: isCompletedInvestment ? `1px solid ${TimelineColor.WHITE}40` : '1px solid var(--border-glass)',
         borderRadius: '8px',
@@ -59,7 +81,7 @@ export default function InvestmentEventBody() {
         flexDirection: 'column',
         gap: '4px',
         color: isCompletedInvestment ? TimelineColor.WHITE : 'inherit',
-        boxShadow: isCompletedInvestment ? `0 4px 14px ${hexToRgba(paletteTheme.primary, 0.35)}` : 'none'
+        boxShadow: isCompletedInvestment ? `0 4px 14px ${hexToRgba(investmentAccentColor, 0.35)}` : 'none'
       }}
     >
       {/* Linha 1: [icone] [titulo do evento] [lables] */}
@@ -163,9 +185,9 @@ export default function InvestmentEventBody() {
                 background: isCancelled
                   ? `${TimelineColor.SLATE_LIGHT}26`
                   : event.category === 'investimento_patrimonio'
-                    ? (event.status === 'Financiado' ? `${TimelineColor.SKY}29` : (isCompletedInvestment ? `${TimelineColor.WHITE}40` : `${TimelineColor.EMERALD}29`))
+                    ? (event.status === 'Financiado' ? `${TimelineColor.SKY}29` : (isCompletedInvestment ? investmentGradient : `${TimelineColor.EMERALD}29`))
                     : isCompletedInvestment
-                      ? `${TimelineColor.WHITE}40`
+                      ? investmentGradient
                       : 'var(--primary)',
                 color: isCancelled
                   ? TimelineColor.SLATE
@@ -272,9 +294,7 @@ export default function InvestmentEventBody() {
                 ? TimelineColor.WHITE
                 : isTransferEvent
                 ? TimelineColor.CYAN
-                : isPocketOutflowEvent
-                ? TimelineColor.DANGER
-                : TimelineColor.INVESTMENT} />
+                : investmentAccentColor} />
           )}
           <EventOutflowTypeBadge onPositiveCard={isCompletedInvestment} />
         </div>

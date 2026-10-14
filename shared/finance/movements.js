@@ -105,7 +105,9 @@ export function classifyMovement(ev, timelineTypeMap = new Map()) {
     normalizedTlType === TimelineType.INVESTMENT ||
     Boolean(ev.isInvestment) ||
     Boolean(ev.isWithdrawal) ||
-    Boolean(ev.pocketId || ev.pocket_id)
+    Boolean(ev.pocketId || ev.pocket_id) ||
+    // Account expenses belong to the account even in its General space (no pocket)
+    isAccountOutflowEvent(ev)
   ) && !isLoan;
 
   // Pocket costs / expenses debit the account but do not return money to the income timeline

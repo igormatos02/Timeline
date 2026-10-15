@@ -1,4 +1,4 @@
-package app.timeboard.mobile;
+package app.condoflow.client;
 
 import com.getcapacitor.BridgeActivity;
 

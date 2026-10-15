@@ -4,7 +4,7 @@ App para membros individuais (condóminos): login com Google ou email e senha, c
 saldo devedor e prestações. O código está em `src/mobile/`; o Capacitor empacota o build
 (`dist-mobile/`) no projeto Android em `android/`.
 
-- ID da app (package): `app.timeboard.mobile` — **definitivo depois do primeiro envio à Play Store**
+- ID da app (package): `app.condoflow.client` — **definitivo depois do primeiro envio à Play Store**
   (para mudar antes disso: `capacitor.config.json` e `android/app/build.gradle`).
 
 ## Desenvolvimento no browser
@@ -20,7 +20,7 @@ npm run dev:mobile    # app mobile em http://localhost:5174
    - `VITE_API_URL`: URL pública da API (Vercel).
    - `VITE_GOOGLE_WEB_CLIENT_ID`: o **Web client** OAuth usado no provider Google do Supabase.
 2. **Google Cloud Console → Credentials** (mesmo projeto do Web client):
-   - Criar um **OAuth client ID do tipo Android** com o package `app.timeboard.mobile` e o **SHA-1**
+   - Criar um **OAuth client ID do tipo Android** com o package `app.condoflow.client` e o **SHA-1**
      do certificado. É preciso um client Android por certificado:
      - debug (testes locais): `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android`
      - upload key (a sua keystore de release) e **Play App Signing** (Play Console → Configuração → Integridade da app).

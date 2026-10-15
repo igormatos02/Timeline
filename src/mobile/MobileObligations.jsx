@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { LogOut, RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, Loader2, Ticket, Crown, UserCheck } from 'lucide-react';
 import { format, parseISO, setMonth } from 'date-fns';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { TimelineColor, PersonRole, EventStatus, EntityDirection } from '../enums/index.js';
+import { TimelineColor, PersonRole, EventStatus, EntityDirection, TimeboardType } from '../enums/index.js';
 import { formatCurrency } from '../utils/formatCurrency.js';
 import * as mobileApi from './mobileApi.js';
 import MobileMoneySummary from './MobileMoneySummary.jsx';
@@ -52,10 +52,12 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
     else setError(err.message || t('auth.errors.requestFailed'));
   }, [onSessionExpired, t]);
 
-  // Timeboards where the user is linked to a person (the ones with installments) or is admin
+  // CondoFlow timeboards where the user is linked to a person (the ones with installments) or is admin:
+  // this app is only for condominiums (other timeboard types will have their own app)
   const loadTimeboards = useCallback((preferredId = null) => mobileApi.getTimeboards()
     .then((result) => {
-      const linked = (result?.all || []).filter((tb) => tb.personId || tb.role === PersonRole.ADMIN);
+      const linked = (result?.all || []).filter((tb) => tb.type === TimeboardType.CONDOFLOW
+        && (tb.personId || tb.role === PersonRole.ADMIN));
       setTimeboards(linked);
       setSelectedId((current) => {
         const wanted = preferredId || current;

@@ -1,6 +1,6 @@
 {
-  "appId": "app.timeboard.mobile",
-  "appName": "Timeboard",
+  "appId": "app.condoflow.client",
+  "appName": "CondoFlow",
   "webDir": "dist-mobile",
   "android": {
     "allowMixedContent": false

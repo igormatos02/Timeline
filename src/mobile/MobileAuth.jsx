@@ -120,7 +120,7 @@ export default function MobileAuth({ onLoggedIn, notice, onClearNotice }) {
   return (
     <div className={`${styles.screen} ${styles.centered}`}>
       <div className={styles.brand}>
-        timeboard <Sparkles size={20} />
+        {t('mobile.brand')} <Sparkles size={20} />
       </div>
       <p className={styles.subtitle}>{t('mobile.tagline')}</p>
 

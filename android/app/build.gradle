@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "app.timeboard.mobile"
+    namespace = "app.condoflow.client"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "app.timeboard.mobile"
+        applicationId "app.condoflow.client"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

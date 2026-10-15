@@ -955,11 +955,12 @@ export const translations = {
 
     // Mobile app (individual members)
     mobile: {
-      tagline: "Your installments, always at hand",
+      brand: "CondoFlow",
+      tagline: "Your condominium, always at hand",
       title: "My installments",
       refresh: "Refresh",
       logout: "Sign out",
-      timeboardLabel: "Timeboard",
+      timeboardLabel: "Condominium",
       debtBalance: "Debt balance",
       toReceiveBalance: "To receive: {{amount}}",
       sideReceives: "To receive",
@@ -3341,11 +3342,12 @@ export const translations = {
 
     // Aplicação móvel (membros individuais)
     mobile: {
-      tagline: "As suas prestações, sempre à mão",
+      brand: "CondoFlow",
+      tagline: "O seu condomínio, sempre à mão",
       title: "As minhas prestações",
       refresh: "Atualizar",
       logout: "Terminar sessão",
-      timeboardLabel: "Timeboard",
+      timeboardLabel: "Condomínio",
       debtBalance: "Saldo devedor",
       toReceiveBalance: "Tem a receber: {{amount}}",
       sideReceives: "A receber",

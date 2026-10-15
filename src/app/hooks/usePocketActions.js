@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { LoanAmortizationSystem, TimelineType, isWalletTimelineType, isLoanTimelineType, normalizeTimelineType } from '../../enums/index.js';
+import { EventPeriodicity, EventRecurrence, EventStatus, EventType, InvestmentEventCategory, LoanAmortizationSystem, TimelineType, isWalletTimelineType, isLoanTimelineType, normalizeTimelineType } from '../../enums/index.js';
+import { computeSpaceBalances } from '../../../shared/finance/savingsSpaces.js';
+import { generateUUID } from '../../utils/uuid.js';
 import * as api from '../../services/api';
 import { recalculateLoanState } from '../../utils/loanCalculations';
 import { format } from 'date-fns';
@@ -110,10 +112,57 @@ export function usePocketActions({
     setIsPocketModalOpen(true);
   }, []);
 
+  // A closed pocket ends empty: the money left on the closing date goes to the current account (General space),
+  // as a pocket withdrawal. Nothing is created when it is already empty, so saving it again changes nothing.
+  const moveClosedPocketBalance = async (pocketId, payload) => {
+    const closedAt = String(payload.dateClosed || payload.date_closed || '').substring(0, 10);
+    if (!pocketId || !closedAt) return false;
+    const timelineTypeMap = new Map((activeTimeboardTimelines || []).map((tl) => [String(tl.id), tl.type]));
+    const balance = computeSpaceBalances({
+      events: rawEvents,
+      pockets,
+      timelineTypeMap,
+      side: 'realized',
+      upToDate: closedAt
+    }).get(String(pocketId)) || 0;
+    if (balance <= 0.004) return false;
+    const pocket = pockets.find((p) => String(p.id) === String(pocketId)) || {};
+    const pocketName = payload.name || pocket.name || '';
+    const title = t('pocket.closingTransferTitle', { name: pocketName });
+    const amount = Math.round(balance * 100) / 100;
+    await api.createEvent({
+      id: generateUUID(),
+      title,
+      name: title,
+      amount,
+      date: closedAt,
+      dayOfMonth: Number(closedAt.substring(8, 10)),
+      pocketId,
+      pocket_id: pocketId,
+      pocketName,
+      targetPocketId: null,
+      target_pocket_id: null,
+      category: InvestmentEventCategory.OTHER,
+      eventType: EventType.POCKET_TRANSFER,
+      recurrence: EventRecurrence.ONCE,
+      periodicity: EventPeriodicity.MONTHLY,
+      isWithdrawal: false,
+      isInvestment: false,
+      isRecurring: false,
+      isAutomatic: false,
+      status: EventStatus.COMPLETED,
+      isCompleted: true,
+      timelineId: pocket.timelineId || pocket.timeline_id || investmentTimeline?.id || null,
+      timeboardId: activeTimeboard?.id || null
+    });
+    return true;
+  };
+
   const handleSavePocket = async (payload, pocketId) => {
     try {
       if (pocketId) {
         await api.updatePocket(pocketId, payload);
+        if (await moveClosedPocketBalance(pocketId, payload)) await refreshTimelines();
       } else {
         await api.createPocket(payload);
       }

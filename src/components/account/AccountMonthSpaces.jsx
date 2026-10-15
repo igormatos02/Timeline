@@ -95,7 +95,8 @@ export default function AccountMonthSpaces({
         <AccountSpaceCard
           key={pocket.id}
           name={pocket.name}
-          isClosed={Boolean(pocket.date_closed || pocket.dateClosed)}
+          // "Closed" only in the month it was closed: before that the pocket was open
+          isClosed={(pocket.date_closed || pocket.dateClosed || '').substring(0, 7) === monthKey}
           balance={balances.get(String(pocket.id)) || 0}
           target={pocketHasTarget(pocket) ? Number(pocket.target_value ?? pocket.targetValue ?? 0) : 0}
           initialValue={Number(pocket.initial_value ?? pocket.initialValue ?? 0)}

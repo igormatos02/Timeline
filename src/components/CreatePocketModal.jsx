@@ -321,6 +321,9 @@ export default function CreatePocketModal({
                   boxSizing: 'border-box'
                 }}
               />
+              <div style={{ marginTop: '6px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                {t('pocket.closeMovesBalanceHint')}
+              </div>
             </div>
           )}
         </div>

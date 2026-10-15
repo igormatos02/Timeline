@@ -3,6 +3,9 @@ import { TimelineEvent } from '../../../domain/entities/TimelineEvent.js';
 import { supabase } from './supabaseClient.js';
 import { EventType, EventStatus, EventPriority, EventPeriodicity, EventRecurrence, AmortizationEventCategory } from '../../../../shared/enums/index.js';
 
+// Ids accepted in a timeboard filter (they go into a PostgREST `or` expression)
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Infrastructure Adapter: SupabaseFinancialEventRepository
  * Implements IRepository for Financial Events stored in Supabase table
@@ -802,6 +805,9 @@ export class SupabaseFinancialEventRepository extends IRepository {
   // -------------------------------------------------------------------------
 
   async getAllWithStatuses(filter = null) {
+    // The embedded financial_event_status join is unavailable without a foreign key: once it failed, read the
+    // events directly (the service attaches the statuses from its status map anyway)
+    if (this._statusJoinUnavailable) return this.getAll(filter);
     let query = supabase
       .from(this.tableName)
       .select('*, financial_event_status(*)')
@@ -816,7 +822,11 @@ export class SupabaseFinancialEventRepository extends IRepository {
         query = query.lte('date', filter.endDate);
       }
 
-      if (filter.timeboardId) {
+      // Events of a timeboard: stamped with it or placed on one of its timelines
+      const timelineIds = Array.isArray(filter.timelineIds) ? filter.timelineIds.filter((id) => UUID_PATTERN.test(String(id))) : [];
+      if (filter.timeboardId && timelineIds.length > 0 && UUID_PATTERN.test(String(filter.timeboardId))) {
+        query = query.or(`timeboard_id.eq.${filter.timeboardId},timeline_id.in.(${timelineIds.join(',')})`);
+      } else if (filter.timeboardId) {
         query = query.eq(
           'timeboard_id',
           filter.timeboardId
@@ -838,6 +848,7 @@ export class SupabaseFinancialEventRepository extends IRepository {
         'Fallback to separate getAll due to join error:',
         error.message
       );
+      this._statusJoinUnavailable = true;
 
       return this.getAll(filter);
     }
@@ -876,7 +887,11 @@ export class SupabaseFinancialEventRepository extends IRepository {
         query = query.lte('date', filter.endDate);
       }
 
-      if (filter.timeboardId) {
+      // Events of a timeboard: stamped with it or placed on one of its timelines
+      const timelineIds = Array.isArray(filter.timelineIds) ? filter.timelineIds.filter((id) => UUID_PATTERN.test(String(id))) : [];
+      if (filter.timeboardId && timelineIds.length > 0 && UUID_PATTERN.test(String(filter.timeboardId))) {
+        query = query.or(`timeboard_id.eq.${filter.timeboardId},timeline_id.in.(${timelineIds.join(',')})`);
+      } else if (filter.timeboardId) {
         query = query.eq(
           'timeboard_id',
           filter.timeboardId

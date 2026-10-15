@@ -123,7 +123,20 @@ export class FinancialEventService {
     }
   }
 
+  // GET /timelines (metrics) and GET /events ask for the same timeboard at the same time after every change:
+  // while one computation of a timeboard is running, the other request shares it instead of starting another
   async getAllEvents(filter = {}) {
+    const keys = Object.keys(filter || {}).filter((k) => filter[k] !== undefined && filter[k] !== null);
+    const sharedKey = keys.length === 1 && keys[0] === 'timeboardId' ? String(filter.timeboardId) : null;
+    if (!sharedKey) return this._computeAllEvents(filter);
+    if (!this._inFlightEvents) this._inFlightEvents = new Map();
+    if (this._inFlightEvents.has(sharedKey)) return this._inFlightEvents.get(sharedKey);
+    const pending = this._computeAllEvents(filter).finally(() => this._inFlightEvents.delete(sharedKey));
+    this._inFlightEvents.set(sharedKey, pending);
+    return pending;
+  }
+
+  async _computeAllEvents(filter = {}) {
     let rawEvents = [];
     if (filter.timeboardId) {
       let tlIds = [];
@@ -134,7 +147,8 @@ export class FinancialEventService {
         console.warn('Could not fetch timelines for timeboardId in getAllEvents:', err.message);
       }
 
-      const allCandidateEvents = await eventRepository.getAllWithStatuses();
+      // Only this timeboard's rows are read (the filter below stays as a safety net)
+      const allCandidateEvents = await eventRepository.getAllWithStatuses({ timeboardId: filter.timeboardId, timelineIds: tlIds });
       rawEvents = allCandidateEvents.filter((ev) =>
         ev.timeboardId === filter.timeboardId ||
         tlIds.includes(ev.timelineId) ||

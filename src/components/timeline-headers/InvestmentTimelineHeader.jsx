@@ -87,17 +87,26 @@ export default function InvestmentTimelineHeader({
   // Balance of each space (shared engine): initial value + effective movements (external ones included)
   const pocketBalances = computeSpaceBalances({ events: eventsList, pockets, side: 'realized' });
   let totalPocketsAccumulated = 0;
-  const rawPocketList = pockets.map((pocket, idx) => {
+  // A closed pocket leaves the list once its closing date has passed (its months still count in the totals),
+  // unless it is the pocket picked in the sidebar filter
+  const todayDateStr = format(new Date(), 'yyyy-MM-dd');
+  const isPocketClosed = (pocket) => {
+    const closedAt = String(pocket.date_closed || pocket.dateClosed || '').substring(0, 10);
+    return Boolean(closedAt) && closedAt <= todayDateStr;
+  };
+  const rawPocketList = pockets.flatMap((pocket, idx) => {
+    if (!isPocketFiltered && isPocketClosed(pocket)) return [];
     const accumulated = pocketBalances.get(String(pocket.id)) || 0;
     totalPocketsAccumulated += accumulated;
 
-    return {
+    return [{
       id: pocket.id,
       name: pocket.name,
       amount: accumulated,
       hasTarget: pocketHasTarget(pocket),
+      targetValue: Number(pocket.target_value ?? pocket.targetValue ?? 0),
       color: pocket.color || pocketColors[idx % pocketColors.length]
-    };
+    }];
   });
 
   // The account's General space (movements without a pocket) is part of the total: Account = General + pockets
@@ -116,7 +125,10 @@ export default function InvestmentTimelineHeader({
   const pocketList = rawPocketList
     .map((item) => ({
       ...item,
-      percent: totalPocketsAccumulated > 0 ? Math.round((item.amount / totalPocketsAccumulated) * 100) : 0
+      // A pocket with a target shows how much of it is reached; the other spaces their share of the account
+      percent: item.hasTarget && item.targetValue > 0
+        ? Math.round((item.amount / item.targetValue) * 100)
+        : (totalPocketsAccumulated > 0 ? Math.round((item.amount / totalPocketsAccumulated) * 100) : 0)
     }))
     .sort((a, b) => b.amount - a.amount);
 
@@ -495,7 +507,7 @@ export default function InvestmentTimelineHeader({
                               </div>
                             </div>
 
-                            {/* Share bar only for pockets with a target */}
+                            {/* Goal progress bar only for pockets with a target */}
                             {item.hasTarget && (
                               <div
                                 style={{

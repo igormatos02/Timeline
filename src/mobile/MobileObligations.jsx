@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { LogOut, RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, Loader2, Ticket, Crown, UserCheck, FileText } from 'lucide-react';
 import { Browser } from '@capacitor/browser';
-import { enablePush, savePushPrefs } from './pushNotifications.js';
+import { enablePush, onNoticeOpened, savePushPrefs } from './pushNotifications.js';
+import MobileNotices, { MobileSection } from './MobileNotices.jsx';
 import { format, parseISO, setMonth } from 'date-fns';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { TimelineColor, PersonRole, EventStatus, EntityDirection, TimeboardType, TimelineType, PaymentChannel, getFixedTimelineColor } from '../enums/index.js';
@@ -36,6 +37,8 @@ const CHANNEL_TAGS = {
 
 export default function MobileObligations({ user, preferredTimeboardId, notice, onClearNotice, onLogout, onSessionExpired }) {
   const { t, dateLocale, language } = useTranslation();
+  // Installments of the person or notices of the condominium (opened from a notification)
+  const [section, setSection] = useState(MobileSection.INSTALLMENTS);
   // Push notifications of this phone: the person's choices, or null when unavailable / not allowed
   const [pushPrefs, setPushPrefs] = useState(null);
   // Installment whose receipt link is being asked for
@@ -190,6 +193,12 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
     return () => { isActive = false; };
   }, [language, t]);
 
+  // Tapping a notification opens the notices of its condominium
+  useEffect(() => onNoticeOpened((data) => {
+    setSection(MobileSection.NOTICES);
+    if (data.timeboardId) setSelectedId(data.timeboardId);
+  }), []);
+
   const handleTogglePush = async (key) => {
     const next = { ...pushPrefs, [key]: !pushPrefs[key] };
     setPushPrefs(next);
@@ -297,169 +306,191 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
             </select>
           )}
 
-          {/* Admins: individual (own) view or admin view of any entity */}
-          {isAdmin && (
-            <div className={styles.tabs} role="tablist" aria-label={t('mobile.viewLabel')} style={{ marginBottom: 0 }}>
-              {[PersonRole.INDIVIDUAL, PersonRole.ADMIN].map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  role="tab"
-                  aria-selected={viewMode === mode}
-                  className={`${styles.tab} ${viewMode === mode ? styles.tabActive : ''}`}
-                  onClick={() => setViewModeChoice(mode)}
-                >
-                  {t(`mobile.views.${mode}`)}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Installments of the person / notices of the condominium */}
+          <div className={styles.tabs} role="tablist" aria-label={t('mobile.sections.label')} style={{ marginBottom: 0 }}>
+            {[MobileSection.INSTALLMENTS, MobileSection.NOTICES].map((key) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={section === key}
+                className={`${styles.tab} ${section === key ? styles.tabActive : ''}`}
+                onClick={() => setSection(key)}
+              >
+                {t(`mobile.sections.${key}`)}
+              </button>
+            ))}
+          </div>
 
-          {isAdminView && <MobileMoneySummary summary={summary} t={t} />}
-
-          {isAdminView && entities.length > 0 && (
-            <select className={styles.select} value={selectedEntityId || ''} onChange={(e) => setSelectedEntityId(e.target.value)} aria-label={t('mobile.entityLabel')}>
-              {entities.map((entity) => (
-                <option key={entity.id} value={entity.id}>
-                  {entity.debtBalance > 0 ? `${entity.name} · ${formatCurrency(entity.debtBalance)}` : entity.name}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {!isAdminView && !hasOwnEntity ? (
-            <div className={`${styles.card} ${styles.empty}`}>{t('mobile.noOwnEntity')}</div>
-          ) : isAdminView && entities.length === 0 ? (
-            <div className={`${styles.card} ${styles.empty}`}>{t('mobile.noEntities')}</div>
+          {section === MobileSection.NOTICES ? (
+            <MobileNotices timeboardId={selectedId} t={t} dateLocale={dateLocale} onError={handleError} />
           ) : (
           <>
-
-          {/* Debt balance */}
-          <div className={styles.debtCard} style={{ background: `linear-gradient(135deg, ${debtColor} 0%, ${debtColor}cc 100%)` }}>
-            <div className={styles.debtLabel}>
-              <Wallet size={15} />
-              <span>{t('mobile.debtBalance')}</span>
-            </div>
-            <div className={styles.debtValue}>{formatCurrency(debt)}</div>
-            <div className={styles.debtHint}>
-              {debt > 0 ? t('mobile.overdueCount', { count: overdueCount }) : t('mobile.upToDate')}
-            </div>
-            {toReceive > 0 && (
-              <div className={styles.debtHint} style={{ fontWeight: 700 }}>
-                {t('mobile.toReceiveBalance', { amount: formatCurrency(toReceive) })}
+            {/* Admins: individual (own) view or admin view of any entity */}
+            {isAdmin && (
+              <div className={styles.tabs} role="tablist" aria-label={t('mobile.viewLabel')} style={{ marginBottom: 0 }}>
+                {[PersonRole.INDIVIDUAL, PersonRole.ADMIN].map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="tab"
+                    aria-selected={viewMode === mode}
+                    className={`${styles.tab} ${viewMode === mode ? styles.tabActive : ''}`}
+                    onClick={() => setViewModeChoice(mode)}
+                  >
+                    {t(`mobile.views.${mode}`)}
+                  </button>
+                ))}
               </div>
             )}
-          </div>
 
-          {/* Year / month filter */}
-          <div className={styles.filters}>
-            <div className={styles.monthChips} role="group" aria-label={t('mobile.yearLabel')}>
-              <button type="button" className={`${styles.chip} ${year === ALL ? styles.chipActive : ''}`} onClick={() => setYear(ALL)}>
-                {t('mobile.allYears')}
-              </button>
-              {years.map((y) => (
-                <button key={y} type="button" className={`${styles.chip} ${year === y ? styles.chipActive : ''}`} onClick={() => setYear(y)}>
-                  {y}
-                </button>
-              ))}
-            </div>
-            <div className={styles.monthChips} role="group" aria-label={t('mobile.monthLabel')}>
-              <button type="button" className={`${styles.chip} ${month === ALL ? styles.chipActive : ''}`} onClick={() => setMonthFilter(ALL)}>
-                {t('mobile.allMonths')}
-              </button>
-              {MONTH_INDEXES.map((index) => (
-                <button
-                  key={index}
-                  type="button"
-                  className={`${styles.chip} ${styles.monthChip} ${month === index ? styles.chipActive : ''}`}
-                  onClick={() => setMonthFilter(index)}
-                >
-                  {format(setMonth(new Date(2000, 0, 1), index), 'MMM', { locale: dateLocale }).replace('.', '')}
-                </button>
-              ))}
-            </div>
-          </div>
+            {isAdminView && <MobileMoneySummary summary={summary} t={t} />}
 
-          {/* Paid / pending totals of the period — tap to show only those installments (tap again: all) */}
-          <div className={styles.totals}>
-            <button
-              type="button"
-              aria-pressed={statusFilter === EventStatus.PAID}
-              className={`${styles.card} ${styles.totalButton} ${statusFilter === EventStatus.PAID ? styles.totalActive : ''}`}
-              onClick={() => toggleStatus(EventStatus.PAID)}
-            >
-              <div className={styles.totalLabel}>{t('mobile.paid')}</div>
-              <div className={styles.totalValue} style={{ color: TimelineColor.SUCCESS }}>{formatCurrency(paidTotal)}</div>
-            </button>
-            <button
-              type="button"
-              aria-pressed={statusFilter === EventStatus.PENDING}
-              className={`${styles.card} ${styles.totalButton} ${statusFilter === EventStatus.PENDING ? styles.totalActive : ''}`}
-              onClick={() => toggleStatus(EventStatus.PENDING)}
-            >
-              <div className={styles.totalLabel}>{t('mobile.pending')}</div>
-              <div className={styles.totalValue} style={{ color: pendingTotal > 0 ? TimelineColor.WARNING : 'var(--text-main)' }}>{formatCurrency(pendingTotal)}</div>
-            </button>
-          </div>
+            {isAdminView && entities.length > 0 && (
+              <select className={styles.select} value={selectedEntityId || ''} onChange={(e) => setSelectedEntityId(e.target.value)} aria-label={t('mobile.entityLabel')}>
+                {entities.map((entity) => (
+                  <option key={entity.id} value={entity.id}>
+                    {entity.debtBalance > 0 ? `${entity.name} · ${formatCurrency(entity.debtBalance)}` : entity.name}
+                  </option>
+                ))}
+              </select>
+            )}
 
-          {/* Installments */}
-          <div className={styles.list}>
-            {isLoading && !data ? (
-              <Loader2 size={24} className={styles.spin} style={{ alignSelf: 'center', color: 'var(--primary)' }} />
-            ) : filtered.length === 0 ? (
-              <div className={`${styles.card} ${styles.empty}`}>{t('mobile.noInstallments')}</div>
-            ) : filtered.map((item) => {
-              const state = itemState(item);
-              const StateIcon = state.Icon;
-              return (
-                <div key={`${item.id}-${item.date}`} className={styles.item}>
-                  <div className={styles.itemIcon} style={{ background: `${state.color}1f`, color: state.color }}>
-                    <StateIcon size={18} />
-                  </div>
-                  <div className={styles.itemBody}>
-                    <div className={styles.itemTitle}>{item.title}</div>
-                    <div className={styles.itemMeta}>
-                      {t('mobile.dueOn', { date: format(parseISO(item.date), 'dd MMM yyyy', { locale: dateLocale }) })}
-                      {item.timelineName ? ` · ${item.timelineName}` : ''}
-                      {item.side === EntityDirection.RECEIVES ? ` · ${t('mobile.sideReceives')}` : ''}
-                    </div>
-                    {/* How it was paid (cash in the wallet / into the bank) and the receipt, like the web cards */}
-                    {(CHANNEL_TAGS[item.channel] || item.receiptNumber || item.paidOn || item.isPaid) && (
-                      <div className={styles.itemExtra}>
-                        {CHANNEL_TAGS[item.channel] && (() => {
-                          const tag = CHANNEL_TAGS[item.channel];
-                          return (
-                            <span className={styles.channelTag} style={{ background: `${tag.color}1f`, color: tag.color, borderColor: `${tag.color}59` }}>
-                              {t(tag.labelKey)}
-                            </span>
-                          );
-                        })()}
-                        {item.receiptNumber ? <span>{t('receipt.receiptNumber', { number: item.receiptNumber })}</span> : null}
-                        {item.paidOn ? <span>{t('receipt.paymentDateShort', { date: format(parseISO(item.paidOn), 'dd/MM/yyyy') })}</span> : null}
-                        {item.isPaid && (
-                          <button
-                            type="button"
-                            className={styles.receiptButton}
-                            onClick={() => handleOpenReceipt(item)}
-                            disabled={openingReceiptId === item.id}
-                          >
-                            {openingReceiptId === item.id ? <Loader2 size={12} className={styles.spin} /> : <FileText size={12} />}
-                            {t('mobile.openReceipt')}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className={styles.itemRight}>
-                    <div className={styles.itemAmount}>{formatCurrency(item.amount)}</div>
-                    <span className={styles.badge} style={{ background: `${state.color}1f`, color: state.color }}>
-                      {t(`mobile.status.${state.key}`)}
-                    </span>
-                  </div>
+            {!isAdminView && !hasOwnEntity ? (
+              <div className={`${styles.card} ${styles.empty}`}>{t('mobile.noOwnEntity')}</div>
+            ) : isAdminView && entities.length === 0 ? (
+              <div className={`${styles.card} ${styles.empty}`}>{t('mobile.noEntities')}</div>
+            ) : (
+            <>
+
+            {/* Debt balance */}
+            <div className={styles.debtCard} style={{ background: `linear-gradient(135deg, ${debtColor} 0%, ${debtColor}cc 100%)` }}>
+              <div className={styles.debtLabel}>
+                <Wallet size={15} />
+                <span>{t('mobile.debtBalance')}</span>
+              </div>
+              <div className={styles.debtValue}>{formatCurrency(debt)}</div>
+              <div className={styles.debtHint}>
+                {debt > 0 ? t('mobile.overdueCount', { count: overdueCount }) : t('mobile.upToDate')}
+              </div>
+              {toReceive > 0 && (
+                <div className={styles.debtHint} style={{ fontWeight: 700 }}>
+                  {t('mobile.toReceiveBalance', { amount: formatCurrency(toReceive) })}
                 </div>
-              );
-            })}
-          </div>
+              )}
+            </div>
+
+            {/* Year / month filter */}
+            <div className={styles.filters}>
+              <div className={styles.monthChips} role="group" aria-label={t('mobile.yearLabel')}>
+                <button type="button" className={`${styles.chip} ${year === ALL ? styles.chipActive : ''}`} onClick={() => setYear(ALL)}>
+                  {t('mobile.allYears')}
+                </button>
+                {years.map((y) => (
+                  <button key={y} type="button" className={`${styles.chip} ${year === y ? styles.chipActive : ''}`} onClick={() => setYear(y)}>
+                    {y}
+                  </button>
+                ))}
+              </div>
+              <div className={styles.monthChips} role="group" aria-label={t('mobile.monthLabel')}>
+                <button type="button" className={`${styles.chip} ${month === ALL ? styles.chipActive : ''}`} onClick={() => setMonthFilter(ALL)}>
+                  {t('mobile.allMonths')}
+                </button>
+                {MONTH_INDEXES.map((index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    className={`${styles.chip} ${styles.monthChip} ${month === index ? styles.chipActive : ''}`}
+                    onClick={() => setMonthFilter(index)}
+                  >
+                    {format(setMonth(new Date(2000, 0, 1), index), 'MMM', { locale: dateLocale }).replace('.', '')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Paid / pending totals of the period — tap to show only those installments (tap again: all) */}
+            <div className={styles.totals}>
+              <button
+                type="button"
+                aria-pressed={statusFilter === EventStatus.PAID}
+                className={`${styles.card} ${styles.totalButton} ${statusFilter === EventStatus.PAID ? styles.totalActive : ''}`}
+                onClick={() => toggleStatus(EventStatus.PAID)}
+              >
+                <div className={styles.totalLabel}>{t('mobile.paid')}</div>
+                <div className={styles.totalValue} style={{ color: TimelineColor.SUCCESS }}>{formatCurrency(paidTotal)}</div>
+              </button>
+              <button
+                type="button"
+                aria-pressed={statusFilter === EventStatus.PENDING}
+                className={`${styles.card} ${styles.totalButton} ${statusFilter === EventStatus.PENDING ? styles.totalActive : ''}`}
+                onClick={() => toggleStatus(EventStatus.PENDING)}
+              >
+                <div className={styles.totalLabel}>{t('mobile.pending')}</div>
+                <div className={styles.totalValue} style={{ color: pendingTotal > 0 ? TimelineColor.WARNING : 'var(--text-main)' }}>{formatCurrency(pendingTotal)}</div>
+              </button>
+            </div>
+
+            {/* Installments */}
+            <div className={styles.list}>
+              {isLoading && !data ? (
+                <Loader2 size={24} className={styles.spin} style={{ alignSelf: 'center', color: 'var(--primary)' }} />
+              ) : filtered.length === 0 ? (
+                <div className={`${styles.card} ${styles.empty}`}>{t('mobile.noInstallments')}</div>
+              ) : filtered.map((item) => {
+                const state = itemState(item);
+                const StateIcon = state.Icon;
+                return (
+                  <div key={`${item.id}-${item.date}`} className={styles.item}>
+                    <div className={styles.itemIcon} style={{ background: `${state.color}1f`, color: state.color }}>
+                      <StateIcon size={18} />
+                    </div>
+                    <div className={styles.itemBody}>
+                      <div className={styles.itemTitle}>{item.title}</div>
+                      <div className={styles.itemMeta}>
+                        {t('mobile.dueOn', { date: format(parseISO(item.date), 'dd MMM yyyy', { locale: dateLocale }) })}
+                        {item.timelineName ? ` · ${item.timelineName}` : ''}
+                        {item.side === EntityDirection.RECEIVES ? ` · ${t('mobile.sideReceives')}` : ''}
+                      </div>
+                      {/* How it was paid (cash in the wallet / into the bank) and the receipt, like the web cards */}
+                      {(CHANNEL_TAGS[item.channel] || item.receiptNumber || item.paidOn || item.isPaid) && (
+                        <div className={styles.itemExtra}>
+                          {CHANNEL_TAGS[item.channel] && (() => {
+                            const tag = CHANNEL_TAGS[item.channel];
+                            return (
+                              <span className={styles.channelTag} style={{ background: `${tag.color}1f`, color: tag.color, borderColor: `${tag.color}59` }}>
+                                {t(tag.labelKey)}
+                              </span>
+                            );
+                          })()}
+                          {item.receiptNumber ? <span>{t('receipt.receiptNumber', { number: item.receiptNumber })}</span> : null}
+                          {item.paidOn ? <span>{t('receipt.paymentDateShort', { date: format(parseISO(item.paidOn), 'dd/MM/yyyy') })}</span> : null}
+                          {item.isPaid && (
+                            <button
+                              type="button"
+                              className={styles.receiptButton}
+                              onClick={() => handleOpenReceipt(item)}
+                              disabled={openingReceiptId === item.id}
+                            >
+                              {openingReceiptId === item.id ? <Loader2 size={12} className={styles.spin} /> : <FileText size={12} />}
+                              {t('mobile.openReceipt')}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className={styles.itemRight}>
+                      <div className={styles.itemAmount}>{formatCurrency(item.amount)}</div>
+                      <span className={styles.badge} style={{ background: `${state.color}1f`, color: state.color }}>
+                        {t(`mobile.status.${state.key}`)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            </>
+            )}
           </>
           )}
         </>

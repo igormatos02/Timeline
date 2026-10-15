@@ -79,6 +79,9 @@ export const getObligations = (timeboardId, personId = null) => request(
 // Admins: the timeboard's entities with their debt balance
 export const getEntities = (timeboardId) => request(`/me/entities?timeboardId=${encodeURIComponent(timeboardId)}`);
 
+// The condominium's published posts and open reminders
+export const getNotices = (timeboardId) => request(`/me/notices?timeboardId=${encodeURIComponent(timeboardId)}`);
+
 // Signed link (valid a few minutes) to the receipt of a paid installment, opened in the phone's browser
 export const getReceiptLink = (timeboardId, eventId, personId = null, language = 'pt') => request('/me/receipt-link', {
   method: 'POST',

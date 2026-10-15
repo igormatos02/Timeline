@@ -47,6 +47,19 @@ meRouter.get('/summary', async (req, res) => {
   }
 });
 
+// GET /api/me/notices?timeboardId — the condominium's published posts and open reminders (CondoFlow app)
+meRouter.get('/notices', async (req, res) => {
+  try {
+    const { timeboardId } = req.query;
+    if (!timeboardId) return res.status(400).json({ error: t('backend.validation.timeboardIdQueryParamRequired') });
+    const result = await meService.getNotices(req.user.id, { timeboardId });
+    if (!result) return res.status(403).json({ error: t('backend.validation.forbidden') });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/me/receipt-link { timeboardId, eventId, personId?, language? } — signed link (valid a few minutes) to
 // open the receipt of a paid obligation in the phone's browser, where it can be saved as PDF or shared
 meRouter.post('/receipt-link', async (req, res) => {

@@ -5,7 +5,7 @@ import { personRepository } from '../../infrastructure/database/supabase/Supabas
 import { timelineService } from './TimelineService.js';
 import { pocketRepository } from '../../infrastructure/database/supabase/SupabasePocketRepository.js';
 import { timeboardRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardRepository.js';
-import { TimelineType, isWalletTimelineType, PersonRole, TimelineStatus, normalizeTimelineType, isLoanTimelineType, BalanceViewMode, EntityDirection, isKindInBalanceViewMode, paymentChannelOf } from '../../../shared/enums/index.js';
+import { DiaryPublishStatus, TimeboardType, isCancelledStatus, isPositiveStatus, TimelineType, isWalletTimelineType, PersonRole, TimelineStatus, normalizeTimelineType, isLoanTimelineType, BalanceViewMode, EntityDirection, isKindInBalanceViewMode, paymentChannelOf } from '../../../shared/enums/index.js';
 import { classifyMovement, isActiveMovement, isEffectiveMovement } from '../../../shared/finance/movements.js';
 import { computeMoneySummary } from '../../../shared/finance/moneySummary.js';
 import { recalculateLoanState, getLoanMetrics } from '../../../shared/finance/loanCalculations.js';
@@ -200,6 +200,38 @@ export class MeService {
       pendingTotal: items.filter((it) => !it.isPaid).reduce((sum, it) => sum + it.amount, 0),
       items
     };
+  }
+
+  /**
+   * Notices of a condominium for the app (same rules as the web for individual members): the published posts,
+   * newest first, and the open reminders from today on, soonest first.
+   */
+  async getNotices(userId, { timeboardId }) {
+    const access = await accessService.getTimeboardAccess(userId, timeboardId);
+    if (!access) return null;
+    const [timeboard, timelines, events] = await Promise.all([
+      timeboardRepository.getById(timeboardId),
+      timelineRepository.findByTimeboardId(timeboardId),
+      eventService.getAllEvents({ timeboardId })
+    ]);
+    const typeOf = new Map((timelines || []).map((tl) => [String(tl.id), normalizeTimelineType(tl.type)]));
+    const noticeType = (ev) => typeOf.get(String(ev.timelineId || ev.timeline_id || ev.timelineOriginId || ''));
+    const isCondominium = timeboard?.type === TimeboardType.CONDOFLOW;
+    const today = new Date().toISOString().substring(0, 10);
+
+    const posts = (events || [])
+      .filter((ev) => ev && ev.date && noticeType(ev) === TimelineType.DIARY && !ev.isDeleted
+        && (!isCondominium || ev.publishStatus === DiaryPublishStatus.PUBLISHED))
+      .map((ev) => ({ id: ev.id, title: ev.title || ev.name || '', date: ev.date, description: ev.description || '' }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    const reminders = (events || [])
+      .filter((ev) => ev && ev.date >= today && noticeType(ev) === TimelineType.REMINDER && !ev.isDeleted
+        && !isCancelledStatus(ev.status) && !isPositiveStatus(ev.status) && !ev.isCompleted)
+      .map((ev) => ({ id: ev.id, title: ev.title || ev.name || '', date: ev.date, description: ev.description || '' }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return { posts, reminders };
   }
 
   /**

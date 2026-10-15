@@ -67,3 +67,12 @@ export async function disablePush() {
     // Signed out anyway; the server forgets tokens Firebase reports as gone
   }
 }
+
+/** Tapping a notification: `callback(data)` with the notice's data (kind, timeboardId…). Returns the unsubscribe. */
+export function onNoticeOpened(callback) {
+  if (!isPushAvailable()) return () => {};
+  const handle = PushNotifications.addListener('pushNotificationActionPerformed', ({ notification }) => {
+    callback(notification?.data || {});
+  });
+  return () => { handle.then((h) => h.remove()); };
+}

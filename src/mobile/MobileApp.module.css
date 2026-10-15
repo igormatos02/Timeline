@@ -622,3 +622,42 @@
   height: 20px;
   accent-color: var(--primary);
 }
+
+/* Notices of the condominium (reminders and posts) */
+.noticeHeading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.noticeItem {
+  padding: 10px 0;
+  border-top: 1px solid var(--border-glass);
+}
+
+.noticeToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.noticeText {
+  margin-top: 8px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-main);
+  white-space: pre-wrap;
+}

@@ -958,6 +958,17 @@ export const translations = {
       brand: "CondoFlow",
       tagline: "Your condominium, always at hand",
       openReceipt: "Receipt",
+      sections: {
+        label: "Section",
+        installments: "Installments",
+        notices: "Notices"
+      },
+      notices: {
+        reminders: "Upcoming reminders",
+        posts: "Condominium posts",
+        noReminders: "No upcoming reminders.",
+        noPosts: "No posts published yet."
+      },
       notifications: {
         title: "Notifications",
         posts: "New condominium posts",
@@ -3363,6 +3374,17 @@ export const translations = {
       brand: "CondoFlow",
       tagline: "O seu condomínio, sempre à mão",
       openReceipt: "Recibo",
+      sections: {
+        label: "Secção",
+        installments: "Quotas",
+        notices: "Avisos"
+      },
+      notices: {
+        reminders: "Próximos lembretes",
+        posts: "Comunicados do condomínio",
+        noReminders: "Não há lembretes próximos.",
+        noPosts: "Ainda não há comunicados publicados."
+      },
       notifications: {
         title: "Notificações",
         posts: "Novos comunicados do condomínio",

@@ -1,4 +1,4 @@
-import { MovementKind, isPocketTransferEvent } from '../enums/index.js';
+import { InvestmentEventCategory, MovementKind, isPocketTransferEvent } from '../enums/index.js';
 import { classifyMovement, isActiveMovement } from './movements.js';
 
 // Key of the account's General space (movements without a pocket)
@@ -6,12 +6,14 @@ export const GENERAL_SPACE_KEY = 'general';
 
 /**
  * Whether a movement touches a space of the account (pocketId, or null for the General space): its own space,
- * or the destination of a transfer.
+ * or the destination of a transfer (except a pocket closing, shown in its pocket only).
  */
 export function isMovementInSpace(ev, pocketId) {
   if (!ev) return false;
   const origin = ev.pocketId || ev.pocket_id || null;
-  const target = isPocketTransferEvent(ev) ? (ev.targetPocketId || ev.target_pocket_id || null) : undefined;
+  // A pocket closing transfer is shown in the closed pocket only (not again in the current account it fills)
+  const isPocketClosing = ev.category === InvestmentEventCategory.POCKET_CLOSING;
+  const target = isPocketTransferEvent(ev) && !isPocketClosing ? (ev.targetPocketId || ev.target_pocket_id || null) : undefined;
   const key = pocketId ? String(pocketId) : '';
   return String(origin || '') === key || (target !== undefined && String(target || '') === key);
 }

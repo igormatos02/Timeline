@@ -8,6 +8,7 @@ import { timeboardRepository } from '../../infrastructure/database/supabase/Supa
 import { DiaryPublishStatus, TimeboardType, isCancelledStatus, isPositiveStatus, TimelineType, isWalletTimelineType, PersonRole, TimelineStatus, normalizeTimelineType, isLoanTimelineType, BalanceViewMode, EntityDirection, isKindInBalanceViewMode, paymentChannelOf } from '../../../shared/enums/index.js';
 import { classifyMovement, isActiveMovement, isEffectiveMovement } from '../../../shared/finance/movements.js';
 import { computeMoneySummary } from '../../../shared/finance/moneySummary.js';
+import { computeMonthlyFlows, getMonthRowFlows, MonthFlowView } from '../../../shared/finance/financialPosition.js';
 import { recalculateLoanState, getLoanMetrics } from '../../../shared/finance/loanCalculations.js';
 import { buildReceiptHtml } from '../../../shared/utils/receiptGenerator.js';
 import { createT } from '../../../shared/i18n/index.js';
@@ -147,6 +148,27 @@ export class MeService {
       initialAvailable: Number(incomeTimeline?.initialValue ?? incomeTimeline?.initial_value ?? 0),
       loans: loanTimelines.map((loanTimeline) => getLoanMetrics(loanTimeline, events))
     });
+  }
+
+  /**
+   * Admins: income, outflows and result of a month for the whole condominium (same as the balance month row:
+   * money from / to the outside), realized and projected.
+   */
+  async getMonthFlows(userId, { timeboardId, month }) {
+    const access = await accessService.getTimeboardAccess(userId, timeboardId);
+    if (!access || access.role !== PersonRole.ADMIN) return null;
+    const [timelines, events] = await Promise.all([
+      timelineRepository.findByTimeboardId(timeboardId),
+      eventService.getAllEvents({ timeboardId })
+    ]);
+    const flows = computeMonthlyFlows({ events, timelineTypeMap: timelineTypeMapOf(timelines) });
+    const monthKey = /^\d{4}-\d{2}$/.test(String(month || '')) ? month : new Date().toISOString().substring(0, 7);
+    const entry = flows.get(monthKey);
+    return {
+      month: monthKey,
+      realized: getMonthRowFlows(entry?.realized, MonthFlowView.BOARD),
+      projected: getMonthRowFlows(entry?.projected, MonthFlowView.BOARD)
+    };
   }
 
   async getObligations(userId, { timeboardId, year, month, personId = null }) {

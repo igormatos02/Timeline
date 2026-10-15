@@ -10,10 +10,11 @@ import styles from './MobileApp.module.css';
 import { disablePush } from './pushNotifications.js';
 
 /**
- * Mobile app for individual members (e.g. condominium owners): login / registration (Google or
- * e-mail and password, optionally with an invitation code) and their installments.
+ * Shell of the CondoFlow apps: login / registration (Google or e-mail and password, optionally with an
+ * invitation code), the session, then the app's home screen — the members' installments and notices by default,
+ * the condominium management screen in CondoFlow Gestão (`Home`, `brandKey`, `taglineKey`).
  */
-export default function MobileApp() {
+export default function MobileApp({ Home = MobileObligations, brandKey = 'mobile.brand', taglineKey = 'mobile.tagline' }) {
   const { t } = useTranslation();
   const [user, setUser] = useState(() => mobileApi.getStoredUser());
   const [isCheckingSession, setIsCheckingSession] = useState(Boolean(user));
@@ -100,11 +101,11 @@ export default function MobileApp() {
   }
 
   if (!user) {
-    return <MobileAuth onLoggedIn={finishLogin} notice={notice} onClearNotice={() => setNotice('')} />;
+    return <MobileAuth onLoggedIn={finishLogin} notice={notice} onClearNotice={() => setNotice('')} brandKey={brandKey} taglineKey={taglineKey} />;
   }
 
   return (
-    <MobileObligations
+    <Home
       user={user}
       preferredTimeboardId={acceptedTimeboardId}
       notice={notice}

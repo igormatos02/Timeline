@@ -79,6 +79,9 @@ export const getObligations = (timeboardId, personId = null) => request(
 // Admins: the timeboard's entities with their debt balance
 export const getEntities = (timeboardId) => request(`/me/entities?timeboardId=${encodeURIComponent(timeboardId)}`);
 
+// Admins: income, outflows and result of a month (YYYY-MM) for the whole condominium
+export const getMonthFlows = (timeboardId, month) => request(`/me/month?timeboardId=${encodeURIComponent(timeboardId)}&month=${encodeURIComponent(month)}`);
+
 // The condominium's published posts and open reminders
 export const getNotices = (timeboardId) => request(`/me/notices?timeboardId=${encodeURIComponent(timeboardId)}`);
 

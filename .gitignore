@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 dist-mobile
+dist-admin
 *.local
 
 # Editor directories and files

@@ -27,7 +27,8 @@ function GoogleLogo() {
  * Login / registration of the mobile app: Google or e-mail and password; the invitation code
  * identifies the invitation (accepted right after the login / registration).
  */
-export default function MobileAuth({ onLoggedIn, notice, onClearNotice }) {
+// brandKey / taglineKey: the name and tagline of the app (CondoFlow or CondoFlow Gestão)
+export default function MobileAuth({ onLoggedIn, notice, onClearNotice, brandKey = 'mobile.brand', taglineKey = 'mobile.tagline' }) {
   const { t } = useTranslation();
   const [mode, setMode] = useState(Mode.LOGIN);
   const [name, setName] = useState('');
@@ -120,9 +121,9 @@ export default function MobileAuth({ onLoggedIn, notice, onClearNotice }) {
   return (
     <div className={`${styles.screen} ${styles.centered}`}>
       <div className={styles.brand}>
-        {t('mobile.brand')} <Sparkles size={20} />
+        {t(brandKey)} <Sparkles size={20} />
       </div>
-      <p className={styles.subtitle}>{t('mobile.tagline')}</p>
+      <p className={styles.subtitle}>{t(taglineKey)}</p>
 
       {inviteInfo && (
         <div className={styles.inviteBanner}>

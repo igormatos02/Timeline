@@ -1547,6 +1547,17 @@ export const translations = {
       savings: "Via savings",
       installment: "Installments"
     },
+    admin: {
+      brand: "CondoFlow Gestão",
+      tagline: "Manage your condominium",
+      noManagedCondominiums: "You do not manage any condominium yet. Condominiums where you are an administrator appear here.",
+      previousMonth: "Previous month",
+      nextMonth: "Next month",
+      projectedLine: "Planned: +{{income}} · -{{outflows}} · {{result}}",
+      overdueTitle: "Overdue",
+      noOverdue: "Nobody is overdue."
+    },
+
     monthFlows: {
       incomeTitle: "Income of the month",
       outflowsTitle: "Outflows of the month",
@@ -4005,6 +4016,17 @@ export const translations = {
       savings: "Via Poupança",
       installment: "Parcelas"
     },
+    admin: {
+      brand: "CondoFlow Gestão",
+      tagline: "A gestão do seu condomínio",
+      noManagedCondominiums: "Ainda não gere nenhum condomínio. Os condomínios onde é administrador aparecem aqui.",
+      previousMonth: "Mês anterior",
+      nextMonth: "Mês seguinte",
+      projectedLine: "Previsto: +{{income}} · -{{outflows}} · {{result}}",
+      overdueTitle: "Em atraso",
+      noOverdue: "Ninguém está em atraso."
+    },
+
     monthFlows: {
       incomeTitle: "Entradas do mês",
       outflowsTitle: "Saídas do mês",

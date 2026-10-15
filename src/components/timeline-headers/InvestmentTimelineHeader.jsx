@@ -134,6 +134,7 @@ export default function InvestmentTimelineHeader({
   let annualTotalInvested = 0;
   let annualRegularInvested = 0;
   let annualExternalInvested = 0;
+  let annualPlannedExpenses = 0;
   let currentMonthRegularInvested = 0;
   let currentMonthExternalInvested = 0;
   let annualTotalIncome = 0;
@@ -165,12 +166,18 @@ export default function InvestmentTimelineHeader({
     const movement = classifyMovement(ev);
     const effect = savingsEffect(movement);
     if (!effect) return;
+    const evMonthKey = ev.date.substring(0, 7);
+    const isInNext12Months = evMonthKey >= startMonthKey && evMonthKey < endMonthKey;
+    // Account expenses are not contributions: they are shown apart (they still lower the account balance)
+    if (movement.kind === MovementKind.SAVINGS_EXPENSE) {
+      if (isInNext12Months) annualPlannedExpenses += Math.abs(effect);
+      return;
+    }
     if (ev.date.startsWith(currentMonthStr)) {
       if (movement.isExternal) currentMonthExternalInvested += effect;
       else currentMonthRegularInvested += effect;
     }
-    const evMonthKey = ev.date.substring(0, 7);
-    if (evMonthKey >= startMonthKey && evMonthKey < endMonthKey) {
+    if (isInNext12Months) {
       if (movement.isExternal) annualExternalInvested += effect;
       else annualRegularInvested += effect;
     }
@@ -586,6 +593,11 @@ export default function InvestmentTimelineHeader({
                           {annualExternalInvested !== 0 && (
                             <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
                               {t('investmentHeader.externalDepositsLabel', { amount: formatCurrency(annualExternalInvested) })}
+                            </div>
+                          )}
+                          {annualPlannedExpenses > 0 && (
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                              {t('investmentHeader.plannedExpensesLabel', { amount: formatCurrency(annualPlannedExpenses) })}
                             </div>
                           )}
                           {annualTotalIncome > 0 ? (

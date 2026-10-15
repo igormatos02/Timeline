@@ -1732,6 +1732,7 @@ export const translations = {
     // Investment Timeline Header
     investmentHeader: {
       externalDepositsLabel: "External deposits: {{amount}} (not committed)",
+      plannedExpensesLabel: "Planned expenses (12m): {{amount}}",
       badge: "Account",
       addInvestment: "New Inflow",
       resetTitle: "Clear all movements in this timeline",
@@ -4135,6 +4136,7 @@ export const translations = {
     // Investment Timeline Header
     investmentHeader: {
       externalDepositsLabel: "Depósitos externos: {{amount}} (não comprometidos)",
+      plannedExpensesLabel: "Gastos previstos (12m): {{amount}}",
       badge: "Conta",
       addInvestment: "Nova Entrada",
       resetTitle: "Limpar todos os movimentos desta timeline",

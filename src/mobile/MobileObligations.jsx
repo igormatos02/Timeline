@@ -8,7 +8,6 @@ import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { TimelineColor, PersonRole, EventStatus, EntityDirection, TimeboardType, TimelineType, PaymentChannel, getFixedTimelineColor } from '../enums/index.js';
 import { formatCurrency } from '../utils/formatCurrency.js';
 import * as mobileApi from './mobileApi.js';
-import MobileMoneySummary from './MobileMoneySummary.jsx';
 import { PUBLIC_SITE_URL } from '../../shared/config/appConfig.js';
 import styles from './MobileApp.module.css';
 
@@ -55,9 +54,6 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
   const [inviteCode, setInviteCode] = useState('');
   const [isAccepting, setIsAccepting] = useState(false);
   // Admins choose between their own (individual) view and the admin view of any entity
-  const [viewModeChoice, setViewModeChoice] = useState(null);
-  const [entities, setEntities] = useState([]);
-  const [selectedEntityId, setSelectedEntityId] = useState(null);
   // Account deletion (Play Store requirement): confirmation step before deleting
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
@@ -101,57 +97,28 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
   };
 
   const selectedTimeboard = (timeboards || []).find((tb) => tb.id === selectedId);
-  const isAdmin = selectedTimeboard?.role === PersonRole.ADMIN;
+  // The person's own installments (condominium management is the CondoFlow Gestão app's job)
   const hasOwnEntity = Boolean(selectedTimeboard?.personId);
-  // Individual members always see their own view; admins default to it when they have an entity
-  const viewMode = isAdmin
-    ? (viewModeChoice || (hasOwnEntity ? PersonRole.INDIVIDUAL : PersonRole.ADMIN))
-    : PersonRole.INDIVIDUAL;
-  const isAdminView = viewMode === PersonRole.ADMIN;
 
   const selectTimeboard = (id) => {
     setSelectedId(id);
-    setViewModeChoice(null);
-    setSelectedEntityId(null);
   };
-
-  // Admin view: "where is my money" of the timeboard
-  const [summaryState, setSummaryState] = useState({ timeboardId: null, summary: null });
-  useEffect(() => {
-    if (!isAdminView || !selectedId) return;
-    mobileApi.getSummary(selectedId)
-      .then((result) => setSummaryState({ timeboardId: selectedId, summary: result }))
-      .catch(handleError);
-  }, [isAdminView, selectedId, handleError]);
-  const summary = summaryState.timeboardId === selectedId ? summaryState.summary : null;
-
-  // Admin view: the timeboard's entities (with their debt balance)
-  useEffect(() => {
-    if (!isAdminView || !selectedId) return;
-    mobileApi.getEntities(selectedId)
-      .then((list) => {
-        setEntities(list);
-        setSelectedEntityId((current) => (list.some((e) => e.id === current) ? current : (list[0]?.id || null)));
-      })
-      .catch(handleError);
-  }, [isAdminView, selectedId, handleError]);
 
   const loadObligations = useCallback(() => {
     if (!selectedId) return;
     mobileApi.setSelectedTimeboardId(selectedId);
-    const personId = isAdminView ? selectedEntityId : null;
-    // Nothing to show: admin view without an entity yet, or individual view without an own entity
-    if ((isAdminView && !personId) || (!isAdminView && !hasOwnEntity)) {
+    // Nothing to show without an entity of the person in this condominium
+    if (!hasOwnEntity) {
       setData(null);
       return;
     }
     setIsLoading(true);
     setError('');
-    mobileApi.getObligations(selectedId, personId)
+    mobileApi.getObligations(selectedId)
       .then(setData)
       .catch(handleError)
       .finally(() => setIsLoading(false));
-  }, [selectedId, isAdminView, selectedEntityId, hasOwnEntity, handleError]);
+  }, [selectedId, hasOwnEntity, handleError]);
 
   useEffect(() => { loadObligations(); }, [loadObligations]);
 
@@ -214,7 +181,7 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
     setOpeningReceiptId(item.id);
     setError('');
     try {
-      const { url } = await mobileApi.getReceiptLink(selectedId, item.id, isAdminView ? selectedEntityId : null, language);
+      const { url } = await mobileApi.getReceiptLink(selectedId, item.id, null, language);
       await Browser.open({ url });
     } catch (err) {
       handleError(err);
@@ -244,9 +211,7 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
         <div style={{ minWidth: 0 }}>
           <div className={styles.headerTitle}>{selectedTimeboard?.name || t('mobile.title')}</div>
           <div className={styles.headerSub}>
-            {isAdminView
-              ? (entities.find((entity) => entity.id === selectedEntityId)?.name || t('mobile.views.admin'))
-              : (user?.name || user?.email)}
+            {user?.name || user?.email}
           </div>
           {selectedTimeboard && (
             <div className={styles.badgeRow}>
@@ -326,40 +291,8 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
             <MobileNotices timeboardId={selectedId} t={t} dateLocale={dateLocale} onError={handleError} />
           ) : (
           <>
-            {/* Admins: individual (own) view or admin view of any entity */}
-            {isAdmin && (
-              <div className={styles.tabs} role="tablist" aria-label={t('mobile.viewLabel')} style={{ marginBottom: 0 }}>
-                {[PersonRole.INDIVIDUAL, PersonRole.ADMIN].map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    role="tab"
-                    aria-selected={viewMode === mode}
-                    className={`${styles.tab} ${viewMode === mode ? styles.tabActive : ''}`}
-                    onClick={() => setViewModeChoice(mode)}
-                  >
-                    {t(`mobile.views.${mode}`)}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {isAdminView && <MobileMoneySummary summary={summary} t={t} />}
-
-            {isAdminView && entities.length > 0 && (
-              <select className={styles.select} value={selectedEntityId || ''} onChange={(e) => setSelectedEntityId(e.target.value)} aria-label={t('mobile.entityLabel')}>
-                {entities.map((entity) => (
-                  <option key={entity.id} value={entity.id}>
-                    {entity.debtBalance > 0 ? `${entity.name} · ${formatCurrency(entity.debtBalance)}` : entity.name}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {!isAdminView && !hasOwnEntity ? (
+            {!hasOwnEntity ? (
               <div className={`${styles.card} ${styles.empty}`}>{t('mobile.noOwnEntity')}</div>
-            ) : isAdminView && entities.length === 0 ? (
-              <div className={`${styles.card} ${styles.empty}`}>{t('mobile.noEntities')}</div>
             ) : (
             <>
 

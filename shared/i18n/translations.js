@@ -1003,7 +1003,7 @@ export const translations = {
         admin: "Admin"
       },
       entityLabel: "Entity",
-      noOwnEntity: "You have no entity of your own in this timeboard. Use the Admin view to see the entities.",
+      noOwnEntity: "You have no installments in this condominium.",
       noEntities: "This timeboard has no entities yet.",
       googleNotConfigured: "Google sign-in is not configured in this app version.",
       status: {
@@ -3419,7 +3419,7 @@ export const translations = {
         admin: "Admin"
       },
       entityLabel: "Entidade",
-      noOwnEntity: "Não tem uma entidade própria neste timeboard. Use a vista Admin para ver as entidades.",
+      noOwnEntity: "Não tem quotas neste condomínio.",
       noEntities: "Este timeboard ainda não tem entidades.",
       googleNotConfigured: "O login com Google não está configurado nesta versão da aplicação.",
       status: {

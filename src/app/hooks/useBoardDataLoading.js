@@ -94,16 +94,19 @@ export function useBoardDataLoading({
 
   const refreshTimelines = React.useCallback(async () => {
     try {
-      const tlData = await api.fetchTimelines({ timeboardId: activeTimeboardId });
-      if (Array.isArray(tlData)) {
-        setTimelines(tlData);
-      }
-      await fetchEventsForVisiblePeriod(pastHorizonYears, futureHorizonYears, true);
+      // Timelines and events are asked together (the server shares the work of both) and applied in the same
+      // tick, so the board is recomputed once instead of once per answer
+      const [tlData, evData] = await Promise.all([
+        api.fetchTimelines({ timeboardId: activeTimeboardId }),
+        api.fetchEvents({ timeboardId: activeTimeboardId })
+      ]);
+      if (Array.isArray(tlData)) setTimelines(tlData);
+      if (Array.isArray(evData)) setRawEvents(evData);
       return tlData;
     } catch (e) {
       console.error('Error refreshing timelines:', e);
     }
-  }, [activeTimeboardId, fetchEventsForVisiblePeriod, pastHorizonYears, futureHorizonYears]);
+  }, [activeTimeboardId, setRawEvents, setTimelines]);
 
   // Expandir horizonte de tempo sem descartar o que já está na memória
   const isInitialHorizonMountRef = React.useRef(true);

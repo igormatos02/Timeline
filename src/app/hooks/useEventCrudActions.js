@@ -147,9 +147,20 @@ export function useEventCrudActions({
             timelineOriginId: targetTimelineId,
             eventId: editTarget.eventId || editTarget.seriesId
           };
-          await api.updateEvent(editTarget.id, updated);
-          await refreshTimelines();
+          // Optimistic: the card changes at once; the refresh brings the server's version (and the series)
+          let previousEvents = null;
+          setRawEvents((prev) => {
+            previousEvents = prev;
+            return prev.map((ev) => (String(ev.id) === String(editTarget.id) ? { ...ev, ...updated } : ev));
+          });
+          try {
+            await api.updateEvent(editTarget.id, updated);
+          } catch (err) {
+            if (previousEvents) setRawEvents(previousEvents);
+            throw err;
+          }
           showToast(t('toast.eventUpdatedSuccess'), 'success');
+          await refreshTimelines();
         } else {
           const normRec = normalizeRecurrence(eventData);
           const isRecurring = normRec === EventRecurrence.RECURRING || normRec === EventRecurrence.LIMITED;
@@ -165,12 +176,19 @@ export function useEventCrudActions({
             periodicity: normalizePeriodicity(eventData.periodicity || eventData.aggregation),
             isRecurring
           };
-          await api.createEvent(newEvent);
+          // Optimistic: the card shows at once (a recurring series gets its other occurrences with the refresh)
+          setRawEvents((prev) => [...prev, newEvent]);
+          try {
+            await api.createEvent(newEvent);
+          } catch (err) {
+            setRawEvents((prev) => prev.filter((ev) => String(ev.id) !== String(newEvent.id)));
+            throw err;
+          }
           if (correctionOf?.id) {
             await api.setEventStatus(correctionOf.id, { date: correctionOf.date, status: EventStatus.CANCELLED, timeboardId: activeTimeboardId, reason: StatusChangeReason.CORRECTION });
           }
-          await refreshTimelines();
           showToast(t(correctionOf ? 'toast.eventCorrectedSuccess' : 'toast.eventCreatedSuccess'), 'success');
+          await refreshTimelines();
         }
 
         const monthKey = eventData.date ? eventData.date.substring(0, 7) : focusedMonthRef.current;
@@ -338,13 +356,31 @@ export function useEventCrudActions({
     const deleteAsync = async () => {
       try {
         const mode = typeof deleteScope === 'string' ? deleteScope : (deleteScope ? EventDeletionMode.EVERYTHING : EventDeletionMode.ONLY_THIS);
-        await api.deleteEvent(eventId, {
-          deletionMode: mode,
-          deleteScope: mode,
-          eventId: targetEvent.eventId || targetEvent.seriesId,
-          date: targetEvent.date
+        // Optimistic: the card (and the occurrences of the series the mode covers) leave at once
+        const seriesId = targetEvent.eventId || targetEvent.seriesId || null;
+        const isRemoved = (ev) => {
+          if (String(ev.id) === String(eventId)) return true;
+          if (!seriesId || mode === EventDeletionMode.ONLY_THIS) return false;
+          const inSeries = String(ev.eventId || ev.seriesId || '') === String(seriesId);
+          if (!inSeries) return false;
+          return mode === EventDeletionMode.EVERYTHING || (Boolean(ev.date) && Boolean(targetEvent.date) && ev.date >= targetEvent.date);
+        };
+        let previousEvents = null;
+        setRawEvents((prev) => {
+          previousEvents = prev;
+          return prev.filter((ev) => !isRemoved(ev));
         });
-        setRawEvents((prev) => prev.filter((ev) => String(ev.id) !== String(eventId)));
+        try {
+          await api.deleteEvent(eventId, {
+            deletionMode: mode,
+            deleteScope: mode,
+            eventId: seriesId,
+            date: targetEvent.date
+          });
+        } catch (err) {
+          if (previousEvents) setRawEvents(previousEvents);
+          throw err;
+        }
         const monthKey = targetEvent?.date ? targetEvent.date.substring(0, 7) : focusedMonthRef.current;
         const currentMonthKey = format(new Date(), 'yyyy-MM');
         const savedScrollPos = scrollYBeforeModalRef.current || window.scrollY;

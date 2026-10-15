@@ -1,12 +1,12 @@
 import React from 'react';
 import { useEventCard } from './EventCardContext.jsx';
 import { hexToRgba } from './cardUtils.js';
-import { MovementKind, TimelineColor } from '../../enums/index.js';
+import { MovementKind, TimelineColor, TimelineType, getFixedTimelineColor } from '../../enums/index.js';
 import { getPaletteGradient } from '../../../shared/config/colorPalettes.js';
 import EventCardHeader from './EventCardHeader.jsx';
 import EventReceiptRef from './EventReceiptRef.jsx';
 import StatusDropdownButton from './StatusDropdownButton.jsx';
-import { ArrowDownLeft, Ban, CheckCircle2, Lock } from 'lucide-react';
+import { ArrowDownLeft, Ban, Banknote, CheckCircle2, Lock } from 'lucide-react';
 import ReceiptDateEditor from './ReceiptDateEditor.jsx';
 import ReceiptNumberEditor from './ReceiptNumberEditor.jsx';
 import EventCategoryPicker from './EventCategoryPicker.jsx';
@@ -33,6 +33,7 @@ export default function IncomeEventBody() {
 
   // A withdrawal from savings uses the card palette (see TimelineEventCard baseItemColor), an income the green
   const incomeGradient = getPaletteGradient(isWithdrawal ? paletteTheme.primary : TimelineColor.INCOME);
+  const cashColor = getFixedTimelineColor(TimelineType.WALLET);
   const incomeAccentColor = isWithdrawal ? paletteTheme.primary : TimelineColor.SUCCESS;
 
   return (
@@ -69,6 +70,29 @@ export default function IncomeEventBody() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '0px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <EventReceiptRef onPositiveCard={isReceivedIncome} />
+            {/* Income received in cash (the wallet), the counterpart of the account's "External deposit" tag */}
+            {!isWithdrawal && !isVirtual && (
+              <div style={{ display: 'flex', alignItems: 'center', borderLeft: isReceivedIncome ? `1px solid ${TimelineColor.WHITE}4c` : '1px solid var(--border-glass)', paddingLeft: '10px' }}>
+                <span
+                  style={{
+                    background: isReceivedIncome ? `${TimelineColor.WHITE}33` : hexToRgba(cashColor, 0.14),
+                    color: isReceivedIncome ? TimelineColor.WHITE : cashColor,
+                    border: isReceivedIncome ? `1px solid ${TimelineColor.WHITE}59` : `1px solid ${hexToRgba(cashColor, 0.35)}`,
+                    padding: '2px 7px',
+                    borderRadius: '5px',
+                    fontSize: '0.68rem',
+                    fontWeight: '700',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title={t('modal.cashIncomeHint')}
+                >
+                  <Banknote size={10} strokeWidth={2.5} />
+                  <span>{t('modal.cashIncome')}</span>
+                </span>
+              </div>
+            )}
           </div>
           {/* A withdrawal from savings shows its status read-only: it changes in the savings timeline */}
           {(!isVirtual || isWithdrawal) && (

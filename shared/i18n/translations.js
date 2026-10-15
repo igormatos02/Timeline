@@ -902,9 +902,9 @@ export const translations = {
       deleteAccountLink: "Delete account",
       privacy: {
         title: "Privacy Policy",
-        intro: "This policy explains how Timeboard (web and mobile app) handles personal data, in accordance with the General Data Protection Regulation (GDPR).",
+        intro: "This policy explains how Timeboard (web) and CondoFlow (Android app) handle personal data, in accordance with the General Data Protection Regulation (GDPR).",
         s1Title: "1. Who we are",
-        s1Body: "Timeboard is a platform for managing financial timelines and condominiums. For the data you enter in your own account we are the data controller. For the data of a condominium or organisation (entities, installments and payments), the controller is the administrator of that timeboard; Timeboard processes it on their behalf.\n\nContact: {{email}}",
+        s1Body: "Timeboard is a platform for managing financial timelines and condominiums; CondoFlow is its Android app, for the members and administrators of the condominiums managed in Timeboard. For the data you enter in your own account we are the data controller. For the data of a condominium or organisation (entities, installments and payments), the controller is the administrator of that timeboard; Timeboard processes it on their behalf.\n\nContact: {{email}}",
         s2Title: "2. Data we process",
         s2Body: "Account: name, e-mail, password (stored only as an irreversible hash) or, when you sign in with Google, your Google identity (name, e-mail and photo).\n\nTimeboard data entered by the administrators: entities (name, e-mail, phone, tax identification, unit), financial events, installments and their payment status, receipts and comments.\n\nTechnical data: a session token kept on your device to keep you signed in, and server logs required for security.",
         s3Title: "3. Why we use them",
@@ -920,18 +920,18 @@ export const translations = {
         s8Title: "8. Account deletion",
         s8Body: "You can delete your account at any time in the mobile app (Delete account) or on the account deletion page of this site.",
         s9Title: "9. Children",
-        s9Body: "Timeboard is intended for adults and is not directed to children under 16.",
+        s9Body: "Timeboard and CondoFlow are intended for adults and are not directed to children under 16.",
         s10Title: "10. Changes",
         s10Body: "We may update this policy; the date of the last update is shown at the top. Relevant changes will be communicated in the app or by e-mail."
       },
       deleteAccount: {
-        title: "Delete your Timeboard account",
+        title: "Delete your Timeboard / CondoFlow account",
         intro: "You can delete your account at any time. This removes your account, your sign-in (e-mail and password or Google) and your links to timeboards.",
         keptTitle: "What is kept",
         keptBody: "Entity and payment records of a condominium or organisation belong to its administrator and are kept by them, unlinked from your account.",
         ownerNote: "If your account owns timeboards, delete them first (in the timeboard settings).",
         howTitle: "How to delete",
-        howApp: "In the mobile app: sign in and tap \"Delete account\" at the bottom of the screen.",
+        howApp: "In the CondoFlow app: sign in and tap \"Delete account\" at the bottom of the screen.",
         howWeb: "Here: sign in on Timeboard in this browser and use the button below.",
         howEmail: "Or send a request to {{email}} from the e-mail of your account.",
         signedInAs: "Signed in as {{email}}",
@@ -957,6 +957,7 @@ export const translations = {
     mobile: {
       brand: "CondoFlow",
       tagline: "Your condominium, always at hand",
+      openReceipt: "Receipt",
       title: "My installments",
       refresh: "Refresh",
       logout: "Sign out",
@@ -2119,6 +2120,10 @@ export const translations = {
 
     // Backend
     backend: {
+      receiptLink: {
+        unavailableTitle: "Receipt unavailable",
+        unavailableBody: "This receipt link has expired or is no longer valid. Open the receipt again from the app."
+      },
       validation: {
         emailRequired: "Email is required",
         passwordMinLength: "Password must be at least 4 characters",
@@ -3289,9 +3294,9 @@ export const translations = {
       deleteAccountLink: "Eliminar conta",
       privacy: {
         title: "Política de Privacidade",
-        intro: "Esta política explica como o Timeboard (web e aplicação móvel) trata os dados pessoais, de acordo com o Regulamento Geral sobre a Proteção de Dados (RGPD).",
+        intro: "Esta política explica como o Timeboard (web) e o CondoFlow (aplicação para Android) tratam os dados pessoais, de acordo com o Regulamento Geral sobre a Proteção de Dados (RGPD).",
         s1Title: "1. Quem somos",
-        s1Body: "O Timeboard é uma plataforma de gestão de timelines financeiras e de condomínios. Para os dados que introduz na sua própria conta, somos o responsável pelo tratamento. Para os dados de um condomínio ou organização (entidades, prestações e pagamentos), o responsável é o administrador desse timeboard; o Timeboard trata-os por conta dele.\n\nContacto: {{email}}",
+        s1Body: "O Timeboard é uma plataforma de gestão de timelines financeiras e de condomínios; o CondoFlow é a sua aplicação para Android, destinada aos membros e administradores dos condomínios geridos no Timeboard. Para os dados que introduz na sua própria conta, somos o responsável pelo tratamento. Para os dados de um condomínio ou organização (entidades, prestações e pagamentos), o responsável é o administrador desse timeboard; o Timeboard trata-os por conta dele.\n\nContacto: {{email}}",
         s2Title: "2. Dados que tratamos",
         s2Body: "Conta: nome, email, palavra-passe (guardada apenas como hash irreversível) ou, quando entra com a Google, a sua identidade Google (nome, email e fotografia).\n\nDados dos timeboards introduzidos pelos administradores: entidades (nome, email, telefone, NIF, fração), eventos financeiros, prestações e o seu estado de pagamento, recibos e comentários.\n\nDados técnicos: um token de sessão guardado no seu dispositivo para manter a sessão iniciada e registos do servidor necessários à segurança.",
         s3Title: "3. Para que os usamos",
@@ -3307,18 +3312,18 @@ export const translations = {
         s8Title: "8. Eliminação da conta",
         s8Body: "Pode eliminar a sua conta a qualquer momento na aplicação móvel (Eliminar conta) ou na página de eliminação de conta deste site.",
         s9Title: "9. Menores",
-        s9Body: "O Timeboard destina-se a adultos e não se dirige a menores de 16 anos.",
+        s9Body: "O Timeboard e o CondoFlow destinam-se a adultos e não se dirigem a menores de 16 anos.",
         s10Title: "10. Alterações",
         s10Body: "Podemos atualizar esta política; a data da última atualização está indicada no topo. Alterações relevantes serão comunicadas na aplicação ou por email."
       },
       deleteAccount: {
-        title: "Eliminar a sua conta Timeboard",
+        title: "Eliminar a sua conta Timeboard / CondoFlow",
         intro: "Pode eliminar a sua conta a qualquer momento. Isto remove a sua conta, o seu acesso (email e palavra-passe ou Google) e as suas ligações aos timeboards.",
         keptTitle: "O que é mantido",
         keptBody: "Os registos de entidades e pagamentos de um condomínio ou organização pertencem ao respetivo administrador e são mantidos por ele, desligados da sua conta.",
         ownerNote: "Se a sua conta for dona de timeboards, apague-os primeiro (nas definições do timeboard).",
         howTitle: "Como eliminar",
-        howApp: "Na aplicação móvel: inicie sessão e toque em \"Eliminar conta\" no fundo do ecrã.",
+        howApp: "Na aplicação CondoFlow: inicie sessão e toque em \"Eliminar conta\" no fundo do ecrã.",
         howWeb: "Aqui: inicie sessão no Timeboard neste browser e use o botão abaixo.",
         howEmail: "Ou envie um pedido para {{email}} a partir do email da sua conta.",
         signedInAs: "Sessão iniciada como {{email}}",
@@ -3344,6 +3349,7 @@ export const translations = {
     mobile: {
       brand: "CondoFlow",
       tagline: "O seu condomínio, sempre à mão",
+      openReceipt: "Recibo",
       title: "As minhas prestações",
       refresh: "Atualizar",
       logout: "Terminar sessão",
@@ -4548,6 +4554,10 @@ export const translations = {
 
     // Backend
     backend: {
+      receiptLink: {
+        unavailableTitle: "Recibo indisponível",
+        unavailableBody: "Este link do recibo expirou ou já não é válido. Abra o recibo outra vez a partir da app."
+      },
       validation: {
         emailRequired: "O email é obrigatório.",
         passwordMinLength: "A palavra-passe deve ter pelo menos 4 caracteres.",

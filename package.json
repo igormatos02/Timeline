@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
+    "@capacitor/browser": "^8.0.5",
     "@capacitor/core": "^8.5.2",
     "@capgo/capacitor-social-login": "^8.5.11",
     "@getbrevo/brevo": "^6.0.3",

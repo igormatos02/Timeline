@@ -11,6 +11,7 @@ import { followupRouter } from './interfaces/http/routes/followupRoutes.js';
 import { pocketRouter } from './interfaces/http/routes/pocketRoutes.js';
 import { invitationsRouter } from './interfaces/http/routes/invitationsRoutes.js';
 import { meRouter } from './interfaces/http/routes/meRoutes.js';
+import { receiptsRouter } from './interfaces/http/routes/receiptsRoutes.js';
 import { requireAuth } from './interfaces/http/middleware/requireAuth.js';
 import { timeboardAccessFromRequest } from './interfaces/http/middleware/timeboardAccess.js';
 
@@ -23,6 +24,8 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // Public routes: authentication and invitation code lookup (version / health below are public too)
 app.use('/api/auth', authRouter);
 app.use('/api/invitations', invitationsRouter);
+// Receipts opened from the mobile app through a signed, short-lived link (the token is the authorization)
+app.use('/api/receipts', receiptsRouter);
 
 // Protected routes: a valid session token, and access to the timeboard the request targets
 const protectedRoute = [requireAuth, timeboardAccessFromRequest];

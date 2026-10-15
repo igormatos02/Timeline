@@ -9,6 +9,9 @@ import { TimelineType, isWalletTimelineType, PersonRole, TimelineStatus, normali
 import { classifyMovement, isActiveMovement, isEffectiveMovement } from '../../../shared/finance/movements.js';
 import { computeMoneySummary } from '../../../shared/finance/moneySummary.js';
 import { recalculateLoanState, getLoanMetrics } from '../../../shared/finance/loanCalculations.js';
+import { buildReceiptHtml } from '../../../shared/utils/receiptGenerator.js';
+import { createT } from '../../../shared/i18n/index.js';
+import { createLinkToken, verifyLinkToken, LinkTokenPurpose } from '../../infrastructure/security/sessionToken.js';
 
 // Timelines whose events are shared notices visible to individual members
 const NOTICE_TIMELINE_TYPES = [TimelineType.REMINDER, TimelineType.DIARY];
@@ -26,6 +29,8 @@ const obligationSide = (ev, timelineTypeMap) => {
   return null;
 };
 const timelineTypeMapOf = (timelines) => new Map((timelines || []).map((tl) => [String(tl.id), tl.type]));
+// A receipt link opened in the phone's browser is valid for a few minutes
+const RECEIPT_LINK_TTL_SECONDS = 10 * 60;
 // Debt balance: open obligations due up to the end of the current month (same rule as the web individual header)
 const debtLimitDate = () => `${new Date().toISOString().substring(0, 7)}-31`;
 
@@ -195,6 +200,62 @@ export class MeService {
       pendingTotal: items.filter((it) => !it.isPaid).reduce((sum, it) => sum + it.amount, 0),
       items
     };
+  }
+
+  /**
+   * Paid obligation of the person (own, or any entity's for admins) for a receipt, or null when not allowed.
+   * Checked when the link is asked for and again when it is opened (access may have changed meanwhile).
+   */
+  async _findReceiptEvent(userId, { timeboardId, eventId, personId }) {
+    const userAccess = await accessService.getTimeboardAccess(userId, timeboardId);
+    if (!userAccess) return null;
+    const target = await this._resolveTarget(userAccess, timeboardId, personId);
+    if (!target) return null;
+    const events = await eventService.getAllEvents({ timeboardId });
+    const event = (events || []).find((ev) => String(ev.id) === String(eventId));
+    if (!event || !isActiveEvent(event) || !isSettled(event) || !this.isOwnObligation(event, { ...userAccess, ...target })) return null;
+    return { event, personId: target.personId };
+  }
+
+  /** Signed link token of the receipt of a paid obligation (opened in the phone's browser), or null when not allowed. */
+  async createReceiptLinkToken(userId, { timeboardId, eventId, personId = null, language = 'pt' }) {
+    const found = await this._findReceiptEvent(userId, { timeboardId, eventId, personId });
+    if (!found) return null;
+    return createLinkToken(LinkTokenPurpose.RECEIPT, {
+      sub: userId,
+      timeboardId,
+      eventId: found.event.id,
+      personId: found.personId,
+      language
+    }, RECEIPT_LINK_TTL_SECONDS);
+  }
+
+  /** Receipt HTML of a receipt link token (same document as the web's), or null when the link is not valid. */
+  async renderReceipt(token) {
+    const claims = verifyLinkToken(token, LinkTokenPurpose.RECEIPT);
+    if (!claims) return null;
+    const found = await this._findReceiptEvent(claims.sub, claims);
+    if (!found) return null;
+    const { event, personId } = found;
+    const [timeboard, timelines, persons] = await Promise.all([
+      timeboardRepository.getById(claims.timeboardId),
+      timelineRepository.findByTimeboardId(claims.timeboardId),
+      personRepository.getByTimeboardId(claims.timeboardId)
+    ]);
+    const language = claims.language || 'pt';
+    const issuer = (persons || []).find((p) => p.role === PersonRole.ADMIN);
+    return buildReceiptHtml({
+      event,
+      timeboard,
+      timeline: (timelines || []).find((tl) => String(tl.id) === String(event.timelineId || event.timeline_id)) || null,
+      receiptNumber: event.contYear ?? event.cont_year ?? null,
+      currentUser: issuer ? { name: issuer.personName || issuer.name } : null,
+      obligationPerson: (persons || []).find((p) => String(p.id) === String(personId)) || null,
+      persons: persons || [],
+      language,
+      t: createT(language),
+      paymentDate: event.receiptDate || event.date
+    });
   }
 }
 

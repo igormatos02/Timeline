@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { LogOut, RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, Loader2, Ticket, Crown, UserCheck } from 'lucide-react';
+import { LogOut, RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, Loader2, Ticket, Crown, UserCheck, FileText } from 'lucide-react';
+import { Browser } from '@capacitor/browser';
 import { format, parseISO, setMonth } from 'date-fns';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { TimelineColor, PersonRole, EventStatus, EntityDirection, TimeboardType, TimelineType, PaymentChannel, getFixedTimelineColor } from '../enums/index.js';
@@ -33,7 +34,9 @@ const CHANNEL_TAGS = {
 };
 
 export default function MobileObligations({ user, preferredTimeboardId, notice, onClearNotice, onLogout, onSessionExpired }) {
-  const { t, dateLocale } = useTranslation();
+  const { t, dateLocale, language } = useTranslation();
+  // Installment whose receipt link is being asked for
+  const [openingReceiptId, setOpeningReceiptId] = useState(null);
   const [timeboards, setTimeboards] = useState(null);
   const [selectedId, setSelectedId] = useState(() => preferredTimeboardId || mobileApi.getSelectedTimeboardId());
   const [data, setData] = useState(null);
@@ -174,6 +177,20 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
   const toReceive = data?.toReceiveBalance || 0;
   const debtColor = debt > 0 ? TimelineColor.DANGER : TimelineColor.SUCCESS;
   const shownError = error || notice;
+
+  // Receipt of a paid installment: a signed link opened in the phone's browser (save as PDF / share from there)
+  const handleOpenReceipt = async (item) => {
+    setOpeningReceiptId(item.id);
+    setError('');
+    try {
+      const { url } = await mobileApi.getReceiptLink(selectedId, item.id, isAdminView ? selectedEntityId : null, language);
+      await Browser.open({ url });
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setOpeningReceiptId(null);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     setIsDeletingAccount(true);
@@ -385,7 +402,7 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
                       {item.side === EntityDirection.RECEIVES ? ` · ${t('mobile.sideReceives')}` : ''}
                     </div>
                     {/* How it was paid (cash in the wallet / into the bank) and the receipt, like the web cards */}
-                    {(CHANNEL_TAGS[item.channel] || item.receiptNumber || item.paidOn) && (
+                    {(CHANNEL_TAGS[item.channel] || item.receiptNumber || item.paidOn || item.isPaid) && (
                       <div className={styles.itemExtra}>
                         {CHANNEL_TAGS[item.channel] && (() => {
                           const tag = CHANNEL_TAGS[item.channel];
@@ -397,6 +414,17 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
                         })()}
                         {item.receiptNumber ? <span>{t('receipt.receiptNumber', { number: item.receiptNumber })}</span> : null}
                         {item.paidOn ? <span>{t('receipt.paymentDateShort', { date: format(parseISO(item.paidOn), 'dd/MM/yyyy') })}</span> : null}
+                        {item.isPaid && (
+                          <button
+                            type="button"
+                            className={styles.receiptButton}
+                            onClick={() => handleOpenReceipt(item)}
+                            disabled={openingReceiptId === item.id}
+                          >
+                            {openingReceiptId === item.id ? <Loader2 size={12} className={styles.spin} /> : <FileText size={12} />}
+                            {t('mobile.openReceipt')}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

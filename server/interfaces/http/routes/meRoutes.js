@@ -45,3 +45,20 @@ meRouter.get('/summary', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// POST /api/me/receipt-link { timeboardId, eventId, personId?, language? } — signed link (valid a few minutes) to
+// open the receipt of a paid obligation in the phone's browser, where it can be saved as PDF or shared
+meRouter.post('/receipt-link', async (req, res) => {
+  try {
+    const { timeboardId, eventId, personId, language } = req.body || {};
+    if (!timeboardId) return res.status(400).json({ error: t('backend.validation.timeboardIdQueryParamRequired') });
+    const token = await meService.createReceiptLinkToken(req.user.id, { timeboardId, eventId, personId, language });
+    if (!token) return res.status(403).json({ error: t('backend.validation.forbidden') });
+    const protocol = String(req.get('x-forwarded-proto') || req.protocol).split(',')[0].trim();
+    const host = req.get('x-forwarded-host') || req.get('host');
+    const lang = encodeURIComponent(language || 'pt');
+    res.json({ url: `${protocol}://${host}/api/receipts/${token}?lang=${lang}` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});

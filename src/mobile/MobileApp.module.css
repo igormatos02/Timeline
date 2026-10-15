@@ -406,6 +406,20 @@
   color: var(--text-muted);
 }
 
+.receiptButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--border-glass);
+  background: var(--bg-card);
+  color: var(--primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .channelTag {
   display: inline-flex;
   align-items: center;

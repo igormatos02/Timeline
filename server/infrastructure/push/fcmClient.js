@@ -48,7 +48,7 @@ async function getAccessToken(account) {
 }
 
 /**
- * Sends one notification to a device token. Returns { ok, unregistered }: `unregistered` tells the token is no
+ * Sends one notification to a device token. Returns { ok, unregistered, error }: `unregistered` tells the token is no
  * longer valid (app removed, token rotated) and should be forgotten.
  */
 export async function sendPush(token, { title, body, data = {} }) {
@@ -71,5 +71,9 @@ export async function sendPush(token, { title, body, data = {} }) {
   if (response.ok) return { ok: true, unregistered: false };
   const result = await response.json().catch(() => ({}));
   const errorCode = (result.error?.details || []).map((detail) => detail.errorCode).find(Boolean);
-  return { ok: false, unregistered: response.status === 404 || errorCode === 'UNREGISTERED' };
+  return {
+    ok: false,
+    unregistered: response.status === 404 || errorCode === 'UNREGISTERED',
+    error: `${response.status} ${result.error?.status || ''} ${result.error?.message || ''}`.trim()
+  };
 }

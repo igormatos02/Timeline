@@ -49,7 +49,11 @@ export class PushNotificationService {
 
   /** Sends one notification of a kind to the timeboard's members; `message(t)` builds { title, body } per language. */
   async notifyTimeboard(timeboardId, kind, message, data = {}) {
-    if (!isPushConfigured() || !timeboardId) return { sent: 0 };
+    if (!isPushConfigured()) {
+      console.warn('Push notifications are off: FIREBASE_SERVICE_ACCOUNT is missing or not valid JSON');
+      return { sent: 0 };
+    }
+    if (!timeboardId) return { sent: 0 };
     const devices = await pushDeviceRepository.listByUserIds(await this._recipientUserIds(timeboardId));
     const wanted = devices.filter((device) => device[PREFERENCE_BY_KIND[kind]]);
     let sent = 0;
@@ -58,10 +62,12 @@ export class PushNotificationService {
         const result = await sendPush(device.token, { ...message(createT(device.language || 'pt')), data: { ...data, kind, timeboardId } });
         if (result.ok) sent += 1;
         else if (result.unregistered) await pushDeviceRepository.deleteByToken(device.token);
+        else console.warn('Push notification refused by FCM:', result.error);
       } catch (err) {
         console.warn('Push notification not sent:', err.message);
       }
     }));
+    console.info(`Push ${kind}: ${sent}/${wanted.length} sent (timeboard ${timeboardId})`);
     return { sent };
   }
 
@@ -82,7 +88,8 @@ export class PushNotificationService {
 
   /** Daily job: open reminders dated today in every condominium, one notification each. */
   async sendTodayReminders() {
-    if (!isPushConfigured()) return { reminders: 0, sent: 0 };
+    // `configured` tells at once whether the Firebase service account is readable in this environment
+    if (!isPushConfigured()) return { configured: false, reminders: 0, sent: 0 };
     const today = todayIn(REMINDER_TIME_ZONE);
     const condominiums = await timeboardRepository.getAll((tb) => tb.type === TimeboardType.CONDOFLOW);
     let reminders = 0;
@@ -106,7 +113,7 @@ export class PushNotificationService {
         sent += result.sent;
       }
     }
-    return { reminders, sent };
+    return { configured: true, reminders, sent };
   }
 }
 

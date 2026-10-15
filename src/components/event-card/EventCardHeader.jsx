@@ -12,6 +12,7 @@ export default function EventCardHeader() {
   const {
     abatedBreakdown,
     canEdit,
+    balanceOriginTag,
     cardTheme,
     event,
     handleCancelTitle,
@@ -229,6 +230,27 @@ export default function EventCardHeader() {
               {!isEditingTitle && !isVirtual && event.id && (
                 <span onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex' }}>
                   <CopyIdButton id={event.id} />
+                </span>
+              )}
+
+              {/* Balance: origin timeline of the movement (wallet / account…) in its own color */}
+              {balanceOriginTag && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    padding: '2px 8px',
+                    borderRadius: '9999px',
+                    fontSize: '0.68rem',
+                    fontWeight: '700',
+                    lineHeight: 1.3,
+                    whiteSpace: 'nowrap',
+                    background: balanceOriginTag.color,
+                    color: TimelineColor.WHITE,
+                    border: `1px solid ${isFlatPositive ? `${TimelineColor.WHITE}73` : balanceOriginTag.color}`
+                  }}
+                >
+                  {balanceOriginTag.name}
                 </span>
               )}
 

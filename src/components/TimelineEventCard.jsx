@@ -277,6 +277,19 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
       : { isDeposit, accountId: account?.id || accountId, accountName, fromName: accountName, toName: walletName };
   }, [isBalanceView, walletBankKind, event, timelines, t]);
 
+  // Balance: the timeline that owns the movement (wallet, account, loan…), so an income / outflow tells where it
+  // happens; moves between the wallet and the bank already show both ends
+  const balanceOriginTag = useMemo(() => {
+    if (!isBalanceView || walletBankTransfer || event.isReference) return null;
+    const ownerId = event.timelineOriginId || event.timelineId || event.timeline_id;
+    const owner = (timelines || []).find((tl) => String(tl.id) === String(ownerId));
+    if (!owner) return null;
+    return {
+      name: owner.title || owner.name || '',
+      color: owner.color || getDefaultTimelineColor(normalizeTimelineType(owner.type))
+    };
+  }, [isBalanceView, walletBankTransfer, event, timelines]);
+
   // Outflow owned by another timeline (pocket expense, paid installment) shown as a reference in the Outflows timeline
   const isOutflowReference = Boolean(event.isReference && event.referenceKind);
   const outflowReferenceInfo = useMemo(() => {
@@ -1277,6 +1290,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     isOutflowReference,
     isDepositReference,
     accountOperation,
+    balanceOriginTag,
     isPocketClosingTransfer,
     isWalletBankMovement,
     walletBankTransfer,

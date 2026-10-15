@@ -395,6 +395,26 @@
   text-overflow: ellipsis;
 }
 
+/* Payment channel tag and receipt of an installment */
+.itemExtra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.channelTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  font-weight: 700;
+}
+
 .itemRight {
   text-align: right;
   flex-shrink: 0;

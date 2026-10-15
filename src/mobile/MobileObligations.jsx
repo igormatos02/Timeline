@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { LogOut, RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, Loader2, Ticket, Crown, UserCheck } from 'lucide-react';
 import { format, parseISO, setMonth } from 'date-fns';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
-import { TimelineColor, PersonRole, EventStatus, EntityDirection, TimeboardType } from '../enums/index.js';
+import { TimelineColor, PersonRole, EventStatus, EntityDirection, TimeboardType, TimelineType, PaymentChannel, getFixedTimelineColor } from '../enums/index.js';
 import { formatCurrency } from '../utils/formatCurrency.js';
 import * as mobileApi from './mobileApi.js';
 import MobileMoneySummary from './MobileMoneySummary.jsx';
@@ -26,6 +26,12 @@ const itemState = (item) => {
  * Home of the mobile app: debt balance of the person, year / month filter and the list of
  * paid and pending installments of the selected timeboard.
  */
+// Tag of the payment channel of an installment (same labels and colors as the web cards)
+const CHANNEL_TAGS = {
+  [PaymentChannel.CASH]: { labelKey: 'modal.cashIncome', color: getFixedTimelineColor(TimelineType.WALLET) },
+  [PaymentChannel.BANK]: { labelKey: 'modal.externalDeposit', color: getFixedTimelineColor(TimelineType.INVESTMENT) }
+};
+
 export default function MobileObligations({ user, preferredTimeboardId, notice, onClearNotice, onLogout, onSessionExpired }) {
   const { t, dateLocale } = useTranslation();
   const [timeboards, setTimeboards] = useState(null);
@@ -378,6 +384,21 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
                       {item.timelineName ? ` · ${item.timelineName}` : ''}
                       {item.side === EntityDirection.RECEIVES ? ` · ${t('mobile.sideReceives')}` : ''}
                     </div>
+                    {/* How it was paid (cash in the wallet / into the bank) and the receipt, like the web cards */}
+                    {(CHANNEL_TAGS[item.channel] || item.receiptNumber || item.paidOn) && (
+                      <div className={styles.itemExtra}>
+                        {CHANNEL_TAGS[item.channel] && (() => {
+                          const tag = CHANNEL_TAGS[item.channel];
+                          return (
+                            <span className={styles.channelTag} style={{ background: `${tag.color}1f`, color: tag.color, borderColor: `${tag.color}59` }}>
+                              {t(tag.labelKey)}
+                            </span>
+                          );
+                        })()}
+                        {item.receiptNumber ? <span>{t('receipt.receiptNumber', { number: item.receiptNumber })}</span> : null}
+                        {item.paidOn ? <span>{t('receipt.paymentDateShort', { date: format(parseISO(item.paidOn), 'dd/MM/yyyy') })}</span> : null}
+                      </div>
+                    )}
                   </div>
                   <div className={styles.itemRight}>
                     <div className={styles.itemAmount}>{formatCurrency(item.amount)}</div>

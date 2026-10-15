@@ -5,7 +5,7 @@ import { personRepository } from '../../infrastructure/database/supabase/Supabas
 import { timelineService } from './TimelineService.js';
 import { pocketRepository } from '../../infrastructure/database/supabase/SupabasePocketRepository.js';
 import { timeboardRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardRepository.js';
-import { TimelineType, isWalletTimelineType, PersonRole, TimelineStatus, normalizeTimelineType, isLoanTimelineType, BalanceViewMode, EntityDirection, isKindInBalanceViewMode } from '../../../shared/enums/index.js';
+import { TimelineType, isWalletTimelineType, PersonRole, TimelineStatus, normalizeTimelineType, isLoanTimelineType, BalanceViewMode, EntityDirection, isKindInBalanceViewMode, paymentChannelOf } from '../../../shared/enums/index.js';
 import { classifyMovement, isActiveMovement, isEffectiveMovement } from '../../../shared/finance/movements.js';
 import { computeMoneySummary } from '../../../shared/finance/moneySummary.js';
 import { recalculateLoanState, getLoanMetrics } from '../../../shared/finance/loanCalculations.js';
@@ -178,7 +178,11 @@ export class MeService {
         isPaid: isSettled(ev),
         isOverdue: !isSettled(ev) && ev.date < todayStr,
         side: obligationSide(ev, timelineTypeMap),
-        timelineName: timelineNameById.get(String(ev.timelineId || ev.timeline_id || '')) || ''
+        timelineName: timelineNameById.get(String(ev.timelineId || ev.timeline_id || '')) || '',
+        // Cash (wallet) or bank (account), and the receipt of a paid installment
+        channel: paymentChannelOf(timelineTypeMap.get(String(ev.timelineId || ev.timeline_id || ''))),
+        receiptNumber: isSettled(ev) ? (ev.contYear ?? ev.cont_year ?? null) : null,
+        paidOn: isSettled(ev) ? String(ev.receiptDate || ev.paidDate || ev.date || '').substring(0, 10) : null
       }))
       .sort((a, b) => b.date.localeCompare(a.date));
 

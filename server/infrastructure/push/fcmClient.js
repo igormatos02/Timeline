@@ -1,4 +1,5 @@
 import { createSign } from 'node:crypto';
+import { PUSH_ANDROID_CHANNEL_ID } from '../../../shared/enums/index.js';
 
 /**
  * Firebase Cloud Messaging (HTTP v1) with the project's service account, no SDK:
@@ -64,7 +65,7 @@ export async function sendPush(token, { title, body, data = {} }) {
         notification: { title, body },
         // FCM data values must be strings
         data: Object.fromEntries(Object.entries(data).map(([key, value]) => [key, String(value ?? '')])),
-        android: { priority: 'high' }
+        android: { priority: 'high', notification: { channel_id: PUSH_ANDROID_CHANNEL_ID } }
       }
     })
   });

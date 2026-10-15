@@ -42,4 +42,4 @@ export { EntityDirection, entityDirectionToBalanceMode } from './EntityDirection
 export { PocketTransferKind } from './PocketTransferKind.js';
 export { AccountOperation, accountOperationEventType, accountOperationOf, isAccountOutflowOperation } from './AccountOperation.js';
 export { PaymentChannel, paymentChannelOf } from './PaymentChannel.js';
-export { PushNotificationKind, PushPlatform } from './PushNotificationKind.js';
+export { PushNotificationKind, PushPlatform, PUSH_ANDROID_CHANNEL_ID } from './PushNotificationKind.js';

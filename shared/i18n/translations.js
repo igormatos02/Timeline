@@ -961,7 +961,9 @@ export const translations = {
       notifications: {
         title: "Notifications",
         posts: "New condominium posts",
-        reminders: "Reminders on their date"
+        reminders: "Reminders on their date",
+        channelName: "Condominium notices",
+        channelDescription: "New posts and reminders of your condominium"
       },
       title: "My installments",
       refresh: "Refresh",
@@ -3364,7 +3366,9 @@ export const translations = {
       notifications: {
         title: "Notificações",
         posts: "Novos comunicados do condomínio",
-        reminders: "Lembretes na data"
+        reminders: "Lembretes na data",
+        channelName: "Avisos do condomínio",
+        channelDescription: "Novos comunicados e lembretes do seu condomínio"
       },
       title: "As minhas prestações",
       refresh: "Atualizar",

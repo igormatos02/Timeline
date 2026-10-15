@@ -184,11 +184,11 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
   // Signed in: the phone is registered for push notifications (asks the permission the first time)
   useEffect(() => {
     let isActive = true;
-    enablePush(language)
+    enablePush(language, { name: t('mobile.notifications.channelName'), description: t('mobile.notifications.channelDescription') })
       .then((prefs) => { if (isActive) setPushPrefs(prefs); })
       .catch(() => { if (isActive) setPushPrefs(null); });
     return () => { isActive = false; };
-  }, [language]);
+  }, [language, t]);
 
   const handleTogglePush = async (key) => {
     const next = { ...pushPrefs, [key]: !pushPrefs[key] };

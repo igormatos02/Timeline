@@ -1,5 +1,5 @@
 import { PushNotifications } from '@capacitor/push-notifications';
-import { PushPlatform } from '../enums/index.js';
+import { PushPlatform, PUSH_ANDROID_CHANNEL_ID } from '../enums/index.js';
 import { isNativeApp } from './nativeGoogle.js';
 import * as mobileApi from './mobileApi.js';
 
@@ -23,16 +23,25 @@ const registerForToken = () => new Promise((resolve, reject) => {
 });
 
 /**
- * Asks for the notification permission (Android 13+), registers the phone and sends its token and the person's
+ * Asks for the notification permission (Android 13+), creates the notices channel, registers the phone and sends its token and the person's
  * choices to the server. Returns the choices, or null when push is unavailable or the permission is refused.
  */
-export async function enablePush(language) {
+export async function enablePush(language, channel = {}) {
   if (!isPushAvailable()) return null;
   let permission = await PushNotifications.checkPermissions();
   if (permission.receive === 'prompt' || permission.receive === 'prompt-with-rationale') {
     permission = await PushNotifications.requestPermissions();
   }
   if (permission.receive !== 'granted') return null;
+  // High-importance channel (heads-up): the server sends every notice to it
+  await PushNotifications.createChannel({
+    id: PUSH_ANDROID_CHANNEL_ID,
+    name: channel.name || PUSH_ANDROID_CHANNEL_ID,
+    description: channel.description || '',
+    importance: 5,
+    visibility: 1,
+    vibration: true
+  });
   const token = await registerForToken();
   mobileApi.setPushToken(token);
   const prefs = mobileApi.getPushPrefs();

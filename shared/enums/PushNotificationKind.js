@@ -8,3 +8,6 @@ export const PushNotificationKind = Object.freeze({
 export const PushPlatform = Object.freeze({
   ANDROID: 'android'
 });
+
+// Android notification channel of the CondoFlow app: high importance, so notices pop up on the screen
+export const PUSH_ANDROID_CHANNEL_ID = 'condoflow_notices';

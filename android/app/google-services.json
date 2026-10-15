@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "172063513802",
+    "project_id": "snakecobrax-19708",
+    "storage_bucket": "snakecobrax-19708.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:172063513802:android:1abe7dea3a183e60f26833",
+        "android_client_info": {
+          "package_name": "app.condoflow.client"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCruZxBHHoYbUNq4wFGT1meDYrAzlcJ90s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

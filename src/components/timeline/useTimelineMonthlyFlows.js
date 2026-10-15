@@ -52,6 +52,7 @@ export function useTimelineMonthlyFlows({
   const monthInvestmentsExternalRealizedMap = useMemo(() => monthMapOf((e) => e.realized.depositsExternal - (e.realized.allWithdrawals - e.realized.withdrawals)), [monthMapOf]);
 
   return {
+    monthlyFlows,
     monthExpensesRealizedMap,
     monthExpensesTotalMap,
     monthIncomeRealizedMap,

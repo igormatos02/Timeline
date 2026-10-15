@@ -1400,6 +1400,7 @@ function VerticalTimeline({
   // Month-by-month flows from the shared financial engine (shared/finance): one pass over the events,
   // references and cancelled movements excluded, scoped to the active timelines / entity / selected lines
   const {
+    monthlyFlows,
     monthExpensesRealizedMap,
     monthExpensesTotalMap,
     monthIncomeRealizedMap,
@@ -1678,6 +1679,7 @@ function VerticalTimeline({
                 isLoanTimelineOrTab={isLoanTimelineOrTab}
                 isReadOnly={isReadOnly}
                 isReminders={isReminders}
+                monthlyFlows={monthlyFlows}
                 monthExpensesRealizedMap={monthExpensesRealizedMap}
                 monthExpensesTotalMap={monthExpensesTotalMap}
                 monthIncomeRealizedMap={monthIncomeRealizedMap}

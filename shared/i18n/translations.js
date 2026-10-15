@@ -1525,6 +1525,26 @@ export const translations = {
       savings: "Via savings",
       installment: "Installments"
     },
+    monthFlows: {
+      incomeTitle: "Income of the month",
+      outflowsTitle: "Outflows of the month",
+      resultTitle: "Month result = Income - Outflows",
+      boardHint: "Whole board: only money coming from or leaving to the outside (moves between {{wallet}} and the bank do not count)",
+      walletHint: "Money in {{wallet}}",
+      accountHint: "Money in the bank account",
+      received: "Received",
+      externalDeposits: "Received in the bank",
+      bankWithdrawals: "Bank withdrawals",
+      walletDeposits: "Deposits from {{wallet}}",
+      expenses: "Expenses",
+      accountExpenses: "Account expenses",
+      installments: "Installments",
+      amortizations: "Amortizations",
+      bankDeposits: "Bank deposits",
+      walletWithdrawals: "Withdrawals to {{wallet}}",
+      outsideWithdrawals: "Withdrawals to the outside"
+    },
+
     outflowReference: {
       savings: "Via savings",
       installment: "Installment",
@@ -3929,6 +3949,26 @@ export const translations = {
       savings: "Via Poupança",
       installment: "Parcelas"
     },
+    monthFlows: {
+      incomeTitle: "Entradas do mês",
+      outflowsTitle: "Saídas do mês",
+      resultTitle: "Saldo do mês = Entradas - Saídas",
+      boardHint: "Timeboard inteiro: só o dinheiro que vem de fora ou sai de vez (o que passa entre {{wallet}} e o banco não conta)",
+      walletHint: "Dinheiro em {{wallet}}",
+      accountHint: "Dinheiro na conta bancária",
+      received: "Recebimentos",
+      externalDeposits: "Recebimentos no banco",
+      bankWithdrawals: "Retiradas do banco",
+      walletDeposits: "Depósitos de {{wallet}}",
+      expenses: "Gastos",
+      accountExpenses: "Gastos da conta",
+      installments: "Prestações",
+      amortizations: "Amortizações",
+      bankDeposits: "Depósitos no banco",
+      walletWithdrawals: "Levantamentos para {{wallet}}",
+      outsideWithdrawals: "Retiradas para fora"
+    },
+
     outflowReference: {
       savings: "Via Poupança",
       installment: "Parcela",

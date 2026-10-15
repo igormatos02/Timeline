@@ -1,8 +1,9 @@
 import React from 'react';
 import { groupEventsByDate } from '../../utils/eventSorting.js';
-import { EventStatus, EventType, InvestmentEventCategory, LoanEventCategory, MovementKind, PocketTransferKind, TimelineColor, TimelineType } from '../../enums/index.js';
+import { EventStatus, EventType, InvestmentEventCategory, LoanEventCategory, MovementKind, PocketTransferKind, TimelineColor, TimelineType, normalizeTimelineType } from '../../enums/index.js';
 import { classifyMovement } from '../../../shared/finance/movements.js';
 import { savingsEffect } from '../../../shared/finance/savingsSpaces.js';
+import { getMonthRowFlows, MonthFlowView } from '../../../shared/finance/financialPosition.js';
 import { differenceInCalendarMonths, format } from 'date-fns';
 import FutureHorizonButton from './FutureHorizonButton.jsx';
 import { Calendar, Clock, EyeOff, TrendingDown } from 'lucide-react';
@@ -37,6 +38,7 @@ export default function TimelineMonthView({
   isLoanTimelineOrTab,
   isReadOnly,
   isReminders,
+  monthlyFlows,
   monthExpensesRealizedMap,
   monthExpensesTotalMap,
   monthIncomeRealizedMap,
@@ -168,6 +170,19 @@ export default function TimelineMonthView({
         const mMonthRealizedInvestmentExternal = hasInvestmentTimeline ? (monthInvestmentsExternalRealizedMap.get(monthKeyStr) || 0) : 0;
         const mMonthRealizedInvestmentDeduction = mMonthRealizedInvestmentInternal;
         const mMonthRealizedSaldo = mMonthRealizedIncome - (mMonthRealizedExpense + mMonthRealizedLoan + mMonthRealizedInvestmentDeduction);
+
+        // Month row: the balance counts the board (money from / to the outside), the account its own money,
+        // every other financial timeline the cash wallet
+        const normalizedTimelineType = normalizeTimelineType(timeline.type);
+        const monthFlowView = isBalancoView || normalizedTimelineType === TimelineType.BALANCE
+          ? MonthFlowView.BOARD
+          : (normalizedTimelineType === TimelineType.INVESTMENT ? MonthFlowView.ACCOUNT : MonthFlowView.WALLET);
+        const monthFlowsEntry = monthlyFlows?.get(monthKeyStr);
+        const monthRowFlows = {
+          view: monthFlowView,
+          projected: getMonthRowFlows(monthFlowsEntry?.projected, monthFlowView),
+          realized: getMonthRowFlows(monthFlowsEntry?.realized, monthFlowView)
+        };
 
         const isNotComputedMonth = Boolean(isFinancial && computeFromMonth && monthKeyStr < computeFromMonth);
         // Months around today render at once: the view opens positioned on the current month, and the months
@@ -339,6 +354,7 @@ export default function TimelineMonthView({
 
                   {isFinancialTimeline && !isLoanTimelineOrTab && (
                     <MonthProjectionBadges
+                      rowFlows={monthRowFlows}
                       monthProjectedIncome={mMonthProjectedIncome}
                       monthProjectedExpense={mMonthProjectedExpense}
                       monthProjectedLoan={mMonthProjectedLoan}

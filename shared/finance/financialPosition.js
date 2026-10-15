@@ -167,6 +167,48 @@ function computeMonthlyFlowsUncached({ events = [], timelineTypeMap = new Map(),
   return months;
 }
 
+// Which money a month row counts: the whole board (only money from / to the outside), the cash wallet or the
+// bank account. Each part is [labelKey, amount]; parts with no money are left out.
+export const MonthFlowView = Object.freeze({ BOARD: 'board', WALLET: 'wallet', ACCOUNT: 'account' });
+
+/**
+ * Income, outflows and result of one month total (`entry.projected` or `entry.realized` of computeMonthlyFlows)
+ * as seen by a timeline: the board counts what comes from / leaves to the outside (money moved between the
+ * wallet and the bank does not count); the wallet and the account count what enters / leaves them.
+ */
+export function getMonthRowFlows(totals, view = MonthFlowView.WALLET) {
+  const m = { ...emptyMonth(), ...(totals || {}) };
+  const withdrawalsOut = m.allWithdrawals - m.withdrawals;
+  const partsByView = {
+    [MonthFlowView.BOARD]: {
+      income: [['received', m.income], ['externalDeposits', m.depositsExternal]],
+      outflows: [['expenses', m.expensesFromAvailable], ['accountExpenses', m.savingsExpenses], ['installments', m.installments],
+        ['amortizations', m.amortizations], ['outsideWithdrawals', withdrawalsOut]]
+    },
+    [MonthFlowView.WALLET]: {
+      income: [['received', m.income], ['bankWithdrawals', m.withdrawals]],
+      outflows: [['expenses', m.expensesFromAvailable], ['installments', m.installments], ['amortizations', m.amortizations],
+        ['bankDeposits', m.depositsInternal]]
+    },
+    [MonthFlowView.ACCOUNT]: {
+      income: [['externalDeposits', m.depositsExternal], ['walletDeposits', m.depositsInternal]],
+      outflows: [['accountExpenses', m.savingsExpenses], ['walletWithdrawals', m.withdrawals], ['outsideWithdrawals', withdrawalsOut]]
+    }
+  };
+  const { income, outflows } = partsByView[view] || partsByView[MonthFlowView.WALLET];
+  const sum = (parts) => parts.reduce((acc, [, value]) => acc + Math.abs(Number(value) || 0), 0);
+  const nonZero = (parts) => parts.filter(([, value]) => Math.abs(Number(value) || 0) > 0.004);
+  const totalIncome = sum(income);
+  const totalOutflows = sum(outflows);
+  return {
+    income: totalIncome,
+    outflows: totalOutflows,
+    result: totalIncome - totalOutflows,
+    incomeParts: nonZero(income),
+    outflowParts: nonZero(outflows)
+  };
+}
+
 /**
  * Sums the monthly flows between two months (inclusive; null = open) — `side` is 'projected' or 'realized'.
  * Returns the same fields as a month (income, withdrawals, installments, savingsNet, availableNet…).

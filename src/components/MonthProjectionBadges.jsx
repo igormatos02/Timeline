@@ -9,6 +9,7 @@ import {
   isLoanTimelineType
 } from '../enums/index.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
+import { MonthFlowView } from '../../shared/finance/financialPosition.js';
 
 /**
  * MonthProjectionBadges
@@ -16,6 +17,7 @@ import { useTranslation } from '../i18n/LanguageContext.jsx';
  * across financial views with a dropdown to toggle between "Month Projection" and "Real Projection".
  */
 export default function MonthProjectionBadges({
+  rowFlows = null,
   income,
   expense,
   investment,
@@ -229,6 +231,60 @@ export default function MonthProjectionBadges({
         />
       </div>
 
+      {rowFlows ? (() => {
+        // Income / outflows / result of the timeline's view (see getMonthRowFlows), with the parts in the tooltip
+        const flows = isRealizedMode ? rowFlows.realized : rowFlows.projected;
+        const walletName = ((timelines || []).find((x) => isWalletTimelineType(x?.type)) || {}).name || '';
+        const hintKey = {
+          [MonthFlowView.BOARD]: 'monthFlows.boardHint',
+          [MonthFlowView.WALLET]: 'monthFlows.walletHint',
+          [MonthFlowView.ACCOUNT]: 'monthFlows.accountHint'
+        }[rowFlows.view];
+        const partsTitle = (titleKey, parts) => [
+          `${t(titleKey)} (${t(isRealizedMode ? 'timeline.realProjection' : 'timeline.monthProjection')})`,
+          ...(hintKey ? [t(hintKey, { wallet: walletName })] : []),
+          ...parts.map(([key, value]) => `• ${t(`monthFlows.${key}`, { wallet: walletName })}: ${formatCurrency(Math.abs(value))}`)
+        ].join('\n');
+        const itemStyle = (color) => ({
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+          color: isFutureMonth ? 'var(--text-dim)' : color,
+          fontWeight: '800',
+          fontSize: '0.76rem',
+          cursor: 'help'
+        });
+        const resultColor = flows.result >= 0 ? TimelineColor.SUCCESS : TimelineColor.EXPENSE;
+        return (
+          <>
+            <span style={itemStyle(flows.income > 0 ? TimelineColor.SUCCESS : 'var(--text-dim)')} title={partsTitle('monthFlows.incomeTitle', flows.incomeParts)}>
+              <DollarSign size={12} />
+              <span>+{formatCurrency(flows.income)}</span>
+            </span>
+            <span style={itemStyle(flows.outflows > 0 ? TimelineColor.EXPENSE : 'var(--text-dim)')} title={partsTitle('monthFlows.outflowsTitle', flows.outflowParts)}>
+              <TrendingDown size={12} />
+              <span>-{formatCurrency(flows.outflows)}</span>
+            </span>
+            {showBalance && (
+              <span
+                style={{
+                  ...itemStyle(resultColor),
+                  color: resultColor,
+                  marginLeft: 'auto',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  background: `${resultColor}1f`
+                }}
+                title={[t('monthFlows.resultTitle'), ...(hintKey ? [t(hintKey, { wallet: walletName })] : [])].join('\n')}
+              >
+                <Scale size={12} />
+                <span>{t('timeline.balance')}: {flows.result >= 0 ? '+' : ''}{formatCurrency(flows.result)}</span>
+              </span>
+            )}
+          </>
+        );
+      })() : (
+      <>
       {/* 1. Entradas */}
       {showIncome && (
         <span
@@ -346,6 +402,9 @@ export default function MonthProjectionBadges({
           <Scale size={12} />
           <span>{t('timeline.balance')}: {calculatedSaldo >= 0 ? '+' : ''}{formatCurrency(calculatedSaldo)}</span>
         </span>
+      )}
+
+      </>
       )}
 
       {/* 6. Barra de progresso fina: realizado vs planeado no mês */}

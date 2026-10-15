@@ -142,7 +142,7 @@ export function usePocketActions({
       pocketName,
       targetPocketId: null,
       target_pocket_id: null,
-      category: InvestmentEventCategory.OTHER,
+      category: InvestmentEventCategory.POCKET_CLOSING,
       eventType: EventType.POCKET_TRANSFER,
       recurrence: EventRecurrence.ONCE,
       periodicity: EventPeriodicity.MONTHLY,

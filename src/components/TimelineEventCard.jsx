@@ -37,6 +37,7 @@ import {
   normalizeRecurrence,
   getDefaultTimelineColor,
   getFixedTimelineColor,
+  InvestmentEventCategory,
   MovementKind,
   AccountOperation
 } from '../enums/index.js';
@@ -369,6 +370,8 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
   const isAccountOutflow = isAccountOutflowEvent(event);
   // Transfer between two spaces of the account: shown as "General → Roof", without a sign
   const isTransferEvent = isPocketTransferEvent(event);
+  // Money moved to the current account when a pocket is closed: only notes, cancel and delete on its card
+  const isPocketClosingTransfer = isTransferEvent && event.category === InvestmentEventCategory.POCKET_CLOSING;
   const isWithdrawalEvent = !isAccountOutflow && !isTransferEvent && Boolean(
     event.eventType === EventType.WITHDRAWAL ||
     event.isWithdrawal ||
@@ -1274,6 +1277,7 @@ const TimelineEventInnerItem = React.memo(function TimelineEventInnerItem({
     isOutflowReference,
     isDepositReference,
     accountOperation,
+    isPocketClosingTransfer,
     isWalletBankMovement,
     walletBankTransfer,
     isOverdue,

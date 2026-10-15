@@ -36,6 +36,7 @@ export default function EventReceiptRef({ onPositiveCard }) {
     setReceiptNumberDraft,
     setReceiptNumberError,
     setReceiptNumberPos,
+    isPocketClosingTransfer,
     isWalletBankMovement,
     t
   } = useEventCard();
@@ -44,9 +45,9 @@ export default function EventReceiptRef({ onPositiveCard }) {
   const hasReceiptNumber = receiptNumber != null && Number(receiptNumber) > 0;
   const paymentDate = isCompleted && !isCancelled ? (event.receiptDate || event.date) : null;
   // The receipt number can be added or changed at any time (same rules as the receipt modal)
-  // Money moved between the wallet and the bank has no receipt: only its date
+  // Money moved between the wallet and the bank, or out of a closed pocket, has no receipt: only its date
   const canManageReceiptNumber = Boolean(paymentDate) && canEditPaymentDate
-    && Boolean(saveReceiptNumber) && !isWalletBankMovement;
+    && Boolean(saveReceiptNumber) && !isWalletBankMovement && !isPocketClosingTransfer;
   const canAddReceiptNumber = !hasReceiptNumber && canManageReceiptNumber;
   const canChangeReceiptNumber = hasReceiptNumber && canManageReceiptNumber;
   const openReceiptNumberPopover = (e, initialValue) => {

@@ -33,6 +33,7 @@ export default function EventActionButtons() {
     isLoanInstallment,
     isLockedPositive,
     isNotesExpanded,
+    isPocketClosingTransfer,
     isPaidLoan,
     isPayingUpToHere,
     isReadOnly,
@@ -91,6 +92,7 @@ export default function EventActionButtons() {
       )}
 
       {/* Botão de Notas (também disponível para utilizadores só de leitura) */}
+      {/* A pocket closing transfer only keeps notes, cancel and delete */}
       {(onEdit || isReadOnly || canChangeStatus) && !isAnchorCard && !isCondoPost && (() => {
         const allNotes = getCardNotes();
         const hasNotes = allNotes.length > 0;
@@ -126,7 +128,7 @@ export default function EventActionButtons() {
       })()}
 
       {/* Botão de Desmembrar Valor */}
-      {!isLoanInstallment && !isFollowupEvent && !isAnchorCard && !isCondoPost && !isVirtual && !isLockedPositive && !isCancelled && (onUpdateEventDirect || onEdit) && (() => {
+      {!isLoanInstallment && !isFollowupEvent && !isAnchorCard && !isCondoPost && !isVirtual && !isLockedPositive && !isCancelled && !isPocketClosingTransfer && (onUpdateEventDirect || onEdit) && (() => {
         const allSubparts = Array.isArray(event.breakdownItems) ? event.breakdownItems : [];
         const hasBreakdown = allSubparts.length > 0;
 
@@ -164,7 +166,7 @@ export default function EventActionButtons() {
       })()}
 
       {/* Botão / Indicador de Evento Automático (Apenas para Eventos Recorrentes / Parcelamentos e não trancados/cancelados) */}
-      {isRecurringEvent && canEdit && !isLockedPositive && !isCancelled && (
+      {isRecurringEvent && canEdit && !isLockedPositive && !isCancelled && !isPocketClosingTransfer && (
         <button
           type="button"
           className="action-icon-btn"
@@ -245,7 +247,7 @@ export default function EventActionButtons() {
       )}
 
       {/* "Correct" an effective movement: pre-filled form; the original is cancelled when the correction is saved */}
-      {isLockedPositive && !isCancelled && !blocksChanges && correctEvent && (
+      {isLockedPositive && !isCancelled && !blocksChanges && correctEvent && !isPocketClosingTransfer && (
         <button
           type="button"
           className="action-icon-btn"
@@ -325,7 +327,7 @@ export default function EventActionButtons() {
       ))}
 
       {/* Botão Imprimir Recibo */}
-      {onPrintReceipt && (isPositiveStatus(effectiveStatus) || isCompleted) && !isCancelled && (
+      {onPrintReceipt && (isPositiveStatus(effectiveStatus) || isCompleted) && !isCancelled && !isPocketClosingTransfer && (
         <button
           type="button"
           className="action-icon-btn"
@@ -350,7 +352,7 @@ export default function EventActionButtons() {
       )}
 
       {/* Admins can revert an effective movement to pending (confirmation; recorded in the audit log) */}
-      {isLockedPositive && !isCancelled && canOverride && onToggleLoanPayment && (
+      {isLockedPositive && !isCancelled && canOverride && onToggleLoanPayment && !isPocketClosingTransfer && (
         <>
           <button
             type="button"
@@ -406,7 +408,7 @@ export default function EventActionButtons() {
       )}
 
       {/* Botão Editar Evento - Não permitido para parcelas de empréstimo, eventos virtuais ou eventos trancados/cancelados */}
-      {onEdit && !isLoanInstallment && !isVirtual && !isLockedPositive && !isCancelled && (
+      {onEdit && !isLoanInstallment && !isVirtual && !isLockedPositive && !isCancelled && !isPocketClosingTransfer && (
         <button
           type="button"
           className="action-icon-btn"

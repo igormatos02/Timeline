@@ -12,6 +12,7 @@ import { pocketRouter } from './interfaces/http/routes/pocketRoutes.js';
 import { invitationsRouter } from './interfaces/http/routes/invitationsRoutes.js';
 import { meRouter } from './interfaces/http/routes/meRoutes.js';
 import { receiptsRouter } from './interfaces/http/routes/receiptsRoutes.js';
+import { cronRouter } from './interfaces/http/routes/cronRoutes.js';
 import { requireAuth } from './interfaces/http/middleware/requireAuth.js';
 import { timeboardAccessFromRequest } from './interfaces/http/middleware/timeboardAccess.js';
 
@@ -26,6 +27,8 @@ app.use('/api/auth', authRouter);
 app.use('/api/invitations', invitationsRouter);
 // Receipts opened from the mobile app through a signed, short-lived link (the token is the authorization)
 app.use('/api/receipts', receiptsRouter);
+// Scheduled jobs (Vercel cron), authorized by CRON_SECRET
+app.use('/api/cron', cronRouter);
 
 // Protected routes: a valid session token, and access to the timeboard the request targets
 const protectedRoute = [requireAuth, timeboardAccessFromRequest];

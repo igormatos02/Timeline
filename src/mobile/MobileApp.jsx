@@ -7,6 +7,7 @@ import MobileAuth from './MobileAuth.jsx';
 import MobileObligations from './MobileObligations.jsx';
 import { signOutNativeGoogle } from './nativeGoogle.js';
 import styles from './MobileApp.module.css';
+import { disablePush } from './pushNotifications.js';
 
 /**
  * Mobile app for individual members (e.g. condominium owners): login / registration (Google or
@@ -81,6 +82,8 @@ export default function MobileApp() {
   }, [finishLogin, t]);
 
   const handleLogout = async () => {
+    // Still signed in: this phone stops receiving the account's notifications
+    await disablePush();
     mobileApi.clearSession();
     mobileApi.setSelectedTimeboardId(null);
     try { await supabase.auth.signOut(); } catch { /* not signed in with Google */ }

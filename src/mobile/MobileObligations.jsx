@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { LogOut, RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, Loader2, Ticket, Crown, UserCheck, FileText } from 'lucide-react';
 import { Browser } from '@capacitor/browser';
+import { enablePush, savePushPrefs } from './pushNotifications.js';
 import { format, parseISO, setMonth } from 'date-fns';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { TimelineColor, PersonRole, EventStatus, EntityDirection, TimeboardType, TimelineType, PaymentChannel, getFixedTimelineColor } from '../enums/index.js';
@@ -35,6 +36,8 @@ const CHANNEL_TAGS = {
 
 export default function MobileObligations({ user, preferredTimeboardId, notice, onClearNotice, onLogout, onSessionExpired }) {
   const { t, dateLocale, language } = useTranslation();
+  // Push notifications of this phone: the person's choices, or null when unavailable / not allowed
+  const [pushPrefs, setPushPrefs] = useState(null);
   // Installment whose receipt link is being asked for
   const [openingReceiptId, setOpeningReceiptId] = useState(null);
   const [timeboards, setTimeboards] = useState(null);
@@ -177,6 +180,25 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
   const toReceive = data?.toReceiveBalance || 0;
   const debtColor = debt > 0 ? TimelineColor.DANGER : TimelineColor.SUCCESS;
   const shownError = error || notice;
+
+  // Signed in: the phone is registered for push notifications (asks the permission the first time)
+  useEffect(() => {
+    let isActive = true;
+    enablePush(language)
+      .then((prefs) => { if (isActive) setPushPrefs(prefs); })
+      .catch(() => { if (isActive) setPushPrefs(null); });
+    return () => { isActive = false; };
+  }, [language]);
+
+  const handleTogglePush = async (key) => {
+    const next = { ...pushPrefs, [key]: !pushPrefs[key] };
+    setPushPrefs(next);
+    try {
+      await savePushPrefs(next, language);
+    } catch (err) {
+      handleError(err);
+    }
+  };
 
   // Receipt of a paid installment: a signed link opened in the phone's browser (save as PDF / share from there)
   const handleOpenReceipt = async (item) => {
@@ -441,6 +463,19 @@ export default function MobileObligations({ user, preferredTimeboardId, notice, 
           </>
           )}
         </>
+      )}
+
+      {/* Push notifications: what this phone receives */}
+      {pushPrefs && (
+        <div className={styles.card}>
+          <div className={styles.inviteTitle}>{t('mobile.notifications.title')}</div>
+          {[['notifyPosts', 'mobile.notifications.posts'], ['notifyReminders', 'mobile.notifications.reminders']].map(([key, labelKey]) => (
+            <label key={key} className={styles.toggleRow}>
+              <span>{t(labelKey)}</span>
+              <input type="checkbox" checked={Boolean(pushPrefs[key])} onChange={() => handleTogglePush(key)} />
+            </label>
+          ))}
+        </div>
       )}
 
       {/* Account: privacy policy and account deletion */}

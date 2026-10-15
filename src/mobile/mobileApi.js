@@ -8,6 +8,8 @@ const TOKEN_KEY = 'chrono_mobile_token';
 const USER_KEY = 'chrono_mobile_user';
 const INVITE_CODE_KEY = 'chrono_mobile_invite_code';
 const TIMEBOARD_KEY = 'chrono_mobile_timeboard';
+const PUSH_TOKEN_KEY = 'chrono_mobile_push_token';
+const PUSH_PREFS_KEY = 'chrono_mobile_push_prefs';
 
 const read = (key) => {
   try { return localStorage.getItem(key); } catch { return null; }
@@ -90,3 +92,13 @@ export const getPendingInviteCode = () => read(INVITE_CODE_KEY);
 export const setPendingInviteCode = (code) => write(INVITE_CODE_KEY, code || null);
 export const getSelectedTimeboardId = () => read(TIMEBOARD_KEY);
 export const setSelectedTimeboardId = (id) => write(TIMEBOARD_KEY, id || null);
+
+// Push notifications (CondoFlow app): this phone's token and the person's choices (new posts, reminders)
+export const registerPushDevice = (device) => request('/me/push-devices', { method: 'POST', body: device });
+export const unregisterPushDevice = (token) => request('/me/push-devices', { method: 'DELETE', body: { token } });
+export const getPushToken = () => read(PUSH_TOKEN_KEY);
+export const setPushToken = (token) => write(PUSH_TOKEN_KEY, token || null);
+export const getPushPrefs = () => {
+  try { return { notifyPosts: true, notifyReminders: true, ...JSON.parse(read(PUSH_PREFS_KEY) || '{}') }; } catch { return { notifyPosts: true, notifyReminders: true }; }
+};
+export const setPushPrefs = (prefs) => write(PUSH_PREFS_KEY, JSON.stringify(prefs));

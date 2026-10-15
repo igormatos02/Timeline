@@ -958,6 +958,11 @@ export const translations = {
       brand: "CondoFlow",
       tagline: "Your condominium, always at hand",
       openReceipt: "Receipt",
+      notifications: {
+        title: "Notifications",
+        posts: "New condominium posts",
+        reminders: "Reminders on their date"
+      },
       title: "My installments",
       refresh: "Refresh",
       logout: "Sign out",
@@ -2120,6 +2125,12 @@ export const translations = {
 
     // Backend
     backend: {
+      push: {
+        newPostTitle: "New post · {{timeboard}}",
+        reminderTitle: "Reminder · {{timeboard}}",
+        tokenRequired: "The device token is required.",
+        unauthorized: "Unauthorized."
+      },
       receiptLink: {
         unavailableTitle: "Receipt unavailable",
         unavailableBody: "This receipt link has expired or is no longer valid. Open the receipt again from the app."
@@ -3350,6 +3361,11 @@ export const translations = {
       brand: "CondoFlow",
       tagline: "O seu condomínio, sempre à mão",
       openReceipt: "Recibo",
+      notifications: {
+        title: "Notificações",
+        posts: "Novos comunicados do condomínio",
+        reminders: "Lembretes na data"
+      },
       title: "As minhas prestações",
       refresh: "Atualizar",
       logout: "Terminar sessão",
@@ -4554,6 +4570,12 @@ export const translations = {
 
     // Backend
     backend: {
+      push: {
+        newPostTitle: "Novo comunicado · {{timeboard}}",
+        reminderTitle: "Lembrete · {{timeboard}}",
+        tokenRequired: "O token do dispositivo é obrigatório.",
+        unauthorized: "Não autorizado."
+      },
       receiptLink: {
         unavailableTitle: "Recibo indisponível",
         unavailableBody: "Este link do recibo expirou ou já não é válido. Abra o recibo outra vez a partir da app."

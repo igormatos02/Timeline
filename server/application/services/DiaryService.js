@@ -2,6 +2,7 @@ import { diaryRepository } from '../../infrastructure/database/supabase/Supabase
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { DiaryMood, DiaryPublishStatus } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
+import { pushNotificationService } from './PushNotificationService.js';
 
 const t = createT('en');
 
@@ -66,7 +67,7 @@ export class DiaryService {
 
     await this._assertDayIsFree(timelineId, payload.date);
 
-    return diaryRepository.create({
+    const created = await diaryRepository.create({
       ...payload,
       mood: payload.mood || DiaryMood.GOOD,
       publishStatus: payload.publishStatus || DiaryPublishStatus.UNPUBLISHED,
@@ -74,6 +75,9 @@ export class DiaryService {
       timelineId,
       tenantId: data.tenantId || data.tenant_id || null
     });
+    // Created already published: the condominium members are told (CondoFlow app)
+    if (created?.publishStatus === DiaryPublishStatus.PUBLISHED) await pushNotificationService.notifyPostPublished(created);
+    return created;
   }
 
   async updateDiary(id, updates) {
@@ -86,7 +90,12 @@ export class DiaryService {
       await this._assertDayIsFree(existing.timelineId, payload.date, id);
     }
 
-    return diaryRepository.update(id, payload);
+    const updated = await diaryRepository.update(id, payload);
+    // Becomes published: the condominium members are told (CondoFlow app)
+    if (existing.publishStatus !== DiaryPublishStatus.PUBLISHED && payload.publishStatus === DiaryPublishStatus.PUBLISHED) {
+      await pushNotificationService.notifyPostPublished({ ...existing, ...(updated || {}) });
+    }
+    return updated;
   }
 
   async deleteDiary(id) {

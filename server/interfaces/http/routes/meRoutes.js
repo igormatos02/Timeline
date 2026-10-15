@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { meService } from '../../../application/services/MeService.js';
+import { pushNotificationService } from '../../../application/services/PushNotificationService.js';
 import { createT } from '../../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -58,6 +59,31 @@ meRouter.post('/receipt-link', async (req, res) => {
     const host = req.get('x-forwarded-host') || req.get('host');
     const lang = encodeURIComponent(language || 'pt');
     res.json({ url: `${protocol}://${host}/api/receipts/${token}?lang=${lang}` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/me/push-devices { token, platform?, language?, notifyPosts?, notifyReminders? } — registers this phone for
+// push notifications (CondoFlow app), or updates its preferences
+meRouter.post('/push-devices', async (req, res) => {
+  try {
+    const { token, platform, language, notifyPosts, notifyReminders } = req.body || {};
+    if (!token) return res.status(400).json({ error: t('backend.push.tokenRequired') });
+    const device = await pushNotificationService.registerDevice(req.user.id, { token, platform, language, notifyPosts, notifyReminders });
+    res.json({ notifyPosts: device.notifyPosts, notifyReminders: device.notifyReminders });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/me/push-devices { token } — this phone stops receiving notifications (sign-out)
+meRouter.delete('/push-devices', async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    if (!token) return res.status(400).json({ error: t('backend.push.tokenRequired') });
+    await pushNotificationService.unregisterDevice(req.user.id, token);
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

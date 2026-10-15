@@ -693,3 +693,31 @@
   font-size: 1.05rem;
   font-weight: 800;
 }
+
+/* CondoFlow Gestão: movement filters and the receive / pay button */
+.chipRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 8px 0 4px;
+}
+
+.settleButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  border: none;
+  background: var(--primary);
+  color: var(--text-white);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settleButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

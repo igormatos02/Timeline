@@ -5,10 +5,11 @@ import { personRepository } from '../../infrastructure/database/supabase/Supabas
 import { timelineService } from './TimelineService.js';
 import { pocketRepository } from '../../infrastructure/database/supabase/SupabasePocketRepository.js';
 import { timeboardRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardRepository.js';
-import { DiaryPublishStatus, TimeboardType, isCancelledStatus, isPositiveStatus, TimelineType, isWalletTimelineType, PersonRole, TimelineStatus, normalizeTimelineType, isLoanTimelineType, BalanceViewMode, EntityDirection, isKindInBalanceViewMode, paymentChannelOf } from '../../../shared/enums/index.js';
+import { MovementKind, DiaryPublishStatus, TimeboardType, isCancelledStatus, isPositiveStatus, TimelineType, isWalletTimelineType, PersonRole, TimelineStatus, normalizeTimelineType, isLoanTimelineType, BalanceViewMode, EntityDirection, isKindInBalanceViewMode, paymentChannelOf } from '../../../shared/enums/index.js';
 import { classifyMovement, isActiveMovement, isEffectiveMovement } from '../../../shared/finance/movements.js';
 import { computeMoneySummary } from '../../../shared/finance/moneySummary.js';
 import { computeMonthlyFlows, getMonthRowFlows, MonthFlowView } from '../../../shared/finance/financialPosition.js';
+import { effectiveStatusFor } from '../../../shared/finance/statusRules.js';
 import { recalculateLoanState, getLoanMetrics } from '../../../shared/finance/loanCalculations.js';
 import { buildReceiptHtml } from '../../../shared/utils/receiptGenerator.js';
 import { createT } from '../../../shared/i18n/index.js';
@@ -169,6 +170,54 @@ export class MeService {
       realized: getMonthRowFlows(entry?.realized, MonthFlowView.BOARD),
       projected: getMonthRowFlows(entry?.projected, MonthFlowView.BOARD)
     };
+  }
+
+  /**
+   * Admins: the movements of a month that the condominium's balance counts (money from / to the outside —
+   * references and moves between the wallet and the bank left out), with what the Receive / Pay button applies.
+   */
+  async getMonthMovements(userId, { timeboardId, month }) {
+    const access = await accessService.getTimeboardAccess(userId, timeboardId);
+    if (!access || access.role !== PersonRole.ADMIN) return null;
+    const [timelines, persons, events] = await Promise.all([
+      timelineRepository.findByTimeboardId(timeboardId),
+      personRepository.getByTimeboardId(timeboardId),
+      eventService.getAllEvents({ timeboardId })
+    ]);
+    const timelineTypeMap = timelineTypeMapOf(timelines);
+    const timelineNameById = new Map((timelines || []).map((tl) => [String(tl.id), tl.name]));
+    const personNameById = new Map((persons || []).map((p) => [String(p.id), p.personName || '']));
+    const monthKey = /^\d{4}-\d{2}$/.test(String(month || '')) ? month : new Date().toISOString().substring(0, 7);
+    const SIDE_BY_KIND = {
+      [MovementKind.INCOME]: EntityDirection.OWES,
+      [MovementKind.DEPOSIT_EXTERNAL]: EntityDirection.OWES,
+      [MovementKind.EXPENSE]: EntityDirection.RECEIVES,
+      [MovementKind.SAVINGS_EXPENSE]: EntityDirection.RECEIVES,
+      [MovementKind.LOAN_INSTALLMENT]: EntityDirection.RECEIVES,
+      [MovementKind.AMORTIZATION]: EntityDirection.RECEIVES
+    };
+    return (events || [])
+      .filter((ev) => isActiveEvent(ev) && ev.date.startsWith(monthKey))
+      .map((ev) => ({ ev, movement: classifyMovement(ev, timelineTypeMap) }))
+      .filter(({ movement }) => !movement.isReference && SIDE_BY_KIND[movement.kind])
+      .map(({ ev, movement }) => {
+        const timelineId = String(ev.timelineId || ev.timeline_id || '');
+        return {
+          id: ev.id,
+          title: ev.title || ev.name || '',
+          date: ev.date,
+          amount: movement.amount,
+          // OWES: money coming in (fees…), RECEIVES: money going out (suppliers, costs)
+          side: SIDE_BY_KIND[movement.kind],
+          isPaid: isSettled(ev),
+          status: ev.status,
+          effectiveStatus: effectiveStatusFor(ev),
+          channel: paymentChannelOf(timelineTypeMap.get(timelineId)),
+          timelineName: timelineNameById.get(timelineId) || '',
+          personName: personNameById.get(String(ev.obligationPersonId || ev.obligation_person_id || '')) || ''
+        };
+      })
+      .sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
   }
 
   async getObligations(userId, { timeboardId, year, month, personId = null }) {

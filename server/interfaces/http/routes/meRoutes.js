@@ -60,6 +60,19 @@ meRouter.get('/month', async (req, res) => {
   }
 });
 
+// GET /api/me/movements?timeboardId&month=YYYY-MM — admins: the month's income and outflows (CondoFlow Gestão)
+meRouter.get('/movements', async (req, res) => {
+  try {
+    const { timeboardId, month } = req.query;
+    if (!timeboardId) return res.status(400).json({ error: t('backend.validation.timeboardIdQueryParamRequired') });
+    const result = await meService.getMonthMovements(req.user.id, { timeboardId, month });
+    if (!result) return res.status(403).json({ error: t('backend.validation.forbidden') });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/me/notices?timeboardId — the condominium's published posts and open reminders (CondoFlow app)
 meRouter.get('/notices', async (req, res) => {
   try {

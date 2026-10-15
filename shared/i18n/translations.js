@@ -1555,7 +1555,14 @@ export const translations = {
       nextMonth: "Next month",
       projectedLine: "Planned: +{{income}} · -{{outflows}} · {{result}}",
       overdueTitle: "Overdue",
-      noOverdue: "Nobody is overdue."
+      noOverdue: "Nobody is overdue.",
+      movementsTitle: "Movements of the month",
+      filterAll: "All",
+      filterIncome: "Income",
+      filterOutflows: "Outflows",
+      filterPending: "Pending",
+      filterPaid: "Done",
+      noMovements: "No movements with these filters."
     },
 
     monthFlows: {
@@ -4024,7 +4031,14 @@ export const translations = {
       nextMonth: "Mês seguinte",
       projectedLine: "Previsto: +{{income}} · -{{outflows}} · {{result}}",
       overdueTitle: "Em atraso",
-      noOverdue: "Ninguém está em atraso."
+      noOverdue: "Ninguém está em atraso.",
+      movementsTitle: "Movimentos do mês",
+      filterAll: "Todos",
+      filterIncome: "Entradas",
+      filterOutflows: "Saídas",
+      filterPending: "Pendentes",
+      filterPaid: "Efetivados",
+      noMovements: "Não há movimentos com estes filtros."
     },
 
     monthFlows: {

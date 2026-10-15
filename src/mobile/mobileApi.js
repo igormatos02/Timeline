@@ -82,6 +82,11 @@ export const getEntities = (timeboardId) => request(`/me/entities?timeboardId=${
 // Admins: income, outflows and result of a month (YYYY-MM) for the whole condominium
 export const getMonthFlows = (timeboardId, month) => request(`/me/month?timeboardId=${encodeURIComponent(timeboardId)}&month=${encodeURIComponent(month)}`);
 
+// Admins: the month's income and outflows (what the condominium balance counts)
+export const getMonthMovements = (timeboardId, month) => request(`/me/movements?timeboardId=${encodeURIComponent(timeboardId)}&month=${encodeURIComponent(month)}`);
+// Admins: receive / pay a movement — the same route and rules as the web (status toggle)
+export const setMovementEffective = (eventId, status) => request(`/events/${encodeURIComponent(eventId)}/toggle-payment`, { method: 'POST', body: { status } });
+
 // The condominium's published posts and open reminders
 export const getNotices = (timeboardId) => request(`/me/notices?timeboardId=${encodeURIComponent(timeboardId)}`);
 

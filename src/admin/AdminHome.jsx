@@ -7,6 +7,7 @@ import { formatCurrency } from '../utils/formatCurrency.js';
 import { PUBLIC_SITE_URL } from '../../shared/config/appConfig.js';
 import * as mobileApi from '../mobile/mobileApi.js';
 import MobileMoneySummary from '../mobile/MobileMoneySummary.jsx';
+import AdminMovements from './AdminMovements.jsx';
 import styles from '../mobile/MobileApp.module.css';
 
 const currentMonthKey = () => format(new Date(), 'yyyy-MM');
@@ -23,6 +24,7 @@ export default function AdminHome({ user, preferredTimeboardId, notice, onClearN
   const [monthFlows, setMonthFlows] = useState(null);
   const [summary, setSummary] = useState(null);
   const [entities, setEntities] = useState(null);
+  const [movements, setMovements] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -47,14 +49,21 @@ export default function AdminHome({ user, preferredTimeboardId, notice, onClearN
     mobileApi.setSelectedTimeboardId(selectedId);
     setIsLoading(true);
     setError('');
-    Promise.all([
+    return Promise.all([
       mobileApi.getMonthFlows(selectedId, month).then(setMonthFlows),
+      mobileApi.getMonthMovements(selectedId, month).then(setMovements),
       mobileApi.getSummary(selectedId).then(setSummary),
       mobileApi.getEntities(selectedId).then(setEntities)
     ])
       .catch(handleError)
       .finally(() => setIsLoading(false));
   }, [selectedId, month, handleError]);
+
+  // Another month or condominium: its figures and movements are loaded from scratch
+  useEffect(() => {
+    setMonthFlows(null);
+    setMovements(null);
+  }, [selectedId, month]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -143,6 +152,8 @@ export default function AdminHome({ user, preferredTimeboardId, notice, onClearN
               </>
             )}
           </div>
+
+          <AdminMovements movements={movements} t={t} dateLocale={dateLocale} onChanged={load} onError={handleError} />
 
           <MobileMoneySummary summary={summary} t={t} />
 

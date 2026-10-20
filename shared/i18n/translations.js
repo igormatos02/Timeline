@@ -5,6 +5,7 @@ export const translations = {
     // Header / Brand
     header: {
       brandSubtitle: "Financial Management & Timelines",
+      condoBrandSubtitle: "Condominium management · a {{platform}} product",
       selectTimeboard: "Select Timeboard",
       goToToday: "CURRENT MONTH",
       goToTodayTitle: "Focus on current month",
@@ -2373,6 +2374,7 @@ export const translations = {
         invitationTextGreeting: "Hello {name},",
         invitationTextBody: "{inviter} invited you to access and collaborate on the Timeboard \"{name}\" with the role of {role}.\n\nTo accept the invitation and access the dashboard, click the link below:\n{url}\n\nKind regards,\nTimeboard Team",
         brandSubtitle: "Financial Management & Timelines",
+        condoBrandSubtitle: "Condominium management · a {{platform}} product",
         greeting: "Hello {name},",
         invitationHtmlBody: "{inviter} invited you to collaborate on the Timeboard",
         timeboardLabel: "Timeboard",
@@ -2568,6 +2570,7 @@ export const translations = {
     // Header / Brand
     header: {
       brandSubtitle: "Gestão Financeira & Linhas Temporais",
+      condoBrandSubtitle: "Gestão de condomínios · um produto {{platform}}",
       selectTimeboard: "Selecionar Timeboard",
       goToToday: "MÊS ATUAL",
       goToTodayTitle: "Focar no mês atual",
@@ -4936,6 +4939,7 @@ export const translations = {
         invitationTextGreeting: "Olá {name},",
         invitationTextBody: "{inviter} convidou-te para aceder e colaborar no Timeboard \"{name}\" com a função de {role}.\n\nPara aceitar o convite e aceder ao dashboard, clica no link abaixo:\n{url}\n\nCumprimentos,\nEquipa Timeboard",
         brandSubtitle: "Gestão Financeira & Linhas Temporais",
+        condoBrandSubtitle: "Gestão de condomínios · um produto {{platform}}",
         greeting: "Olá {name},",
         invitationHtmlBody: "convidou-te para colaborar no Timeboard",
         timeboardLabel: "Timeboard",

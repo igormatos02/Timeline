@@ -1,4 +1,5 @@
 import { BrevoClient } from '@getbrevo/brevo';
+import { BRAND } from '../../../shared/config/businessConfig.js';
 import dotenv from 'dotenv';
 import { getAppUrl } from '../../../shared/config/appConfig.js';
 import { PersonRole } from '../../../shared/enums/index.js';
@@ -32,8 +33,13 @@ class EmailService {
   /**
    * Send Timeboard Invitation Email
    */
-  async sendTimeboardInvitation({ toEmail, toName, timeboardName, timeboardId, inviterName, role, acceptUrl, inviteCode = '' }) {
+  async sendTimeboardInvitation({ toEmail, toName, timeboardName, timeboardId, inviterName, role, acceptUrl, inviteCode = '', isCondominium = false }) {
     const client = this.getClient();
+    // Condominiums are the CondoFlow product (a Timeboard product); other timeboards keep the platform brand
+    const brandName = isCondominium ? BRAND.product : BRAND.platform;
+    const brandSubtitle = isCondominium
+      ? t('backend.email.condoBrandSubtitle', { platform: BRAND.platform })
+      : t('backend.email.brandSubtitle');
     const finalAcceptUrl = acceptUrl || `${this.appUrl}/?inviteTimeboardId=${encodeURIComponent(timeboardId)}&email=${encodeURIComponent(toEmail)}`;
 
     const roleLabel = role === PersonRole.ADMIN
@@ -72,10 +78,10 @@ class EmailService {
                 <tr>
                   <td style="padding: 32px 32px 20px 32px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); background: linear-gradient(180deg, rgba(99, 102, 241, 0.1) 0%, transparent 100%);">
                     <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
-                      <span style="font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">timeboard</span>
+                      <span style="font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">${brandName.toLowerCase()}</span>
                       <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #6366f1; margin-top: 4px;"></span>
                     </div>
-                    <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 13px; font-weight: 500;">${t('backend.email.brandSubtitle')}</p>
+                    <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 13px; font-weight: 500;">${brandSubtitle}</p>
                   </td>
                 </tr>
 
@@ -131,7 +137,7 @@ class EmailService {
                 <tr>
                   <td style="padding: 20px 32px; background-color: #0d131f; border-top: 1px solid rgba(255, 255, 255, 0.06); text-align: center;">
                     <p style="color: #64748b; font-size: 12px; margin: 0;">
-                      © ${new Date().getFullYear()} Timeboard. ${t('backend.email.copyright')}
+                      © ${new Date().getFullYear()} ${brandName}. ${t('backend.email.copyright')}
                     </p>
                   </td>
                 </tr>
@@ -151,7 +157,7 @@ class EmailService {
 
     try {
       const response = await client.transactionalEmails.sendTransacEmail({
-        sender: { name: this.senderName, email: this.senderEmail },
+        sender: { name: isCondominium ? BRAND.product : this.senderName, email: this.senderEmail },
         to: [{ email: toEmail, name: toName || toEmail.split('@')[0] }],
         subject: subject,
         textContent: textContent,

@@ -286,7 +286,8 @@ export class TimeboardService {
       inviterName: inviterName || t('backend.service.timeboardAdmin'),
       role: finalRole,
       acceptUrl: acceptUrl,
-      inviteCode: formatInviteCode(inviteCode)
+      inviteCode: formatInviteCode(inviteCode),
+      isCondominium: timeboard.type === TimeboardType.CONDOFLOW
     });
 
     return {

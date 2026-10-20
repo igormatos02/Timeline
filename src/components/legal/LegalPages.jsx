@@ -2,16 +2,35 @@ import React, { useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import * as api from '../../services/api.js';
 import { SUPPORT_EMAIL } from '../../../shared/config/appConfig.js';
+import { BRAND, LEGAL_ENTITY, LEGAL_LAST_UPDATED, SUBPROCESSORS } from '../../../shared/config/businessConfig.js';
 import styles from './Legal.module.css';
 
 // Public paths of the legal pages (Portuguese and English aliases)
 export const LegalPath = Object.freeze({
   PRIVACY: ['/privacidade', '/privacy'],
-  DELETE_ACCOUNT: ['/eliminar-conta', '/delete-account']
+  DELETE_ACCOUNT: ['/eliminar-conta', '/delete-account'],
+  TERMS: ['/termos', '/terms'],
+  DPA: ['/dpa', '/acordo-tratamento-dados']
 });
 
-const LAST_UPDATED = '2026-09-28';
-const PRIVACY_SECTIONS = Array.from({ length: 10 }, (_, index) => index + 1);
+// Legal documents: their translation key under `legal.` and how many numbered sections (sNTitle / sNBody) they have
+const LEGAL_DOCUMENTS = Object.freeze({
+  privacy: { key: 'privacy', sections: 10, subprocessorsAfter: 4 },
+  terms: { key: 'terms', sections: 11 },
+  dpa: { key: 'dpa', sections: 10, subprocessorsAfter: 6 }
+});
+
+// Values the legal texts refer to (business configuration: brand and legal entity)
+const LEGAL_PARAMS = {
+  email: SUPPORT_EMAIL,
+  entityName: LEGAL_ENTITY.name,
+  taxId: LEGAL_ENTITY.taxId,
+  entityEmail: LEGAL_ENTITY.email,
+  entityAddress: LEGAL_ENTITY.address || LEGAL_ENTITY.country,
+  product: BRAND.product,
+  platform: BRAND.platform,
+  domain: BRAND.domain
+};
 const LANGUAGES = ['pt', 'en'];
 
 /** Resolves the legal page for the current URL path (or null for the regular app). */
@@ -19,6 +38,8 @@ export function getLegalPage(pathname) {
   const path = String(pathname || '').replace(/\/$/, '').toLowerCase();
   if (LegalPath.PRIVACY.includes(path)) return 'privacy';
   if (LegalPath.DELETE_ACCOUNT.includes(path)) return 'deleteAccount';
+  if (LegalPath.TERMS.includes(path)) return 'terms';
+  if (LegalPath.DPA.includes(path)) return 'dpa';
   return null;
 }
 
@@ -50,31 +71,57 @@ function LegalLayout({ children }) {
         <div className={styles.footerLinks}>
           <a className={styles.link} href={LegalPath.PRIVACY[0]}>{t('legal.privacyLink')}</a>
           <a className={styles.link} href={LegalPath.DELETE_ACCOUNT[0]}>{t('legal.deleteAccountLink')}</a>
+          <a className={styles.link} href={LegalPath.TERMS[0]}>{t('legal.termsLink')}</a>
+          <a className={styles.link} href={LegalPath.DPA[0]}>{t('legal.dpaLink')}</a>
         </div>
       </div>
     </div>
   );
 }
 
-export function PrivacyPolicyPage() {
+// Sub-processors of the service, from the business configuration
+function SubprocessorList() {
+  const { t } = useTranslation();
+  return (
+    <section>
+      <h2 className={styles.sectionTitle}>{t('legal.subprocessorsTitle')}</h2>
+      <ul className={styles.paragraph}>
+        {SUBPROCESSORS.map((processor) => (
+          <li key={processor.name}>{processor.name}: {t(`legal.subprocessors.${processor.purposeKey}`)}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// A legal document of numbered sections (privacy policy, terms, data processing agreement)
+function LegalDocument({ document }) {
   const { t, dateLocale } = useTranslation();
-  const updated = new Date(`${LAST_UPDATED}T12:00:00`).toLocaleDateString(dateLocale?.code || undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+  const updated = new Date(`${LEGAL_LAST_UPDATED}T12:00:00`).toLocaleDateString(dateLocale?.code || undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+  const numbers = Array.from({ length: document.sections }, (_, index) => index + 1);
   return (
     <LegalLayout>
       <article className={styles.card}>
-        <h1 className={styles.title}>{t('legal.privacy.title')}</h1>
+        <h1 className={styles.title}>{t(`legal.${document.key}.title`)}</h1>
         <p className={styles.updated}>{t('legal.lastUpdated', { date: updated })}</p>
-        <Paragraphs text={t('legal.privacy.intro')} />
-        {PRIVACY_SECTIONS.map((n) => (
-          <section key={n}>
-            <h2 className={styles.sectionTitle}>{t(`legal.privacy.s${n}Title`)}</h2>
-            <Paragraphs text={t(`legal.privacy.s${n}Body`, { email: SUPPORT_EMAIL })} />
-          </section>
+        <Paragraphs text={t(`legal.${document.key}.intro`, LEGAL_PARAMS)} />
+        {numbers.map((n) => (
+          <React.Fragment key={n}>
+            <section>
+              <h2 className={styles.sectionTitle}>{t(`legal.${document.key}.s${n}Title`)}</h2>
+              <Paragraphs text={t(`legal.${document.key}.s${n}Body`, LEGAL_PARAMS)} />
+            </section>
+            {document.subprocessorsAfter === n && <SubprocessorList />}
+          </React.Fragment>
         ))}
       </article>
     </LegalLayout>
   );
 }
+
+export const PrivacyPolicyPage = () => <LegalDocument document={LEGAL_DOCUMENTS.privacy} />;
+export const TermsPage = () => <LegalDocument document={LEGAL_DOCUMENTS.terms} />;
+export const DataProcessingAgreementPage = () => <LegalDocument document={LEGAL_DOCUMENTS.dpa} />;
 
 export function DeleteAccountPage() {
   const { t } = useTranslation();

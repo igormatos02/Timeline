@@ -1,6 +1,7 @@
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
 import { userRepository } from '../../infrastructure/database/supabase/SupabaseUserRepository.js';
 import { Person } from '../../domain/entities/Person.js';
+import { planService } from './PlanService.js';
 
 export class PersonService {
   async getPersonsByTimeboard(timeboardId) {
@@ -30,10 +31,14 @@ export class PersonService {
 
   async createPerson(data) {
     Person.validate(data);
+    // The condominium's plan limits its units (frações) and administrators
+    await planService.assertPersonFits(data.timeboardId || data.timeboard_id, data);
     return await personRepository.create(data);
   }
 
   async updatePerson(id, updates) {
+    const previous = await personRepository.getById(id);
+    if (previous) await planService.assertPersonFits(previous.timeboardId, { ...previous, ...updates }, previous);
     return await personRepository.update(id, updates);
   }
 

@@ -14,6 +14,8 @@ import {
   normalizeTimelineType
 } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
+import { planService } from './PlanService.js';
+import { PlanFeature } from '../../../shared/config/plans.js';
 
 // Reminders are sent for the day in the condominiums' time zone
 const REMINDER_TIME_ZONE = 'Europe/Lisbon';
@@ -54,6 +56,8 @@ export class PushNotificationService {
       return { sent: 0 };
     }
     if (!timeboardId) return { sent: 0 };
+    // Push notifications are part of the Profissional and Gestora plans
+    if (!(await planService.hasFeature(timeboardId, PlanFeature.PUSH))) return { sent: 0 };
     const devices = await pushDeviceRepository.listByUserIds(await this._recipientUserIds(timeboardId));
     const wanted = devices.filter((device) => device[PREFERENCE_BY_KIND[kind]]);
     let sent = 0;

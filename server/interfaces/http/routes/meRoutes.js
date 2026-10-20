@@ -1,14 +1,29 @@
 import { Router } from 'express';
 import { meService } from '../../../application/services/MeService.js';
 import { pushNotificationService } from '../../../application/services/PushNotificationService.js';
+import { planService } from '../../../application/services/PlanService.js';
+import { PlanFeature } from '../../../../shared/config/plans.js';
 import { createT } from '../../../../shared/i18n/index.js';
 
 const t = createT('en');
 export const meRouter = Router();
 
+// The apps' routes need the condominium's plan to include them (CondoFlow app / CondoFlow Gestão)
+const requirePlanFeature = (feature) => async (req, res, next) => {
+  try {
+    const timeboardId = req.query?.timeboardId || req.body?.timeboardId;
+    if (timeboardId) await planService.assertFeature(timeboardId, feature);
+    next();
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message, code: err.code });
+  }
+};
+const memberApp = requirePlanFeature(PlanFeature.MEMBER_APP);
+const adminApp = requirePlanFeature(PlanFeature.ADMIN_APP);
+
 // GET /api/me/obligations?timeboardId&year&month[&personId] — obligations and debt balance of the logged-in person
 // (or of another entity, for admins)
-meRouter.get('/obligations', async (req, res) => {
+meRouter.get('/obligations', memberApp, async (req, res) => {
   try {
     const { timeboardId, year, month, personId } = req.query;
     if (!timeboardId) return res.status(400).json({ error: t('backend.validation.timeboardIdQueryParamRequired') });
@@ -22,7 +37,7 @@ meRouter.get('/obligations', async (req, res) => {
 });
 
 // GET /api/me/entities?timeboardId — admins: the timeboard's entities with their debt balance
-meRouter.get('/entities', async (req, res) => {
+meRouter.get('/entities', adminApp, async (req, res) => {
   try {
     const { timeboardId } = req.query;
     if (!timeboardId) return res.status(400).json({ error: t('backend.validation.timeboardIdQueryParamRequired') });
@@ -35,7 +50,7 @@ meRouter.get('/entities', async (req, res) => {
 });
 
 // GET /api/me/summary?timeboardId — admins: "where is my money" of the timeboard (shared financial engine)
-meRouter.get('/summary', async (req, res) => {
+meRouter.get('/summary', adminApp, async (req, res) => {
   try {
     const { timeboardId } = req.query;
     if (!timeboardId) return res.status(400).json({ error: t('backend.validation.timeboardIdQueryParamRequired') });
@@ -48,7 +63,7 @@ meRouter.get('/summary', async (req, res) => {
 });
 
 // GET /api/me/month?timeboardId&month=YYYY-MM — admins: income, outflows and result of the month (CondoFlow Gestão)
-meRouter.get('/month', async (req, res) => {
+meRouter.get('/month', adminApp, async (req, res) => {
   try {
     const { timeboardId, month } = req.query;
     if (!timeboardId) return res.status(400).json({ error: t('backend.validation.timeboardIdQueryParamRequired') });
@@ -61,7 +76,7 @@ meRouter.get('/month', async (req, res) => {
 });
 
 // GET /api/me/movements?timeboardId&month=YYYY-MM — admins: the month's income and outflows (CondoFlow Gestão)
-meRouter.get('/movements', async (req, res) => {
+meRouter.get('/movements', adminApp, async (req, res) => {
   try {
     const { timeboardId, month } = req.query;
     if (!timeboardId) return res.status(400).json({ error: t('backend.validation.timeboardIdQueryParamRequired') });
@@ -74,7 +89,7 @@ meRouter.get('/movements', async (req, res) => {
 });
 
 // GET /api/me/notices?timeboardId — the condominium's published posts and open reminders (CondoFlow app)
-meRouter.get('/notices', async (req, res) => {
+meRouter.get('/notices', memberApp, async (req, res) => {
   try {
     const { timeboardId } = req.query;
     if (!timeboardId) return res.status(400).json({ error: t('backend.validation.timeboardIdQueryParamRequired') });
@@ -88,7 +103,7 @@ meRouter.get('/notices', async (req, res) => {
 
 // POST /api/me/receipt-link { timeboardId, eventId, personId?, language? } — signed link (valid a few minutes) to
 // open the receipt of a paid obligation in the phone's browser, where it can be saved as PDF or shared
-meRouter.post('/receipt-link', async (req, res) => {
+meRouter.post('/receipt-link', memberApp, async (req, res) => {
   try {
     const { timeboardId, eventId, personId, language } = req.body || {};
     if (!timeboardId) return res.status(400).json({ error: t('backend.validation.timeboardIdQueryParamRequired') });

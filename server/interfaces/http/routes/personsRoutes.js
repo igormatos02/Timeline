@@ -44,7 +44,7 @@ personsRouter.post('/', requireCapability(Capability.MANAGE), async (req, res) =
     const created = await personService.createPerson(req.body);
     res.status(201).json(created);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(err.status || 400).json({ error: err.message, code: err.code });
   }
 });
 
@@ -55,7 +55,7 @@ personsRouter.put('/:id', requireCapability(Capability.MANAGE), async (req, res)
     if (!updated) return res.status(404).json({ error: t('backend.validation.personNotFound') });
     res.json(updated);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(err.status || 400).json({ error: err.message, code: err.code });
   }
 });
 

@@ -3,6 +3,8 @@ import { financialEventStatusRepository } from '../../infrastructure/database/su
 import { financialEventNoteRepository } from '../../infrastructure/database/supabase/SupabaseFinancialEventNoteRepository.js';
 import { loanContractRepository } from '../../infrastructure/database/supabase/SupabaseLoanContractRepository.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
+import { planService } from './PlanService.js';
+import { PlanFeature } from '../../../shared/config/plans.js';
 import { todoRepository } from '../../infrastructure/database/supabase/SupabaseTodoRepository.js';
 import { todoService } from './TodoService.js';
 import { diaryRepository } from '../../infrastructure/database/supabase/SupabaseDiaryRepository.js';
@@ -666,6 +668,14 @@ export class FinancialEventService {
     }
     if (sanitizedData.eventType === EventType.TODO || sanitizedData.timelineType === TimelineType.TODO) {
       return todoService.createTodo(sanitizedData);
+    }
+    // Condominium posts and reminders need a plan with notices
+    const targetTimeline = sanitizedData.timelineId || sanitizedData.timeline_id
+      ? await timelineRepository.getById(sanitizedData.timelineId || sanitizedData.timeline_id)
+      : null;
+    const isNotice = this._isDiaryPayload(sanitizedData) || normalizeTimelineType(targetTimeline?.type) === TimelineType.REMINDER;
+    if (isNotice) {
+      await planService.assertFeature(sanitizedData.timeboardId || sanitizedData.timeboard_id || targetTimeline?.timeboardId, PlanFeature.NOTICES);
     }
     if (this._isDiaryPayload(sanitizedData)) {
       return this._diaryToEvent(await diaryService.createDiary(sanitizedData));

@@ -59,7 +59,7 @@ eventsRouter.post('/', requireCapability(Capability.EDIT), async (req, res) => {
     const newEvent = await eventService.createEvent(req.body);
     res.status(201).json(newEvent);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(err.status || 400).json({ error: err.message, code: err.code });
   }
 });
 

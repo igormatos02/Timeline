@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { planService } from '../../../application/services/PlanService.js';
+import { PlanFeature } from '../../../../shared/config/plans.js';
 import { timeboardService } from '../../../application/services/TimeboardService.js';
 import { timeboardInvitationRepository } from '../../../infrastructure/database/supabase/SupabaseTimeboardInvitationRepository.js';
 import { timeboardAccessFromParam } from '../middleware/timeboardAccess.js';
@@ -34,6 +36,17 @@ timeboardsRouter.get('/:id/members', async (req, res) => {
   try {
     const members = await timeboardService.getMembers(req.params.id);
     res.json(members);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/timeboards/:id/plan — CondoFlow license of the condominium: plan in force, end date, limits and usage
+timeboardsRouter.get('/:id/plan', async (req, res) => {
+  try {
+    const info = await planService.getPlanInfo(req.params.id);
+    if (!info) return res.status(404).json({ error: t('backend.validation.timeboardNotFound') });
+    res.json({ ...info, limits: { maxUnits: info.limits.maxUnits === Infinity ? null : info.limits.maxUnits, maxAdmins: info.limits.maxAdmins === Infinity ? null : info.limits.maxAdmins } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -101,6 +114,8 @@ timeboardsRouter.post('/:id/invite', requireCapability(Capability.MANAGE), async
   try {
     const { personId, email, role, inviterName, invitedBy, invited_by } = req.body;
     const originUrl = req.headers.origin || req.headers.referer;
+    // Inviting people needs a plan with invites (CondoFlow)
+    await planService.assertFeature(req.params.id, PlanFeature.INVITES);
     const result = await timeboardService.sendInvitation({
       timeboardId: req.params.id,
       personId,
@@ -113,7 +128,7 @@ timeboardsRouter.post('/:id/invite', requireCapability(Capability.MANAGE), async
     res.json(result);
   } catch (err) {
     console.error('Error sending invitation:', err);
-    res.status(400).json({ error: err.message });
+    res.status(err.status || 400).json({ error: err.message, code: err.code });
   }
 });
 

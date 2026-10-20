@@ -1,4 +1,5 @@
 import { timeboardRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardRepository.js';
+import { planService } from './PlanService.js';
 import { timeboardMemberRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardMemberRepository.js';
 import { timeboardInvitationRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardInvitationRepository.js';
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
@@ -308,11 +309,16 @@ export class TimeboardService {
   async createTimeboard(data, locale = 'en') {
     const t = createT(locale);
     const ownerId = data.ownerId || data.owner_id || data.userId || data.user_id || null;
+    const type = data.type || TimeboardType.FINANCIAL;
     const createdTimeboard = await timeboardRepository.create({
       ...data,
       ownerId: ownerId,
       owner_id: ownerId,
-      type: data.type || TimeboardType.FINANCIAL
+      type,
+      // A new condominium starts with the Profissional trial (the plan is never taken from the request)
+      plan: undefined,
+      planExpiresAt: undefined,
+      ...(type === TimeboardType.CONDOFLOW ? planService.trialPlan() : {})
     });
 
     const isFinancial = createdTimeboard.type === TimeboardType.FINANCIAL;
@@ -457,7 +463,14 @@ export class TimeboardService {
   }
 
   async updateTimeboard(id, updates) {
-    return timeboardRepository.update(id, updates);
+    // The plan is never changed from the app: only by the license tools (setPlan script, billing)
+    const { plan: _plan, planExpiresAt: _planExpiresAt, plan_expires_at: _planExpiresAtRow, ...allowed } = updates || {};
+    return timeboardRepository.update(id, allowed);
+  }
+
+  /** License tools only (never exposed to the app): sets a condominium's plan and its end date (null = no end). */
+  async setPlan(id, { plan, planExpiresAt = null }) {
+    return timeboardRepository.update(id, { plan, planExpiresAt });
   }
 
   async deleteTimeboard(id) {

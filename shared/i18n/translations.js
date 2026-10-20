@@ -2156,6 +2156,18 @@ export const translations = {
 
     // Backend
     backend: {
+      plan: {
+        unitsLimit: "Your plan allows up to {{max}} units (frações). Upgrade the plan to add more.",
+        adminsLimit: "Your plan allows up to {{max}} administrator(s). Upgrade the plan to add more.",
+        feature: {
+          notices: "Posts and reminders are not included in your plan.",
+          invites: "Inviting people is not included in your plan.",
+          memberApp: "The CondoFlow app is not included in this condominium's plan.",
+          adminApp: "The CondoFlow Gestão app is not included in this condominium's plan.",
+          push: "Push notifications are not included in your plan.",
+          reports: "Reports and exports are not included in your plan."
+        }
+      },
       push: {
         newPostTitle: "New post · {{timeboard}}",
         reminderTitle: "Reminder · {{timeboard}}",
@@ -4632,6 +4644,18 @@ export const translations = {
 
     // Backend
     backend: {
+      plan: {
+        unitsLimit: "O seu plano permite até {{max}} frações. Mude de plano para adicionar mais.",
+        adminsLimit: "O seu plano permite até {{max}} administrador(es). Mude de plano para adicionar mais.",
+        feature: {
+          notices: "Os comunicados e lembretes não estão incluídos no seu plano.",
+          invites: "Convidar pessoas não está incluído no seu plano.",
+          memberApp: "A app CondoFlow não está incluída no plano deste condomínio.",
+          adminApp: "A app CondoFlow Gestão não está incluída no plano deste condomínio.",
+          push: "As notificações push não estão incluídas no seu plano.",
+          reports: "Os relatórios e exportações não estão incluídos no seu plano."
+        }
+      },
       push: {
         newPostTitle: "Novo comunicado · {{timeboard}}",
         reminderTitle: "Lembrete · {{timeboard}}",

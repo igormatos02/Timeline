@@ -1547,6 +1547,21 @@ export const translations = {
       savings: "Via savings",
       installment: "Installments"
     },
+    plans: {
+      names: {
+        free: "Free",
+        basic: "Basic",
+        professional: "Professional",
+        manager: "Manager"
+      },
+      planLabel: "{{plan}} plan",
+      usage: "{{units}} of {{maxUnits}} units · {{admins}} of {{maxAdmins}} administrator(s)",
+      unlimited: "unlimited",
+      endsOn: "Ends on {{date}}",
+      expired: "The {{plan}} plan ended on {{date}}: the condominium works as Free (no data was removed).",
+      unitsLimitReached: "Unit limit reached: upgrade the plan to add more."
+    },
+
     admin: {
       brand: "CondoFlow Gestão",
       tagline: "Manage your condominium",
@@ -4035,6 +4050,21 @@ export const translations = {
       savings: "Via Poupança",
       installment: "Parcelas"
     },
+    plans: {
+      names: {
+        free: "Grátis",
+        basic: "Básico",
+        professional: "Profissional",
+        manager: "Gestora"
+      },
+      planLabel: "Plano {{plan}}",
+      usage: "{{units}} de {{maxUnits}} frações · {{admins}} de {{maxAdmins}} administrador(es)",
+      unlimited: "ilimitado",
+      endsOn: "Termina a {{date}}",
+      expired: "O plano {{plan}} terminou a {{date}}: o condomínio funciona como Grátis (nenhum dado foi apagado).",
+      unitsLimitReached: "Limite de frações atingido: mude de plano para adicionar mais."
+    },
+
     admin: {
       brand: "CondoFlow Gestão",
       tagline: "A gestão do seu condomínio",

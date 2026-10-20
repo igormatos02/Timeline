@@ -321,15 +321,21 @@ export async function removeTimeboardMember(timeboardId, memberUserId) {
   return res.json();
 }
 
+// CondoFlow license of a condominium: plan in force, end date, limits (null = unlimited) and usage
+export async function fetchTimeboardPlan(timeboardId) {
+  const res = await apiFetch(`${API_BASE}/timeboards/${encodeURIComponent(timeboardId)}/plan`, { headers: getHeaders() });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 export async function sendTimeboardInvitation({ timeboardId, personId, email, role, inviterName, invitedBy }) {
   const res = await apiFetch(`${API_BASE}/timeboards/${timeboardId}/invite`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({ personId, email, role, inviterName, invitedBy })
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Falha ao enviar convite por email.');
-  return data;
+  if (!res.ok) throw await serverRefusal(res, 'Failed to send the invitation');
+  return res.json();
 }
 
 export async function fetchTimeboardInvitations(timeboardId) {
@@ -445,6 +451,15 @@ export async function fetchPersons(params = {}) {
   });
 }
 
+// Error of a request the server answered with a refusal (e.g. a plan limit, code PLAN_LIMIT): keeps its message and code
+async function serverRefusal(res, fallbackMessage) {
+  const body = await res.json().catch(() => ({}));
+  const error = new Error(body.error || fallbackMessage);
+  error.code = body.code;
+  error.isServerRefusal = true;
+  return error;
+}
+
 export async function createPerson(personData) {
   const tbId = personData.timeboardId || personData.timeboard_id;
   try {
@@ -461,7 +476,10 @@ export async function createPerson(personData) {
       }
       return created;
     }
+    // Refused by the server (validation, plan limit): never saved locally as if it had worked
+    throw await serverRefusal(res, 'Failed to create person');
   } catch (err) {
+    if (err?.isServerRefusal) throw err;
     console.warn(`[api.createPerson] Network error, saving locally:`, err);
   }
 
@@ -495,7 +513,10 @@ export async function updatePerson(id, updates) {
       }
       return updated;
     }
+    // Refused by the server (validation, plan limit): never updated locally as if it had worked
+    throw await serverRefusal(res, 'Failed to update person');
   } catch (err) {
+    if (err?.isServerRefusal) throw err;
     console.warn(`[api.updatePerson] Network error, updating locally:`, err);
   }
 

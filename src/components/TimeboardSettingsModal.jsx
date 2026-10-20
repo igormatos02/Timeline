@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import PlanUsageBanner from './PlanUsageBanner.jsx';
 import { usePermissions } from '../context/PermissionsContext.jsx';
 import AuditHistoryTab from './settings/AuditHistoryTab.jsx';
 import {
@@ -1248,6 +1249,9 @@ export default function TimeboardSettingsModal({
             {/* TAB 2: ENTIDADES & MEMBROS */}
             {activeTab === TimeboardSettingsTab.ENTITIES && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* CondoFlow license: plan in force and the usage of its limits */}
+                <PlanUsageBanner timeboardId={timeboard?.id} refreshKey={persons.length} />
+
                 {/* Top Control Bar: Filters, Search & Add Button */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                   {/* Filter Pills */}

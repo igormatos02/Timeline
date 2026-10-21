@@ -153,12 +153,14 @@ export async function registerWithEmail(name, email, password) {
 
 export async function loginWithGoogle(pendingInvite = null) {
   const baseUrl = getAppUrl();
-  let redirectUrl = baseUrl;
+  // Back to the page the login started from (the platform or a product: /condoflow, /myfinance)
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+  let redirectUrl = `${baseUrl}${currentPath === '/' ? '' : currentPath}`;
   if (pendingInvite?.timeboardId) {
     const params = new URLSearchParams();
     params.set('inviteTimeboardId', pendingInvite.timeboardId);
     if (pendingInvite.email) params.set('email', pendingInvite.email);
-    redirectUrl = `${baseUrl}/?${params.toString()}`;
+    redirectUrl = `${baseUrl}${currentPath}?${params.toString()}`;
   }
 
   // Google sign-in through Supabase Auth; the session is exchanged for an API session in syncGoogleSession

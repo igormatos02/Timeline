@@ -131,13 +131,11 @@ export function useTimeboardActions({
     setActiveTimeboardId(tbId);
     setActiveTimelineId(null);
     setActiveFinancialTab(null);
-    setCurrentView('workspace');
-    localStorage.setItem('chrono_current_view', 'workspace');
+    setCurrentView({ view: 'workspace', timeboardId: tbId });
   };
 
   const handleNavigateToHub = () => {
     setCurrentView('hub');
-    localStorage.setItem('chrono_current_view', 'hub');
   };
 
   return {

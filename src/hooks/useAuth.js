@@ -50,7 +50,6 @@ export default function useAuth(setCurrentView) {
     const handleExpired = () => {
       setCurrentUser(null);
       setCurrentView('landing');
-      localStorage.removeItem('chrono_current_view');
       showToast(t('auth.sessionExpired'), 'info');
     };
     window.addEventListener(api.SESSION_EXPIRED_EVENT, handleExpired);
@@ -60,7 +59,6 @@ export default function useAuth(setCurrentView) {
   const handleAuthSuccess = useCallback((user) => {
     setCurrentUser(user);
     setCurrentView('hub');
-    localStorage.setItem('chrono_current_view', 'hub');
     showToast(t('auth.welcome', { name: user.name }));
   }, [setCurrentView, showToast, t]);
 
@@ -68,7 +66,6 @@ export default function useAuth(setCurrentView) {
     api.logoutUser();
     setCurrentUser(null);
     setCurrentView('landing');
-    localStorage.removeItem('chrono_current_view');
     showToast(t('auth.loggedOut'));
   }, [setCurrentView, showToast, t]);
 

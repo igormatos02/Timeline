@@ -3,6 +3,7 @@ import { X, Sparkles, LayoutGrid, Trash2, DollarSign, Plus, Home } from 'lucide-
 import { TimeboardType } from '../../shared/enums/TimeboardType.js';
 import { TimelineColor } from '../../shared/enums/TimelineColor.js';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
+import { productOfTimeboardType } from '../../shared/config/products.js';
 
 const TEMPLATES = [
   {
@@ -39,14 +40,20 @@ export default function CreateTimeboardModal({
   onClose,
   onSave,
   onDelete,
-  initialData
+  initialData,
+  // Inside a product (/condoflow, /myfinance): the type it creates, without the template choice
+  fixedType = null
 }) {
   const { t } = useTranslation();
 
+  const defaultType = fixedType || TimeboardType.FINANCIAL;
+  // Inside a product its own words ("New condominium"), otherwise the generic ones
+  const fixedProduct = fixedType ? productOfTimeboardType(fixedType) : null;
+  const modalText = (key) => (fixedProduct && !initialData ? t(`timeboardModal.products.${fixedProduct.id}.${key}`) : t(`timeboardModal.${key}`));
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    type: TimeboardType.FINANCIAL
+    type: defaultType
   });
 
   useEffect(() => {
@@ -61,10 +68,10 @@ export default function CreateTimeboardModal({
       setFormData({
         name: '',
         description: '',
-        type: TimeboardType.FINANCIAL
+        type: defaultType
       });
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, defaultType]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -106,7 +113,7 @@ export default function CreateTimeboardModal({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        backgroundColor: 'var(--overlay-backdrop)',
         backdropFilter: 'blur(6px)',
         WebkitBackdropFilter: 'blur(6px)',
         display: 'flex',
@@ -128,7 +135,7 @@ export default function CreateTimeboardModal({
           background: 'var(--bg-card)',
           borderRadius: '16px',
           border: '1px solid var(--border-glass)',
-          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.85)',
+          boxShadow: 'var(--shadow-lg)',
           padding: '24px',
           boxSizing: 'border-box'
         }}
@@ -141,10 +148,10 @@ export default function CreateTimeboardModal({
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                {initialData ? t('timeboardModal.editTitle') : t('timeboardModal.newTitle')}
+                {initialData ? t('timeboardModal.editTitle') : modalText('newTitle')}
               </h3>
               <div style={{ fontSize: '0.76rem', color: TimelineColor.PRIMARY, fontWeight: '700' }}>
-                {initialData ? t('timeboardModal.editSubtitle') : t('timeboardModal.newSubtitle')}
+                {initialData ? t('timeboardModal.editSubtitle') : modalText('newSubtitle')}
               </div>
             </div>
           </div>
@@ -152,7 +159,7 @@ export default function CreateTimeboardModal({
             type="button"
             className="action-icon-btn"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('common.close')}
             style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}
           >
             <X size={18} />
@@ -160,7 +167,8 @@ export default function CreateTimeboardModal({
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Timeboard Template */}
+          {/* Timeboard Template (not inside a product, which creates its own type) */}
+          {!fixedType && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
               {t('timeboardModal.templateLabel')}
@@ -189,7 +197,7 @@ export default function CreateTimeboardModal({
                       padding: '14px 12px',
                       borderRadius: '12px',
                       border: `2px solid ${isSelected ? tmpl.color : 'var(--border-glass)'}`,
-                      background: isSelected ? `${tmpl.color}1f` : (isDisabled ? 'rgba(148, 163, 184, 0.1)' : 'var(--bg-glass)'),
+                      background: isSelected ? `${tmpl.color}1f` : (isDisabled ? `${TimelineColor.SLATE}1a` : 'var(--bg-glass)'),
                       color: isDisabled ? 'var(--text-dim)' : 'var(--text-main)',
                       cursor: isDisabled ? 'not-allowed' : 'pointer',
                       fontSize: '0.8rem',
@@ -201,8 +209,8 @@ export default function CreateTimeboardModal({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                      <div style={{ background: isSelected ? tmpl.color : 'var(--bg-input)', padding: '8px', borderRadius: '8px', display: 'flex' }}>
-                        <Icon size={18} style={{ color: isSelected ? 'white' : tmpl.color }} />
+                      <div style={{ background: isSelected ? tmpl.color : 'var(--bg-glass)', padding: '8px', borderRadius: '8px', display: 'flex' }}>
+                        <Icon size={18} style={{ color: isSelected ? 'var(--text-white)' : tmpl.color }} />
                       </div>
                       <span style={{ fontWeight: '700', color: isSelected ? tmpl.color : (isDisabled ? 'var(--text-dim)' : 'var(--text-main)') }}>
                         {t(`timeboardModal.${tmpl.titleKey}`)}
@@ -216,21 +224,22 @@ export default function CreateTimeboardModal({
               })}
             </div>
           </div>
+          )}
 
           {/* Timeboard Name */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
-              {t('timeboardModal.nameLabel')}
+              {modalText('nameLabel')}
             </label>
             <input
               type="text"
               style={{
                 width: '100%',
                 padding: '12px 14px',
-                background: '#ffffff',
+                background: 'var(--bg-glass)',
                 border: '1px solid var(--border-glass)',
                 borderRadius: '10px',
-                color: '#090d16',
+                color: 'var(--text-main)',
                 fontSize: '0.95rem',
                 fontWeight: '500',
                 outline: 'none',
@@ -247,7 +256,7 @@ export default function CreateTimeboardModal({
           {/* Description / Condo Name */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-dim)' }}>
-              {formData.type === 'condoflow'
+              {formData.type === TimeboardType.CONDOFLOW
                 ? t('timeboardModal.condoNameLabel')
                 : t('timeboardModal.descriptionLabel')}
             </label>
@@ -256,23 +265,23 @@ export default function CreateTimeboardModal({
               style={{
                 width: '100%',
                 padding: '12px 14px',
-                background: '#ffffff',
+                background: 'var(--bg-glass)',
                 border: '1px solid var(--border-glass)',
                 borderRadius: '10px',
-                color: '#090d16',
+                color: 'var(--text-main)',
                 fontSize: '0.95rem',
                 fontWeight: '500',
                 outline: 'none',
                 boxSizing: 'border-box'
               }}
-              placeholder={formData.type === 'condoflow'
+              placeholder={formData.type === TimeboardType.CONDOFLOW
                 ? t('timeboardModal.condoNamePlaceholder')
                 : t(`timeboardModal.${TEMPLATES.find(t => t.value === formData.type)?.descriptionPlaceholderKey || 'descriptionPlaceholder'}`)}
-              maxLength={formData.type === 'condoflow' ? 100 : undefined}
+              maxLength={formData.type === TimeboardType.CONDOFLOW ? 100 : undefined}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
-            {formData.type === 'condoflow' && (
+            {formData.type === TimeboardType.CONDOFLOW && (
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'right' }}>
                 {formData.description?.length || 0}/100
               </span>
@@ -331,7 +340,7 @@ export default function CreateTimeboardModal({
               }}
             >
               <Sparkles size={16} />
-              <span>{initialData ? t('timeboardModal.saveButton') : t('timeboardModal.createButton')}</span>
+              <span>{initialData ? t('timeboardModal.saveButton') : modalText('createButton')}</span>
             </button>
           </div>
         </form>

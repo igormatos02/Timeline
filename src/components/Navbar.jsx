@@ -10,12 +10,16 @@ import {
   LayoutGrid,
   ChevronDown,
   LogOut,
-  Check
+  Check,
+  Home,
+  Wallet
 } from 'lucide-react';
 import { getCurrentUser } from '../services/api';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { TimelineColor } from '../enums/index.js';
 import { isGlobalTenant } from '../constants/tenant.js';
+import { BRAND } from '../../shared/config/businessConfig.js';
+import { ProductId } from '../../shared/config/products.js';
 import VersionBadge from './ui/VersionBadge.jsx';
 import LogoutConfirmModal from './LogoutConfirmModal.jsx';
 import Tooltip from './ui/Tooltip.jsx';
@@ -27,13 +31,11 @@ export default function Navbar({
   onLogout,
   onOpenEntities,
   onOpenReports,
-  onOpenSettings
+  onOpenSettings,
+  // Product being used (/condoflow, /myfinance): its name and color in the header
+  product = null
 }) {
-  const currentUser = getCurrentUser() || {
-    name: 'Igor Matos',
-    avatarInitials: 'IM',
-    tenantName: 'Espaço Pessoal'
-  };
+  const currentUser = getCurrentUser() || {};
   const { language, setLanguage, t } = useTranslation();
 
   return (
@@ -46,12 +48,12 @@ export default function Navbar({
           style={{ cursor: onNavigateToHub ? 'pointer' : 'default' }}
           title={onNavigateToHub ? t('header.viewHub') : undefined}
         >
-          <div className="logo-icon">
-            <Clock size={22} />
+          <div className="logo-icon" style={product ? { background: product.color } : undefined}>
+            {product?.id === ProductId.CONDOFLOW ? <Home size={22} /> : product?.id === ProductId.MYFINANCE ? <Wallet size={22} /> : <Clock size={22} />}
           </div>
           <div>
             <div className="brand-title">
-              Timeboard <Sparkles size={16} style={{ color: 'var(--primary-light)' }} />
+              {product?.name || BRAND.platform} <Sparkles size={16} style={{ color: product?.color || 'var(--primary-light)' }} />
             </div>
           </div>
           <VersionBadge style={{ marginLeft: '4px' }} />
@@ -90,7 +92,7 @@ export default function Navbar({
                       transition: 'all 0.18s ease'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(99, 102, 241, 0.14)';
+                      e.currentTarget.style.background = `${TimelineColor.PRIMARY}24`;
                       e.currentTarget.style.borderColor = 'var(--border-glass-glow)';
                       e.currentTarget.style.color = 'var(--primary-light)';
                       e.currentTarget.style.transform = 'translateY(-1px)';
@@ -128,7 +130,7 @@ export default function Navbar({
                       transition: 'all 0.18s ease'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(99, 102, 241, 0.14)';
+                      e.currentTarget.style.background = `${TimelineColor.PRIMARY}24`;
                       e.currentTarget.style.borderColor = 'var(--border-glass-glow)';
                       e.currentTarget.style.color = 'var(--primary-light)';
                       e.currentTarget.style.transform = 'translateY(-1px)';
@@ -166,7 +168,7 @@ export default function Navbar({
                       transition: 'all 0.18s ease'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(99, 102, 241, 0.14)';
+                      e.currentTarget.style.background = `${TimelineColor.PRIMARY}24`;
                       e.currentTarget.style.borderColor = 'var(--border-glass-glow)';
                       e.currentTarget.style.color = 'var(--primary-light)';
                       e.currentTarget.style.transform = 'translateY(-1px)';
@@ -204,7 +206,7 @@ export default function Navbar({
                       transition: 'all 0.18s ease'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(99, 102, 241, 0.14)';
+                      e.currentTarget.style.background = `${TimelineColor.PRIMARY}24`;
                       e.currentTarget.style.borderColor = 'var(--border-glass-glow)';
                       e.currentTarget.style.color = 'var(--primary-light)';
                       e.currentTarget.style.transform = 'translateY(-1px)';
@@ -288,7 +290,7 @@ function LanguageDropdown({ language, setLanguage }) {
           height: '36px',
           padding: '0 10px',
           borderRadius: '9px',
-          background: isOpen ? 'rgba(99, 102, 241, 0.16)' : 'var(--bg-glass)',
+          background: isOpen ? `${TimelineColor.PRIMARY}29` : 'var(--bg-glass)',
           border: isOpen ? '1px solid var(--border-glass-glow)' : '1px solid var(--border-glass)',
           color: 'var(--text-main)',
           cursor: 'pointer',
@@ -322,7 +324,7 @@ function LanguageDropdown({ language, setLanguage }) {
             background: 'var(--bg-card)',
             border: '1px solid var(--border-glass-glow)',
             borderRadius: '10px',
-            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.5), 0 0 16px rgba(99, 102, 241, 0.15)',
+            boxShadow: 'var(--shadow-lg), var(--shadow-glow)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',
             padding: '4px',
@@ -345,7 +347,7 @@ function LanguageDropdown({ language, setLanguage }) {
               padding: '6px 8px',
               borderRadius: '6px',
               border: 'none',
-              background: language === 'pt' ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+              background: language === 'pt' ? `${TimelineColor.PRIMARY}26` : 'transparent',
               color: language === 'pt' ? 'var(--primary-light)' : 'var(--text-main)',
               cursor: 'pointer',
               fontSize: '0.78rem',
@@ -355,7 +357,7 @@ function LanguageDropdown({ language, setLanguage }) {
               width: '100%'
             }}
             onMouseEnter={(e) => {
-              if (language !== 'pt') e.currentTarget.style.background = 'rgba(99, 102, 241, 0.08)';
+              if (language !== 'pt') e.currentTarget.style.background = `${TimelineColor.PRIMARY}14`;
             }}
             onMouseLeave={(e) => {
               if (language !== 'pt') e.currentTarget.style.background = 'transparent';
@@ -383,7 +385,7 @@ function LanguageDropdown({ language, setLanguage }) {
               padding: '6px 8px',
               borderRadius: '6px',
               border: 'none',
-              background: language === 'en' ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+              background: language === 'en' ? `${TimelineColor.PRIMARY}26` : 'transparent',
               color: language === 'en' ? 'var(--primary-light)' : 'var(--text-main)',
               cursor: 'pointer',
               fontSize: '0.78rem',
@@ -393,7 +395,7 @@ function LanguageDropdown({ language, setLanguage }) {
               width: '100%'
             }}
             onMouseEnter={(e) => {
-              if (language !== 'en') e.currentTarget.style.background = 'rgba(99, 102, 241, 0.08)';
+              if (language !== 'en') e.currentTarget.style.background = `${TimelineColor.PRIMARY}14`;
             }}
             onMouseLeave={(e) => {
               if (language !== 'en') e.currentTarget.style.background = 'transparent';
@@ -446,7 +448,7 @@ function UserDropdown({ currentUser, onLogout }) {
             alignItems: 'center',
             gap: '9px',
             padding: '4px 10px 4px 6px',
-            background: isOpen ? 'rgba(99, 102, 241, 0.16)' : 'rgba(99, 102, 241, 0.08)',
+            background: isOpen ? `${TimelineColor.PRIMARY}29` : `${TimelineColor.PRIMARY}14`,
             border: '1px solid var(--border-glass-glow)',
             borderRadius: '9999px',
             marginLeft: '6px',
@@ -469,7 +471,7 @@ function UserDropdown({ currentUser, onLogout }) {
               fontWeight: '800',
               fontSize: '0.78rem',
               letterSpacing: '0.5px',
-              boxShadow: '0 2px 8px rgba(99, 102, 241, 0.35)',
+              boxShadow: `0 2px 8px ${TimelineColor.PRIMARY}59`,
               position: 'relative'
             }}
           >
@@ -519,7 +521,7 @@ function UserDropdown({ currentUser, onLogout }) {
               background: 'var(--bg-card)',
               border: '1px solid var(--border-glass-glow)',
               borderRadius: '12px',
-              boxShadow: '0 16px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.15)',
+              boxShadow: 'var(--shadow-lg), var(--shadow-glow)',
               backdropFilter: 'blur(16px)',
               WebkitBackdropFilter: 'blur(16px)',
               padding: '6px',
@@ -570,7 +572,7 @@ function UserDropdown({ currentUser, onLogout }) {
                 transition: 'background 0.15s ease'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(99, 102, 241, 0.12)';
+                e.currentTarget.style.background = `${TimelineColor.PRIMARY}1f`;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
@@ -606,7 +608,7 @@ function UserDropdown({ currentUser, onLogout }) {
                 transition: 'background 0.15s ease'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)';
+                e.currentTarget.style.background = `${TimelineColor.DANGER}1f`;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';

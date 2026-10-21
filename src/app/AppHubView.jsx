@@ -5,6 +5,8 @@ import HubTimeboardModals from './HubTimeboardModals.jsx';
 
 // Extracted from App.jsx (App).
 export default function AppHubView({
+  product,
+  onNavigateHome,
   currentUser,
   editingTimeboard,
   handleDeleteTimeboard,
@@ -30,6 +32,8 @@ export default function AppHubView({
   return (
     <div className="app-container">
       <TimeboardsHub
+        product={product}
+        onNavigateHome={onNavigateHome}
         timeboards={timeboards}
         myTimeboards={myTimeboards}
         sharedTimeboards={sharedTimeboards}
@@ -70,6 +74,7 @@ export default function AppHubView({
         setIsTimeboardModalOpen={setIsTimeboardModalOpen}
         setIsTimeboardSettingsModalOpen={setIsTimeboardSettingsModalOpen}
         settingsInitialTab={settingsTab}
+        createType={product?.timeboardType}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, startTransition } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, startTransition } from 'react';
 import { Capability, can } from '../shared/permissions.js';
 import { format } from 'date-fns';
 import Navbar from './components/Navbar';
@@ -36,18 +36,32 @@ import { useBoardDataLoading } from './app/hooks/useBoardDataLoading.js';
 import { useTimeboardPersons } from './app/hooks/useTimeboardPersons.js';
 import { useTimeboardsBootstrap } from './app/hooks/useTimeboardsBootstrap.js';
 import AppHubView from './app/AppHubView.jsx';
+import PlatformHome from './components/landing/PlatformHome.jsx';
+import { useAppRoute, ProductPage } from './app/routes.js';
+import { productOfTimeboardType } from '../shared/config/products.js';
 
 export default function App() {
   const { showToast } = useToast();
   const { language, setLanguage, t } = useTranslation();
 
-  // Authentication & View State
-  const [currentView, setCurrentView] = useState(() => {
-    const user = api.getCurrentUser();
-    if (!user) return 'landing';
-    const savedView = localStorage.getItem('chrono_current_view');
-    return savedView === 'workspace' ? 'workspace' : 'hub';
-  });
+  // Route: / (the platform's products), /<product> (its hub), /<product>/<timeboardId> (a timeboard)
+  const { route, navigate } = useAppRoute();
+  const activeProduct = route.product;
+  const routeRef = useRef(route);
+  useEffect(() => { routeRef.current = route; }, [route]);
+
+  // The view follows the URL; the hooks still ask for a view, translated here into a navigation
+  // ('landing' follows the session, a function form keeps the route)
+  const setCurrentView = useCallback((view) => {
+    const { product, timeboardId } = routeRef.current;
+    if (view && typeof view === 'object' && view.view === 'workspace') {
+      navigate({ product: productOfTimeboardType(view.type) || product, timeboardId: view.timeboardId });
+    } else if (view === 'hub' && product) {
+      navigate({ product });
+    } else if (view === 'workspace' && product && timeboardId) {
+      navigate({ product, timeboardId });
+    }
+  }, [navigate]);
 
   const { currentUser, handleAuthSuccess, handleLogout } = useAuth(setCurrentView);
 
@@ -82,13 +96,11 @@ export default function App() {
     return storedCode ? { timeboardId: null, email: '', code: storedCode } : null;
   });
 
-  const [activeTimeboardId, setActiveTimeboardId] = useState(() => {
-    try {
-      const saved = localStorage.getItem('chrono_active_timeboard_id');
-      if (saved) return saved;
-    } catch (e) { }
-    return null;
-  });
+  const [activeTimeboardId, setActiveTimeboardId] = useState(() => route.timeboardId || null);
+  // The timeboard in the URL is the active one
+  useEffect(() => {
+    if (route.timeboardId) setActiveTimeboardId(route.timeboardId);
+  }, [route.timeboardId]);
   const [isTimeboardModalOpen, setIsTimeboardModalOpen] = useState(false);
   const [isTimeboardSettingsModalOpen, setIsTimeboardSettingsModalOpen] = useState(false);
   const [timeboardSettingsInitialTab, setTimeboardSettingsInitialTab] = useState(TimeboardSettingsTab.GENERAL);
@@ -162,7 +174,7 @@ export default function App() {
           setSharedTimeboards(shared);
           setTimeboards(all);
           setActiveTimeboardId((currentId) => {
-            const saved = localStorage.getItem('chrono_active_timeboard_id');
+            const saved = routeRef.current.timeboardId || localStorage.getItem('chrono_active_timeboard_id');
             const targetId = saved || currentId;
             const exists = all.some((tb) => tb.id === targetId);
             return exists ? targetId : (all[0]?.id || null);
@@ -171,7 +183,7 @@ export default function App() {
           setTimeboards(data);
           setMyTimeboards(data);
           setActiveTimeboardId((currentId) => {
-            const saved = localStorage.getItem('chrono_active_timeboard_id');
+            const saved = routeRef.current.timeboardId || localStorage.getItem('chrono_active_timeboard_id');
             const targetId = saved || currentId;
             const exists = data.some((tb) => tb.id === targetId);
             return exists ? targetId : (data[0]?.id || null);
@@ -616,22 +628,57 @@ export default function App() {
     setIsTimeboardSettingsModalOpen(true);
   }, [activeTimeboard]);
 
-  // 1. Landing Page View (When not logged in or explicitly at landing)
-  if (!currentUser || currentView === 'landing') {
-    return (
+  // Timeboards of the product in the URL (each product only shows its own types)
+  const isOfActiveProduct = useCallback((tb) => Boolean(activeProduct?.timeboardTypes.includes(tb?.type)), [activeProduct]);
+  const productTimeboards = useMemo(() => timeboards.filter(isOfActiveProduct), [timeboards, isOfActiveProduct]);
+  const productMyTimeboards = useMemo(() => myTimeboards.filter(isOfActiveProduct), [myTimeboards, isOfActiveProduct]);
+  const productSharedTimeboards = useMemo(() => sharedTimeboards.filter(isOfActiveProduct), [sharedTimeboards, isOfActiveProduct]);
+
+  // A timeboard of another product (or no longer accessible) in the URL: back to the product's hub
+  useEffect(() => {
+    if (!currentUser || !route.timeboardId || timeboards.length === 0) return;
+    if (!productTimeboards.some((tb) => tb.id === route.timeboardId)) navigate({ product: activeProduct }, { replace: true });
+  }, [currentUser, route.timeboardId, timeboards.length, productTimeboards, activeProduct, navigate]);
+
+  // 1. Not logged in: the platform's page (/) or the product's page (/condoflow…), both with the login
+  if (!currentUser) {
+    return activeProduct ? (
       <LandingPage
+        product={activeProduct}
         onAuthSuccess={handleAuthSuccess}
         initialEmail={pendingInvite?.email || ''}
         pendingInvite={pendingInvite}
         t={t}
       />
+    ) : (
+      <PlatformHome
+        onAuthSuccess={handleAuthSuccess}
+        initialEmail={pendingInvite?.email || ''}
+        pendingInvite={pendingInvite}
+        onOpenProduct={(product) => navigate({ product })}
+      />
     );
   }
 
-  // 2. Dashboards / Timeboards Hub View (Second page when logged in)
-  if (currentView === 'hub') {
+  // 2. Logged in at the platform's root: choose a product
+  if (!activeProduct) {
+    return (
+      <PlatformHome
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        onOpenProduct={(product) => navigate({ product })}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+      />
+    );
+  }
+
+  // 3. The product's hub: only its timeboards
+  if (!route.timeboardId || route.page === ProductPage.PLANS) {
     return (
       <AppHubView
+        product={activeProduct}
+        onNavigateHome={() => navigate('/')}
         currentUser={currentUser}
         editingTimeboard={editingTimeboard}
         handleDeleteTimeboard={handleDeleteTimeboard}
@@ -642,15 +689,15 @@ export default function App() {
         isTimeboardModalOpen={isTimeboardModalOpen}
         isTimeboardSettingsModalOpen={isTimeboardSettingsModalOpen}
         language={language}
-        myTimeboards={myTimeboards}
+        myTimeboards={productMyTimeboards}
         setEditingTimeboard={setEditingTimeboard}
         setIsTimeboardModalOpen={setIsTimeboardModalOpen}
         setIsTimeboardSettingsModalOpen={setIsTimeboardSettingsModalOpen}
         setLanguage={setLanguage}
-        sharedTimeboards={sharedTimeboards}
+        sharedTimeboards={productSharedTimeboards}
         t={t}
         theme={theme}
-        timeboards={timeboards}
+        timeboards={productTimeboards}
       />
     );
   }
@@ -673,13 +720,15 @@ export default function App() {
         onOpenEntities={can(timeboardRole, Capability.PRINT) ? handleOpenTimeboardEntities : undefined}
         onOpenReports={can(timeboardRole, Capability.PRINT) ? handleOpenTimeboardReports : undefined}
         onOpenSettings={can(timeboardRole, Capability.PRINT) ? handleOpenTimeboardSettings : undefined}
+        product={activeProduct}
       />
 
       {/* Main Layout Area */}
       <AppMainArea
-        timeboards={timeboards}
+        timeboards={productTimeboards}
         activeTimeboardId={activeTimeboardId}
         onSelectTimeboard={(id) => {
+          navigate({ product: activeProduct, timeboardId: id });
           setActiveTimeboardId(id);
           setActiveTimelineId(null);
           setActiveFinancialTab(null);

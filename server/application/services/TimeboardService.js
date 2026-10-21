@@ -10,6 +10,7 @@ import { personRepository } from '../../infrastructure/database/supabase/Supabas
 import { userRepository } from '../../infrastructure/database/supabase/SupabaseUserRepository.js';
 import { emailService } from './EmailService.js';
 import { getAppUrl } from '../../../shared/config/appConfig.js';
+import { productOfTimeboardType } from '../../../shared/config/products.js';
 import { TimeboardType, TimelineType, TimelineColor, TimelineStatus, EventPeriodicity, InvitationStatus, PersonRole, PersonType, getFixedTimelineColor } from '../../../shared/enums/index.js';
 import { generateInviteCode, normalizeInviteCode, formatInviteCode, maskEmail, INVITE_CODE_TTL_DAYS } from '../../infrastructure/security/inviteCode.js';
 import { createT } from '../../../shared/i18n/index.js';
@@ -275,7 +276,9 @@ export class TimeboardService {
 
     // 3. Build accept invitation URL (the code identifies the invitation; the other params keep old links working)
     const cleanBaseUrl = getAppUrl(originUrl);
-    const acceptUrl = `${cleanBaseUrl}/?invite=${encodeURIComponent(inviteCode)}&inviteTimeboardId=${encodeURIComponent(timeboardId)}&email=${encodeURIComponent(cleanEmail)}`;
+    // Opens the timeboard's product (/condoflow, /myfinance)
+    const productPath = productOfTimeboardType(timeboard?.type)?.path || '';
+    const acceptUrl = `${cleanBaseUrl}/${productPath}?invite=${encodeURIComponent(inviteCode)}&inviteTimeboardId=${encodeURIComponent(timeboardId)}&email=${encodeURIComponent(cleanEmail)}`;
 
     // 4. Send via Brevo
     const emailResult = await emailService.sendTimeboardInvitation({

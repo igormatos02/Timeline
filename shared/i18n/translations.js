@@ -766,6 +766,10 @@ export const translations = {
 
     // Timeboard Modal
     timeboardModal: {
+      products: {
+        condoflow: { newTitle: "New condominium", newSubtitle: "The building you manage", nameLabel: "Condominium name *", createButton: "Create condominium" },
+        myfinance: { newTitle: "New financial timeboard", newSubtitle: "Income, expenses and investments on a timeline", nameLabel: "Timeboard name *", createButton: "Create timeboard" }
+      },
       deleteTitle: "Delete timeboard",
       typeShared: "Shared",
       newTitle: "Create Timeboard",
@@ -797,6 +801,20 @@ export const translations = {
     },
 
     // Landing Page
+    platform: {
+      title: "One platform, <span>products for each need</span>.",
+      subtitle: "Timeboard organises money over time. Each product is made for one kind of management.",
+      greeting: "Hello, {{name}} 👋",
+      chooseProduct: "Which product do you want to open?",
+      productsTitle: "Products",
+      productsSubtitle: "One account for all of them; each product has its own license.",
+      open: "Open {{product}}",
+      learnMore: "Discover {{product}}",
+      products: {
+        condoflow: { tagline: "Condominium management", desc: "Fees, expenses, owners, notices and apps for the building." },
+        myfinance: { tagline: "Personal finances", desc: "Income, expenses, loans and investments on a timeline." }
+      }
+    },
     landing: {
       badge: "Financial Management & Interactive Timelines",
       title: "Where time meets <span>financial clarity</span>.",
@@ -835,7 +853,24 @@ export const translations = {
         }
       },
       cta: "Start Free",
-      footer: "Timeboard — Financial clarity through time."
+      footer: "Timeboard — Financial clarity through time.",
+      productOf: "a {{platform}} product",
+      condoflow: {
+        badge: "Condominium management",
+        title: "The building's accounts, <span>clear for everyone</span>.",
+        subtitle: "Fees, expenses, cash and bank account of the condominium in one place. Each owner sees what they owe and their receipts, on the web and in the app.",
+        pills: { fees: "Fees and receipts", owners: "Owners invited", apps: "Apps for owners and managers" },
+        featuresTitle: "Everything a condominium administration needs",
+        featuresSubtitle: "From the monthly fees to the year-end report, without spreadsheets.",
+        features: {
+          fees: { title: "Monthly fees", desc: "Each unit's fee, what was paid and what is overdue, with receipts." },
+          accounts: { title: "Cash and bank account", desc: "Every income and expense, deposits to the bank and the balance of each place." },
+          owners: { title: "Owners", desc: "Units, owners and their contacts; import them from a spreadsheet." },
+          notices: { title: "Notices and reminders", desc: "Posts for the building and reminders of meetings and deadlines." },
+          apps: { title: "CondoFlow apps", desc: "The owners' app and CondoFlow Gestão for the administration, with notifications." },
+          reports: { title: "Reports", desc: "Monthly closing and annual accounts ready to share." }
+        }
+      }
     },
 
     // Auth Card
@@ -1102,6 +1137,26 @@ export const translations = {
       stats: {
         myTimeboards: "My Timeboards",
         shared: "Shared"
+      },
+      products: {
+        condoflow: {
+          greetingSubtitle: "Your condominiums: open one to manage fees, expenses and notices.",
+          searchPlaceholder: "Search condominium...",
+          createButton: "New condominium",
+          createTitle: "Add a condominium",
+          createDesc: "Create the building and register its units and owners.",
+          myTimeboards: "My condominiums",
+          openButton: "Open condominium"
+        },
+        myfinance: {
+          greetingSubtitle: "Your financial timeboards: open one to see the timeline.",
+          searchPlaceholder: "Search timeboard...",
+          createButton: "New timeboard",
+          createTitle: "Create a financial timeboard",
+          createDesc: "Income, expenses, loans and investments on a timeline.",
+          myTimeboards: "My timeboards",
+          openButton: "Open timeboard"
+        }
       },
       sharedWithYou: "Shared with you",
       planUnits: "{{plan}} · {{units}}/{{max}} units",
@@ -3396,6 +3451,10 @@ export const translations = {
 
     // Timeboard Modal
     timeboardModal: {
+      products: {
+        condoflow: { newTitle: "Novo condomínio", newSubtitle: "O prédio que administra", nameLabel: "Nome do condomínio *", createButton: "Criar condomínio" },
+        myfinance: { newTitle: "Novo timeboard financeiro", newSubtitle: "Rendimentos, despesas e investimentos numa linha do tempo", nameLabel: "Nome do timeboard *", createButton: "Criar timeboard" }
+      },
       deleteTitle: "Eliminar timeboard",
       typeShared: "Partilhado",
       condoNameLabel: "Nome do Condomínio",
@@ -3692,6 +3751,26 @@ export const translations = {
       stats: {
         myTimeboards: "Meus Timeboards",
         shared: "Partilhados"
+      },
+      products: {
+        condoflow: {
+          greetingSubtitle: "Os seus condomínios: abra um para gerir quotas, despesas e avisos.",
+          searchPlaceholder: "Pesquisar condomínio...",
+          createButton: "Novo condomínio",
+          createTitle: "Adicionar um condomínio",
+          createDesc: "Crie o prédio e registe as frações e os condóminos.",
+          myTimeboards: "Os meus condomínios",
+          openButton: "Abrir condomínio"
+        },
+        myfinance: {
+          greetingSubtitle: "Os seus timeboards financeiros: abra um para ver a linha do tempo.",
+          searchPlaceholder: "Pesquisar timeboard...",
+          createButton: "Novo timeboard",
+          createTitle: "Criar um timeboard financeiro",
+          createDesc: "Rendimentos, despesas, empréstimos e investimentos numa linha do tempo.",
+          myTimeboards: "Os meus timeboards",
+          openButton: "Abrir timeboard"
+        }
       },
       sharedWithYou: "Partilhado consigo",
       planUnits: "{{plan}} · {{units}}/{{max}} frações",
@@ -4159,6 +4238,20 @@ export const translations = {
     },
 
     // Landing Page
+    platform: {
+      title: "Uma plataforma, <span>produtos para cada gestão</span>.",
+      subtitle: "O Timeboard organiza o dinheiro ao longo do tempo. Cada produto é feito para um tipo de gestão.",
+      greeting: "Olá, {{name}} 👋",
+      chooseProduct: "Que produto quer abrir?",
+      productsTitle: "Produtos",
+      productsSubtitle: "Uma conta para todos; cada produto tem a sua licença.",
+      open: "Abrir {{product}}",
+      learnMore: "Conhecer o {{product}}",
+      products: {
+        condoflow: { tagline: "Gestão de condomínios", desc: "Quotas, despesas, condóminos, avisos e apps para o prédio." },
+        myfinance: { tagline: "Finanças pessoais", desc: "Rendimentos, despesas, empréstimos e investimentos numa linha do tempo." }
+      }
+    },
     landing: {
       badge: "Gestão Financeira & Linhas Temporais Interativas",
       title: "Onde o tempo encontra a <span>clareza financeira</span>.",
@@ -4197,7 +4290,24 @@ export const translations = {
         }
       },
       cta: "Começar Grátis",
-      footer: "Timeboard — Clareza financeira através do tempo."
+      footer: "Timeboard — Clareza financeira através do tempo.",
+      productOf: "um produto {{platform}}",
+      condoflow: {
+        badge: "Gestão de condomínios",
+        title: "As contas do prédio, <span>claras para todos</span>.",
+        subtitle: "Quotas, despesas, caixa e conta bancária do condomínio num só lugar. Cada condómino vê o que deve e os seus recibos, na web e na app.",
+        pills: { fees: "Quotas e recibos", owners: "Condóminos convidados", apps: "Apps para condóminos e administração" },
+        featuresTitle: "Tudo o que a administração de um condomínio precisa",
+        featuresSubtitle: "Das quotas mensais ao relatório de fecho do ano, sem folhas de cálculo.",
+        features: {
+          fees: { title: "Quotas mensais", desc: "A quota de cada fração, o que está pago e o que está em atraso, com recibos." },
+          accounts: { title: "Caixa e conta bancária", desc: "Todas as entradas e saídas, depósitos no banco e o saldo de cada lugar." },
+          owners: { title: "Condóminos", desc: "Frações, condóminos e os seus contactos; importe-os de uma folha de cálculo." },
+          notices: { title: "Avisos e lembretes", desc: "Comunicados para o prédio e lembretes de assembleias e prazos." },
+          apps: { title: "Apps CondoFlow", desc: "A app dos condóminos e a CondoFlow Gestão para a administração, com notificações." },
+          reports: { title: "Relatórios", desc: "Fecho mensal e contas anuais prontos a partilhar." }
+        }
+      }
     },
 
     // Income Timeline Header

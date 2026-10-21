@@ -55,8 +55,7 @@ export function useTimeboardsBootstrap({
           setActiveTimeboardId(acceptedTimeboardId);
           setActiveTimelineId(null);
           setActiveFinancialTab(null);
-          setCurrentView('workspace');
-          localStorage.setItem('chrono_current_view', 'workspace');
+          setCurrentView({ view: 'workspace', timeboardId: acceptedTimeboardId, type: result?.timeboard?.type });
           localStorage.setItem('chrono_active_timeboard_id', acceptedTimeboardId);
         }
       } catch (err) {

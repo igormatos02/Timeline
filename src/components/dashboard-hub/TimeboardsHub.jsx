@@ -17,7 +17,8 @@ import {
   ArrowRight,
   Share2,
   ChevronDown,
-  Home
+  Home,
+  ArrowLeft
 } from 'lucide-react';
 import { TimeboardType, TimelineColor, PersonRole, TimeboardSettingsTab } from '../../enums/index.js';
 import { BRAND } from '../../../shared/config/businessConfig.js';
@@ -30,6 +31,8 @@ import LogoutConfirmModal from '../LogoutConfirmModal.jsx';
 import './TimeboardsHub.css';
 
 export default function TimeboardsHub({
+  product = null,
+  onNavigateHome,
   timeboards = [],
   myTimeboards: initialMyTimeboards = null,
   sharedTimeboards: initialSharedTimeboards = null,
@@ -49,6 +52,8 @@ export default function TimeboardsHub({
 }) {
   const { t: hookT, dateLocale } = useTranslation();
   const t = propT || hookT;
+  // Texts of the product's hub (e.g. "My condominiums"), falling back to the generic hub texts
+  const hubText = (key, params) => (product ? t(`timeboardsHub.products.${product.id}.${key}`, params) : t(`timeboardsHub.${key}`, params));
   const [searchTerm, setSearchTerm] = useState('');
   
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -170,6 +175,7 @@ export default function TimeboardsHub({
                   </span>
                 </span>
               )}
+              {!product && (
               <span
                 className="hub-card-badge"
                 style={{
@@ -180,6 +186,7 @@ export default function TimeboardsHub({
               >
                 {typeInfo.label}
               </span>
+              )}
             </div>
           </div>
 
@@ -210,7 +217,7 @@ export default function TimeboardsHub({
             }}
             onClick={() => onSelectTimeboard(tb.id)}
           >
-            <span>{t('timeboardsHub.openButton')}</span>
+            <span>{hubText('openButton')}</span>
             <ArrowRight size={14} />
           </button>
 
@@ -245,10 +252,15 @@ export default function TimeboardsHub({
       {/* Header */}
       <header className="hub-header">
         <div className="hub-brand">
-          <div className="hub-brand-icon">
-            <Clock size={20} />
+          {onNavigateHome && (
+            <button type="button" onClick={onNavigateHome} title={BRAND.platform} className="hub-card-action-btn" style={{ marginRight: '4px' }}>
+              <ArrowLeft size={16} />
+            </button>
+          )}
+          <div className="hub-brand-icon" style={product ? { background: product.color } : undefined}>
+            {product ? React.createElement(TYPE_DETAILS[product.timeboardType].Icon, { size: 20 }) : <Clock size={20} />}
           </div>
-          <span>{BRAND.platform} <Sparkles size={15} style={{ color: TimelineColor.PRIMARY }} /></span>
+          <span>{product?.name || BRAND.platform} <Sparkles size={15} style={{ color: product?.color || TimelineColor.PRIMARY }} /></span>
         </div>
 
         <div className="hub-header-actions">
@@ -435,14 +447,14 @@ export default function TimeboardsHub({
               {t('timeboardsHub.greetingTitle', { name: currentUser?.name ? currentUser.name.split(' ')[0] : '' })}
             </h1>
             <p className="hub-greeting-subtitle">
-              {t('timeboardsHub.greetingSubtitle')}
+              {hubText('greetingSubtitle')}
             </p>
           </div>
 
           <div className="hub-stats-row">
             <div className="hub-stat-item">
               <span className="hub-stat-val">{myTimeboards.length}</span>
-              <span className="hub-stat-lbl">{t('timeboardsHub.stats.myTimeboards')}</span>
+              <span className="hub-stat-lbl">{hubText('myTimeboards')}</span>
             </div>
             <div className="hub-stat-item">
               <span className="hub-stat-val" style={{ color: TimelineColor.PURPLE }}>
@@ -460,7 +472,7 @@ export default function TimeboardsHub({
             <input
               type="text"
               className="hub-search-input"
-              placeholder={t('timeboardsHub.searchPlaceholder')}
+              placeholder={hubText('searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -473,7 +485,7 @@ export default function TimeboardsHub({
               onClick={onOpenCreateTimeboard}
             >
               <Plus size={16} />
-              <span>{t('timeboardsHub.createButton')}</span>
+              <span>{hubText('createButton')}</span>
             </button>
           </div>
         </section>
@@ -493,7 +505,7 @@ export default function TimeboardsHub({
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: TimelineColor.PRIMARY }} />
               <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)' }}>
-                {t('timeboardsHub.myTimeboards')}
+                {hubText('myTimeboards')}
               </h2>
               <span
                 style={{
@@ -522,10 +534,10 @@ export default function TimeboardsHub({
                 <Plus size={24} />
               </div>
               <div style={{ fontWeight: '700', fontSize: '1.05rem', color: 'var(--text-main)' }}>
-                {t('timeboardsHub.createTitle')}
+                {hubText('createTitle')}
               </div>
               <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary, var(--text-dim))', maxWidth: '220px' }}>
-                {t('timeboardsHub.createDesc')}
+                {hubText('createDesc')}
               </div>
             </div>
 

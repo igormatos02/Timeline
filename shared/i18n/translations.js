@@ -2367,7 +2367,10 @@ export const translations = {
       baseFeePlaceholder: "E.g. 25,00",
       baseFeeHelp: "Only a reference: it prefills new units' fees. Changing it does not change existing entries.",
       feeChannelLabel: "Fees are received in",
-      feeChannel: { cash: "Cash", bank: "Bank account" }
+      feeChannel: { cash: "Cash", bank: "Bank account" },
+      startDateMissing: "Set the accounting start date of this condominium before creating entries.",
+      startDateMissingMember: "The administration has not set the accounting start date yet: entries cannot be created.",
+      setStartDate: "Set start date"
     },
     people: {
       tabs: { units: "Units", entities: "Entities", members: "Members" },
@@ -2472,6 +2475,7 @@ export const translations = {
         unavailableBody: "This receipt link has expired or is no longer valid. Open the receipt again from the app."
       },
       validation: {
+        startDateRequired: "Set the condominium's accounting start date first (Settings → General).",
         entityNotInvitable: "Entities are only a reference and cannot be invited.",
         productNotFound: "Unknown product.",
         invalidPlan: "Invalid plan or product.",
@@ -5152,7 +5156,10 @@ export const translations = {
       baseFeePlaceholder: "Ex: 25,00",
       baseFeeHelp: "É só uma referência: preenche a quota das novas frações. Alterá-lo não muda os lançamentos existentes.",
       feeChannelLabel: "As quotas são recebidas na",
-      feeChannel: { cash: "Caixa", bank: "Conta bancária" }
+      feeChannel: { cash: "Caixa", bank: "Conta bancária" },
+      startDateMissing: "Defina a data de início contabilística deste condomínio antes de criar lançamentos.",
+      startDateMissingMember: "A administração ainda não definiu a data de início contabilística: não é possível criar lançamentos.",
+      setStartDate: "Definir data de início"
     },
     people: {
       tabs: { units: "Frações", entities: "Entidades", members: "Membros" },
@@ -5257,6 +5264,7 @@ export const translations = {
         unavailableBody: "Este link do recibo expirou ou já não é válido. Abra o recibo outra vez a partir da app."
       },
       validation: {
+        startDateRequired: "Defina primeiro a data de início contabilística do condomínio (Definições → Geral).",
         entityNotInvitable: "As entidades são apenas uma referência e não podem ser convidadas.",
         productNotFound: "Produto desconhecido.",
         invalidPlan: "Plano ou produto inválido.",

@@ -39,6 +39,8 @@ import {
   normalizeTimelineType
 } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
+import { timeboardRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardRepository.js';
+import { needsAccountingStart } from '../../../shared/finance/accountingStart.js';
 import { isLockableMovement, changedLockedFields } from '../../../shared/finance/corrections.js';
 import { auditService } from './AuditService.js';
 
@@ -660,6 +662,16 @@ export class FinancialEventService {
     if (!(Math.abs(Number(data.amount || 0)) > 0)) throw new Error(t('backend.validation.transferAmountRequired'));
   }
 
+  async _assertAccountingStart(timeboardId) {
+    if (!timeboardId) return;
+    const timeboard = await timeboardRepository.getById(timeboardId);
+    if (!needsAccountingStart(timeboard)) return;
+    const error = new Error(t('backend.validation.startDateRequired'));
+    error.code = 'START_DATE_REQUIRED';
+    error.status = 409;
+    throw error;
+  }
+
   async createEvent(eventData) {
     const sanitizedData = this._sanitizeFutureEventStatus(eventData);
     this._validateAccountTransfer(sanitizedData);
@@ -681,6 +693,8 @@ export class FinancialEventService {
     if (this._isDiaryPayload(sanitizedData)) {
       return this._diaryToEvent(await diaryService.createDiary(sanitizedData));
     }
+    // A condominium needs its accounting start date before any financial entry (posts and reminders are not)
+    if (!isNotice) await this._assertAccountingStart(sanitizedData.timeboardId || sanitizedData.timeboard_id || targetTimeline?.timeboardId);
 
     const isRecurring =
       sanitizedData.recurrence === EventRecurrence.RECURRING ||

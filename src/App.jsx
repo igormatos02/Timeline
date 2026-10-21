@@ -37,6 +37,8 @@ import { useTimeboardPersons } from './app/hooks/useTimeboardPersons.js';
 import { useTimeboardsBootstrap } from './app/hooks/useTimeboardsBootstrap.js';
 import AppHubView from './app/AppHubView.jsx';
 import PlatformHome from './components/landing/PlatformHome.jsx';
+import StartDateNotice from './app/StartDateNotice.jsx';
+import { needsAccountingStart } from '../shared/finance/accountingStart.js';
 import ProductPlansPage from './components/plans/ProductPlansPage.jsx';
 import { useAppRoute, ProductPage } from './app/routes.js';
 import { productOfTimeboardType } from '../shared/config/products.js';
@@ -428,7 +430,7 @@ export default function App() {
   const {
     handleConfirmDeleteEvent,
     handleCorrectEvent,
-    handleOpenCreateEvent,
+    handleOpenCreateEvent: openCreateEventModal,
     handleOpenEditEvent,
     handlePatchEventLocal,
     handleRequestDeleteEvent,
@@ -459,6 +461,23 @@ export default function App() {
     t,
     timelines
   });
+
+  // Condominiums without accounting start date: no entries yet, "new entry" opens the settings on Geral instead
+  const isMissingStartDate = needsAccountingStart(activeTimeboard);
+  const openStartDateSettings = useCallback(() => {
+    if (!activeTimeboard) return;
+    setEditingTimeboard(activeTimeboard);
+    setTimeboardSettingsInitialTab(TimeboardSettingsTab.GENERAL);
+    setIsTimeboardSettingsModalOpen(true);
+  }, [activeTimeboard]);
+  const handleOpenCreateEvent = useCallback((...args) => {
+    if (isMissingStartDate) {
+      showToast(t('backend.validation.startDateRequired'), 'warning');
+      openStartDateSettings();
+      return;
+    }
+    openCreateEventModal(...args);
+  }, [isMissingStartDate, openStartDateSettings, openCreateEventModal, showToast, t]);
 
   const handleConfirmResetTimeline = async () => {
     let targetTlIds = [];
@@ -730,6 +749,9 @@ export default function App() {
         onOpenSettings={can(timeboardRole, Capability.PRINT) ? handleOpenTimeboardSettings : undefined}
         product={activeProduct}
       />
+
+      {/* Condominium without accounting start date */}
+      {isMissingStartDate && <StartDateNotice canEdit={can(timeboardRole, Capability.MANAGE)} onOpenSettings={openStartDateSettings} />}
 
       {/* Main Layout Area */}
       <AppMainArea

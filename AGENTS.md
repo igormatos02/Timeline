@@ -114,6 +114,8 @@ Whenever you edit an existing file or implement new code, you MUST follow these 
 ## Database Schema (Supabase)
 Main tables: timeboards, timelines, events, loan_contracts, persons
 
+New tables (migrations in `server/infrastructure/database/supabase/migrations/`): since 2026-10-30 Supabase no longer grants Data API access to new tables automatically. Migration 0016 sets default privileges for `service_role` (the only role the API server uses); still add `GRANT SELECT, INSERT, UPDATE, DELETE ON public.<table> TO service_role;` next to each `CREATE TABLE`, and never grant `anon` / `authenticated` (browsers do not use the Data API).
+
 ## Environment Variables
 Server requires `.env` file with:
 - `PORT` (default: 3001)

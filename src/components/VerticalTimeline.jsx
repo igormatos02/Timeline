@@ -217,6 +217,7 @@ function VerticalTimeline({
     handleOpenReceipt,
     handleReceiptDateChange,
     handleReceiptPrint,
+    handleReceiptSendEmail,
     handleSaveReceiptDate,
     handleSaveReceiptNumber,
     isGeneratingReceipt,
@@ -1822,6 +1823,8 @@ function VerticalTimeline({
             receiptNumber={receiptModalData.receiptNumber}
             canEditReceiptNumber={Boolean(receiptModalData.targetEvent && receiptModalData.canEditReceiptNumber)}
             onSaveReceiptNumber={receiptModalData.targetEvent ? handleSaveReceiptNumber : undefined}
+            onSendEmail={isCondoflow && receiptModalData.targetEvent && receiptModalData.targetPerson ? handleReceiptSendEmail : undefined}
+            defaultEmail={receiptModalData.targetPerson?.email || ''}
           />
         )}
 

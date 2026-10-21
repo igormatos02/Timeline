@@ -93,6 +93,22 @@ export function useTimelineReceipts({
     setReceiptModalData((prev) => (prev ? { ...prev, proposedReceiptNumber: null } : prev));
   }, [receiptModalData, activeTimeboard, onPatchEventLocal, advanceReceiptCounter]);
 
+  // "Enviar por email" (condominium fees): the receipt number is kept like when printing, then the server e-mails
+  // the receipt link (now, or tomorrow when today's e-mail budget is used up)
+  const handleReceiptSendEmail = useCallback(async (email) => {
+    const { targetEvent, targetPerson } = receiptModalData || {};
+    if (!targetEvent?.id || !targetPerson?.id) return false;
+    try {
+      await handleReceiptPrint();
+      const result = await api.sendReceiptEmail(targetEvent.id, { date: targetEvent.date, personId: targetPerson.id, email });
+      showToast(t(result?.sent ? 'receipt.sendEmailSent' : 'receipt.sendEmailQueued', { email }), 'success');
+      return true;
+    } catch (err) {
+      showToast(err.message, 'error');
+      return false;
+    }
+  }, [receiptModalData, handleReceiptPrint, showToast, t]);
+
   const handleOpenReceipt = useCallback((targetEvent, targetPerson) => {
     setGeneratingLabelKey('receipt.generatingReceipt');
     setIsGeneratingReceipt(true);
@@ -346,6 +362,7 @@ export function useTimelineReceipts({
     handleOpenReceipt,
     handleReceiptDateChange,
     handleReceiptPrint,
+    handleReceiptSendEmail,
     handleSaveReceiptDate,
     handleSaveReceiptNumber,
     isGeneratingReceipt,

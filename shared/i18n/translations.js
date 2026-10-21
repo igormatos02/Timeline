@@ -2535,7 +2535,10 @@ export const translations = {
         receiptPushTitle: "{{timeboard}}: fee received",
         receiptPushBody: "Your fee of {{month}} ({{amount}} €) was received.",
         overduePushTitle: "{{timeboard}}: fees overdue",
-        overduePushBody: "{{count}} fee(s) overdue, {{amount}} € in total."
+        overduePushBody: "{{count}} fee(s) overdue, {{amount}} € in total.",
+        invalidEmail: "Enter a valid e-mail.",
+        receiptUnavailable: "This receipt cannot be sent.",
+        receiptNotPaid: "Only the receipt of a received fee can be sent."
       },
       upgradeRequest: {
         subject: "Upgrade request: {{product}} {{plan}} ({{name}})",
@@ -2712,6 +2715,11 @@ export const translations = {
     },
 
     receipt: {
+      sendEmail: "Send by e-mail",
+      sendEmailPlaceholder: "E-mail of the recipient",
+      sendEmailSubmit: "Send",
+      sendEmailSent: "Receipt sent to {{email}}.",
+      sendEmailQueued: "Today's e-mail limit was reached: the receipt to {{email}} goes out tomorrow.",
       changePaymentDate: "Click to change the payment date",
       addNumber: "Add",
       addNumberHint: "Add the receipt number",
@@ -5418,7 +5426,10 @@ export const translations = {
         receiptPushTitle: "{{timeboard}}: quota recebida",
         receiptPushBody: "A sua quota de {{month}} ({{amount}} €) foi recebida.",
         overduePushTitle: "{{timeboard}}: quotas em atraso",
-        overduePushBody: "{{count}} quota(s) em atraso, {{amount}} € no total."
+        overduePushBody: "{{count}} quota(s) em atraso, {{amount}} € no total.",
+        invalidEmail: "Indique um email válido.",
+        receiptUnavailable: "Não é possível enviar este recibo.",
+        receiptNotPaid: "Só se envia o recibo de uma quota recebida."
       },
       upgradeRequest: {
         subject: "Pedido de upgrade: {{product}} {{plan}} ({{name}})",
@@ -5595,6 +5606,11 @@ export const translations = {
     },
 
     receipt: {
+      sendEmail: "Enviar por email",
+      sendEmailPlaceholder: "Email do destinatário",
+      sendEmailSubmit: "Enviar",
+      sendEmailSent: "Recibo enviado para {{email}}.",
+      sendEmailQueued: "Atingiu-se o limite de emails de hoje: o recibo para {{email}} segue amanhã.",
       changePaymentDate: "Clique para alterar a data de pagamento",
       addNumber: "Adicionar",
       addNumberHint: "Adicionar o número do recibo",

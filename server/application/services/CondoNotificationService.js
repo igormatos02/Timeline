@@ -55,17 +55,8 @@ export class CondoNotificationService {
       const person = await personRepository.getById(row.obligationPersonId || row.obligation_person_id);
       if (!person || personCategoryOf(person) !== PersonCategory.UNIT) return null;
 
-      const occurrenceDate = String(date || idDate || row.date).substring(0, 10);
-      const occurrenceId = isRecurringRow(row) ? `${row.eventId || row.id}_${occurrenceDate}` : row.id;
-      // The amount of that month (a series may have changed value over time)
-      const monthEvents = await eventService.getAllEvents({
-        timeboardId: timeboard.id,
-        startDate: format(startOfMonth(parseISO(occurrenceDate)), 'yyyy-MM-dd'),
-        endDate: format(endOfMonth(parseISO(occurrenceDate)), 'yyyy-MM-dd')
-      });
-      const occurrence = (monthEvents || []).find((ev) => String(ev.id) === String(occurrenceId));
-      const amount = Math.abs(Number(occurrence?.amount ?? row.amount ?? 0));
-      const month = monthLabelOf(occurrenceDate, NOTICE_LANGUAGE);
+      const receipt = await this._receiptOf({ row, idDate, date, timeboard, person });
+      const { occurrenceId, month, amount } = receipt;
 
       const pushed = await pushNotificationService.notifyUser(person.userId, timeboard.id, PushNotificationKind.RECEIPT, (t) => ({
         title: t('backend.notify.receiptPushTitle', { timeboard: timeboard.name || '' }),
@@ -79,14 +70,7 @@ export class CondoNotificationService {
         kind: CondoNotificationKind.RECEIPT,
         recipientEmail: person.email,
         dedupeKey: `receipt:${occurrenceId}`,
-        payload: {
-          name: person.personName || '',
-          unit: person.obligatorIdentification || '',
-          timeboardName: timeboard.name || '',
-          month,
-          amount: money(amount),
-          receiptUrl: meService.createEmailReceiptLink({ timeboard, eventId: occurrenceId, personId: person.id, language: NOTICE_LANGUAGE })
-        }
+        payload: receipt.payload
       });
       await this.processOutbox(5);
       return { channel: 'email' };
@@ -94,6 +78,63 @@ export class CondoNotificationService {
       console.warn('[CondoNotificationService] receipt notice not sent:', err.message);
       return null;
     }
+  }
+
+  /** A fee occurrence of a unit: its id, month, amount, whether it is paid and the e-mail payload of its receipt. */
+  async _receiptOf({ row, idDate, date, timeboard, person }) {
+    const occurrenceDate = String(date || idDate || row.date).substring(0, 10);
+    const occurrenceId = isRecurringRow(row) ? `${row.eventId || row.id}_${occurrenceDate}` : row.id;
+    // The amount of that month (a series may have changed value over time)
+    const monthEvents = await eventService.getAllEvents({
+      timeboardId: timeboard.id,
+      startDate: format(startOfMonth(parseISO(occurrenceDate)), 'yyyy-MM-dd'),
+      endDate: format(endOfMonth(parseISO(occurrenceDate)), 'yyyy-MM-dd')
+    });
+    const occurrence = (monthEvents || []).find((ev) => String(ev.id) === String(occurrenceId));
+    const amount = Math.abs(Number(occurrence?.amount ?? row.amount ?? 0));
+    const month = monthLabelOf(occurrenceDate, NOTICE_LANGUAGE);
+    return {
+      occurrenceId,
+      month,
+      amount,
+      isPaid: isPositiveStatus(occurrence?.status),
+      payload: {
+        name: person.personName || '',
+        unit: person.obligatorIdentification || '',
+        timeboardName: timeboard.name || '',
+        month,
+        amount: money(amount),
+        receiptUrl: meService.createEmailReceiptLink({ timeboard, eventId: occurrenceId, personId: person.id, language: NOTICE_LANGUAGE })
+      }
+    };
+  }
+
+  /**
+   * "Enviar por email" in the receipt (web): sends the receipt of a paid fee to the given address now, or keeps it
+   * for the next day when today's budget is used up. Resending is allowed (no dedupe).
+   */
+  async sendReceiptByEmail({ id, date, personId, email }) {
+    const t = createT('en');
+    const recipient = String(email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) throw Object.assign(new Error(t('backend.notify.invalidEmail')), { status: 400 });
+    const [rootId, idDate] = String(id).split('_');
+    const row = await financialEventRepository.getById(rootId);
+    const timeboard = row ? await timeboardRepository.getById(row.timeboardId || row.timeboard_id) : null;
+    const person = personId ? await personRepository.getById(personId) : null;
+    if (!row || timeboard?.type !== TimeboardType.CONDOFLOW || !person || String(person.timeboardId) !== String(timeboard.id)) {
+      throw Object.assign(new Error(t('backend.notify.receiptUnavailable')), { status: 404 });
+    }
+    const receipt = await this._receiptOf({ row, idDate, date, timeboard, person });
+    if (!receipt.isPaid) throw Object.assign(new Error(t('backend.notify.receiptNotPaid')), { status: 409 });
+    await emailOutboxRepository.enqueue({
+      timeboardId: timeboard.id,
+      kind: CondoNotificationKind.RECEIPT,
+      recipientEmail: recipient,
+      dedupeKey: `receipt-manual:${receipt.occurrenceId}:${Date.now()}`,
+      payload: receipt.payload
+    });
+    const result = await this.processOutbox(1);
+    return { sent: result.sent > 0, queued: result.sent === 0 };
   }
 
   /** Daily job: on the notice day, each unit with overdue fees is told once that month (push or e-mail). */

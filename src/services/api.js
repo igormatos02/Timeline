@@ -362,6 +362,17 @@ export async function exportTimeboardData(timeboardId, language) {
   URL.revokeObjectURL(url);
 }
 
+// "Enviar por email" of a receipt (condominium fees): { sent } now, or { queued } for tomorrow
+export async function sendReceiptEmail(eventId, { date, personId, email }) {
+  const res = await apiFetch(`${API_BASE}/events/${encodeURIComponent(eventId)}/send-receipt`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ date, personId, email })
+  });
+  if (!res.ok) throw await serverRefusal(res, 'Failed to send the receipt');
+  return res.json();
+}
+
 // Owners' notices of a condominium: e-mails sent this month
 export async function fetchCondoNoticeStats(timeboardId) {
   const res = await apiFetch(`${API_BASE}/timeboards/${encodeURIComponent(timeboardId)}/notifications`, { headers: getHeaders() });

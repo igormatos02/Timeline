@@ -143,6 +143,16 @@ eventsRouter.post('/:id/status', requireCapability(Capability.CHANGE_STATUS), as
   }
 });
 
+// POST /api/events/:id/send-receipt { date, personId, email } — the receipt of a paid fee by e-mail (condominiums)
+eventsRouter.post('/:id/send-receipt', requireCapability(Capability.EDIT), async (req, res) => {
+  try {
+    const { date, personId, email } = req.body || {};
+    res.json(await condoNotificationService.sendReceiptByEmail({ id: req.params.id, date, personId, email }));
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
 // DELETE /api/events/:id
 eventsRouter.delete('/:id', requireCapability(Capability.EDIT), async (req, res) => {
   try {

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Printer, Download, X, Calendar, ChevronDown, Check } from 'lucide-react';
+import { Printer, Download, X, Calendar, ChevronDown, Check, Mail, Send, Loader2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import DueDatePicker from '../ui/DueDatePicker.jsx';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
@@ -18,7 +18,10 @@ export default function ReceiptModal({
   onSaveDate,
   receiptNumber = null,
   canEditReceiptNumber = false,
-  onSaveReceiptNumber
+  onSaveReceiptNumber,
+  // Condominium fees: "Enviar por email" (async (email) => void) and the owner's e-mail to prefill
+  onSendEmail,
+  defaultEmail = ''
 }) {
   const { t, dateLocale } = useTranslation();
   const iframeRef = useRef(null);
@@ -30,6 +33,18 @@ export default function ReceiptModal({
   const [numberError, setNumberError] = useState('');
   const [isSavingNumber, setIsSavingNumber] = useState(false);
   const hasReceiptNumber = receiptNumber != null && Boolean(onSaveReceiptNumber);
+  // "Enviar por email": the address (the owner's by default) is confirmed before sending
+  const [emailDraft, setEmailDraft] = useState(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+  const handleSendEmail = async (e) => {
+    e.preventDefault();
+    if (!isValidEmail(emailDraft)) return;
+    setIsSendingEmail(true);
+    const ok = await onSendEmail(emailDraft.trim());
+    setIsSendingEmail(false);
+    if (ok) setEmailDraft(null);
+  };
 
   const handleSaveNumber = async () => {
     setIsSavingNumber(true);
@@ -149,6 +164,19 @@ export default function ReceiptModal({
               <span>{t('receipt.download')}</span>
             </button>
 
+            {onSendEmail && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setEmailDraft((prev) => (prev === null ? defaultEmail || '' : null))}
+                disabled={!htmlContent}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                <Mail size={14} />
+                <span>{t('receipt.sendEmail')}</span>
+              </button>
+            )}
+
             <button
               type="button"
               className="btn btn-primary btn-sm"
@@ -187,6 +215,29 @@ export default function ReceiptModal({
             </button>
           </div>
         </div>
+
+        {/* Send the receipt by e-mail: confirm the address */}
+        {onSendEmail && emailDraft !== null && (
+          <form onSubmit={handleSendEmail} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', padding: '10px 20px', borderBottom: '1px solid var(--border-glass)', background: 'var(--bg-app)' }}>
+            <Mail size={16} style={{ color: 'var(--text-muted)' }} />
+            <input
+              type="email"
+              autoFocus
+              value={emailDraft}
+              onChange={(e) => setEmailDraft(e.target.value)}
+              placeholder={t('receipt.sendEmailPlaceholder')}
+              aria-label={t('receipt.sendEmailPlaceholder')}
+              style={{ flex: '1 1 220px', padding: '7px 10px', borderRadius: '8px', border: `1px solid ${isValidEmail(emailDraft) ? TimelineColor.SUCCESS : 'var(--border-glass)'}`, background: 'var(--bg-card-hover)', color: 'var(--text-main)', fontSize: '0.86rem' }}
+            />
+            <button type="submit" className="btn btn-primary btn-sm" disabled={isSendingEmail || !isValidEmail(emailDraft)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px' }}>
+              {isSendingEmail ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              <span>{t('receipt.sendEmailSubmit')}</span>
+            </button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEmailDraft(null)} style={{ padding: '6px 12px', borderRadius: '6px' }}>
+              {t('common.cancel')}
+            </button>
+          </form>
+        )}
 
         {/* Payment date row (below the header, separated by a divider) */}
         {hasDatePicker && (

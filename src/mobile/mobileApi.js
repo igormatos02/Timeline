@@ -84,6 +84,8 @@ export const getMonthFlows = (timeboardId, month) => request(`/me/month?timeboar
 
 // Admins: the month's income and outflows (what the condominium balance counts)
 export const getMonthMovements = (timeboardId, month) => request(`/me/movements?timeboardId=${encodeURIComponent(timeboardId)}&month=${encodeURIComponent(month)}`);
+// Admins: records a movement (outflow, bank deposit) — the same route and payload as the web forms
+export const createMovement = (movement) => request('/events', { method: 'POST', body: movement });
 // Admins: receive / pay a movement — the same route and rules as the web (status toggle)
 export const setMovementEffective = (eventId, status) => request(`/events/${encodeURIComponent(eventId)}/toggle-payment`, { method: 'POST', body: { status } });
 

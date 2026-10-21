@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, ChevronLeft, ChevronRight, LogOut, RefreshCw, Loader2, Users } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, Landmark, LogOut, Plus, RefreshCw, Loader2, Users } from 'lucide-react';
 import { addMonths, format, parseISO } from 'date-fns';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { PersonRole, TimeboardType, TimelineColor } from '../enums/index.js';
@@ -8,6 +8,7 @@ import { PUBLIC_SITE_URL } from '../../shared/config/appConfig.js';
 import * as mobileApi from '../mobile/mobileApi.js';
 import MobileMoneySummary from '../mobile/MobileMoneySummary.jsx';
 import AdminMovements from './AdminMovements.jsx';
+import AdminMovementForm, { AdminFormKind } from './AdminMovementForm.jsx';
 import styles from '../mobile/MobileApp.module.css';
 
 const currentMonthKey = () => format(new Date(), 'yyyy-MM');
@@ -25,6 +26,8 @@ export default function AdminHome({ user, preferredTimeboardId, notice, onClearN
   const [summary, setSummary] = useState(null);
   const [entities, setEntities] = useState(null);
   const [movements, setMovements] = useState(null);
+  // Open form: a new outflow or a bank deposit (null = closed)
+  const [formKind, setFormKind] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -153,6 +156,18 @@ export default function AdminHome({ user, preferredTimeboardId, notice, onClearN
             )}
           </div>
 
+          {/* Record an outflow or deposit the cash into the bank */}
+          {monthFlows?.places && (
+            <div className={styles.actionRow}>
+              <button type="button" className={styles.primaryButton} onClick={() => setFormKind(AdminFormKind.EXPENSE)}>
+                <Plus size={18} /><span>{t('admin.form.newExpense')}</span>
+              </button>
+              <button type="button" className={styles.primaryButton} onClick={() => setFormKind(AdminFormKind.DEPOSIT)} disabled={!monthFlows.places.accountTimelineId}>
+                <Landmark size={18} /><span>{t('admin.form.newDeposit')}</span>
+              </button>
+            </div>
+          )}
+
           <AdminMovements movements={movements} t={t} dateLocale={dateLocale} onChanged={load} onError={handleError} />
 
           <MobileMoneySummary summary={summary} t={t} />
@@ -175,6 +190,17 @@ export default function AdminHome({ user, preferredTimeboardId, notice, onClearN
             ))}
           </div>
         </>
+      )}
+
+      {formKind && monthFlows?.places && (
+        <AdminMovementForm
+          kind={formKind}
+          timeboardId={selectedId}
+          places={monthFlows.places}
+          t={t}
+          onClose={() => setFormKind(null)}
+          onSaved={load}
+        />
       )}
 
       <div className={styles.accountFooter}>

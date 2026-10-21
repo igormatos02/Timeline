@@ -1638,7 +1638,24 @@ export const translations = {
       filterOutflows: "Outflows",
       filterPending: "Pending",
       filterPaid: "Done",
-      noMovements: "No movements with these filters."
+      noMovements: "No movements with these filters.",
+      form: {
+        newExpense: "New outflow",
+        newDeposit: "Deposit in the bank",
+        title: "Description",
+        amount: "Amount (€)",
+        date: "Date",
+        place: "Where the money comes from",
+        cash: "Cash",
+        bank: "Bank account",
+        category: "Category",
+        alreadyPaid: "Already paid",
+        alreadyDeposited: "Already deposited",
+        save: "Save",
+        cancel: "Cancel",
+        depositDefaultTitle: "Bank deposit",
+        required: "Enter a description and an amount greater than zero."
+      }
     },
 
     monthFlows: {
@@ -4203,7 +4220,24 @@ export const translations = {
       filterOutflows: "Saídas",
       filterPending: "Pendentes",
       filterPaid: "Efetivados",
-      noMovements: "Não há movimentos com estes filtros."
+      noMovements: "Não há movimentos com estes filtros.",
+      form: {
+        newExpense: "Nova saída",
+        newDeposit: "Depositar no banco",
+        title: "Descrição",
+        amount: "Valor (€)",
+        date: "Data",
+        place: "De onde sai o dinheiro",
+        cash: "Caixa",
+        bank: "Conta bancária",
+        category: "Categoria",
+        alreadyPaid: "Já está pago",
+        alreadyDeposited: "Já está depositado",
+        save: "Guardar",
+        cancel: "Cancelar",
+        depositDefaultTitle: "Depósito no banco",
+        required: "Indique a descrição e um valor maior que zero."
+      }
     },
 
     monthFlows: {

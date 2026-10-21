@@ -165,10 +165,14 @@ export class MeService {
     const flows = computeMonthlyFlows({ events, timelineTypeMap: timelineTypeMapOf(timelines) });
     const monthKey = /^\d{4}-\d{2}$/.test(String(month || '')) ? month : new Date().toISOString().substring(0, 7);
     const entry = flows.get(monthKey);
+    // Where the Gestão app records outflows and deposits: the condominium's cash (wallet) and bank account
+    const walletTimeline = (timelines || []).find((tl) => isWalletTimelineType(tl.type));
+    const accountTimeline = (timelines || []).find((tl) => normalizeTimelineType(tl.type) === TimelineType.INVESTMENT);
     return {
       month: monthKey,
       realized: getMonthRowFlows(entry?.realized, MonthFlowView.BOARD),
-      projected: getMonthRowFlows(entry?.projected, MonthFlowView.BOARD)
+      projected: getMonthRowFlows(entry?.projected, MonthFlowView.BOARD),
+      places: { walletTimelineId: walletTimeline?.id || null, accountTimelineId: accountTimeline?.id || null }
     };
   }
 

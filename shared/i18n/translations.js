@@ -1751,7 +1751,11 @@ export const translations = {
         email: "E-mail",
         shareTitle: "Receipt — {{title}}",
         shareText: "Receipt of {{title}} ({{person}}, {{amount}}). Check it and open it at:",
-        unavailable: "The receipt of this fee is not available."
+        unavailable: "The receipt of this fee is not available.",
+        title: "Receipt",
+        open: "Receipt",
+        print: "Print / PDF",
+        printHint: "Print / PDF opens the receipt in the browser: menu → Share → Print → Save as PDF."
       },
       form: {
         newExpense: "New outflow",
@@ -4675,7 +4679,11 @@ export const translations = {
         email: "Email",
         shareTitle: "Recibo — {{title}}",
         shareText: "Recibo de {{title}} ({{person}}, {{amount}}). Confirme e abra em:",
-        unavailable: "O recibo desta quota não está disponível."
+        unavailable: "O recibo desta quota não está disponível.",
+        title: "Recibo",
+        open: "Recibo",
+        print: "Imprimir / PDF",
+        printHint: "Imprimir / PDF abre o recibo no navegador: menu → Partilhar → Imprimir → Guardar como PDF."
       },
       form: {
         newExpense: "Nova saída",

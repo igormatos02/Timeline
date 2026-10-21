@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { buildReceiptHtml, computeNextReceiptNumber, computeReceiptNumber } from '../../utils/receiptGenerator.js';
 import * as api from '../../services/api.js';
 import { format } from 'date-fns';
+import { TimeboardType } from '../../enums/index.js';
 
 // Extracted from VerticalTimeline.jsx (VerticalTimeline).
 export function useTimelineReceipts({
@@ -109,6 +110,50 @@ export function useTimelineReceipts({
     }
   }, [receiptModalData, handleReceiptPrint, showToast, t]);
 
+  const isCondominium = activeTimeboard?.type === TimeboardType.CONDOFLOW;
+
+  // Receipt code of a received condominium obligation: printed with a QR code; the server's receipt number wins
+  const loadReceiptCode = useCallback(async (targetEvent, targetPerson) => {
+    try {
+      const result = await api.fetchReceiptCode(targetEvent.id, targetEvent.date);
+      if (!result?.code) return;
+      if (result.receiptNumber) {
+        targetEvent.contYear = result.receiptNumber;
+        targetEvent.cont_year = result.receiptNumber;
+        onPatchEventLocal?.(targetEvent.id, { contYear: result.receiptNumber, cont_year: result.receiptNumber });
+      }
+      setReceiptModalData((prev) => {
+        if (!prev || prev.targetEvent?.id !== targetEvent.id) return prev;
+        const receiptNumber = result.receiptNumber || prev.receiptNumber;
+        const html = buildReceiptHtml({
+          event: targetEvent,
+          timeboard: activeTimeboard,
+          timeline: resolveReceiptTimeline(targetEvent),
+          receiptNumber,
+          currentUser,
+          obligationPerson: targetPerson,
+          persons,
+          language,
+          t,
+          paymentDate: prev.receiptDate,
+          receiptCode: result.code,
+          verifyUrl: result.verifyUrl
+        });
+        return {
+          ...prev,
+          htmlContent: html,
+          receiptNumber,
+          receiptCode: result.code,
+          verifyUrl: result.verifyUrl,
+          // Numbered by the server: printing no longer advances the counter
+          proposedReceiptNumber: result.receiptNumber ? null : prev.proposedReceiptNumber
+        };
+      });
+    } catch (err) {
+      console.warn('Receipt code not loaded:', err.message);
+    }
+  }, [activeTimeboard, currentUser, persons, language, t, onPatchEventLocal, resolveReceiptTimeline]);
+
   const handleOpenReceipt = useCallback((targetEvent, targetPerson) => {
     setGeneratingLabelKey('receipt.generatingReceipt');
     setIsGeneratingReceipt(true);
@@ -145,13 +190,15 @@ export function useTimelineReceipts({
           // Automatic proposal (timeline counter): saving it advances the counter, a custom number does not
           proposedReceiptNumber: hasStoredNumber ? null : receiptNumber
         });
+        // Condominiums: the receipt's code (QR + verification) and the number the server already gave it
+        if (isCondominium && targetEvent?.id) loadReceiptCode(targetEvent, targetPerson);
       } catch (err) {
         console.error('Error generating receipt HTML:', err);
       } finally {
         setIsGeneratingReceipt(false);
       }
     }, 450);
-  }, [activeTimeboard, timeline, currentUser, language, t, persons, resolveReceiptTimeline]);
+  }, [activeTimeboard, timeline, currentUser, language, t, persons, resolveReceiptTimeline, isCondominium, loadReceiptCode]);
 
   // The receipt date can be changed in the receipt modal header: rebuild the document with it
   const handleReceiptDateChange = useCallback((nextDate) => {
@@ -167,7 +214,9 @@ export function useTimelineReceipts({
         persons,
         language,
         t,
-        paymentDate: nextDate
+        paymentDate: nextDate,
+        receiptCode: prev.receiptCode,
+        verifyUrl: prev.verifyUrl
       });
       return { ...prev, receiptDate: nextDate, htmlContent: html };
     });
@@ -240,7 +289,9 @@ export function useTimelineReceipts({
         persons,
         language,
         t,
-        paymentDate: prev.receiptDate
+        paymentDate: prev.receiptDate,
+        receiptCode: prev.receiptCode,
+        verifyUrl: prev.verifyUrl
       });
       return { ...prev, receiptNumber: number, htmlContent: html, proposedReceiptNumber: null };
     });

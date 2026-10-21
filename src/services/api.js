@@ -362,6 +362,20 @@ export async function exportTimeboardData(timeboardId, language) {
   URL.revokeObjectURL(url);
 }
 
+// Receipt code of a received condominium obligation (created when missing) and its receipt number
+export async function fetchReceiptCode(eventId, date) {
+  const res = await apiFetch(`${API_BASE}/events/${encodeURIComponent(eventId)}/receipt-code?date=${encodeURIComponent(date || '')}`, { headers: getHeaders() });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+// Public: whether a receipt code is valid (timeboard.pt/recibo/<code>)
+export async function verifyReceiptCode(code, language) {
+  const res = await fetch(`${API_BASE}/receipts/verify/${encodeURIComponent(code)}?lang=${encodeURIComponent(language || 'pt')}`);
+  if (!res.ok) throw new Error(String(res.status));
+  return res.json();
+}
+
 // "Enviar por email" of a receipt (condominium fees): { sent } now, or { queued } for tomorrow
 export async function sendReceiptEmail(eventId, { date, personId, email }) {
   const res = await apiFetch(`${API_BASE}/events/${encodeURIComponent(eventId)}/send-receipt`, {

@@ -6,6 +6,7 @@ import { financialEventRepository } from '../../infrastructure/database/supabase
 import { emailOutboxRepository } from '../../infrastructure/database/supabase/SupabaseEmailOutboxRepository.js';
 import { eventService } from './EventService.js';
 import { meService } from './MeService.js';
+import { receiptCodeService } from './ReceiptCodeService.js';
 import { emailService } from './EmailService.js';
 import { pushNotificationService } from './PushNotificationService.js';
 import {
@@ -93,6 +94,8 @@ export class CondoNotificationService {
     const occurrence = (monthEvents || []).find((ev) => String(ev.id) === String(occurrenceId));
     const amount = Math.abs(Number(occurrence?.amount ?? row.amount ?? 0));
     const month = monthLabelOf(occurrenceDate, NOTICE_LANGUAGE);
+    // The e-mail links to the receipt code's verification page (valid while the payment stands)
+    const receiptCode = isPositiveStatus(occurrence?.status) ? await receiptCodeService.codeForOccurrence({ id: occurrenceId, date: occurrenceDate }) : null;
     return {
       occurrenceId,
       month,
@@ -104,7 +107,7 @@ export class CondoNotificationService {
         timeboardName: timeboard.name || '',
         month,
         amount: money(amount),
-        receiptUrl: meService.createEmailReceiptLink({ timeboard, eventId: occurrenceId, personId: person.id, language: NOTICE_LANGUAGE })
+        receiptUrl: receiptCode?.verifyUrl || meService.createEmailReceiptLink({ timeboard, eventId: occurrenceId, personId: person.id, language: NOTICE_LANGUAGE })
       }
     };
   }

@@ -2433,6 +2433,27 @@ export const translations = {
       unchanged: "The fee already has this value.",
       saveUnitFirst: "Save the unit to update its entries."
     },
+    receiptVerify: {
+      title: "Receipt verification",
+      codePlaceholder: "Receipt code (e.g. CF-7K3M-Q9XA-2B4C)",
+      check: "Check",
+      valid: "Valid receipt",
+      validHint: "This receipt was issued by the condominium and the payment stands.",
+      voided: "Voided receipt",
+      voidedHint: "The payment of this receipt was reverted or cancelled: the receipt is no longer valid.",
+      notFound: "Code not found",
+      notFoundHint: "Check the code on the receipt. If it is right, the receipt was not issued by CondoFlow.",
+      error: "Could not check the code. Try again.",
+      code: "Code",
+      condominium: "Condominium",
+      unit: "Unit",
+      concept: "Concept",
+      month: "Month",
+      amount: "Amount",
+      paymentDate: "Payment date",
+      receiptNumber: "Receipt number",
+      open: "Open receipt"
+    },
     people: {
       tabs: { units: "Units", entities: "Entities", members: "Members" },
       add: { unit: "Add unit", entity: "Add entity", member: "Add member" },
@@ -2715,6 +2736,9 @@ export const translations = {
     },
 
     receipt: {
+      numberPrefix: "No.",
+      codeLabel: "Receipt code",
+      verifyHint: "Check that this receipt is valid at {{url}}",
       sendEmail: "Send by e-mail",
       sendEmailPlaceholder: "E-mail of the recipient",
       sendEmailSubmit: "Send",
@@ -5324,6 +5348,27 @@ export const translations = {
       unchanged: "A quota já tem este valor.",
       saveUnitFirst: "Guarde a fração para atualizar os lançamentos."
     },
+    receiptVerify: {
+      title: "Verificação de recibo",
+      codePlaceholder: "Código do recibo (ex: CF-7K3M-Q9XA-2B4C)",
+      check: "Verificar",
+      valid: "Recibo válido",
+      validHint: "Este recibo foi emitido pelo condomínio e o pagamento mantém-se.",
+      voided: "Recibo anulado",
+      voidedHint: "O pagamento deste recibo foi revertido ou cancelado: o recibo deixou de ser válido.",
+      notFound: "Código não encontrado",
+      notFoundHint: "Confirme o código no recibo. Se estiver certo, o recibo não foi emitido pelo CondoFlow.",
+      error: "Não foi possível verificar o código. Tente de novo.",
+      code: "Código",
+      condominium: "Condomínio",
+      unit: "Fração",
+      concept: "Conceito",
+      month: "Mês",
+      amount: "Valor",
+      paymentDate: "Data de pagamento",
+      receiptNumber: "Nº do recibo",
+      open: "Abrir recibo"
+    },
     people: {
       tabs: { units: "Frações", entities: "Entidades", members: "Membros" },
       add: { unit: "Adicionar fração", entity: "Adicionar entidade", member: "Adicionar membro" },
@@ -5606,6 +5651,9 @@ export const translations = {
     },
 
     receipt: {
+      numberPrefix: "Nº",
+      codeLabel: "Código do recibo",
+      verifyHint: "Confirme a validade deste recibo em {{url}}",
       sendEmail: "Enviar por email",
       sendEmailPlaceholder: "Email do destinatário",
       sendEmailSubmit: "Enviar",

@@ -74,6 +74,7 @@
     "express": "^5.2.1",
     "framer-motion": "^13.1.1",
     "lucide-react": "^1.33.0",
+    "qrcode-generator": "^1.4.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

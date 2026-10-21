@@ -6,6 +6,8 @@ import { format, parseISO } from 'date-fns';
 import { pt, enUS } from 'date-fns/locale';
 import { formatCurrency } from './formatCurrency.js';
 import { EventType, ClearanceDocumentType, TIMELINE_COLOR_PRESETS } from '../enums/index.js';
+import { PrintTheme } from '../config/printTheme.js';
+import qrcode from 'qrcode-generator';
 
 /**
  * Computa o número de recibo baseado na timeline (cont_year) e ano corrente:
@@ -100,10 +102,14 @@ function resolveIssuer({ timeboard, currentUser, t }) {
 
 const RECEIPT_STYLES = `
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        .verify-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed ${PrintTheme.border}; }
+        .verify-qr svg { display: block; width: 64px; height: 64px; }
+        .verify-code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; font-weight: 700; letter-spacing: 1px; color: ${PrintTheme.ink}; }
+        .verify-hint { font-size: 10px; color: ${PrintTheme.muted}; }
         body {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-          color: #1e293b;
-          background: #ffffff;
+          color: ${PrintTheme.inkSoft};
+          background: ${PrintTheme.paper};
           padding: 24px;
         }
         .container {
@@ -112,13 +118,13 @@ const RECEIPT_STYLES = `
           display: flex;
           flex-direction: column;
           gap: 0;
-          background: #ffffff;
+          background: ${PrintTheme.paper};
         }
         .receipt-section {
           padding: 28px 24px;
-          border: 1px solid #cbd5e1;
+          border: 1px solid ${PrintTheme.borderStrong};
           border-radius: 8px;
-          background: #ffffff;
+          background: ${PrintTheme.paper};
         }
         .divider {
           display: flex;
@@ -126,14 +132,14 @@ const RECEIPT_STYLES = `
           justify-content: center;
           position: relative;
           margin: 18px 0;
-          border-top: 2px dashed #94a3b8;
+          border-top: 2px dashed ${PrintTheme.faint};
         }
         .divider-tag {
           position: absolute;
-          background: #ffffff;
+          background: ${PrintTheme.paper};
           padding: 2px 14px;
           font-size: 11px;
-          color: #64748b;
+          color: ${PrintTheme.muted};
           letter-spacing: 0.1em;
           text-transform: uppercase;
           font-weight: 700;
@@ -147,12 +153,12 @@ const RECEIPT_STYLES = `
         .brand-title {
           font-size: 18px;
           font-weight: 800;
-          color: #0f172a;
+          color: ${PrintTheme.ink};
           letter-spacing: -0.02em;
         }
         .brand-desc {
           font-size: 12px;
-          color: #64748b;
+          color: ${PrintTheme.muted};
           margin-top: 2px;
         }
         .badge-tag {
@@ -162,9 +168,9 @@ const RECEIPT_STYLES = `
           text-transform: uppercase;
           padding: 4px 10px;
           border-radius: 6px;
-          background: #f1f5f9;
-          color: #334155;
-          border: 1px solid #e2e8f0;
+          background: ${PrintTheme.panelAlt};
+          color: ${PrintTheme.inkMuted};
+          border: 1px solid ${PrintTheme.border};
         }
         .receipt-number-tag {
           font-size: 12px;
@@ -172,15 +178,15 @@ const RECEIPT_STYLES = `
           letter-spacing: 0.04em;
           padding: 4px 10px;
           border-radius: 6px;
-          background: #eef2ff;
-          color: #4338ca;
-          border: 1px solid #c7d2fe;
+          background: ${PrintTheme.accentTint};
+          color: ${PrintTheme.accentInk};
+          border: 1px solid ${PrintTheme.accentBorder};
           font-variant-numeric: tabular-nums;
         }
         .receipt-type {
           font-size: 15px;
           font-weight: 800;
-          color: #2563eb;
+          color: ${PrintTheme.link};
           margin-bottom: 16px;
           text-transform: uppercase;
           letter-spacing: 0.04em;
@@ -189,8 +195,8 @@ const RECEIPT_STYLES = `
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 12px;
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
+          background: ${PrintTheme.panel};
+          border: 1px solid ${PrintTheme.border};
           border-radius: 8px;
           padding: 14px;
           margin-bottom: 16px;
@@ -210,13 +216,13 @@ const RECEIPT_STYLES = `
         .label {
           font-size: 10px;
           font-weight: 700;
-          color: #64748b;
+          color: ${PrintTheme.muted};
           text-transform: uppercase;
           letter-spacing: 0.04em;
         }
         .value {
           font-size: 13px;
-          color: #1e293b;
+          color: ${PrintTheme.inkSoft};
         }
         .concept-badge-row {
           display: flex;
@@ -233,23 +239,23 @@ const RECEIPT_STYLES = `
           letter-spacing: 0.05em;
           padding: 3px 8px;
           border-radius: 4px;
-          background: #e0e7ff;
-          color: #3730a3;
-          border: 1px solid #c7d2fe;
+          background: ${PrintTheme.accentTintStrong};
+          color: ${PrintTheme.accentInkDeep};
+          border: 1px solid ${PrintTheme.accentBorder};
         }
         .concept-title {
           font-size: 14px;
           font-weight: 800;
-          color: #0f172a;
+          color: ${PrintTheme.ink};
         }
         .value.strong {
           font-weight: 700;
-          color: #0f172a;
+          color: ${PrintTheme.ink};
         }
         .value.amount {
           font-size: 18px;
           font-weight: 800;
-          color: #0f172a;
+          color: ${PrintTheme.ink};
         }
         .footer-row {
           display: flex;
@@ -268,24 +274,24 @@ const RECEIPT_STYLES = `
           text-align: center;
         }
         .signature-line {
-          border-bottom: 1px solid #0f172a;
+          border-bottom: 1px solid ${PrintTheme.ink};
           margin-bottom: 4px;
         }
         .signature-label {
           font-size: 11px;
-          color: #64748b;
+          color: ${PrintTheme.muted};
           font-weight: 600;
         }
         @media print {
           body {
             padding: 0;
-            background: #ffffff;
+            background: ${PrintTheme.paper};
           }
           .receipt-section {
-            border: 1px solid #000000;
+            border: 1px solid ${PrintTheme.printInk};
           }
           .divider {
-            border-top: 2px dashed #000000;
+            border-top: 2px dashed ${PrintTheme.printInk};
           }
           @page {
             size: A4 portrait;
@@ -299,6 +305,14 @@ const RECEIPT_STYLES = `
         }
 `;
 
+// QR code (SVG) of a receipt's verification page
+const qrSvg = (url) => {
+  const qr = qrcode(0, 'M');
+  qr.addData(url);
+  qr.make();
+  return qr.createSvgTag({ cellSize: 2, margin: 0, scalable: true });
+};
+
 export function buildReceiptHtml({
   event,
   timeboard,
@@ -309,7 +323,10 @@ export function buildReceiptHtml({
   persons = [],
   language = 'pt',
   t,
-  paymentDate = null
+  paymentDate = null,
+  // Receipt code (receipt_codes) and its verification page: printed with a QR code
+  receiptCode = null,
+  verifyUrl = null
 }) {
   const isIncome = event?.eventType === EventType.INCOME;
   const isPt = language === 'pt';
@@ -357,7 +374,7 @@ export function buildReceiptHtml({
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
             <div class="badge-tag">${badgeText}</div>
-            ${receiptNumber ? `<div class="receipt-number-tag">Nº ${receiptNumber}</div>` : ''}
+            ${receiptNumber ? `<div class="receipt-number-tag">${t('receipt.numberPrefix')} ${receiptNumber}</div>` : ''}
         
         </div>
       </div>
@@ -399,6 +416,14 @@ export function buildReceiptHtml({
           <div class="signature-label">${t('receipt.signaturePlaceholder')}</div>
         </div>` : ''}
       </div>
+      ${receiptCode ? `
+      <div class="verify-row">
+        ${!isStub && verifyUrl ? `<div class="verify-qr">${qrSvg(verifyUrl)}</div>` : ''}
+        <div>
+          <div class="verify-code">${t('receipt.codeLabel')}: ${receiptCode}</div>
+          ${!isStub && verifyUrl ? `<div class="verify-hint">${t('receipt.verifyHint', { url: verifyUrl.replace(/^https?:\/\//, '') })}</div>` : ''}
+        </div>
+      </div>` : ''}
     </div>
   `;
 

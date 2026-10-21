@@ -77,5 +77,6 @@ export const RateLimitRule = Object.freeze({
   INVITE_CODE: { name: 'invite-code', windowMs: 10 * MINUTE, max: 20 },
   SEND_INVITE: { name: 'send-invite', windowMs: 60 * MINUTE, max: 30 }, // per account
   UPGRADE_REQUEST: { name: 'upgrade-request', windowMs: 60 * MINUTE, max: 5 }, // per account
-  RECEIPT_LINK: { name: 'receipt-link', windowMs: 10 * MINUTE, max: 60 }
+  RECEIPT_LINK: { name: 'receipt-link', windowMs: 10 * MINUTE, max: 60 },
+  RECEIPT_CODE: { name: 'receipt-code', windowMs: 10 * MINUTE, max: 60 }
 });

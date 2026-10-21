@@ -3,6 +3,7 @@ import { resourceAccessParam } from '../middleware/timeboardAccess.js';
 import { eventService } from '../../../application/services/EventService.js';
 import { meService } from '../../../application/services/MeService.js';
 import { condoNotificationService } from '../../../application/services/CondoNotificationService.js';
+import { receiptCodeService } from '../../../application/services/ReceiptCodeService.js';
 import { PersonRole } from '../../../../shared/enums/index.js';
 import { requireCapability, actorOf } from '../middleware/requireCapability.js';
 import { can } from '../../../../shared/permissions.js';
@@ -89,7 +90,9 @@ eventsRouter.post('/:id/toggle-payment', requireCapability(Capability.CHANGE_STA
   try {
     if (deniesStatusChange(req, req.body?.status)) return noPermission(res);
     const updated = await eventService.toggleEventPayment(req.params.id, req.body?.status, actorOf(req));
-    // A condominium fee received: its receipt to the owner (when the condominium turned it on)
+    // Condominiums: a received obligation gets its receipt code and number (a reverted one loses the code), and the
+    // owner its receipt (when the condominium turned it on)
+    await receiptCodeService.onStatusChanged({ id: req.params.id, date: updated?.date, status: updated?.status });
     await condoNotificationService.onFeeStatusChanged({ id: req.params.id, date: updated?.date, status: updated?.status });
     res.json(updated);
   } catch (err) {
@@ -135,11 +138,22 @@ eventsRouter.post('/:id/status', requireCapability(Capability.CHANGE_STATUS), as
       timelineId,
       timeboardId
     });
+    await receiptCodeService.onStatusChanged({ id: req.params.id, date, status: result?.status || status });
     await condoNotificationService.onFeeStatusChanged({ id: req.params.id, date, status: result?.status || status });
     res.json(result);
   } catch (err) {
     const httpStatus = err.code === 'RECEIPT_NUMBER_TAKEN' || err.code === 'EVENT_LOCKED' ? 409 : 400;
     res.status(httpStatus).json({ error: err.message, code: err.code });
+  }
+});
+
+// GET /api/events/:id/receipt-code?date — the receipt code of a received condominium obligation (created when
+// missing) and its receipt number, printed on the receipt with a QR code
+eventsRouter.get('/:id/receipt-code', async (req, res) => {
+  try {
+    res.json(await receiptCodeService.codeForOccurrence({ id: req.params.id, date: req.query.date }) || {});
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

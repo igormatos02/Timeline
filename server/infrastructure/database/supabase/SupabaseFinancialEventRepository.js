@@ -1042,6 +1042,15 @@ export class SupabaseFinancialEventRepository extends IRepository {
     return true;
   }
 
+  /** A row of an event: by its id, or the first row of the series with that event id (series ids may differ from row ids). */
+  async getByIdOrSeries(id) {
+    const direct = await this.getById(id);
+    if (direct) return direct;
+    const { data, error } = await supabase.from(this.tableName).select('*').eq('event_id', String(id)).order('date', { ascending: true }).limit(1);
+    if (error || !data?.length) return null;
+    return this.getById(data[0].id);
+  }
+
   async deleteByEventId(eventId) {
     if (!eventId) return true;
     const ids = Array.isArray(eventId) ? eventId.filter(Boolean).map(String) : [String(eventId)];

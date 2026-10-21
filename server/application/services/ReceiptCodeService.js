@@ -57,7 +57,7 @@ export class ReceiptCodeService {
   /** Occurrence of an event id ("<series>_<date>" or a unique event) in a condominium, or null. */
   async _occurrence(id, date) {
     const [rootId, idDate] = String(id).split('_');
-    const row = await financialEventRepository.getById(rootId);
+    const row = await financialEventRepository.getByIdOrSeries(rootId);
     if (!row || !(row.obligationPersonId || row.obligation_person_id)) return null;
     const timeboard = await timeboardRepository.getById(row.timeboardId || row.timeboard_id);
     if (timeboard?.type !== TimeboardType.CONDOFLOW) return null;

@@ -49,7 +49,7 @@ export class CondoNotificationService {
     try {
       if (!id || !isPositiveStatus(status)) return null;
       const [rootId, idDate] = String(id).split('_');
-      const row = await financialEventRepository.getById(rootId);
+      const row = await financialEventRepository.getByIdOrSeries(rootId);
       if (!row || !FEE_CATEGORIES.has(row.category) || !(row.obligationPersonId || row.obligation_person_id)) return null;
       const timeboard = await timeboardRepository.getById(row.timeboardId || row.timeboard_id);
       if (timeboard?.type !== TimeboardType.CONDOFLOW || !timeboard.notifyReceipts) return null;
@@ -121,7 +121,7 @@ export class CondoNotificationService {
     const recipient = String(email || '').trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) throw Object.assign(new Error(t('backend.notify.invalidEmail')), { status: 400 });
     const [rootId, idDate] = String(id).split('_');
-    const row = await financialEventRepository.getById(rootId);
+    const row = await financialEventRepository.getByIdOrSeries(rootId);
     const timeboard = row ? await timeboardRepository.getById(row.timeboardId || row.timeboard_id) : null;
     const person = personId ? await personRepository.getById(personId) : null;
     if (!row || timeboard?.type !== TimeboardType.CONDOFLOW || !person || String(person.timeboardId) !== String(timeboard.id)) {

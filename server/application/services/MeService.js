@@ -5,7 +5,7 @@ import { personRepository } from '../../infrastructure/database/supabase/Supabas
 import { timelineService } from './TimelineService.js';
 import { pocketRepository } from '../../infrastructure/database/supabase/SupabasePocketRepository.js';
 import { timeboardRepository } from '../../infrastructure/database/supabase/SupabaseTimeboardRepository.js';
-import { MovementKind, DiaryPublishStatus, TimeboardType, isCancelledStatus, isPositiveStatus, TimelineType, isWalletTimelineType, PersonRole, TimelineStatus, normalizeTimelineType, isLoanTimelineType, BalanceViewMode, EntityDirection, isKindInBalanceViewMode, paymentChannelOf } from '../../../shared/enums/index.js';
+import { ReceiptPart, MovementKind, DiaryPublishStatus, TimeboardType, isCancelledStatus, isPositiveStatus, TimelineType, isWalletTimelineType, PersonRole, TimelineStatus, normalizeTimelineType, isLoanTimelineType, BalanceViewMode, EntityDirection, isKindInBalanceViewMode, paymentChannelOf } from '../../../shared/enums/index.js';
 import { classifyMovement, isActiveMovement, isEffectiveMovement } from '../../../shared/finance/movements.js';
 import { computeMoneySummary } from '../../../shared/finance/moneySummary.js';
 import { computeMonthlyFlows, getMonthRowFlows, MonthFlowView } from '../../../shared/finance/financialPosition.js';
@@ -409,7 +409,9 @@ export class MeService {
       persons: persons || [],
       language,
       t: createT(language),
-      paymentDate: event.receiptDate || event.date
+      paymentDate: event.receiptDate || event.date,
+      // The owner's copy (the stub stays with the administration)
+      parts: ReceiptPart.RECEIPT
     });
   }
 }

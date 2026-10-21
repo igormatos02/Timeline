@@ -36,6 +36,16 @@ export class SupabaseReceiptCodeRepository {
     return data ? rowToEntity(data) : null;
   }
 
+  /** Valid codes of a timeboard, optionally between two occurrence dates (inclusive). */
+  async listActive(timeboardId, { fromDate = null, toDate = null } = {}) {
+    let query = supabase.from(TABLE).select('*').eq('timeboard_id', timeboardId).is('voided_at', null);
+    if (fromDate) query = query.gte('occurrence_date', fromDate);
+    if (toDate) query = query.lte('occurrence_date', toDate);
+    const { data, error } = await query;
+    if (error) throw new Error(`Supabase listActive [${TABLE}]: ${error.message}`);
+    return (data || []).map(rowToEntity);
+  }
+
   async voidActive(eventId, occurrenceDate) {
     const { error } = await supabase.from(TABLE).update({ voided_at: new Date().toISOString() }).eq('event_id', String(eventId)).eq('occurrence_date', occurrenceDate).is('voided_at', null);
     if (error) throw new Error(`Supabase voidActive [${TABLE}]: ${error.message}`);

@@ -5,6 +5,7 @@ import { timeboardService } from '../../../application/services/TimeboardService
 import { firstStepsService } from '../../../application/services/FirstStepsService.js';
 import { dataExportService } from '../../../application/services/DataExportService.js';
 import { condoNotificationService } from '../../../application/services/CondoNotificationService.js';
+import { receiptCodeRepository } from '../../../infrastructure/database/supabase/SupabaseReceiptCodeRepository.js';
 import { unitFeeService } from '../../../application/services/UnitFeeService.js';
 import { unitImportService } from '../../../application/services/UnitImportService.js';
 import { timeboardInvitationRepository } from '../../../infrastructure/database/supabase/SupabaseTimeboardInvitationRepository.js';
@@ -95,6 +96,16 @@ timeboardsRouter.post('/:id/units/:personId/fee', requireCapability(Capability.M
     res.json(await unitFeeService.applyUnitFee(req.params.id, req.params.personId, { amount, parts, channel }, language));
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message, code: err.code });
+  }
+});
+
+// GET /api/timeboards/:id/receipt-codes?from&to — valid receipt codes of the timeboard (register of receipts report)
+timeboardsRouter.get('/:id/receipt-codes', async (req, res) => {
+  try {
+    const codes = await receiptCodeRepository.listActive(req.params.id, { fromDate: req.query.from || null, toDate: req.query.to || null });
+    res.json(codes.map(({ code, eventId, occurrenceDate }) => ({ code, eventId, occurrenceDate })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

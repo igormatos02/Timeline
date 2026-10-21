@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FileWarning, Printer, Check, CalendarCheck } from 'lucide-react';
+import { FileWarning, Printer, Check, CalendarCheck, ReceiptText } from 'lucide-react';
 import { format, parseISO, subMonths, addMonths, endOfMonth, setMonth } from 'date-fns';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import {
@@ -21,7 +21,8 @@ import {
   isPositiveStatus,
   isLoanTimelineType
 } from '../../enums/index.js';
-import { buildDebtorsReportHtml, buildClosingReportHtml } from '../../utils/receiptGenerator.js';
+import { buildDebtorsReportHtml, buildClosingReportHtml, buildReceiptRegisterHtml } from '../../utils/receiptGenerator.js';
+import * as api from '../../services/api.js';
 import { computeClosingReport } from '../../utils/closingReport.js';
 import { getLoanMetrics } from '../../utils/loanCalculations.js';
 import { computeMoneySummary } from '../../../shared/finance/moneySummary.js';
@@ -29,7 +30,8 @@ import ReceiptModal from '../modals/ReceiptModal.jsx';
 
 const REPORTS = [
   { id: ReportType.DEBTORS, icon: FileWarning },
-  { id: ReportType.CLOSINGS, icon: CalendarCheck }
+  { id: ReportType.CLOSINGS, icon: CalendarCheck },
+  { id: ReportType.RECEIPTS, icon: ReceiptText }
 ];
 
 const CLOSING_PERIOD_OPTIONS = [ClosingPeriod.MONTH, ClosingPeriod.YEAR, ClosingPeriod.GENERAL];
@@ -148,7 +150,8 @@ export default function TimeboardReportsTab({ timeboard, timelines = [], events 
     };
   };
 
-  const buildClosingsHtml = () => {
+  // Period chosen in the closing filters (closings and register of receipts)
+  const closingRange = () => {
     let fromDate;
     let toDate;
     let periodLabel;
@@ -168,7 +171,11 @@ export default function TimeboardReportsTab({ timeboard, timelines = [], events 
       toDate = closingUntilDate || todayStr;
       periodLabel = t('timeboardSettings.reports.closings.periodGeneral', { date: format(parseISO(toDate), 'dd/MM/yyyy') });
     }
+    return { fromDate, toDate, periodLabel };
+  };
 
+  const buildClosingsHtml = () => {
+    const { fromDate, toDate, periodLabel } = closingRange();
     const report = computeClosingReport({
       events,
       timelines: boardTimelines,
@@ -257,9 +264,38 @@ export default function TimeboardReportsTab({ timeboard, timelines = [], events 
     return buildDebtorsReportHtml({ timeboard, currentUser, fromDate, toDate: todayStr, groups, total, language, t });
   };
 
-  const handlePrint = () => {
+  // Register of receipts: every received obligation of the period (by payment date) with its receipt number and code
+  const buildReceiptRegisterHtmlForPeriod = async () => {
+    const { fromDate, toDate, periodLabel } = closingRange();
+    const boardIds = new Set(boardTimelines.map((tl) => String(tl.id)));
+    const personById = new Map(persons.map((p) => [String(p.id), p]));
+    const codes = await api.fetchReceiptCodes(timeboard.id, { from: fromDate, to: toDate });
+    const codeByOccurrence = new Map(codes.map((c) => [`${c.eventId}|${c.occurrenceDate}`, c.code]));
+    const rows = events
+      .filter((ev) => ev?.date && !ev.isVirtual && !ev.isReference && boardIds.has(String(ev.timelineId || ev.timeline_id || ''))
+        && (ev.obligationPersonId || ev.obligation_person_id) && isPositiveStatus(ev.status))
+      .map((ev) => {
+        const person = personById.get(String(ev.obligationPersonId || ev.obligation_person_id));
+        const paymentDate = String(ev.receiptDate || ev.receipt_date || ev.date).substring(0, 10);
+        return {
+          receiptNumber: Number(ev.contYear ?? ev.cont_year) > 0 ? Number(ev.contYear ?? ev.cont_year) : null,
+          paymentDate,
+          unit: person?.obligatorIdentification || '',
+          payer: getPersonName(person),
+          concept: ev.title || ev.name || '',
+          amount: Math.abs(Number(ev.amount || 0)),
+          code: codeByOccurrence.get(`${ev.eventId || ev.id}|${ev.date}`) || ''
+        };
+      })
+      .filter((row) => (!fromDate || row.paymentDate >= fromDate) && row.paymentDate <= toDate)
+      .sort((a, b) => (a.receiptNumber ?? Infinity) - (b.receiptNumber ?? Infinity) || a.paymentDate.localeCompare(b.paymentDate));
+    return buildReceiptRegisterHtml({ timeboard, currentUser, periodLabel, rows, language, t });
+  };
+
+  const handlePrint = async () => {
     if (selectedReport === ReportType.DEBTORS) setPrintHtml(buildDebtorsHtml());
     if (selectedReport === ReportType.CLOSINGS) setPrintHtml(buildClosingsHtml());
+    if (selectedReport === ReportType.RECEIPTS) setPrintHtml(await buildReceiptRegisterHtmlForPeriod());
   };
 
   const renderSegmented = (label, options, value, onChange, labelOf) => (
@@ -450,13 +486,13 @@ export default function TimeboardReportsTab({ timeboard, timelines = [], events 
                       {renderTimelinePicker()}
                     </>
                   )}
-                  {id === ReportType.CLOSINGS && renderClosingFilters()}
+                  {(id === ReportType.CLOSINGS || id === ReportType.RECEIPTS) && renderClosingFilters()}
                   <button
                     type="button"
                     className="btn btn-primary btn-sm"
                     onClick={handlePrint}
                     disabled={
-                      (id === ReportType.CLOSINGS && closingPeriod === ClosingPeriod.GENERAL && !closingUntilDate) ||
+                      ((id === ReportType.CLOSINGS || id === ReportType.RECEIPTS) && closingPeriod === ClosingPeriod.GENERAL && !closingUntilDate) ||
                       (id === ReportType.DEBTORS && selectedDebtorTimelineIds.length === 0)
                     }
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}

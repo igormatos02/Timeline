@@ -47,6 +47,7 @@ import {
   EventType,
   EventStatus,
   ClearanceDocumentType,
+  ReceiptPart,
   HISTORY_PERIOD_MONTHS,
   HistoryPeriod,
   TimelineType,
@@ -218,6 +219,7 @@ function VerticalTimeline({
     handleReceiptDateChange,
     handleReceiptPrint,
     handleReceiptSendEmail,
+    handleReceiptPartsChange,
     handleSaveReceiptDate,
     handleSaveReceiptNumber,
     isGeneratingReceipt,
@@ -1825,6 +1827,21 @@ function VerticalTimeline({
             onSaveReceiptNumber={receiptModalData.targetEvent ? handleSaveReceiptNumber : undefined}
             onSendEmail={isCondoflow && receiptModalData.targetEvent && receiptModalData.targetPerson ? handleReceiptSendEmail : undefined}
             defaultEmail={receiptModalData.targetPerson?.email || ''}
+            toolbar={receiptModalData.targetEvent ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                {[ReceiptPart.BOTH, ReceiptPart.RECEIPT, ReceiptPart.STUB].map((part) => (
+                  <button
+                    key={part}
+                    type="button"
+                    onClick={() => handleReceiptPartsChange(part)}
+                    className={`btn btn-sm ${receiptModalData.parts === part ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ padding: '4px 10px', borderRadius: '6px' }}
+                  >
+                    {t(`receipt.parts.${part}`)}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           />
         )}
 

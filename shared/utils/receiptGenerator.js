@@ -5,7 +5,7 @@
 import { format, parseISO } from 'date-fns';
 import { pt, enUS } from 'date-fns/locale';
 import { formatCurrency } from './formatCurrency.js';
-import { EventType, ClearanceDocumentType, TIMELINE_COLOR_PRESETS } from '../enums/index.js';
+import { EventType, ClearanceDocumentType, TIMELINE_COLOR_PRESETS, ReceiptPart } from '../enums/index.js';
 import { PrintTheme } from '../config/printTheme.js';
 import qrcode from 'qrcode-generator';
 
@@ -327,7 +327,9 @@ export function buildReceiptHtml({
   paymentDate = null,
   // Receipt code (receipt_codes) and its verification page: printed with a QR code
   receiptCode = null,
-  verifyUrl = null
+  verifyUrl = null,
+  // Receipt and stub (administration's print), only the receipt (sent to the payer) or only the stub (archive)
+  parts = ReceiptPart.BOTH
 }) {
   const isIncome = event?.eventType === EventType.INCOME;
   const isPt = language === 'pt';
@@ -442,16 +444,15 @@ ${RECEIPT_STYLES}
     </head>
     <body>
       <div class="container">
-        <!-- Parte 1: Recibo (50%) -->
-        ${renderSection(t('receipt.receiptTitle'), false)}
+        ${parts !== ReceiptPart.STUB ? renderSection(t('receipt.receiptTitle'), false) : ''}
 
-        <!-- Linha divisória de 50% com Picote -->
+        ${parts === ReceiptPart.BOTH ? `
+        <!-- Cut line between the receipt and the stub -->
         <div class="divider">
           <span class="divider-tag">✂ ${t('receipt.stubTitle')}</span>
-        </div>
+        </div>` : ''}
 
-        <!-- Parte 2: Canhoto (50%) -->
-        ${renderSection(t('receipt.stubTitle'), true)}
+        ${parts !== ReceiptPart.RECEIPT ? renderSection(t('receipt.stubTitle'), true) : ''}
       </div>
     </body>
     </html>
@@ -863,6 +864,84 @@ ${DOCUMENT_TABLE_STYLES}
               <tr class="total-row">
                 <td colspan="3">${t('timeboardSettings.reports.debtors.total')}</td>
                 <td class="num">${formatCurrency(total)}</td>
+              </tr>` : ''}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Register of the receipts issued in a period (for the condominium's book): one line per receipt, by receipt
+ * number — number, payment date, unit, payer, concept, amount and receipt code — with the total.
+ * rows: [{ receiptNumber, paymentDate, unit, payer, concept, amount, code }]
+ */
+export function buildReceiptRegisterHtml({ timeboard, currentUser, periodLabel, rows = [], language = 'pt', t }) {
+  const { timeboardName, timeboardDesc } = resolveIssuer({ timeboard, currentUser, t });
+  const titleLabel = t('timeboardSettings.reports.receiptRegister.title');
+  const total = rows.reduce((sum, row) => sum + Math.abs(Number(row.amount || 0)), 0);
+  const hasCodes = rows.some((row) => row.code);
+  const columns = hasCodes ? 7 : 6;
+  const rowsHtml = rows.length > 0
+    ? rows.map((r) => `
+          <tr>
+            <td>${r.receiptNumber ?? '—'}</td>
+            <td>${r.paymentDate ? format(parseISO(r.paymentDate), 'dd/MM/yyyy') : '—'}</td>
+            <td>${escapeHtml(r.unit) || '—'}</td>
+            <td>${escapeHtml(r.payer) || '—'}</td>
+            <td>${escapeHtml(r.concept) || '—'}</td>
+            <td class="num">${formatCurrency(Math.abs(Number(r.amount || 0)))}</td>
+            ${hasCodes ? `<td class="code">${escapeHtml(r.code) || '—'}</td>` : ''}
+          </tr>`).join('')
+    : `
+          <tr><td colspan="${columns}" class="empty">${t('timeboardSettings.reports.receiptRegister.empty')}</td></tr>`;
+
+  return `
+    <!DOCTYPE html>
+    <html lang="${language}">
+    <head>
+      <meta charset="utf-8" />
+      <title>${titleLabel} - ${timeboardName}</title>
+      <style>
+${RECEIPT_STYLES}
+${DOCUMENT_TABLE_STYLES}
+        .history { line-height: 1.5; font-size: 13px; }
+        .history .doc-title { font-size: 16px; font-weight: 800; text-align: center; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+        .history .condo-name { font-size: 14px; font-weight: 700; text-align: center; margin-bottom: 4px; }
+        .history .print-layout { text-align: center; margin-bottom: 16px; }
+        .history .period { margin-bottom: 12px; text-align: center; }
+        .charges-table .code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 10px; }
+        .charges-table .total-row td { font-weight: 800; font-size: 13px; border-top: 2px solid currentColor; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="receipt-section history">
+          <div class="doc-title">${titleLabel}</div>
+          <div class="condo-name">${timeboardName}</div>
+          ${timeboardDesc ? `<div class="print-layout">${timeboardDesc}</div>` : ''}
+          <div class="period">${periodLabel}</div>
+          <table class="charges-table">
+            <thead>
+              <tr>
+                <th>${t('timeboardSettings.reports.receiptRegister.colNumber')}</th>
+                <th>${t('timeboardSettings.reports.receiptRegister.colDate')}</th>
+                <th>${t('timeboardSettings.reports.receiptRegister.colUnit')}</th>
+                <th>${t('timeboardSettings.reports.receiptRegister.colPayer')}</th>
+                <th>${t('timeboardSettings.reports.receiptRegister.colConcept')}</th>
+                <th class="num">${t('timeboardSettings.reports.receiptRegister.colAmount')}</th>
+                ${hasCodes ? `<th>${t('timeboardSettings.reports.receiptRegister.colCode')}</th>` : ''}
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}
+            ${rows.length > 0 ? `
+              <tr class="total-row">
+                <td colspan="5">${t('timeboardSettings.reports.receiptRegister.total', { count: rows.length })}</td>
+                <td class="num">${formatCurrency(total)}</td>
+                ${hasCodes ? '<td></td>' : ''}
               </tr>` : ''}
             </tbody>
           </table>

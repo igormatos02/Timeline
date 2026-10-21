@@ -1,7 +1,15 @@
 // Reports available in the timeboard settings (Reports tab)
 export const ReportType = Object.freeze({
   DEBTORS: 'debtors',
-  CLOSINGS: 'closings'
+  CLOSINGS: 'closings',
+  RECEIPTS: 'receipts' // register of the receipts issued in a period (printed for the condominium's book)
+});
+
+// Parts of a printed receipt: the receipt (the payer's copy) and the stub (canhoto, kept by the administration)
+export const ReceiptPart = Object.freeze({
+  BOTH: 'both',
+  RECEIPT: 'receipt',
+  STUB: 'stub'
 });
 
 // How the rows of a report are grouped

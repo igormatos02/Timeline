@@ -29,7 +29,7 @@ export { FollowupStatus, normalizeFollowupStatus } from './FollowupStatus.js';
 export { ClearanceDocumentType } from './ClearanceDocumentType.js';
 export { HistoryPeriod, HISTORY_PERIOD_MONTHS } from './HistoryPeriod.js';
 export { DiaryPublishStatus } from './DiaryPublishStatus.js';
-export { ReportType, ReportGroupBy, ClosingPeriod } from './ReportType.js';
+export { ReportType, ReportGroupBy, ClosingPeriod, ReceiptPart } from './ReportType.js';
 export { HeaderDefaultState } from './HeaderDefaultState.js';
 export { ProjectionDirection } from './ProjectionDirection.js';
 export { AccountMovementType, getAccountMovementType } from './AccountMovementType.js';

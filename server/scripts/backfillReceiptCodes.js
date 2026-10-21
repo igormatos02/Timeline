@@ -7,14 +7,14 @@ import { receiptCodeService } from '../application/services/ReceiptCodeService.j
 import { TimeboardType, isPositiveStatus } from '../../shared/enums/index.js';
 
 const apply = process.argv.includes('--apply');
-const today = new Date().toISOString().substring(0, 10);
 const condominiums = await timeboardRepository.getAll((tb) => tb.type === TimeboardType.CONDOFLOW);
 let total = 0;
 let withoutNumber = 0;
 for (const timeboard of condominiums) {
-  const events = await eventService.getAllEvents({ timeboardId: timeboard.id, endDate: today });
+  // Every paid occurrence, also those paid in advance (dated after today)
+  const events = await eventService.getAllEvents({ timeboardId: timeboard.id });
   const paid = (events || [])
-    .filter((ev) => (ev.obligationPersonId || ev.obligation_person_id) && isPositiveStatus(ev.status) && ev.date <= today)
+    .filter((ev) => (ev.obligationPersonId || ev.obligation_person_id) && isPositiveStatus(ev.status))
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
   const missing = paid.filter((ev) => !(Number(ev.contYear ?? ev.cont_year) > 0)).length;
   total += paid.length;

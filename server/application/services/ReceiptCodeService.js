@@ -8,7 +8,7 @@ import { timeboardRepository } from '../../infrastructure/database/supabase/Supa
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
 import { eventService } from './EventService.js';
-import { EventRecurrence, PersonRole, TimeboardType, isPositiveStatus } from '../../../shared/enums/index.js';
+import { EventRecurrence, PersonRole, ReceiptPart, TimeboardType, isPositiveStatus } from '../../../shared/enums/index.js';
 import { buildReceiptHtml, computeNextReceiptNumber, computeReceiptNumber } from '../../../shared/utils/receiptGenerator.js';
 import { formatCurrency } from '../../../shared/utils/formatCurrency.js';
 import { getAppUrl } from '../../../shared/config/appConfig.js';
@@ -194,7 +194,9 @@ export class ReceiptCodeService {
       t: createT(language),
       paymentDate: event.receiptDate || event.date,
       receiptCode: code,
-      verifyUrl: receiptVerifyUrl(code)
+      verifyUrl: receiptVerifyUrl(code),
+      // The payer's copy (the stub stays with the administration)
+      parts: ReceiptPart.RECEIPT
     });
   }
 

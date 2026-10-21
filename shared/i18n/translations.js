@@ -1307,16 +1307,30 @@ export const translations = {
         print: "Print",
         types: {
           debtors: "Debtors Report",
-          closings: "Closings"
+          closings: "Closings",
+          receipts: "Register of receipts"
         },
         typesDesc: {
           debtors: "Overdue income and account deposits not yet settled, by timeline, debtor or date",
-          closings: "Income, savings, expenses, balance and pending amounts of a month, a year or up to a date"
+          closings: "Income, savings, expenses, balance and pending amounts of a month, a year or up to a date",
+          receipts: "Every receipt issued in a period, by number — to print for the condominium's book"
         },
         groupBy: {
           timeline: "Timeline",
           debtor: "Debtor",
           date: "Date"
+        },
+        receiptRegister: {
+          title: "Register of receipts",
+          colNumber: "No.",
+          colDate: "Payment",
+          colUnit: "Unit",
+          colPayer: "Payer",
+          colConcept: "Concept",
+          colAmount: "Amount",
+          colCode: "Receipt code",
+          total: "Total ({{count}} receipts)",
+          empty: "No receipts in this period."
         },
         debtors: {
           title: "Debtors Report",
@@ -2751,6 +2765,7 @@ export const translations = {
     receipt: {
       numberPrefix: "No.",
       codeLabel: "Receipt code",
+      parts: { both: "Receipt and stub", receipt: "Receipt only", stub: "Stub only" },
       electronicIssued: "Document issued electronically by the condominium's administration, valid without signature.",
       verifyHint: "Check that this receipt is valid at {{url}}",
       sendEmail: "Send by e-mail",
@@ -4163,16 +4178,30 @@ export const translations = {
         print: "Imprimir",
         types: {
           debtors: "Relatório de Devedores",
-          closings: "Fechamentos"
+          closings: "Fechamentos",
+          receipts: "Registo de recibos"
         },
         typesDesc: {
           debtors: "Entradas e depósitos na conta em atraso ainda não liquidados, por timeline, devedor ou data",
-          closings: "Entradas, poupança, saídas, balanço e valores pendentes de um mês, de um ano ou até uma data"
+          closings: "Entradas, poupança, saídas, balanço e valores pendentes de um mês, de um ano ou até uma data",
+          receipts: "Todos os recibos emitidos num período, por número — para imprimir para o livro do condomínio"
         },
         groupBy: {
           timeline: "Timeline",
           debtor: "Devedor",
           date: "Data"
+        },
+        receiptRegister: {
+          title: "Registo de recibos",
+          colNumber: "Nº",
+          colDate: "Pagamento",
+          colUnit: "Fração",
+          colPayer: "Pago por",
+          colConcept: "Conceito",
+          colAmount: "Valor",
+          colCode: "Código do recibo",
+          total: "Total ({{count}} recibos)",
+          empty: "Não há recibos neste período."
         },
         debtors: {
           title: "Relatório de Devedores",
@@ -5680,6 +5709,7 @@ export const translations = {
     receipt: {
       numberPrefix: "Nº",
       codeLabel: "Código do recibo",
+      parts: { both: "Recibo e canhoto", receipt: "Só recibo", stub: "Só canhoto" },
       electronicIssued: "Documento emitido eletronicamente pela administração do condomínio, válido sem assinatura.",
       verifyHint: "Confirme a validade deste recibo em {{url}}",
       sendEmail: "Enviar por email",

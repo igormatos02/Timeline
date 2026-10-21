@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { buildReceiptHtml, computeNextReceiptNumber, computeReceiptNumber } from '../../utils/receiptGenerator.js';
 import * as api from '../../services/api.js';
 import { format } from 'date-fns';
-import { TimeboardType } from '../../enums/index.js';
+import { ReceiptPart, TimeboardType } from '../../enums/index.js';
 
 // Extracted from VerticalTimeline.jsx (VerticalTimeline).
 export function useTimelineReceipts({
@@ -137,7 +137,8 @@ export function useTimelineReceipts({
           t,
           paymentDate: prev.receiptDate,
           receiptCode: result.code,
-          verifyUrl: result.verifyUrl
+          verifyUrl: result.verifyUrl,
+          parts: prev.parts
         });
         return {
           ...prev,
@@ -187,6 +188,8 @@ export function useTimelineReceipts({
           receiptDate,
           // The receipt number can be changed at any time
           canEditReceiptNumber: true,
+          // Receipt and stub by default; only the stub prints the administration's archive copy
+          parts: ReceiptPart.BOTH,
           // Automatic proposal (timeline counter): saving it advances the counter, a custom number does not
           proposedReceiptNumber: hasStoredNumber ? null : receiptNumber
         });
@@ -216,11 +219,35 @@ export function useTimelineReceipts({
         t,
         paymentDate: nextDate,
         receiptCode: prev.receiptCode,
+        parts: prev.parts,
         verifyUrl: prev.verifyUrl
       });
       return { ...prev, receiptDate: nextDate, htmlContent: html };
     });
   }, [activeTimeboard, timeline, currentUser, persons, language, t]);
+
+  // Receipt / stub / both: rebuild the document with the chosen parts
+  const handleReceiptPartsChange = useCallback((parts) => {
+    setReceiptModalData((prev) => {
+      if (!prev || !prev.targetEvent) return prev;
+      const html = buildReceiptHtml({
+        event: prev.targetEvent,
+        timeboard: activeTimeboard,
+        timeline: resolveReceiptTimeline(prev.targetEvent),
+        receiptNumber: prev.receiptNumber,
+        currentUser,
+        obligationPerson: prev.targetPerson,
+        persons,
+        language,
+        t,
+        paymentDate: prev.receiptDate,
+        receiptCode: prev.receiptCode,
+        verifyUrl: prev.verifyUrl,
+        parts
+      });
+      return { ...prev, parts, htmlContent: html };
+    });
+  }, [activeTimeboard, currentUser, persons, language, t, resolveReceiptTimeline]);
 
   // "Save" in the receipt modal: store the payment date in financial_event_status.receipt_date
   const handleSaveReceiptDate = useCallback(async (nextDate) => {
@@ -291,6 +318,7 @@ export function useTimelineReceipts({
         t,
         paymentDate: prev.receiptDate,
         receiptCode: prev.receiptCode,
+        parts: prev.parts,
         verifyUrl: prev.verifyUrl
       });
       return { ...prev, receiptNumber: number, htmlContent: html, proposedReceiptNumber: null };
@@ -414,6 +442,7 @@ export function useTimelineReceipts({
     handleReceiptDateChange,
     handleReceiptPrint,
     handleReceiptSendEmail,
+    handleReceiptPartsChange,
     handleSaveReceiptDate,
     handleSaveReceiptNumber,
     isGeneratingReceipt,

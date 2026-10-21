@@ -369,6 +369,14 @@ export async function fetchReceiptCode(eventId, date) {
   return res.json();
 }
 
+// Valid receipt codes of a timeboard between two dates (register of receipts report)
+export async function fetchReceiptCodes(timeboardId, { from, to }) {
+  const query = new URLSearchParams(Object.entries({ from, to }).filter(([, value]) => value)).toString();
+  const res = await apiFetch(`${API_BASE}/timeboards/${encodeURIComponent(timeboardId)}/receipt-codes${query ? `?${query}` : ''}`, { headers: getHeaders() });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 // Public: whether a receipt code is valid (timeboard.pt/recibo/<code>)
 export async function verifyReceiptCode(code, language) {
   const res = await fetch(`${API_BASE}/receipts/verify/${encodeURIComponent(code)}?lang=${encodeURIComponent(language || 'pt')}`);

@@ -322,8 +322,9 @@ export async function removeTimeboardMember(timeboardId, memberUserId) {
 }
 
 // CondoFlow license of a condominium: plan in force, end date, limits (null = unlimited) and usage
-export async function fetchTimeboardPlan(timeboardId) {
-  const res = await apiFetch(`${API_BASE}/timeboards/${encodeURIComponent(timeboardId)}/plan`, { headers: getHeaders() });
+export async function fetchTimeboardPlan(timeboardId, { withFirstSteps = false } = {}) {
+  const query = withFirstSteps ? '?withFirstSteps=1' : '';
+  const res = await apiFetch(`${API_BASE}/timeboards/${encodeURIComponent(timeboardId)}/plan${query}`, { headers: getHeaders() });
   if (!res.ok) return null;
   return res.json();
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import TimeboardsHub from '../components/dashboard-hub/TimeboardsHub.jsx';
 import * as api from '../services/api';
 import HubTimeboardModals from './HubTimeboardModals.jsx';
@@ -25,6 +25,8 @@ export default function AppHubView({
   theme,
   timeboards
 }) {
+  // Settings tab to open (the hub's first steps open the entities tab)
+  const [settingsTab, setSettingsTab] = useState(undefined);
   return (
     <div className="app-container">
       <TimeboardsHub
@@ -37,7 +39,8 @@ export default function AppHubView({
           setEditingTimeboard(null);
           setIsTimeboardModalOpen(true);
         }}
-        onOpenEditTimeboard={async (tb) => {
+        onOpenEditTimeboard={async (tb, tab) => {
+          setSettingsTab(tab);
           try {
             const fresh = await api.fetchTimeboard(tb.id);
             setEditingTimeboard(fresh || tb);
@@ -53,6 +56,7 @@ export default function AppHubView({
         language={language}
         onToggleLanguage={() => setLanguage(language === 'pt' ? 'en' : 'pt')}
         t={t}
+        statusRefreshKey={isTimeboardSettingsModalOpen}
       />
 
       {/* Global Modals for Timeboard management */}
@@ -65,6 +69,7 @@ export default function AppHubView({
         setEditingTimeboard={setEditingTimeboard}
         setIsTimeboardModalOpen={setIsTimeboardModalOpen}
         setIsTimeboardSettingsModalOpen={setIsTimeboardSettingsModalOpen}
+        settingsInitialTab={settingsTab}
       />
     </div>
   );

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { format, parseISO } from 'date-fns';
 import {
   Clock,
   Sparkles,
@@ -18,7 +19,10 @@ import {
   ChevronDown,
   Home
 } from 'lucide-react';
-import { TimeboardType, TimelineColor, PersonRole } from '../../enums/index.js';
+import { TimeboardType, TimelineColor, PersonRole, TimeboardSettingsTab } from '../../enums/index.js';
+import { BRAND } from '../../../shared/config/businessConfig.js';
+import * as api from '../../services/api.js';
+import HubFirstSteps from './HubFirstSteps.jsx';
 import { isGlobalTenant } from '../../constants/tenant.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import LogoutConfirmModal from '../LogoutConfirmModal.jsx';
@@ -38,9 +42,11 @@ export default function TimeboardsHub({
   onToggleTheme,
   language,
   onToggleLanguage,
-  t: propT
+  t: propT,
+  // Changes when the settings close, so the condominiums' plan and first steps reload
+  statusRefreshKey
 }) {
-  const { t: hookT } = useTranslation();
+  const { t: hookT, dateLocale } = useTranslation();
   const t = propT || hookT;
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -78,50 +84,46 @@ export default function TimeboardsHub({
   const filteredMy = filterList(myTimeboards);
   const filteredShared = filterList(sharedTimeboards);
 
+  // Badge of each timeboard type (tinted from its palette color)
+  const TYPE_DETAILS = {
+    [TimeboardType.EMPTY]: { labelKey: 'timeboardsHub.typeEmpty', color: TimelineColor.EMPTY, Icon: Layers },
+    [TimeboardType.PROJECTS]: { labelKey: 'timeboardsHub.typeProject', color: TimelineColor.BLUE, Icon: FolderKanban },
+    [TimeboardType.REMINDERS]: { labelKey: 'timeboardsHub.typeReminders', color: TimelineColor.WARNING, Icon: Calendar },
+    [TimeboardType.CONDOFLOW]: { labelKey: 'timeboardsHub.typeCondoflow', color: TimelineColor.CONDOFLOW, Icon: Home },
+    [TimeboardType.FINANCIAL]: { labelKey: 'timeboardsHub.typeFinancial', color: TimelineColor.FINANCIAL, Icon: Wallet }
+  };
   const getTypeDetails = (type) => {
-    if (type === TimeboardType.EMPTY || type === 'empty') {
-      return {
-        label: t('timeboardsHub.typeEmpty'),
-        color: TimelineColor.EMPTY,
-        bg: `rgba(100, 116, 139, 0.15)`,
-        border: `rgba(100, 116, 139, 0.3)`,
-        icon: <Layers size={20} style={{ color: TimelineColor.EMPTY }} />
-      };
-    }
-    if (type === TimeboardType.PROJECT || type === TimeboardType.PROJECTS || type === 'projects' || type === 'project') {
-      return {
-        label: t('timeboardsHub.typeProject'),
-        color: TimelineColor.BLUE,
-        bg: 'rgba(59, 130, 246, 0.15)',
-        border: 'rgba(59, 130, 246, 0.3)',
-        icon: <FolderKanban size={20} style={{ color: TimelineColor.BLUE }} />
-      };
-    }
-    if (type === TimeboardType.REMINDERS || type === 'reminders' || type === 'reminder') {
-      return {
-        label: t('timeboardsHub.typeReminders'),
-        color: TimelineColor.WARNING,
-        bg: 'rgba(245, 158, 11, 0.15)',
-        border: 'rgba(245, 158, 11, 0.3)',
-        icon: <Calendar size={20} style={{ color: TimelineColor.WARNING }} />
-      };
-    }
-    if (type === TimeboardType.CONDOFLOW || type === 'condoflow') {
-      return {
-        label: t('timeboardsHub.typeCondoflow'),
-        color: TimelineColor.CONDOFLOW,
-        bg: 'rgba(166, 128, 105, 0.15)',
-        border: 'rgba(166, 128, 105, 0.3)',
-        icon: <Home size={20} style={{ color: TimelineColor.CONDOFLOW }} />
-      };
-    }
-    return {
-      label: t('timeboardsHub.typeFinancial'),
-      color: TimelineColor.FINANCIAL,
-      bg: 'rgba(16, 185, 129, 0.15)',
-      border: 'rgba(16, 185, 129, 0.3)',
-      icon: <Wallet size={20} style={{ color: TimelineColor.FINANCIAL }} />
-    };
+    const { labelKey, color, Icon } = TYPE_DETAILS[type] || TYPE_DETAILS[TimeboardType.FINANCIAL];
+    return { label: t(labelKey), color, bg: `${color}26`, border: `${color}4d`, icon: <Icon size={20} style={{ color }} /> };
+  };
+
+  // Condominiums the user manages (owned or shared as administrator): plan, usage and first steps
+  const managedCondos = useMemo(() => [
+    ...myTimeboards.filter((tb) => tb.type === TimeboardType.CONDOFLOW),
+    ...sharedTimeboards.filter((tb) => tb.type === TimeboardType.CONDOFLOW && tb.role === PersonRole.ADMIN)
+  ], [myTimeboards, sharedTimeboards]);
+  const managedKey = managedCondos.map((tb) => tb.id).join(',');
+  const [condoStatusById, setCondoStatusById] = useState({});
+  useEffect(() => {
+    let isActive = true;
+    Promise.all(managedCondos.map((tb) => api.fetchTimeboardPlan(tb.id, { withFirstSteps: true }).then((info) => [tb.id, info]).catch(() => [tb.id, null])))
+      .then((entries) => { if (isActive) setCondoStatusById(Object.fromEntries(entries.filter(([, info]) => info?.isLicensed))); });
+    return () => { isActive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [managedKey, statusRefreshKey]);
+
+  const renderPlanLine = (tb) => {
+    const info = condoStatusById[tb.id];
+    if (!info) return null;
+    const isTrial = info.expiresAt && !info.isExpired;
+    return (
+      <div style={{ marginTop: '8px', fontSize: '0.76rem', color: 'var(--text-muted)', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+        <span style={{ color: TimelineColor.CONDOFLOW, fontWeight: 700 }}>
+          {t('timeboardsHub.planUnits', { plan: t(`plans.names.${info.effectivePlanId}`), units: info.usage.units, max: info.limits.maxUnits ?? t('plans.unlimited') })}
+        </span>
+        {isTrial && <span>· {t('timeboardsHub.trialEnds', { date: format(parseISO(info.expiresAt), 'dd MMM yyyy', { locale: dateLocale }) })}</span>}
+      </div>
+    );
   };
 
   const renderTimeboardCard = (tb, isShared = false) => {
@@ -146,14 +148,14 @@ export default function TimeboardsHub({
                 <span
                   className="hub-card-badge"
                   style={{
-                    background: 'rgba(168, 85, 247, 0.15)',
+                    background: `${TimelineColor.PURPLE}26`,
                     color: TimelineColor.PURPLE,
-                    border: '1px solid rgba(168, 85, 247, 0.35)',
+                    border: `1px solid ${TimelineColor.PURPLE}59`,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '4px'
                   }}
-                  title="Partilhado consigo via Timeboard Members"
+                  title={t('timeboardsHub.sharedWithYou')}
                 >
                   <Share2 size={11} />
                   <span>
@@ -185,6 +187,7 @@ export default function TimeboardsHub({
             <p className="hub-card-desc">
               {tb.description || t('timeboardsHub.noDescription')}
             </p>
+            {renderPlanLine(tb)}
           </div>
         </div>
 
@@ -192,8 +195,8 @@ export default function TimeboardsHub({
           <button
             type="button"
             style={{
-              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.05) 100%)',
-              border: '1px solid rgba(99, 102, 241, 0.3)',
+              background: `linear-gradient(135deg, ${TimelineColor.PRIMARY}26 0%, ${TimelineColor.PRIMARY}0d 100%)`,
+              border: `1px solid ${TimelineColor.PRIMARY}4d`,
               color: 'var(--primary-light)',
               padding: '6px 12px',
               borderRadius: '8px',
@@ -244,7 +247,7 @@ export default function TimeboardsHub({
           <div className="hub-brand-icon">
             <Clock size={20} />
           </div>
-          <span>Timeboard <Sparkles size={15} style={{ color: TimelineColor.PRIMARY }} /></span>
+          <span>{BRAND.platform} <Sparkles size={15} style={{ color: TimelineColor.PRIMARY }} /></span>
         </div>
 
         <div className="hub-header-actions">
@@ -280,7 +283,7 @@ export default function TimeboardsHub({
               display: 'flex',
               alignItems: 'center'
             }}
-            title={theme === 'dark' ? 'Tema Claro' : 'Tema Escuro'}
+            title={theme === 'dark' ? t('header.toggleThemeLight') : t('header.toggleThemeDark')}
           >
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
@@ -294,10 +297,10 @@ export default function TimeboardsHub({
               title={t('header.userProfile')}
             >
               <div className="hub-user-avatar">
-                {currentUser?.avatarInitials || 'IM'}
+                {currentUser?.avatarInitials || ''}
               </div>
               <span style={{ fontSize: '0.88rem', fontWeight: '600' }}>
-                {currentUser?.name || 'Igor Matos'}
+                {currentUser?.name || currentUser?.email || ''}
               </span>
               <ChevronDown
                 size={14}
@@ -320,7 +323,7 @@ export default function TimeboardsHub({
                   background: 'var(--bg-card)',
                   border: '1px solid var(--border-glass-glow)',
                   borderRadius: '12px',
-                  boxShadow: '0 16px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.15)',
+                  boxShadow: 'var(--shadow-lg), var(--shadow-glow)',
                   backdropFilter: 'blur(16px)',
                   WebkitBackdropFilter: 'blur(16px)',
                   padding: '6px',
@@ -333,7 +336,7 @@ export default function TimeboardsHub({
                 {/* User Info Header */}
                 <div style={{ padding: '6px 8px 6px 8px' }}>
                   <div style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main)', lineHeight: 1.2 }}>
-                    {currentUser?.name || 'Igor Matos'}
+                    {currentUser?.name || currentUser?.email || ''}
                   </div>
                   {!isGlobalTenant(currentUser?.tenantId, currentUser?.tenantName) ? (
                     <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
@@ -371,7 +374,7 @@ export default function TimeboardsHub({
                     transition: 'background 0.15s ease'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.12)';
+                    e.currentTarget.style.background = `${TimelineColor.PRIMARY}1f`;
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'transparent';
@@ -407,7 +410,7 @@ export default function TimeboardsHub({
                     transition: 'background 0.15s ease'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)';
+                    e.currentTarget.style.background = `${TimelineColor.DANGER}1f`;
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'transparent';
@@ -428,7 +431,7 @@ export default function TimeboardsHub({
         <section className="hub-hero-banner">
           <div>
             <h1 className="hub-greeting-title">
-              {t('timeboardsHub.greetingTitle', { name: currentUser?.name ? currentUser.name.split(' ')[0] : 'Igor' })}
+              {t('timeboardsHub.greetingTitle', { name: currentUser?.name ? currentUser.name.split(' ')[0] : '' })}
             </h1>
             <p className="hub-greeting-subtitle">
               {t('timeboardsHub.greetingSubtitle')}
@@ -474,6 +477,15 @@ export default function TimeboardsHub({
           </div>
         </section>
 
+        {/* Condominiums still being set up */}
+        <HubFirstSteps
+          timeboards={managedCondos}
+          statusById={condoStatusById}
+          t={t}
+          onOpenSettings={(tb) => onOpenEditTimeboard(tb, TimeboardSettingsTab.ENTITIES)}
+          onOpenBoard={onSelectTimeboard}
+        />
+
         {/* Section 1: My Timeboards */}
         <section style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -484,7 +496,7 @@ export default function TimeboardsHub({
               </h2>
               <span
                 style={{
-                  background: 'rgba(99, 102, 241, 0.12)',
+                  background: `${TimelineColor.PRIMARY}1f`,
                   color: TimelineColor.PRIMARY,
                   padding: '2px 8px',
                   borderRadius: '100px',
@@ -532,7 +544,7 @@ export default function TimeboardsHub({
                 </h2>
                 <span
                   style={{
-                    background: 'rgba(168, 85, 247, 0.12)',
+                    background: `${TimelineColor.PURPLE}1f`,
                     color: TimelineColor.PURPLE,
                     padding: '2px 8px',
                     borderRadius: '100px',

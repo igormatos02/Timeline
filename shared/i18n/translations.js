@@ -1102,6 +1102,20 @@ export const translations = {
       stats: {
         myTimeboards: "My Timeboards",
         shared: "Shared"
+      },
+      sharedWithYou: "Shared with you",
+      planUnits: "{{plan}} · {{units}}/{{max}} units",
+      trialEnds: "Trial until {{date}}",
+      firstSteps: {
+        title: "First steps",
+        progress: "{{done}} of {{total}} done",
+        needsPlan: "Available from the {{plan}} plan.",
+        steps: {
+          units: { title: "Register the units", desc: "Add the units (frações) and their owners, or import them from a spreadsheet.", action: "Add units" },
+          fees: { title: "Set the monthly fees", desc: "Each unit's recurring fee, so the app knows what is due every month.", action: "Set fees" },
+          invites: { title: "Invite the owners", desc: "Each owner sees their fees and receipts on the web and in the app.", action: "Invite" },
+          notice: { title: "Publish the first notice", desc: "A post or reminder for the whole building.", action: "Open condominium" }
+        }
       }
     },
 
@@ -3669,6 +3683,20 @@ export const translations = {
       stats: {
         myTimeboards: "Meus Timeboards",
         shared: "Partilhados"
+      },
+      sharedWithYou: "Partilhado consigo",
+      planUnits: "{{plan}} · {{units}}/{{max}} frações",
+      trialEnds: "Teste até {{date}}",
+      firstSteps: {
+        title: "Primeiros passos",
+        progress: "{{done}} de {{total}} feitos",
+        needsPlan: "Disponível a partir do plano {{plan}}.",
+        steps: {
+          units: { title: "Registar as frações", desc: "Adicione as frações e os condóminos, ou importe-os de uma folha de cálculo.", action: "Adicionar frações" },
+          fees: { title: "Definir as quotas mensais", desc: "A quota recorrente de cada fração, para saber o que se deve em cada mês.", action: "Definir quotas" },
+          invites: { title: "Convidar os condóminos", desc: "Cada condómino vê as suas quotas e recibos na web e na app.", action: "Convidar" },
+          notice: { title: "Publicar o primeiro aviso", desc: "Um comunicado ou lembrete para todo o prédio.", action: "Abrir condomínio" }
+        }
       }
     },
 

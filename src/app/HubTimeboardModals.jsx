@@ -11,7 +11,8 @@ export default function HubTimeboardModals({
   isTimeboardSettingsModalOpen,
   setEditingTimeboard,
   setIsTimeboardModalOpen,
-  setIsTimeboardSettingsModalOpen
+  setIsTimeboardSettingsModalOpen,
+  settingsInitialTab
 }) {
   return (
     <Suspense fallback={null}>
@@ -30,6 +31,7 @@ export default function HubTimeboardModals({
           setEditingTimeboard(null);
         }}
         timeboard={editingTimeboard}
+        initialTab={settingsInitialTab}
         onSaveTimeboard={handleSaveTimeboard}
         onDeleteTimeboard={handleDeleteTimeboard}
       />

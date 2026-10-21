@@ -421,7 +421,7 @@ export default function PeopleTab({ timeboard, category = ALL, persons, setPerso
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-glass)', background: 'var(--bg-app)' }}>
-                {category === PersonCategory.UNIT && <th style={{ ...headCell, width: '130px' }}>{t('people.columns.unit')}</th>}
+                {category === PersonCategory.UNIT && <th style={{ ...headCell, width: '200px' }}>{t('people.columns.unit')}</th>}
                 <th style={headCell}>{category === PersonCategory.UNIT ? t('people.columns.owner') : t('people.columns.name')}</th>
                 {showsRole && <th style={{ ...headCell, width: '150px' }}>{t('people.columns.role')}</th>}
                 {showsAccess && <th style={{ ...headCell, width: '150px' }}>{t('people.columns.access')}</th>}

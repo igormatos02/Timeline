@@ -4,6 +4,7 @@ import { PlanFeature } from '../../../../shared/config/plans.js';
 import { timeboardService } from '../../../application/services/TimeboardService.js';
 import { firstStepsService } from '../../../application/services/FirstStepsService.js';
 import { dataExportService } from '../../../application/services/DataExportService.js';
+import { unitFeeService } from '../../../application/services/UnitFeeService.js';
 import { unitImportService } from '../../../application/services/UnitImportService.js';
 import { timeboardInvitationRepository } from '../../../infrastructure/database/supabase/SupabaseTimeboardInvitationRepository.js';
 import { timeboardAccessFromParam } from '../middleware/timeboardAccess.js';
@@ -67,6 +68,28 @@ timeboardsRouter.get('/:id/export', requireCapability(Capability.MANAGE), async 
     res.send(result.buffer);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/timeboards/:id/units/:personId/fee — the unit's monthly fee (value in force, parts, where it is received)
+timeboardsRouter.get('/:id/units/:personId/fee', requireCapability(Capability.MANAGE), async (req, res) => {
+  try {
+    const fee = await unitFeeService.getUnitFee(req.params.id, req.params.personId);
+    if (!fee) return res.status(404).json({ error: t('backend.validation.unitNotFound') });
+    res.json(fee);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/timeboards/:id/units/:personId/fee { amount, parts, channel, language } — "Atualizar lançamentos":
+// creates the fee from the start date, or changes it from next month on
+timeboardsRouter.post('/:id/units/:personId/fee', requireCapability(Capability.MANAGE), async (req, res) => {
+  try {
+    const { amount, parts, channel, language } = req.body || {};
+    res.json(await unitFeeService.applyUnitFee(req.params.id, req.params.personId, { amount, parts, channel }, language));
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message, code: err.code });
   }
 });
 

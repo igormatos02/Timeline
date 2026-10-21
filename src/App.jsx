@@ -735,7 +735,7 @@ export default function App() {
   // 3. Timeline Workspace View (When a specific timeboard is active)
   return (
     <PermissionsProvider role={timeboardRole} isReadOnly={isIndividualRole}>
-    <TimeboardProvider timeboardType={activeTimeboard?.type} headerDefaultState={activeTimeboard?.headerDefaultState} pockets={pockets}>
+    <TimeboardProvider timeboardType={activeTimeboard?.type} headerDefaultState={activeTimeboard?.headerDefaultState} pockets={pockets} baseFeeAmount={activeTimeboard?.baseFeeAmount ?? null}>
     <>
     <div className="app-container">
       {/* Navbar */}

@@ -23,6 +23,7 @@ import {
   normalizePeriodicity,
   TimelineType,
   InvestmentEventCategory,
+  IncomeEventCategory,
   AccountOperation,
   accountOperationEventType,
   accountOperationOf,
@@ -71,7 +72,12 @@ export default function CashFlowEventModal({
   // Bank account pockets (deposits choose the space that receives the money)
   pockets = []
 }) {
-  const { isCondoflow } = useTimeboard();
+  const { isCondoflow, baseFeeAmount } = useTimeboard();
+  // Condominiums: a new condominium payment starts with the base monthly fee (settings → Geral)
+  const baseFeeFor = (category) => (
+    isCondoflow && (category === IncomeEventCategory.CONDO_PAYMENT || category === InvestmentEventCategory.CONDO_PAYMENT) && baseFeeAmount !== null && baseFeeAmount !== undefined
+      ? String(baseFeeAmount) : ''
+  );
   const [currentEventType, setCurrentEventType] = useState(
     initialData?.eventType || eventType || EventType.INCOME
   );
@@ -119,7 +125,8 @@ export default function CashFlowEventModal({
     setFormData((prev) => ({
       ...prev,
       category: nextConfig.categoryDefault,
-      status: nextConfig.defaultStatus
+      status: nextConfig.defaultStatus,
+      amount: prev.amount === '' ? baseFeeFor(nextConfig.categoryDefault) : prev.amount
     }));
   };
 
@@ -301,7 +308,7 @@ export default function CashFlowEventModal({
         recurrence: EventRecurrence.ONCE,
         periodicity: EventPeriodicity.MONTHLY,
         recurrenceEndDate: defaultEndMonth,
-        amount: '',
+        amount: baseFeeFor(initialConfig.categoryDefault),
         isAutomatic: false,
         category: initialConfig.categoryDefault,
         isObligation: false,
@@ -314,7 +321,7 @@ export default function CashFlowEventModal({
     }
     setIsBreakdownOpen(false);
     setUpdateScope(EventUpdateMode.SINGLE);
-  }, [initialData, defaultDate, isOpen, isEditing, eventType, isCondoflow]);
+  }, [initialData, defaultDate, isOpen, isEditing, eventType, isCondoflow, baseFeeAmount]);
 
   const totalBreakdownAmount = breakdownItems.reduce(
     (acc, it) => acc + (parseFloat(it.amount) || 0), 0
@@ -753,7 +760,7 @@ export default function CashFlowEventModal({
           <div>
             <CategorySelector
               value={formData.category}
-              onChange={(catKey) => setFormData((prev) => ({ ...prev, category: catKey }))}
+              onChange={(catKey) => setFormData((prev) => ({ ...prev, category: catKey, amount: prev.amount === '' ? baseFeeFor(catKey) : prev.amount }))}
               categoryMeta={categoryMeta}
               accent={ACCENT}
               translationPrefix={config.translationPrefix}

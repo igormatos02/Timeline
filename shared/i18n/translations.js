@@ -2372,6 +2372,30 @@ export const translations = {
       startDateMissingMember: "The administration has not set the accounting start date yet: entries cannot be created.",
       setStartDate: "Set start date"
     },
+    unitFee: {
+      title: "Monthly fee",
+      amountLabel: "Fee (€)",
+      splitToggle: "Split into parts",
+      partName: "Part",
+      partNamePlaceholder: "E.g. Reserve fund",
+      partAmount: "€",
+      addPart: "Add part",
+      removePart: "Remove part",
+      total: "Total: {{amount}} €",
+      channelLabel: "Received in",
+      channelFixed: "Received in: {{channel}}",
+      noFee: "This unit has no monthly fee yet.",
+      currentFee: "Current fee: {{amount}} €",
+      scheduled: "{{amount}} € from {{month}} (until then {{current}} €)",
+      createOnSave: "Create the monthly fee when saving",
+      apply: "Update entries",
+      confirmCreate: "Create the monthly fee of {{amount}} € for {{unit}} from {{month}}?",
+      confirmUpdate: "From {{month}}, the fee of {{unit}} goes from {{from}} € to {{to}} €. Past months, this month and paid months do not change. Continue?",
+      created: "Monthly fee of {{amount}} € created from {{month}}.",
+      updated: "Fee changed to {{amount}} € from {{month}}.",
+      unchanged: "The fee already has this value.",
+      saveUnitFirst: "Save the unit to update its entries."
+    },
     people: {
       tabs: { units: "Units", entities: "Entities", members: "Members" },
       add: { unit: "Add unit", entity: "Add entity", member: "Add member" },
@@ -2475,6 +2499,9 @@ export const translations = {
         unavailableBody: "This receipt link has expired or is no longer valid. Open the receipt again from the app."
       },
       validation: {
+        unitNotFound: "Unit not found in this condominium.",
+        unitFeeInvalid: "Enter a fee greater than zero.",
+        unitFeeNoTimeline: "The condominium has no timeline (Cash or Account) where the fee is received.",
         startDateRequired: "Set the condominium's accounting start date first (Settings → General).",
         entityNotInvitable: "Entities are only a reference and cannot be invited.",
         productNotFound: "Unknown product.",
@@ -5161,6 +5188,30 @@ export const translations = {
       startDateMissingMember: "A administração ainda não definiu a data de início contabilística: não é possível criar lançamentos.",
       setStartDate: "Definir data de início"
     },
+    unitFee: {
+      title: "Quota mensal",
+      amountLabel: "Quota (€)",
+      splitToggle: "Dividir em partes",
+      partName: "Parte",
+      partNamePlaceholder: "Ex: Fundo de reserva",
+      partAmount: "€",
+      addPart: "Adicionar parte",
+      removePart: "Remover parte",
+      total: "Total: {{amount}} €",
+      channelLabel: "Recebida na",
+      channelFixed: "Recebida na: {{channel}}",
+      noFee: "Esta fração ainda não tem quota mensal.",
+      currentFee: "Quota atual: {{amount}} €",
+      scheduled: "{{amount}} € a partir de {{month}} (até lá {{current}} €)",
+      createOnSave: "Criar a quota mensal ao guardar",
+      apply: "Atualizar lançamentos",
+      confirmCreate: "Criar a quota mensal de {{amount}} € para {{unit}} a partir de {{month}}?",
+      confirmUpdate: "A partir de {{month}}, a quota de {{unit}} passa de {{from}} € para {{to}} €. Os meses passados, o mês atual e os meses pagos não mudam. Continuar?",
+      created: "Quota mensal de {{amount}} € criada a partir de {{month}}.",
+      updated: "Quota alterada para {{amount}} € a partir de {{month}}.",
+      unchanged: "A quota já tem este valor.",
+      saveUnitFirst: "Guarde a fração para atualizar os lançamentos."
+    },
     people: {
       tabs: { units: "Frações", entities: "Entidades", members: "Membros" },
       add: { unit: "Adicionar fração", entity: "Adicionar entidade", member: "Adicionar membro" },
@@ -5264,6 +5315,9 @@ export const translations = {
         unavailableBody: "Este link do recibo expirou ou já não é válido. Abra o recibo outra vez a partir da app."
       },
       validation: {
+        unitNotFound: "Fração não encontrada neste condomínio.",
+        unitFeeInvalid: "Indique uma quota maior que zero.",
+        unitFeeNoTimeline: "O condomínio não tem a linha (Caixa ou Conta) onde a quota é recebida.",
         startDateRequired: "Defina primeiro a data de início contabilística do condomínio (Definições → Geral).",
         entityNotInvitable: "As entidades são apenas uma referência e não podem ser convidadas.",
         productNotFound: "Produto desconhecido.",

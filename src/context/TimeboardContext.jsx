@@ -6,16 +6,17 @@ import { TimeboardType, HeaderDefaultState } from '../enums/index.js';
  * - isCondoflow: condominium timeboards hide personal features such as the diary mood.
  * - headerDefaultState: whether the timeline headers start collapsed or expanded.
  * - pockets: pockets of the account (names of the account spaces shown on the movements).
+ * - baseFeeAmount: condominiums' base monthly fee, prefilling new condominium-payment entries.
  */
-const TimeboardContext = createContext({ timeboardType: null, isCondoflow: false, headerDefaultState: HeaderDefaultState.COLLAPSED, pockets: [] });
+const TimeboardContext = createContext({ timeboardType: null, isCondoflow: false, headerDefaultState: HeaderDefaultState.COLLAPSED, pockets: [], baseFeeAmount: null });
 
 // Open / closed state shared by every timeline header (its own context: toggling it re-renders only the headers)
 const HeaderCollapsedContext = createContext(null);
 
-export function TimeboardProvider({ timeboardType = null, headerDefaultState = HeaderDefaultState.COLLAPSED, pockets = [], children }) {
+export function TimeboardProvider({ timeboardType = null, headerDefaultState = HeaderDefaultState.COLLAPSED, pockets = [], baseFeeAmount = null, children }) {
   const value = useMemo(
-    () => ({ timeboardType, isCondoflow: timeboardType === TimeboardType.CONDOFLOW, headerDefaultState, pockets }),
-    [timeboardType, headerDefaultState, pockets]
+    () => ({ timeboardType, isCondoflow: timeboardType === TimeboardType.CONDOFLOW, headerDefaultState, pockets, baseFeeAmount }),
+    [timeboardType, headerDefaultState, pockets, baseFeeAmount]
   );
 
   // One state for all headers, so switching timeline or balance mode keeps the header open or closed;

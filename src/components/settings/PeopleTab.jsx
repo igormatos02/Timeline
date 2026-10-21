@@ -31,6 +31,9 @@ import {
 } from '../../enums/index.js';
 import * as api from '../../services/api.js';
 import OptionBoxGroup from '../ui/OptionBoxGroup.jsx';
+import UnitFeeSection, { feeDraftFrom, feeDraftTotal } from './UnitFeeSection.jsx';
+import { addMonths, format, parseISO, startOfMonth } from 'date-fns';
+import { accountingStartOf } from '../../../shared/finance/accountingStart.js';
 
 // What each list shows (condominiums: units, entities, members; other timeboards: everyone)
 const ALL = 'all';
@@ -66,8 +69,13 @@ const emptyForm = (category) => ({
  * Collaborator). Other timeboards show everyone, as before.
  */
 export default function PeopleTab({ timeboard, category = ALL, persons, setPersons, invitations, isLoading, onReload, onEntitySaved, showToast }) {
-  const { t } = useTranslation();
+  const { t, language, dateLocale } = useTranslation();
   const [search, setSearch] = useState('');
+  // Units: their monthly fee (settings → Frações → Quota)
+  const [unitFee, setUnitFee] = useState(null);
+  const [feeDraft, setFeeDraft] = useState(() => feeDraftFrom(null, timeboard));
+  const [isFeeLoading, setIsFeeLoading] = useState(false);
+  const [isApplyingFee, setIsApplyingFee] = useState(false);
   const [typeFilter, setTypeFilter] = useState(ALL);
   const [formPerson, setFormPerson] = useState(null); // null = closed; {} = new; person = editing
   const [form, setForm] = useState(() => emptyForm(category));
@@ -132,6 +140,16 @@ export default function PeopleTab({ timeboard, category = ALL, persons, setPerso
   // ---- Form (add / edit) ----
   const openForm = (person = null) => {
     setFormPerson(person || {});
+    if (category === PersonCategory.UNIT) {
+      setUnitFee(null);
+      setFeeDraft(feeDraftFrom(null, timeboard));
+      if (person?.id) {
+        setIsFeeLoading(true);
+        api.fetchUnitFee(timeboard.id, person.id)
+          .then((fee) => { setUnitFee(fee); setFeeDraft(feeDraftFrom(fee, timeboard)); })
+          .finally(() => setIsFeeLoading(false));
+      }
+    }
     setForm(person ? {
       type: person.type || PersonType.PERSON,
       personName: nameOf(person),
@@ -143,6 +161,38 @@ export default function PeopleTab({ timeboard, category = ALL, persons, setPerso
       observation: person.observation || '',
       role: person.role || PersonRole.CONTRIBUTOR
     } : { ...emptyForm(category), type: category === ALL && typeFilter !== ALL ? typeFilter : emptyForm(category).type });
+  };
+
+  // "Atualizar lançamentos" (asks first) and the fee of a new unit (created on save, no question)
+  const monthLabel = (date) => format(date, 'MMMM yyyy', { locale: dateLocale });
+  const applyFee = async (personId, unitName, { ask }) => {
+    const amount = feeDraftTotal(feeDraft);
+    if (!(amount > 0)) return;
+    const start = accountingStartOf(timeboard);
+    if (ask) {
+      const message = unitFee?.exists
+        ? t('unitFee.confirmUpdate', { unit: unitName, month: monthLabel(startOfMonth(addMonths(new Date(), 1))), from: unitFee.amount, to: amount })
+        : t('unitFee.confirmCreate', { unit: unitName, amount, month: start ? monthLabel(parseISO(start)) : '' });
+      if (!window.confirm(message)) return;
+    }
+    setIsApplyingFee(true);
+    try {
+      const result = await api.applyUnitFee(timeboard.id, personId, {
+        amount,
+        parts: feeDraft.isSplit ? feeDraft.parts : [],
+        channel: feeDraft.channel,
+        language
+      });
+      const when = result.fromDate ? monthLabel(parseISO(result.fromDate)) : '';
+      showToast(t(`unitFee.${result.action}`, { amount: result.amount, month: when }));
+      const fresh = await api.fetchUnitFee(timeboard.id, personId);
+      setUnitFee(fresh);
+      if (fresh) setFeeDraft(feeDraftFrom(fresh, timeboard));
+    } catch (err) {
+      showToast(err.message);
+    } finally {
+      setIsApplyingFee(false);
+    }
   };
 
   const handleSave = async (e) => {
@@ -182,6 +232,7 @@ export default function PeopleTab({ timeboard, category = ALL, persons, setPerso
         const saved = { ...payload, ...created };
         setPersons((prev) => [...prev, saved]);
         onEntitySaved?.(saved);
+        if (category === PersonCategory.UNIT && feeDraft.createOnSave && saved.id) await applyFee(saved.id, unit, { ask: false });
       }
       showToast(t('people.savedToast', { name: personName }));
       setFormPerson(null);
@@ -517,6 +568,18 @@ export default function PeopleTab({ timeboard, category = ALL, persons, setPerso
                 <OptionBoxGroup label={t('timeboardSettings.entities.form.roleLabel')} options={roleOptions} value={form.role} onChange={(role) => setForm({ ...form, role })} marginBottom="0" />
               )}
               {category === PersonCategory.UNIT && <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('people.fixedRole')}</span>}
+
+              {category === PersonCategory.UNIT && (
+                <UnitFeeSection
+                  draft={feeDraft}
+                  onChange={setFeeDraft}
+                  fee={unitFee}
+                  isNew={!isEditing}
+                  isLoading={isFeeLoading}
+                  isApplying={isApplyingFee}
+                  onApply={() => applyFee(formPerson.id, unitOf(formPerson) || form.obligatorIdentification, { ask: true })}
+                />
+              )}
 
               {/* Linked account (not for entities: they never have access) */}
               {isEditing && category !== PersonCategory.ENTITY && (

@@ -362,6 +362,24 @@ export async function exportTimeboardData(timeboardId, language) {
   URL.revokeObjectURL(url);
 }
 
+// A condominium unit's monthly fee (value set, parts, where it is received)
+export async function fetchUnitFee(timeboardId, personId) {
+  const res = await apiFetch(`${API_BASE}/timeboards/${encodeURIComponent(timeboardId)}/units/${encodeURIComponent(personId)}/fee`, { headers: getHeaders() });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+// "Atualizar lançamentos": creates the unit's fee from the start date or changes it from next month on
+export async function applyUnitFee(timeboardId, personId, { amount, parts, channel, language }) {
+  const res = await apiFetch(`${API_BASE}/timeboards/${encodeURIComponent(timeboardId)}/units/${encodeURIComponent(personId)}/fee`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ amount, parts, channel, language })
+  });
+  if (!res.ok) throw await serverRefusal(res, 'Failed to update the fee');
+  return res.json();
+}
+
 // Imports a condominium's units (frações) and monthly fees from spreadsheet rows
 export async function importUnits(timeboardId, { rows, feeStartDate, feeChannel, language }) {
   const res = await apiFetch(`${API_BASE}/timeboards/${encodeURIComponent(timeboardId)}/import-units`, {

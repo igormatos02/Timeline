@@ -123,7 +123,9 @@ export class CondoNotificationService {
     const [rootId, idDate] = String(id).split('_');
     const row = await financialEventRepository.getByIdOrSeries(rootId);
     const timeboard = row ? await timeboardRepository.getById(row.timeboardId || row.timeboard_id) : null;
-    const person = personId ? await personRepository.getById(personId) : null;
+    // The fee's own unit when the caller does not say which
+    const unitId = personId || row?.obligationPersonId || row?.obligation_person_id || null;
+    const person = unitId ? await personRepository.getById(unitId) : null;
     if (!row || timeboard?.type !== TimeboardType.CONDOFLOW || !person || String(person.timeboardId) !== String(timeboard.id)) {
       throw Object.assign(new Error(t('backend.notify.receiptUnavailable')), { status: 404 });
     }

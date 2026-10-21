@@ -78,7 +78,8 @@ export default function AdminMovements({ movements, t, dateLocale, onChanged, on
         const amountColor = isIncome ? TimelineColor.SUCCESS : TimelineColor.DANGER;
         const tag = CHANNEL_TAGS[movement.channel];
         const isBusy = savingId === movement.id;
-        const hasReceipt = isIncome && movement.isPaid && Boolean(movement.personId);
+        // A received fee has a receipt (the server finds its unit)
+        const hasReceipt = isIncome && movement.isPaid;
         return (
           <div key={movement.id} className={styles.noticeItem} style={{ display: 'flex', flexDirection: 'column', gap: '8px', cursor: hasReceipt ? 'pointer' : 'default' }} onClick={hasReceipt ? () => setReceiptMovement(movement) : undefined}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { meService } from '../../../application/services/MeService.js';
 import { createT } from '../../../../shared/i18n/index.js';
+import { rateLimit, RateLimitRule } from '../middleware/rateLimit.js';
 
 export const receiptsRouter = Router();
 
@@ -14,7 +15,7 @@ const unavailablePage = (language) => {
 };
 
 // GET /api/receipts/:token — public: the receipt of a signed, short-lived link asked for by the mobile app
-receiptsRouter.get('/:token', async (req, res) => {
+receiptsRouter.get('/:token', rateLimit({ ...RateLimitRule.RECEIPT_LINK, message: createT('en')('backend.validation.tooManyAttempts') }), async (req, res) => {
   const language = String(req.query.lang || 'pt');
   try {
     const html = await meService.renderReceipt(req.params.token);

@@ -1,11 +1,20 @@
 import { Router } from 'express';
 import { authService } from '../../../application/services/AuthService.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { rateLimit, RateLimitRule } from '../middleware/rateLimit.js';
+import { createT } from '../../../../shared/i18n/index.js';
+
+const tooMany = createT('en')('backend.validation.tooManyAttempts');
+// Brute force: per client and, for the login, per account (e-mail)
+const loginPerClient = rateLimit({ ...RateLimitRule.LOGIN, message: tooMany });
+const loginPerAccount = rateLimit({ ...RateLimitRule.LOGIN_ACCOUNT, message: tooMany, keyOf: (req) => req.body?.email });
+const registerPerClient = rateLimit({ ...RateLimitRule.REGISTER, message: tooMany });
+const googlePerClient = rateLimit({ ...RateLimitRule.GOOGLE, message: tooMany });
 
 export const authRouter = Router();
 
 // POST /api/auth/register
-authRouter.post('/register', async (req, res) => {
+authRouter.post('/register', registerPerClient, async (req, res) => {
   try {
     const { name, email, password } = req.body;
     const user = await authService.registerWithEmail({ name, email, password });
@@ -16,7 +25,7 @@ authRouter.post('/register', async (req, res) => {
 });
 
 // POST /api/auth/login
-authRouter.post('/login', async (req, res) => {
+authRouter.post('/login', loginPerClient, loginPerAccount, async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await authService.loginWithEmail({ email, password });
@@ -27,7 +36,7 @@ authRouter.post('/login', async (req, res) => {
 });
 
 // POST /api/auth/google  { accessToken } — Supabase session of a Google sign-in (web OAuth or native Android)
-authRouter.post('/google', async (req, res) => {
+authRouter.post('/google', googlePerClient, async (req, res) => {
   try {
     const { accessToken, access_token } = req.body;
     const user = await authService.loginWithSupabaseAccessToken(accessToken || access_token);

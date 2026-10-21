@@ -7,6 +7,7 @@ import { PRODUCTS } from '../../../../shared/config/products.js';
 import { emailService } from '../../../application/services/EmailService.js';
 import { userRepository } from '../../../infrastructure/database/supabase/SupabaseUserRepository.js';
 import { createT } from '../../../../shared/i18n/index.js';
+import { rateLimit, RateLimitRule } from '../middleware/rateLimit.js';
 
 const t = createT('en');
 export const meRouter = Router();
@@ -164,7 +165,7 @@ meRouter.get('/licenses/:product', async (req, res) => {
 });
 
 // POST /api/me/licenses/:product/upgrade-request { planId, message } — asks the provider for another plan (by e-mail)
-meRouter.post('/licenses/:product/upgrade-request', async (req, res) => {
+meRouter.post('/licenses/:product/upgrade-request', rateLimit({ ...RateLimitRule.UPGRADE_REQUEST, message: t('backend.validation.tooManyAttempts'), keyOf: (req) => req.user?.id }), async (req, res) => {
   try {
     const product = PRODUCTS[req.params.product];
     const { planId, message } = req.body || {};

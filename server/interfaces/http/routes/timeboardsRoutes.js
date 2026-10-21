@@ -10,10 +10,14 @@ import { timeboardInvitationRepository } from '../../../infrastructure/database/
 import { timeboardAccessFromParam } from '../middleware/timeboardAccess.js';
 import { createT } from '../../../../shared/i18n/index.js';
 import { requireCapability } from '../middleware/requireCapability.js';
+import { rateLimit, RateLimitRule } from '../middleware/rateLimit.js';
 import { auditService } from '../../../application/services/AuditService.js';
 import { Capability } from '../../../../shared/permissions.js';
 
 const t = createT('en');
+
+// Invitations send e-mails: limited per account
+const sendInviteLimit = rateLimit({ ...RateLimitRule.SEND_INVITE, message: t('backend.validation.tooManyAttempts'), keyOf: (req) => req.user?.id });
 
 export const timeboardsRouter = Router();
 
@@ -162,7 +166,7 @@ timeboardsRouter.post('/:id/persons/:personId/unlink', requireCapability(Capabil
 });
 
 // POST /api/timeboards/:id/invite
-timeboardsRouter.post('/:id/invite', requireCapability(Capability.MANAGE), async (req, res) => {
+timeboardsRouter.post('/:id/invite', requireCapability(Capability.MANAGE), sendInviteLimit, async (req, res) => {
   try {
     const { personId, email, role, inviterName, invitedBy, invited_by } = req.body;
     const originUrl = req.headers.origin || req.headers.referer;

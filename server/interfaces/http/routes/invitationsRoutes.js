@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { timeboardService } from '../../../application/services/TimeboardService.js';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { rateLimit } from '../middleware/rateLimit.js';
+import { rateLimit, RateLimitRule } from '../middleware/rateLimit.js';
 import { createT } from '../../../../shared/i18n/index.js';
 
 const t = createT('en');
 export const invitationsRouter = Router();
 
-const codeAttempts = rateLimit({ windowMs: 10 * 60 * 1000, max: 20, message: t('backend.validation.tooManyAttempts') });
+const codeAttempts = rateLimit({ ...RateLimitRule.INVITE_CODE, message: t('backend.validation.tooManyAttempts') });
 
 // GET /api/invitations/code/:code — public details of an invitation code (before login / registration)
 invitationsRouter.get('/code/:code', codeAttempts, async (req, res) => {

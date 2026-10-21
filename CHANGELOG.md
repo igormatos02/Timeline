@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.7.0](https://github.com/igormatos02/Timeline/compare/v0.6.0...v0.7.0) (2026-10-21)
+
+
+### Features
+
+* register of receipts report, stub-only print and payer copies without stub ([f052f68](https://github.com/igormatos02/Timeline/commit/f052f680be1fa7815e39f2a7ce96095448db7d6b))
+
 ## [0.6.0](https://github.com/igormatos02/Timeline/compare/v0.5.0...v0.6.0) (2026-10-21)
 
 

@@ -42,6 +42,7 @@ export const translations = {
       hub: "Hub",
       viewHubTooltip: "Return to Timeboards Hub",
       entitiesTooltip: "Manage timeboard entities and members",
+      unitsTooltip: "Manage units",
       reportsTooltip: "Open timeboard reports and exports",
       settingsTooltip: "Configure timeboard members and settings",
       activeTimeboardTooltip: "Active Timeboard: {{name}}"
@@ -2889,6 +2890,7 @@ export const translations = {
       hub: "Hub",
       viewHubTooltip: "Voltar para o Hub de Timeboards",
       entitiesTooltip: "Gerir entidades e membros do timeboard",
+      unitsTooltip: "Gerir frações",
       reportsTooltip: "Abrir relatórios e exportações do timeboard",
       settingsTooltip: "Configurar membros e definições do timeboard",
       activeTimeboardTooltip: "Timeboard Ativo: {{name}}"

@@ -37,6 +37,9 @@ export default function Navbar({
 }) {
   const currentUser = getCurrentUser() || {};
   const { language, setLanguage, t } = useTranslation();
+  // Condominiums: the people button opens the units (frações)
+  const isCondominium = product?.id === ProductId.CONDOFLOW;
+  const entitiesLabel = isCondominium ? t('header.unitsTooltip') : t('header.entitiesTooltip');
 
   return (
     <header className="app-header">
@@ -110,12 +113,12 @@ export default function Navbar({
               )}
 
               {onOpenEntities && (
-                <Tooltip content={t('header.entitiesTooltip')}>
+                <Tooltip content={entitiesLabel}>
                   <button
                     type="button"
                     className="header-icon-action-btn"
                     onClick={onOpenEntities}
-                    aria-label={t('header.entitiesTooltip')}
+                    aria-label={entitiesLabel}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -142,7 +145,7 @@ export default function Navbar({
                       e.currentTarget.style.transform = 'none';
                     }}
                   >
-                    <Users size={18} />
+                    {isCondominium ? <Home size={18} /> : <Users size={18} />}
                   </button>
                 </Tooltip>
               )}

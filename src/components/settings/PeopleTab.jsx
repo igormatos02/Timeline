@@ -84,22 +84,25 @@ export default function PeopleTab({ timeboard, category = ALL, persons, setPerso
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState(PersonRole.CONTRIBUTOR);
   const [isSendingInvite, setIsSendingInvite] = useState(false);
+  // Condominium members are never registered by hand: they are invited (name optional, e-mail and role)
+  const [memberInvite, setMemberInvite] = useState(null);
 
   const isCategoryList = category !== ALL;
   const isEditing = Boolean(formPerson?.id);
 
   // Esc closes the open form / invitation first (captured before the settings modal's own Esc)
   useEffect(() => {
-    if (!formPerson && !invitingPerson) return undefined;
+    if (!formPerson && !invitingPerson && !memberInvite) return undefined;
     const handleKeyDown = (e) => {
       if (e.key !== 'Escape') return;
       e.stopPropagation();
       setInvitingPerson(null);
       setFormPerson(null);
+      setMemberInvite(null);
     };
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [formPerson, invitingPerson]);
+  }, [formPerson, invitingPerson, memberInvite]);
 
   // The timeboard's owner is shown first among the members (not editable)
   const currentUser = api.getCurrentUser();
@@ -113,13 +116,20 @@ export default function PeopleTab({ timeboard, category = ALL, persons, setPerso
     isOwner: true
   }), [timeboard, ownerId, isCurrentOwner, currentUser?.name, currentUser?.email]);
 
+  // The person's invitation that matters: a pending one first, otherwise the last one
   const inviteOf = (person) => {
     const email = person.email?.toLowerCase().trim();
-    return email ? invitations.find((invitation) => invitation.email?.toLowerCase().trim() === email) : null;
+    if (!email) return null;
+    const own = invitations.filter((invitation) => invitation.email?.toLowerCase().trim() === email);
+    return own.find((invitation) => invitation.status === InvitationStatus.PENDING) || own[own.length - 1] || null;
   };
+  // Access: active (accepted), pending confirmation, expired invitation or none
   const accessOf = (person) => {
     if (userIdOf(person)) return 'active';
-    return inviteOf(person)?.status === InvitationStatus.PENDING ? 'pending' : 'none';
+    const invite = inviteOf(person);
+    const isExpired = invite?.status === InvitationStatus.EXPIRED || (invite?.status === InvitationStatus.PENDING && invite.expiresAt && new Date(invite.expiresAt) < new Date());
+    if (isExpired) return 'expired';
+    return invite?.status === InvitationStatus.PENDING ? 'pending' : 'none';
   };
 
   const rows = useMemo(() => {
@@ -139,6 +149,10 @@ export default function PeopleTab({ timeboard, category = ALL, persons, setPerso
 
   // ---- Form (add / edit) ----
   const openForm = (person = null) => {
+    if (category === PersonCategory.MEMBER && !person) {
+      setMemberInvite({ personName: '', email: '', role: PersonRole.CONTRIBUTOR });
+      return;
+    }
     setFormPerson(person || {});
     if (category === PersonCategory.UNIT) {
       setUnitFee(null);
@@ -243,9 +257,54 @@ export default function PeopleTab({ timeboard, category = ALL, persons, setPerso
     }
   };
 
-  const handleDelete = async (person) => {
-    if (!window.confirm(t('people.deleteConfirm', { name: nameOf(person) }))) return;
+  // Invites a member: the member record is created pending and becomes active when the invitation is accepted
+  const handleInviteMember = async (e) => {
+    e.preventDefault();
+    const email = memberInvite.email.trim().toLowerCase();
+    if (!isValidEmail(email)) return;
+    setIsSendingInvite(true);
+    let created = null;
     try {
+      created = await api.createPerson({
+        timeboardId: timeboard.id,
+        type: PersonType.MEMBER,
+        personName: memberInvite.personName.trim() || email.split('@')[0],
+        email,
+        role: memberInvite.role
+      });
+      await api.sendTimeboardInvitation({ timeboardId: timeboard.id, personId: created.id, email, role: memberInvite.role, inviterName: currentUser?.name || '', invitedBy: currentUser?.id || null });
+      showToast(t('people.inviteSentToast', { email }));
+      setMemberInvite(null);
+      onReload();
+    } catch (err) {
+      // The invitation was not sent: no member is left behind
+      if (created?.id) await api.deletePerson(created.id, timeboard.id).catch(() => {});
+      showToast(err.message || t('people.inviteFailedToast'));
+    } finally {
+      setIsSendingInvite(false);
+    }
+  };
+
+  // Cancels a member's pending invitation (the pending member goes away)
+  const handleCancelInvite = async (person) => {
+    if (!window.confirm(t('people.cancelInviteConfirm', { name: nameOf(person) }))) return;
+    try {
+      const invite = inviteOf(person);
+      if (invite?.status === InvitationStatus.PENDING) await api.revokeTimeboardInvitation(timeboard.id, invite.id);
+      await api.deletePerson(person.id, timeboard.id);
+      showToast(t('people.inviteCancelledToast', { name: nameOf(person) }));
+      onReload();
+    } catch (err) {
+      showToast(err.message);
+      onReload();
+    }
+  };
+
+  const handleDelete = async (person) => {
+    if (!window.confirm(t(category === PersonCategory.MEMBER ? 'people.removeMemberConfirm' : 'people.deleteConfirm', { name: nameOf(person) }))) return;
+    try {
+      // A member with access loses it first
+      if (category === PersonCategory.MEMBER && userIdOf(person)) await api.unlinkPersonMember(timeboard.id, person.id);
       setPersons((prev) => prev.filter((p) => p.id !== person.id));
       await api.deletePerson(person.id, timeboard.id);
       showToast(t('people.deletedToast', { name: nameOf(person) }));
@@ -335,8 +394,8 @@ export default function PeopleTab({ timeboard, category = ALL, persons, setPerso
   const accessBadge = (person) => {
     if (person.isOwner) return null;
     const access = accessOf(person);
-    const color = access === 'active' ? TimelineColor.SUCCESS : access === 'pending' ? TimelineColor.WARNING : 'var(--text-muted)';
-    const Icon = access === 'active' ? Check : access === 'pending' ? Clock : UserX;
+    const color = access === 'active' ? TimelineColor.SUCCESS : access === 'pending' ? TimelineColor.WARNING : access === 'expired' ? TimelineColor.DANGER : 'var(--text-muted)';
+    const Icon = access === 'active' ? Check : access === 'pending' || access === 'expired' ? Clock : UserX;
     return (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.78rem', fontWeight: 600, color }}>
         <Icon size={13} />{t(`people.access.${access}`)}
@@ -360,7 +419,8 @@ export default function PeopleTab({ timeboard, category = ALL, persons, setPerso
     tooltip: t(`timeboardSettings.entities.rolesDesc.${role}`)
   }));
   const formType = category === PersonCategory.MEMBER ? PersonType.MEMBER : form.type;
-  const addLabel = isCategoryList ? t(`people.add.${ADD_KEYS[category]}`) : t('timeboardSettings.entities.addEntityButton');
+  const addLabel = category === PersonCategory.MEMBER ? t('people.inviteMember')
+    : isCategoryList ? t(`people.add.${ADD_KEYS[category]}`) : t('timeboardSettings.entities.addEntityButton');
   const formTitle = isCategoryList
     ? t(`people.formTitle.${ADD_KEYS[category]}`)
     : t(isEditing ? 'timeboardSettings.entities.editPersonTitle' : 'timeboardSettings.entities.addPersonTitle');
@@ -469,7 +529,25 @@ export default function PeopleTab({ timeboard, category = ALL, persons, setPerso
                   )}
                   {showsAccess && <td style={cell}>{accessBadge(person)}</td>}
                   <td style={{ ...cell, textAlign: 'right' }}>
-                    {!person.isOwner && (
+                    {!person.isOwner && category === PersonCategory.MEMBER && (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        {accessOf(person) !== 'active' ? (
+                          <>
+                            <button type="button" onClick={() => openInvite(person)} title={t('people.resendInvite')} style={{ ...iconButton, gap: '5px', padding: '5px 9px', color: TimelineColor.PRIMARY, fontSize: '0.76rem', fontWeight: 600 }}>
+                              <Send size={12} /><span>{t('people.resendInvite')}</span>
+                            </button>
+                            <button type="button" onClick={() => handleCancelInvite(person)} title={t('people.cancelInvite')} style={{ ...iconButton, color: TimelineColor.DANGER }}>
+                              <X size={13} />
+                            </button>
+                          </>
+                        ) : (
+                          <button type="button" onClick={() => handleDelete(person)} title={t('people.removeMember')} style={{ ...iconButton, color: TimelineColor.DANGER, background: `${TimelineColor.DANGER}1a`, borderColor: `${TimelineColor.DANGER}40` }}>
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {!person.isOwner && category !== PersonCategory.MEMBER && (
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         {canInvite(person) && (
                           <button
@@ -610,6 +688,43 @@ export default function PeopleTab({ timeboard, category = ALL, persons, setPerso
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Invite a member (condominiums) */}
+      {memberInvite && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 1400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', background: 'var(--overlay-backdrop)' }}>
+          <form onSubmit={handleInviteMember} className="modal-container" style={{ width: '100%', maxWidth: '520px', background: 'var(--bg-card)', border: '1px solid var(--border-glass)', borderRadius: '16px', padding: '24px', boxShadow: 'var(--shadow-lg)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>{t('people.inviteMember')}</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('people.inviteMemberHelp')}</p>
+              </div>
+              <button type="button" onClick={() => setMemberInvite(null)} aria-label={t('people.cancel')} style={{ ...iconButton, background: 'transparent', border: 'none' }}><X size={18} /></button>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label style={{ ...label, display: 'flex', justifyContent: 'space-between' }}>
+                <span>{t('people.inviteModal.emailLabel')}</span>
+                {memberInvite.email.trim() && (
+                  <span style={{ fontSize: '0.74rem', fontWeight: 600, color: isValidEmail(memberInvite.email) ? TimelineColor.SUCCESS : TimelineColor.DANGER }}>
+                    {t(isValidEmail(memberInvite.email) ? 'people.inviteModal.validEmail' : 'people.inviteModal.invalidEmail')}
+                  </span>
+                )}
+              </label>
+              <input type="email" required autoFocus className="form-input" style={input} value={memberInvite.email} onChange={(e) => setMemberInvite({ ...memberInvite, email: e.target.value })} placeholder={t('people.inviteModal.emailPlaceholder')} />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label style={label}>{t('people.memberNameLabel')}</label>
+              <input type="text" className="form-input" style={input} value={memberInvite.personName} onChange={(e) => setMemberInvite({ ...memberInvite, personName: e.target.value })} placeholder={t('people.memberNamePlaceholder')} />
+            </div>
+            <OptionBoxGroup label={t('people.inviteModal.roleLabel')} options={roleOptions} value={memberInvite.role} onChange={(role) => setMemberInvite({ ...memberInvite, role })} marginBottom="0" />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button type="button" onClick={() => setMemberInvite(null)} style={secondaryButton}>{t('people.cancel')}</button>
+              <button type="submit" disabled={isSendingInvite || !isValidEmail(memberInvite.email)} style={{ ...primaryButton, padding: '10px 22px', borderRadius: '10px', opacity: isValidEmail(memberInvite.email) ? 1 : 0.5 }}>
+                <Send size={15} /><span>{t(isSendingInvite ? 'people.inviteModal.sending' : 'people.inviteModal.send')}</span>
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

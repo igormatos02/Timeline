@@ -160,10 +160,19 @@ export class TimeboardService {
       if (!isOwner) {
         try {
           const persons = await personRepository.getByTimeboardId(timeboardId);
-          const matchingPerson = persons.find((p) => p.email && p.email.toLowerCase().trim() === cleanEmail);
-          if (matchingPerson) {
-            if (!matchingPerson.userId || matchingPerson.userId !== userId) {
-              await personRepository.update(matchingPerson.id, { userId: userId });
+          // Every record of the invited e-mail (e.g. a unit and a member of the same person); entities never get access
+          const matchingPersons = persons.filter((p) => (
+            p.email && p.email.toLowerCase().trim() === cleanEmail &&
+            !(timeboard?.type === TimeboardType.CONDOFLOW && personCategoryOf(p) === PersonCategory.ENTITY)
+          ));
+          if (matchingPersons.length > 0) {
+            for (const matchingPerson of matchingPersons) {
+              const updates = {};
+              if (matchingPerson.userId !== userId) updates.userId = userId;
+              // A member invited by e-mail only takes the name of the account that accepted
+              const placeholderName = !matchingPerson.personName || matchingPerson.personName === cleanEmail.split('@')[0] || matchingPerson.personName === cleanEmail;
+              if (personCategoryOf(matchingPerson) === PersonCategory.MEMBER && placeholderName && acceptingUser?.name) updates.personName = acceptingUser.name;
+              if (Object.keys(updates).length > 0) await personRepository.update(matchingPerson.id, updates);
             }
           } else {
             let invRole = PersonRole.CONTRIBUTOR;

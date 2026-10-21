@@ -84,6 +84,10 @@ export const getMonthFlows = (timeboardId, month) => request(`/me/month?timeboar
 
 // Admins: the month's income and outflows (what the condominium balance counts)
 export const getMonthMovements = (timeboardId, month) => request(`/me/movements?timeboardId=${encodeURIComponent(timeboardId)}&month=${encodeURIComponent(month)}`);
+// Admins: receipt code of a received fee (created when missing), and the receipt by e-mail
+export const getReceiptCode = (eventId, date) => request(`/events/${encodeURIComponent(eventId)}/receipt-code?date=${encodeURIComponent(date || '')}`);
+export const sendReceiptEmail = (eventId, { date, personId, email }) => request(`/events/${encodeURIComponent(eventId)}/send-receipt`, { method: 'POST', body: { date, personId, email } });
+
 // Admins: records a movement (outflow, bank deposit) — the same route and payload as the web forms
 export const createMovement = (movement) => request('/events', { method: 'POST', body: movement });
 // Admins: receive / pay a movement — the same route and rules as the web (status toggle)

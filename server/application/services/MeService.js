@@ -197,6 +197,8 @@ export class MeService {
     const timelineTypeMap = timelineTypeMapOf(timelines);
     const timelineNameById = new Map((timelines || []).map((tl) => [String(tl.id), tl.name]));
     const personNameById = new Map((persons || []).map((p) => [String(p.id), p.personName || '']));
+    // The receipt can be e-mailed to the unit's owner from the Gestão app
+    const personEmailById = new Map((persons || []).map((p) => [String(p.id), p.email || '']));
     const monthKey = /^\d{4}-\d{2}$/.test(String(month || '')) ? month : new Date().toISOString().substring(0, 7);
     const SIDE_BY_KIND = {
       [MovementKind.INCOME]: EntityDirection.OWES,
@@ -224,7 +226,9 @@ export class MeService {
           effectiveStatus: effectiveStatusFor(ev),
           channel: paymentChannelOf(timelineTypeMap.get(timelineId)),
           timelineName: timelineNameById.get(timelineId) || '',
-          personName: personNameById.get(String(ev.obligationPersonId || ev.obligation_person_id || '')) || ''
+          personName: personNameById.get(String(ev.obligationPersonId || ev.obligation_person_id || '')) || '',
+          personId: ev.obligationPersonId || ev.obligation_person_id || null,
+          personEmail: personEmailById.get(String(ev.obligationPersonId || ev.obligation_person_id || '')) || ''
         };
       })
       .sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));

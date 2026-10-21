@@ -9,6 +9,7 @@ import * as mobileApi from '../mobile/mobileApi.js';
 import MobileMoneySummary from '../mobile/MobileMoneySummary.jsx';
 import AdminMovements from './AdminMovements.jsx';
 import AdminMovementForm, { AdminFormKind } from './AdminMovementForm.jsx';
+import { ADMIN_APP_MOVEMENT_FORMS_ENABLED } from '../../shared/config/featureFlags.js';
 import styles from '../mobile/MobileApp.module.css';
 
 const currentMonthKey = () => format(new Date(), 'yyyy-MM');
@@ -157,7 +158,7 @@ export default function AdminHome({ user, preferredTimeboardId, notice, onClearN
           </div>
 
           {/* Record an outflow or deposit the cash into the bank */}
-          {monthFlows?.places && (
+          {ADMIN_APP_MOVEMENT_FORMS_ENABLED && monthFlows?.places && (
             <div className={styles.actionRow}>
               <button type="button" className={styles.primaryButton} onClick={() => setFormKind(AdminFormKind.EXPENSE)}>
                 <Plus size={18} /><span>{t('admin.form.newExpense')}</span>

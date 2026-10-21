@@ -1743,6 +1743,16 @@ export const translations = {
       filterPending: "Pending",
       filterPaid: "Done",
       noMovements: "No movements with these filters.",
+      feesTitle: "Fees of the month",
+      filterReceived: "Received",
+      receipt: {
+        view: "Receipt",
+        share: "Share",
+        email: "E-mail",
+        shareTitle: "Receipt — {{title}}",
+        shareText: "Receipt of {{title}} ({{person}}, {{amount}}). Check it and open it at:",
+        unavailable: "The receipt of this fee is not available."
+      },
       form: {
         newExpense: "New outflow",
         newDeposit: "Deposit in the bank",
@@ -4657,6 +4667,16 @@ export const translations = {
       filterPending: "Pendentes",
       filterPaid: "Efetivados",
       noMovements: "Não há movimentos com estes filtros.",
+      feesTitle: "Quotas do mês",
+      filterReceived: "Recebidas",
+      receipt: {
+        view: "Recibo",
+        share: "Partilhar",
+        email: "Email",
+        shareTitle: "Recibo — {{title}}",
+        shareText: "Recibo de {{title}} ({{person}}, {{amount}}). Confirme e abra em:",
+        unavailable: "O recibo desta quota não está disponível."
+      },
       form: {
         newExpense: "Nova saída",
         newDeposit: "Depositar no banco",

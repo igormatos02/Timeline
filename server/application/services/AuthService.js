@@ -7,8 +7,16 @@ import { supabase } from '../../infrastructure/database/supabase/supabaseClient.
 import { hashPassword, verifyPassword, isHashedPassword } from '../../infrastructure/security/password.js';
 import { createSessionToken } from '../../infrastructure/security/sessionToken.js';
 import { createT } from '../../../shared/i18n/index.js';
+import { randomUUID } from 'node:crypto';
 
 const t = createT('en');
+
+// Hash compared when the e-mail has no password account, so the answer takes about as long as a real check
+let dummyHashPromise = null;
+const dummyHash = () => {
+  dummyHashPromise = dummyHashPromise || hashPassword(randomUUID());
+  return dummyHashPromise;
+};
 
 export class AuthService {
   // Auth responses: the public user plus the signed session token used by every API request
@@ -111,24 +119,18 @@ export class AuthService {
     return this._withSession(userObj);
   }
 
-  async loginWithEmail({ email, password }) {
+  async loginWithEmail({ email, password, language = 'en' }) {
     if (!email || !password) {
       throw new Error(t('backend.validation.emailAndPasswordRequired'));
     }
 
     const cleanEmail = email.toLowerCase().trim();
     const user = await userRepository.findByEmail(cleanEmail);
-    if (!user) {
-      throw new Error(t('backend.validation.accountNotFound'));
-    }
-
-    // If user registered with Google and has no password
-    if (!user.password && user.googleId) {
-      throw new Error(t('backend.validation.googleAccountOnly'));
-    }
-
-    if (!(await verifyPassword(password, user.password))) {
-      throw new Error(t('backend.validation.incorrectPassword'));
+    // One answer whether the e-mail has no account, only signs in with Google or the password is wrong, so the
+    // login never tells which e-mails have an account
+    const isValid = await verifyPassword(password, user?.password || await dummyHash());
+    if (!user || !user.password || !isValid) {
+      throw new Error(createT(language)('backend.validation.invalidCredentials'));
     }
     // Legacy plain-text passwords are hashed on the first successful login
     if (!isHashedPassword(user.password)) {

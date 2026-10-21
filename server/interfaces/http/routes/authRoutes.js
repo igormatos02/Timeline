@@ -28,7 +28,9 @@ authRouter.post('/register', registerPerClient, async (req, res) => {
 authRouter.post('/login', loginPerClient, loginPerAccount, async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await authService.loginWithEmail({ email, password });
+    // Language of the error from the browser (pt / en)
+    const language = String(req.headers['accept-language'] || '').toLowerCase().startsWith('pt') ? 'pt' : 'en';
+    const user = await authService.loginWithEmail({ email, password, language });
     res.json(user);
   } catch (err) {
     res.status(400).json({ error: err.message });

@@ -11,9 +11,10 @@ const LanguageContext = createContext({
 export const LanguageProvider = ({ children }) => {
   const [language, setLanguageState] = useState(() => {
     try {
-      return localStorage.getItem('timeline_language') || 'en';
+      // The UI is primarily in Portuguese
+      return localStorage.getItem('timeline_language') || 'pt';
     } catch {
-      return 'en';
+      return 'pt';
     }
   });
 

@@ -4,12 +4,18 @@ import '../index.css';
 import { LanguageProvider } from '../i18n/LanguageContext.jsx';
 import { TimelineColor } from '../enums/index.js';
 
+const DEFAULT_APP_LANGUAGE = 'pt';
+const LANGUAGE_DEFAULT_KEY = 'condoflow_language_default';
+const LANGUAGE_DEFAULT_VERSION = 'pt-1';
+
 /** Starts a CondoFlow app (members or Gestão): device language and theme, status bar color, then the root. */
 export function bootMobileApp(root) {
-  // Default language: the device language (Portuguese or English) when none was chosen yet
+  // CondoFlow apps start in Portuguese (condominiums in Portugal); English stays one tap away. Installs that took the
+  // device language before get Portuguese once, then the person's choice is kept
   try {
-    if (!localStorage.getItem('timeline_language')) {
-      localStorage.setItem('timeline_language', (navigator.language || '').toLowerCase().startsWith('pt') ? 'pt' : 'en');
+    if (localStorage.getItem(LANGUAGE_DEFAULT_KEY) !== LANGUAGE_DEFAULT_VERSION) {
+      localStorage.setItem('timeline_language', DEFAULT_APP_LANGUAGE);
+      localStorage.setItem(LANGUAGE_DEFAULT_KEY, LANGUAGE_DEFAULT_VERSION);
     }
   } catch { /* storage unavailable */ }
 

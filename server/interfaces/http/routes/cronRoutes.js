@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { pushNotificationService } from '../../../application/services/PushNotificationService.js';
+import { condoNotificationService } from '../../../application/services/CondoNotificationService.js';
 import { createT } from '../../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -16,7 +17,11 @@ const isCronRequest = (req) => {
 cronRouter.get('/reminders', async (req, res) => {
   if (!isCronRequest(req)) return res.status(401).json({ error: t('backend.push.unauthorized') });
   try {
-    res.json(await pushNotificationService.sendTodayReminders());
+    // Reminders of today, the monthly overdue notices (on their day) and e-mails kept from previous days
+    const reminders = await pushNotificationService.sendTodayReminders();
+    const overdue = await condoNotificationService.runMonthlyOverdue();
+    const outbox = overdue.skipped ? await condoNotificationService.processOutbox() : null;
+    res.json({ ...reminders, overdue, outbox });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

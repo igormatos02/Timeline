@@ -1,7 +1,9 @@
 // What a push notification of the CondoFlow app is about (each one can be turned off by the person)
 export const PushNotificationKind = Object.freeze({
   POST: 'post', // a condominium post was published
-  REMINDER: 'reminder' // a reminder reached its date
+  REMINDER: 'reminder', // a reminder reached its date
+  RECEIPT: 'receipt', // one of the person's fees was received
+  OVERDUE: 'overdue' // the person has overdue fees
 });
 
 // Platforms a device token can come from

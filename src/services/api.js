@@ -362,6 +362,13 @@ export async function exportTimeboardData(timeboardId, language) {
   URL.revokeObjectURL(url);
 }
 
+// Owners' notices of a condominium: e-mails sent this month
+export async function fetchCondoNoticeStats(timeboardId) {
+  const res = await apiFetch(`${API_BASE}/timeboards/${encodeURIComponent(timeboardId)}/notifications`, { headers: getHeaders() });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 // A condominium unit's monthly fee (value set, parts, where it is received)
 export async function fetchUnitFee(timeboardId, personId) {
   const res = await apiFetch(`${API_BASE}/timeboards/${encodeURIComponent(timeboardId)}/units/${encodeURIComponent(personId)}/fee`, { headers: getHeaders() });

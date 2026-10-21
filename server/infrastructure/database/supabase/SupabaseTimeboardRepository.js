@@ -25,6 +25,9 @@ function rowToEntity(row) {
     // Condominium settings (migration 0015)
     baseFeeAmount: row.base_fee_amount ?? null,
     feeChannel: row.fee_channel || null,
+    // Owner notifications (migration 0019)
+    notifyReceipts: Boolean(row.notify_receipts),
+    notifyOverdue: Boolean(row.notify_overdue),
     createdAt: row.created_at,
     updatedAt: row.updated_at
   });
@@ -66,6 +69,9 @@ function entityToRow(data, isCreate = false) {
     row.base_fee_amount = Number.isFinite(amount) ? amount : null;
   }
   if (Object.values(PaymentChannel).includes(data.feeChannel)) row.fee_channel = data.feeChannel;
+  // Owner notifications (migration 0019)
+  if (typeof data.notifyReceipts === 'boolean') row.notify_receipts = data.notifyReceipts;
+  if (typeof data.notifyOverdue === 'boolean') row.notify_overdue = data.notifyOverdue;
 
   const rawComputeFrom = data.computeFrom !== undefined ? data.computeFrom : data.compute_from;
   if (rawComputeFrom !== undefined) {
@@ -118,8 +124,8 @@ export class SupabaseTimeboardRepository extends IRepository {
     const row = entityToRow(updates, false);
     let { data, error } = await supabase.from(TABLE).update(row).eq('id', id).select().maybeSingle();
     // Before migration 0015 the condominium settings columns do not exist: save the rest
-    if (error && /base_fee_amount|fee_channel/.test(error.message || '')) {
-      const { base_fee_amount: _baseFee, fee_channel: _feeChannel, ...withoutSettings } = row;
+    if (error && /base_fee_amount|fee_channel|notify_receipts|notify_overdue/.test(error.message || '')) {
+      const { base_fee_amount: _baseFee, fee_channel: _feeChannel, notify_receipts: _receipts, notify_overdue: _overdue, ...withoutSettings } = row;
       ({ data, error } = await supabase.from(TABLE).update(withoutSettings).eq('id', id).select().maybeSingle());
     }
     if (error) throw new Error(`Supabase update [timeboards]: ${error.message}`);

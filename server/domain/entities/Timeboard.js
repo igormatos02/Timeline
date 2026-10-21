@@ -26,6 +26,9 @@ export class Timeboard {
     // Condominiums: base monthly fee (a reference) and where fees are received by default
     baseFeeAmount = null,
     feeChannel = null,
+    // Condominiums: notify owners of received fees (receipt) and, monthly, of overdue fees
+    notifyReceipts = false,
+    notifyOverdue = false,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
   }) {
@@ -45,6 +48,8 @@ export class Timeboard {
     this.headerDefaultState = Object.values(HeaderDefaultState).includes(headerDefaultState) ? headerDefaultState : HeaderDefaultState.COLLAPSED;
     this.baseFeeAmount = baseFeeAmount === null || baseFeeAmount === undefined ? null : Number(baseFeeAmount);
     this.feeChannel = feeChannel || null;
+    this.notifyReceipts = Boolean(notifyReceipts);
+    this.notifyOverdue = Boolean(notifyOverdue);
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }

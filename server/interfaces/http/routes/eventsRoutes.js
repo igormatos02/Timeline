@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { resourceAccessParam } from '../middleware/timeboardAccess.js';
 import { eventService } from '../../../application/services/EventService.js';
 import { meService } from '../../../application/services/MeService.js';
+import { condoNotificationService } from '../../../application/services/CondoNotificationService.js';
 import { PersonRole } from '../../../../shared/enums/index.js';
 import { requireCapability, actorOf } from '../middleware/requireCapability.js';
 import { can } from '../../../../shared/permissions.js';
@@ -88,6 +89,8 @@ eventsRouter.post('/:id/toggle-payment', requireCapability(Capability.CHANGE_STA
   try {
     if (deniesStatusChange(req, req.body?.status)) return noPermission(res);
     const updated = await eventService.toggleEventPayment(req.params.id, req.body?.status, actorOf(req));
+    // A condominium fee received: its receipt to the owner (when the condominium turned it on)
+    await condoNotificationService.onFeeStatusChanged({ id: req.params.id, date: updated?.date, status: updated?.status });
     res.json(updated);
   } catch (err) {
     res.status(err.code === 'EVENT_LOCKED' ? 409 : 400).json({ error: err.message, code: err.code });
@@ -132,6 +135,7 @@ eventsRouter.post('/:id/status', requireCapability(Capability.CHANGE_STATUS), as
       timelineId,
       timeboardId
     });
+    await condoNotificationService.onFeeStatusChanged({ id: req.params.id, date, status: result?.status || status });
     res.json(result);
   } catch (err) {
     const httpStatus = err.code === 'RECEIPT_NUMBER_TAKEN' || err.code === 'EVENT_LOCKED' ? 409 : 400;

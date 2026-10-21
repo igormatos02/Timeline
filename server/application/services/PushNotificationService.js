@@ -75,6 +75,27 @@ export class PushNotificationService {
     return { sent };
   }
 
+  /**
+   * Sends a notification to one person's phones (receipts, overdue fees); returns how many were sent — 0 when the
+   * person has no phone registered, push is off or the plan has no push (the caller then sends an e-mail).
+   */
+  async notifyUser(userId, timeboardId, kind, message, data = {}) {
+    if (!userId || !isPushConfigured()) return { sent: 0 };
+    if (!(await planService.hasFeature(timeboardId, PlanFeature.PUSH))) return { sent: 0 };
+    const devices = await pushDeviceRepository.listByUserIds([String(userId)]);
+    let sent = 0;
+    await Promise.all(devices.map(async (device) => {
+      try {
+        const result = await sendPush(device.token, { ...message(createT(device.language || 'pt')), data: { ...data, kind, timeboardId } });
+        if (result.ok) sent += 1;
+        else if (result.unregistered) await pushDeviceRepository.deleteByToken(device.token);
+      } catch (err) {
+        console.warn('Push notification not sent:', err.message);
+      }
+    }));
+    return { sent };
+  }
+
   /** A condominium post was published. Never throws: a failed notification must not fail the save. */
   async notifyPostPublished(post) {
     try {

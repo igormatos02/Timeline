@@ -22,7 +22,8 @@
     "release:minor": "standard-version --release-as minor",
     "release:major": "standard-version --release-as major",
     "prepare": "husky",
-    "plan:set": "node --env-file=server/.env server/scripts/setPlan.js"
+    "plan:set": "node --env-file=server/.env server/scripts/setPlan.js",
+    "email:stats": "node --env-file=server/.env server/scripts/emailStats.js"
   },
   "standard-version": {
     "types": [

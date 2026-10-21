@@ -2371,7 +2371,12 @@ export const translations = {
       feeChannel: { cash: "Cash", bank: "Bank account" },
       startDateMissing: "Set the accounting start date of this condominium before creating entries.",
       startDateMissingMember: "The administration has not set the accounting start date yet: entries cannot be created.",
-      setStartDate: "Set start date"
+      setStartDate: "Set start date",
+      noticesTitle: "Notices to owners",
+      noticesHelp: "Owners with the CondoFlow app get a notification; the others an e-mail (when the unit has one).",
+      notifyReceipts: "Send the receipt when a fee is received",
+      notifyOverdue: "Notify overdue fees once a month (day {{day}})",
+      emailsThisMonth: "E-mails sent this month: {{count}}"
     },
     condoWizard: {
       title: "New condominium",
@@ -2512,6 +2517,26 @@ export const translations = {
     },
     backend: {
       import: { noRows: "The file has no rows to import." },
+      notify: {
+        receiptSubject: "{{timeboard}}: receipt of {{month}}",
+        receiptTitle: "Fee received",
+        receiptBody: "Hello {{name}}, the condominium {{timeboard}} received your fee of {{month}} ({{amount}} €). Thank you.",
+        receiptCta: "View receipt",
+        overdueSubject: "{{timeboard}}: fees overdue",
+        overdueTitle: "Fees overdue",
+        overdueBody: "Hello {{name}}, the condominium {{timeboard}} has {{count}} fee(s) of your unit overdue, {{amount}} € in total.",
+        overdueHint: "If you have already paid, please ignore this message; otherwise talk to the administration.",
+        overdueCta: "Open CondoFlow",
+        unitLabel: "Unit",
+        monthLabel: "Month",
+        amountLabel: "Amount",
+        overdueCountLabel: "Fees overdue",
+        footer: "Message from your condominium's administration.",
+        receiptPushTitle: "{{timeboard}}: fee received",
+        receiptPushBody: "Your fee of {{month}} ({{amount}} €) was received.",
+        overduePushTitle: "{{timeboard}}: fees overdue",
+        overduePushBody: "{{count}} fee(s) overdue, {{amount}} € in total."
+      },
       upgradeRequest: {
         subject: "Upgrade request: {{product}} {{plan}} ({{name}})",
         body: "{{name}} <{{email}}> asks for another {{product}} plan.\n\nCurrent plan: {{current}}\nRequested plan: {{requested}}\n\nMessage:\n{{message}}\n\nTo set it: npm run plan:set -- {{email}} <product> <plan> [YYYY-MM-DD | none] [condominiums]"
@@ -5229,7 +5254,12 @@ export const translations = {
       feeChannel: { cash: "Caixa", bank: "Conta bancária" },
       startDateMissing: "Defina a data de início contabilística deste condomínio antes de criar lançamentos.",
       startDateMissingMember: "A administração ainda não definiu a data de início contabilística: não é possível criar lançamentos.",
-      setStartDate: "Definir data de início"
+      setStartDate: "Definir data de início",
+      noticesTitle: "Avisos aos condóminos",
+      noticesHelp: "Quem tem a app CondoFlow recebe uma notificação; os outros um email (quando a fração tem email).",
+      notifyReceipts: "Enviar o recibo quando a quota é recebida",
+      notifyOverdue: "Avisar as quotas em atraso uma vez por mês (dia {{day}})",
+      emailsThisMonth: "Emails enviados este mês: {{count}}"
     },
     condoWizard: {
       title: "Novo condomínio",
@@ -5370,6 +5400,26 @@ export const translations = {
     },
     backend: {
       import: { noRows: "O ficheiro não tem linhas para importar." },
+      notify: {
+        receiptSubject: "{{timeboard}}: recibo de {{month}}",
+        receiptTitle: "Quota recebida",
+        receiptBody: "Olá {{name}}, o condomínio {{timeboard}} recebeu a sua quota de {{month}} ({{amount}} €). Obrigado.",
+        receiptCta: "Ver recibo",
+        overdueSubject: "{{timeboard}}: quotas em atraso",
+        overdueTitle: "Quotas em atraso",
+        overdueBody: "Olá {{name}}, o condomínio {{timeboard}} tem {{count}} quota(s) da sua fração em atraso, no total de {{amount}} €.",
+        overdueHint: "Se já pagou, ignore esta mensagem; caso contrário, fale com a administração.",
+        overdueCta: "Abrir CondoFlow",
+        unitLabel: "Fração",
+        monthLabel: "Mês",
+        amountLabel: "Valor",
+        overdueCountLabel: "Quotas em atraso",
+        footer: "Mensagem da administração do seu condomínio.",
+        receiptPushTitle: "{{timeboard}}: quota recebida",
+        receiptPushBody: "A sua quota de {{month}} ({{amount}} €) foi recebida.",
+        overduePushTitle: "{{timeboard}}: quotas em atraso",
+        overduePushBody: "{{count}} quota(s) em atraso, {{amount}} € no total."
+      },
       upgradeRequest: {
         subject: "Pedido de upgrade: {{product}} {{plan}} ({{name}})",
         body: "{{name}} <{{email}}> pede outro plano do {{product}}.\n\nPlano atual: {{current}}\nPlano pedido: {{requested}}\n\nMensagem:\n{{message}}\n\nPara ativar: npm run plan:set -- {{email}} <produto> <plano> [AAAA-MM-DD | none] [condomínios]"

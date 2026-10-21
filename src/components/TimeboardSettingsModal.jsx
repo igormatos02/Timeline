@@ -33,6 +33,7 @@ import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { PaymentChannel, PersonCategory, TimeboardType, HeaderDefaultState, TimelineColor, TimeboardSettingsTab, personCategoryOf } from '../enums/index.js';
 import { buildPath, ProductPage } from '../app/routes.js';
 import { productOfTimeboardType } from '../../shared/config/products.js';
+import { OVERDUE_NOTICE_DAY } from '../../shared/config/notifications.js';
 
 // Accounting start month (yyyy-MM) of a timeboard, '' when it counts from the beginning
 const startMonthOf = (timeboard) => {
@@ -186,8 +187,12 @@ export default function TimeboardSettingsModal({
     // Condominiums: accounting start month (yyyy-MM), base monthly fee and where fees are received
     startMonth: '',
     baseFeeAmount: '',
-    feeChannel: PaymentChannel.CASH
+    feeChannel: PaymentChannel.CASH,
+    // Condominiums: owners' notices (receipt, monthly overdue fees)
+    notifyReceipts: false,
+    notifyOverdue: false
   });
+  const [noticeStats, setNoticeStats] = useState(null);
   const [isSavingGeneral, setIsSavingGeneral] = useState(false);
   const [generalSaveSuccess, setGeneralSaveSuccess] = useState(false);
 
@@ -224,8 +229,11 @@ export default function TimeboardSettingsModal({
         print_template: printTemplateMd,
         startMonth: startMonthOf(timeboard),
         baseFeeAmount: timeboard.baseFeeAmount ?? '',
-        feeChannel: timeboard.feeChannel || PaymentChannel.CASH
+        feeChannel: timeboard.feeChannel || PaymentChannel.CASH,
+        notifyReceipts: Boolean(timeboard.notifyReceipts),
+        notifyOverdue: Boolean(timeboard.notifyOverdue)
       });
+      if (timeboard.type === TimeboardType.CONDOFLOW) api.fetchCondoNoticeStats(timeboard.id).then(setNoticeStats).catch(() => setNoticeStats(null));
 
       setHeaderDefaultState(timeboard.headerDefaultState === HeaderDefaultState.EXPANDED ? HeaderDefaultState.EXPANDED : HeaderDefaultState.COLLAPSED);
 
@@ -322,7 +330,9 @@ export default function TimeboardSettingsModal({
           computeFrom: generalForm.startMonth ? `${generalForm.startMonth}-01` : (timeboard.computeFrom || null),
           compute_from: generalForm.startMonth ? `${generalForm.startMonth}-01` : (timeboard.compute_from || null),
           baseFeeAmount: generalForm.baseFeeAmount === '' ? null : Number(String(generalForm.baseFeeAmount).replace(',', '.')),
-          feeChannel: generalForm.feeChannel
+          feeChannel: generalForm.feeChannel,
+          notifyReceipts: generalForm.notifyReceipts,
+          notifyOverdue: generalForm.notifyOverdue
         } : {})
       });
       setGeneralSaveSuccess(true);
@@ -797,6 +807,21 @@ export default function TimeboardSettingsModal({
                         onChange={(feeChannel) => setGeneralForm({ ...generalForm, feeChannel })}
                         marginBottom="0"
                       />
+
+                      {/* Owners' notices: receipt and monthly overdue fees (push with the app, e-mail otherwise) */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--border-glass)', background: 'var(--bg-app)' }}>
+                        <strong style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>{t('condoSettings.noticesTitle')}</strong>
+                        <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>{t('condoSettings.noticesHelp')}</span>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', color: 'var(--text-main)', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={generalForm.notifyReceipts} onChange={(e) => setGeneralForm({ ...generalForm, notifyReceipts: e.target.checked })} />
+                          {t('condoSettings.notifyReceipts')}
+                        </label>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', color: 'var(--text-main)', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={generalForm.notifyOverdue} onChange={(e) => setGeneralForm({ ...generalForm, notifyOverdue: e.target.checked })} />
+                          {t('condoSettings.notifyOverdue', { day: OVERDUE_NOTICE_DAY })}
+                        </label>
+                        {noticeStats && <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>{t('condoSettings.emailsThisMonth', { count: noticeStats.sentThisMonth })}</span>}
+                      </div>
                     </>
                   )}
 

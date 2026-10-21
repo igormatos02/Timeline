@@ -14,6 +14,7 @@ import { recalculateLoanState, getLoanMetrics } from '../../../shared/finance/lo
 import { buildReceiptHtml } from '../../../shared/utils/receiptGenerator.js';
 import { createT } from '../../../shared/i18n/index.js';
 import { createLinkToken, verifyLinkToken, LinkTokenPurpose } from '../../infrastructure/security/sessionToken.js';
+import { getAppUrl } from '../../../shared/config/appConfig.js';
 
 // Timelines whose events are shared notices visible to individual members
 const NOTICE_TIMELINE_TYPES = [TimelineType.REMINDER, TimelineType.DIARY];
@@ -33,6 +34,8 @@ const obligationSide = (ev, timelineTypeMap) => {
 const timelineTypeMapOf = (timelines) => new Map((timelines || []).map((tl) => [String(tl.id), tl.type]));
 // A receipt link opened in the phone's browser is valid for a few minutes
 const RECEIPT_LINK_TTL_SECONDS = 10 * 60;
+// Receipt links sent by e-mail to unit owners stay valid for a year
+const EMAIL_RECEIPT_LINK_TTL_SECONDS = 365 * 24 * 60 * 60;
 // Debt balance: open obligations due up to the end of the current month (same rule as the web individual header)
 const debtLimitDate = () => `${new Date().toISOString().substring(0, 7)}-31`;
 
@@ -335,6 +338,44 @@ export class MeService {
       personId: found.personId,
       language
     }, RECEIPT_LINK_TTL_SECONDS);
+  }
+
+  /**
+   * Receipt link of an e-mail to a unit's owner (who may have no account): signed on behalf of the condominium's
+   * owner, so opening it checks the receipt like an administrator would (still paid, same unit).
+   */
+  createEmailReceiptLink({ timeboard, eventId, personId, language = 'pt' }) {
+    const token = createLinkToken(LinkTokenPurpose.RECEIPT, {
+      sub: timeboard.ownerId || timeboard.userId,
+      timeboardId: timeboard.id,
+      eventId,
+      personId,
+      language
+    }, EMAIL_RECEIPT_LINK_TTL_SECONDS);
+    return `${getAppUrl()}/api/receipts/${token}?lang=${language}`;
+  }
+
+  /**
+   * Overdue fees of each unit of a condominium (fees owed by the unit whose date has passed), for the monthly
+   * notice: personId → { overdueCount, overdueAmount }.
+   */
+  async getOverdueByPerson(timeboardId, today = new Date().toISOString().substring(0, 10)) {
+    const [events, timelines] = await Promise.all([
+      eventService.getAllEvents({ timeboardId }),
+      timelineRepository.findByTimeboardId(timeboardId)
+    ]);
+    const timelineTypeMap = timelineTypeMapOf(timelines);
+    const overdue = new Map();
+    (events || []).forEach((ev) => {
+      if (!isActiveEvent(ev) || isSettled(ev) || !(ev.date < today)) return;
+      const personId = String(ev.obligationPersonId || ev.obligation_person_id || '');
+      if (!personId || obligationSide(ev, timelineTypeMap) !== EntityDirection.OWES) return;
+      const entry = overdue.get(personId) || { overdueCount: 0, overdueAmount: 0 };
+      entry.overdueCount += 1;
+      entry.overdueAmount = Math.round((entry.overdueAmount + Math.abs(Number(ev.amount || 0))) * 100) / 100;
+      overdue.set(personId, entry);
+    });
+    return overdue;
   }
 
   /** Receipt HTML of a receipt link token (same document as the web's), or null when the link is not valid. */

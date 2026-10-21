@@ -4,6 +4,7 @@ import { PlanFeature } from '../../../../shared/config/plans.js';
 import { timeboardService } from '../../../application/services/TimeboardService.js';
 import { firstStepsService } from '../../../application/services/FirstStepsService.js';
 import { dataExportService } from '../../../application/services/DataExportService.js';
+import { condoNotificationService } from '../../../application/services/CondoNotificationService.js';
 import { unitFeeService } from '../../../application/services/UnitFeeService.js';
 import { unitImportService } from '../../../application/services/UnitImportService.js';
 import { timeboardInvitationRepository } from '../../../infrastructure/database/supabase/SupabaseTimeboardInvitationRepository.js';
@@ -94,6 +95,15 @@ timeboardsRouter.post('/:id/units/:personId/fee', requireCapability(Capability.M
     res.json(await unitFeeService.applyUnitFee(req.params.id, req.params.personId, { amount, parts, channel }, language));
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message, code: err.code });
+  }
+});
+
+// GET /api/timeboards/:id/notifications — owners' notices of the condominium: e-mails sent this month
+timeboardsRouter.get('/:id/notifications', requireCapability(Capability.MANAGE), async (req, res) => {
+  try {
+    res.json(await condoNotificationService.monthStats(req.params.id));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

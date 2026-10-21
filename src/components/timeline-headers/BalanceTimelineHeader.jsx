@@ -655,6 +655,8 @@ export default function BalanceTimelineHeader({
         asOfMonth: currentMonthStr,
         horizonMonth: format(addMonths(new Date(), 12), 'yyyy-MM'),
         initialAvailable: incomeInitialValue,
+        // Opening balance of the account's General space (initial value of the savings timeline)
+        initialSavings: Number((allTimelines || []).find((tl) => normalizeTimelineType(tl?.type) === TimelineType.INVESTMENT)?.initialValue ?? 0),
         // Same loan source as the loans quadrant: the metrics of each loan timeline
         loans: activeLoanTimelines.map((loanTimeline) => {
           const m = loanTimeline.metrics || loanTimeline.loanHeaderResult || loanTimeline.procedureMetrics || {};

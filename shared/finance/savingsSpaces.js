@@ -35,6 +35,7 @@ export function savingsEffect(movement) {
  * - side 'realized': effective movements only (what is really in the space); 'projected': every active one.
  * - upToMonth ('yyyy-MM') / upToDate ('yyyy-MM-dd'): only movements up to that point.
  * - excludeEventId: leaves one movement out (e.g. the one being edited).
+ * - generalInitial: starting balance of the General space (the account's initial value / opening balance).
  * Returns Map(pocketId | GENERAL_SPACE_KEY → balance).
  */
 export function computeSpaceBalances({
@@ -44,9 +45,10 @@ export function computeSpaceBalances({
   side = 'realized',
   upToMonth = null,
   upToDate = null,
-  excludeEventId = null
+  excludeEventId = null,
+  generalInitial = 0
 }) {
-  const balances = new Map([[GENERAL_SPACE_KEY, 0]]);
+  const balances = new Map([[GENERAL_SPACE_KEY, Number(generalInitial) || 0]]);
   (pockets || []).forEach((p) => balances.set(String(p.id), Number(p.initial_value ?? p.initialValue ?? 0)));
 
   (events || []).forEach((ev) => {

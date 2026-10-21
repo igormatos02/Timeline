@@ -112,6 +112,7 @@ export default function TimeboardReportsTab({ timeboard, timelines = [], events 
   const buildMoneySummary = (fromDate, toDate) => {
     const timelineTypeMap = new Map(boardTimelines.map((tl) => [String(tl.id), tl.type]));
     const incomeTimeline = boardTimelines.find((tl) => isWalletTimelineType(tl.type));
+    const accountTimeline = boardTimelines.find((tl) => normalizeTimelineType(tl.type) === TimelineType.INVESTMENT);
     const rawComputeFrom = String(timeboard?.computeFrom || timeboard?.compute_from || '');
     const computeFromMonth = rawComputeFrom && !rawComputeFrom.startsWith('1900-01') ? rawComputeFrom.substring(0, 7) : null;
     const asOfMonth = toDate.substring(0, 7);
@@ -130,7 +131,8 @@ export default function TimeboardReportsTab({ timeboard, timelines = [], events 
     const positions = computeMoneySummary({
       ...common,
       fromMonth: computeFromMonth,
-      initialAvailable: Number(incomeTimeline?.initialValue ?? incomeTimeline?.initial_value ?? 0)
+      initialAvailable: Number(incomeTimeline?.initialValue ?? incomeTimeline?.initial_value ?? 0),
+      initialSavings: Number(accountTimeline?.initialValue ?? accountTimeline?.initial_value ?? 0)
     });
     const flows = computeMoneySummary({ ...common, fromMonth: fromDate ? fromDate.substring(0, 7) : computeFromMonth });
     return {

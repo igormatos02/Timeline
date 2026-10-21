@@ -3,23 +3,15 @@ import { Home, Landmark, Loader2, Plus, Trash2, Wallet, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import {
-  AccountOperation,
-  EventPeriodicity,
-  EventRecurrence,
-  EventType,
-  IncomeEventCategory,
-  InvestmentEventCategory,
   PaymentChannel,
   PersonRole,
   PersonType,
   TimeboardType,
   TimelineColor,
   TimelineType,
-  accountOperationEventType,
   isWalletTimelineType,
   normalizeTimelineType
 } from '../../enums/index.js';
-import { effectiveStatusFor } from '../../../shared/finance/statusRules.js';
 import { generateUUID } from '../../utils/uuid.js';
 import OptionBoxGroup from '../ui/OptionBoxGroup.jsx';
 import * as api from '../../services/api.js';
@@ -68,34 +60,6 @@ export default function CondoSetupWizard({ isOpen, onClose, onCreated }) {
     setStep(Step.UNITS);
   };
 
-  // Opening balance: an effective movement on the start date (cash income / money received in the account)
-  const openingBalance = (timeline, amount, isBank, startDate, timeboardId) => {
-    const eventType = isBank ? accountOperationEventType(AccountOperation.RECEIVE) : EventType.INCOME;
-    const movement = {
-      id: generateUUID(),
-      title: t('condoWizard.openingTitleEntry'),
-      name: t('condoWizard.openingTitleEntry'),
-      description: '',
-      amount,
-      date: startDate,
-      dayOfMonth: 1,
-      recurrence: EventRecurrence.ONCE,
-      isRecurring: false,
-      periodicity: EventPeriodicity.MONTHLY,
-      eventType,
-      category: isBank ? InvestmentEventCategory.OTHER : IncomeEventCategory.OTHER,
-      ...(isBank ? { isExternal: true, is_external: true } : {}),
-      isObligation: false,
-      obligationPersonId: null,
-      timeboardId,
-      timelineId: timeline.id,
-      timelineOriginId: timeline.id,
-      pocketId: null,
-      pocket_id: null
-    };
-    return api.createEvent({ ...movement, status: effectiveStatusFor(movement) });
-  };
-
   const handleCreate = async (withUnits) => {
     const rows = withUnits ? units.filter((row) => row.unit.trim() || row.owner.trim()) : [];
     if (rows.some((row) => !row.unit.trim() || !row.owner.trim())) return setError(t('condoWizard.unitIncomplete'));
@@ -123,8 +87,10 @@ export default function CondoSetupWizard({ isOpen, onClose, onCreated }) {
       const timelines = await api.fetchTimelines({ timeboardId: created.id });
       const wallet = timelines.find((tl) => isWalletTimelineType(tl.type));
       const account = timelines.find((tl) => normalizeTimelineType(tl.type) === TimelineType.INVESTMENT);
-      if (toNumber(condo.openingCash) > 0 && wallet) await openingBalance(wallet, toNumber(condo.openingCash), false, startDate, created.id);
-      if (toNumber(condo.openingBank) > 0 && account) await openingBalance(account, toNumber(condo.openingBank), true, startDate, created.id);
+      // Opening balances: the initial value of the cash and of the account (money already there on the start date,
+      // in the balances from then on, never income)
+      if (toNumber(condo.openingCash) > 0 && wallet) await api.updateTimeline(wallet.id, { initialValue: toNumber(condo.openingCash), initial_value: toNumber(condo.openingCash) });
+      if (toNumber(condo.openingBank) > 0 && account) await api.updateTimeline(account.id, { initialValue: toNumber(condo.openingBank), initial_value: toNumber(condo.openingBank) });
     } catch (err) {
       failures.push(err.message);
     }

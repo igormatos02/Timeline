@@ -12,6 +12,7 @@ const round = (value) => Math.round((Number(value) || 0) * 100) / 100;
  * via savings), transferred, withdrawn, put into savings (internal / external), paid on loans, amortized, owed.
  *
  * - initialAvailable: starting balance of the available money (initial value of the income timeline)
+ * - initialSavings: starting balance of the account's General space (initial value of the savings timeline)
  * - fromMonth: calculation start ('yyyy-MM' or null); horizonMonth: limit of "expected to receive"
  * - loans: [{ remainingDebt, amortizedCapital }] from the loan metrics (owed and amortized capital)
  * Wealth = available + savings - owed (transfers never change it).
@@ -24,6 +25,7 @@ export function computeMoneySummary({
   asOfMonth,
   horizonMonth,
   initialAvailable = 0,
+  initialSavings = 0,
   loans = []
 }) {
   const { realized } = computeFinancialPosition({ events, timelineTypeMap, fromMonth, asOfMonth, horizonMonth });
@@ -40,7 +42,7 @@ export function computeMoneySummary({
     expectedToReceive += movement.amount;
   });
 
-  const spaceBalances = computeSpaceBalances({ events, pockets, timelineTypeMap, side: 'realized', upToMonth: asOfMonth });
+  const spaceBalances = computeSpaceBalances({ events, pockets, timelineTypeMap, side: 'realized', upToMonth: asOfMonth, generalInitial: initialSavings });
   const spaces = [
     { id: GENERAL_SPACE_KEY, isGeneral: true, balance: round(spaceBalances.get(GENERAL_SPACE_KEY)) },
     ...(pockets || []).map((pocket) => ({ id: pocket.id, name: pocket.name, balance: round(spaceBalances.get(String(pocket.id))) }))

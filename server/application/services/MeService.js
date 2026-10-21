@@ -139,6 +139,7 @@ export class MeService {
     loanTimelines.forEach((loanTimeline) => { events = recalculateLoanState(loanTimeline, events); });
 
     const incomeTimeline = (timelines || []).find((tl) => isWalletTimelineType(tl.type));
+    const accountTimeline = (timelines || []).find((tl) => normalizeTimelineType(tl.type) === TimelineType.INVESTMENT);
     const rawComputeFrom = String(timeboard?.computeFrom || '');
     const today = new Date();
     const horizon = new Date(today.getFullYear() + 1, today.getMonth(), 1);
@@ -150,6 +151,8 @@ export class MeService {
       asOfMonth: today.toISOString().substring(0, 7),
       horizonMonth: horizon.toISOString().substring(0, 7),
       initialAvailable: Number(incomeTimeline?.initialValue ?? incomeTimeline?.initial_value ?? 0),
+      // Opening balance of the bank account (initial value of the savings timeline)
+      initialSavings: Number(accountTimeline?.initialValue ?? accountTimeline?.initial_value ?? 0),
       loans: loanTimelines.map((loanTimeline) => getLoanMetrics(loanTimeline, events))
     });
   }

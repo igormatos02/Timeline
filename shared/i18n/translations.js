@@ -2248,7 +2248,34 @@ export const translations = {
     },
 
     // Backend
+    unitImport: {
+      open: "Import units",
+      title: "Import units from a spreadsheet",
+      intro: "One row per unit (fração), saved as CSV from Excel or Google Sheets. Units already registered are skipped. Each unit with a monthly fee gets its recurring fee.",
+      template: "Download template",
+      chooseFile: "Choose CSV file",
+      rowsFound: "{{count}} unit(s) found in the file.",
+      noColumns: "The file needs at least the columns Unit and Name (see the template).",
+      feeStart: "Fees start on",
+      feeChannel: "Fees are received in",
+      cash: "Cash",
+      bank: "Bank account",
+      submit: "Import",
+      cancel: "Close",
+      done: "{{units}} unit(s) and {{fees}} monthly fee(s) created.",
+      skippedTitle: "Rows not imported",
+      skippedLine: "Line {{line}} ({{unit}}): {{reason}}",
+      example: { unit: "1.º Esq.", name: "Ana Silva", email: "ana@example.com", phone: "912345678", taxId: "123456789", monthlyFee: "25,00", observation: "" },
+      columns: { unit: "Unit", name: "Name", email: "Email", phone: "Phone", taxId: "Tax ID", monthlyFee: "Monthly fee", observation: "Notes" },
+      reasons: {
+        missingFields: "unit or name missing",
+        invalidFee: "invalid monthly fee",
+        duplicateInFile: "repeated in the file",
+        alreadyExists: "already registered"
+      }
+    },
     backend: {
+      import: { noRows: "The file has no rows to import." },
       plan: {
         unitsLimit: "Your plan allows up to {{max}} units (frações). Upgrade the plan to add more.",
         adminsLimit: "Your plan allows up to {{max}} administrator(s). Upgrade the plan to add more.",
@@ -4830,7 +4857,34 @@ export const translations = {
     },
 
     // Backend
+    unitImport: {
+      open: "Importar frações",
+      title: "Importar frações de uma folha de cálculo",
+      intro: "Uma linha por fração, guardada em CSV a partir do Excel ou do Google Sheets. As frações já registadas são ignoradas. Cada fração com quota mensal fica com a sua quota recorrente.",
+      template: "Descarregar modelo",
+      chooseFile: "Escolher ficheiro CSV",
+      rowsFound: "{{count}} fração(ões) encontrada(s) no ficheiro.",
+      noColumns: "O ficheiro precisa pelo menos das colunas Fração e Nome (veja o modelo).",
+      feeStart: "As quotas começam em",
+      feeChannel: "As quotas são recebidas na",
+      cash: "Caixa",
+      bank: "Conta bancária",
+      submit: "Importar",
+      cancel: "Fechar",
+      done: "{{units}} fração(ões) e {{fees}} quota(s) mensal(is) criadas.",
+      skippedTitle: "Linhas não importadas",
+      skippedLine: "Linha {{line}} ({{unit}}): {{reason}}",
+      example: { unit: "1.º Esq.", name: "Ana Silva", email: "ana@exemplo.pt", phone: "912345678", taxId: "123456789", monthlyFee: "25,00", observation: "" },
+      columns: { unit: "Fração", name: "Nome", email: "Email", phone: "Telefone", taxId: "NIF", monthlyFee: "Quota mensal", observation: "Observações" },
+      reasons: {
+        missingFields: "falta a fração ou o nome",
+        invalidFee: "quota mensal inválida",
+        duplicateInFile: "repetida no ficheiro",
+        alreadyExists: "já está registada"
+      }
+    },
     backend: {
+      import: { noRows: "O ficheiro não tem linhas para importar." },
       plan: {
         unitsLimit: "O seu plano permite até {{max}} frações. Mude de plano para adicionar mais.",
         adminsLimit: "O seu plano permite até {{max}} administrador(es). Mude de plano para adicionar mais.",

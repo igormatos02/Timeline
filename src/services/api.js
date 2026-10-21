@@ -328,6 +328,17 @@ export async function fetchTimeboardPlan(timeboardId) {
   return res.json();
 }
 
+// Imports a condominium's units (frações) and monthly fees from spreadsheet rows
+export async function importUnits(timeboardId, { rows, feeStartDate, feeChannel, language }) {
+  const res = await apiFetch(`${API_BASE}/timeboards/${encodeURIComponent(timeboardId)}/import-units`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ rows, feeStartDate, feeChannel, language })
+  });
+  if (!res.ok) throw await serverRefusal(res, 'Failed to import the units');
+  return res.json();
+}
+
 export async function sendTimeboardInvitation({ timeboardId, personId, email, role, inviterName, invitedBy }) {
   const res = await apiFetch(`${API_BASE}/timeboards/${timeboardId}/invite`, {
     method: 'POST',

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { planService } from '../../../application/services/PlanService.js';
 import { PlanFeature } from '../../../../shared/config/plans.js';
 import { timeboardService } from '../../../application/services/TimeboardService.js';
+import { unitImportService } from '../../../application/services/UnitImportService.js';
 import { timeboardInvitationRepository } from '../../../infrastructure/database/supabase/SupabaseTimeboardInvitationRepository.js';
 import { timeboardAccessFromParam } from '../middleware/timeboardAccess.js';
 import { createT } from '../../../../shared/i18n/index.js';
@@ -49,6 +50,17 @@ timeboardsRouter.get('/:id/plan', async (req, res) => {
     res.json({ ...info, limits: { maxUnits: info.limits.maxUnits === Infinity ? null : info.limits.maxUnits, maxAdmins: info.limits.maxAdmins === Infinity ? null : info.limits.maxAdmins } });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/timeboards/:id/import-units — creates the condominium's units (frações) and monthly fees from a spreadsheet
+timeboardsRouter.post('/:id/import-units', requireCapability(Capability.MANAGE), async (req, res) => {
+  try {
+    const { rows, feeStartDate, feeChannel, language } = req.body || {};
+    if (!Array.isArray(rows) || rows.length === 0) return res.status(400).json({ error: t('backend.import.noRows') });
+    res.json(await unitImportService.importUnits(req.params.id, { rows, feeStartDate, feeChannel, language }));
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message, code: err.code });
   }
 });
 

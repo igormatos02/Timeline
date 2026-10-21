@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PlanUsageBanner from './PlanUsageBanner.jsx';
+import UnitImportPanel from './UnitImportPanel.jsx';
 import { usePermissions } from '../context/PermissionsContext.jsx';
 import AuditHistoryTab from './settings/AuditHistoryTab.jsx';
 import {
@@ -34,8 +35,7 @@ import {
   PanelTop,
   ChevronsDownUp,
   ChevronsUpDown,
-  History
-} from 'lucide-react';
+  History, FileUp } from 'lucide-react';
 import { useTranslation } from '../i18n/LanguageContext.jsx';
 import { PersonRole, PersonType, TimeboardType, InvitationStatus, HeaderDefaultState, TimelineColor, TimeboardSettingsTab } from '../enums/index.js';
 import * as api from '../services/api.js';
@@ -202,6 +202,8 @@ export default function TimeboardSettingsModal({
 
   // Entities tab state
   const [persons, setPersons] = useState([]);
+  // Condominiums: panel that imports units from a spreadsheet
+  const [isUnitImportOpen, setIsUnitImportOpen] = useState(false);
   const [invitations, setInvitations] = useState([]);
   const [isLoadingPersons, setIsLoadingPersons] = useState(false);
   const [entitySearch, setEntitySearch] = useState('');
@@ -1251,6 +1253,19 @@ export default function TimeboardSettingsModal({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {/* CondoFlow license: plan in force and the usage of its limits */}
                 <PlanUsageBanner timeboardId={timeboard?.id} refreshKey={persons.length} />
+
+                {/* Condominiums: import units (frações) and monthly fees from a spreadsheet */}
+                {timeboard?.type === TimeboardType.CONDOFLOW && (isUnitImportOpen ? (
+                  <UnitImportPanel timeboardId={timeboard.id} onImported={() => loadPersons(timeboard.id)} onClose={() => setIsUnitImportOpen(false)} />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsUnitImportOpen(true)}
+                    style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)', background: 'transparent', color: 'var(--text-main)', fontSize: '0.82rem', cursor: 'pointer' }}
+                  >
+                    <FileUp size={15} />{t('unitImport.open')}
+                  </button>
+                ))}
 
                 {/* Top Control Bar: Filters, Search & Add Button */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>

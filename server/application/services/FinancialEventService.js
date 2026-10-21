@@ -35,7 +35,8 @@ import {
   isPocketTransferEvent,
   PersonRole,
   AuditAction,
-  StatusChangeReason
+  StatusChangeReason,
+  normalizeTimelineType
 } from '../../../shared/enums/index.js';
 import { createT } from '../../../shared/i18n/index.js';
 import { isLockableMovement, changedLockedFields } from '../../../shared/finance/corrections.js';

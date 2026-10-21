@@ -521,7 +521,7 @@ export default function TimeboardsHub({
           timeboards={managedCondos}
           statusById={condoStatusById}
           t={t}
-          onOpenSettings={(tb) => onOpenEditTimeboard(tb, TimeboardSettingsTab.ENTITIES)}
+          onOpenSettings={(tb) => onOpenEditTimeboard(tb, tb.type === TimeboardType.CONDOFLOW ? TimeboardSettingsTab.UNITS : TimeboardSettingsTab.ENTITIES)}
           onOpenBoard={onSelectTimeboard}
         />}
 

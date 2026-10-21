@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient.js';
 import { Timeboard } from '../../../domain/entities/Timeboard.js';
 import { IRepository } from '../../../domain/repositories/IRepository.js';
-import { HeaderDefaultState } from '../../../../shared/enums/index.js';
+import { HeaderDefaultState, PaymentChannel } from '../../../../shared/enums/index.js';
 
 const TABLE = 'timeboards';
 
@@ -22,7 +22,9 @@ function rowToEntity(row) {
     printTemplate: row.print_template || row.printTemplate || null,
     print_template: row.print_template || row.printTemplate || null,
     headerDefaultState: row.header_default_state || undefined,
-    // CondoFlow license (migration 0014)
+    // Condominium settings (migration 0015)
+    baseFeeAmount: row.base_fee_amount ?? null,
+    feeChannel: row.fee_channel || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   });
@@ -57,6 +59,13 @@ function entityToRow(data, isCreate = false) {
   }
 
   if (Object.values(HeaderDefaultState).includes(data.headerDefaultState)) row.header_default_state = data.headerDefaultState;
+
+  // Condominium settings (migration 0015)
+  if (data.baseFeeAmount !== undefined) {
+    const amount = data.baseFeeAmount === null || data.baseFeeAmount === '' ? null : Number(data.baseFeeAmount);
+    row.base_fee_amount = Number.isFinite(amount) ? amount : null;
+  }
+  if (Object.values(PaymentChannel).includes(data.feeChannel)) row.fee_channel = data.feeChannel;
 
   const rawComputeFrom = data.computeFrom !== undefined ? data.computeFrom : data.compute_from;
   if (rawComputeFrom !== undefined) {
@@ -107,7 +116,12 @@ export class SupabaseTimeboardRepository extends IRepository {
 
   async update(id, updates) {
     const row = entityToRow(updates, false);
-    const { data, error } = await supabase.from(TABLE).update(row).eq('id', id).select().maybeSingle();
+    let { data, error } = await supabase.from(TABLE).update(row).eq('id', id).select().maybeSingle();
+    // Before migration 0015 the condominium settings columns do not exist: save the rest
+    if (error && /base_fee_amount|fee_channel/.test(error.message || '')) {
+      const { base_fee_amount: _baseFee, fee_channel: _feeChannel, ...withoutSettings } = row;
+      ({ data, error } = await supabase.from(TABLE).update(withoutSettings).eq('id', id).select().maybeSingle());
+    }
     if (error) throw new Error(`Supabase update [timeboards]: ${error.message}`);
     return data ? rowToEntity(data) : null;
   }

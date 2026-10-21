@@ -10,7 +10,7 @@ import {
   getLoanMetrics
 } from './utils/loanCalculations';
 import * as api from './services/api';
-import { TimelineType, isLoanTimelineType, PersonRole, TimeboardSettingsTab } from './enums/index.js';
+import { TimelineType, isLoanTimelineType, PersonRole, TimeboardSettingsTab, TimeboardType } from './enums/index.js';
 import { useToast } from './context/ToastContext.jsx';
 import { useTranslation } from './i18n/LanguageContext.jsx';
 import LandingPage from './components/landing/LandingPage.jsx';
@@ -602,7 +602,7 @@ export default function App() {
     } catch {
       setEditingTimeboard(activeTimeboard);
     }
-    setTimeboardSettingsInitialTab(TimeboardSettingsTab.ENTITIES);
+    setTimeboardSettingsInitialTab(activeTimeboard?.type === TimeboardType.CONDOFLOW ? TimeboardSettingsTab.UNITS : TimeboardSettingsTab.ENTITIES);
     setIsTimeboardSettingsModalOpen(true);
   }, [activeTimeboard]);
 

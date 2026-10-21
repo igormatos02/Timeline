@@ -11,7 +11,7 @@ import { userRepository } from '../../infrastructure/database/supabase/SupabaseU
 import { emailService } from './EmailService.js';
 import { getAppUrl } from '../../../shared/config/appConfig.js';
 import { productOfTimeboardType } from '../../../shared/config/products.js';
-import { TimeboardType, TimelineType, TimelineColor, TimelineStatus, EventPeriodicity, InvitationStatus, PersonRole, PersonType, getFixedTimelineColor } from '../../../shared/enums/index.js';
+import { TimeboardType, TimelineType, TimelineColor, TimelineStatus, EventPeriodicity, InvitationStatus, PersonRole, PersonType, PersonCategory, personCategoryOf, isMemberRole, roleRank, getFixedTimelineColor } from '../../../shared/enums/index.js';
 import { generateInviteCode, normalizeInviteCode, formatInviteCode, maskEmail, INVITE_CODE_TTL_DAYS } from '../../infrastructure/security/inviteCode.js';
 import { createT } from '../../../shared/i18n/index.js';
 
@@ -50,19 +50,23 @@ export class TimeboardService {
     // 2. Shared Timeboards: from timeboard_members where user_id = userId
     const sharedRaw = await timeboardMemberRepository.getSharedTimeboardsForUser(userId);
     const userPersons = await personRepository.getByUserId(userId);
-    const personByTb = new Map(userPersons.map((p) => [p.timeboardId, p]));
+    // Several records in one timeboard (e.g. administrator and owner of a unit): the highest role, their own unit
+    const personsByTb = new Map();
+    for (const p of userPersons) personsByTb.set(p.timeboardId, [...(personsByTb.get(p.timeboardId) || []), p]);
 
     const myIds = new Set(myTimeboards.map((t) => t.id));
     const sharedTimeboards = sharedRaw
       .filter((tb) => !myIds.has(tb.id))
       .map((tb) => {
-        const matchingPerson = personByTb.get(tb.id);
+        const records = personsByTb.get(tb.id) || [];
+        const roleRecord = [...records].sort((a, b) => roleRank(b.role) - roleRank(a.role))[0];
+        const unitRecord = records.find((p) => personCategoryOf(p) === PersonCategory.UNIT) || roleRecord;
         return {
           ...tb,
           isShared: true,
-          role: matchingPerson?.role || PersonRole.CONTRIBUTOR,
-          personId: matchingPerson?.id || null,
-          obligatorIdentification: matchingPerson?.obligatorIdentification || null,
+          role: roleRecord?.role || PersonRole.CONTRIBUTOR,
+          personId: unitRecord?.id || null,
+          obligatorIdentification: unitRecord?.obligatorIdentification || null,
           timelines: timelines.filter((tl) => tl.timeboardId === tb.id)
         };
       });
@@ -237,12 +241,18 @@ export class TimeboardService {
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const finalRole = role || 'contributor';
+    let finalRole = role || PersonRole.CONTRIBUTOR;
 
     // 1. If personId provided, update person with email and role
     let personName = '';
     if (personId) {
       const existing = await personRepository.getById(personId);
+      // Condominiums: units are invited as Individual, members keep their role, entities are never invited
+      if (existing && timeboard.type === TimeboardType.CONDOFLOW) {
+        const category = personCategoryOf(existing);
+        if (category === PersonCategory.ENTITY) throw new Error(t('backend.validation.entityNotInvitable'));
+        finalRole = category === PersonCategory.UNIT ? PersonRole.INDIVIDUAL : (isMemberRole(role) ? role : existing.role);
+      }
       if (existing) {
         personName = existing.personName || '';
         await personRepository.update(personId, {

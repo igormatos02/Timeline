@@ -23,6 +23,9 @@ export class Timeboard {
     printTemplate = null,
     print_template = null,
     headerDefaultState = HeaderDefaultState.COLLAPSED,
+    // Condominiums: base monthly fee (a reference) and where fees are received by default
+    baseFeeAmount = null,
+    feeChannel = null,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString()
   }) {
@@ -40,6 +43,8 @@ export class Timeboard {
     this.printTemplate = printTemplate ?? print_template ?? null;
     this.print_template = this.printTemplate;
     this.headerDefaultState = Object.values(HeaderDefaultState).includes(headerDefaultState) ? headerDefaultState : HeaderDefaultState.COLLAPSED;
+    this.baseFeeAmount = baseFeeAmount === null || baseFeeAmount === undefined ? null : Number(baseFeeAmount);
+    this.feeChannel = feeChannel || null;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }

@@ -18,6 +18,7 @@ export { EventDeletionMode } from './EventDeletionMode.js';
 export { EventUpdateMode } from './EventUpdateMode.js';
 export { PersonRole } from './PersonRole.js';
 export { PersonType } from './PersonType.js';
+export { PersonCategory, MEMBER_ROLES, isMemberRole, personCategoryOf, normalizeCondominiumPerson, roleRank } from './PersonCategory.js';
 export { InvitationStatus } from './InvitationStatus.js';
 export { DiaryMood, DiaryEventCategory } from './DiaryMood.js';
 export { TimelineColor, TIMELINE_COLOR_PRESETS, getDefaultTimelineColor, getFixedTimelineColor } from './TimelineColor.js';

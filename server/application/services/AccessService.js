@@ -3,7 +3,7 @@ import { timeboardMemberRepository } from '../../infrastructure/database/supabas
 import { timelineRepository } from '../../infrastructure/database/supabase/SupabaseTimelineRepository.js';
 import { personRepository } from '../../infrastructure/database/supabase/SupabasePersonRepository.js';
 import { supabase } from '../../infrastructure/database/supabase/supabaseClient.js';
-import { PersonRole } from '../../../shared/enums/index.js';
+import { PersonCategory, PersonRole, personCategoryOf, roleRank } from '../../../shared/enums/index.js';
 
 /**
  * Access of a user to a timeboard: the owner is admin; members take the role of their linked person
@@ -21,12 +21,15 @@ export class AccessService {
     const memberships = await timeboardMemberRepository.getByUserId(userId);
     const isMember = memberships.some((m) => String(m.timeboardId) === String(timeboardId));
     if (!isMember) return null;
-    const persons = await personRepository.getByUserId(userId);
-    const person = persons.find((p) => String(p.timeboardId) === String(timeboardId));
+    const persons = (await personRepository.getByUserId(userId)).filter((p) => String(p.timeboardId) === String(timeboardId));
+    // Several records of the same account (e.g. administrator and owner of a unit): the highest role gives the
+    // access, the unit stays the person's own (their installments and receipts)
+    const roleRecord = [...persons].sort((a, b) => roleRank(b.role) - roleRank(a.role))[0];
+    const unitRecord = persons.find((p) => personCategoryOf(p) === PersonCategory.UNIT) || roleRecord;
     return {
-      role: person?.role || PersonRole.CONTRIBUTOR,
-      personId: person?.id || null,
-      obligatorIdentification: person?.obligatorIdentification || null
+      role: roleRecord?.role || PersonRole.CONTRIBUTOR,
+      personId: unitRecord?.id || null,
+      obligatorIdentification: unitRecord?.obligatorIdentification || null
     };
   }
 

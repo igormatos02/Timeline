@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PlanUsageBanner from './PlanUsageBanner.jsx';
 import UnitImportPanel from './UnitImportPanel.jsx';
+import { UNIT_IMPORT_ENABLED } from '../../shared/config/featureFlags.js';
 import DataExportCard from './DataExportCard.jsx';
 import { usePermissions } from '../context/PermissionsContext.jsx';
 import AuditHistoryTab from './settings/AuditHistoryTab.jsx';
@@ -1256,7 +1257,7 @@ export default function TimeboardSettingsModal({
                 <PlanUsageBanner timeboardId={timeboard?.id} refreshKey={persons.length} />
 
                 {/* Condominiums: import units (frações) and monthly fees from a spreadsheet */}
-                {timeboard?.type === TimeboardType.CONDOFLOW && (isUnitImportOpen ? (
+                {UNIT_IMPORT_ENABLED && timeboard?.type === TimeboardType.CONDOFLOW && (isUnitImportOpen ? (
                   <UnitImportPanel timeboardId={timeboard.id} onImported={() => loadPersons(timeboard.id)} onClose={() => setIsUnitImportOpen(false)} />
                 ) : (
                   <button

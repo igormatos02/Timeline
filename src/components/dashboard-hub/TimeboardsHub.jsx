@@ -23,6 +23,7 @@ import { TimeboardType, TimelineColor, PersonRole, TimeboardSettingsTab } from '
 import { BRAND } from '../../../shared/config/businessConfig.js';
 import * as api from '../../services/api.js';
 import HubFirstSteps from './HubFirstSteps.jsx';
+import { FIRST_STEPS_ENABLED } from '../../../shared/config/firstSteps.js';
 import { isGlobalTenant } from '../../constants/tenant.js';
 import { useTranslation } from '../../i18n/LanguageContext.jsx';
 import LogoutConfirmModal from '../LogoutConfirmModal.jsx';
@@ -106,7 +107,7 @@ export default function TimeboardsHub({
   const [condoStatusById, setCondoStatusById] = useState({});
   useEffect(() => {
     let isActive = true;
-    Promise.all(managedCondos.map((tb) => api.fetchTimeboardPlan(tb.id, { withFirstSteps: true }).then((info) => [tb.id, info]).catch(() => [tb.id, null])))
+    Promise.all(managedCondos.map((tb) => api.fetchTimeboardPlan(tb.id, { withFirstSteps: FIRST_STEPS_ENABLED }).then((info) => [tb.id, info]).catch(() => [tb.id, null])))
       .then((entries) => { if (isActive) setCondoStatusById(Object.fromEntries(entries.filter(([, info]) => info?.isLicensed))); });
     return () => { isActive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -478,13 +479,13 @@ export default function TimeboardsHub({
         </section>
 
         {/* Condominiums still being set up */}
-        <HubFirstSteps
+        {FIRST_STEPS_ENABLED && <HubFirstSteps
           timeboards={managedCondos}
           statusById={condoStatusById}
           t={t}
           onOpenSettings={(tb) => onOpenEditTimeboard(tb, TimeboardSettingsTab.ENTITIES)}
           onOpenBoard={onSelectTimeboard}
-        />
+        />}
 
         {/* Section 1: My Timeboards */}
         <section style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

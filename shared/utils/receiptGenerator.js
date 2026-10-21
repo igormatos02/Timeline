@@ -106,6 +106,7 @@ const RECEIPT_STYLES = `
         .verify-qr svg { display: block; width: 64px; height: 64px; }
         .verify-code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; font-weight: 700; letter-spacing: 1px; color: ${PrintTheme.ink}; }
         .verify-hint { font-size: 10px; color: ${PrintTheme.muted}; }
+        .electronic-note { max-width: 240px; font-size: 10px; line-height: 1.4; text-align: right; color: ${PrintTheme.muted}; font-style: italic; }
         body {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
           color: ${PrintTheme.inkSoft};
@@ -410,7 +411,9 @@ export function buildReceiptHtml({
           <div class="label">${t('receipt.issuer')}</div>
           <div class="value">${adminName}</div>
         </div>
-        ${!isStub ? `
+        ${!isStub && receiptCode ? `
+        <div class="electronic-note">${t('receipt.electronicIssued')}</div>` : ''}
+        ${!isStub && !receiptCode ? `
         <div class="signature-box">
           <div class="signature-line"></div>
           <div class="signature-label">${t('receipt.signaturePlaceholder')}</div>

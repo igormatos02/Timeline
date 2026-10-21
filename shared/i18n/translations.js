@@ -2751,6 +2751,7 @@ export const translations = {
     receipt: {
       numberPrefix: "No.",
       codeLabel: "Receipt code",
+      electronicIssued: "Document issued electronically by the condominium's administration, valid without signature.",
       verifyHint: "Check that this receipt is valid at {{url}}",
       sendEmail: "Send by e-mail",
       sendEmailPlaceholder: "E-mail of the recipient",
@@ -5679,6 +5680,7 @@ export const translations = {
     receipt: {
       numberPrefix: "Nº",
       codeLabel: "Código do recibo",
+      electronicIssued: "Documento emitido eletronicamente pela administração do condomínio, válido sem assinatura.",
       verifyHint: "Confirme a validade deste recibo em {{url}}",
       sendEmail: "Enviar por email",
       sendEmailPlaceholder: "Email do destinatário",

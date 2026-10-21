@@ -329,6 +329,19 @@ export async function fetchTimeboardPlan(timeboardId, { withFirstSteps = false }
   return res.json();
 }
 
+// Downloads every record of a timeboard (ZIP with CSV sheets and data.json)
+export async function exportTimeboardData(timeboardId, language) {
+  const res = await apiFetch(`${API_BASE}/timeboards/${encodeURIComponent(timeboardId)}/export?language=${encodeURIComponent(language || '')}`, { headers: getHeaders() });
+  if (!res.ok) throw await serverRefusal(res, 'Failed to export the data');
+  const fileName = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '')?.[1] || 'timeboard.zip';
+  const url = URL.createObjectURL(await res.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 // Imports a condominium's units (frações) and monthly fees from spreadsheet rows
 export async function importUnits(timeboardId, { rows, feeStartDate, feeChannel, language }) {
   const res = await apiFetch(`${API_BASE}/timeboards/${encodeURIComponent(timeboardId)}/import-units`, {

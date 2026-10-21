@@ -2262,6 +2262,15 @@ export const translations = {
     },
 
     // Backend
+    dataExport: {
+      title: "Export all data",
+      description: "Download everything recorded in this timeboard: spreadsheets (CSV) that open in Excel and the complete data (JSON). The data is yours, in any plan.",
+      button: "Download data (ZIP)",
+      exporting: "Preparing…",
+      files: { entities: "entities", movements: "movements", notices: "notices", data: "data", readme: "README" },
+      columns: { unit: "Unit", name: "Name", type: "Type", role: "Role", email: "Email", phone: "Phone", taxId: "Tax ID", notes: "Notes", date: "Date", title: "Description", timeline: "Timeline", category: "Category", amount: "Amount", status: "Status", person: "Person", content: "Content" },
+      readme: "Export of {{name}} on {{date}}.\r\n\r\nentities.csv: people, companies and units.\r\nmovements.csv: every movement up to {{until}} with its status.\r\nnotices.csv: posts and notes.\r\ndata.json: every stored record (recurring series, statuses per month, receipts), to move the data to another program.\r\n\r\nThe CSV files use \";\" as separator (Excel in Portugal)."
+    },
     unitImport: {
       open: "Import units",
       title: "Import units from a spreadsheet",
@@ -4885,6 +4894,15 @@ export const translations = {
     },
 
     // Backend
+    dataExport: {
+      title: "Exportar todos os dados",
+      description: "Descarregue tudo o que está registado neste timeboard: folhas (CSV) que abrem no Excel e os dados completos (JSON). Os dados são seus, em qualquer plano.",
+      button: "Descarregar dados (ZIP)",
+      exporting: "A preparar…",
+      files: { entities: "entidades", movements: "movimentos", notices: "avisos", data: "dados", readme: "LEIA-ME" },
+      columns: { unit: "Fração", name: "Nome", type: "Tipo", role: "Função", email: "Email", phone: "Telefone", taxId: "NIF", notes: "Notas", date: "Data", title: "Descrição", timeline: "Linha", category: "Categoria", amount: "Valor", status: "Estado", person: "Pessoa", content: "Conteúdo" },
+      readme: "Exportação de {{name}} em {{date}}.\r\n\r\nentidades.csv: pessoas, empresas e frações.\r\nmovimentos.csv: todos os movimentos até {{until}} com o seu estado.\r\navisos.csv: comunicados e notas.\r\ndados.json: todos os registos guardados (séries recorrentes, estados por mês, recibos), para levar os dados para outro programa.\r\n\r\nOs ficheiros CSV usam \";\" como separador (Excel em Portugal)."
+    },
     unitImport: {
       open: "Importar frações",
       title: "Importar frações de uma folha de cálculo",

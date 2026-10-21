@@ -3,6 +3,7 @@ import { planService } from '../../../application/services/PlanService.js';
 import { PlanFeature } from '../../../../shared/config/plans.js';
 import { timeboardService } from '../../../application/services/TimeboardService.js';
 import { firstStepsService } from '../../../application/services/FirstStepsService.js';
+import { dataExportService } from '../../../application/services/DataExportService.js';
 import { unitImportService } from '../../../application/services/UnitImportService.js';
 import { timeboardInvitationRepository } from '../../../infrastructure/database/supabase/SupabaseTimeboardInvitationRepository.js';
 import { timeboardAccessFromParam } from '../middleware/timeboardAccess.js';
@@ -51,6 +52,19 @@ timeboardsRouter.get('/:id/plan', async (req, res) => {
     // The hub also asks for the condominium's first steps
     const firstSteps = req.query.withFirstSteps && info.isLicensed ? await firstStepsService.getFirstSteps(req.params.id, info) : undefined;
     res.json({ ...info, firstSteps, limits: { maxUnits: info.limits.maxUnits === Infinity ? null : info.limits.maxUnits, maxAdmins: info.limits.maxAdmins === Infinity ? null : info.limits.maxAdmins } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/timeboards/:id/export — every record of the timeboard in a ZIP (CSV sheets + data.json), in every plan
+timeboardsRouter.get('/:id/export', requireCapability(Capability.MANAGE), async (req, res) => {
+  try {
+    const result = await dataExportService.exportTimeboard(req.params.id, { language: req.query.language });
+    if (!result) return res.status(404).json({ error: t('backend.validation.timeboardNotFound') });
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
+    res.send(result.buffer);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PlanUsageBanner from './PlanUsageBanner.jsx';
 import UnitImportPanel from './UnitImportPanel.jsx';
+import DataExportCard from './DataExportCard.jsx';
 import { usePermissions } from '../context/PermissionsContext.jsx';
 import AuditHistoryTab from './settings/AuditHistoryTab.jsx';
 import {
@@ -1676,6 +1677,9 @@ export default function TimeboardSettingsModal({
                     {t('timeboardSettings.settingsTab.subtitle')}
                   </p>
                 </div>
+
+                {/* Data portability: download every record of the timeboard */}
+                <DataExportCard timeboardId={timeboard?.id} />
 
                 {/* Card de Configuração: Contar a partir de (Compute From) */}
                 <div

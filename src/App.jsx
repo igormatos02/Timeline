@@ -706,6 +706,14 @@ export default function App() {
         product={activeProduct}
         onNavigateHome={() => navigate('/')}
         onOpenPlans={() => navigate({ product: activeProduct, page: ProductPage.PLANS })}
+        onCondominiumCreated={(created, warning) => {
+          setTimeboards((prev) => [...prev.filter((tb) => tb.id !== created.id), created]);
+          setMyTimeboards((prev) => [...prev.filter((tb) => tb.id !== created.id), created]);
+          if (warning) showToast(warning, 'warning');
+          setActiveTimelineId(null);
+          setActiveFinancialTab(null);
+          navigate({ product: activeProduct, timeboardId: created.id });
+        }}
         currentUser={currentUser}
         editingTimeboard={editingTimeboard}
         handleDeleteTimeboard={handleDeleteTimeboard}

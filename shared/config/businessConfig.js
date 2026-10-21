@@ -8,6 +8,13 @@ export const BRAND = Object.freeze({
   domain: 'timeboard.pt'
 });
 
+// Senders of the platform's e-mails (verified in the e-mail provider): invitations and account e-mails, and the
+// notices to condominium owners (receipts, overdue fees)
+export const EMAIL_SENDERS = Object.freeze({
+  invitation: 'invitation@timeboard.pt',
+  notice: 'notice@timeboard.pt'
+});
+
 // Who sells the service and processes the data (today an individual; replace with the company's data later)
 export const LEGAL_ENTITY = Object.freeze({
   name: 'Igor Matos',

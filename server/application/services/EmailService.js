@@ -1,5 +1,5 @@
 import { BrevoClient } from '@getbrevo/brevo';
-import { BRAND, LEGAL_ENTITY } from '../../../shared/config/businessConfig.js';
+import { BRAND, EMAIL_SENDERS, LEGAL_ENTITY } from '../../../shared/config/businessConfig.js';
 import { EmailTheme } from '../../../shared/config/emailTheme.js';
 import dotenv from 'dotenv';
 import { getAppUrl } from '../../../shared/config/appConfig.js';
@@ -13,7 +13,8 @@ class EmailService {
   constructor() {
     this.apiKey = process.env.BREVO_API_KEY;
     this.senderName = process.env.BREVO_SENDER_NAME || 'Timeboard';
-    this.senderEmail = process.env.BREVO_SENDER_EMAIL || 'invitation@timeboard.pt';
+    this.senderEmail = process.env.BREVO_SENDER_EMAIL || EMAIL_SENDERS.invitation;
+    this.noticeSenderEmail = process.env.BREVO_NOTICE_SENDER_EMAIL || EMAIL_SENDERS.notice;
     this.appUrl = getAppUrl();
     
     if (this.apiKey) {
@@ -258,7 +259,7 @@ class EmailService {
       return false;
     }
     await client.transactionalEmails.sendTransacEmail({
-      sender: { name: BRAND.product, email: this.senderEmail },
+      sender: { name: BRAND.product, email: this.noticeSenderEmail },
       to: [{ email: toEmail, name: toName || toEmail.split('@')[0] }],
       subject,
       textContent,

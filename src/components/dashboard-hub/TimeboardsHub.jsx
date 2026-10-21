@@ -33,6 +33,7 @@ import './TimeboardsHub.css';
 export default function TimeboardsHub({
   product = null,
   onNavigateHome,
+  onOpenPlans,
   timeboards = [],
   myTimeboards: initialMyTimeboards = null,
   sharedTimeboards: initialSharedTimeboards = null,
@@ -110,6 +111,15 @@ export default function TimeboardsHub({
   ], [myTimeboards, sharedTimeboards]);
   const managedKey = managedCondos.map((tb) => tb.id).join(',');
   const [condoStatusById, setCondoStatusById] = useState({});
+
+  // The account's license in the product (header: plan + upgrade)
+  const [license, setLicense] = useState(null);
+  useEffect(() => {
+    if (!product?.isLicensed) return undefined;
+    let isActive = true;
+    api.fetchMyLicense(product.id).then((result) => { if (isActive) setLicense(result); }).catch(() => {});
+    return () => { isActive = false; };
+  }, [product, statusRefreshKey]);
   useEffect(() => {
     let isActive = true;
     Promise.all(managedCondos.map((tb) => api.fetchTimeboardPlan(tb.id, { withFirstSteps: FIRST_STEPS_ENABLED }).then((info) => [tb.id, info]).catch(() => [tb.id, null])))
@@ -264,6 +274,22 @@ export default function TimeboardsHub({
         </div>
 
         <div className="hub-header-actions">
+          {/* License of the product: plan in force and the way to upgrade */}
+          {product?.isLicensed && license && (
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              {t('plans.planLabel', { plan: t(`plans.names.${license.effectivePlanId}`) })}
+              {license.expiresAt && !license.isExpired && ` · ${t('plans.trialUntil', { date: format(parseISO(license.expiresAt), 'dd MMM yyyy', { locale: dateLocale }) })}`}
+            </span>
+          )}
+          {product?.isLicensed && onOpenPlans && (
+            <button
+              type="button"
+              onClick={onOpenPlans}
+              style={{ background: product.color, border: `1px solid ${product.color}`, color: 'var(--text-white)', borderRadius: '8px', padding: '6px 12px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
+            >
+              {t('plans.upgrade')}
+            </button>
+          )}
           {/* Language Toggle */}
           <button
             type="button"

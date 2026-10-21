@@ -37,6 +37,7 @@ import { useTimeboardPersons } from './app/hooks/useTimeboardPersons.js';
 import { useTimeboardsBootstrap } from './app/hooks/useTimeboardsBootstrap.js';
 import AppHubView from './app/AppHubView.jsx';
 import PlatformHome from './components/landing/PlatformHome.jsx';
+import ProductPlansPage from './components/plans/ProductPlansPage.jsx';
 import { useAppRoute, ProductPage } from './app/routes.js';
 import { productOfTimeboardType } from '../shared/config/products.js';
 
@@ -572,6 +573,7 @@ export default function App() {
     setRawEvents,
     setTimeboards,
     setTimelines,
+    showToast,
     timeboards,
     timelines
   });
@@ -673,12 +675,18 @@ export default function App() {
     );
   }
 
-  // 3. The product's hub: only its timeboards
-  if (!route.timeboardId || route.page === ProductPage.PLANS) {
+  // 3. The product's plans (/condoflow/planos)
+  if (route.page === ProductPage.PLANS) {
+    return <ProductPlansPage product={activeProduct} onBack={() => navigate({ product: activeProduct })} />;
+  }
+
+  // 4. The product's hub: only its timeboards
+  if (!route.timeboardId) {
     return (
       <AppHubView
         product={activeProduct}
         onNavigateHome={() => navigate('/')}
+        onOpenPlans={() => navigate({ product: activeProduct, page: ProductPage.PLANS })}
         currentUser={currentUser}
         editingTimeboard={editingTimeboard}
         handleDeleteTimeboard={handleDeleteTimeboard}

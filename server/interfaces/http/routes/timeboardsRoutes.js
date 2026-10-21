@@ -203,7 +203,8 @@ timeboardsRouter.post('/', async (req, res) => {
     const newTimeboard = await timeboardService.createTimeboard({ ...req.body, ownerId: req.user.id, userId: req.user.id }, req.body.locale);
     res.status(201).json(newTimeboard);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    // A license that covers no more condominiums: 403 PLAN_LIMIT
+    res.status(err.status || 400).json({ error: err.message, code: err.code });
   }
 });
 

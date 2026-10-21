@@ -2,7 +2,10 @@ import { Router } from 'express';
 import { meService } from '../../../application/services/MeService.js';
 import { pushNotificationService } from '../../../application/services/PushNotificationService.js';
 import { planService } from '../../../application/services/PlanService.js';
-import { PlanFeature } from '../../../../shared/config/plans.js';
+import { PlanFeature, PLANS } from '../../../../shared/config/plans.js';
+import { PRODUCTS } from '../../../../shared/config/products.js';
+import { emailService } from '../../../application/services/EmailService.js';
+import { userRepository } from '../../../infrastructure/database/supabase/SupabaseUserRepository.js';
 import { createT } from '../../../../shared/i18n/index.js';
 
 const t = createT('en');
@@ -138,6 +141,48 @@ meRouter.delete('/push-devices', async (req, res) => {
     if (!token) return res.status(400).json({ error: t('backend.push.tokenRequired') });
     await pushNotificationService.unregisterDevice(req.user.id, token);
     res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Limits in JSON (Infinity = no limit = null)
+const finiteOrNull = (value) => (value === Infinity ? null : value);
+
+// GET /api/me/licenses/:product — the account's license in a product: plan in force, end, limits and condominiums used
+meRouter.get('/licenses/:product', async (req, res) => {
+  try {
+    if (!PRODUCTS[req.params.product]) return res.status(404).json({ error: t('backend.validation.productNotFound') });
+    const license = await planService.getAccountLicense(req.user.id, req.params.product);
+    res.json({
+      ...license,
+      limits: Object.fromEntries(Object.entries(license.limits).map(([key, value]) => [key, finiteOrNull(value)]))
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/me/licenses/:product/upgrade-request { planId, message } — asks the provider for another plan (by e-mail)
+meRouter.post('/licenses/:product/upgrade-request', async (req, res) => {
+  try {
+    const product = PRODUCTS[req.params.product];
+    const { planId, message } = req.body || {};
+    if (!product || !PLANS[planId]) return res.status(400).json({ error: t('backend.validation.invalidPlan') });
+    const [license, user] = await Promise.all([
+      planService.getAccountLicense(req.user.id, product.id),
+      userRepository.getById(req.user.id)
+    ]);
+    const tp = createT('pt');
+    await emailService.sendUpgradeRequest({
+      requesterName: user?.name || req.user.name || '',
+      requesterEmail: user?.email || req.user.email,
+      productName: product.name,
+      currentPlan: tp(`plans.names.${license.effectivePlanId}`),
+      requestedPlan: tp(`plans.names.${planId}`),
+      message: String(message || '').slice(0, 2000)
+    });
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -7,6 +7,7 @@ import HubTimeboardModals from './HubTimeboardModals.jsx';
 export default function AppHubView({
   product,
   onNavigateHome,
+  onOpenPlans,
   currentUser,
   editingTimeboard,
   handleDeleteTimeboard,
@@ -34,6 +35,7 @@ export default function AppHubView({
       <TimeboardsHub
         product={product}
         onNavigateHome={onNavigateHome}
+        onOpenPlans={onOpenPlans}
         timeboards={timeboards}
         myTimeboards={myTimeboards}
         sharedTimeboards={sharedTimeboards}

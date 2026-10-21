@@ -23,8 +23,6 @@ function rowToEntity(row) {
     print_template: row.print_template || row.printTemplate || null,
     headerDefaultState: row.header_default_state || undefined,
     // CondoFlow license (migration 0014)
-    plan: row.plan || null,
-    planExpiresAt: row.plan_expires_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   });
@@ -35,8 +33,6 @@ function entityToRow(data, isCreate = false) {
   const row = {};
   if (data.id !== undefined) row.id = data.id;
   if (data.name !== undefined) row.name = data.name;
-  if (data.plan !== undefined) row.plan = data.plan;
-  if (data.planExpiresAt !== undefined) row.plan_expires_at = data.planExpiresAt;
   if (data.description !== undefined) row.description = data.description;
   if (data.tenant !== undefined) row.tenant = data.tenant;
   else if (isCreate) row.tenant = 'Global';
@@ -104,12 +100,7 @@ export class SupabaseTimeboardRepository extends IRepository {
 
   async create(data) {
     const row = entityToRow(data, true);
-    let { data: created, error } = await supabase.from(TABLE).insert(row).select().single();
-    // Before migration 0014 the plan columns do not exist: create without them (the timeboard counts as legacy)
-    if (error && /plan/.test(error.message || '') && ('plan' in row || 'plan_expires_at' in row)) {
-      const { plan: _plan, plan_expires_at: _planExpiresAt, ...withoutPlan } = row;
-      ({ data: created, error } = await supabase.from(TABLE).insert(withoutPlan).select().single());
-    }
+    const { data: created, error } = await supabase.from(TABLE).insert(row).select().single();
     if (error) throw new Error(`Supabase create [timeboards]: ${error.message}`);
     return rowToEntity(created);
   }

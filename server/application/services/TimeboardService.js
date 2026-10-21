@@ -314,15 +314,13 @@ export class TimeboardService {
     const t = createT(locale);
     const ownerId = data.ownerId || data.owner_id || data.userId || data.user_id || null;
     const type = data.type || TimeboardType.FINANCIAL;
+    // Licensed products: the account's first one starts its trial, the next ones must fit its license
+    await planService.prepareNewTimeboard(ownerId, type);
     const createdTimeboard = await timeboardRepository.create({
       ...data,
       ownerId: ownerId,
       owner_id: ownerId,
-      type,
-      // A new condominium starts with the Profissional trial (the plan is never taken from the request)
-      plan: undefined,
-      planExpiresAt: undefined,
-      ...(type === TimeboardType.CONDOFLOW ? planService.trialPlan() : {})
+      type
     });
 
     const isFinancial = createdTimeboard.type === TimeboardType.FINANCIAL;
@@ -467,15 +465,11 @@ export class TimeboardService {
   }
 
   async updateTimeboard(id, updates) {
-    // The plan is never changed from the app: only by the license tools (setPlan script, billing)
+    // Licenses are not timeboard fields: never taken from the app
     const { plan: _plan, planExpiresAt: _planExpiresAt, plan_expires_at: _planExpiresAtRow, ...allowed } = updates || {};
     return timeboardRepository.update(id, allowed);
   }
 
-  /** License tools only (never exposed to the app): sets a condominium's plan and its end date (null = no end). */
-  async setPlan(id, { plan, planExpiresAt = null }) {
-    return timeboardRepository.update(id, { plan, planExpiresAt });
-  }
 
   async deleteTimeboard(id) {
     const timelines = await timelineRepository.findByTimeboardId(id);

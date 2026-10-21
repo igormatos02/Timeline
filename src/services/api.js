@@ -252,7 +252,7 @@ export async function createTimeboard(timeboardData, locale) {
       ...timeboardData
     })
   });
-  if (!res.ok) throw new Error('Failed to create timeboard');
+  if (!res.ok) throw await serverRefusal(res, 'Failed to create timeboard');
   return res.json();
 }
 
@@ -324,6 +324,24 @@ export async function removeTimeboardMember(timeboardId, memberUserId) {
 }
 
 // CondoFlow license of a condominium: plan in force, end date, limits (null = unlimited) and usage
+// The account's license in a product (plan in force, limits, condominiums used)
+export async function fetchMyLicense(productId) {
+  const res = await apiFetch(`${API_BASE}/me/licenses/${encodeURIComponent(productId)}`, { headers: getHeaders() });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+// Asks the provider for another plan (e-mail; the license is set by hand until online payments)
+export async function requestPlanUpgrade(productId, { planId, message }) {
+  const res = await apiFetch(`${API_BASE}/me/licenses/${encodeURIComponent(productId)}/upgrade-request`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ planId, message })
+  });
+  if (!res.ok) throw await serverRefusal(res, 'Failed to send the request');
+  return res.json();
+}
+
 export async function fetchTimeboardPlan(timeboardId, { withFirstSteps = false } = {}) {
   const query = withFirstSteps ? '?withFirstSteps=1' : '';
   const res = await apiFetch(`${API_BASE}/timeboards/${encodeURIComponent(timeboardId)}/plan${query}`, { headers: getHeaders() });

@@ -17,6 +17,7 @@ export function useTimeboardActions({
   setRawEvents,
   setTimeboards,
   setTimelines,
+  showToast,
   timeboards,
   timelines
 }) {
@@ -92,6 +93,13 @@ export function useTimeboardActions({
         }
       } catch (err) {
         console.error('Error creating timeboard or default timelines:', err);
+        // Refused by the server (e.g. the license covers no more condominiums): the optimistic card goes away
+        if (err?.isServerRefusal) {
+          setTimeboards((prev) => prev.filter((tb) => tb.id !== newTb.id));
+          setMyTimeboards((prev) => prev.filter((tb) => tb.id !== newTb.id));
+          setActiveTimeboardId(null);
+          showToast?.(err.message, 'error');
+        }
       }
     }
   };

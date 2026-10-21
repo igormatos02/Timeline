@@ -1689,7 +1689,39 @@ export const translations = {
       unlimited: "unlimited",
       endsOn: "Ends on {{date}}",
       expired: "The {{plan}} plan ended on {{date}}: the condominium works as Free (no data was removed).",
-      unitsLimitReached: "Unit limit reached: upgrade the plan to add more."
+      unitsLimitReached: "Unit limit reached: upgrade the plan to add more.",
+      upgrade: "Upgrade",
+      license: "{{product}} license: {{plan}}",
+      trialUntil: "trial until {{date}}",
+      page: {
+        title: "{{product}} plans",
+        subtitle: "One license per account. Prices per condominium, VAT included; annual = 2 months free.",
+        current: "Your plan",
+        perMonth: "€/month",
+        perYear: "{{price}} €/year",
+        free: "Free",
+        units: "Up to {{count}} units per condominium",
+        admins: "{{count}} administrator(s)",
+        adminsUnlimited: "Unlimited administrators",
+        condominiums: "{{count}} condominiums included (+{{extra}} €/month each extra)",
+        usage: "You use {{used}} of {{max}} condominium(s) of your license.",
+        request: "Request this plan",
+        requestTitle: "Request the {{plan}} plan",
+        requestMessage: "Message (optional): number of condominiums, annual or monthly payment…",
+        send: "Send request",
+        cancel: "Cancel",
+        sent: "Request sent. We will contact you by e-mail to activate the plan.",
+        notLicensed: "{{product}} is free for now: no license needed.",
+        back: "Back",
+        features: {
+          notices: "Posts and reminders",
+          invites: "Invite owners",
+          memberApp: "CondoFlow app for owners",
+          adminApp: "CondoFlow Gestão app",
+          push: "Push notifications",
+          reports: "Reports and closing"
+        }
+      }
     },
 
     admin: {
@@ -2354,9 +2386,14 @@ export const translations = {
     },
     backend: {
       import: { noRows: "The file has no rows to import." },
+      upgradeRequest: {
+        subject: "Upgrade request: {{product}} {{plan}} ({{name}})",
+        body: "{{name}} <{{email}}> asks for another {{product}} plan.\n\nCurrent plan: {{current}}\nRequested plan: {{requested}}\n\nMessage:\n{{message}}\n\nTo set it: npm run plan:set -- {{email}} <product> <plan> [YYYY-MM-DD | none] [condominiums]"
+      },
       plan: {
         unitsLimit: "Your plan allows up to {{max}} units (frações). Upgrade the plan to add more.",
         adminsLimit: "Your plan allows up to {{max}} administrator(s). Upgrade the plan to add more.",
+        condominiumsLimit: "Your license covers {{max}} condominium(s). Upgrade it to add another.",
         feature: {
           notices: "Posts and reminders are not included in your plan.",
           invites: "Inviting people is not included in your plan.",
@@ -2377,6 +2414,8 @@ export const translations = {
         unavailableBody: "This receipt link has expired or is no longer valid. Open the receipt again from the app."
       },
       validation: {
+        productNotFound: "Unknown product.",
+        invalidPlan: "Invalid plan or product.",
         emailRequired: "Email is required",
         passwordMinLength: "Password must be at least 4 characters",
         emailAlreadyExists: "An account is already registered with this email address",
@@ -4376,7 +4415,39 @@ export const translations = {
       unlimited: "ilimitado",
       endsOn: "Termina a {{date}}",
       expired: "O plano {{plan}} terminou a {{date}}: o condomínio funciona como Grátis (nenhum dado foi apagado).",
-      unitsLimitReached: "Limite de frações atingido: mude de plano para adicionar mais."
+      unitsLimitReached: "Limite de frações atingido: mude de plano para adicionar mais.",
+      upgrade: "Fazer upgrade",
+      license: "Licença {{product}}: {{plan}}",
+      trialUntil: "teste até {{date}}",
+      page: {
+        title: "Planos {{product}}",
+        subtitle: "Uma licença por conta. Preços por condomínio, IVA incluído; anual = 2 meses grátis.",
+        current: "O seu plano",
+        perMonth: "€/mês",
+        perYear: "{{price}} €/ano",
+        free: "Grátis",
+        units: "Até {{count}} frações por condomínio",
+        admins: "{{count}} administrador(es)",
+        adminsUnlimited: "Administradores ilimitados",
+        condominiums: "{{count}} condomínios incluídos (+{{extra}} €/mês por cada extra)",
+        usage: "Usa {{used}} de {{max}} condomínio(s) da sua licença.",
+        request: "Pedir este plano",
+        requestTitle: "Pedir o plano {{plan}}",
+        requestMessage: "Mensagem (opcional): número de condomínios, pagamento anual ou mensal…",
+        send: "Enviar pedido",
+        cancel: "Cancelar",
+        sent: "Pedido enviado. Vamos contactá-lo por email para ativar o plano.",
+        notLicensed: "O {{product}} é gratuito por agora: não precisa de licença.",
+        back: "Voltar",
+        features: {
+          notices: "Comunicados e lembretes",
+          invites: "Convidar condóminos",
+          memberApp: "App CondoFlow para condóminos",
+          adminApp: "App CondoFlow Gestão",
+          push: "Notificações push",
+          reports: "Relatórios e fecho"
+        }
+      }
     },
 
     admin: {
@@ -5041,9 +5112,14 @@ export const translations = {
     },
     backend: {
       import: { noRows: "O ficheiro não tem linhas para importar." },
+      upgradeRequest: {
+        subject: "Pedido de upgrade: {{product}} {{plan}} ({{name}})",
+        body: "{{name}} <{{email}}> pede outro plano do {{product}}.\n\nPlano atual: {{current}}\nPlano pedido: {{requested}}\n\nMensagem:\n{{message}}\n\nPara ativar: npm run plan:set -- {{email}} <produto> <plano> [AAAA-MM-DD | none] [condomínios]"
+      },
       plan: {
         unitsLimit: "O seu plano permite até {{max}} frações. Mude de plano para adicionar mais.",
         adminsLimit: "O seu plano permite até {{max}} administrador(es). Mude de plano para adicionar mais.",
+        condominiumsLimit: "A sua licença cobre {{max}} condomínio(s). Faça upgrade para adicionar outro.",
         feature: {
           notices: "Os comunicados e lembretes não estão incluídos no seu plano.",
           invites: "Convidar pessoas não está incluído no seu plano.",
@@ -5064,6 +5140,8 @@ export const translations = {
         unavailableBody: "Este link do recibo expirou ou já não é válido. Abra o recibo outra vez a partir da app."
       },
       validation: {
+        productNotFound: "Produto desconhecido.",
+        invalidPlan: "Plano ou produto inválido.",
         emailRequired: "O email é obrigatório.",
         passwordMinLength: "A palavra-passe deve ter pelo menos 4 caracteres.",
         emailAlreadyExists: "Já existe uma conta registada com este endereço de email.",

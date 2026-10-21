@@ -1,5 +1,5 @@
 import { BrevoClient } from '@getbrevo/brevo';
-import { BRAND } from '../../../shared/config/businessConfig.js';
+import { BRAND, LEGAL_ENTITY } from '../../../shared/config/businessConfig.js';
 import dotenv from 'dotenv';
 import { getAppUrl } from '../../../shared/config/appConfig.js';
 import { PersonRole } from '../../../shared/enums/index.js';
@@ -168,6 +168,41 @@ class EmailService {
       return { success: true, messageId: response?.messageId, url: finalAcceptUrl };
     } catch (err) {
       console.error('[EmailService] Failed to send invitation email:', err?.response?.body || err.message);
+      throw new Error(t('backend.email.emailSendError', { error: err.message }));
+    }
+  }
+
+  /**
+   * Upgrade request of an account (before online payments): sent to the provider (LEGAL_ENTITY), who sets the
+   * license by hand (npm run plan:set). Reply-to is the requester.
+   */
+  async sendUpgradeRequest({ requesterName, requesterEmail, productName, currentPlan, requestedPlan, message = '' }) {
+    const client = this.getClient();
+    const tp = createT('pt');
+    const subject = tp('backend.upgradeRequest.subject', { product: productName, plan: requestedPlan, name: requesterName || requesterEmail });
+    const textContent = tp('backend.upgradeRequest.body', {
+      name: requesterName || '',
+      email: requesterEmail,
+      product: productName,
+      current: currentPlan,
+      requested: requestedPlan,
+      message: message || '—'
+    });
+    if (!client) {
+      console.log(`[EmailService] Simulated upgrade request to ${LEGAL_ENTITY.email}:\n${textContent}`);
+      return { success: true, simulated: true };
+    }
+    try {
+      const response = await client.transactionalEmails.sendTransacEmail({
+        sender: { name: BRAND.platform, email: this.senderEmail },
+        to: [{ email: LEGAL_ENTITY.email, name: LEGAL_ENTITY.name }],
+        replyTo: { email: requesterEmail, name: requesterName || requesterEmail },
+        subject,
+        textContent
+      });
+      return { success: true, messageId: response?.messageId };
+    } catch (err) {
+      console.error('[EmailService] Failed to send upgrade request:', err?.response?.body || err.message);
       throw new Error(t('backend.email.emailSendError', { error: err.message }));
     }
   }

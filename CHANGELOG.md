@@ -2,6 +2,78 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.6.0](https://github.com/igormatos02/Timeline/compare/v0.5.0...v0.6.0) (2026-10-21)
+
+
+### Features
+
+* apps and web start in portuguese, data export hidden for the alpha ([9d76c3b](https://github.com/igormatos02/Timeline/commit/9d76c3b041d675b3cbe840b7e1ff482a339fa245))
+* balance cards tag the timeline a movement comes from ([a4220bc](https://github.com/igormatos02/Timeline/commit/a4220bc6ab61fdb144cd2e4ce64a3d9fa7b24814))
+* bank account operations and pocket contributions / withdrawals ([09dd4a8](https://github.com/igormatos02/Timeline/commit/09dd4a855142b9ab2c6767642c1f8cf3cffb274b))
+* closing a pocket moves its balance to the current account ([6dae7b4](https://github.com/igormatos02/Timeline/commit/6dae7b44c52d9dc27bd507bdc008146e25da02a0))
+* coded receipts are issued electronically, without signature ([42f6254](https://github.com/igormatos02/Timeline/commit/42f6254db8ac4ec3593c8d7b28eefd9ede6a6181))
+* condoflow gestão app for condominium admins (first screen) ([b86d933](https://github.com/igormatos02/Timeline/commit/b86d9338fb96ee81a70b83f32f537c6f56cc637a))
+* condoflow plans and their limits enforced on the server ([e77f974](https://github.com/igormatos02/Timeline/commit/e77f9744586e6e6f5fbb5869c3a8f50a0ecc7675))
+* condominium invitations are branded condoflow, a timeboard product ([1594611](https://github.com/igormatos02/Timeline/commit/1594611c331dbb54549323c4145ab8a26e1fced1))
+* condominium members are invited, not registered ([b4f78d8](https://github.com/igormatos02/Timeline/commit/b4f78d89a7942a685b520985cc97603d58241cb7))
+* condominium notices in the CondoFlow app ([42d8fc8](https://github.com/igormatos02/Timeline/commit/42d8fc8948759d48f1e8f54de8efc5023b5368b6))
+* condominium settings split into units, entities and members ([eecbef2](https://github.com/igormatos02/Timeline/commit/eecbef227916238819b55f0690fbe8b93c2a2253))
+* condominium setup wizard ([5dbb7cf](https://github.com/igormatos02/Timeline/commit/5dbb7cfed2e0219f99d8a1fa1a37307da88614a2))
+* condominiums need their accounting start date before any entry ([12aed1a](https://github.com/igormatos02/Timeline/commit/12aed1a3c6d7abdf1b2d88fcffa49246de2f03fe))
+* credit bank deposits from the wallet and show them with both ends ([899b0bf](https://github.com/igormatos02/Timeline/commit/899b0bfd75d0b524b64f6ccebafa43e1e64d8031))
+* export all of a timeboard's data in a zip ([53bfa5c](https://github.com/igormatos02/Timeline/commit/53bfa5c963b2a9fff4a1eaf6c0229bb8020f3a26))
+* fixed timeline palettes and movement card colors ([10b89c8](https://github.com/igormatos02/Timeline/commit/10b89c81e7ef64047a6282c7f9449e87f713b015))
+* gestão is a basic app to receive fees and send receipts ([00bac35](https://github.com/igormatos02/Timeline/commit/00bac35a674a7cc03c281268194b2bc8936a414c))
+* gestão lists the month's movements and receives / pays them ([feab965](https://github.com/igormatos02/Timeline/commit/feab965110ac32c51b4ea6975ffd686f108fe173))
+* gestão opens the receipt of a received fee with e-mail, print and share ([ce564d5](https://github.com/igormatos02/Timeline/commit/ce564d5b60c71dadc189c61ed65bd440872a6479))
+* gestão records outflows and bank deposits ([2b2e511](https://github.com/igormatos02/Timeline/commit/2b2e511580e4e4683fbef590e36db92cabd319e0))
+* hub shows each condominium's plan and its first steps ([a13e75c](https://github.com/igormatos02/Timeline/commit/a13e75c1f3d0ef09531f82401a8aea09d5e66600))
+* import a condominium's units and monthly fees from a spreadsheet ([b973ddb](https://github.com/igormatos02/Timeline/commit/b973ddb45af720334ef865033e9429701b1d865d))
+* licenses per account and product, with a plans page and upgrade requests ([eecfede](https://github.com/igormatos02/Timeline/commit/eecfede8ef2107e1350b482b701446fdfb286a33))
+* mobile app becomes CondoFlow (app.condoflow.client), condominiums only ([cb2d2bc](https://github.com/igormatos02/Timeline/commit/cb2d2bc46e57fc041f13071e91d4cecc9e24582d))
+* mobile installments show how they were paid and their receipt ([8927484](https://github.com/igormatos02/Timeline/commit/8927484d064d19dfa71a8f4955ebd1b8424b7aed))
+* month row shows income, outflows and result of each timeline ([8267944](https://github.com/igormatos02/Timeline/commit/82679442a6149add8667557567a9435e02c26669))
+* monthly fee of each condominium unit with "atualizar lançamentos" ([9a9277b](https://github.com/igormatos02/Timeline/commit/9a9277b197e2b8c64a025334069a5127c88ea3e8))
+* owners get the receipt and a monthly overdue notice ([d006adc](https://github.com/igormatos02/Timeline/commit/d006adc8ffb971ba17cfdfeb4c538bed8e017ecf))
+* owners' notices are sent from notice@timeboard.pt ([83b2982](https://github.com/igormatos02/Timeline/commit/83b2982995eaace7acf379dd39a4aee045a07137))
+* plan and its usage shown in the condominium's entities ([edc3896](https://github.com/igormatos02/Timeline/commit/edc389642038b378e71739d95a1786a5f35209af))
+* pocket closing transfer card only offers notes, cancel and delete ([5a9bce8](https://github.com/igormatos02/Timeline/commit/5a9bce8fb777b258ed181e948e578ea98d65dbd3))
+* pocket movement conversion script and form details ([c0cac6f](https://github.com/igormatos02/Timeline/commit/c0cac6fe2a96ca41ebd060e5b44bffbb71d41839))
+* push notifications for condominium posts and reminders ([907e2e3](https://github.com/igormatos02/Timeline/commit/907e2e3c65d2bc2cd1a335d0db258b315d7bdfdb))
+* rate limits on login and invitations, data api locked down ([6beda1b](https://github.com/igormatos02/Timeline/commit/6beda1b42c6533afbd19d4e17eb26f1fe44efc8c))
+* receipt codes with qr verification and automatic receipt numbers ([3de6e0e](https://github.com/igormatos02/Timeline/commit/3de6e0e55f1838b658fe589a09e7d6c85f7f78a6))
+* receipts of paid installments open from the CondoFlow app ([26e95b7](https://github.com/igormatos02/Timeline/commit/26e95b799b9b4b361b5be2832d3078fa3e3d8789))
+* send a receipt by e-mail from the receipt preview ([2cdf16f](https://github.com/igormatos02/Timeline/commit/2cdf16f83026e1f6c34fd480a837e87a92cf3301))
+* terms, data processing agreement and privacy name condoflow's provider ([a259aea](https://github.com/igormatos02/Timeline/commit/a259aeaa2879b8882fb8240068782cd9f30ceb7e))
+* timeboard platform with the condoflow and myfinance products ([6f6f15d](https://github.com/igormatos02/Timeline/commit/6f6f15d8da2b9fd0242d3ab82732980712f1f54d))
+* wallet income cards carry an "Em dinheiro" tag ([502afd3](https://github.com/igormatos02/Timeline/commit/502afd33f08588a91b83515f05c139b93805afe8))
+
+
+### Bug Fixes
+
+* account expenses are not counted as committed contributions ([cd94c07](https://github.com/igormatos02/Timeline/commit/cd94c07e35f7480d8b384e4b20436a756a5f97b7))
+* account expenses without a pocket count as account movements ([19ad00e](https://github.com/igormatos02/Timeline/commit/19ad00e2db83ba7ca490499205bfc370131b1207))
+* account header lists open pockets with their goal progress ([932b50d](https://github.com/igormatos02/Timeline/commit/932b50d91076b1176a50049bb9f9a5e1ba9a7606))
+* account movements name their action by operation ([b1279ac](https://github.com/igormatos02/Timeline/commit/b1279acd822291a976d0c944c47cc13aa6fa7c14))
+* condominium notices pop up on the phone (high-importance channel) ([288768d](https://github.com/igormatos02/Timeline/commit/288768d22603a861b973da0c9fd049aaf7c88ddb))
+* converted pocket transfers get a UUID series id ([8262b27](https://github.com/igormatos02/Timeline/commit/8262b27e1a035885aea548f04e817517a1b3af5b))
+* creating events failed with normalizeTimelineType not defined ([bb73105](https://github.com/igormatos02/Timeline/commit/bb731059b0ffe5a1a6cc36a969e56e59b8493048))
+* gestão opens the receipt of any received fee ([13625cf](https://github.com/igormatos02/Timeline/commit/13625cf38233ff728ef84b752d973a15d399e630))
+* header people button is "gerir frações" in condominiums ([2e3f17b](https://github.com/igormatos02/Timeline/commit/2e3f17b8341a0db7199d467c704cab20d54a49a5))
+* login no longer reveals which e-mails have an account ([c49ccd0](https://github.com/igormatos02/Timeline/commit/c49ccd0aa48ada735c9ef9fa6149e030cb8ae80f))
+* opening balances are the timelines' initial value, not movements ([40bd316](https://github.com/igormatos02/Timeline/commit/40bd31642290f0536af422863b0255992b596831))
+* pocket closing transfer shows in the closed pocket only ([d73e078](https://github.com/igormatos02/Timeline/commit/d73e078606b4a9bbe4d130bf1060a98aeca1e9d7))
+* push notifications log why they are not sent ([ebf1517](https://github.com/igormatos02/Timeline/commit/ebf15179d76795a37c235d9da569ff21d09c6813))
+* receipt codes and notices of series whose id differs from their first row ([57d0378](https://github.com/igormatos02/Timeline/commit/57d0378978987a856b2bd11d12870c19cc6a4515))
+* refused deposit credit keeps the card pending ([a8a987a](https://github.com/igormatos02/Timeline/commit/a8a987aa167430dcdbedacfd4009d62e179c313d))
+* wider unit column in the units list ([1badf45](https://github.com/igormatos02/Timeline/commit/1badf4589134e791d8ee5dbb4151e7380767e87d))
+
+
+### Refactors
+
+* drop the pre-migration bridge and split mobile debts by side ([e19ee9a](https://github.com/igormatos02/Timeline/commit/e19ee9a6b256f4fefb8ff4d2ddbd67a4041af60f))
+* the CondoFlow app only shows the person's own installments ([a3b0b5f](https://github.com/igormatos02/Timeline/commit/a3b0b5f7f60fe0fe84ee8bc4651aeb99a5871eff))
+
 ## [0.5.0](https://github.com/igormatos02/Timeline/compare/v0.3.0...v0.5.0) (2026-09-29)
 
 
